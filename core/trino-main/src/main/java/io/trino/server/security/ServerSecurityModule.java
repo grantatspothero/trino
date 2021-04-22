@@ -27,6 +27,8 @@ import io.airlift.http.server.HttpServer.ClientCertificate;
 import io.airlift.http.server.HttpServerConfig;
 import io.airlift.jmx.MBeanResource;
 import io.airlift.openmetrics.MetricsResource;
+import io.trino.server.security.galaxy.GalaxyTrinoAuthenticator;
+import io.trino.server.security.galaxy.GalaxyTrinoAuthenticatorConfig;
 import io.trino.server.security.jwt.JwtAuthenticator;
 import io.trino.server.security.jwt.JwtAuthenticatorSupportModule;
 import io.trino.server.security.oauth2.OAuth2AuthenticationSupportModule;
@@ -75,6 +77,7 @@ public class ServerSecurityModule
             newOptionalBinder(certificateBinder, ClientCertificate.class).setBinding().toInstance(REQUESTED);
             configBinder(certificateBinder).bindConfig(CertificateConfig.class);
         }));
+        installAuthenticator("galaxy", GalaxyTrinoAuthenticator.class, GalaxyTrinoAuthenticatorConfig.class);
         installAuthenticator("kerberos", KerberosAuthenticator.class, KerberosConfig.class);
         install(authenticatorModule("password", PasswordAuthenticator.class, used -> {
             configBinder(binder).bindConfig(PasswordAuthenticatorConfig.class);

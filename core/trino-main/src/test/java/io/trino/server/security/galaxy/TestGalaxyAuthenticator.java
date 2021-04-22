@@ -1,0 +1,131 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.trino.server.security.galaxy;
+
+import io.trino.server.security.AuthenticationException;
+import io.trino.server.security.galaxy.GalaxyAuthenticatorController.RequestBodyHashing;
+import io.trino.spi.security.Identity;
+import org.testng.annotations.Test;
+
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.time.ZonedDateTime;
+import java.util.Date;
+import java.util.Optional;
+
+import static io.trino.server.security.galaxy.GalaxyAuthenticatorController.REQUEST_EXPIRATION_CLAIM;
+import static io.trino.server.security.galaxy.GalaxyAuthenticatorController.parseClaimsWithoutValidation;
+import static io.trino.server.security.jwt.JwtUtil.newJwtBuilder;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+public abstract class TestGalaxyAuthenticator
+{
+    protected static final String TOKEN_ISSUER = "https://issuer.example.com";
+    protected static final String ACCOUNT_ID = "a-12345678";
+    protected static final String USER_ID = "u-1234567890";
+    protected static final String ROLE_ID = "r-9876543252";
+
+    @FunctionalInterface
+    interface TestAuthenticator
+    {
+        Identity authenticate(String token, Optional<RequestBodyHashing> requestBodyHashing)
+                throws AuthenticationException;
+    }
+
+    protected void test(String subject, KeyPair keyPair, TestAuthenticator authenticator)
+            throws Exception
+    {
+        assertThat(authenticator.authenticate(generateJwt("username", ACCOUNT_ID, subject, keyPair.getPrivate()), Optional.empty()))
+                .satisfies(identity -> assertThat(identity.getUser()).isEqualTo("username"))
+                .satisfies(identity -> assertThat(identity.getPrincipal().orElseThrow().toString()).isEqualTo("galaxy:u-12345678:r-98765432"));
+
+        Date notExpired = Date.from(ZonedDateTime.now().plusMinutes(5).toInstant());
+        Date requestNotExpired = Date.from(ZonedDateTime.now().plusSeconds(60).toInstant());
+        RequestBodyHashing requestBodyHashing = new RequestBodyHashing("good", "statement_hash");
+        assertThat(authenticator.authenticate(generateJwt("username", ACCOUNT_ID, subject, keyPair.getPrivate(), notExpired, requestNotExpired, Optional.of("good")), Optional.of(requestBodyHashing)))
+                .satisfies(identity -> assertThat(identity.getUser()).isEqualTo("username"))
+                .satisfies(identity -> assertThat(identity.getPrincipal().orElseThrow().toString()).isEqualTo("galaxy:u-12345678:r-98765432"));
+
+        assertThatThrownBy(() -> authenticator.authenticate(generateJwt("username", "unknown", subject, keyPair.getPrivate()), Optional.empty()))
+                .isInstanceOf(AuthenticationException.class)
+                .satisfies(exception -> assertThat(((AuthenticationException) exception).getAuthenticateHeader()).isEqualTo(Optional.of("Galaxy")));
+
+        assertThatThrownBy(() -> authenticator.authenticate(generateJwt("username", ACCOUNT_ID, "unknown", keyPair.getPrivate()), Optional.empty()))
+                .isInstanceOf(AuthenticationException.class)
+                .satisfies(exception -> assertThat(((AuthenticationException) exception).getAuthenticateHeader()).isEqualTo(Optional.of("Galaxy")));
+
+        assertThatThrownBy(() -> authenticator.authenticate(generateJwt("username", ACCOUNT_ID, "unknown", generateKeyPair().getPrivate()), Optional.empty()))
+                .isInstanceOf(AuthenticationException.class)
+                .satisfies(exception -> assertThat(((AuthenticationException) exception).getAuthenticateHeader()).isEqualTo(Optional.of("Galaxy")));
+
+        Date expired = new Date(System.currentTimeMillis() - 1000);
+        assertThatThrownBy(() -> authenticator.authenticate(generateJwt("username", ACCOUNT_ID, subject, keyPair.getPrivate(), expired, requestNotExpired, Optional.empty()), Optional.empty()))
+                .isInstanceOf(AuthenticationException.class)
+                .satisfies(exception -> assertThat(((AuthenticationException) exception).getAuthenticateHeader()).isEqualTo(Optional.of("Galaxy")));
+
+        Date requestExpired = Date.from(ZonedDateTime.now().minusSeconds(60).toInstant());
+        assertThatThrownBy(() -> authenticator.authenticate(generateJwt("username", ACCOUNT_ID, subject, keyPair.getPrivate(), notExpired, requestExpired, Optional.of("good")), Optional.of(requestBodyHashing)))
+                .isInstanceOfSatisfying(AuthenticationException.class, exception -> assertThat(exception.getAuthenticateHeader()).isEqualTo(Optional.of("Galaxy")))
+                .isInstanceOf(AuthenticationException.class)
+                .hasMessage("Token expired");
+
+        assertThatThrownBy(() -> authenticator.authenticate(generateJwt("username", ACCOUNT_ID, subject, keyPair.getPrivate(), notExpired, requestNotExpired, Optional.of("bad")), Optional.of(requestBodyHashing)))
+                .isInstanceOf(AuthenticationException.class)
+                .hasMessage("Request body hash does not match")
+                .satisfies(exception -> assertThat(((AuthenticationException) exception).getAuthenticateHeader()).isEqualTo(Optional.of("Galaxy")));
+    }
+
+    @Test
+    public void testParseClaimsWithoutValidation()
+    {
+        Optional<String> claims = parseClaimsWithoutValidation(
+                "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+                        "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ." +
+                        "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c");
+        assertThat(claims).contains("{sub=1234567890, name=John Doe, iat=1516239022}");
+    }
+
+    static KeyPair generateKeyPair()
+            throws NoSuchAlgorithmException
+    {
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+        generator.initialize(4096);
+        return generator.generateKeyPair();
+    }
+
+    private static String generateJwt(String username, String accountId, String subject, PrivateKey privateKey)
+    {
+        return generateJwt(username, accountId, subject, privateKey, Date.from(ZonedDateTime.now().plusMinutes(5).toInstant()), Date.from(ZonedDateTime.now().plusSeconds(60).toInstant()), Optional.empty());
+    }
+
+    private static String generateJwt(String username, String accountId, String deploymentId, PrivateKey privateKey, Date expiration, Date requestExpiration, Optional<String> statementHash)
+    {
+        return newJwtBuilder()
+                .signWith(privateKey)
+                .setIssuer(TOKEN_ISSUER)
+                .setAudience(accountId)
+                .setSubject(deploymentId)
+                .setExpiration(expiration)
+                .claim("username", username)
+                .claim("user_id", "u-12345678")
+                .claim("role_id", "r-98765432")
+                .claim("role_name", "roletest")
+                .claim(REQUEST_EXPIRATION_CLAIM, requestExpiration)
+                .claim("statement_hash", statementHash.orElse(null))
+                .compact();
+    }
+}
