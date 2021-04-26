@@ -1,3 +1,13 @@
+---
+---
+---
+
+# Temporary staging area for Galaxy changes to Trino
+
+---
+---
+---
+
 <p align="center">
     <a href="https://trino.io/"><img alt="Trino Logo" src=".github/homepage.png" /></a>
 </p>
