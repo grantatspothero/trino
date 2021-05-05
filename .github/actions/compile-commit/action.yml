@@ -35,7 +35,12 @@ runs:
         # It's important that these values are NOT passed as parameters, because then their values would always be taken from PR HEAD
         # -------
         # allow overriding Maven command
-        export MAVEN="./mvnw"
+        # The settings.xml is not added in the first commit of the fork. The action code is taken from the tip of the PR, so it needs to support the case where it didn't exist yet.
+        if test -f .github/settings.xml; then
+          export MAVEN="./mvnw -s .github/settings.xml"
+        else
+          export MAVEN="./mvnw"
+        fi
         # maven.wagon.rto is in millis, defaults to 30m
         MAVEN_INSTALL_OPTS="-Xmx3G -XX:+ExitOnOutOfMemoryError -Dmaven.wagon.rto=60000"
         MAVEN_COMPILE_COMMITS="-B --strict-checksums --quiet -T C1 -DskipTests -Dmaven.source.skip=true -Dair.check.skip-all=true -Dmaven.javadoc.skip=true --no-snapshot-updates --no-transfer-progress -pl !:trino-server-rpm"

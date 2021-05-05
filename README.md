@@ -4,6 +4,12 @@
 
 # Temporary staging area for Galaxy changes to Trino
 
+## How to build this project?
+
+You will need to use settings.xml file with credentials for AWS CodeArtifact.
+
+Use one either from [Galaxy](https://github.com/starburstdata/stargate) or [SEP](https://github.com/starburstdata/starburst-enterprise) repository.
+
 ---
 ---
 ---

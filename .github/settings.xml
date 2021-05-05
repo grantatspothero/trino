@@ -1,0 +1,28 @@
+<settings>
+    <servers>
+        <server>
+            <id>starburstdata-sep.snapshots</id>
+            <username>${env.mavenSnapshotsUsername}</username>
+            <password>${env.mavenSnapshotsPassword}</password>
+            <configuration>
+                <httpConfiguration>
+                    <all>
+                        <usePreemptive>true</usePreemptive>
+                    </all>
+                </httpConfiguration>
+            </configuration>
+        </server>
+        <server>
+            <id>starburstdata-sep.releases</id>
+            <username>${env.mavenReleaseUsername}</username>
+            <password>${env.mavenReleasePassword}</password>
+            <configuration>
+                <httpConfiguration>
+                    <all>
+                        <usePreemptive>true</usePreemptive>
+                    </all>
+                </httpConfiguration>
+            </configuration>
+        </server>
+    </servers>
+</settings>
