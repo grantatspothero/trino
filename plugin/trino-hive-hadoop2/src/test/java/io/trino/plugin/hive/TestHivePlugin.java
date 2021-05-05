@@ -120,12 +120,36 @@ public class TestHivePlugin
         ConnectorFactory factory = getHiveConnectorFactory();
 
         factory.create(
+                        "test",
+                        ImmutableMap.of(
+                                "hive.metastore", "alluxio-deprecated",
+                                "hive.metastore.alluxio.master.address", "dummy:1234"),
+                        new TestingConnectorContext())
+                .shutdown();
+    }
+
+    @Test
+    public void testGalaxyMetastore()
+    {
+        ConnectorFactory factory = getHiveConnectorFactory();
+
+        factory.create(
                 "test",
                 ImmutableMap.of(
-                        "hive.metastore", "alluxio-deprecated",
-                        "hive.metastore.alluxio.master.address", "dummy:1234"),
-                new TestingConnectorContext())
-                .shutdown();
+                        "hive.metastore", "galaxy",
+                        "galaxy.metastore.metastore-id", "ms-1234567890",
+                        "galaxy.metastore.shared-secret", "1234567890123456789012345678901234567890123456789012345678901234",
+                        "galaxy.metastore.server-uri", "https://example.com",
+                        "galaxy.metastore.default-data-dir", "/tmp"),
+                new TestingConnectorContext());
+
+        assertThatThrownBy(() -> factory.create(
+                "test",
+                ImmutableMap.of(
+                        "hive.metastore", "glue",
+                        "hive.metastore.uri", "thrift://foo:1234"),
+                new TestingConnectorContext()))
+                .hasMessageContaining("Error: Configuration property 'hive.metastore.uri' was not used");
     }
 
     @Test

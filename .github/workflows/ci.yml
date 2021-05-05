@@ -21,6 +21,9 @@ env:
   mavenReleasePassword: ${{ secrets.CODE_ARTIFACT_PASSWORD }}
   mavenSnapshotsUsername: ${{ secrets.CODE_ARTIFACT_USERNAME }}
   mavenSnapshotsPassword: ${{ secrets.CODE_ARTIFACT_PASSWORD }}
+  # certificates for Galaxy metastore
+  GALAXY_SERVICE_PEM: ${{ secrets.GALAXY_SERVICE_PEM }}
+  GALAXY_PORTAL_PEM: ${{ secrets.GALAXY_PORTAL_PEM }}
   # An envar that signals to tests we are executing in the CI environment
   CONTINUOUS_INTEGRATION: true
   # allow overriding Maven command
@@ -579,6 +582,7 @@ jobs:
             - { modules: plugin/trino-delta-lake, profile: gcs-tests }
             - { modules: plugin/trino-elasticsearch }
             - { modules: plugin/trino-hive }
+            - { modules: plugin/trino-hive, profile: test-galaxy }
             - { modules: plugin/trino-hive, profile: test-parquet }
             - { modules: plugin/trino-hudi }
             - { modules: plugin/trino-iceberg }

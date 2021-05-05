@@ -1,0 +1,109 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.trino.server.galaxy;
+
+import com.google.common.collect.ImmutableList;
+import io.airlift.log.Logger;
+import io.trino.testing.containers.galaxy.ExtendedCockroachContainer;
+import org.testcontainers.containers.CockroachContainer;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.Network;
+import org.testcontainers.containers.startupcheck.OneShotStartupCheckStrategy;
+
+import java.io.Closeable;
+import java.io.IOException;
+
+import static io.trino.server.galaxy.GalaxyImageConstants.STARGATE_DOCKER_REPO;
+import static io.trino.server.galaxy.GalaxyImageConstants.STARGATE_IMAGE_TAG;
+import static java.time.Duration.ofMinutes;
+
+public class GalaxyCockroachContainer
+        implements Closeable
+{
+    private static final Logger log = Logger.get(GalaxyCockroachContainer.class);
+
+    private static final String MIGRATION_IMAGE = STARGATE_DOCKER_REPO + "migration-tool:" + STARGATE_IMAGE_TAG;
+
+    private CockroachContainer cockroach;
+    private Network network;
+
+    public GalaxyCockroachContainer()
+    {
+        try {
+            log.info("");
+            log.info("Starting Cockroach");
+            network = Network.newNetwork();
+            cockroach = new ExtendedCockroachContainer();
+            cockroach.setNetwork(network);
+            cockroach.setNetworkAliases(ImmutableList.of("cockroach"));
+            cockroach.start();
+
+            log.info("");
+            log.info("Running Database Migration");
+            GenericContainer<?> migration = new GenericContainer<>(MIGRATION_IMAGE);
+            migration.setNetwork(network);
+            migration.addEnv("DB_PASSWORD", cockroach.getPassword());
+            migration.setCommand(
+                    "--url", "jdbc:postgresql://cockroach:26257/postgres",
+                    "--user", cockroach.getUsername());
+            migration.withStartupCheckStrategy(new OneShotStartupCheckStrategy().withTimeout(ofMinutes(2)));
+            migration.start();
+            migration.stop();
+        }
+        catch (Throwable t) {
+            log.error(t, "Failed to start Galaxy Cockroach container");
+            try {
+                close();
+            }
+            catch (IOException e) {
+                log.error(e, "Failed to clean up cockroach docker resources");
+            }
+            throw t;
+        }
+    }
+
+    public Network getNetwork()
+    {
+        return network;
+    }
+
+    public String getUsername()
+    {
+        return cockroach.getUsername();
+    }
+
+    public String getPassword()
+    {
+        return cockroach.getPassword();
+    }
+
+    public String getJdbcUrl()
+    {
+        return cockroach.getJdbcUrl();
+    }
+
+    @Override
+    public void close()
+            throws IOException
+    {
+        if (cockroach != null) {
+            cockroach.close();
+            cockroach = null;
+        }
+        if (network != null) {
+            network.close();
+            network = null;
+        }
+    }
+}

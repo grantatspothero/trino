@@ -22,6 +22,7 @@ import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.plugin.hive.AllowHiveTableRename;
 import io.trino.plugin.hive.HideDeltaLakeTables;
 import io.trino.plugin.hive.metastore.file.FileMetastoreModule;
+import io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreModule;
 import io.trino.plugin.hive.metastore.glue.GlueMetastoreModule;
 import io.trino.plugin.hive.metastore.thrift.ThriftMetastoreModule;
 
@@ -54,6 +55,7 @@ public class HiveMetastoreModule
             // and allows deploying Trino without the Alluxio jar. Can be useful if the integration is unused and is flagged
             // by a security scanner.
             bindMetastoreModule("alluxio-deprecated", deferredModule("io.trino.plugin.hive.metastore.alluxio.AlluxioMetastoreModule"));
+            bindMetastoreModule("galaxy", new GalaxyMetastoreModule());
         }
 
         install(new DecoratedHiveMetastoreModule());
