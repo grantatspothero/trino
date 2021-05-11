@@ -580,6 +580,14 @@ jobs:
     env:
       SECRETS_PRESENT: ${{ secrets.SECRETS_PRESENT }}
     steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.PROD_AWS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Login to the ECR Docker Registry
+        uses: aws-actions/amazon-ecr-login@v1
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # checkout all commits to be able to determine merge base for GIB
