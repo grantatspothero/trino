@@ -31,7 +31,7 @@ public class TestNodeMemoryConfig
     public void testDefaults()
     {
         assertRecordedDefaults(recordDefaults(NodeMemoryConfig.class)
-                .setMaxQueryMemoryPerNode(DataSize.ofBytes(Math.round(AVAILABLE_HEAP_MEMORY * 0.3)))
+                .setMaxQueryMemoryPerNode(DataSize.ofBytes(Math.round(AVAILABLE_HEAP_MEMORY * 0.7)))
                 .setHeapHeadroom(DataSize.ofBytes(Math.round(AVAILABLE_HEAP_MEMORY * 0.3))));
     }
 

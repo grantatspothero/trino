@@ -25,6 +25,7 @@ import java.util.Map;
 import static io.airlift.configuration.testing.ConfigAssertions.assertFullMapping;
 import static io.airlift.configuration.testing.ConfigAssertions.assertRecordedDefaults;
 import static io.airlift.configuration.testing.ConfigAssertions.recordDefaults;
+import static io.airlift.units.DataSize.Unit.BYTE;
 import static io.airlift.units.DataSize.Unit.GIGABYTE;
 import static io.airlift.units.DataSize.Unit.MEGABYTE;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -39,8 +40,8 @@ public class TestMemoryManagerConfig
                 .setLowMemoryQueryKillerPolicy(LowMemoryQueryKillerPolicy.TOTAL_RESERVATION_ON_BLOCKED_NODES)
                 .setLowMemoryTaskKillerPolicy(LowMemoryTaskKillerPolicy.TOTAL_RESERVATION_ON_BLOCKED_NODES)
                 .setKillOnOutOfMemoryDelay(new Duration(5, MINUTES))
-                .setMaxQueryMemory(DataSize.of(20, GIGABYTE))
-                .setMaxQueryTotalMemory(DataSize.of(40, GIGABYTE))
+                .setMaxQueryMemory(DataSize.of(Long.MAX_VALUE, BYTE))
+                .setMaxQueryTotalMemory(DataSize.of(Long.MAX_VALUE, BYTE))
                 .setFaultTolerantExecutionCoordinatorTaskMemory(DataSize.of(2, GIGABYTE))
                 .setFaultTolerantExecutionTaskMemory(DataSize.of(5, GIGABYTE))
                 .setFaultTolerantExecutionTaskRuntimeMemoryEstimationOverhead(DataSize.of(1, GIGABYTE))

@@ -215,7 +215,7 @@ public class TestMemoryManager
         }
     }
 
-    @Test(timeOut = 240_000)
+    @Test(timeOut = 240_000, enabled = false)
     public void testClusterPools()
             throws Exception
     {

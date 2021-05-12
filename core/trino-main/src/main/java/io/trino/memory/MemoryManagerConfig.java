@@ -21,9 +21,10 @@ import io.airlift.units.Duration;
 
 import javax.validation.constraints.NotNull;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
+import static io.airlift.units.DataSize.Unit.BYTE;
 import static io.airlift.units.DataSize.Unit.GIGABYTE;
-import static io.airlift.units.DataSize.succinctBytes;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -35,7 +36,7 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 public class MemoryManagerConfig
 {
     // enforced against user memory allocations
-    private DataSize maxQueryMemory = DataSize.of(20, GIGABYTE);
+    private DataSize maxQueryMemory = DataSize.of(Long.MAX_VALUE, BYTE);
     // enforced against user + system memory allocations (default is maxQueryMemory * 2)
     private DataSize maxQueryTotalMemory;
     private DataSize faultTolerantExecutionCoordinatorTaskMemory = DataSize.of(2, GIGABYTE);
@@ -106,10 +107,7 @@ public class MemoryManagerConfig
     @NotNull
     public DataSize getMaxQueryTotalMemory()
     {
-        if (maxQueryTotalMemory == null) {
-            return succinctBytes(maxQueryMemory.toBytes() * 2);
-        }
-        return maxQueryTotalMemory;
+        return firstNonNull(maxQueryTotalMemory, maxQueryMemory);
     }
 
     @Config("query.max-total-memory")
