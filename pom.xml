@@ -2390,7 +2390,7 @@
                         <version>4.1.1</version>
                         <extensions>true</extensions>
                         <configuration>
-                            <disableIfBranchMatches>master</disableIfBranchMatches>
+                            <disableIfBranchMatches>galaxy.*</disableIfBranchMatches>
                             <compareToMergeBase>true</compareToMergeBase>
                             <uncommitted>true</uncommitted>
                             <untracked>true</untracked>

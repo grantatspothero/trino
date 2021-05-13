@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - galaxy*
   pull_request:
     paths-ignore:
       - 'docs/**'
