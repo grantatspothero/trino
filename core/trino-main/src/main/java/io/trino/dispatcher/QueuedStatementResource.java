@@ -33,6 +33,7 @@ import io.trino.server.HttpRequestSessionContextFactory;
 import io.trino.server.ProtocolConfig;
 import io.trino.server.ServerConfig;
 import io.trino.server.SessionContext;
+import io.trino.server.StartupStatus;
 import io.trino.server.protocol.QueryInfoUrlFactory;
 import io.trino.server.protocol.Slug;
 import io.trino.server.security.InternalPrincipal;
@@ -123,6 +124,7 @@ import static javax.ws.rs.core.Response.Status.GONE;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 import static javax.ws.rs.core.Response.Status.OK;
 import static javax.ws.rs.core.Response.Status.PRECONDITION_FAILED;
+import static javax.ws.rs.core.Response.Status.SERVICE_UNAVAILABLE;
 
 @Path("/v1/statement")
 public class QueuedStatementResource
@@ -143,6 +145,7 @@ public class QueuedStatementResource
     private final boolean compressionEnabled;
     private final Optional<String> alternateHeaderName;
     private final QueryManager queryManager;
+    private final StartupStatus startupStatus;
 
     @Inject
     public QueuedStatementResource(
@@ -150,6 +153,7 @@ public class QueuedStatementResource
             DispatchManager dispatchManager,
             DispatchExecutor executor,
             QueryInfoUrlFactory queryInfoUrlTemplate,
+            StartupStatus startupStatus,
             ServerConfig serverConfig,
             ProtocolConfig protocolConfig,
             QueryManagerConfig queryManagerConfig)
@@ -159,6 +163,7 @@ public class QueuedStatementResource
         this.responseExecutor = executor.getExecutor();
         this.timeoutExecutor = executor.getScheduledExecutor();
         this.queryInfoUrlFactory = requireNonNull(queryInfoUrlTemplate, "queryInfoUrlTemplate is null");
+        this.startupStatus = requireNonNull(startupStatus, "startupStatus is null");
         this.compressionEnabled = serverConfig.isQueryResultsCompressionEnabled();
         this.alternateHeaderName = protocolConfig.getAlternateHeaderName();
         queryManager = new QueryManager(queryManagerConfig.getClientTimeout());
@@ -191,6 +196,38 @@ public class QueuedStatementResource
 
         Query query = registerQueryIfNeeded(servletRequest, httpHeaders, sessionContext ->
                 new Query(statement, sessionContext, dispatchManager, queryInfoUrlFactory));
+
+        return createQueryResultsResponse(query.getQueryResults(query.getLastToken(), uriInfo));
+    }
+
+    @ResourceSecurity(AUTHENTICATED_USER)
+    @PUT
+    @Path("queued/{queryId}/{slug}")
+    @Produces(APPLICATION_JSON)
+    public Response putStatement(
+            @PathParam("queryId") QueryId queryId,
+            @PathParam("slug") String slug,
+            String statement,
+            @Context HttpServletRequest servletRequest,
+            @Context HttpHeaders httpHeaders,
+            @Context UriInfo uriInfo)
+    {
+        if (isNullOrEmpty(statement)) {
+            throw badRequest(BAD_REQUEST, "SQL statement is empty");
+        }
+        if (isNullOrEmpty(slug)) {
+            throw badRequest(BAD_REQUEST, "Slug is empty");
+        }
+        if (!startupStatus.isStartupComplete()) {
+            throw badRequest(SERVICE_UNAVAILABLE, "Trino server is still initializing");
+        }
+
+        Query query = registerQueryIfNeeded(servletRequest, httpHeaders, sessionContext ->
+                new Query(statement, queryId, Optional.of(slug), sessionContext, dispatchManager, queryInfoUrlFactory));
+
+        if (!query.getSubmitSlug().equals(Optional.of(slug)) || (query.getLastToken() != 0)) {
+            throw badRequest(CONFLICT, "Conflict with existing query");
+        }
 
         return createQueryResultsResponse(query.getQueryResults(query.getLastToken(), uriInfo));
     }
@@ -395,6 +432,7 @@ public class QueuedStatementResource
         private final QueryId queryId;
         private final Optional<URI> queryInfoUrl;
         private final Slug slug = Slug.createNew();
+        private final Optional<String> submitSlug;
         private final AtomicLong lastToken = new AtomicLong();
 
         private final long initTime = System.nanoTime();
@@ -404,10 +442,22 @@ public class QueuedStatementResource
 
         public Query(String query, SessionContext sessionContext, DispatchManager dispatchManager, QueryInfoUrlFactory queryInfoUrlFactory)
         {
+            this(query, dispatchManager.createQueryId(), Optional.empty(), sessionContext, dispatchManager, queryInfoUrlFactory);
+        }
+
+        public Query(
+                String query,
+                QueryId queryId,
+                Optional<String> submitSlug,
+                SessionContext sessionContext,
+                DispatchManager dispatchManager,
+                QueryInfoUrlFactory queryInfoUrlFactory)
+        {
             this.query = requireNonNull(query, "query is null");
             this.sessionContext = requireNonNull(sessionContext, "sessionContext is null");
             this.dispatchManager = requireNonNull(dispatchManager, "dispatchManager is null");
-            this.queryId = dispatchManager.createQueryId();
+            this.queryId = requireNonNull(queryId, "queryId is null");
+            this.submitSlug = requireNonNull(submitSlug, "submitSlug is null");
             requireNonNull(queryInfoUrlFactory, "queryInfoUrlFactory is null");
             this.queryInfoUrl = queryInfoUrlFactory.getQueryInfoUrl(queryId);
             completionFuture = nonCancellationPropagating(transformAsync(
@@ -424,6 +474,11 @@ public class QueuedStatementResource
         public Slug getSlug()
         {
             return slug;
+        }
+
+        public Optional<String> getSubmitSlug()
+        {
+            return submitSlug;
         }
 
         public long getLastToken()
