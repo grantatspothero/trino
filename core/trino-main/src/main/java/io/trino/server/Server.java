@@ -55,6 +55,9 @@ import io.trino.metadata.CatalogManager;
 import io.trino.security.AccessControlManager;
 import io.trino.security.AccessControlModule;
 import io.trino.security.GroupProviderManager;
+import io.trino.server.galaxy.GalaxyConfig;
+import io.trino.server.galaxy.GalaxyCorsModule;
+import io.trino.server.galaxy.GalaxyEnabledConfig;
 import io.trino.server.security.CertificateAuthenticatorManager;
 import io.trino.server.security.HeaderAuthenticatorManager;
 import io.trino.server.security.PasswordAuthenticatorManager;
@@ -74,6 +77,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static io.airlift.configuration.ConditionalModule.conditionalModule;
+import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.airlift.discovery.client.ServiceAnnouncement.ServiceAnnouncementBuilder;
 import static io.airlift.discovery.client.ServiceAnnouncement.serviceAnnouncement;
 import static io.trino.server.TrinoSystemRequirements.verifyJvmRequirements;
@@ -122,6 +127,8 @@ public class Server
                 new CatalogManagerModule(),
                 new TransactionManagerModule(),
                 new ServerMainModule(trinoVersion),
+                conditionalModule(GalaxyEnabledConfig.class, GalaxyEnabledConfig::isGalaxyEnabled, binder -> configBinder(binder).bindConfig(GalaxyConfig.class)),
+                conditionalModule(GalaxyEnabledConfig.class, GalaxyEnabledConfig::isGalaxyCorsEnabled, new GalaxyCorsModule()),
                 new GracefulShutdownModule(),
                 new WarningCollectorModule());
 
