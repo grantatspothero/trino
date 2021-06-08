@@ -23,15 +23,14 @@ import static io.airlift.configuration.testing.ConfigAssertions.assertFullMappin
 import static io.airlift.configuration.testing.ConfigAssertions.assertRecordedDefaults;
 import static io.airlift.configuration.testing.ConfigAssertions.recordDefaults;
 
-public class TestGalaxyEnabledConfig
+public class TestGalaxyOperatorAuthenticationConfig
 {
     @Test
     public void testDefaults()
     {
-        assertRecordedDefaults(recordDefaults(GalaxyEnabledConfig.class)
-                .setGalaxyEnabled(false)
-                .setGalaxyCorsEnabled(false)
-                .setGalaxyOperatorAuthenticationEnabled(false));
+        assertRecordedDefaults(recordDefaults(GalaxyOperatorAuthenticationConfig.class)
+                .setOperatorTokenIssuer(null)
+                .setOperatorSharedSecret(null));
     }
 
     @Test
@@ -39,15 +38,13 @@ public class TestGalaxyEnabledConfig
             throws IOException
     {
         Map<String, String> properties = ImmutableMap.<String, String>builder()
-                .put("galaxy.enabled", "true")
-                .put("galaxy.cors.enabled", "true")
-                .put("galaxy.operator.enabled", "true")
+                .put("galaxy.operator.token-issuer", "https://issuer.example.com")
+                .put("galaxy.operator.shared-secret", "0123456789ABCDEF")
                 .buildOrThrow();
 
-        GalaxyEnabledConfig expected = new GalaxyEnabledConfig()
-                .setGalaxyEnabled(true)
-                .setGalaxyCorsEnabled(true)
-                .setGalaxyOperatorAuthenticationEnabled(true);
+        GalaxyOperatorAuthenticationConfig expected = new GalaxyOperatorAuthenticationConfig()
+                .setOperatorTokenIssuer("https://issuer.example.com")
+                .setOperatorSharedSecret("0123456789ABCDEF");
 
         assertFullMapping(properties, expected);
     }

@@ -13,13 +13,16 @@
  */
 package io.trino.dispatcher;
 
+import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FluentFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import io.airlift.log.Logger;
 import io.airlift.units.Duration;
+import io.trino.client.DrainState;
 import io.trino.client.QueryError;
 import io.trino.client.QueryResults;
 import io.trino.client.StatementStats;
@@ -36,17 +39,21 @@ import io.trino.server.security.InternalPrincipal;
 import io.trino.server.security.ResourceSecurity;
 import io.trino.spi.ErrorCode;
 import io.trino.spi.QueryId;
+import io.trino.spi.TrinoException;
 import io.trino.spi.security.Identity;
 
 import javax.annotation.Nullable;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -63,24 +70,35 @@ import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
 import java.net.URI;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
-import static com.clearspring.analytics.util.Preconditions.checkState;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.common.base.Verify.verify;
+import static com.google.common.collect.Comparators.max;
+import static com.google.common.collect.Comparators.min;
 import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
 import static com.google.common.util.concurrent.Futures.nonCancellationPropagating;
 import static com.google.common.util.concurrent.Futures.transformAsync;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.airlift.jaxrs.AsyncResponseHandler.bindAsyncResponse;
+import static io.trino.client.DrainState.CLUSTER_START_TIME_HEADER;
+import static io.trino.client.DrainState.IF_IDLE_FOR_HEADER;
 import static io.trino.execution.QueryState.FAILED;
 import static io.trino.execution.QueryState.QUEUED;
 import static io.trino.server.HttpRequestSessionContextFactory.AUTHENTICATED_IDENTITY;
@@ -90,6 +108,8 @@ import static io.trino.server.protocol.Slug.Context.QUEUED_QUERY;
 import static io.trino.server.security.ResourceSecurity.AccessType.AUTHENTICATED_USER;
 import static io.trino.server.security.ResourceSecurity.AccessType.PUBLIC;
 import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
+import static io.trino.spi.StandardErrorCode.SERVER_SHUTTING_DOWN;
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -97,8 +117,12 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN_TYPE;
 import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
+import static javax.ws.rs.core.Response.Status.CONFLICT;
 import static javax.ws.rs.core.Response.Status.FORBIDDEN;
+import static javax.ws.rs.core.Response.Status.GONE;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
+import static javax.ws.rs.core.Response.Status.OK;
+import static javax.ws.rs.core.Response.Status.PRECONDITION_FAILED;
 
 @Path("/v1/statement")
 public class QueuedStatementResource
@@ -165,12 +189,13 @@ public class QueuedStatementResource
             throw badRequest(BAD_REQUEST, "SQL statement is empty");
         }
 
-        Query query = registerQuery(statement, servletRequest, httpHeaders);
+        Query query = registerQueryIfNeeded(servletRequest, httpHeaders, sessionContext ->
+                new Query(statement, sessionContext, dispatchManager, queryInfoUrlFactory));
 
         return createQueryResultsResponse(query.getQueryResults(query.getLastToken(), uriInfo));
     }
 
-    private Query registerQuery(String statement, HttpServletRequest servletRequest, HttpHeaders httpHeaders)
+    private Query registerQueryIfNeeded(HttpServletRequest servletRequest, HttpHeaders httpHeaders, Function<SessionContext, Query> queryFactory)
     {
         Optional<String> remoteAddress = Optional.ofNullable(servletRequest.getRemoteAddr());
         Optional<Identity> identity = Optional.ofNullable((Identity) servletRequest.getAttribute(AUTHENTICATED_IDENTITY));
@@ -181,13 +206,73 @@ public class QueuedStatementResource
         MultivaluedMap<String, String> headers = httpHeaders.getRequestHeaders();
 
         SessionContext sessionContext = sessionContextFactory.createSessionContext(headers, alternateHeaderName, remoteAddress, identity);
-        Query query = new Query(statement, sessionContext, dispatchManager, queryInfoUrlFactory);
-        queryManager.registerQuery(query);
+        Query query = queryManager.registerQuery(() -> queryFactory.apply(sessionContext))
+                .orElseThrow(() -> badRequest(GONE, "Server is shutting down"));
 
         // let authentication filter know that identity lifecycle has been handed off
         servletRequest.setAttribute(AUTHENTICATED_IDENTITY, null);
 
         return query;
+    }
+
+    @ResourceSecurity(PUBLIC)
+    @GET
+    @Path("drainState")
+    @Produces(APPLICATION_JSON)
+    public DrainState getDrainState()
+    {
+        return queryManager.getDrainState();
+    }
+
+    @ResourceSecurity(PUBLIC)
+    @PUT
+    @Path("drainState")
+    @Consumes(APPLICATION_JSON)
+    public Response putDrainState(DrainState drainState, @Context HttpHeaders httpHeaders)
+    {
+        DrainState.Type type = drainState.getType();
+        Optional<Duration> maxDrainTime = drainState.getMaxDrainTime();
+
+        switch (type) {
+            case UNDRAINED:
+                return Response.status(queryManager.isDrainStarted() ? CONFLICT : OK).build();
+            case DRAINING:
+                return Response.status(queryManager.trySetDraining(maxDrainTime) ? OK : CONFLICT).build();
+            case DRAINED:
+                Optional<Duration> ifIdleFor = extractIfIdleFor(httpHeaders);
+                Optional<Instant> clusterStartTime = extractClusterStartTime(httpHeaders);
+                return Response.status(queryManager.trySetDrained(ifIdleFor, clusterStartTime) ? OK : PRECONDITION_FAILED).build();
+            default:
+                throw new VerifyException("Unknown drain state type: " + type);
+        }
+    }
+
+    private static Optional<Duration> extractIfIdleFor(HttpHeaders httpHeaders)
+    {
+        String headerString = httpHeaders.getHeaderString(IF_IDLE_FOR_HEADER);
+        if (isNullOrEmpty(headerString)) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(Duration.valueOf(headerString));
+        }
+        catch (IllegalArgumentException e) {
+            throw badRequest(BAD_REQUEST, format("Invalid %s header value", IF_IDLE_FOR_HEADER));
+        }
+    }
+
+    private static Optional<Instant> extractClusterStartTime(HttpHeaders httpHeaders)
+    {
+        String headerString = httpHeaders.getHeaderString(CLUSTER_START_TIME_HEADER);
+        if (isNullOrEmpty(headerString)) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(Instant.parse(headerString));
+        }
+        catch (DateTimeParseException e) {
+            throw badRequest(BAD_REQUEST, format("Invalid %s header value", CLUSTER_START_TIME_HEADER));
+        }
     }
 
     @ResourceSecurity(PUBLIC)
@@ -415,6 +500,13 @@ public class QueuedStatementResource
             creationFuture.addListener(() -> dispatchManager.cancelQuery(queryId), directExecutor());
         }
 
+        public void failOrAbandon(Throwable cause)
+        {
+            creationFuture.addListener(() -> dispatchManager.failQuery(queryId, cause), directExecutor());
+            // Abandon the submission if it has not occurred yet
+            submissionGate.compareAndSet(null, false);
+        }
+
         public void destroy()
         {
             sessionContext.getIdentity().destroy();
@@ -485,10 +577,24 @@ public class QueuedStatementResource
     @ThreadSafe
     private static class QueryManager
     {
+        private static final Duration QUERY_LINGER_TIME = new Duration(30, TimeUnit.SECONDS);
+
         private final ConcurrentMap<QueryId, Query> queries = new ConcurrentHashMap<>();
+        private final Set<QueryId> activeQueries = Sets.newConcurrentHashSet();
+        private final AtomicReference<Long> coordinatorIdleStartNanos = new AtomicReference<>(System.nanoTime());
+        private final SettableFuture<Void> idleAfterDrainingFuture = SettableFuture.create();
         private final ScheduledExecutorService scheduledExecutorService = newSingleThreadScheduledExecutor(daemonThreadsNamed("drain-state-query-manager"));
 
         private final Duration querySubmissionTimeout;
+
+        @GuardedBy("this")
+        private boolean drainStarted;
+
+        @GuardedBy("this")
+        private boolean drainCompleted;
+
+        @GuardedBy("this")
+        private Optional<DrainTimeoutTask> drainTimeoutTask = Optional.empty();
 
         public QueryManager(Duration querySubmissionTimeout)
         {
@@ -508,10 +614,16 @@ public class QueuedStatementResource
         private void syncWith(DispatchManager dispatchManager)
         {
             queries.forEach((queryId, query) -> {
+                if (query.getCompletionFuture().isDone()) {
+                    activeQueries.remove(queryId);
+                }
+
                 if (shouldBePurged(dispatchManager, query)) {
                     removeQuery(queryId);
                 }
             });
+
+            updateIdlenessState();
         }
 
         private boolean shouldBePurged(DispatchManager dispatchManager, Query query)
@@ -533,6 +645,7 @@ public class QueuedStatementResource
 
         private void removeQuery(QueryId queryId)
         {
+            activeQueries.remove(queryId);
             Optional.ofNullable(queries.remove(queryId))
                     .ifPresent(QueryManager::destroyQuietly);
         }
@@ -547,16 +660,199 @@ public class QueuedStatementResource
             }
         }
 
-        public void registerQuery(Query query)
+        public synchronized Optional<Query> registerQuery(Supplier<Query> queryFactory)
         {
-            Query existingQuery = queries.putIfAbsent(query.getQueryId(), query);
-            checkState(existingQuery == null, "Query already registered");
+            if (drainStarted) {
+                return Optional.empty();
+            }
+
+            Query newQuery = queryFactory.get();
+            Query existingQuery = queries.putIfAbsent(newQuery.getQueryId(), newQuery);
+
+            if (existingQuery != null) {
+                // Query already registered
+                destroyQuietly(newQuery);
+                return Optional.of(existingQuery);
+            }
+
+            // Only update active queries if this is a new query
+            activeQueries.add(newQuery.getQueryId());
+            updateIdlenessState();
+            return Optional.of(newQuery);
+        }
+
+        private synchronized void updateIdlenessState()
+        {
+            if (activeQueries.isEmpty()) {
+                coordinatorIdleStartNanos.compareAndSet(null, System.nanoTime());
+                if (drainStarted) {
+                    idleAfterDrainingFuture.set(null);
+                }
+            }
+            else {
+                verify(!idleAfterDrainingFuture.isDone());
+                verify(!drainCompleted);
+                coordinatorIdleStartNanos.set(null);
+            }
         }
 
         @Nullable
         public Query getQuery(QueryId queryId)
         {
             return queries.get(queryId);
+        }
+
+        public synchronized boolean isDrainStarted()
+        {
+            return drainStarted;
+        }
+
+        public synchronized boolean isDrainCompleted()
+        {
+            return drainCompleted;
+        }
+
+        public synchronized DrainState getDrainState()
+        {
+            return new DrainState(getDrainStateType(), drainTimeoutTask.map(DrainTimeoutTask::getMaxDrainTime));
+        }
+
+        @GuardedBy("this")
+        private DrainState.Type getDrainStateType()
+        {
+            verify(Thread.holdsLock(this));
+            if (drainCompleted) {
+                return DrainState.Type.DRAINED;
+            }
+            if (drainStarted) {
+                return DrainState.Type.DRAINING;
+            }
+            return DrainState.Type.UNDRAINED;
+        }
+
+        public synchronized boolean trySetDraining(Optional<Duration> maxDrainTime)
+        {
+            if (drainCompleted) {
+                // Already drained
+                return false;
+            }
+
+            if (!drainStarted) {
+                drainStarted = true;
+                updateIdlenessState();
+
+                // Schedule a delay of QUERY_LINGER_TIME idle time before drainCompleted
+                idleAfterDrainingFuture.addListener(
+                        () -> scheduledExecutorService.schedule(
+                                this::markDrainingCompleted,
+                                Math.max(QUERY_LINGER_TIME.toMillis() - getCoordinatorIdleTime().orElseThrow().toMillis(), 0),
+                                TimeUnit.MILLISECONDS),
+                        directExecutor());
+            }
+
+            updateDrainTimeoutTask(maxDrainTime);
+            return true;
+        }
+
+        private synchronized void markDrainingCompleted()
+        {
+            drainCompleted = true;
+        }
+
+        @GuardedBy("this")
+        private void updateDrainTimeoutTask(Optional<Duration> maxDrainTime)
+        {
+            verify(Thread.holdsLock(this));
+
+            // Check if update is needed by matching parameters
+            if (maxDrainTime.equals(drainTimeoutTask.map(DrainTimeoutTask::getMaxDrainTime))) {
+                return;
+            }
+
+            drainTimeoutTask.ifPresent(timeoutTask -> timeoutTask.getFuture().cancel(true));
+
+            if (maxDrainTime.isEmpty()) {
+                // No timeout requested
+                drainTimeoutTask = Optional.empty();
+                return;
+            }
+
+            long nowNanos = System.nanoTime();
+            long startTimeNanos = drainTimeoutTask.map(DrainTimeoutTask::getStartTimeNanos).orElse(nowNanos);
+            long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(nowNanos - startTimeNanos);
+            long remainingMillis = Math.max(maxDrainTime.get().toMillis() - elapsedMillis, 0);
+
+            // Schedule a job to fail all queries after the specified timeout
+            Future<?> future = scheduledExecutorService.schedule(
+                    () -> queries.values().forEach(
+                            query -> query.failOrAbandon(new TrinoException(SERVER_SHUTTING_DOWN, "Server is shutting down. Query " + query.getQueryId() + " has been cancelled"))),
+                    remainingMillis,
+                    TimeUnit.MILLISECONDS);
+            drainTimeoutTask = Optional.of(new DrainTimeoutTask(startTimeNanos, maxDrainTime.get(), future));
+        }
+
+        public synchronized boolean trySetDrained(Optional<Duration> ifIdleFor, Optional<Instant> clusterStartTime)
+        {
+            if (drainCompleted) {
+                return true;
+            }
+            Optional<Duration> coordinatorIdleTime = getCoordinatorIdleTime();
+            if (coordinatorIdleTime.isEmpty()) {
+                return false;
+            }
+            if (getClusterIdleTime(coordinatorIdleTime.get(), clusterStartTime).compareTo(max(ifIdleFor.orElse(NO_DURATION), QUERY_LINGER_TIME)) < 0) {
+                return false;
+            }
+            drainStarted = true;
+            drainCompleted = true;
+            updateIdlenessState();
+            return true;
+        }
+
+        private Optional<Duration> getCoordinatorIdleTime()
+        {
+            return Optional.ofNullable(coordinatorIdleStartNanos.get())
+                    .map(Duration::nanosSince);
+        }
+
+        private static Duration getClusterIdleTime(Duration coordinatorIdleTime, Optional<Instant> clusterStartTime)
+        {
+            if (clusterStartTime.isEmpty()) {
+                return coordinatorIdleTime;
+            }
+
+            // Clamp idle time to be no more than the cluster age
+            long millisSinceStart = Math.max(java.time.Duration.between(clusterStartTime.get(), Instant.now()).toMillis(), 0);
+            return min(coordinatorIdleTime, new Duration(millisSinceStart, MILLISECONDS));
+        }
+
+        private static class DrainTimeoutTask
+        {
+            private final long startTimeNanos;
+            private final Duration maxDrainTime;
+            private final Future<?> future;
+
+            public DrainTimeoutTask(long startTimeNanos, Duration maxDrainTime, Future<?> future)
+            {
+                this.startTimeNanos = startTimeNanos;
+                this.maxDrainTime = requireNonNull(maxDrainTime, "maxDrainTime is null");
+                this.future = requireNonNull(future, "future is null");
+            }
+
+            public long getStartTimeNanos()
+            {
+                return startTimeNanos;
+            }
+
+            public Duration getMaxDrainTime()
+            {
+                return maxDrainTime;
+            }
+
+            public Future<?> getFuture()
+            {
+                return future;
+            }
         }
     }
 }
