@@ -75,7 +75,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import static com.clearspring.analytics.util.Preconditions.checkState;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
 import static com.google.common.util.concurrent.Futures.nonCancellationPropagating;
+import static com.google.common.util.concurrent.Futures.transformAsync;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.airlift.jaxrs.AsyncResponseHandler.bindAsyncResponse;
@@ -313,6 +315,7 @@ public class QueuedStatementResource
         private final long initTime = System.nanoTime();
         private final AtomicReference<Boolean> submissionGate = new AtomicReference<>();
         private final SettableFuture<Void> creationFuture = SettableFuture.create();
+        private final ListenableFuture<Void> completionFuture;
 
         public Query(String query, SessionContext sessionContext, DispatchManager dispatchManager, QueryInfoUrlFactory queryInfoUrlFactory)
         {
@@ -322,6 +325,10 @@ public class QueuedStatementResource
             this.queryId = dispatchManager.createQueryId();
             requireNonNull(queryInfoUrlFactory, "queryInfoUrlFactory is null");
             this.queryInfoUrl = queryInfoUrlFactory.getQueryInfoUrl(queryId);
+            completionFuture = nonCancellationPropagating(transformAsync(
+                    creationFuture,
+                    ignored -> dispatchManager.tryGetCompletionFuture(queryId).orElse(immediateVoidFuture()),
+                    directExecutor()));
         }
 
         public QueryId getQueryId()
@@ -369,6 +376,11 @@ public class QueuedStatementResource
             if (submissionGate.compareAndSet(null, true)) {
                 creationFuture.setFuture(dispatchManager.createQuery(queryId, slug, sessionContext, query));
             }
+        }
+
+        public ListenableFuture<Void> getCompletionFuture()
+        {
+            return completionFuture;
         }
 
         public QueryResults getQueryResults(long token, UriInfo uriInfo)

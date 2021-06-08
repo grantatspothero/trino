@@ -254,6 +254,12 @@ public class DispatchManager
                 .orElseGet(Futures::immediateVoidFuture);
     }
 
+    public Optional<ListenableFuture<Void>> tryGetCompletionFuture(QueryId queryId)
+    {
+        return queryTracker.tryGetQuery(queryId)
+                .map(DispatchQuery::getCompletionFuture);
+    }
+
     public List<BasicQueryInfo> getQueries()
     {
         return queryTracker.getAllQueries().stream()

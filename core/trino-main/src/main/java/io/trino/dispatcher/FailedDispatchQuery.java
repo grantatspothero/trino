@@ -111,6 +111,12 @@ public class FailedDispatchQuery
     }
 
     @Override
+    public ListenableFuture<Void> getCompletionFuture()
+    {
+        return immediateVoidFuture();
+    }
+
+    @Override
     public DispatchInfo getDispatchInfo()
     {
         return dispatchInfo;

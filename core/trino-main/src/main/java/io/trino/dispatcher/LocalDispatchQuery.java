@@ -64,6 +64,8 @@ public class LocalDispatchQuery
     private final Consumer<QueryExecution> querySubmitter;
     private final SettableFuture<Void> submitted = SettableFuture.create();
 
+    private final SettableFuture<Void> completed = SettableFuture.create();
+
     private final AtomicBoolean notificationSentOrGuaranteed = new AtomicBoolean();
 
     public LocalDispatchQuery(
@@ -99,6 +101,7 @@ public class LocalDispatchQuery
             }
             if (state.isDone()) {
                 submitted.set(null);
+                completed.set(null);
                 queryExecutionFuture.cancel(true);
             }
         });
@@ -174,6 +177,12 @@ public class LocalDispatchQuery
     public ListenableFuture<Void> getDispatchedFuture()
     {
         return nonCancellationPropagating(submitted);
+    }
+
+    @Override
+    public ListenableFuture<Void> getCompletionFuture()
+    {
+        return nonCancellationPropagating(completed);
     }
 
     @Override
