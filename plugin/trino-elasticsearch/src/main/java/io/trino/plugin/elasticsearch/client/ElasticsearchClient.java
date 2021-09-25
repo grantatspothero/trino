@@ -35,7 +35,13 @@ import io.airlift.units.Duration;
 import io.trino.plugin.elasticsearch.AwsSecurityConfig;
 import io.trino.plugin.elasticsearch.ElasticsearchConfig;
 import io.trino.plugin.elasticsearch.PasswordConfig;
+import io.trino.plugin.elasticsearch.client.galaxy.RegionEnforcerInterceptor;
+import io.trino.plugin.elasticsearch.client.galaxy.SshHostRegionEnforcerInterceptor;
+import io.trino.plugin.elasticsearch.client.galaxy.SshTunnelConnectingIOReactor;
 import io.trino.spi.TrinoException;
+import io.trino.sshtunnel.SshTunnelConfig;
+import io.trino.sshtunnel.SshTunnelManager;
+import io.trino.sshtunnel.SshTunnelProperties;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
@@ -47,8 +53,10 @@ import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
+import org.apache.http.impl.nio.conn.PoolingNHttpClientConnectionManager;
 import org.apache.http.impl.nio.reactor.IOReactorConfig;
 import org.apache.http.message.BasicHeader;
+import org.apache.http.nio.reactor.IOReactorException;
 import org.apache.http.util.EntityUtils;
 import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.action.search.ClearScrollRequest;
@@ -72,6 +80,7 @@ import javax.net.ssl.SSLContext;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -92,6 +101,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.trino.plugin.base.ssl.SslUtils.createSSLContext;
+import static io.trino.plugin.elasticsearch.ElasticsearchConfig.Security.AWS;
 import static io.trino.plugin.elasticsearch.ElasticsearchErrorCode.ELASTICSEARCH_CONNECTION_ERROR;
 import static io.trino.plugin.elasticsearch.ElasticsearchErrorCode.ELASTICSEARCH_INVALID_METADATA;
 import static io.trino.plugin.elasticsearch.ElasticsearchErrorCode.ELASTICSEARCH_INVALID_RESPONSE;
@@ -135,10 +145,12 @@ public class ElasticsearchClient
     @Inject
     public ElasticsearchClient(
             ElasticsearchConfig config,
+            SshTunnelConfig sshTunnelConfig,
             Optional<AwsSecurityConfig> awsSecurityConfig,
             Optional<PasswordConfig> passwordConfig)
     {
-        client = createClient(config, awsSecurityConfig, passwordConfig, backpressureStats);
+        Optional<SshTunnelProperties> sshTunnelProperties = SshTunnelProperties.generateFrom(sshTunnelConfig);
+        client = createClient(config, sshTunnelProperties, awsSecurityConfig, passwordConfig, backpressureStats);
 
         this.ignorePublishAddress = config.isIgnorePublishAddress();
         this.scrollSize = config.getScrollSize();
@@ -194,10 +206,20 @@ public class ElasticsearchClient
 
     private static BackpressureRestHighLevelClient createClient(
             ElasticsearchConfig config,
+            Optional<SshTunnelProperties> sshTunnelProperties,
             Optional<AwsSecurityConfig> awsSecurityConfig,
             Optional<PasswordConfig> passwordConfig,
             TimeStat backpressureStats)
     {
+        /* https://github.com/aws/aws-sdk-java/blob/master/aws-java-sdk-core/src/main/java/com/amazonaws/auth/AWS4Signer.java#L552-L554
+        AWS4Signer includes port while signing a request in the Host header in case non-standard port is provided before signing the request
+        which causes the requests to fail due to discrepancies in the IAM sign validator service.
+        Restricting cluster with IAM based authentication method with having standard https port */
+        config.getSecurity().ifPresent(security -> {
+            if (security == AWS) {
+                checkArgument(config.getPort() == 443, "Only standard https port(443) is supported");
+            }
+        });
         RestClientBuilder builder = RestClient.builder(
                 config.getHosts().stream()
                         .map(httpHost -> new HttpHost(httpHost, config.getPort(), config.isTlsEnabled() ? "https" : "http"))
@@ -230,6 +252,12 @@ public class ElasticsearchClient
                 }
             }
 
+            sshTunnelProperties.ifPresentOrElse(tunnelProperties -> clientBuilder
+                            .addInterceptorFirst(
+                                    new SshHostRegionEnforcerInterceptor(config.getAllowedIpAddresses(), tunnelProperties.getServer().getHost()))
+                            .setConnectionManager(getConnectionManager(config, reactorConfig, tunnelProperties)),
+                    () -> clientBuilder.addInterceptorFirst(new RegionEnforcerInterceptor(config.getAllowedIpAddresses())));
+
             passwordConfig.ifPresent(securityConfig -> {
                 CredentialsProvider credentials = new BasicCredentialsProvider();
                 credentials.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(securityConfig.getUser(), securityConfig.getPassword()));
@@ -244,6 +272,21 @@ public class ElasticsearchClient
         });
 
         return new BackpressureRestHighLevelClient(builder, config, backpressureStats);
+    }
+
+    private static PoolingNHttpClientConnectionManager getConnectionManager(ElasticsearchConfig config, IOReactorConfig reactorConfig, SshTunnelProperties sshTunnelProperties)
+    {
+        SshTunnelManager sshTunnelManager = SshTunnelManager.getCached(sshTunnelProperties);
+        try {
+            PoolingNHttpClientConnectionManager manager = new PoolingNHttpClientConnectionManager(
+                    new SshTunnelConnectingIOReactor(reactorConfig, sshTunnelManager));
+            manager.setMaxTotal(config.getMaxHttpConnections());
+            manager.setDefaultMaxPerRoute(config.getMaxHttpConnections());
+            return manager;
+        }
+        catch (IOReactorException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     private static AWSCredentialsProvider getAwsCredentialsProvider(AwsSecurityConfig config)

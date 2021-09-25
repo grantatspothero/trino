@@ -18,6 +18,9 @@ import io.airlift.security.pem.PemReader;
 import io.airlift.units.Duration;
 import io.trino.plugin.hive.metastore.thrift.ThriftHiveMetastoreClient.TransportSupplier;
 import io.trino.spi.NodeManager;
+import io.trino.sshtunnel.SshTunnelConfig;
+import io.trino.sshtunnel.SshTunnelManager;
+import io.trino.sshtunnel.SshTunnelProperties;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
@@ -52,6 +55,7 @@ import static java.util.Objects.requireNonNull;
 public class DefaultThriftMetastoreClientFactory
         implements ThriftMetastoreClientFactory
 {
+    private final Optional<SshTunnelProperties> sshTunnelProperties;
     private final Optional<SSLContext> sslContext;
     private final Optional<HostAndPort> socksProxy;
     private final int timeoutMillis;
@@ -66,12 +70,14 @@ public class DefaultThriftMetastoreClientFactory
     private final AtomicInteger chosenAlterPartitionsAlternative = new AtomicInteger(Integer.MAX_VALUE);
 
     public DefaultThriftMetastoreClientFactory(
+            SshTunnelConfig sshTunnelConfig,
             Optional<SSLContext> sslContext,
             Optional<HostAndPort> socksProxy,
             Duration timeout,
             HiveMetastoreAuthentication metastoreAuthentication,
             String hostname)
     {
+        this.sshTunnelProperties = SshTunnelProperties.generateFrom(sshTunnelConfig);
         this.sslContext = requireNonNull(sslContext, "sslContext is null");
         this.socksProxy = requireNonNull(socksProxy, "socksProxy is null");
         this.timeoutMillis = toIntExact(timeout.toMillis());
@@ -81,11 +87,13 @@ public class DefaultThriftMetastoreClientFactory
 
     @Inject
     public DefaultThriftMetastoreClientFactory(
+            SshTunnelConfig sshTunnelConfig,
             ThriftMetastoreConfig config,
             HiveMetastoreAuthentication metastoreAuthentication,
             NodeManager nodeManager)
     {
         this(
+                sshTunnelConfig,
                 buildSslContext(
                         config.isTlsEnabled(),
                         Optional.ofNullable(config.getKeystorePath()),
@@ -102,7 +110,11 @@ public class DefaultThriftMetastoreClientFactory
     public ThriftMetastoreClient create(HostAndPort address, Optional<String> delegationToken)
             throws TTransportException
     {
-        return create(() -> createTransport(address, delegationToken), hostname);
+        HostAndPort useAddress = sshTunnelProperties.map(SshTunnelManager::getCached)
+                .map(sshTunnelManager -> sshTunnelManager.getOrCreateTunnel(address))
+                .map(tunnel -> HostAndPort.fromParts("localhost", tunnel.getLocalTunnelPort()))
+                .orElse(address);
+        return create(() -> createTransport(useAddress, delegationToken), hostname);
     }
 
     protected ThriftMetastoreClient create(TransportSupplier transportSupplier, String hostname)

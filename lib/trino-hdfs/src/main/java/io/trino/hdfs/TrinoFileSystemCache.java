@@ -16,6 +16,7 @@ package io.trino.hdfs;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import io.airlift.log.Logger;
+import io.trino.hdfs.galaxy.RegionEnforcement;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CreateFlag;
@@ -155,6 +156,8 @@ public class TrinoFileSystemCache
         if (clazz == null) {
             throw new IOException("No FileSystem for scheme: " + uri.getScheme());
         }
+        RegionEnforcement.enforceRegion(uri, conf);
+
         FileSystem original = (FileSystem) ReflectionUtils.newInstance(clazz, conf);
         original.initialize(uri, conf);
         FilterFileSystem wrapper = new FileSystemWrapper(original);

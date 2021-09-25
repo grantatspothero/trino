@@ -63,6 +63,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobConfigurable;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.util.StringUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -591,7 +592,7 @@ public class BackgroundHiveSplitLoader
             if (targetInputFormat instanceof JobConfigurable) {
                 ((JobConfigurable) targetInputFormat).configure(targetJob);
             }
-            FileInputFormat.setInputPaths(targetJob, targetPath);
+            targetJob.set(org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR, StringUtils.escapeString(targetPath.toString()));
             InputSplit[] targetSplits = hdfsEnvironment.doAs(
                     hdfsContext.getIdentity(),
                     () -> targetInputFormat.getSplits(targetJob, 0));

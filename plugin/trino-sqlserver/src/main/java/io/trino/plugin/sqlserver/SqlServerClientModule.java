@@ -20,6 +20,7 @@ import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.microsoft.sqlserver.jdbc.SQLServerDriver;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
 import io.trino.plugin.jdbc.DriverConnectionFactory;
@@ -30,14 +31,29 @@ import io.trino.plugin.jdbc.JdbcStatisticsConfig;
 import io.trino.plugin.jdbc.MaxDomainCompactionThreshold;
 import io.trino.plugin.jdbc.credential.CredentialProvider;
 import io.trino.plugin.jdbc.ptf.Query;
+import io.trino.plugin.sqlserver.galaxy.GalaxySqlServerSocketFactory;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.ptf.ConnectorTableFunction;
+import io.trino.sshtunnel.SshTunnelConfig;
+import io.trino.sshtunnel.SshTunnelProperties;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.Properties;
 
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionAllowed;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addRegionLocalIpAddresses;
 import static io.trino.plugin.jdbc.JdbcModule.bindSessionPropertiesProvider;
 import static io.trino.plugin.jdbc.JdbcModule.bindTablePropertiesProvider;
 import static io.trino.plugin.sqlserver.SqlServerClient.SQL_SERVER_MAX_LIST_EXPRESSIONS;
+import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class SqlServerClientModule
         extends AbstractConfigurationAwareModule
@@ -59,10 +75,34 @@ public class SqlServerClientModule
     @Singleton
     @ForBaseJdbc
     public static ConnectionFactory getConnectionFactory(
+            CatalogHandle catalogHandle,
             BaseJdbcConfig config,
             SqlServerConfig sqlServerConfig,
+            RegionEnforcementConfig regionEnforcementConfig,
+            SshTunnelConfig sshTunnelConfig,
             CredentialProvider credentialProvider)
     {
-        return new SqlServerConnectionFactory(new DriverConnectionFactory(new SQLServerDriver(), config, credentialProvider), sqlServerConfig.isSnapshotIsolationDisabled());
+        Properties socketArgs = new Properties();
+        addCatalogName(socketArgs, catalogHandle.getCatalogName());
+        addCatalogId(socketArgs, catalogHandle.getVersion().toString());
+        addCrossRegionAllowed(socketArgs, false);
+        addRegionLocalIpAddresses(socketArgs, regionEnforcementConfig.getAllowedIpAddresses());
+        SshTunnelProperties.generateFrom(sshTunnelConfig)
+                .ifPresent(sshTunnelProperties -> addSshTunnelProperties(socketArgs::setProperty, sshTunnelProperties));
+
+        Properties connectionProperties = new Properties();
+        connectionProperties.put("socketFactoryClass", GalaxySqlServerSocketFactory.class.getName());
+
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            socketArgs.store(outputStream, null);
+            // serialize ssh tunnel and region enforcement properties
+            connectionProperties.put("socketFactoryConstructorArg", outputStream.toString(UTF_8));
+        }
+        catch (IOException e) {
+            throw new UncheckedIOException("Could not construct SocketFactory argument", e);
+        }
+
+        DriverConnectionFactory delegate = new DriverConnectionFactory(new SQLServerDriver(), config.getConnectionUrl(), connectionProperties, credentialProvider);
+        return new SqlServerConnectionFactory(delegate, sqlServerConfig.isSnapshotIsolationDisabled());
     }
 }

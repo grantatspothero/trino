@@ -19,6 +19,7 @@ import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.plugin.elasticsearch.client.ElasticsearchClient;
 import io.trino.plugin.elasticsearch.ptf.RawQuery;
 import io.trino.spi.ptf.ConnectorTableFunction;
+import io.trino.sshtunnel.SshTunnelConfig;
 
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
@@ -45,6 +46,7 @@ public class ElasticsearchConnectorModule
         newExporter(binder).export(ElasticsearchClient.class).withGeneratedName();
 
         configBinder(binder).bindConfig(ElasticsearchConfig.class);
+        configBinder(binder).bindConfig(SshTunnelConfig.class);
 
         newOptionalBinder(binder, AwsSecurityConfig.class);
         newOptionalBinder(binder, PasswordConfig.class);

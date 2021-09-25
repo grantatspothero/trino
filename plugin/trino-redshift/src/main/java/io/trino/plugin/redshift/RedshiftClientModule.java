@@ -18,6 +18,8 @@ import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
+import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
 import io.trino.plugin.jdbc.DecimalModule;
@@ -28,13 +30,21 @@ import io.trino.plugin.jdbc.JdbcJoinPushdownSupportModule;
 import io.trino.plugin.jdbc.JdbcStatisticsConfig;
 import io.trino.plugin.jdbc.credential.CredentialProvider;
 import io.trino.plugin.jdbc.ptf.Query;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.ptf.ConnectorTableFunction;
+import io.trino.sshtunnel.SshTunnelConfig;
+import io.trino.sshtunnel.SshTunnelProperties;
 
 import java.util.Properties;
 
 import static com.google.inject.Scopes.SINGLETON;
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionAllowed;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addRegionLocalIpAddresses;
+import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
 
 public class RedshiftClientModule
         extends AbstractConfigurationAwareModule
@@ -55,12 +65,24 @@ public class RedshiftClientModule
     @Provides
     @ForBaseJdbc
     public static ConnectionFactory getConnectionFactory(
+            CatalogHandle catalogHandle,
             BaseJdbcConfig config,
-            CredentialProvider credentialProvider)
+            RegionEnforcementConfig regionEnforcementConfig,
+            CredentialProvider credentialProvider,
+            SshTunnelConfig sshTunnelConfig)
     {
         Properties properties = new Properties();
         properties.put("reWriteBatchedInserts", "true");
         properties.put("reWriteBatchedInsertsSize", "512");
+
+        properties.put("socketFactory", GalaxySqlSocketFactory.class.getName());
+        addCatalogName(properties, catalogHandle.getCatalogName());
+        addCatalogId(properties, catalogHandle.getVersion().toString());
+        addCrossRegionAllowed(properties, false);
+        addRegionLocalIpAddresses(properties, regionEnforcementConfig.getAllowedIpAddresses());
+
+        SshTunnelProperties.generateFrom(sshTunnelConfig)
+                .ifPresent(sshTunnelProperties -> addSshTunnelProperties(properties::setProperty, sshTunnelProperties));
 
         return new DriverConnectionFactory(new Driver(), config.getConnectionUrl(), properties, credentialProvider);
     }

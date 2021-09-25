@@ -147,6 +147,7 @@
         <module>lib/trino-phoenix5-patched</module>
         <module>lib/trino-plugin-toolkit</module>
         <module>lib/trino-record-decoder</module>
+        <module>lib/trino-ssh-tunnel</module>
         <module>plugin/trino-accumulo</module>
         <module>plugin/trino-accumulo-iterators</module>
         <module>plugin/trino-atop</module>
@@ -707,6 +708,12 @@
 
             <dependency>
                 <groupId>io.trino</groupId>
+                <artifactId>trino-ssh-tunnel</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
                 <artifactId>trino-testing</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -1260,6 +1267,12 @@
                 <groupId>com.github.docker-java</groupId>
                 <artifactId>docker-java-api</artifactId>
                 <version>3.2.13</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.github.mwiede</groupId>
+                <artifactId>jsch</artifactId>
+                <version>0.2.5</version>
             </dependency>
 
             <dependency>

@@ -23,6 +23,7 @@ import io.trino.connector.system.GlobalSystemConnector;
 import io.trino.metadata.Catalog;
 import io.trino.metadata.CatalogManager;
 import io.trino.server.ForStartup;
+import io.trino.server.galaxy.GalaxyEnabledConfig;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.CatalogHandle.CatalogVersion;
@@ -74,7 +75,11 @@ public class StaticCatalogManager
     private final AtomicReference<State> state = new AtomicReference<>(State.CREATED);
 
     @Inject
-    public StaticCatalogManager(CatalogFactory catalogFactory, StaticCatalogManagerConfig config, @ForStartup Executor executor)
+    public StaticCatalogManager(
+            CatalogFactory catalogFactory,
+            StaticCatalogManagerConfig config,
+            @ForStartup Executor executor,
+            GalaxyEnabledConfig galaxyEnabledConfig)
     {
         this.catalogFactory = requireNonNull(catalogFactory, "catalogFactory is null");
         List<String> disabledCatalogs = firstNonNull(config.getDisabledCatalogs(), ImmutableList.of());
@@ -104,8 +109,14 @@ public class StaticCatalogManager
                 log.warn("Catalog '%s' is using the deprecated connector name '%s'. The correct connector name is '%s'", catalogName, deprecatedConnectorName, connectorName);
             }
 
+            String version = "default";
+            if (galaxyEnabledConfig.isGalaxyEnabled()) {
+                version = properties.remove("galaxy.catalog-id");
+                checkState(version != null, "Catalog configuration %s does not contain galaxy.catalog-id", file.getAbsoluteFile());
+            }
+
             catalogProperties.add(new CatalogProperties(
-                    createRootCatalogHandle(catalogName, new CatalogVersion("default")),
+                    createRootCatalogHandle(catalogName, new CatalogVersion(version)),
                     new ConnectorName(connectorName),
                     ImmutableMap.copyOf(properties)));
         }

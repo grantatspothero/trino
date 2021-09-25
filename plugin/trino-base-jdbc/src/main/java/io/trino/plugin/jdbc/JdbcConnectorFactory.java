@@ -17,17 +17,21 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import io.airlift.bootstrap.Bootstrap;
 import io.trino.plugin.base.CatalogName;
+import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
 import io.trino.spi.NodeManager;
 import io.trino.spi.VersionEmbedder;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
 import io.trino.spi.connector.ConnectorFactory;
 import io.trino.spi.type.TypeManager;
+import io.trino.sshtunnel.SshTunnelConfig;
 
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.trino.plugin.base.Versions.checkSpiVersion;
 import static java.util.Objects.requireNonNull;
 
@@ -62,7 +66,10 @@ public class JdbcConnectorFactory
                 binder -> binder.bind(NodeManager.class).toInstance(context.getNodeManager()),
                 binder -> binder.bind(VersionEmbedder.class).toInstance(context.getVersionEmbedder()),
                 binder -> binder.bind(CatalogName.class).toInstance(new CatalogName(catalogName)),
+                binder -> binder.bind(CatalogHandle.class).toInstance(context.getCatalogHandle()),
                 new JdbcModule(),
+                binder -> configBinder(binder).bindConfig(RegionEnforcementConfig.class),
+                binder -> configBinder(binder).bindConfig(SshTunnelConfig.class),
                 module);
 
         Injector injector = app

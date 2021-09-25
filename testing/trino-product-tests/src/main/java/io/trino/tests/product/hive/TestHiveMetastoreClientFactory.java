@@ -21,6 +21,7 @@ import io.trino.plugin.hive.metastore.thrift.DefaultThriftMetastoreClientFactory
 import io.trino.plugin.hive.metastore.thrift.NoHiveMetastoreAuthentication;
 import io.trino.plugin.hive.metastore.thrift.ThriftMetastoreClient;
 import io.trino.plugin.hive.metastore.thrift.ThriftMetastoreClientFactory;
+import io.trino.sshtunnel.SshTunnelConfig;
 import org.apache.thrift.TException;
 
 import java.net.URI;
@@ -31,6 +32,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public final class TestHiveMetastoreClientFactory
 {
     private final ThriftMetastoreClientFactory thriftMetastoreClientFactory = new DefaultThriftMetastoreClientFactory(
+            new SshTunnelConfig(),
             Optional.empty(),
             Optional.empty(),
             new Duration(10, SECONDS),

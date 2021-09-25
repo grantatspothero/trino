@@ -40,6 +40,7 @@ import io.trino.plugin.hive.metastore.thrift.ThriftMetastoreConfig;
 import io.trino.plugin.hive.metastore.thrift.ThriftMetastoreFactory;
 import io.trino.plugin.hive.metastore.thrift.TokenAwareMetastoreClientFactory;
 import io.trino.spi.security.ConnectorIdentity;
+import io.trino.sshtunnel.SshTunnelConfig;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.tpch.TpchEntity;
 import io.trino.tpch.TpchTable;
@@ -110,6 +111,7 @@ public class TestDeltaLakePerTransactionMetastoreCache
                         binder.bind(TokenAwareMetastoreClientFactory.class).to(StaticTokenAwareMetastoreClientFactory.class).in(Scopes.SINGLETON);
                         configBinder(binder).bindConfig(StaticMetastoreConfig.class);
                         configBinder(binder).bindConfig(ThriftMetastoreConfig.class);
+                        configBinder(binder).bindConfig(SshTunnelConfig.class);
                         binder.bind(ThriftMetastoreFactory.class).to(ThriftHiveMetastoreFactory.class).in(Scopes.SINGLETON);
                         newExporter(binder).export(ThriftMetastoreFactory.class)
                                 .as(generator -> generator.generatedNameOf(ThriftHiveMetastore.class));

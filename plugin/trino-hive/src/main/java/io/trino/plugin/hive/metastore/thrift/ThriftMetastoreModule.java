@@ -25,6 +25,7 @@ import io.trino.plugin.hive.AllowHiveTableRename;
 import io.trino.plugin.hive.ForHiveMetastore;
 import io.trino.plugin.hive.metastore.HiveMetastoreFactory;
 import io.trino.plugin.hive.metastore.RawHiveMetastoreFactory;
+import io.trino.sshtunnel.SshTunnelConfig;
 
 import javax.annotation.PreDestroy;
 
@@ -48,6 +49,7 @@ public class ThriftMetastoreModule
         binder.bind(TokenAwareMetastoreClientFactory.class).to(StaticTokenAwareMetastoreClientFactory.class).in(Scopes.SINGLETON);
         configBinder(binder).bindConfig(StaticMetastoreConfig.class);
         configBinder(binder).bindConfig(ThriftMetastoreConfig.class);
+        configBinder(binder).bindConfig(SshTunnelConfig.class);
 
         binder.bind(ThriftMetastoreFactory.class).to(ThriftHiveMetastoreFactory.class).in(Scopes.SINGLETON);
         newExporter(binder).export(ThriftMetastoreFactory.class)
