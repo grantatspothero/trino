@@ -31,7 +31,8 @@ public class TestGalaxyEnabledConfig
         assertRecordedDefaults(recordDefaults(GalaxyEnabledConfig.class)
                 .setGalaxyEnabled(false)
                 .setGalaxyCorsEnabled(false)
-                .setGalaxyOperatorAuthenticationEnabled(false));
+                .setGalaxyOperatorAuthenticationEnabled(false)
+                .setGalaxyHeartbeatEnabled(false));
     }
 
     @Test
@@ -41,13 +42,15 @@ public class TestGalaxyEnabledConfig
         Map<String, String> properties = ImmutableMap.<String, String>builder()
                 .put("galaxy.enabled", "true")
                 .put("galaxy.cors.enabled", "true")
+                .put("galaxy.heartbeat.enabled", "true")
                 .put("galaxy.operator.enabled", "true")
                 .buildOrThrow();
 
         GalaxyEnabledConfig expected = new GalaxyEnabledConfig()
                 .setGalaxyEnabled(true)
                 .setGalaxyCorsEnabled(true)
-                .setGalaxyOperatorAuthenticationEnabled(true);
+                .setGalaxyOperatorAuthenticationEnabled(true)
+                .setGalaxyHeartbeatEnabled(true);
 
         assertFullMapping(properties, expected);
     }

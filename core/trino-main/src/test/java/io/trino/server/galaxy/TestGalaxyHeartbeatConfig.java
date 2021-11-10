@@ -23,16 +23,16 @@ import static io.airlift.configuration.testing.ConfigAssertions.assertFullMappin
 import static io.airlift.configuration.testing.ConfigAssertions.assertRecordedDefaults;
 import static io.airlift.configuration.testing.ConfigAssertions.recordDefaults;
 
-public class TestGalaxyConfig
+public class TestGalaxyHeartbeatConfig
 {
     @Test
     public void testDefaults()
     {
-        assertRecordedDefaults(recordDefaults(GalaxyConfig.class)
-                .setAccountId(null)
-                .setClusterId(null)
-                .setDeploymentId(null)
-                .setCloudRegionId(null));
+        assertRecordedDefaults(recordDefaults(GalaxyHeartbeatConfig.class)
+                .setTrinoPlaneFqdn(null)
+                .setVariant(null)
+                .setRole(null)
+                .setBillingTopic("billing"));
     }
 
     @Test
@@ -40,17 +40,17 @@ public class TestGalaxyConfig
             throws IOException
     {
         Map<String, String> properties = ImmutableMap.<String, String>builder()
-                .put("galaxy.account-id", "a-123456")
-                .put("galaxy.cluster-id", "c-123654")
-                .put("galaxy.deployment-id", "d-123567")
-                .put("galaxy.cloud-region-id", "aws-eu-west1")
+                .put("galaxy.trino-plane-fqdn", "gcp-test-1.galaxy.gate0.net")
+                .put("galaxy.cluster-variant", "demo")
+                .put("galaxy.trino-instance-role", "coordinator")
+                .put("galaxy.billing.topic", "notbilling")
                 .buildOrThrow();
 
-        GalaxyConfig expected = new GalaxyConfig()
-                .setAccountId("a-123456")
-                .setClusterId("c-123654")
-                .setDeploymentId("d-123567")
-                .setCloudRegionId("aws-eu-west1");
+        GalaxyHeartbeatConfig expected = new GalaxyHeartbeatConfig()
+                .setTrinoPlaneFqdn("gcp-test-1.galaxy.gate0.net")
+                .setVariant("demo")
+                .setRole("coordinator")
+                .setBillingTopic("notbilling");
 
         assertFullMapping(properties, expected);
     }

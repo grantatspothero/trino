@@ -19,6 +19,7 @@ public class GalaxyEnabledConfig
 {
     private boolean galaxyEnabled;
     private boolean galaxyCorsEnabled = true;
+    private boolean galaxyHeartbeatEnabled = true;
     private boolean galaxyOperatorAuthenticationEnabled = true;
 
     public boolean isGalaxyEnabled()
@@ -42,6 +43,18 @@ public class GalaxyEnabledConfig
     public GalaxyEnabledConfig setGalaxyCorsEnabled(boolean galaxyCorsEnabled)
     {
         this.galaxyCorsEnabled = galaxyCorsEnabled;
+        return this;
+    }
+
+    public boolean isGalaxyHeartbeatEnabled()
+    {
+        return galaxyEnabled && galaxyHeartbeatEnabled;
+    }
+
+    @Config("galaxy.heartbeat.enabled")
+    public GalaxyEnabledConfig setGalaxyHeartbeatEnabled(boolean galaxyHeartbeatEnabled)
+    {
+        this.galaxyHeartbeatEnabled = galaxyHeartbeatEnabled;
         return this;
     }
 

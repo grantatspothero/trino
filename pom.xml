@@ -135,6 +135,7 @@
         <module>lib/trino-array</module>
         <module>lib/trino-collect</module>
         <module>lib/trino-filesystem</module>
+        <module>lib/trino-galaxy-kafka</module>
         <module>lib/trino-geospatial-toolkit</module>
         <module>lib/trino-hadoop-toolkit</module>
         <module>lib/trino-hdfs</module>
@@ -162,6 +163,7 @@
         <module>plugin/trino-example-http</module>
         <module>plugin/trino-exchange-filesystem</module>
         <module>plugin/trino-exchange-hdfs</module>
+        <module>plugin/trino-galaxy-kafka-event-listener</module>
         <module>plugin/trino-geospatial</module>
         <module>plugin/trino-google-sheets</module>
         <module>plugin/trino-hive</module>
@@ -341,6 +343,7 @@
                 <version>${project.version}</version>
             </dependency>
 
+
             <dependency>
                 <groupId>io.trino</groupId>
                 <artifactId>trino-exchange-filesystem</artifactId>
@@ -363,6 +366,18 @@
             <dependency>
                 <groupId>io.trino</groupId>
                 <artifactId>trino-filesystem</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>trino-galaxy-kafka</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>trino-galaxy-kafka-event-listener</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -1456,6 +1471,24 @@
                 <version>4.7.0</version>
             </dependency>
 
+        <dependency>
+            <groupId>io.cloudevents</groupId>
+            <artifactId>cloudevents-api</artifactId>
+            <version>${dep.cloudevents.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.cloudevents</groupId>
+            <artifactId>cloudevents-core</artifactId>
+            <version>${dep.cloudevents.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.cloudevents</groupId>
+            <artifactId>cloudevents-json-jackson</artifactId>
+            <version>${dep.cloudevents.version}</version>
+        </dependency>
+
             <dependency>
                 <groupId>io.confluent</groupId>
                 <artifactId>kafka-avro-serializer</artifactId>
@@ -1824,7 +1857,18 @@
             <dependency>
                 <groupId>org.apache.kafka</groupId>
                 <artifactId>kafka-clients</artifactId>
-                <version>2.4.1</version>
+                <version>3.0.0</version>
+                <exclusions>
+                    <exclusion>
+                        <!-- This can cause a conflict with trino-orc and others -->
+                        <groupId>com.github.luben</groupId>
+                        <artifactId>zstd-jni</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.xerial.snappy</groupId>
+                        <artifactId>snappy-java</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <dependency>

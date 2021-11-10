@@ -15,6 +15,7 @@ package io.trino.server.galaxy;
 
 import io.airlift.configuration.Config;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.NotEmpty;
 
 public class GalaxyConfig
@@ -22,6 +23,7 @@ public class GalaxyConfig
     private String accountId;
     private String clusterId;
     private String deploymentId;
+    private String cloudRegionId;
 
     @NotEmpty
     public String getAccountId()
@@ -59,6 +61,19 @@ public class GalaxyConfig
     public GalaxyConfig setDeploymentId(String deploymentId)
     {
         this.deploymentId = deploymentId;
+        return this;
+    }
+
+    @Nullable
+    public String getCloudRegionId()
+    {
+        return cloudRegionId;
+    }
+
+    @Config("galaxy.cloud-region-id")
+    public GalaxyConfig setCloudRegionId(String cloudRegionId)
+    {
+        this.cloudRegionId = cloudRegionId;
         return this;
     }
 }

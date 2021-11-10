@@ -34,6 +34,7 @@ bigquery
 blackhole
 elasticsearch
 exchange-filesystem
+galaxy-kafka-event-listener
 geospatial
 google-sheets
 hive

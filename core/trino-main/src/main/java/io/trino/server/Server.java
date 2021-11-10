@@ -58,6 +58,7 @@ import io.trino.security.GroupProviderManager;
 import io.trino.server.galaxy.GalaxyConfig;
 import io.trino.server.galaxy.GalaxyCorsModule;
 import io.trino.server.galaxy.GalaxyEnabledConfig;
+import io.trino.server.galaxy.GalaxyHeartbeatModule;
 import io.trino.server.galaxy.GalaxyOperatorAuthenticationModule;
 import io.trino.server.security.CertificateAuthenticatorManager;
 import io.trino.server.security.HeaderAuthenticatorManager;
@@ -130,6 +131,7 @@ public class Server
                 new ServerMainModule(trinoVersion),
                 conditionalModule(GalaxyEnabledConfig.class, GalaxyEnabledConfig::isGalaxyEnabled, binder -> configBinder(binder).bindConfig(GalaxyConfig.class)),
                 conditionalModule(GalaxyEnabledConfig.class, GalaxyEnabledConfig::isGalaxyCorsEnabled, new GalaxyCorsModule()),
+                conditionalModule(GalaxyEnabledConfig.class, GalaxyEnabledConfig::isGalaxyHeartbeatEnabled, new GalaxyHeartbeatModule()),
                 conditionalModule(GalaxyEnabledConfig.class, GalaxyEnabledConfig::isGalaxyOperatorAuthenticationEnabled, new GalaxyOperatorAuthenticationModule()),
                 new GracefulShutdownModule(),
                 new WarningCollectorModule());

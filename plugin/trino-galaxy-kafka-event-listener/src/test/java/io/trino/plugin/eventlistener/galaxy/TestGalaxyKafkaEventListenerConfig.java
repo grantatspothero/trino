@@ -11,46 +11,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.server.galaxy;
+package io.trino.plugin.eventlistener.galaxy;
 
 import com.google.common.collect.ImmutableMap;
 import org.testng.annotations.Test;
 
-import java.io.IOException;
 import java.util.Map;
 
 import static io.airlift.configuration.testing.ConfigAssertions.assertFullMapping;
 import static io.airlift.configuration.testing.ConfigAssertions.assertRecordedDefaults;
 import static io.airlift.configuration.testing.ConfigAssertions.recordDefaults;
 
-public class TestGalaxyConfig
+public class TestGalaxyKafkaEventListenerConfig
 {
     @Test
     public void testDefaults()
     {
-        assertRecordedDefaults(recordDefaults(GalaxyConfig.class)
+        assertRecordedDefaults(recordDefaults(GalaxyKafkaEventListenerConfig.class)
+                .setPluginReportingName(null)
                 .setAccountId(null)
                 .setClusterId(null)
                 .setDeploymentId(null)
-                .setCloudRegionId(null));
+                .setTrinoPlaneFqdn(null)
+                .setEventKafkaTopic(null)
+                .setMaxBufferingCapacity(200));
     }
 
     @Test
     public void testExplicitPropertyMappings()
-            throws IOException
     {
         Map<String, String> properties = ImmutableMap.<String, String>builder()
-                .put("galaxy.account-id", "a-123456")
-                .put("galaxy.cluster-id", "c-123654")
-                .put("galaxy.deployment-id", "d-123567")
-                .put("galaxy.cloud-region-id", "aws-eu-west1")
+                .put("plugin.reporting-name", "test-name")
+                .put("galaxy.account-id", "a-123")
+                .put("galaxy.cluster-id", "c-234")
+                .put("galaxy.deployment-id", "dep-345")
+                .put("galaxy.trino-plane-fqdn", "trino.example.com")
+                .put("galaxy.event.kafka.topic", "test")
+                .put("publisher.max-buffering-capacity", "10")
                 .buildOrThrow();
 
-        GalaxyConfig expected = new GalaxyConfig()
-                .setAccountId("a-123456")
-                .setClusterId("c-123654")
-                .setDeploymentId("d-123567")
-                .setCloudRegionId("aws-eu-west1");
+        GalaxyKafkaEventListenerConfig expected = new GalaxyKafkaEventListenerConfig()
+                .setPluginReportingName("test-name")
+                .setAccountId("a-123")
+                .setClusterId("c-234")
+                .setDeploymentId("dep-345")
+                .setTrinoPlaneFqdn("trino.example.com")
+                .setEventKafkaTopic("test")
+                .setMaxBufferingCapacity(10);
 
         assertFullMapping(properties, expected);
     }
