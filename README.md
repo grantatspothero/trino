@@ -6,11 +6,27 @@
 
 Commits following *Temporary OSS cherry-picks* are already merged to OSS, and will be dropped upon rebase to the next Trino version.
 
+Commits following *Proprietary changes* will be maintained as a fork.
+
 ## How to build this project?
 
 You will need to use settings.xml file with credentials for AWS CodeArtifact.
 
 Use one either from [Galaxy](https://github.com/starburstdata/stargate) or [SEP](https://github.com/starburstdata/starburst-enterprise) repository.
+
+## How to update this Trino fork to a newer Trino version?
+
+- Fetch latest Trino changes locally
+- Find the release commit named `[maven-release-plugin] prepare for next development iteration`, create a branch starting at this commit
+- Rebase changes from the default `galaxyXXX` branch onto the new branch you just created
+- See above instructions on how to handle the 3 types of commits during the rebase
+- Open a PR and get it reviewed. Also open a PR in [Galaxy](https://github.com/starburstdata/stargate) upgrading the version of stargate-trino (get the image tag from ``docker-images`` in stargate-trino's GHA).
+- Confirm if you need to upgrade [trino-plugins](https://github.com/starburstdata/starburst-trino-plugins) shared dependency (`dep.starburst-trino-plugins.version` in pom.xml). This repository hosts the plugin or library code we share between SEP and Galaxy, and is recommended that we keep it in-sync with the Trino version.
+- If the PR is approved and green you will need to modify the default branch of stargate-trino to point to your new branch.
+  - Only a few people have privileges to do this, reach out to @david or @dain in slack for help
+  - Do not modify the default branch in stargate-trino if tests fail in [Galaxy](https://github.com/starburstdata/stargate) with the version of trino from your PR.
+  - Note: the branch should be named `galaxyXXX`
+  - Note: you will also need to fetch Trino tags and push them to the stargate-trino remote, this is to ensure the docker image tag is named correctly. see "Determine the image tag" in ci.yml
 
 ---
 ---
