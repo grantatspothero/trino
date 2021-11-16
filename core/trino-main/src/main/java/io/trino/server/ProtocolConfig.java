@@ -22,7 +22,7 @@ import java.util.Optional;
 
 public class ProtocolConfig
 {
-    private String alternateHeaderName;
+    private String alternateHeaderName = "presto";
     private int preparedStatementCompressionThreshold = 2 * 1024;
     private int preparedStatementCompressionMinimalGain = 512;
 

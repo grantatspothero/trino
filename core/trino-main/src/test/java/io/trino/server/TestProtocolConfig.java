@@ -28,7 +28,7 @@ public class TestProtocolConfig
     public void testDefaults()
     {
         assertRecordedDefaults(recordDefaults(ProtocolConfig.class)
-                .setAlternateHeaderName(null)
+                .setAlternateHeaderName("presto")
                 .setPreparedStatementCompressionThreshold(2 * 1024)
                 .setPreparedStatementCompressionMinimalGain(512));
     }
