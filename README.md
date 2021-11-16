@@ -4,6 +4,8 @@
 
 # Temporary staging area for Galaxy changes to Trino
 
+Commits following *Temporary OSS cherry-picks* are already merged to OSS, and will be dropped upon rebase to the next Trino version.
+
 ## How to build this project?
 
 You will need to use settings.xml file with credentials for AWS CodeArtifact.
