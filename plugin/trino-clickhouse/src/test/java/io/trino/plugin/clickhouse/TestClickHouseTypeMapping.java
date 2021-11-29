@@ -16,6 +16,7 @@ package io.trino.plugin.clickhouse;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.trino.Session;
+import io.trino.spi.type.DoubleType;
 import io.trino.spi.type.TimeZoneKey;
 import io.trino.spi.type.UuidType;
 import io.trino.testing.AbstractTestQueryFramework;
@@ -23,6 +24,7 @@ import io.trino.testing.QueryRunner;
 import io.trino.testing.datatype.CreateAndInsertDataSetup;
 import io.trino.testing.datatype.CreateAsSelectDataSetup;
 import io.trino.testing.datatype.DataSetup;
+import io.trino.testing.datatype.DataType;
 import io.trino.testing.datatype.DataTypeTest;
 import io.trino.testing.datatype.SqlDataTypeTest;
 import io.trino.testing.sql.TrinoSqlExecutor;
@@ -37,6 +39,8 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 import static io.trino.plugin.clickhouse.ClickHouseQueryRunner.createClickHouseQueryRunner;
 import static io.trino.spi.type.DecimalType.createDecimalType;
+import static io.trino.spi.type.DoubleType.DOUBLE;
+import static io.trino.spi.type.RealType.REAL;
 import static io.trino.spi.type.TimeZoneKey.UTC_KEY;
 import static io.trino.spi.type.VarbinaryType.VARBINARY;
 import static io.trino.spi.type.VarcharType.createUnboundedVarcharType;
@@ -47,6 +51,7 @@ import static io.trino.testing.datatype.DataType.integerDataType;
 import static io.trino.testing.datatype.DataType.realDataType;
 import static io.trino.testing.datatype.DataType.smallintDataType;
 import static io.trino.testing.datatype.DataType.tinyintDataType;
+import static java.lang.String.format;
 
 public class TestClickHouseTypeMapping
         extends AbstractTestQueryFramework
@@ -116,35 +121,44 @@ public class TestClickHouseTypeMapping
     @Test
     public void testReal()
     {
-        // TODO SqlDataTypeTest
-        DataTypeTest.create()
-                .addRoundTrip(realDataType(), 12.5f)
-                .addRoundTrip(realDataType(), Float.NaN)
-                .addRoundTrip(realDataType(), Float.NEGATIVE_INFINITY)
-                .addRoundTrip(realDataType(), Float.POSITIVE_INFINITY)
+        SqlDataTypeTest.create()
+                .addRoundTrip("real", "12.5", REAL, "cast(12.5 as real)")
+                .addRoundTrip("Nullable(real)", "NULL", REAL, "CAST(NULL AS real)")
+                .addRoundTrip("real", "cast(NaN as real)", REAL, "nan()")
+                .addRoundTrip("real", "cast(+Infinity as real)", REAL, "+infinity()")
+                .addRoundTrip("real", "cast(-Infinity as real)", REAL, "-infinity()")
+                .execute(getQueryRunner(), clickhouseCreateAndInsert("tpch.test_real"));
 
-                // TODO .execute(getQueryRunner(), clickhouseCreateAndInsert("tpch.test_real"))
-
-                // TODO test ClickHouse Nullable(...)
-                .addRoundTrip(realDataType(), null)
-
-                .execute(getQueryRunner(), trinoCreateAsSelect("trino__test_real"));
+        SqlDataTypeTest.create()
+                .addRoundTrip("real", "12.5", REAL, "cast(12.5 as real)")
+                .addRoundTrip("real", "NULL", REAL, "CAST(NULL AS real)")
+                .addRoundTrip("real", "nan()", REAL, "nan()")
+                .addRoundTrip("real", "+infinity() as real", REAL, "+infinity()")
+                .addRoundTrip("real", "-infinity() as real", REAL, "-infinity()")
+                .execute(getQueryRunner(), trinoCreateAsSelect("trino_test_real"));
     }
 
     @Test
     public void testDouble()
     {
-        // TODO SqlDataTypeTest
-        DataTypeTest.create()
-                .addRoundTrip(doubleDataType(), 3.1415926835)
-                .addRoundTrip(doubleDataType(), 1.79769E+308)
-                .addRoundTrip(doubleDataType(), 2.225E-307)
+        SqlDataTypeTest.create()
+                .addRoundTrip("double", "3.1415926835", DOUBLE, "cast(3.1415926835 as double)")
+                .addRoundTrip("double", "1.79769E+308", DOUBLE, "cast(1.79769E+308 as double)")
+                .addRoundTrip("double", "2.225E-307", DOUBLE, "cast(2.225E-307 as double)")
+                .addRoundTrip("Nullable(double)", "NULL", DOUBLE, "CAST(NULL AS double)")
+                .addRoundTrip("double", "cast(nan as double)", DOUBLE, "nan()")
+                .addRoundTrip("double", "cast(+inf as double)", DOUBLE, "+infinity()")
+                .addRoundTrip("double", "cast(-inf as double)", DOUBLE, "-infinity()")
+                .execute(getQueryRunner(), clickhouseCreateAndInsert("tpch.test_decimal"));
 
-                .execute(getQueryRunner(), clickhouseCreateAndInsert("tpch.test_decimal"))
-
-                // TODO test ClickHouse Nullable(...)
-                .addRoundTrip(doubleDataType(), null)
-
+        SqlDataTypeTest.create()
+                .addRoundTrip("double", "3.1415926835", DOUBLE, "cast(3.1415926835 as double)")
+                .addRoundTrip("double", "1.79769E+308", DOUBLE, "cast(1.79769E+308 as double)")
+                .addRoundTrip("double", "2.225E-307", DOUBLE, "2.225E-307")
+                .addRoundTrip("double", "NULL", DOUBLE, "CAST(NULL AS double)")
+                .addRoundTrip("double", "nan()", DOUBLE, "nan()")
+                .addRoundTrip("double", "+infinity()", DOUBLE, "+infinity()")
+                .addRoundTrip("double", "-infinity()", DOUBLE, "-infinity()")
                 .execute(getQueryRunner(), trinoCreateAsSelect("trino_test_double"));
     }
 
