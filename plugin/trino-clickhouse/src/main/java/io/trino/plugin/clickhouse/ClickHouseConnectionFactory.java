@@ -50,14 +50,19 @@ public class ClickHouseConnectionFactory
             }
 
             @Override
-            public boolean getAutoCommit()
+            public void setAutoCommit(boolean autoCommit)
                     throws SQLException
             {
-                // ClickHouse's Connection (ru.yandex.clickhouse.ClickHouseConnectionImpl) ignores setAutoCommit, commit and rollback,
-                // but still returns false from getAutoCommit().
-                // TODO once https://github.com/ClickHouse/clickhouse-jdbc/issues/657 is solved, remove the workaround.
-                verify(!delegate.getAutoCommit(), "ClickHouse connection declared auto-commit mode, the code needs update");
-                return true;
+                // Clickhouse "Transactions are not supported"
+            }
+            @Override
+            public void commit() throws SQLException {
+                // Clickhouse "Transactions are not supported"
+            }
+
+            @Override
+            public void rollback() throws SQLException {
+                // Clickhouse "Transactions are not supported"
             }
         };
     }
