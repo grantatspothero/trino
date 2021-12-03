@@ -20,6 +20,14 @@ import org.apache.hadoop.conf.Configuration;
 
 import javax.inject.Inject;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Optional;
+
 import static com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystemConfiguration.GCS_CONFIG_PREFIX;
 import static com.google.cloud.hadoop.fs.gcs.HadoopCredentialConfiguration.ACCESS_TOKEN_PROVIDER_IMPL_SUFFIX;
 import static com.google.cloud.hadoop.fs.gcs.HadoopCredentialConfiguration.ENABLE_SERVICE_ACCOUNTS_SUFFIX;
@@ -29,13 +37,31 @@ public class GoogleGcsConfigurationInitializer
         implements ConfigurationInitializer
 {
     private final boolean useGcsAccessToken;
-    private final String jsonKeyFilePath;
+    private final Optional<String> jsonKeyFilePath;
 
     @Inject
     public GoogleGcsConfigurationInitializer(HiveGcsConfig config)
     {
         this.useGcsAccessToken = config.isUseGcsAccessToken();
-        this.jsonKeyFilePath = config.getJsonKeyFilePath();
+        this.jsonKeyFilePath = getJsonKeyFilePath(Optional.ofNullable(config.getJsonKey()));
+    }
+
+    private static Optional<String> getJsonKeyFilePath(Optional<String> jsonKey)
+    {
+        // Just create a temporary json key file
+        return jsonKey.map(key -> writeNewTempFile("gcs-key-", ".json", key).getPath());
+    }
+
+    private static File writeNewTempFile(String filePrefix, String fileSuffix, String fileContents)
+    {
+        try {
+            Path tempFile = Files.createTempFile(filePrefix, fileSuffix);
+            Files.writeString(tempFile, fileContents, StandardCharsets.UTF_8);
+            return tempFile.toFile();
+        }
+        catch (IOException e) {
+            throw new UncheckedIOException("Failed to create a temp file for the GCS JSON key", e);
+        }
     }
 
     @Override
@@ -48,10 +74,10 @@ public class GoogleGcsConfigurationInitializer
             config.setBoolean(GCS_CONFIG_PREFIX + ENABLE_SERVICE_ACCOUNTS_SUFFIX.getKey(), false);
             config.setClass(GCS_CONFIG_PREFIX + ACCESS_TOKEN_PROVIDER_IMPL_SUFFIX.getKey(), GcsAccessTokenProvider.class, AccessTokenProvider.class);
         }
-        else if (jsonKeyFilePath != null) {
+        else if (jsonKeyFilePath.isPresent()) {
             // use service account key file
             config.setBoolean(GCS_CONFIG_PREFIX + ENABLE_SERVICE_ACCOUNTS_SUFFIX.getKey(), true);
-            config.set(GCS_CONFIG_PREFIX + SERVICE_ACCOUNT_JSON_KEYFILE_SUFFIX.getKey(), jsonKeyFilePath);
+            config.set(GCS_CONFIG_PREFIX + SERVICE_ACCOUNT_JSON_KEYFILE_SUFFIX.getKey(), jsonKeyFilePath.get());
         }
     }
 }

@@ -17,10 +17,19 @@ import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;
 import io.airlift.configuration.validation.FileExists;
 
+import javax.annotation.Nullable;
+
 public class HiveGcsConfig
 {
     private boolean useGcsAccessToken;
+    private String jsonKey;
     private String jsonKeyFilePath;
+
+    @Nullable
+    public String getJsonKey()
+    {
+        return jsonKey;
+    }
 
     @FileExists
     public String getJsonKeyFilePath()
@@ -33,6 +42,13 @@ public class HiveGcsConfig
     public HiveGcsConfig setJsonKeyFilePath(String jsonKeyFilePath)
     {
         this.jsonKeyFilePath = jsonKeyFilePath;
+        return this;
+    }
+
+    @Config("hive.gcs.json-key")
+    public HiveGcsConfig setJsonKey(String jsonKey)
+    {
+        this.jsonKey = jsonKey;
         return this;
     }
 
