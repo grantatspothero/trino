@@ -13,8 +13,12 @@
  */
 package io.trino.plugin.base.security;
 
+import com.google.common.collect.ImmutableSet;
 import io.trino.spi.security.SystemAccessControl;
+import io.trino.spi.security.SystemSecurityContext;
 import org.testng.annotations.Test;
+
+import java.util.Collection;
 
 import static io.trino.spi.testing.InterfaceTestUtils.assertAllMethodsOverridden;
 
@@ -22,7 +26,9 @@ public class TestAllowAllSystemAccessControl
 {
     @Test
     public void testEverythingImplemented()
+            throws Exception
     {
-        assertAllMethodsOverridden(SystemAccessControl.class, AllowAllSystemAccessControl.class);
+        assertAllMethodsOverridden(SystemAccessControl.class, AllowAllSystemAccessControl.class, ImmutableSet.of(
+                AllowAllSystemAccessControl.class.getMethod("filterViewQuery", SystemSecurityContext.class, Collection.class)));
     }
 }
