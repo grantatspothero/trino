@@ -35,6 +35,8 @@ import java.util.Set;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
+import static io.trino.execution.GalaxyWildcardUtil.isWildcard;
+import static io.trino.execution.GalaxyWildcardUtil.validateWildcard;
 import static io.trino.metadata.MetadataUtil.createCatalogSchemaName;
 import static io.trino.metadata.MetadataUtil.createPrincipal;
 import static io.trino.metadata.MetadataUtil.createQualifiedObjectName;
@@ -84,7 +86,10 @@ public class RevokeTask
     {
         CatalogSchemaName schemaName = createCatalogSchemaName(session, statement, Optional.of(statement.getName()));
 
-        if (!metadata.schemaExists(session, schemaName)) {
+        if (isWildcard(schemaName)) {
+            validateWildcard(session, metadata, statement, schemaName);
+        }
+        else if (!metadata.schemaExists(session, schemaName)) {
             throw semanticException(SCHEMA_NOT_FOUND, statement, "Schema '%s' does not exist", schemaName);
         }
 
@@ -99,12 +104,17 @@ public class RevokeTask
     private void executeRevokeOnTable(Session session, Revoke statement)
     {
         QualifiedObjectName tableName = createQualifiedObjectName(session, statement, statement.getName());
-        RedirectionAwareTableHandle redirection = metadata.getRedirectionAwareTableHandle(session, tableName);
-        if (redirection.getTableHandle().isEmpty()) {
-            throw semanticException(TABLE_NOT_FOUND, statement, "Table '%s' does not exist", tableName);
+        if (isWildcard(tableName)) {
+            validateWildcard(session, metadata, statement, tableName);
         }
-        if (redirection.getRedirectedTableName().isPresent()) {
-            throw semanticException(NOT_SUPPORTED, statement, "Table %s is redirected to %s and REVOKE is not supported with table redirections", tableName, redirection.getRedirectedTableName().get());
+        else {
+            RedirectionAwareTableHandle redirection = metadata.getRedirectionAwareTableHandle(session, tableName);
+            if (redirection.getTableHandle().isEmpty()) {
+                throw semanticException(TABLE_NOT_FOUND, statement, "Table '%s' does not exist", tableName);
+            }
+            if (redirection.getRedirectedTableName().isPresent()) {
+                throw semanticException(NOT_SUPPORTED, statement, "Table %s is redirected to %s and REVOKE is not supported with table redirections", tableName, redirection.getRedirectedTableName().get());
+            }
         }
 
         Set<Privilege> privileges = parseStatementPrivileges(statement);

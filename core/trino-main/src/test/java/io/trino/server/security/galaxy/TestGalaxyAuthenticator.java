@@ -13,6 +13,9 @@
  */
 package io.trino.server.security.galaxy;
 
+import io.starburst.stargate.id.AccountId;
+import io.starburst.stargate.id.RoleId;
+import io.starburst.stargate.id.UserId;
 import io.trino.server.security.AuthenticationException;
 import io.trino.server.security.galaxy.GalaxyAuthenticatorController.RequestBodyHashing;
 import io.trino.spi.security.Identity;
@@ -28,6 +31,7 @@ import java.util.Optional;
 
 import static io.trino.server.security.galaxy.GalaxyAuthenticatorController.REQUEST_EXPIRATION_CLAIM;
 import static io.trino.server.security.galaxy.GalaxyAuthenticatorController.parseClaimsWithoutValidation;
+import static io.trino.server.security.galaxy.GalaxyIdentity.createPrincipalString;
 import static io.trino.server.security.jwt.JwtUtil.newJwtBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -38,6 +42,7 @@ public abstract class TestGalaxyAuthenticator
     protected static final String ACCOUNT_ID = "a-12345678";
     protected static final String USER_ID = "u-1234567890";
     protected static final String ROLE_ID = "r-9876543252";
+    protected static final String GALAXY_IDENTITY = createPrincipalString(new AccountId(ACCOUNT_ID), new UserId(USER_ID), new RoleId(ROLE_ID));
 
     @FunctionalInterface
     interface TestAuthenticator
@@ -51,14 +56,14 @@ public abstract class TestGalaxyAuthenticator
     {
         assertThat(authenticator.authenticate(generateJwt("username", ACCOUNT_ID, subject, keyPair.getPrivate()), Optional.empty()))
                 .satisfies(identity -> assertThat(identity.getUser()).isEqualTo("username"))
-                .satisfies(identity -> assertThat(identity.getPrincipal().orElseThrow().toString()).isEqualTo("galaxy:u-12345678:r-98765432"));
+                .satisfies(identity -> assertThat(identity.getPrincipal().orElseThrow().toString()).isEqualTo(GALAXY_IDENTITY));
 
         Date notExpired = Date.from(ZonedDateTime.now().plusMinutes(5).toInstant());
         Date requestNotExpired = Date.from(ZonedDateTime.now().plusSeconds(60).toInstant());
         RequestBodyHashing requestBodyHashing = new RequestBodyHashing("good", "statement_hash");
         assertThat(authenticator.authenticate(generateJwt("username", ACCOUNT_ID, subject, keyPair.getPrivate(), notExpired, requestNotExpired, Optional.of("good")), Optional.of(requestBodyHashing)))
                 .satisfies(identity -> assertThat(identity.getUser()).isEqualTo("username"))
-                .satisfies(identity -> assertThat(identity.getPrincipal().orElseThrow().toString()).isEqualTo("galaxy:u-12345678:r-98765432"));
+                .satisfies(identity -> assertThat(identity.getPrincipal().orElseThrow().toString()).isEqualTo(GALAXY_IDENTITY));
 
         assertThatThrownBy(() -> authenticator.authenticate(generateJwt("username", "unknown", subject, keyPair.getPrivate()), Optional.empty()))
                 .isInstanceOf(AuthenticationException.class)
@@ -121,8 +126,8 @@ public abstract class TestGalaxyAuthenticator
                 .setSubject(deploymentId)
                 .setExpiration(expiration)
                 .claim("username", username)
-                .claim("user_id", "u-12345678")
-                .claim("role_id", "r-98765432")
+                .claim("user_id", USER_ID)
+                .claim("role_id", ROLE_ID)
                 .claim("role_name", "roletest")
                 .claim(REQUEST_EXPIRATION_CLAIM, requestExpiration)
                 .claim("statement_hash", statementHash.orElse(null))

@@ -251,6 +251,12 @@
             <!-- Trino -->
             <dependency>
                 <groupId>io.trino</groupId>
+                <artifactId>galaxy-security</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
                 <artifactId>trino-array</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -1644,7 +1650,19 @@
             <!-- Stargate -->
             <dependency>
                 <groupId>io.starburst.stargate</groupId>
+                <artifactId>access-control-client</artifactId>
+                <version>${dep.stargate.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.starburst.stargate</groupId>
                 <artifactId>metastore-client</artifactId>
+                <version>${dep.stargate.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.starburst.stargate</groupId>
+                <artifactId>stargate-exceptions</artifactId>
                 <version>${dep.stargate.version}</version>
             </dependency>
 

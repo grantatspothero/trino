@@ -107,6 +107,13 @@
             <groupId>io.trino</groupId>
             <artifactId>trino-main</artifactId>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <!-- Has resource conflicting with org.apache.httpcomponents.client5:httpclient5 which is the driver's dependency -->
+                    <groupId>org.apache.httpcomponents</groupId>
+                    <artifactId>httpclient</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>

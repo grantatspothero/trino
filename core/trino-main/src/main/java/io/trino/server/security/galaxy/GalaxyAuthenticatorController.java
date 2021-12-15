@@ -24,7 +24,6 @@ import io.starburst.stargate.id.AccountId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.UserId;
 import io.trino.server.security.AuthenticationException;
-import io.trino.spi.security.BasicPrincipal;
 import io.trino.spi.security.Identity;
 
 import javax.ws.rs.BadRequestException;
@@ -38,21 +37,18 @@ import java.security.GeneralSecurityException;
 import java.security.PublicKey;
 import java.time.Instant;
 import java.util.Date;
-import java.util.Map;
 import java.util.Optional;
 
 import static com.google.common.hash.Hashing.sha256;
+import static io.trino.server.security.galaxy.GalaxyIdentity.createIdentity;
 import static io.trino.server.security.jwt.JwtUtil.newJwtParserBuilder;
-import static java.lang.String.format;
 import static java.time.Instant.now;
 import static java.util.Objects.requireNonNull;
 
 public class GalaxyAuthenticatorController
 {
-    private static final Logger log = Logger.get(GalaxyAuthenticatorController.class);
-
     static final String REQUEST_EXPIRATION_CLAIM = "request_expiry";
-    private static final String GALAXY_TOKEN_CREDENTIAL = "GalaxyTokenCredential";
+    private static final Logger log = Logger.get(GalaxyAuthenticatorController.class);
 
     private final JwtParser jwtParser;
 
@@ -138,10 +134,7 @@ public class GalaxyAuthenticatorController
                 }
             }
 
-            return Identity.forUser(username)
-                    .withPrincipal(new BasicPrincipal(format("galaxy:%s:%s", userId, roleId)))
-                    .withExtraCredentials(Map.of(GALAXY_TOKEN_CREDENTIAL, token))
-                    .build();
+            return createIdentity(username, accountId, userId, roleId, token);
         }
         catch (JwtException e) {
             log.error(e, "Exception parsing JWT token: %s", parseClaimsWithoutValidation(token).orElse("not a JWT token"));

@@ -690,6 +690,11 @@ public class AccessDeniedException
         throw new AccessDeniedException(format("Cannot execute function %s", functionName));
     }
 
+    public static void denyExecuteFunction(String functionName, String extraInfo)
+    {
+        throw new AccessDeniedException(format("Cannot execute function %s%s", functionName, formatExtraInfo(extraInfo)));
+    }
+
     public static void denyExecuteFunction(String functionName, FunctionKind functionKind, String extraInfo)
     {
         throw new AccessDeniedException(format("Cannot execute %s function %s%s", functionKind.name().toLowerCase(Locale.ROOT), functionName, formatExtraInfo(extraInfo)));

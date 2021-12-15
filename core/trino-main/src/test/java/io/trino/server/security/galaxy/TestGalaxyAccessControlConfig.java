@@ -11,29 +11,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.server.galaxy;
+package io.trino.server.security.galaxy;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import io.starburst.stargate.id.CatalogId;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.Map;
 
 import static io.airlift.configuration.testing.ConfigAssertions.assertFullMapping;
 import static io.airlift.configuration.testing.ConfigAssertions.assertRecordedDefaults;
 import static io.airlift.configuration.testing.ConfigAssertions.recordDefaults;
 
-public class TestGalaxyEnabledConfig
+public class TestGalaxyAccessControlConfig
 {
     @Test
     public void testDefaults()
     {
-        assertRecordedDefaults(recordDefaults(GalaxyEnabledConfig.class)
-                .setGalaxyEnabled(false)
-                .setGalaxyRbacEnabled(true)
-                .setGalaxyCorsEnabled(false)
-                .setGalaxyOperatorAuthenticationEnabled(false)
-                .setGalaxyHeartbeatEnabled(false));
+        assertRecordedDefaults(recordDefaults(GalaxyAccessControlConfig.class)
+                // No defaults for the accountUri
+                .setAccountUri(null)
+                .setCatalogNames("")
+                .setReadOnlyCatalogs(""));
     }
 
     @Test
@@ -41,19 +43,18 @@ public class TestGalaxyEnabledConfig
             throws IOException
     {
         Map<String, String> properties = ImmutableMap.<String, String>builder()
-                .put("galaxy.enabled", "true")
-                .put("galaxy.rbac.enabled", "true")
-                .put("galaxy.cors.enabled", "true")
-                .put("galaxy.heartbeat.enabled", "true")
-                .put("galaxy.operator.enabled", "true")
+                .put("galaxy.account-url", "https://whackadoodle.galaxy.com")
+                .put("galaxy.catalog-names", "my_catalog->c-1234567890,other_catalog->c-1112223334")
+                .put("galaxy.read-only-catalogs", "sillycatalog,funnycatalog")
                 .buildOrThrow();
 
-        GalaxyEnabledConfig expected = new GalaxyEnabledConfig()
-                .setGalaxyEnabled(true)
-                .setGalaxyRbacEnabled(true)
-                .setGalaxyCorsEnabled(true)
-                .setGalaxyOperatorAuthenticationEnabled(true)
-                .setGalaxyHeartbeatEnabled(true);
+        GalaxyAccessControlConfig expected = new GalaxyAccessControlConfig()
+                .setAccountUri(URI.create("https://whackadoodle.galaxy.com"))
+                .setCatalogNames(ImmutableMap.<String, CatalogId>builder()
+                        .put("my_catalog", new CatalogId("c-1234567890"))
+                        .put("other_catalog", new CatalogId("c-1112223334"))
+                        .buildOrThrow())
+                .setReadOnlyCatalogs(ImmutableSet.of("sillycatalog", "funnycatalog"));
 
         assertFullMapping(properties, expected);
     }

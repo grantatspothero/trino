@@ -90,6 +90,8 @@ import io.trino.memory.TotalReservationOnBlockedNodesQueryLowMemoryKiller;
 import io.trino.memory.TotalReservationOnBlockedNodesTaskLowMemoryKiller;
 import io.trino.operator.ForScheduler;
 import io.trino.operator.OperatorStats;
+import io.trino.server.galaxy.GalaxyEnabledConfig;
+import io.trino.server.galaxy.GalaxySecurityModule;
 import io.trino.server.protocol.ExecutingStatementResource;
 import io.trino.server.protocol.QueryInfoUrlFactory;
 import io.trino.server.protocol.StatementResponseFilter;
@@ -148,6 +150,8 @@ public class CoordinatorModule
     @Override
     protected void setup(Binder binder)
     {
+        install(conditionalModule(GalaxyEnabledConfig.class, GalaxyEnabledConfig::isGalaxyRbacEnabled, new GalaxySecurityModule()));
+
         install(new WebUiModule());
 
         // coordinator announcement

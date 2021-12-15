@@ -18,6 +18,7 @@ import io.airlift.configuration.Config;
 public class GalaxyEnabledConfig
 {
     private boolean galaxyEnabled;
+    private boolean galaxyRbacEnabled = true;
     private boolean galaxyCorsEnabled = true;
     private boolean galaxyHeartbeatEnabled = true;
     private boolean galaxyOperatorAuthenticationEnabled = true;
@@ -31,6 +32,18 @@ public class GalaxyEnabledConfig
     public GalaxyEnabledConfig setGalaxyEnabled(boolean galaxyEnabled)
     {
         this.galaxyEnabled = galaxyEnabled;
+        return this;
+    }
+
+    public boolean isGalaxyRbacEnabled()
+    {
+        return galaxyEnabled && galaxyRbacEnabled;
+    }
+
+    @Config("galaxy.rbac.enabled")
+    public GalaxyEnabledConfig setGalaxyRbacEnabled(boolean galaxyRbacEnabled)
+    {
+        this.galaxyRbacEnabled = galaxyRbacEnabled;
         return this;
     }
 
