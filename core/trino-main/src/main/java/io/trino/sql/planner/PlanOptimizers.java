@@ -137,6 +137,7 @@ import io.trino.sql.planner.iterative.rule.PruneValuesColumns;
 import io.trino.sql.planner.iterative.rule.PruneWindowColumns;
 import io.trino.sql.planner.iterative.rule.PushAggregationIntoTableScan;
 import io.trino.sql.planner.iterative.rule.PushAggregationThroughOuterJoin;
+import io.trino.sql.planner.iterative.rule.PushAggregationThroughUnion;
 import io.trino.sql.planner.iterative.rule.PushCastIntoRow;
 import io.trino.sql.planner.iterative.rule.PushDeleteIntoConnector;
 import io.trino.sql.planner.iterative.rule.PushDistinctLimitIntoTableScan;
@@ -670,7 +671,8 @@ public class PlanOptimizers
                                 new PushdownLimitIntoWindow(),
                                 new PushdownFilterIntoRowNumber(metadata, typeOperators),
                                 new PushdownFilterIntoWindow(metadata, typeOperators),
-                                new ReplaceWindowWithRowNumber(metadata))),
+                                new ReplaceWindowWithRowNumber(metadata),
+                                new PushAggregationThroughUnion(metadata))),
                 new IterativeOptimizer(
                         metadata,
                         ruleStats,
