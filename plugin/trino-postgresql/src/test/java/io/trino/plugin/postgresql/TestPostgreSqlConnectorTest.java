@@ -19,11 +19,13 @@ import io.airlift.units.Duration;
 import io.trino.Session;
 import io.trino.plugin.jdbc.BaseJdbcConnectorTest;
 import io.trino.plugin.jdbc.JdbcColumnHandle;
+import io.trino.plugin.jdbc.JdbcQueryRelationHandle;
 import io.trino.plugin.jdbc.JdbcTableHandle;
 import io.trino.plugin.jdbc.RemoteDatabaseEvent;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.predicate.Range;
 import io.trino.spi.predicate.TupleDomain;
+import io.trino.sql.planner.assertions.PlanMatchPattern;
 import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.planner.plan.TableScanNode;
@@ -44,6 +46,7 @@ import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 import static com.google.common.collect.MoreCollectors.onlyElement;
 import static io.airlift.slice.Slices.utf8Slice;
@@ -610,6 +613,46 @@ public class TestPostgreSqlConnectorTest
                     .matches("VALUES 1")
                     .isFullyPushedDown();
         }
+    }
+
+    @Test
+    public void testCoerceInsideAgg()
+    {
+        // GROUP BY without a projection on the group by field
+        assertThat(query("SELECT orderkey, sum(linenumber) as m FROM lineitem group by orderkey"))
+                .matches(PlanMatchPattern.anyTree(PlanMatchPattern.tableScan(
+                        tableHandle -> {
+                            // A single column handle does not necessarily mean that the group by column was pruned from the pushed down query
+                            // For example, PruneTableScanColumns can fire after aggregation pushdown
+                            JdbcTableHandle jdbcTableHandle = (JdbcTableHandle) tableHandle;
+                            JdbcQueryRelationHandle jdbcQueryRelationHandle = ((JdbcQueryRelationHandle) jdbcTableHandle.getRelationHandle());
+                            Pattern regex = Pattern.compile("SELECT min\\(\\\"nationkey\\\"\\) AS \\\"[^\\s]+ FROM", Pattern.CASE_INSENSITIVE);
+                            return jdbcTableHandle.getColumns().get().size() == 1 &&
+                                    regex.matcher(jdbcQueryRelationHandle.getPreparedQuery().getQuery()).lookingAt();
+                        },
+                        TupleDomain.all(),
+                        ImmutableMap.of())))
+                .isFullyPushedDown();
+    }
+
+    @Test
+    public void testPruneGroupingKeysDuringAggregationPushdown()
+    {
+        // GROUP BY without a projection on the group by field
+        assertThat(query("select * from (SELECT min(nationkey) as m FROM nation GROUP BY regionkey ) tmp limit 1"))
+                .matches(PlanMatchPattern.anyTree(PlanMatchPattern.tableScan(
+                        tableHandle -> {
+                            // A single column handle does not necessarily mean that the group by column was pruned from the pushed down query
+                            // For example, PruneTableScanColumns can fire after aggregation pushdown
+                            JdbcTableHandle jdbcTableHandle = (JdbcTableHandle) tableHandle;
+                            JdbcQueryRelationHandle jdbcQueryRelationHandle = ((JdbcQueryRelationHandle) jdbcTableHandle.getRelationHandle());
+                            Pattern regex = Pattern.compile("SELECT min\\(\\\"nationkey\\\"\\) AS \\\"[^\\s]+ FROM", Pattern.CASE_INSENSITIVE);
+                            return jdbcTableHandle.getColumns().get().size() == 1 &&
+                                    regex.matcher(jdbcQueryRelationHandle.getPreparedQuery().getQuery()).lookingAt();
+                        },
+                        TupleDomain.all(),
+                        ImmutableMap.of())))
+                .isFullyPushedDown();
     }
 
     private String getLongInClause(int start, int length)

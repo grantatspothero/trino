@@ -1,16 +1,3 @@
-/*
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package io.trino.sql.planner.iterative.rule;
 
 import com.google.common.collect.ImmutableBiMap;
@@ -20,20 +7,18 @@ import io.trino.matching.Capture;
 import io.trino.matching.Captures;
 import io.trino.matching.Pattern;
 import io.trino.metadata.BoundSignature;
-import io.trino.metadata.Metadata;
+import io.trino.metadata.FunctionId;
+import io.trino.metadata.ResolvedFunction;
 import io.trino.metadata.TableHandle;
 import io.trino.spi.connector.AggregateFunction;
 import io.trino.spi.connector.AggregationApplicationResult;
 import io.trino.spi.connector.Assignment;
 import io.trino.spi.connector.ColumnHandle;
-import io.trino.spi.connector.SortItem;
-import io.trino.spi.expression.ConnectorExpression;
-import io.trino.spi.expression.Variable;
+import io.trino.spi.function.AggregationFunction;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.sql.PlannerContext;
 import io.trino.sql.planner.ConnectorExpressionTranslator;
 import io.trino.sql.planner.LiteralEncoder;
-import io.trino.sql.planner.OrderingScheme;
 import io.trino.sql.planner.Symbol;
 import io.trino.sql.planner.iterative.Rule;
 import io.trino.sql.planner.plan.AggregationNode;
@@ -41,14 +26,15 @@ import io.trino.sql.planner.plan.Assignments;
 import io.trino.sql.planner.plan.PlanNode;
 import io.trino.sql.planner.plan.ProjectNode;
 import io.trino.sql.planner.plan.TableScanNode;
+import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.SymbolReference;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.google.common.base.Verify.verify;
@@ -59,27 +45,28 @@ import static io.trino.matching.Capture.newCapture;
 import static io.trino.sql.planner.iterative.rule.Rules.deriveTableStatisticsForPushdown;
 import static io.trino.sql.planner.plan.Patterns.Aggregation.step;
 import static io.trino.sql.planner.plan.Patterns.aggregation;
+import static io.trino.sql.planner.plan.Patterns.project;
 import static io.trino.sql.planner.plan.Patterns.source;
 import static io.trino.sql.planner.plan.Patterns.tableScan;
 import static java.util.Objects.requireNonNull;
 
-public class PushAggregationIntoTableScan
-        implements Rule<AggregationNode>
-{
+public class PushCastedAggregationsIntoTableScan implements Rule<AggregationNode> {
     private static final Capture<TableScanNode> TABLE_SCAN = newCapture();
+    private static final Capture<ProjectNode> PROJECT = newCapture();
 
     private static final Pattern<AggregationNode> PATTERN =
             aggregation()
                     .with(step().equalTo(AggregationNode.Step.SINGLE))
+                    .matching(PushCastedAggregationsIntoTableScan::allArgumentsAreSimpleReferences)
                     // skip arguments that are, for instance, lambda expressions
-                    .matching(PushAggregationIntoTableScan::allArgumentsAreSimpleReferences)
                     .matching(node -> node.getGroupingSets().getGroupingSetCount() <= 1)
-                    .matching(PushAggregationIntoTableScan::hasNoMasks)
-                    .with(source().matching(tableScan().capturedAs(TABLE_SCAN)));
+                    .with(
+                            source().matching(project().matching(PushCastedAggregationsIntoTableScan::allArgumentsAreSimpleReferencesOrCasts).capturedAs(PROJECT).with(
+                                    source().matching(tableScan().capturedAs(TABLE_SCAN)))));
 
     private final PlannerContext plannerContext;
 
-    public PushAggregationIntoTableScan(PlannerContext plannerContext)
+    public PushCastedAggregationsIntoTableScan(PlannerContext plannerContext)
     {
         this.plannerContext = requireNonNull(plannerContext, "plannerContext is null");
     }
@@ -104,17 +91,40 @@ public class PushAggregationIntoTableScan
                 .allMatch(SymbolReference.class::isInstance);
     }
 
-    private static boolean hasNoMasks(AggregationNode node)
+    private static boolean allArgumentsAreSimpleReferencesOrCasts(ProjectNode node)
     {
-        return node.getAggregations()
-                .values().stream()
-                .allMatch(aggregation -> aggregation.getMask().isEmpty());
+        return node.getAssignments().getExpressions().stream()
+                .allMatch(expression -> expression instanceof SymbolReference || expression instanceof Cast);
     }
 
     @Override
     public Result apply(AggregationNode node, Captures captures, Context context)
     {
-        return pushAggregationIntoTableScan(plannerContext, context, node, captures.get(TABLE_SCAN), node.getAggregations(), node.getGroupingSets().getGroupingKeys())
+        ProjectNode projectNode = captures.get(PROJECT);
+        TableScanNode tableScanNode = captures.get(TABLE_SCAN);
+        // TODO: verify no casting funny business is happening in the group by of the aggregation
+
+        Map<Symbol, AggregationNode.Aggregation> rewrittenAggregations = node.getAggregations().entrySet().stream().map(
+                entry -> {
+                    ResolvedFunction rewrittenFunction = entry.getValue().getResolvedFunction();
+//                    BoundSignature oldSignature = entry.getValue().getResolvedFunction().getSignature();
+//                    BoundSignature rewrittenSignature = new BoundSignature(oldSignature.getName(), )
+//                    FunctionId.toFunctionId()
+                    List<Expression> rewrittenArguments = entry.getValue().getArguments().stream().map(expression -> {
+                        Expression projectExpression = projectNode.getAssignments().get(Symbol.from(expression));
+                        if(projectExpression instanceof Cast){
+                            return projectExpression;
+                        }
+                        // No rewriting needed
+                        return expression;
+                    }).collect(Collectors.toList());
+                    AggregationNode.Aggregation rewrittenAggregation  = new AggregationNode.Aggregation(rewrittenFunction, rewrittenArguments, entry.getValue().isDistinct(), entry.getValue().getFilter(), entry.getValue().getOrderingScheme(), entry.getValue().getMask());
+                    return Map.entry(entry.getKey(), rewrittenAggregation);
+                }
+        ).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        AggregationNode rewrittenAggregationNode = new AggregationNode(node.getId(), tableScanNode, rewrittenAggregations, node.getGroupingSets(), node.getPreGroupedSymbols(), node.getStep(), node.getHashSymbol(), node.getGroupIdSymbol());
+
+        return pushAggregationIntoTableScan(plannerContext, context, rewrittenAggregationNode, projectNode, tableScanNode, rewrittenAggregations, rewrittenAggregationNode.getGroupingKeys())
                 .map(Rule.Result::ofPlanNode)
                 .orElseGet(Rule.Result::empty);
     }
@@ -123,25 +133,26 @@ public class PushAggregationIntoTableScan
             PlannerContext plannerContext,
             Context context,
             PlanNode aggregationNode,
+            ProjectNode projectNode,
             TableScanNode tableScan,
             Map<Symbol, AggregationNode.Aggregation> aggregations,
             List<Symbol> groupingKeys)
     {
         Map<String, ColumnHandle> assignments = tableScan.getAssignments()
                 .entrySet().stream()
-                .collect(toImmutableMap(entry -> entry.getKey().getName(), Entry::getValue));
+                .collect(toImmutableMap(entry -> entry.getKey().getName(), Map.Entry::getValue));
 
-        List<Entry<Symbol, AggregationNode.Aggregation>> aggregationsList = aggregations
+        List<Map.Entry<Symbol, AggregationNode.Aggregation>> aggregationsList = aggregations
                 .entrySet().stream()
                 .collect(toImmutableList());
 
         List<AggregateFunction> aggregateFunctions = aggregationsList.stream()
-                .map(Entry::getValue)
-                .map(aggregation -> toAggregateFunction(plannerContext.getMetadata(), context, aggregation))
+                .map(Map.Entry::getValue)
+                .map(aggregation -> PushAggregationIntoTableScan.toAggregateFunction(plannerContext.getMetadata(), context, aggregation))
                 .collect(toImmutableList());
 
         List<Symbol> aggregationOutputSymbols = aggregationsList.stream()
-                .map(Entry::getKey)
+                .map(Map.Entry::getKey)
                 .collect(toImmutableList());
 
         List<ColumnHandle> groupByColumns = groupingKeys.stream()
@@ -216,29 +227,5 @@ public class PushAggregationIntoTableScan
                         assignmentBuilder.build()));
     }
 
-    public static AggregateFunction toAggregateFunction(Metadata metadata, Context context, AggregationNode.Aggregation aggregation)
-    {
-        String canonicalName = metadata.getFunctionMetadata(aggregation.getResolvedFunction()).getCanonicalName();
-        BoundSignature signature = aggregation.getResolvedFunction().getSignature();
 
-        ImmutableList.Builder<ConnectorExpression> arguments = new ImmutableList.Builder<>();
-        for (int i = 0; i < aggregation.getArguments().size(); i++) {
-            SymbolReference argument = (SymbolReference) aggregation.getArguments().get(i);
-            arguments.add(new Variable(argument.getName(), signature.getArgumentTypes().get(i)));
-        }
-
-        Optional<OrderingScheme> orderingScheme = aggregation.getOrderingScheme();
-        Optional<List<SortItem>> sortBy = orderingScheme.map(OrderingScheme::toSortItems);
-
-        Optional<ConnectorExpression> filter = aggregation.getFilter()
-                .map(symbol -> new Variable(symbol.getName(), context.getSymbolAllocator().getTypes().get(symbol)));
-
-        return new AggregateFunction(
-                canonicalName,
-                signature.getReturnType(),
-                arguments.build(),
-                sortBy.orElse(ImmutableList.of()),
-                aggregation.isDistinct(),
-                filter);
-    }
 }

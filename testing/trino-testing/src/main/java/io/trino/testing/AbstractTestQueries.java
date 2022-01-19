@@ -38,6 +38,7 @@ import static io.trino.testing.StatefulSleepingSum.STATEFUL_SLEEPING_SUM;
 import static io.trino.testing.assertions.Assert.assertEquals;
 import static io.trino.testing.assertions.Assert.assertEventually;
 import static io.trino.tpch.TpchTable.CUSTOMER;
+import static io.trino.tpch.TpchTable.LINE_ITEM;
 import static io.trino.tpch.TpchTable.NATION;
 import static io.trino.tpch.TpchTable.ORDERS;
 import static io.trino.tpch.TpchTable.REGION;
@@ -50,7 +51,7 @@ import static org.testng.Assert.assertTrue;
 public abstract class AbstractTestQueries
         extends AbstractTestQueryFramework
 {
-    protected static final List<TpchTable<?>> REQUIRED_TPCH_TABLES = ImmutableList.of(CUSTOMER, NATION, ORDERS, REGION);
+    protected static final List<TpchTable<?>> REQUIRED_TPCH_TABLES = ImmutableList.of(CUSTOMER, NATION, ORDERS, REGION, LINE_ITEM);
 
     // We can just use the default type registry, since we don't use any parametric types
     protected static final List<SqlFunction> CUSTOM_FUNCTIONS = new FunctionListBuilder()
