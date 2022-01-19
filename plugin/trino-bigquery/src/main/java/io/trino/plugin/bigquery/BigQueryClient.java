@@ -33,6 +33,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSet;
 import io.airlift.log.Logger;
 import io.airlift.units.Duration;
+import io.trino.plugin.base.cache.EvictableCache;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.TableNotFoundException;
 
@@ -64,8 +65,8 @@ public class BigQueryClient
     private final BigQuery bigQuery;
     private final ViewMaterializationCache materializationCache;
     private final boolean caseInsensitiveNameMatching;
-    private final Cache<String, Optional<RemoteDatabaseObject>> remoteDatasets;
-    private final Cache<TableId, Optional<RemoteDatabaseObject>> remoteTables;
+    private final EvictableCache<String, Optional<RemoteDatabaseObject>> remoteDatasets;
+    private final EvictableCache<TableId, Optional<RemoteDatabaseObject>> remoteTables;
 
     public BigQueryClient(BigQuery bigQuery, BigQueryConfig config, ViewMaterializationCache materializationCache)
     {
@@ -77,8 +78,8 @@ public class BigQueryClient
         this.caseInsensitiveNameMatching = config.isCaseInsensitiveNameMatching();
         CacheBuilder<Object, Object> remoteNamesCacheBuilder = CacheBuilder.newBuilder()
                 .expireAfterWrite(caseInsensitiveNameMatchingCacheTtl.toMillis(), MILLISECONDS);
-        this.remoteDatasets = remoteNamesCacheBuilder.build();
-        this.remoteTables = remoteNamesCacheBuilder.build();
+        this.remoteDatasets = EvictableCache.buildWith(remoteNamesCacheBuilder);
+        this.remoteTables = EvictableCache.buildWith(remoteNamesCacheBuilder);
     }
 
     public Optional<RemoteDatabaseObject> toRemoteDataset(String projectId, String datasetName)
