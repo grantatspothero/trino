@@ -28,7 +28,6 @@ import com.google.cloud.bigquery.TableId;
 import com.google.cloud.bigquery.TableInfo;
 import com.google.cloud.bigquery.TableResult;
 import com.google.cloud.http.BaseHttpServiceException;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.UncheckedExecutionException;
@@ -38,6 +37,7 @@ import io.trino.plugin.base.cache.EvictableCache;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.TableNotFoundException;
 
+import javax.swing.text.html.Option;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -50,7 +50,6 @@ import java.util.function.Supplier;
 
 import static com.google.cloud.bigquery.TableDefinition.Type.TABLE;
 import static com.google.cloud.bigquery.TableDefinition.Type.VIEW;
-import static com.google.common.base.Throwables.throwIfInstanceOf;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Iterables.getOnlyElement;
@@ -61,6 +60,7 @@ import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.joining;
+import static org.weakref.jmx.internal.guava.base.Throwables.throwIfInstanceOf;
 
 public class BigQueryClient
 {
@@ -69,8 +69,10 @@ public class BigQueryClient
     private final BigQuery bigQuery;
     private final ViewMaterializationCache materializationCache;
     private final boolean caseInsensitiveNameMatching;
-    private final EvictableCache<String, Optional<RemoteDatabaseObject>> remoteDatasets;
-    private final EvictableCache<TableId, Optional<RemoteDatabaseObject>> remoteTables;
+    // projectId -> [lowercase] datasetName -> RemoteDatabaseObject
+    private final EvictableCache<String, Map<String, Optional<RemoteDatabaseObject>>> remoteDatasets;
+    // Entry<projectId, datasetName> -> [lowercase] tableName -> RemoteDatabaseObject
+    private final EvictableCache<Map.Entry<String, String>, Map<String, Optional<RemoteDatabaseObject>>> remoteTables;
 
     public BigQueryClient(BigQuery bigQuery, BigQueryConfig config, ViewMaterializationCache materializationCache)
     {
@@ -95,17 +97,31 @@ public class BigQueryClient
             return Optional.of(RemoteDatabaseObject.of(datasetName));
         }
 
-        return refreshCacheFromLocalPresentMapping(remoteDatasets, datasetName, () -> {
-            // cache miss, list all the datasets and collect them in a local mapping
-            Map<String, RemoteDatabaseObject> mapping = new HashMap<>();
+
+        // Check if we have a cached result, if we do and the cached result doesn't contain the datasetName then invalidate
+        Map<String, Optional<RemoteDatabaseObject>> cachedDatasetToRemoteDatabaseObject = remoteDatasets.getIfPresent(projectId);
+        if (cachedDatasetToRemoteDatabaseObject != null && !cachedDatasetToRemoteDatabaseObject.containsKey(datasetName)) {
+            remoteDatasets.invalidate(projectId);
+        }
+
+        Map<String, Optional<RemoteDatabaseObject>> datasetToRemoteDatabaseObject = get(remoteDatasets, projectId, () -> {
+            // cache miss, list all the datasets and refresh cache
+            Map<String, Optional<RemoteDatabaseObject>> mapping = new HashMap<>();
             for (Dataset dataset : listDatasets(projectId)) {
                 mapping.merge(
                         dataset.getDatasetId().getDataset().toLowerCase(ENGLISH),
-                        RemoteDatabaseObject.of(dataset.getDatasetId().getDataset()),
-                        (currentValue, collision) -> currentValue.registerCollision(collision.getOnlyRemoteName()));
+                        Optional.of(RemoteDatabaseObject.of(dataset.getDatasetId().getDataset())),
+                        (currentValue, collision) -> Optional.of(currentValue.get().registerCollision(collision.get().getOnlyRemoteName())));
+            }
+            // explicitly cache the negative entry if the requested dataset doesn't exist
+            if (!mapping.containsKey(datasetName)) {
+                mapping.put(datasetName, Optional.empty());
             }
             return mapping;
         });
+
+        return datasetToRemoteDatabaseObject.get(datasetName);
+
     }
 
     public Optional<RemoteDatabaseObject> toRemoteTable(String projectId, String remoteDatasetName, String tableName)
@@ -128,19 +144,31 @@ public class BigQueryClient
             return Optional.of(RemoteDatabaseObject.of(tableName));
         }
 
-        TableId cacheKey = TableId.of(projectId, remoteDatasetName, tableName);
+        Map.Entry<String, String> cacheKey = Map.entry(projectId, remoteDatasetName);
 
-        return refreshCacheFromLocalPresentMapping(remoteTables, cacheKey, () -> {
-            // cache miss, list all the tables and collect them in a local mapping
-            Map<TableId, RemoteDatabaseObject> mapping = new HashMap<>();
+        // Check if we have a cached result, if we do and the cached result doesn't contain the tableName then invalidate
+        Map<String, Optional<RemoteDatabaseObject>> cachedTableToRemoteDatabaseObject = remoteTables.getIfPresent(cacheKey);
+        if (cachedTableToRemoteDatabaseObject != null && !cachedTableToRemoteDatabaseObject.containsKey(tableName)) {
+            remoteDatasets.invalidate(projectId);
+        }
+
+        Map<String, Optional<RemoteDatabaseObject>> tableToRemoteDatabaseObject = get(remoteTables, cacheKey, () -> {
+            // cache miss, list all the tables and refresh cache
+            Map<String, Optional<RemoteDatabaseObject>> mapping = new HashMap<>();
             for (Table table : tables.get()) {
                 mapping.merge(
-                        tableIdToLowerCase(table.getTableId()),
-                        RemoteDatabaseObject.of(table.getTableId().getTable()),
-                        (currentValue, collision) -> currentValue.registerCollision(collision.getOnlyRemoteName()));
+                        table.getTableId().getTable().toLowerCase(ENGLISH),
+                        Optional.of(RemoteDatabaseObject.of(table.getTableId().getTable())),
+                        (currentValue, collision) -> Optional.of(currentValue.get().registerCollision(collision.get().getOnlyRemoteName())));
+            }
+            // explicitly cache the negative entry if the requested tableName doesn't exist
+            if (!mapping.containsKey(tableName)) {
+                mapping.put(tableName, Optional.empty());
             }
             return mapping;
         });
+
+        return tableToRemoteDatabaseObject.get(tableName);
     }
 
     private static TableId tableIdToLowerCase(TableId tableId)
@@ -200,6 +228,7 @@ public class BigQueryClient
     public void dropSchema(DatasetId datasetId)
     {
         bigQuery.delete(datasetId);
+        remoteDatasets.invalidate(getProjectId());
     }
 
     public void createTable(TableInfo tableInfo)
@@ -210,6 +239,7 @@ public class BigQueryClient
     public void dropTable(TableId tableId)
     {
         bigQuery.delete(tableId);
+        remoteTables.invalidate(Map.entry(getProjectId(), tableId.getDataset()));
     }
 
     Job create(JobInfo jobInfo)
@@ -322,32 +352,6 @@ public class BigQueryClient
         catch (ExecutionException e) {
             throwIfInstanceOf(e.getCause(), TrinoException.class);
             throw new UncheckedExecutionException(e);
-        }
-    }
-
-    @VisibleForTesting
-    static <K, V> Optional<V> refreshCacheFromLocalPresentMapping(EvictableCache<K, Optional<V>> cache, K cacheKey, Supplier<Map<K, V>> presentMappingSupplier)
-    {
-        Optional<V> maybeOutput = cache.getIfPresent(cacheKey);
-        if (maybeOutput != null) {
-            return maybeOutput;
-        }
-        Map<K, V> presentMapping = presentMappingSupplier.get();
-        // invalidate then cache present keys from the presentMapping
-        for (Map.Entry<K, V> entry : presentMapping.entrySet()) {
-            cache.invalidate(entry.getKey());
-            get(cache, entry.getKey(), () -> Optional.of(entry.getValue()));
-        }
-
-        if (presentMapping.containsKey(cacheKey)) {
-            // already cached present keys
-            return Optional.of(presentMapping.get(cacheKey));
-        }
-        else {
-            // invalidate then cache not present cacheKey
-            cache.invalidate(cacheKey);
-            get(cache, cacheKey, Optional::empty);
-            return Optional.empty();
         }
     }
 }
