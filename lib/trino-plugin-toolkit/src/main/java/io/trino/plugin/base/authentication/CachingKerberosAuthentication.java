@@ -37,11 +37,26 @@ public class CachingKerberosAuthentication
 
     public synchronized Subject getSubject()
     {
-        if (subject == null || nextRefreshTime < System.currentTimeMillis()) {
+        if (subject == null || ticketNeedsRefresh()) {
             subject = requireNonNull(kerberosAuthentication.getSubject(), "kerberosAuthentication.getSubject() is null");
             KerberosTicket tgtTicket = getTicketGrantingTicket(subject);
             nextRefreshTime = KerberosTicketUtils.getRefreshTime(tgtTicket);
         }
         return subject;
+    }
+
+    public synchronized void reauthenticateIfSoonWillBeExpired()
+    {
+        requireNonNull(subject, "subject is null, getSubject() must be called before reAuthenticate()");
+        if (ticketNeedsRefresh()) {
+            kerberosAuthentication.reLoginSubject(subject);
+            KerberosTicket tgtTicket = getTicketGrantingTicket(subject);
+            nextRefreshTime = KerberosTicketUtils.getRefreshTime(tgtTicket);
+        }
+    }
+
+    private boolean ticketNeedsRefresh()
+    {
+        return nextRefreshTime < System.currentTimeMillis();
     }
 }
