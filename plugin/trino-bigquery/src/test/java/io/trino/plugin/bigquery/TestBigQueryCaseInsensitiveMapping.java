@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.bigquery;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.trino.plugin.bigquery.BigQueryQueryRunner.BigQuerySqlExecutor;
@@ -23,6 +24,7 @@ import io.trino.testing.sql.TestView;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.util.Locale;
 import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -235,6 +237,42 @@ public class TestBigQueryCaseInsensitiveMapping
         }
     }
 
+    @Test
+    public void testDropSchemaAndDropTableRefreshesMetadataCache()
+            throws Exception
+    {
+        String schemaName = "recreate_tests" + randomTableSuffix();
+        try (AutoCloseable schema = withSchema(schemaName)) {
+            assertThat(computeActual("SHOW SCHEMAS").getOnlyColumn()).contains(schemaName);
+            assertQuerySucceeds("DROP SCHEMA " + schemaName);
+            assertThat(computeActual("SHOW SCHEMAS").getOnlyColumn()).noneMatch(s -> s == schemaName);
+        }
+
+        try (AutoCloseable schema = withSchema(schemaName);
+                TestTable table = new TestTable(getQueryRunner()::execute, schemaName + ".test_table", "(c varchar)", ImmutableList.of(), true)) {
+            assertThat(computeActual("SHOW TABLES FROM " + schemaName).getOnlyColumn()).contains(table.getName().replace(schemaName + ".", ""));
+            assertQuerySucceeds("DROP TABLE " + table.getName());
+            assertThat(computeActual("SHOW TABLES FROM " + schemaName).getOnlyColumn()).noneMatch(t -> t == table.getName());
+        }
+    }
+
+    @Test
+    public void testSchemaAndTableRenameErrorMessagesValid()
+            throws Exception
+    {
+        String schemaName = "recreate_tests" + randomTableSuffix();
+        try (AutoCloseable schema = withSchema(schemaName)) {
+            assertThat(computeActual("SHOW SCHEMAS").getOnlyColumn()).contains(schemaName);
+            assertQueryFails(format("ALTER SCHEMA %s RENAME TO %s", schemaName, schemaName + "renamed"), "This connector does not support renaming schemas.*");
+        }
+
+        try (AutoCloseable schema = withSchema(schemaName);
+             TestTable table = new TestTable(getQueryRunner()::execute, schemaName + ".test_table", "(c varchar)", ImmutableList.of(), true)) {
+            assertThat(computeActual("SHOW TABLES FROM " + schemaName).getOnlyColumn()).contains(table.getName().replace(schemaName + ".", ""));
+            assertQueryFails(format("ALTER TABLE %s RENAME TO %s", table.getName(), table.getName() + "renamed"), "This connector does not support renaming tables.*");
+        }
+    }
+
     private AutoCloseable withSchema(String schemaName)
     {
         bigQuerySqlExecutor.dropDatasetIfExists(schemaName);
@@ -251,4 +289,5 @@ public class TestBigQueryCaseInsensitiveMapping
         bigQuerySqlExecutor.execute(format("CREATE TABLE %s %s", tableName, tableDefinition));
         return () -> bigQuerySqlExecutor.execute(format("DROP TABLE %s", tableName));
     }
+
 }

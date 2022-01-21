@@ -36,6 +36,7 @@ public class TestTable
 
     private final SqlExecutor sqlExecutor;
     private final String name;
+    private boolean dropIfExists;
 
     public TestTable(SqlExecutor sqlExecutor, String namePrefix, String tableDefinition)
     {
@@ -44,8 +45,14 @@ public class TestTable
 
     public TestTable(SqlExecutor sqlExecutor, String namePrefix, String tableDefinition, List<String> rowsToInsert)
     {
+        this(sqlExecutor, namePrefix, tableDefinition, rowsToInsert, false);
+    }
+
+    public TestTable(SqlExecutor sqlExecutor, String namePrefix, String tableDefinition, List<String> rowsToInsert, boolean dropIfExists)
+    {
         this.sqlExecutor = sqlExecutor;
         this.name = namePrefix + randomTableSuffix();
+        this.dropIfExists = dropIfExists;
         sqlExecutor.execute(format("CREATE TABLE %s %s", name, tableDefinition));
         try {
             for (String row : rowsToInsert) {
@@ -119,7 +126,8 @@ public class TestTable
     @Override
     public void close()
     {
-        sqlExecutor.execute("DROP TABLE " + name);
+        String ifExistsClause = dropIfExists ? "IF EXISTS" : "";
+        sqlExecutor.execute(format("DROP TABLE %s %s", ifExistsClause, name));
     }
 
     public static String randomTableSuffix()

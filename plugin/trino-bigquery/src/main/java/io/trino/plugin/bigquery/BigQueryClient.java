@@ -120,7 +120,8 @@ public class BigQueryClient
             return mapping;
         });
 
-        return datasetToRemoteDatabaseObject.get(datasetName);
+        Optional<RemoteDatabaseObject> remoteDatabaseObject = datasetToRemoteDatabaseObject.get(datasetName);
+        return remoteDatabaseObject == null ? Optional.empty() : remoteDatabaseObject;
 
     }
 
@@ -168,7 +169,8 @@ public class BigQueryClient
             return mapping;
         });
 
-        return tableToRemoteDatabaseObject.get(tableName);
+        Optional<RemoteDatabaseObject> remoteDatabaseObject = tableToRemoteDatabaseObject.get(tableName);
+        return remoteDatabaseObject == null ? Optional.empty() : remoteDatabaseObject;
     }
 
     private static TableId tableIdToLowerCase(TableId tableId)
