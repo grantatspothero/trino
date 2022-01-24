@@ -495,6 +495,6 @@ public class TrinoGalaxyCatalog
     @Override
     public Optional<CatalogSchemaTableName> redirectTable(ConnectorSession session, SchemaTableName tableName)
     {
-        throw new UnsupportedOperationException();
+        return Optional.empty();
     }
 }

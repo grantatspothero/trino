@@ -188,6 +188,12 @@
         </artifact>
     </artifactSet>
 
+    <artifactSet to="plugin/galaxy-objectstore">
+        <artifact id="${project.groupId}:trino-galaxy-objectstore:zip:${project.version}">
+            <unpack />
+        </artifact>
+    </artifactSet>
+
     <artifactSet to="plugin/redshift">
         <artifact id="${project.groupId}:trino-redshift:zip:${project.version}">
             <unpack />

@@ -20,7 +20,7 @@ import io.airlift.configuration.DefunctConfig;
 import io.airlift.configuration.LegacyConfig;
 import io.airlift.units.DataSize;
 import io.airlift.units.Duration;
-import io.trino.plugin.hive.HiveCompressionCodec;
+import io.trino.plugin.hive.HiveCompressionOption;
 import org.joda.time.DateTimeZone;
 
 import javax.validation.constraints.DecimalMax;
@@ -60,7 +60,7 @@ public class DeltaLakeConfig
     private DataSize maxSplitSize = DataSize.of(64, MEGABYTE);
     private double minimumAssignedSplitWeight = 0.05;
     private int maxPartitionsPerWriter = 100;
-    private boolean unsafeWritesEnabled;
+    private boolean unsafeWritesEnabled = true;
     private boolean checkpointRowStatisticsWritingEnabled = true;
     private long defaultCheckpointWritingInterval = 10;
     private Duration vacuumMinRetention = new Duration(7, DAYS);
@@ -69,7 +69,7 @@ public class DeltaLakeConfig
     private boolean tableStatisticsEnabled = true;
     private boolean extendedStatisticsEnabled = true;
     private boolean collectExtendedStatisticsOnWrite = true;
-    private HiveCompressionCodec compressionCodec = HiveCompressionCodec.SNAPPY;
+    private HiveCompressionOption compressionCodec = HiveCompressionOption.DEFAULT;
     private long perTransactionMetastoreCacheMaximumSize = 1000;
     private boolean deleteSchemaLocationsFallback;
     private String parquetTimeZone = TimeZone.getDefault().getID();
@@ -361,14 +361,14 @@ public class DeltaLakeConfig
     }
 
     @NotNull
-    public HiveCompressionCodec getCompressionCodec()
+    public HiveCompressionOption getCompressionCodec()
     {
         return compressionCodec;
     }
 
     @Config("delta.compression-codec")
     @ConfigDescription("Compression codec to use when writing new data files")
-    public DeltaLakeConfig setCompressionCodec(HiveCompressionCodec compressionCodec)
+    public DeltaLakeConfig setCompressionCodec(HiveCompressionOption compressionCodec)
     {
         this.compressionCodec = compressionCodec;
         return this;

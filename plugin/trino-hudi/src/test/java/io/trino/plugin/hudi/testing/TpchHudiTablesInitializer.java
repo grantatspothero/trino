@@ -16,13 +16,11 @@ package io.trino.plugin.hudi.testing;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.airlift.log.Logger;
-import io.trino.plugin.hive.HiveStorageFormat;
 import io.trino.plugin.hive.HiveType;
 import io.trino.plugin.hive.metastore.Column;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hive.metastore.StorageFormat;
 import io.trino.plugin.hive.metastore.Table;
-import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.spi.connector.CatalogSchemaName;
 import io.trino.testing.MaterializedResult;
 import io.trino.testing.MaterializedRow;
@@ -35,6 +33,8 @@ import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat;
+import org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe;
 import org.apache.hudi.client.HoodieJavaWriteClient;
 import org.apache.hudi.client.common.HoodieJavaEngineContext;
 import org.apache.hudi.common.bootstrap.index.NoOpBootstrapIndex;
@@ -49,6 +49,7 @@ import org.apache.hudi.common.util.Option;
 import org.apache.hudi.config.HoodieArchivalConfig;
 import org.apache.hudi.config.HoodieIndexConfig;
 import org.apache.hudi.config.HoodieWriteConfig;
+import org.apache.hudi.hadoop.HoodieParquetInputFormat;
 import org.apache.hudi.index.HoodieIndex;
 import org.intellij.lang.annotations.Language;
 
@@ -109,8 +110,6 @@ public class TpchHudiTablesInitializer
             String dataDir,
             Configuration conf)
     {
-        queryRunner.installPlugin(new TpchPlugin());
-        queryRunner.createCatalog(TPCH_TINY.getCatalogName(), "tpch", ImmutableMap.of());
         for (TpchTable<?> table : tpchTables) {
             load(table, queryRunner, metastore, schemaName, dataDir, conf);
         }
@@ -164,8 +163,11 @@ public class TpchHudiTablesInitializer
         List<Column> columns = Stream.of(HUDI_META_COLUMNS, createMetastoreColumns(table))
                 .flatMap(Collection::stream)
                 .collect(toUnmodifiableList());
-        // TODO: create right format
-        StorageFormat storageFormat = StorageFormat.fromHiveStorageFormat(HiveStorageFormat.PARQUET);
+
+        StorageFormat storageFormat = StorageFormat.create(
+                ParquetHiveSerDe.class.getName(),
+                HoodieParquetInputFormat.class.getName(),
+                MapredParquetOutputFormat.class.getName());
 
         return Table.builder()
                 .setDatabaseName(schemaName)

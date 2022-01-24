@@ -72,6 +72,7 @@
         <dep.protobuf.version>3.21.6</dep.protobuf.version>
         <dep.wire.version>3.2.2</dep.wire.version>
         <dep.kotlin.version>1.4.0</dep.kotlin.version>
+        <dep.hudi.version>0.12.2</dep.hudi.version>
 
         <dep.docker.images.version>77</dep.docker.images.version>
 
@@ -164,6 +165,7 @@
         <module>plugin/trino-exchange-filesystem</module>
         <module>plugin/trino-exchange-hdfs</module>
         <module>plugin/trino-galaxy-kafka-event-listener</module>
+        <module>plugin/trino-galaxy-objectstore</module>
         <module>plugin/trino-geospatial</module>
         <module>plugin/trino-google-sheets</module>
         <module>plugin/trino-hive</module>
@@ -389,6 +391,12 @@
 
             <dependency>
                 <groupId>io.trino</groupId>
+                <artifactId>trino-galaxy-objectstore</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
                 <artifactId>trino-geospatial</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -408,6 +416,13 @@
             <dependency>
                 <groupId>io.trino</groupId>
                 <artifactId>trino-hdfs</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>trino-hdfs</artifactId>
+                <type>test-jar</type>
                 <version>${project.version}</version>
             </dependency>
 
@@ -439,6 +454,13 @@
             <dependency>
                 <groupId>io.trino</groupId>
                 <artifactId>trino-hudi</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>trino-hudi</artifactId>
+                <type>test-jar</type>
                 <version>${project.version}</version>
             </dependency>
 

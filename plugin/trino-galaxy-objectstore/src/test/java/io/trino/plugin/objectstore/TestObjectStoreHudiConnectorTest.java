@@ -1,0 +1,301 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.trino.plugin.objectstore;
+
+import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
+import io.trino.testing.DistributedQueryRunner;
+import io.trino.testing.MaterializedResult;
+import io.trino.testing.TestingConnectorBehavior;
+import org.intellij.lang.annotations.Language;
+import org.testng.SkipException;
+import org.testng.annotations.Test;
+
+import static io.trino.plugin.objectstore.TableType.HUDI;
+import static io.trino.spi.type.VarcharType.VARCHAR;
+import static io.trino.testing.MaterializedResult.resultBuilder;
+import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_CREATE_TABLE;
+import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_INSERT;
+import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_UPDATE;
+import static io.trino.testing.TestingNames.randomNameSuffix;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+public class TestObjectStoreHudiConnectorTest
+        extends BaseObjectStoreConnectorTest
+{
+    public TestObjectStoreHudiConnectorTest()
+    {
+        super(HUDI);
+    }
+
+    @Override
+    protected void initializeTpchTables(DistributedQueryRunner queryRunner, TestingGalaxyMetastore metastore)
+    {
+        ObjectStoreQueryRunner.initializeTpchTablesHudi(queryRunner, REQUIRED_TPCH_TABLES, metastore);
+    }
+
+    @Override
+    protected boolean hasBehavior(TestingConnectorBehavior connectorBehavior)
+    {
+        switch (connectorBehavior) {
+            case SUPPORTS_CREATE_TABLE:
+            case SUPPORTS_RENAME_TABLE:
+            case SUPPORTS_COMMENT_ON_TABLE:
+            case SUPPORTS_INSERT:
+            case SUPPORTS_DELETE:
+            case SUPPORTS_UPDATE:
+            case SUPPORTS_MERGE:
+            case SUPPORTS_ADD_COLUMN:
+            case SUPPORTS_DROP_COLUMN:
+            case SUPPORTS_RENAME_COLUMN:
+            case SUPPORTS_SET_COLUMN_TYPE:
+            case SUPPORTS_COMMENT_ON_COLUMN:
+                return false;
+            default:
+                return super.hasBehavior(connectorBehavior);
+        }
+    }
+
+    @Override
+    public void testShowCreateTable()
+    {
+        assertThat((String) computeActual("SHOW CREATE TABLE orders").getOnlyValue()).matches("" +
+                "\\QCREATE TABLE objectstore.tpch.orders (\n" +
+                "   _hoodie_commit_time varchar,\n" +
+                "   _hoodie_commit_seqno varchar,\n" +
+                "   _hoodie_record_key varchar,\n" +
+                "   _hoodie_partition_path varchar,\n" +
+                "   _hoodie_file_name varchar,\n" +
+                "   orderkey bigint,\n" +
+                "   custkey bigint,\n" +
+                "   orderstatus varchar(1),\n" +
+                "   totalprice double,\n" +
+                "   orderdate date,\n" +
+                "   orderpriority varchar(15),\n" +
+                "   clerk varchar(15),\n" +
+                "   shippriority integer,\n" +
+                "   comment varchar(79),\n" +
+                "   _uuid varchar\n" +
+                ")\n" +
+                "WITH (\n" +
+                "   location = '\\E.*\\Q/data/orders',\n" +
+                "   type = 'HUDI'\n" +
+                ")\\E");
+    }
+
+    @Override
+    public void testDescribeTable()
+    {
+        assertColumns("DESCRIBE orders");
+    }
+
+    @Override
+    public void testShowColumns()
+    {
+        assertColumns("SHOW COLUMNS FROM orders");
+    }
+
+    protected void assertColumns(@Language("SQL") String sql)
+    {
+        MaterializedResult actual = computeActual(sql);
+
+        MaterializedResult expected = resultBuilder(getSession(), VARCHAR, VARCHAR, VARCHAR, VARCHAR)
+                .row("_hoodie_commit_time", "varchar", "", "")
+                .row("_hoodie_commit_seqno", "varchar", "", "")
+                .row("_hoodie_record_key", "varchar", "", "")
+                .row("_hoodie_partition_path", "varchar", "", "")
+                .row("_hoodie_file_name", "varchar", "", "")
+                .row("orderkey", "bigint", "", "")
+                .row("custkey", "bigint", "", "")
+                .row("orderstatus", "varchar(1)", "", "")
+                .row("totalprice", "double", "", "")
+                .row("orderdate", "date", "", "")
+                .row("orderpriority", "varchar(15)", "", "")
+                .row("clerk", "varchar(15)", "", "")
+                .row("shippriority", "integer", "", "")
+                .row("comment", "varchar(79)", "", "")
+                .row("_uuid", "varchar", "", "")
+                .build();
+
+        assertThat(actual).isEqualTo(expected);
+    }
+
+    // The Hudi connector includes additional metadata columns which are not hidden. This means the nation table does not have the expected schema.
+    // This is a copy of the test from the base class with any `SELECT *`s replaced with explicit column lists.
+
+    @SuppressWarnings("deprecation")
+    @Override
+    @Test(enabled = false)
+    public void testMaterializedView() {}
+
+    @Override
+    public void testCreateTable()
+    {
+        assertQueryFails("CREATE TABLE %s%s (x bigint)".formatted("test_create_", randomNameSuffix()),
+                "Table creation is not supported for Hudi");
+    }
+
+    @Override
+    public void testCreateTableAsSelect()
+    {
+        assertQueryFails("CREATE TABLE %s%s AS SELECT name, regionkey FROM nation".formatted("test_create_", randomNameSuffix()),
+                "Table creation is not supported for Hudi");
+    }
+
+    @Override
+    public void testCreateTableAsSelectNegativeDate()
+    {
+        skipTestUnless(hasBehavior(SUPPORTS_CREATE_TABLE));
+        super.testCreateTableAsSelectNegativeDate();
+    }
+
+    @Override
+    public void testCommentTable()
+    {
+        assertQueryFails("COMMENT ON TABLE nation IS 'new comment'", "Setting comments for Hudi tables is not supported");
+    }
+
+    @Override
+    public void testCommentColumn()
+    {
+        assertQueryFails("COMMENT ON COLUMN nation.nationkey IS 'new comment'", "Setting column comments in Hudi tables is not supported");
+    }
+
+    @Override
+    public void testAddColumn()
+    {
+        assertQueryFails("ALTER TABLE nation ADD COLUMN test_add_column bigint", "Adding columns to Hudi tables is not supported");
+    }
+
+    @Override
+    public void testRenameColumn()
+    {
+        assertQueryFails("ALTER TABLE nation RENAME COLUMN nationkey TO test_rename_column", "Renaming columns in Hudi tables is not supported");
+    }
+
+    @Override
+    public void testDropColumn()
+    {
+        assertQueryFails("ALTER TABLE nation DROP COLUMN nationkey", "Dropping columns from Hudi tables is not supported");
+    }
+
+    @Override
+    public void testInsert()
+    {
+        assertQueryFails("INSERT INTO nation (nationkey) VALUES (42)", "Writes are not supported for Hudi tables");
+    }
+
+    @Override
+    public void testInsertNegativeDate()
+    {
+        skipTestUnless(hasBehavior(SUPPORTS_INSERT));
+        super.testInsertNegativeDate();
+    }
+
+    @Override
+    public void testUpdate()
+    {
+        assertQueryFails("UPDATE nation SET nationkey = nationkey + regionkey WHERE regionkey < 1", "Writes are not supported for Hudi tables");
+    }
+
+    @Override
+    public void testUpdateRowType()
+    {
+        // TODO: when updates are generally supported, replace this query with something that exercises ROW type, e.g. by removing the override.
+        assertQueryFails("UPDATE nation SET nationkey = nationkey + regionkey WHERE regionkey < 1", "Writes are not supported for Hudi tables");
+    }
+
+    @Override
+    public void testUpdateWithPredicates()
+    {
+        skipTestUnless(hasBehavior(SUPPORTS_UPDATE));
+        super.testUpdateWithPredicates();
+    }
+
+    @Override
+    public void testUpdateAllValues()
+    {
+        skipTestUnless(hasBehavior(SUPPORTS_UPDATE));
+        super.testUpdateAllValues();
+    }
+
+    @Override
+    public void testMaterializedViewBaseTableGone(boolean initialized)
+    {
+        skipTestUnless(hasBehavior(SUPPORTS_CREATE_TABLE));
+        super.testMaterializedViewBaseTableGone(initialized);
+    }
+
+    @Override
+    public void testCompatibleTypeChangeForView()
+    {
+        skipTestUnless(hasBehavior(SUPPORTS_CREATE_TABLE));
+        super.testCompatibleTypeChangeForView();
+    }
+
+    @Override
+    public void testCompatibleTypeChangeForView2()
+    {
+        skipTestUnless(hasBehavior(SUPPORTS_CREATE_TABLE));
+        super.testCompatibleTypeChangeForView2();
+    }
+
+    @Override
+    public void testDropNonEmptySchemaWithTable()
+    {
+        skipTestUnless(hasBehavior(SUPPORTS_CREATE_TABLE));
+        super.testDropNonEmptySchemaWithTable();
+    }
+
+    @Override
+    public void testReadMetadataWithRelationsConcurrentModifications()
+            throws Exception
+    {
+        skipTestUnless(hasBehavior(SUPPORTS_CREATE_TABLE));
+        super.testReadMetadataWithRelationsConcurrentModifications();
+    }
+
+    @Override
+    public void testHiveSpecificTableProperty()
+    {
+        assertThatThrownBy(super::testHiveSpecificTableProperty)
+                .hasMessage("Table creation is not supported for Hudi");
+    }
+
+    @Override
+    public void testIcebergSpecificTableProperty()
+    {
+        assertThatThrownBy(super::testIcebergSpecificTableProperty)
+                .hasMessage("Table creation is not supported for Hudi");
+    }
+
+    @Override
+    public void testDeltaSpecificTableProperty()
+    {
+        assertThatThrownBy(super::testDeltaSpecificTableProperty)
+                .hasMessage("Table creation is not supported for Hudi");
+    }
+
+    @Override
+    public void testSelectAll()
+    {
+        throw new SkipException("Hudi returns extra columns");
+    }
+
+    @Override
+    public void testSelectInformationSchemaColumns()
+    {
+        throw new SkipException("Hudi returns extra columns");
+    }
+}

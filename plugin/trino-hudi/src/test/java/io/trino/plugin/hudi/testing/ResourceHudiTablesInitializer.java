@@ -16,7 +16,6 @@ package io.trino.plugin.hudi.testing;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.airlift.log.Logger;
-import io.trino.plugin.hive.HiveStorageFormat;
 import io.trino.plugin.hive.HiveType;
 import io.trino.plugin.hive.PartitionStatistics;
 import io.trino.plugin.hive.metastore.Column;
@@ -29,7 +28,10 @@ import io.trino.plugin.hive.metastore.Table;
 import io.trino.testing.QueryRunner;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.metastore.TableType;
+import org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat;
+import org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe;
 import org.apache.hudi.common.model.HoodieTableType;
+import org.apache.hudi.hadoop.HoodieParquetInputFormat;
 
 import java.io.File;
 import java.io.IOException;
@@ -94,7 +96,10 @@ public class ResourceHudiTablesInitializer
             List<Column> partitionColumns,
             Map<String, String> partitions)
     {
-        StorageFormat storageFormat = StorageFormat.fromHiveStorageFormat(HiveStorageFormat.PARQUET);
+        StorageFormat storageFormat = StorageFormat.create(
+                ParquetHiveSerDe.class.getName(),
+                HoodieParquetInputFormat.class.getName(),
+                MapredParquetOutputFormat.class.getName());
 
         Table table = Table.builder()
                 .setDatabaseName(schemaName)

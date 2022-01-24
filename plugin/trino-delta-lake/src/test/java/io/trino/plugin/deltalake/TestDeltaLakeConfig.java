@@ -16,7 +16,7 @@ package io.trino.plugin.deltalake;
 import com.google.common.collect.ImmutableMap;
 import io.airlift.units.DataSize;
 import io.airlift.units.Duration;
-import io.trino.plugin.hive.HiveCompressionCodec;
+import io.trino.plugin.hive.HiveCompressionOption;
 import org.testng.annotations.Test;
 
 import java.util.Map;
@@ -51,7 +51,7 @@ public class TestDeltaLakeConfig
                 .setMaxSplitSize(DataSize.of(64, DataSize.Unit.MEGABYTE))
                 .setMinimumAssignedSplitWeight(0.05)
                 .setMaxPartitionsPerWriter(100)
-                .setUnsafeWritesEnabled(false)
+                .setUnsafeWritesEnabled(true)
                 .setDefaultCheckpointWritingInterval(10)
                 .setCheckpointRowStatisticsWritingEnabled(true)
                 .setVacuumMinRetention(new Duration(7, DAYS))
@@ -60,7 +60,7 @@ public class TestDeltaLakeConfig
                 .setTableStatisticsEnabled(true)
                 .setExtendedStatisticsEnabled(true)
                 .setCollectExtendedStatisticsOnWrite(true)
-                .setCompressionCodec(HiveCompressionCodec.SNAPPY)
+                .setCompressionCodec(HiveCompressionOption.DEFAULT)
                 .setDeleteSchemaLocationsFallback(false)
                 .setParquetTimeZone(TimeZone.getDefault().getID())
                 .setPerTransactionMetastoreCacheMaximumSize(1000)
@@ -86,7 +86,7 @@ public class TestDeltaLakeConfig
                 .put("delta.max-split-size", "10 MB")
                 .put("delta.minimum-assigned-split-weight", "0.01")
                 .put("delta.max-partitions-per-writer", "200")
-                .put("delta.enable-non-concurrent-writes", "true")
+                .put("delta.enable-non-concurrent-writes", "false")
                 .put("delta.default-checkpoint-writing-interval", "15")
                 .put("delta.checkpoint-row-statistics-writing.enabled", "false")
                 .put("delta.vacuum.min-retention", "13h")
@@ -118,7 +118,7 @@ public class TestDeltaLakeConfig
                 .setMaxSplitSize(DataSize.of(10, DataSize.Unit.MEGABYTE))
                 .setMinimumAssignedSplitWeight(0.01)
                 .setMaxPartitionsPerWriter(200)
-                .setUnsafeWritesEnabled(true)
+                .setUnsafeWritesEnabled(false)
                 .setDefaultCheckpointWritingInterval(15)
                 .setCheckpointRowStatisticsWritingEnabled(false)
                 .setVacuumMinRetention(new Duration(13, HOURS))
@@ -127,7 +127,7 @@ public class TestDeltaLakeConfig
                 .setTableStatisticsEnabled(false)
                 .setExtendedStatisticsEnabled(false)
                 .setCollectExtendedStatisticsOnWrite(false)
-                .setCompressionCodec(HiveCompressionCodec.GZIP)
+                .setCompressionCodec(HiveCompressionOption.GZIP)
                 .setDeleteSchemaLocationsFallback(true)
                 .setParquetTimeZone(nonDefaultTimeZone().getID())
                 .setPerTransactionMetastoreCacheMaximumSize(500)

@@ -492,6 +492,7 @@ jobs:
             !:trino-druid,
             !:trino-elasticsearch,
             !:trino-faulttolerant-tests,
+            !:trino-galaxy-objectstore,
             !:trino-hive,
             !:trino-hudi,
             !:trino-iceberg,
@@ -581,6 +582,7 @@ jobs:
             - { modules: plugin/trino-delta-lake, profile: cloud-tests }
             - { modules: plugin/trino-delta-lake, profile: gcs-tests }
             - { modules: plugin/trino-elasticsearch }
+            - { modules: plugin/trino-galaxy-objectstore }
             - { modules: plugin/trino-hive }
             - { modules: plugin/trino-hive, profile: test-galaxy }
             - { modules: plugin/trino-hive, profile: test-parquet }

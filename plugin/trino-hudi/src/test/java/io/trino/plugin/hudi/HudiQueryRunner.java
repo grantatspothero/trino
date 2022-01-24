@@ -22,6 +22,7 @@ import io.trino.plugin.hive.metastore.Database;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hudi.testing.HudiTablesInitializer;
 import io.trino.plugin.hudi.testing.ResourceHudiTablesInitializer;
+import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.spi.security.PrincipalType;
 import io.trino.testing.DistributedQueryRunner;
 
@@ -50,6 +51,9 @@ public final class HudiQueryRunner
                 .builder(createSession())
                 .setExtraProperties(extraProperties)
                 .build();
+
+        queryRunner.installPlugin(new TpchPlugin());
+        queryRunner.createCatalog("tpch", "tpch", ImmutableMap.of());
 
         Path coordinatorBaseDir = queryRunner.getCoordinator().getBaseDataDir();
         File catalogDir = coordinatorBaseDir.resolve("catalog").toFile();

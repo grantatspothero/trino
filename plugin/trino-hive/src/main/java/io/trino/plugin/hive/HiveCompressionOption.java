@@ -16,6 +16,7 @@ package io.trino.plugin.hive;
 public enum HiveCompressionOption
 {
     NONE,
+    DEFAULT,
     SNAPPY,
     LZ4,
     ZSTD,

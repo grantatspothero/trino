@@ -36,4 +36,10 @@ public class HudiInputInfo
     {
         return partitionIds;
     }
+
+    @JsonProperty
+    public String getTableType()
+    {
+        return "HUDI";
+    }
 }

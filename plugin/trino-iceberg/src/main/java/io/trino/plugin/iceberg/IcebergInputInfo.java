@@ -56,6 +56,12 @@ public class IcebergInputInfo
         return tableDefaultFileFormat;
     }
 
+    @JsonProperty
+    public String getTableType()
+    {
+        return "ICEBERG";
+    }
+
     @Override
     public boolean equals(Object o)
     {

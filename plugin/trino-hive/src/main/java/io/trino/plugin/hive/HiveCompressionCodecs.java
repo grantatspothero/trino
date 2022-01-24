@@ -37,7 +37,6 @@ public final class HiveCompressionCodecs
     public static HiveCompressionCodec selectCompressionCodec(HiveCompressionOption compressionOption, HiveStorageFormat storageFormat)
     {
         HiveCompressionCodec selectedCodec = selectCompressionCodec(compressionOption);
-
         // perform codec vs format validation
         if (storageFormat == HiveStorageFormat.AVRO && selectedCodec.getAvroCompressionCodec().isEmpty()) {
             throw new TrinoException(HiveErrorCode.HIVE_UNSUPPORTED_FORMAT, "Compression codec " + selectedCodec + " not supported for " + storageFormat);
@@ -50,6 +49,7 @@ public final class HiveCompressionCodecs
     {
         return switch (compressionOption) {
             case NONE -> HiveCompressionCodec.NONE;
+            case DEFAULT -> HiveCompressionCodec.GZIP;
             case SNAPPY -> HiveCompressionCodec.SNAPPY;
             case LZ4 -> HiveCompressionCodec.LZ4;
             case ZSTD -> HiveCompressionCodec.ZSTD;
@@ -61,6 +61,7 @@ public final class HiveCompressionCodecs
     {
         return switch (compressionOption) {
             case NONE -> HiveCompressionCodec.NONE;
+            case DEFAULT -> HiveCompressionCodec.GZIP;
             case SNAPPY -> HiveCompressionCodec.SNAPPY;
             case LZ4 -> HiveCompressionCodec.LZ4;
             case ZSTD -> HiveCompressionCodec.ZSTD;

@@ -1304,6 +1304,11 @@ public class TestIcebergSparkCompatibility
     @Test(groups = {ICEBERG, PROFILE_SPECIFIC_TESTS, ICEBERG_REST, ICEBERG_JDBC}, dataProvider = "storageFormatsAndCompressionCodecs")
     public void testTrinoReadingSparkCompressedData(StorageFormat storageFormat, String compressionCodec)
     {
+        // Spark does not understand "DEFAULT" compression codec since it is a stargate-trino concept
+        if (compressionCodec.equals("DEFAULT")) {
+            return;
+        }
+
         String baseTableName = toLowerCase("test_spark_compression" +
                 "_" + storageFormat +
                 "_" + compressionCodec +
@@ -1387,7 +1392,7 @@ public class TestIcebergSparkCompatibility
         }
         if (storageFormat == StorageFormat.AVRO && (compressionCodec.equals("LZ4"))) {
             assertQueryFailure(() -> onTrino().executeQuery(createTable))
-                    .hasMessageMatching("\\QQuery failed (#\\E\\S+\\Q): Unsupported compression codec: " + compressionCodec);
+                    .hasMessageMatching("\\QQuery failed (#\\E\\S+\\Q): Compression codec LZ4 not supported for AVRO");
             return;
         }
         onTrino().executeQuery(createTable);
@@ -1409,8 +1414,8 @@ public class TestIcebergSparkCompatibility
         assertThat(onTrino().executeQuery("SHOW SESSION LIKE 'iceberg.compression_codec'"))
                 .containsOnly(row(
                         "iceberg.compression_codec",
-                        "ZSTD",
-                        "ZSTD",
+                        "DEFAULT",
+                        "DEFAULT",
                         "varchar",
                         "Compression codec to use when writing files. Possible values: " + compressionCodecs()));
     }
@@ -1429,6 +1434,7 @@ public class TestIcebergSparkCompatibility
     {
         return List.of(
                 "NONE",
+                "DEFAULT",
                 "SNAPPY",
                 "LZ4",
                 "ZSTD",

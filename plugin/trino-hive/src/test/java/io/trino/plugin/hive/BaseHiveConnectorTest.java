@@ -197,7 +197,7 @@ public abstract class BaseHiveConnectorTest
             throws Exception
     {
         // Use faster compression codec in tests. TODO remove explicit config when default changes
-        verify(new HiveConfig().getHiveCompressionCodec() == HiveCompressionOption.GZIP);
+        verify(new HiveConfig().getHiveCompressionCodec() == HiveCompressionOption.DEFAULT);
         String hiveCompressionCodec = HiveCompressionCodec.ZSTD.name();
 
         DistributedQueryRunner queryRunner = HiveQueryRunner.builder()

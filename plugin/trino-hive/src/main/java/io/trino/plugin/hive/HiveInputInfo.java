@@ -57,6 +57,12 @@ public class HiveInputInfo
         return tableDefaultFileFormat;
     }
 
+    @JsonProperty
+    public String getTableType()
+    {
+        return "HIVE";
+    }
+
     @Override
     public boolean equals(Object o)
     {

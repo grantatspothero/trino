@@ -18,6 +18,8 @@ import io.airlift.units.DataSize;
 import io.airlift.units.Duration;
 import io.trino.plugin.base.session.SessionPropertiesProvider;
 import io.trino.plugin.hive.HiveCompressionCodec;
+import io.trino.plugin.hive.HiveCompressionOption;
+import io.trino.plugin.hive.HiveStorageFormat;
 import io.trino.plugin.hive.HiveTimestampPrecision;
 import io.trino.plugin.hive.parquet.ParquetReaderConfig;
 import io.trino.plugin.hive.parquet.ParquetWriterConfig;
@@ -32,6 +34,7 @@ import java.util.Optional;
 
 import static io.trino.plugin.base.session.PropertyMetadataUtil.dataSizeProperty;
 import static io.trino.plugin.base.session.PropertyMetadataUtil.durationProperty;
+import static io.trino.plugin.hive.HiveCompressionCodecs.selectCompressionCodec;
 import static io.trino.plugin.hive.HiveTimestampPrecision.MILLISECONDS;
 import static io.trino.spi.StandardErrorCode.INVALID_SESSION_PROPERTY;
 import static io.trino.spi.session.PropertyMetadata.booleanProperty;
@@ -178,10 +181,10 @@ public final class DeltaLakeSessionProperties
                 enumProperty(
                         COMPRESSION_CODEC,
                         "Compression codec to use when writing new data files",
-                        HiveCompressionCodec.class,
+                        HiveCompressionOption.class,
                         deltaLakeConfig.getCompressionCodec(),
                         value -> {
-                            if (value == HiveCompressionCodec.LZ4) {
+                            if (value == HiveCompressionOption.LZ4) {
                                 throw new TrinoException(INVALID_SESSION_PROPERTY, "Unsupported codec: LZ4");
                             }
                         },
@@ -282,6 +285,7 @@ public final class DeltaLakeSessionProperties
 
     public static HiveCompressionCodec getCompressionCodec(ConnectorSession session)
     {
-        return session.getProperty(COMPRESSION_CODEC, HiveCompressionCodec.class);
+        HiveCompressionOption option = session.getProperty(COMPRESSION_CODEC, HiveCompressionOption.class);
+        return option == HiveCompressionOption.DEFAULT ? HiveCompressionCodec.SNAPPY : selectCompressionCodec(option, HiveStorageFormat.PARQUET);
     }
 }

@@ -19,6 +19,8 @@ import io.airlift.units.Duration;
 import io.trino.orc.OrcWriteValidation.OrcWriteValidationMode;
 import io.trino.plugin.base.session.SessionPropertiesProvider;
 import io.trino.plugin.hive.HiveCompressionCodec;
+import io.trino.plugin.hive.HiveCompressionOption;
+import io.trino.plugin.hive.HiveStorageFormat;
 import io.trino.plugin.hive.orc.OrcReaderConfig;
 import io.trino.plugin.hive.orc.OrcWriterConfig;
 import io.trino.plugin.hive.parquet.ParquetReaderConfig;
@@ -36,6 +38,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.trino.plugin.base.session.PropertyMetadataUtil.dataSizeProperty;
 import static io.trino.plugin.base.session.PropertyMetadataUtil.durationProperty;
+import static io.trino.plugin.hive.HiveCompressionCodecs.selectCompressionCodec;
 import static io.trino.plugin.iceberg.IcebergConfig.EXTENDED_STATISTICS_DESCRIPTION;
 import static io.trino.spi.StandardErrorCode.INVALID_SESSION_PROPERTY;
 import static io.trino.spi.session.PropertyMetadata.booleanProperty;
@@ -97,7 +100,7 @@ public final class IcebergSessionProperties
                 .add(enumProperty(
                         COMPRESSION_CODEC,
                         "Compression codec to use when writing files",
-                        HiveCompressionCodec.class,
+                        HiveCompressionOption.class,
                         icebergConfig.getCompressionCodec(),
                         false))
                 .add(booleanProperty(
@@ -374,9 +377,11 @@ public final class IcebergSessionProperties
         return session.getProperty(ORC_WRITER_MAX_DICTIONARY_MEMORY, DataSize.class);
     }
 
-    public static HiveCompressionCodec getCompressionCodec(ConnectorSession session)
+    public static HiveCompressionCodec getCompressionCodec(ConnectorSession session, HiveStorageFormat hiveStorageFormat)
     {
-        return session.getProperty(COMPRESSION_CODEC, HiveCompressionCodec.class);
+        HiveCompressionOption option = session.getProperty(COMPRESSION_CODEC, HiveCompressionOption.class);
+        // The iceberg connector supports writing ORC with ZSTD but the hive connector does not
+        return option == HiveCompressionOption.DEFAULT ? HiveCompressionCodec.ZSTD : selectCompressionCodec(option, hiveStorageFormat);
     }
 
     public static boolean isUseFileSizeFromMetadata(ConnectorSession session)

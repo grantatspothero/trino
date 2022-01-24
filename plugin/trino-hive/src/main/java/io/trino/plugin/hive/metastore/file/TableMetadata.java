@@ -24,6 +24,8 @@ import io.trino.plugin.hive.metastore.HiveColumnStatistics;
 import io.trino.plugin.hive.metastore.Storage;
 import io.trino.plugin.hive.metastore.StorageFormat;
 import io.trino.plugin.hive.metastore.Table;
+import org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat;
+import org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe;
 
 import java.util.Arrays;
 import java.util.List;
@@ -46,7 +48,7 @@ public class TableMetadata
     private final List<Column> partitionColumns;
     private final Map<String, String> parameters;
 
-    private final Optional<HiveStorageFormat> storageFormat;
+    private final Optional<HiveFileFormat> storageFormat;
     private final Optional<HiveBucketProperty> bucketProperty;
     private final Map<String, String> serdeParameters;
 
@@ -65,7 +67,7 @@ public class TableMetadata
             @JsonProperty("dataColumns") List<Column> dataColumns,
             @JsonProperty("partitionColumns") List<Column> partitionColumns,
             @JsonProperty("parameters") Map<String, String> parameters,
-            @JsonProperty("storageFormat") Optional<HiveStorageFormat> storageFormat,
+            @JsonProperty("storageFormat") Optional<HiveFileFormat> storageFormat,
             @JsonProperty("bucketProperty") Optional<HiveBucketProperty> bucketProperty,
             @JsonProperty("serdeParameters") Map<String, String> serdeParameters,
             @JsonProperty("externalLocation") Optional<String> externalLocation,
@@ -107,9 +109,15 @@ public class TableMetadata
         parameters = table.getParameters();
 
         StorageFormat tableFormat = table.getStorage().getStorageFormat();
-        storageFormat = Arrays.stream(HiveStorageFormat.values())
-                .filter(format -> tableFormat.equals(StorageFormat.fromHiveStorageFormat(format)))
-                .findFirst();
+        if ("org.apache.hudi.hadoop.HoodieParquetInputFormat".equals(tableFormat.getInputFormatNullable())) {
+            storageFormat = Optional.of(HiveFileFormat.HUDI);
+        }
+        else {
+            storageFormat = Arrays.stream(HiveStorageFormat.values())
+                    .filter(format -> tableFormat.equals(StorageFormat.fromHiveStorageFormat(format)))
+                    .map(HiveFileFormat::fromHiveStorageFormat)
+                    .findFirst();
+        }
         bucketProperty = table.getStorage().getBucketProperty();
         serdeParameters = table.getStorage().getSerdeParameters();
 
@@ -177,7 +185,7 @@ public class TableMetadata
     }
 
     @JsonProperty
-    public Optional<HiveStorageFormat> getStorageFormat()
+    public Optional<HiveFileFormat> getStorageFormat()
     {
         return storageFormat;
     }
@@ -274,6 +282,18 @@ public class TableMetadata
 
     public Table toTable(String databaseName, String tableName, String location)
     {
+        StorageFormat format = storageFormat
+                .map(fileFormat -> {
+                    if (fileFormat == HiveFileFormat.HUDI) {
+                        return StorageFormat.create(
+                                ParquetHiveSerDe.class.getName(),
+                                "org.apache.hudi.hadoop.HoodieParquetInputFormat",
+                                MapredParquetOutputFormat.class.getName());
+                    }
+                    return StorageFormat.fromHiveStorageFormat(fileFormat.toHiveStorageFormat());
+                })
+                .orElse(VIEW_STORAGE_FORMAT);
+
         return new Table(
                 databaseName,
                 tableName,
@@ -281,7 +301,7 @@ public class TableMetadata
                 tableType,
                 Storage.builder()
                         .setLocation(externalLocation.or(() -> Optional.ofNullable(parameters.get(LOCATION_PROPERTY))).orElse(location))
-                        .setStorageFormat(storageFormat.map(StorageFormat::fromHiveStorageFormat).orElse(VIEW_STORAGE_FORMAT))
+                        .setStorageFormat(format)
                         .setBucketProperty(bucketProperty)
                         .setSerdeParameters(serdeParameters)
                         .build(),

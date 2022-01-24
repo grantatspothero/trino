@@ -16,7 +16,7 @@ package io.trino.plugin.iceberg;
 import com.google.common.collect.ImmutableMap;
 import io.airlift.units.DataSize;
 import io.airlift.units.Duration;
-import io.trino.plugin.hive.HiveCompressionCodec;
+import io.trino.plugin.hive.HiveCompressionOption;
 import org.testng.annotations.Test;
 
 import java.util.Map;
@@ -26,7 +26,6 @@ import static io.airlift.configuration.testing.ConfigAssertions.assertRecordedDe
 import static io.airlift.configuration.testing.ConfigAssertions.recordDefaults;
 import static io.airlift.units.DataSize.Unit.GIGABYTE;
 import static io.airlift.units.DataSize.Unit.MEGABYTE;
-import static io.trino.plugin.hive.HiveCompressionCodec.ZSTD;
 import static io.trino.plugin.iceberg.CatalogType.GLUE;
 import static io.trino.plugin.iceberg.CatalogType.HIVE_METASTORE;
 import static io.trino.plugin.iceberg.IcebergFileFormat.ORC;
@@ -42,7 +41,7 @@ public class TestIcebergConfig
     {
         assertRecordedDefaults(recordDefaults(IcebergConfig.class)
                 .setFileFormat(ORC)
-                .setCompressionCodec(ZSTD)
+                .setCompressionCodec(HiveCompressionOption.DEFAULT)
                 .setUseFileSizeFromMetadata(true)
                 .setMaxPartitionsPerWriter(100)
                 .setUniqueTableLocation(true)
@@ -89,7 +88,7 @@ public class TestIcebergConfig
 
         IcebergConfig expected = new IcebergConfig()
                 .setFileFormat(PARQUET)
-                .setCompressionCodec(HiveCompressionCodec.NONE)
+                .setCompressionCodec(HiveCompressionOption.NONE)
                 .setUseFileSizeFromMetadata(false)
                 .setMaxPartitionsPerWriter(222)
                 .setUniqueTableLocation(false)

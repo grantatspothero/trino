@@ -16,6 +16,7 @@ package io.trino.plugin.hudi;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import io.airlift.bootstrap.Bootstrap;
 import io.airlift.bootstrap.LifeCycleManager;
@@ -49,6 +50,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static com.google.inject.util.Modules.EMPTY_MODULE;
+
 public class InternalHudiConnectorFactory
 {
     private InternalHudiConnectorFactory() {}
@@ -57,7 +60,8 @@ public class InternalHudiConnectorFactory
             String catalogName,
             Map<String, String> config,
             ConnectorContext context,
-            Optional<HiveMetastore> metastore)
+            Optional<HiveMetastore> metastore,
+            Optional<Module> module)
     {
         ClassLoader classLoader = InternalHudiConnectorFactory.class.getClassLoader();
         try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
@@ -78,7 +82,8 @@ public class InternalHudiConnectorFactory
                         binder.bind(NodeManager.class).toInstance(context.getNodeManager());
                         binder.bind(TypeManager.class).toInstance(context.getTypeManager());
                         binder.bind(CatalogName.class).toInstance(new CatalogName(catalogName));
-                    });
+                    },
+                    module.orElse(EMPTY_MODULE));
 
             Injector injector = app
                     .doNotInitializeLogging()

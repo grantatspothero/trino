@@ -34,6 +34,12 @@ public class DeltaLakeInputInfo
         return partitioned;
     }
 
+    @JsonProperty
+    public String getTableType()
+    {
+        return "DELTA";
+    }
+
     @Override
     public boolean equals(Object o)
     {

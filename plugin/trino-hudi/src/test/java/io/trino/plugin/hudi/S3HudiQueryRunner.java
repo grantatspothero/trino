@@ -33,6 +33,7 @@ import io.trino.plugin.hive.s3.HiveS3Config;
 import io.trino.plugin.hive.s3.TrinoS3ConfigurationInitializer;
 import io.trino.plugin.hudi.testing.HudiTablesInitializer;
 import io.trino.plugin.hudi.testing.TpchHudiTablesInitializer;
+import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.spi.security.PrincipalType;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.tpch.TpchTable;
@@ -89,6 +90,10 @@ public final class S3HudiQueryRunner
         DistributedQueryRunner queryRunner = builder(createSession())
                 .setExtraProperties(extraProperties)
                 .build();
+
+        queryRunner.installPlugin(new TpchPlugin());
+        queryRunner.createCatalog("tpch", "tpch", ImmutableMap.of());
+
         queryRunner.installPlugin(new TestingHudiPlugin(Optional.of(metastore)));
         queryRunner.createCatalog(
                 "hudi",

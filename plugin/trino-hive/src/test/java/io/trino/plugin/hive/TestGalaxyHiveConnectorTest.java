@@ -51,7 +51,7 @@ public class TestGalaxyHiveConnectorTest
         };
 
         // Use a compression codec that's fast and doesn't cause GCLocker
-        verify(new HiveConfig().getHiveCompressionCodec() == HiveCompressionOption.GZIP);
+        verify(new HiveConfig().getHiveCompressionCodec() == HiveCompressionOption.DEFAULT);
         String hiveCompressionCodec = HiveCompressionCodec.ZSTD.name();
 
         DistributedQueryRunner queryRunner = HiveQueryRunner.builder()

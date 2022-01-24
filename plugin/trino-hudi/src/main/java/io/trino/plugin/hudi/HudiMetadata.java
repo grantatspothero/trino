@@ -15,6 +15,8 @@ package io.trino.plugin.hudi;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.uber.hoodie.hadoop.HoodieInputFormat;
+import com.uber.hoodie.hadoop.realtime.HoodieRealtimeInputFormat;
 import io.airlift.log.Logger;
 import io.trino.hdfs.HdfsContext;
 import io.trino.hdfs.HdfsEnvironment;
@@ -40,6 +42,8 @@ import io.trino.spi.type.TypeManager;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hudi.common.model.HoodieTableType;
+import org.apache.hudi.hadoop.HoodieParquetInputFormat;
+import org.apache.hudi.hadoop.realtime.HoodieParquetRealtimeInputFormat;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -196,6 +200,14 @@ public class HudiMetadata
 
     private boolean isHudiTable(ConnectorSession session, Table table)
     {
+        String inputFormatClassName = table.getStorage().getStorageFormat().getInputFormatNullable();
+        if (!HoodieParquetInputFormat.class.getName().equals(inputFormatClassName) &&
+                !HoodieParquetRealtimeInputFormat.class.getName().equals(inputFormatClassName) &&
+                !HoodieInputFormat.class.getName().equals(inputFormatClassName) &&
+                !HoodieRealtimeInputFormat.class.getName().equals(inputFormatClassName)) {
+            return false;
+        }
+
         String basePath = table.getStorage().getLocation();
         Configuration configuration = hdfsEnvironment.getConfiguration(new HdfsContext(session), new Path(basePath));
         try {
