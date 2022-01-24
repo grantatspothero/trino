@@ -16,6 +16,7 @@ package io.trino.plugin.kudu;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Closer;
 import com.google.common.net.HostAndPort;
+import org.testcontainers.containers.FixedHostPortGenericContainer;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 
@@ -23,12 +24,15 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 
+import static java.lang.String.format;
+import static java.lang.Thread.sleep;
+
 public class TestingKuduServer
         implements Closeable
 {
     private static final Integer KUDU_MASTER_PORT = 7051;
     private static final Integer KUDU_TSERVER_PORT = 7050;
-    private static final Integer NUMBER_OF_REPLICA = 3;
+    private static final Integer NUMBER_OF_REPLICA = 4;
 
     private final GenericContainer<?> master;
     private final List<GenericContainer<?>> tServers;
@@ -37,32 +41,53 @@ public class TestingKuduServer
     {
         Network network = Network.newNetwork();
         ImmutableList.Builder<GenericContainer<?>> tServersBuilder = ImmutableList.builder();
-        this.master = new GenericContainer<>("apache/kudu:1.10.0")
-                .withExposedPorts(KUDU_MASTER_PORT)
+        int hostPort = 7051;
+        String hostAlias = "kudu-master";
+
+        // This is supposed to work but is not :shrug, see: https://github.com/docker/for-linux/issues/264#issuecomment-714253414
+        // String hostDNS = "host.docker.internal";
+        // Manually set, will automate in a bit: KUDU_QUICKSTART_IP=$(ifconfig | grep "inet " | grep -Fv 127.0.0.1 |  awk '{print $2}' | tail -1)
+        String hostDNS = null;
+
+        this.master = new FixedHostPortGenericContainer<>("apache/kudu:1.15.0")
+                .withFixedExposedPort(hostPort, hostPort)
                 .withCommand("master")
+                .withEnv("KUDU_MASTERS", "kudu-master:7051")
+                .withEnv("MASTER_ARGS", format("--fs_wal_dir=/var/lib/kudu/master --logtostderr --use_hybrid_clock=false --rpc_bind_addresses=%s:%s --rpc_advertised_addresses=%s:%s", "kudu-master", hostPort, hostDNS, hostPort))
                 .withNetwork(network)
-                .withNetworkAliases("kudu-master");
+                .withNetworkAliases(hostAlias)
+                .withExtraHost("host.docker.internal", "host-gateway");
 
         for (int instance = 0; instance < NUMBER_OF_REPLICA; instance++) {
+            hostPort += 1;
             String instanceName = "kudu-tserver-" + instance;
-            GenericContainer<?> tableServer = new GenericContainer<>("apache/kudu:1.10.0")
-                    .withExposedPorts(KUDU_TSERVER_PORT)
+            GenericContainer<?> tableServer = new FixedHostPortGenericContainer<>("apache/kudu:1.15.0")
+                    .withFixedExposedPort(hostPort, hostPort)
                     .withCommand("tserver")
                     .withEnv("KUDU_MASTERS", "kudu-master:" + KUDU_MASTER_PORT)
                     .withNetwork(network)
-                    .withNetworkAliases("kudu-tserver-" + instance)
+                    .withNetworkAliases(instanceName)
+                    .withExtraHost("host.docker.internal", "host-gateway")
                     .dependsOn(master)
-                    .withEnv("TSERVER_ARGS", "--fs_wal_dir=/var/lib/kudu/tserver --use_hybrid_clock=false --rpc_advertised_addresses=" + instanceName);
+                    .withEnv("TSERVER_ARGS", format("--fs_wal_dir=/var/lib/kudu/tserver --logtostderr --use_hybrid_clock=false --rpc_bind_addresses=%s:%s --rpc_advertised_addresses=%s:%s", instanceName, hostPort, hostDNS, hostPort));
             tServersBuilder.add(tableServer);
         }
         this.tServers = tServersBuilder.build();
         master.start();
         tServers.forEach(GenericContainer::start);
+
+        // Workaround because sometimes the tablet servers will not be ready to start servicing requests
+        try{
+            sleep(30_000);
+        }catch(Exception e){
+            throw new RuntimeException(e);
+        }
+
     }
 
     public HostAndPort getMasterAddress()
     {
-        return HostAndPort.fromParts(master.getContainerIpAddress(), master.getMappedPort(KUDU_MASTER_PORT));
+        return HostAndPort.fromParts("localhost", 7051);
     }
 
     @Override
