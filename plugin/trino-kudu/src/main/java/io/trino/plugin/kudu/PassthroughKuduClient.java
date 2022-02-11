@@ -15,6 +15,8 @@ package io.trino.plugin.kudu;
 
 import org.apache.kudu.client.KuduClient;
 
+import java.util.function.Function;
+
 import static java.util.Objects.requireNonNull;
 
 public class PassthroughKuduClient
@@ -28,8 +30,8 @@ public class PassthroughKuduClient
     }
 
     @Override
-    protected KuduClient delegate()
+    protected <R> R delegate(Function<KuduClient, R> function)
     {
-        return kuduClient;
+        return function.apply(kuduClient);
     }
 }

@@ -18,31 +18,28 @@ import org.apache.kudu.client.AlterTableOptions;
 import org.apache.kudu.client.AlterTableResponse;
 import org.apache.kudu.client.CreateTableOptions;
 import org.apache.kudu.client.DeleteTableResponse;
-import org.apache.kudu.client.KuduException;
 import org.apache.kudu.client.KuduScanToken;
 import org.apache.kudu.client.KuduScanner;
 import org.apache.kudu.client.KuduSession;
 import org.apache.kudu.client.KuduTable;
 import org.apache.kudu.client.ListTablesResponse;
 
-import java.io.IOException;
-
 public interface KuduClientWrapper
         extends AutoCloseable
 {
-    KuduTable createTable(String name, Schema schema, CreateTableOptions builder) throws KuduException;
+    KuduTable createTable(String name, Schema schema, CreateTableOptions builder);
 
-    DeleteTableResponse deleteTable(String name) throws KuduException;
+    DeleteTableResponse deleteTable(String name);
 
-    AlterTableResponse alterTable(String name, AlterTableOptions ato) throws KuduException;
+    AlterTableResponse alterTable(String name, AlterTableOptions ato);
 
-    ListTablesResponse getTablesList() throws KuduException;
+    ListTablesResponse getTablesList();
 
-    ListTablesResponse getTablesList(String nameFilter) throws KuduException;
+    ListTablesResponse getTablesList(String nameFilter);
 
-    boolean tableExists(String name) throws KuduException;
+    boolean tableExists(String name);
 
-    KuduTable openTable(String name) throws KuduException;
+    KuduTable openTable(String name);
 
     KuduScanner.KuduScannerBuilder newScannerBuilder(KuduTable table);
 
@@ -50,8 +47,8 @@ public interface KuduClientWrapper
 
     KuduSession newSession();
 
-    KuduScanner deserializeIntoScanner(byte[] serializedScanToken) throws IOException;
+    KuduScanner deserializeIntoScanner(byte[] serializedScanToken);
 
     @Override
-    void close() throws KuduException;
+    void close();
 }

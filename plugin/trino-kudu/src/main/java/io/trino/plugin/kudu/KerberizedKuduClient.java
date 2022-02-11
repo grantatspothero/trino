@@ -14,11 +14,17 @@
 package io.trino.plugin.kudu;
 
 import io.trino.plugin.base.authentication.CachingKerberosAuthentication;
+import net.jodah.failsafe.ExecutionContext;
+import net.jodah.failsafe.Failsafe;
+import net.jodah.failsafe.RetryPolicy;
 import org.apache.kudu.client.KuduClient;
+import org.apache.kudu.client.KuduException;
+import org.apache.kudu.client.Status;
 
 import javax.security.auth.Subject;
 
 import java.security.PrivilegedAction;
+import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.kudu.client.KuduClient.KuduClientBuilder;
@@ -28,6 +34,14 @@ public class KerberizedKuduClient
 {
     private final KuduClient kuduClient;
     private final CachingKerberosAuthentication cachingKerberosAuthentication;
+    private final RetryPolicy<Object> kerberosRetryPolicy = new RetryPolicy<>().withMaxAttempts(2).handleIf((Exception e) -> {
+        if (e instanceof UncheckedKuduException) {
+            KuduException kuduException = ((UncheckedKuduException) e).getCause();
+            Status status = kuduException.getStatus();
+            return status.isServiceUnavailable() && kuduException.getMessage().contains("server requires authentication, but client Kerberos credentials (TGT) have expired");
+        }
+        return false;
+    });
 
     KerberizedKuduClient(KuduClientBuilder kuduClientBuilder, CachingKerberosAuthentication cachingKerberosAuthentication)
     {
@@ -37,9 +51,13 @@ public class KerberizedKuduClient
     }
 
     @Override
-    protected KuduClient delegate()
+    protected <R> R delegate(Function<KuduClient, R> function)
     {
-        cachingKerberosAuthentication.reauthenticateIfSoonWillBeExpired();
-        return kuduClient;
+        return Failsafe.with(kerberosRetryPolicy).get((ExecutionContext context) -> {
+            if (!context.isFirstAttempt()) {
+                cachingKerberosAuthentication.reauthenticateIfSoonWillBeExpired();
+            }
+            return function.apply(kuduClient);
+        });
     }
 }

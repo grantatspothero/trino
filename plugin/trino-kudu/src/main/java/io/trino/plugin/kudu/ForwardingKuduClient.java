@@ -27,90 +27,148 @@ import org.apache.kudu.client.KuduTable;
 import org.apache.kudu.client.ListTablesResponse;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.Objects;
+import java.util.function.Function;
+
+import static java.util.Objects.requireNonNull;
 
 public abstract class ForwardingKuduClient
         implements KuduClientWrapper
 {
-    protected abstract KuduClient delegate();
+    protected abstract <R> R delegate(Function<KuduClient, R> function);
 
     @Override
     public KuduTable createTable(String name, Schema schema, CreateTableOptions builder)
             throws KuduException
     {
-        return delegate().createTable(name, schema, builder);
+        return delegateAndWrapKuduException((KuduClient kuduClient) -> kuduClient.createTable(name, schema, builder));
     }
 
     @Override
     public DeleteTableResponse deleteTable(String name)
             throws KuduException
     {
-        return delegate().deleteTable(name);
+        return delegateAndWrapKuduException((KuduClient kuduClient) -> kuduClient.deleteTable(name));
     }
 
     @Override
     public AlterTableResponse alterTable(String name, AlterTableOptions ato)
-            throws KuduException
     {
-        return delegate().alterTable(name, ato);
+        return delegateAndWrapKuduException((KuduClient kuduClient) -> kuduClient.alterTable(name, ato));
     }
 
     @Override
     public ListTablesResponse getTablesList()
-            throws KuduException
     {
-        return delegate().getTablesList();
+        return delegateAndWrapKuduException((KuduClient kuduClient) -> kuduClient.getTablesList());
     }
 
     @Override
     public ListTablesResponse getTablesList(String nameFilter)
-            throws KuduException
     {
-        return delegate().getTablesList(nameFilter);
+        return delegateAndWrapKuduException((KuduClient kuduClient) -> kuduClient.getTablesList(nameFilter));
     }
 
     @Override
     public boolean tableExists(String name)
-            throws KuduException
     {
-        return delegate().tableExists(name);
+        return delegateAndWrapKuduException((KuduClient kuduClient) -> kuduClient.tableExists(name));
     }
 
     @Override
     public KuduTable openTable(final String name)
-            throws KuduException
     {
-        return delegate().openTable(name);
+        return delegateAndWrapKuduException((KuduClient kuduClient) -> kuduClient.openTable(name));
     }
 
     @Override
     public KuduScanner.KuduScannerBuilder newScannerBuilder(KuduTable table)
     {
-        return delegate().newScannerBuilder(table);
+        return delegateAndWrapKuduException((KuduClient kuduClient) -> kuduClient.newScannerBuilder(table));
     }
 
     @Override
     public KuduScanToken.KuduScanTokenBuilder newScanTokenBuilder(KuduTable table)
     {
-        return delegate().newScanTokenBuilder(table);
+        return delegateAndWrapKuduException((KuduClient kuduClient) -> kuduClient.newScanTokenBuilder(table));
     }
 
     @Override
     public KuduSession newSession()
     {
-        return delegate().newSession();
+        return delegateAndWrapKuduException((KuduClient kuduClient) -> kuduClient.newSession());
     }
 
     @Override
     public KuduScanner deserializeIntoScanner(byte[] serializedScanToken)
-            throws IOException
     {
-        return KuduScanToken.deserializeIntoScanner(serializedScanToken, delegate());
+        return delegateAndWrapIOException((KuduClient kuduClient) -> KuduScanToken.deserializeIntoScanner(serializedScanToken, kuduClient));
     }
 
     @Override
     public void close()
+    {
+        delegateAndWrapKuduException((KuduClient kuduClient) -> {
+            kuduClient.close();
+            return null;
+        });
+    }
+
+    public static class UncheckedKuduException
+            extends RuntimeException
+    {
+        UncheckedKuduException(KuduException cause)
+        {
+            super(requireNonNull(cause))
+        }
+
+        @Override
+        public KuduException getCause() {
+            return (KuduException) super.getCause();
+        }
+    }
+
+    @FunctionalInterface
+    protected interface CheckedFunction<T, R, E extends Exception>
+    {
+        R apply(T argument) throws E;
+    }
+
+    private <R> R delegateAndWrapKuduException(CheckedFunction<KuduClient, R, KuduException> checkedFunction)
             throws KuduException
     {
-        delegate().close();
+        Function<KuduClient, R> uncheckedFunction = (KuduClient kuduClient) -> {
+            try {
+                return checkedFunction.apply(kuduClient);
+            }
+            catch (KuduException e) {
+                throw new UncheckedKuduException(e);
+            }
+        };
+        try{
+            return delegate(uncheckedFunction);
+        }catch (UncheckedKuduException e){
+            throw e.getCause();
+        }
+    }
+
+    private <R> R delegateAndWrapIOException(CheckedFunction<KuduClient, R, IOException> checkedFunction)
+            throws IOException
+    {
+        Function<KuduClient, R> uncheckedFunction = (KuduClient kuduClient) -> {
+            try {
+                return checkedFunction.apply(kuduClient);
+            }
+            catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        };
+        try{
+            return delegate(uncheckedFunction);
+        }
+        catch (UncheckedIOException e){
+            throw e.getCause();
+        }
     }
 }

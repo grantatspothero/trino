@@ -14,6 +14,7 @@
 package io.trino.plugin.kudu.schema;
 
 import com.google.common.collect.ImmutableList;
+import io.trino.plugin.kudu.ForwardingKuduClient;
 import io.trino.plugin.kudu.KuduClientWrapper;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.SchemaNotFoundException;
@@ -74,7 +75,7 @@ public class SchemaEmulationByTableNameConvention
                     session.close();
                 }
             }
-            catch (KuduException e) {
+            catch (KuduException | ForwardingKuduClient.UncheckedKuduException e) {
                 throw new TrinoException(GENERIC_INTERNAL_ERROR, e);
             }
         }
@@ -116,7 +117,7 @@ public class SchemaEmulationByTableNameConvention
                     session.close();
                 }
             }
-            catch (KuduException e) {
+            catch (KuduException | ForwardingKuduClient.UncheckedKuduException e) {
                 throw new TrinoException(GENERIC_INTERNAL_ERROR, e);
             }
         }
@@ -144,13 +145,12 @@ public class SchemaEmulationByTableNameConvention
             }
             return result;
         }
-        catch (KuduException e) {
+        catch (KuduException | ForwardingKuduClient.UncheckedKuduException e) {
             throw new TrinoException(GENERIC_INTERNAL_ERROR, e);
         }
     }
 
     private KuduTable getSchemasTable(KuduClientWrapper client)
-            throws KuduException
     {
         if (rawSchemasTable == null) {
             rawSchemasTable = client.openTable(rawSchemasTableName);
@@ -183,7 +183,6 @@ public class SchemaEmulationByTableNameConvention
     }
 
     private List<String> listSchemaNamesFromTablets(KuduClientWrapper client)
-            throws KuduException
     {
         List<String> tables = client.getTablesList().getTablesList();
         LinkedHashSet<String> schemas = new LinkedHashSet<>();

@@ -45,7 +45,6 @@ import org.apache.kudu.Schema;
 import org.apache.kudu.Type;
 import org.apache.kudu.client.AlterTableOptions;
 import org.apache.kudu.client.CreateTableOptions;
-import org.apache.kudu.client.KuduException;
 import org.apache.kudu.client.KuduPredicate;
 import org.apache.kudu.client.KuduScanToken;
 import org.apache.kudu.client.KuduScanner;
@@ -55,6 +54,7 @@ import org.apache.kudu.client.PartialRow;
 import org.apache.kudu.client.PartitionSchema.HashBucketSchema;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -65,6 +65,7 @@ import java.util.stream.IntStream;
 
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.trino.plugin.kudu.ForwardingKuduClient.UncheckedKuduException;
 import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.trino.spi.StandardErrorCode.QUERY_REJECTED;
 import static java.util.stream.Collectors.toList;
@@ -99,7 +100,7 @@ public class KuduClientSession
             }
             return client.getTablesList(prefix).getTablesList();
         }
-        catch (KuduException e) {
+        catch (UncheckedKuduException e) {
             throw new TrinoException(GENERIC_INTERNAL_ERROR, e);
         }
     }
@@ -218,7 +219,7 @@ public class KuduClientSession
         try {
             return client.deserializeIntoScanner(kuduSplit.getSerializedScanToken());
         }
-        catch (IOException e) {
+        catch (UncheckedIOException e) {
             throw new RuntimeException(e);
         }
     }
@@ -229,7 +230,7 @@ public class KuduClientSession
         try {
             return client.openTable(rawName);
         }
-        catch (KuduException e) {
+        catch (UncheckedKuduException e) {
             log.debug(e, "Error on doOpenTable");
             if (!listSchemaNames().contains(schemaTableName.getSchemaName())) {
                 throw new SchemaNotFoundException(schemaTableName.getSchemaName());
@@ -259,7 +260,7 @@ public class KuduClientSession
             String rawName = schemaEmulation.toRawName(schemaTableName);
             client.deleteTable(rawName);
         }
-        catch (KuduException e) {
+        catch (UncheckedKuduException e) {
             throw new TrinoException(GENERIC_INTERNAL_ERROR, e);
         }
     }
@@ -273,7 +274,7 @@ public class KuduClientSession
             alterOptions.renameTable(newRawName);
             client.alterTable(rawName, alterOptions);
         }
-        catch (KuduException e) {
+        catch (UncheckedKuduException e) {
             throw new TrinoException(GENERIC_INTERNAL_ERROR, e);
         }
     }
@@ -299,7 +300,7 @@ public class KuduClientSession
             CreateTableOptions options = buildCreateTableOptions(schema, properties);
             return client.createTable(rawName, schema, options);
         }
-        catch (KuduException e) {
+        catch (UncheckedKuduException e) {
             throw new TrinoException(GENERIC_INTERNAL_ERROR, e);
         }
     }
@@ -313,7 +314,7 @@ public class KuduClientSession
             alterOptions.addNullableColumn(column.getName(), type);
             client.alterTable(rawName, alterOptions);
         }
-        catch (KuduException e) {
+        catch (UncheckedKuduException e) {
             throw new TrinoException(GENERIC_INTERNAL_ERROR, e);
         }
     }
@@ -326,7 +327,7 @@ public class KuduClientSession
             alterOptions.dropColumn(name);
             client.alterTable(rawName, alterOptions);
         }
-        catch (KuduException e) {
+        catch (UncheckedKuduException e) {
             throw new TrinoException(GENERIC_INTERNAL_ERROR, e);
         }
     }
@@ -339,7 +340,7 @@ public class KuduClientSession
             alterOptions.renameColumn(oldName, newName);
             client.alterTable(rawName, alterOptions);
         }
-        catch (KuduException e) {
+        catch (UncheckedKuduException e) {
             throw new TrinoException(GENERIC_INTERNAL_ERROR, e);
         }
     }
@@ -379,7 +380,7 @@ public class KuduClientSession
             }
             client.alterTable(rawName, alterOptions);
         }
-        catch (KuduException e) {
+        catch (UncheckedKuduException e) {
             throw new TrinoException(GENERIC_INTERNAL_ERROR, e);
         }
     }
