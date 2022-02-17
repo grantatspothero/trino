@@ -20,11 +20,13 @@ import io.trino.plugin.iceberg.CatalogType;
 import io.trino.plugin.iceberg.IcebergConfig;
 import io.trino.plugin.iceberg.catalog.file.IcebergFileMetastoreCatalogModule;
 import io.trino.plugin.iceberg.catalog.glue.IcebergGlueCatalogModule;
+import io.trino.plugin.iceberg.catalog.hms.IcebergGalaxyMetastoreCatalogModule;
 import io.trino.plugin.iceberg.catalog.hms.IcebergHiveMetastoreCatalogModule;
 import io.trino.plugin.iceberg.catalog.jdbc.IcebergJdbcCatalogModule;
 import io.trino.plugin.iceberg.catalog.rest.IcebergRestCatalogModule;
 
 import static io.airlift.configuration.ConditionalModule.conditionalModule;
+import static io.trino.plugin.iceberg.CatalogType.GALAXY_METASTORE;
 import static io.trino.plugin.iceberg.CatalogType.GLUE;
 import static io.trino.plugin.iceberg.CatalogType.HIVE_METASTORE;
 import static io.trino.plugin.iceberg.CatalogType.JDBC;
@@ -37,6 +39,7 @@ public class IcebergCatalogModule
     @Override
     protected void setup(Binder binder)
     {
+        bindCatalogModule(GALAXY_METASTORE, new IcebergGalaxyMetastoreCatalogModule());
         bindCatalogModule(HIVE_METASTORE, new IcebergHiveMetastoreCatalogModule());
         bindCatalogModule(TESTING_FILE_METASTORE, new IcebergFileMetastoreCatalogModule());
         bindCatalogModule(GLUE, new IcebergGlueCatalogModule());
