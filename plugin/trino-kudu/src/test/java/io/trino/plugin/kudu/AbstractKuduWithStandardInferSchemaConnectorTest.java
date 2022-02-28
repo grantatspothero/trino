@@ -13,9 +13,13 @@
  */
 package io.trino.plugin.kudu;
 
+import io.trino.testing.MaterializedRow;
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static io.trino.testing.sql.TestTable.randomTableSuffix;
 import static org.testng.Assert.assertEquals;
@@ -32,7 +36,13 @@ public abstract class AbstractKuduWithStandardInferSchemaConnectorTest
     @Test
     public void testListingOfTableForDefaultSchema()
     {
-        assertEquals(computeActual("SHOW TABLES FROM default").getRowCount(), 0);
+        // The special $schemas table is created when listing schema names with schema emulation enabled
+        // Depending on test ordering, this table may or may not be created when this test runs, so filter it out
+        List<MaterializedRow> rows = computeActual("SHOW TABLES FROM default").getMaterializedRows()
+                .stream()
+                .filter(row -> ! ((String)row.getField(0)).contains("$schemas"))
+                .collect(Collectors.toList());
+        assertEquals(rows, new ArrayList<MaterializedRow>());
     }
 
     @Test
