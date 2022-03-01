@@ -26,6 +26,7 @@ import io.trino.spi.connector.JoinCondition;
 import io.trino.spi.predicate.Range;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.sql.planner.assertions.PlanMatchPattern;
+import io.trino.sql.planner.plan.AggregationNode;
 import io.trino.sql.planner.plan.ExchangeNode;
 import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.JoinNode;
@@ -775,6 +776,18 @@ public class TestPostgreSqlConnectorTest
                     .matches("VALUES 1")
                     .isFullyPushedDown();
         }
+    }
+
+    @Test
+    public void testGroupByTextualPushdown()
+    {
+        // Count is safe to pushdown over textual types
+        assertThat(query("SELECT orderstatus, count(comment) from orders group by orderstatus"))
+                .isFullyPushedDown();
+
+        // Max is not safe to pushdown over textual types, this fails
+        assertThat(query("SELECT orderstatus, max(comment) from orders group by orderstatus"))
+                .isFullyPushedDown();
     }
 
     private String getLongInClause(int start, int length)

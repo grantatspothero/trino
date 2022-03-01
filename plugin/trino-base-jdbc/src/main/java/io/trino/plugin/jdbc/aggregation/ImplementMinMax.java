@@ -66,7 +66,7 @@ public class ImplementMinMax
         verify(columnHandle.getColumnType().equals(aggregateFunction.getOutputType()));
 
         // Remote database is case insensitive or sorts values differently from Trino
-        if (!isRemoteCollationSensitive && (columnHandle.getColumnType() instanceof CharType || columnHandle.getColumnType() instanceof VarcharType)) {
+        if (isRemoteCollationSensitive && (columnHandle.getColumnType() instanceof CharType || columnHandle.getColumnType() instanceof VarcharType)) {
             return Optional.empty();
         }
 

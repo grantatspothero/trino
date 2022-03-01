@@ -280,7 +280,7 @@ public class PostgreSqlClient
                 this::quoted,
                 ImmutableSet.<AggregateFunctionRule<JdbcExpression>>builder()
                         .add(new ImplementCountAll(bigintTypeHandle))
-                        .add(new ImplementMinMax(false))
+                        .add(new ImplementMinMax(true))
                         .add(new ImplementCount(bigintTypeHandle))
                         .add(new ImplementCountDistinct(bigintTypeHandle, false))
                         .add(new ImplementSum(PostgreSqlClient::toTypeHandle))
@@ -700,7 +700,7 @@ public class PostgreSqlClient
     public boolean supportsAggregationPushdown(ConnectorSession session, JdbcTableHandle table, List<AggregateFunction> aggregates, Map<String, ColumnHandle> assignments, List<List<ColumnHandle>> groupingSets)
     {
         // Postgres sorts textual types differently compared to Trino so we cannot safely pushdown any aggregations which take a text type as an input or as part of grouping set
-        return preventTextualTypeAggregationPushdown(groupingSets);
+        return true;
     }
 
     private static Optional<JdbcTypeHandle> toTypeHandle(DecimalType decimalType)
