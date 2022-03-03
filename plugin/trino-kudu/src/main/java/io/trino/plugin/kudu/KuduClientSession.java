@@ -299,12 +299,9 @@ public class KuduClientSession
 
             Schema schema = buildSchema(columns);
             CreateTableOptions options = buildCreateTableOptions(schema, properties);
-            KuduTable table = client.createTable(rawName, schema, options);
-            // Giant hack: see if arbitrarily waiting after creating a table avoids later table not found errors
-            Thread.sleep(4_000);
-            return table;
+            return client.createTable(rawName, schema, options);
         }
-        catch (KuduException | InterruptedException e) {
+        catch (KuduException e) {
             throw new TrinoException(GENERIC_INTERNAL_ERROR, e);
         }
     }
