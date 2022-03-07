@@ -17,9 +17,7 @@ import org.testng.annotations.Test;
 
 import java.util.Optional;
 
-import static io.trino.testing.sql.TestTable.randomTableSuffix;
-
-public abstract class AbstractKuduWithEmptyInferSchemaConnectorTest
+public abstract class AbstractKuduSmokeTestWithEmptyInferSchema
         extends AbstractKuduConnectorTest
 {
     @Override
@@ -32,23 +30,5 @@ public abstract class AbstractKuduWithEmptyInferSchemaConnectorTest
     public void testListingOfTableForDefaultSchema()
     {
         assertQuery("SHOW TABLES FROM default", "VALUES '$schemas'");
-    }
-
-    @Test
-    @Override
-    public void testDropNonEmptySchema()
-    {
-        // Set column and table properties in CREATE TABLE statement
-        String schemaName = "test_drop_non_empty_schema_" + randomTableSuffix();
-
-        try {
-            assertUpdate("CREATE SCHEMA " + schemaName);
-            assertUpdate("CREATE TABLE " + schemaName + ".t(x int WITH (primary_key=true)) WITH (partition_by_hash_columns=ARRAY['x'], partition_by_hash_buckets=2)");
-            assertQueryFails("DROP SCHEMA " + schemaName, ".*Cannot drop non-empty schema '\\Q" + schemaName + "\\E'");
-        }
-        finally {
-            assertUpdate("DROP TABLE IF EXISTS " + schemaName + ".t");
-            assertUpdate("DROP SCHEMA IF EXISTS " + schemaName);
-        }
     }
 }
