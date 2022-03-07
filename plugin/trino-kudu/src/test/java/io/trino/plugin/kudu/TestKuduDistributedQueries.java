@@ -72,6 +72,84 @@ public class TestKuduDistributedQueries
     }
 
     @Override
+    protected TestTable createTableWithDefaultColumns()
+    {
+        throw new SkipException("Kudu connector does not support column default values");
+    }
+
+    @Override
+    public void testInsert()
+    {
+        // TODO Support these test once kudu connector can create tables with default partitions
+    }
+
+    @Override
+    public void testCommentTable()
+    {
+        // TODO
+        throw new SkipException("TODO");
+    }
+
+    @Override
+    public void testCommentColumn()
+    {
+        // TODO
+        throw new SkipException("TODO");
+    }
+
+    @Override
+    public void testAddColumn()
+    {
+        // TODO Support these test once kudu connector can create tables with default partitions
+        throw new SkipException("TODO");
+    }
+
+    @Override
+    public void testCreateTable()
+    {
+        // TODO Support these test once kudu connector can create tables with default partitions
+        throw new SkipException("TODO");
+    }
+
+    @Override
+    public void testInsertUnicode()
+    {
+        // TODO Support these test once kudu connector can create tables with default partitions
+        throw new SkipException("TODO");
+    }
+
+    @Override
+    public void testInsertHighestUnicodeCharacter()
+    {
+        // TODO Support these test once kudu connector can create tables with default partitions
+        throw new SkipException("TODO");
+    }
+
+    @Override
+    public void testDropNonEmptySchema()
+    {
+        // TODO Support these test once kudu connector can create tables with default partitions
+        throw new SkipException("TODO");
+    }
+
+    @Override
+    public void testDelete()
+    {
+        // TODO Support these test once kudu connector can create tables with default partitions
+        throw new SkipException("TODO");
+    }
+
+    @Override
+    protected void skipTestUnlessSupportsDeletes()
+    {
+        // TODO Remove override once kudu connector can create tables with default partitions
+        if (!supportsDelete()) {
+            assertQueryFails("DELETE FROM region", "This connector does not support deletes");
+            throw new SkipException("This connector does not support deletes");
+        }
+    }
+
+    @Override
     public void testShowColumns()
     {
         MaterializedResult actual = computeActual("SHOW COLUMNS FROM orders");
@@ -92,6 +170,21 @@ public class TestKuduDistributedQueries
     }
 
     @Override
+    @Test
+    public void testWrittenStats()
+    {
+        // TODO Kudu connector supports CTAS and inserts, but the test would fail
+        throw new SkipException("TODO");
+    }
+
+    @Override
+    public void testColumnName(String columnName)
+    {
+        // TODO (https://github.com/trinodb/trino/issues/3477) enable the test
+        throw new SkipException("TODO");
+    }
+
+    @Override
     protected Optional<DataMappingTestSetup> filterDataMappingSmokeTestData(DataMappingTestSetup dataMappingTestSetup)
     {
         String typeName = dataMappingTestSetup.getTrinoTypeName();
@@ -108,5 +201,13 @@ public class TestKuduDistributedQueries
         }
 
         return Optional.of(dataMappingTestSetup);
+    }
+
+    @Test
+    @Override
+    public void testQueryLoggingCount()
+    {
+        // TODO (https://github.com/trinodb/trino/issues/3477) enable the test
+        throw new SkipException("TODO");
     }
 }

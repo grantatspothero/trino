@@ -239,15 +239,6 @@ public class TestPhoenixConnectorTest
                         ")");
     }
 
-    // TODO (https://github.com/trinodb/trino/issues/10904): Test is flaky because tests execute in parallel
-    @Flaky(issue = "https://github.com/trinodb/trino/issues/10904", match = "\\QERROR 1012 (42M03): Table undefined. tableName=")
-    @Test
-    @Override
-    public void testSelectInformationSchemaColumns()
-    {
-        super.testSelectInformationSchemaColumns();
-    }
-
     @Override
     public void testCharVarcharComparison()
     {
