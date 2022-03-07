@@ -49,7 +49,6 @@ import io.trino.spi.connector.TableNotFoundException;
 import io.trino.spi.connector.TableScanRedirectApplicationResult;
 import io.trino.spi.connector.TopNApplicationResult;
 import io.trino.spi.expression.ConnectorExpression;
-import io.trino.spi.expression.Constant;
 import io.trino.spi.expression.Variable;
 import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.TupleDomain;
@@ -59,7 +58,6 @@ import io.trino.spi.statistics.ComputedStatistics;
 import io.trino.spi.statistics.TableStatistics;
 
 import java.sql.Types;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -77,10 +75,7 @@ import static com.google.common.base.Verify.verify;
 import static com.google.common.base.Verify.verifyNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static io.trino.plugin.base.expression.ConnectorExpressions.and;
-import static io.trino.plugin.base.expression.ConnectorExpressions.extractConjuncts;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.isAggregationPushdownEnabled;
-import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.isComplexExpressionPushdown;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.isJoinPushdownEnabled;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.isTopNPushdownEnabled;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
@@ -137,13 +132,10 @@ public class DefaultJdbcMetadata
 
         TupleDomain<ColumnHandle> oldDomain = handle.getConstraint();
         TupleDomain<ColumnHandle> newDomain = oldDomain.intersect(constraint.getSummary());
-        List<String> newConstraintExpressions;
+
         TupleDomain<ColumnHandle> remainingFilter;
-        Optional<ConnectorExpression> remainingExpression;
         if (newDomain.isNone()) {
-            newConstraintExpressions = ImmutableList.of();
             remainingFilter = TupleDomain.all();
-            remainingExpression = Optional.of(Constant.TRUE);
         }
         else {
             Map<ColumnHandle, Domain> domains = newDomain.getDomains().orElseThrow();
@@ -168,50 +160,22 @@ public class DefaultJdbcMetadata
 
             newDomain = TupleDomain.withColumnDomains(supported);
             remainingFilter = TupleDomain.withColumnDomains(unsupported);
-
-            if (isComplexExpressionPushdown(session)) {
-                List<String> newExpressions = new ArrayList<>();
-                List<ConnectorExpression> remainingExpressions = new ArrayList<>();
-                for (ConnectorExpression expression : extractConjuncts(constraint.getExpression())) {
-                    Optional<String> converted = jdbcClient.convertPredicate(session, expression, constraint.getAssignments());
-                    if (converted.isPresent()) {
-                        newExpressions.add(converted.get());
-                    }
-                    else {
-                        remainingExpressions.add(expression);
-                    }
-                }
-                newConstraintExpressions = ImmutableSet.<String>builder()
-                        .addAll(handle.getConstraintExpressions())
-                        .addAll(newExpressions)
-                        .build().asList();
-                remainingExpression = Optional.of(and(remainingExpressions));
-            }
-            else {
-                newConstraintExpressions = ImmutableList.of();
-                remainingExpression = Optional.empty();
-            }
         }
 
-        if (oldDomain.equals(newDomain) &&
-                handle.getConstraintExpressions().equals(newConstraintExpressions)) {
+        if (oldDomain.equals(newDomain)) {
             return Optional.empty();
         }
 
         handle = new JdbcTableHandle(
                 handle.getRelationHandle(),
                 newDomain,
-                newConstraintExpressions,
                 handle.getSortOrder(),
                 handle.getLimit(),
                 handle.getColumns(),
                 handle.getOtherReferencedTables(),
                 handle.getNextSyntheticColumnId());
 
-        return Optional.of(
-                remainingExpression.isPresent()
-                        ? new ConstraintApplicationResult<>(handle, remainingFilter, remainingExpression.get(), false)
-                        : new ConstraintApplicationResult<>(handle, remainingFilter, false));
+        return Optional.of(new ConstraintApplicationResult<>(handle, remainingFilter, false));
     }
 
     private JdbcTableHandle flushAttributesAsQuery(ConnectorSession session, JdbcTableHandle handle)
@@ -222,7 +186,6 @@ public class DefaultJdbcMetadata
         return new JdbcTableHandle(
                 new JdbcQueryRelationHandle(preparedQuery),
                 TupleDomain.all(),
-                ImmutableList.of(),
                 Optional.empty(),
                 OptionalLong.empty(),
                 Optional.of(columns),
@@ -257,7 +220,6 @@ public class DefaultJdbcMetadata
                 new JdbcTableHandle(
                         handle.getRelationHandle(),
                         handle.getConstraint(),
-                        handle.getConstraintExpressions(),
                         handle.getSortOrder(),
                         handle.getLimit(),
                         Optional.of(newColumns),
@@ -316,10 +278,10 @@ public class DefaultJdbcMetadata
                 .flatMap(List::stream)
                 .distinct()
                 .peek(handle.getColumns().<Consumer<JdbcColumnHandle>>map(
-                                columns -> groupKey -> verify(columns.contains(groupKey),
-                                        "applyAggregation called with a grouping column %s which was not included in the table columns: %s",
-                                        groupKey,
-                                        tableColumns))
+                        columns -> groupKey -> verify(columns.contains(groupKey),
+                                "applyAggregation called with a grouping column %s which was not included in the table columns: %s",
+                                groupKey,
+                                tableColumns))
                         .orElse(groupKey -> {}))
                 .forEach(newColumns::add);
 
@@ -357,7 +319,6 @@ public class DefaultJdbcMetadata
         handle = new JdbcTableHandle(
                 new JdbcQueryRelationHandle(preparedQuery),
                 TupleDomain.all(),
-                ImmutableList.of(),
                 Optional.empty(),
                 OptionalLong.empty(),
                 Optional.of(newColumnsList),
@@ -434,7 +395,6 @@ public class DefaultJdbcMetadata
                 new JdbcTableHandle(
                         new JdbcQueryRelationHandle(joinQuery.get()),
                         TupleDomain.all(),
-                        ImmutableList.of(),
                         Optional.empty(),
                         OptionalLong.empty(),
                         Optional.of(
@@ -498,7 +458,6 @@ public class DefaultJdbcMetadata
         handle = new JdbcTableHandle(
                 handle.getRelationHandle(),
                 handle.getConstraint(),
-                handle.getConstraintExpressions(),
                 handle.getSortOrder(),
                 OptionalLong.of(limit),
                 handle.getColumns(),
@@ -547,7 +506,6 @@ public class DefaultJdbcMetadata
         JdbcTableHandle sortedTableHandle = new JdbcTableHandle(
                 handle.getRelationHandle(),
                 handle.getConstraint(),
-                handle.getConstraintExpressions(),
                 Optional.of(resultSortOrder),
                 OptionalLong.of(topNCount),
                 handle.getColumns(),

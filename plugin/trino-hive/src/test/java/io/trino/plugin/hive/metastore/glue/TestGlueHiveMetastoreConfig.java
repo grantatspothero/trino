@@ -50,7 +50,7 @@ public class TestGlueHiveMetastoreConfig
     @Test
     public void testExplicitPropertyMapping()
     {
-        Map<String, String> properties = ImmutableMap.<String, String>builder()
+        Map<String, String> properties = new ImmutableMap.Builder<String, String>()
                 .put("hive.metastore.glue.region", "us-east-1")
                 .put("hive.metastore.glue.endpoint-url", "http://foo.bar")
                 .put("hive.metastore.glue.pin-client-to-current-region", "true")

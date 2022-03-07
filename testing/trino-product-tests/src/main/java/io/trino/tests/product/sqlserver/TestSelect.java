@@ -48,6 +48,7 @@ import static java.sql.JDBCType.INTEGER;
 import static java.sql.JDBCType.REAL;
 import static java.sql.JDBCType.SMALLINT;
 import static java.sql.JDBCType.TIMESTAMP;
+import static java.sql.JDBCType.TINYINT;
 import static java.sql.JDBCType.VARCHAR;
 import static java.util.Collections.nCopies;
 
@@ -132,7 +133,7 @@ public class TestSelect
                         BIGINT,
                         SMALLINT,
                         INTEGER,
-                        SMALLINT,
+                        TINYINT,
                         DOUBLE,
                         REAL,
                         CHAR,
@@ -153,7 +154,7 @@ public class TestSelect
                                 Long.MIN_VALUE,
                                 Short.MIN_VALUE,
                                 Integer.MIN_VALUE,
-                                0,
+                                Byte.MIN_VALUE,
                                 Double.MIN_VALUE,
                                 -3.40E+38f,
                                 "\0   ",
@@ -173,7 +174,7 @@ public class TestSelect
                                 Long.MAX_VALUE,
                                 Short.MAX_VALUE,
                                 Integer.MAX_VALUE,
-                                255,
+                                Byte.MAX_VALUE,
                                 Double.MAX_VALUE,
                                 Float.MAX_VALUE,
                                 "abcd",

@@ -138,7 +138,7 @@ public class KafkaInternalFieldManager
     {
         Type varcharMapType = typeManager.getType(mapType(VARCHAR.getTypeSignature(), arrayType(VARBINARY.getTypeSignature())));
 
-        internalFields = ImmutableMap.<String, InternalField>builder()
+        internalFields = new ImmutableMap.Builder<String, InternalField>()
                 .put(PARTITION_ID_FIELD, new InternalField(
                         PARTITION_ID_FIELD,
                         "Partition Id",

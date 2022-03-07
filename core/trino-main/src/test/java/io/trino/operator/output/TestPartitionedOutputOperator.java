@@ -19,6 +19,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.airlift.slice.Slice;
 import io.airlift.units.DataSize;
+import io.trino.Session;
 import io.trino.execution.StateMachine;
 import io.trino.execution.buffer.BufferResult;
 import io.trino.execution.buffer.BufferState;
@@ -30,8 +31,11 @@ import io.trino.execution.buffer.PagesSerdeFactory;
 import io.trino.operator.BucketPartitionFunction;
 import io.trino.operator.DriverContext;
 import io.trino.operator.OperatorContext;
+import io.trino.operator.OperatorFactories;
 import io.trino.operator.OutputFactory;
 import io.trino.operator.PartitionFunction;
+import io.trino.operator.TaskContext;
+import io.trino.operator.TrinoOperatorFactories;
 import io.trino.spi.Page;
 import io.trino.spi.block.Block;
 import io.trino.spi.block.DictionaryBlock;
@@ -40,7 +44,6 @@ import io.trino.spi.block.TestingBlockEncodingSerde;
 import io.trino.spi.predicate.NullableValue;
 import io.trino.spi.type.ArrayType;
 import io.trino.spi.type.Decimals;
-import io.trino.spi.type.TimestampType;
 import io.trino.spi.type.Type;
 import io.trino.sql.planner.plan.PlanNodeId;
 import io.trino.testing.TestingTaskContext;
@@ -64,7 +67,6 @@ import java.util.stream.Stream;
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.airlift.units.DataSize.Unit.MEGABYTE;
-import static io.trino.SessionTestUtils.TEST_SESSION;
 import static io.trino.block.BlockAssertions.createLongDictionaryBlock;
 import static io.trino.block.BlockAssertions.createLongSequenceBlock;
 import static io.trino.block.BlockAssertions.createLongsBlock;
@@ -83,7 +85,7 @@ import static io.trino.spi.type.UuidType.UUID;
 import static io.trino.spi.type.VarbinaryType.VARBINARY;
 import static io.trino.spi.type.VarcharType.createUnboundedVarcharType;
 import static io.trino.sql.planner.SystemPartitioningHandle.SystemPartitionFunction.ROUND_ROBIN;
-import static io.trino.type.IpAddressType.IPADDRESS;
+import static io.trino.testing.TestingSession.testSessionBuilder;
 import static java.lang.Math.toIntExact;
 import static java.util.Collections.nCopies;
 import static java.util.Collections.unmodifiableList;
@@ -96,6 +98,8 @@ import static org.testng.Assert.assertEquals;
 @Test(singleThreaded = true)
 public class TestPartitionedOutputOperator
 {
+    private static final OperatorFactories TRINO_OPERATOR_FACTORIES = new TrinoOperatorFactories();
+    private static final Session TEST_SESSION = testSessionBuilder().build();
     private static final DataSize MAX_MEMORY = DataSize.of(50, MEGABYTE);
     private static final DataSize PARTITION_MAX_MEMORY = DataSize.of(5, MEGABYTE);
 
@@ -105,9 +109,23 @@ public class TestPartitionedOutputOperator
     private static final PagesSerdeFactory PAGES_SERDE_FACTORY = new PagesSerdeFactory(new TestingBlockEncodingSerde(), false);
     private static final PagesSerde PAGES_SERDE = PAGES_SERDE_FACTORY.createPagesSerde();
 
+    private final Session testSession;
+    private final OperatorFactories operatorFactories;
+
     private ExecutorService executor;
     private ScheduledExecutorService scheduledExecutor;
     private TestOutputBuffer outputBuffer;
+
+    public TestPartitionedOutputOperator()
+    {
+        this(TEST_SESSION, TRINO_OPERATOR_FACTORIES);
+    }
+
+    protected TestPartitionedOutputOperator(Session testSession, OperatorFactories operatorFactories)
+    {
+        this.testSession = testSession;
+        this.operatorFactories = operatorFactories;
+    }
 
     @BeforeClass
     public void setUpClass()
@@ -374,10 +392,7 @@ public class TestPartitionedOutputOperator
                         {VARBINARY},
                         {createDecimalType(1)},
                         {createDecimalType(Decimals.MAX_SHORT_PRECISION + 1)},
-                        {new ArrayType(BIGINT)},
-                        {TimestampType.createTimestampType(9)},
-                        {TimestampType.createTimestampType(3)},
-                        {IPADDRESS}
+                        {new ArrayType(BIGINT)}
                 };
     }
 
@@ -429,12 +444,13 @@ public class TestPartitionedOutputOperator
 
     private PartitionedOutputOperatorBuilder partitionedOutputOperator()
     {
-        return new PartitionedOutputOperatorBuilder(executor, scheduledExecutor, outputBuffer);
+        return new PartitionedOutputOperatorBuilder(operatorFactories, testSession, executor, scheduledExecutor, outputBuffer);
     }
 
     static class PartitionedOutputOperatorBuilder
     {
-        public static final PositionsAppenderFactory POSITIONS_APPENDER_FACTORY = new PositionsAppenderFactory();
+        private final OperatorFactories operatorFactories;
+        private final Session testSession;
         private final ExecutorService executor;
         private final ScheduledExecutorService scheduledExecutor;
         private final OutputBuffer outputBuffer;
@@ -446,8 +462,10 @@ public class TestPartitionedOutputOperator
         private OptionalInt nullChannel = OptionalInt.empty();
         private List<Type> types;
 
-        PartitionedOutputOperatorBuilder(ExecutorService executor, ScheduledExecutorService scheduledExecutor, OutputBuffer outputBuffer)
+        PartitionedOutputOperatorBuilder(OperatorFactories operatorFactories, Session testSession, ExecutorService executor, ScheduledExecutorService scheduledExecutor, OutputBuffer outputBuffer)
         {
+            this.operatorFactories = requireNonNull(operatorFactories, "operatorFactories is null");
+            this.testSession = requireNonNull(testSession, "testSession is null");
             this.executor = requireNonNull(executor, "executor is null");
             this.scheduledExecutor = requireNonNull(scheduledExecutor, "scheduledExecutor is null");
             this.outputBuffer = requireNonNull(outputBuffer, "outputBuffer is null");
@@ -511,9 +529,10 @@ public class TestPartitionedOutputOperator
 
         public PartitionedOutputOperator build()
         {
-            DriverContext driverContext = TestingTaskContext.builder(executor, scheduledExecutor, TEST_SESSION)
+            TaskContext taskContext = TestingTaskContext.builder(executor, scheduledExecutor, testSession)
                     .setMemoryPoolSize(MAX_MEMORY)
-                    .build()
+                    .build();
+            DriverContext driverContext = taskContext
                     .addPipelineContext(0, true, true, false)
                     .addDriverContext();
 
@@ -522,15 +541,15 @@ public class TestPartitionedOutputOperator
                 buffers = buffers.withBuffer(new OutputBuffers.OutputBufferId(partition), partition);
             }
 
-            OutputFactory operatorFactory = new PartitionedOutputOperator.PartitionedOutputFactory(
+            OutputFactory operatorFactory = operatorFactories.partitionedOutput(
+                    taskContext,
                     partitionFunction,
                     partitionChannels,
                     partitionConstants,
                     shouldReplicate,
                     nullChannel,
                     outputBuffer,
-                    PARTITION_MAX_MEMORY,
-                    POSITIONS_APPENDER_FACTORY);
+                    PARTITION_MAX_MEMORY);
 
             return (PartitionedOutputOperator) operatorFactory
                     .createOutputOperator(0, new PlanNodeId("plan-node-0"), types, Function.identity(), PAGES_SERDE_FACTORY)

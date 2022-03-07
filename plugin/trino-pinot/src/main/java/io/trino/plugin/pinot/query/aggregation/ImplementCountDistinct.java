@@ -28,7 +28,7 @@ import static io.trino.matching.Capture.newCapture;
 import static io.trino.plugin.base.aggregation.AggregateFunctionPatterns.basicAggregation;
 import static io.trino.plugin.base.aggregation.AggregateFunctionPatterns.functionName;
 import static io.trino.plugin.base.aggregation.AggregateFunctionPatterns.outputType;
-import static io.trino.plugin.base.aggregation.AggregateFunctionPatterns.singleArgument;
+import static io.trino.plugin.base.aggregation.AggregateFunctionPatterns.singleInput;
 import static io.trino.plugin.base.aggregation.AggregateFunctionPatterns.variable;
 import static io.trino.plugin.pinot.PinotSessionProperties.isCountDistinctPushdownEnabled;
 import static io.trino.spi.type.BigintType.BIGINT;
@@ -36,7 +36,7 @@ import static io.trino.spi.type.BigintType.BIGINT;
 public class ImplementCountDistinct
         implements AggregateFunctionRule<AggregateExpression>
 {
-    private static final Capture<Variable> ARGUMENT = newCapture();
+    private static final Capture<Variable> INPUT = newCapture();
 
     @Override
     public Pattern<AggregateFunction> getPattern()
@@ -44,7 +44,7 @@ public class ImplementCountDistinct
         return basicAggregation()
                 .with(functionName().equalTo("count"))
                 .with(outputType().equalTo(BIGINT))
-                .with(singleArgument().matching(variable().capturedAs(ARGUMENT)));
+                .with(singleInput().matching(variable().capturedAs(INPUT)));
     }
 
     @Override
@@ -53,8 +53,8 @@ public class ImplementCountDistinct
         if (!isCountDistinctPushdownEnabled(context.getSession())) {
             return Optional.empty();
         }
-        Variable argument = captures.get(ARGUMENT);
+        Variable input = captures.get(INPUT);
         verify(aggregateFunction.getOutputType() == BIGINT);
-        return Optional.of(new AggregateExpression("distinctcount", context.getIdentifierQuote().apply(argument.getName()), false));
+        return Optional.of(new AggregateExpression("distinctcount", context.getIdentifierQuote().apply(input.getName()), false));
     }
 }

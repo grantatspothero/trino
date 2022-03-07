@@ -249,11 +249,7 @@ public class RaptorMetadata
     @Override
     public List<SchemaTableName> listTables(ConnectorSession session, Optional<String> schemaName)
     {
-        // Deduplicate with set because state may change concurrently
-        return ImmutableSet.<SchemaTableName>builder()
-                .addAll(dao.listTables(schemaName.orElse(null)))
-                .addAll(listViews(session, schemaName))
-                .build().asList();
+        return dao.listTables(schemaName.orElse(null));
     }
 
     @Override

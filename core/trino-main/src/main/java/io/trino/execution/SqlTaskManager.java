@@ -84,7 +84,7 @@ import static java.util.concurrent.Executors.newFixedThreadPool;
 import static java.util.concurrent.Executors.newScheduledThreadPool;
 
 public class SqlTaskManager
-        implements Closeable
+        implements TaskManager, Closeable
 {
     private static final Logger log = Logger.get(SqlTaskManager.class);
 
@@ -216,8 +216,8 @@ public class SqlTaskManager
         }, 0, 1, TimeUnit.SECONDS);
     }
 
-    @PreDestroy
     @Override
+    @PreDestroy
     public void close()
     {
         boolean taskCanceled = false;
@@ -265,10 +265,7 @@ public class SqlTaskManager
         return ImmutableList.copyOf(tasks.asMap().values());
     }
 
-    /**
-     * Gets all of the currently tracked tasks.  This will included
-     * uninitialized, running, and completed tasks.
-     */
+    @Override
     public List<TaskInfo> getAllTaskInfo()
     {
         return tasks.asMap().values().stream()
@@ -276,13 +273,7 @@ public class SqlTaskManager
                 .collect(toImmutableList());
     }
 
-    /**
-     * Gets the info for the specified task.  If the task has not been created
-     * yet, an uninitialized task is created and the info is returned.
-     * <p>
-     * NOTE: this design assumes that only tasks that will eventually exist are
-     * queried.
-     */
+    @Override
     public TaskInfo getTaskInfo(TaskId taskId)
     {
         requireNonNull(taskId, "taskId is null");
@@ -292,9 +283,7 @@ public class SqlTaskManager
         return sqlTask.getTaskInfo();
     }
 
-    /**
-     * Gets the status for the specified task.
-     */
+    @Override
     public TaskStatus getTaskStatus(TaskId taskId)
     {
         requireNonNull(taskId, "taskId is null");
@@ -304,15 +293,7 @@ public class SqlTaskManager
         return sqlTask.getTaskStatus();
     }
 
-    /**
-     * Gets future info for the task after the state changes from
-     * {@code current state}. If the task has not been created yet, an
-     * uninitialized task is created and the future is returned.  If the task
-     * is already in a final state, the info is returned immediately.
-     * <p>
-     * NOTE: this design assumes that only tasks that will eventually exist are
-     * queried.
-     */
+    @Override
     public ListenableFuture<TaskInfo> getTaskInfo(TaskId taskId, long currentVersion)
     {
         requireNonNull(taskId, "taskId is null");
@@ -322,10 +303,7 @@ public class SqlTaskManager
         return sqlTask.getTaskInfo(currentVersion);
     }
 
-    /**
-     * Gets the unique instance id of a task.  This can be used to detect a task
-     * that was destroyed and recreated.
-     */
+    @Override
     public String getTaskInstanceId(TaskId taskId)
     {
         SqlTask sqlTask = tasks.getUnchecked(taskId);
@@ -333,15 +311,7 @@ public class SqlTaskManager
         return sqlTask.getTaskInstanceId();
     }
 
-    /**
-     * Gets future status for the task after the state changes from
-     * {@code current state}. If the task has not been created yet, an
-     * uninitialized task is created and the future is returned.  If the task
-     * is already in a final state, the status is returned immediately.
-     * <p>
-     * NOTE: this design assumes that only tasks that will eventually exist are
-     * queried.
-     */
+    @Override
     public ListenableFuture<TaskStatus> getTaskStatus(TaskId taskId, long currentVersion)
     {
         requireNonNull(taskId, "taskId is null");
@@ -351,6 +321,7 @@ public class SqlTaskManager
         return sqlTask.getTaskStatus(currentVersion);
     }
 
+    @Override
     public VersionedDynamicFilterDomains acknowledgeAndGetNewDynamicFilterDomains(TaskId taskId, long currentDynamicFiltersVersion)
     {
         requireNonNull(taskId, "taskId is null");
@@ -360,10 +331,7 @@ public class SqlTaskManager
         return sqlTask.acknowledgeAndGetNewDynamicFilterDomains(currentDynamicFiltersVersion);
     }
 
-    /**
-     * Updates the task plan, splitAssignments and output buffers.  If the task does not
-     * already exist, it is created and then updated.
-     */
+    @Override
     public TaskInfo updateTask(
             Session session,
             TaskId taskId,
@@ -418,14 +386,7 @@ public class SqlTaskManager
         return sqlTask.updateTask(session, fragment, splitAssignments, outputBuffers, dynamicFilterDomains);
     }
 
-    /**
-     * Gets results from a task either immediately or in the future.  If the
-     * task or buffer has not been created yet, an uninitialized task is
-     * created and a future is returned.
-     * <p>
-     * NOTE: this design assumes that only tasks and buffers that will
-     * eventually exist are queried.
-     */
+    @Override
     public ListenableFuture<BufferResult> getTaskResults(TaskId taskId, OutputBufferId bufferId, long startingSequenceId, DataSize maxSize)
     {
         requireNonNull(taskId, "taskId is null");
@@ -436,9 +397,7 @@ public class SqlTaskManager
         return tasks.getUnchecked(taskId).getTaskResults(bufferId, startingSequenceId, maxSize);
     }
 
-    /**
-     * Acknowledges previously received results.
-     */
+    @Override
     public void acknowledgeTaskResults(TaskId taskId, OutputBufferId bufferId, long sequenceId)
     {
         requireNonNull(taskId, "taskId is null");
@@ -448,14 +407,7 @@ public class SqlTaskManager
         tasks.getUnchecked(taskId).acknowledgeTaskResults(bufferId, sequenceId);
     }
 
-    /**
-     * Aborts a result buffer for a task.  If the task or buffer has not been
-     * created yet, an uninitialized task is created and a the buffer is
-     * aborted.
-     * <p>
-     * NOTE: this design assumes that only tasks and buffers that will
-     * eventually exist are queried.
-     */
+    @Override
     public TaskInfo destroyTaskResults(TaskId taskId, OutputBufferId bufferId)
     {
         requireNonNull(taskId, "taskId is null");
@@ -464,10 +416,7 @@ public class SqlTaskManager
         return tasks.getUnchecked(taskId).destroyTaskResults(bufferId);
     }
 
-    /**
-     * Cancels a task.  If the task does not already exist, it is created and then
-     * canceled.
-     */
+    @Override
     public TaskInfo cancelTask(TaskId taskId)
     {
         requireNonNull(taskId, "taskId is null");
@@ -475,10 +424,7 @@ public class SqlTaskManager
         return tasks.getUnchecked(taskId).cancel();
     }
 
-    /**
-     * Aborts a task.  If the task does not already exist, it is created and then
-     * aborted.
-     */
+    @Override
     public TaskInfo abortTask(TaskId taskId)
     {
         requireNonNull(taskId, "taskId is null");
@@ -486,10 +432,7 @@ public class SqlTaskManager
         return tasks.getUnchecked(taskId).abort();
     }
 
-    /**
-     * Fail a task.  If the task does not already exist, it is created and then
-     * failed.
-     */
+    @Override
     public TaskInfo failTask(TaskId taskId, Throwable failure)
     {
         requireNonNull(taskId, "taskId is null");
@@ -521,7 +464,7 @@ public class SqlTaskManager
                 });
     }
 
-    private void failAbandonedTasks()
+    public void failAbandonedTasks()
     {
         DateTime now = DateTime.now();
         DateTime oldestAllowedHeartbeat = now.minus(clientTimeout.toMillis());
@@ -564,29 +507,20 @@ public class SqlTaskManager
         cachedStats.resetTo(tempIoStats);
     }
 
-    /**
-     * Adds a state change listener to the specified task.
-     * Listener is always notified asynchronously using a dedicated notification thread pool so, care should
-     * be taken to avoid leaking {@code this} when adding a listener in a constructor. Additionally, it is
-     * possible notifications are observed out of order due to the asynchronous execution.
-     */
+    @Override
     public void addStateChangeListener(TaskId taskId, StateChangeListener<TaskState> stateChangeListener)
     {
         requireNonNull(taskId, "taskId is null");
         tasks.getUnchecked(taskId).addStateChangeListener(stateChangeListener);
     }
 
-    /**
-     * Add a listener that notifies about failures of any source tasks for a given task
-     */
+    @Override
     public void addSourceTaskFailureListener(TaskId taskId, TaskFailureListener listener)
     {
         tasks.getUnchecked(taskId).addSourceTaskFailureListener(listener);
     }
 
-    /**
-     * Return trace token for a given task (see Session#traceToken)
-     */
+    @Override
     public Optional<String> getTraceToken(TaskId taskId)
     {
         return tasks.getUnchecked(taskId).getTraceToken();

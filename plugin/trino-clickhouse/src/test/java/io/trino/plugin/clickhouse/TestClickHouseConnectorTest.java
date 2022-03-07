@@ -214,7 +214,7 @@ public class TestClickHouseConnectorTest
     protected TestTable createTableWithDefaultColumns()
     {
         return new TestTable(
-                onRemoteDatabase(),
+                clickhouseServer::execute,
                 "tpch.tbl",
                 "(col_required Int64," +
                         "col_nullable Nullable(Int64)," +
@@ -456,7 +456,7 @@ public class TestClickHouseConnectorTest
     protected TestTable createTableWithUnsupportedColumn()
     {
         return new TestTable(
-                onRemoteDatabase(),
+                clickhouseServer::execute,
                 "tpch.test_unsupported_column_present",
                 "(one bigint, two Array(UInt8), three String) ENGINE=Log");
     }
@@ -572,7 +572,7 @@ public class TestClickHouseConnectorTest
             preparedStatement.setString(2, tableName);
 
             ResultSet resultSet = preparedStatement.executeQuery();
-            ImmutableMap.Builder<String, String> properties = ImmutableMap.builder();
+            ImmutableMap.Builder<String, String> properties = new ImmutableMap.Builder<>();
             while (resultSet.next()) {
                 properties.put(ENGINE_PROPERTY, resultSet.getString("engine"));
                 properties.put(ORDER_BY_PROPERTY, resultSet.getString("sorting_key"));

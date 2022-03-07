@@ -159,7 +159,7 @@ public abstract class AbstractSingleRowBlock
     }
 
     @Override
-    public long getPositionsSizeInBytes(boolean[] positions, int selectedPositionsCount)
+    public long getPositionsSizeInBytes(boolean[] positions)
     {
         throw new UnsupportedOperationException();
     }

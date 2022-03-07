@@ -52,7 +52,6 @@ import io.trino.spi.statistics.DoubleRange;
 import io.trino.spi.statistics.Estimate;
 import io.trino.spi.statistics.TableStatistics;
 import io.trino.spi.statistics.TableStatisticsMetadata;
-import io.trino.spi.type.DecimalType;
 import io.trino.spi.type.Type;
 import io.trino.spi.type.VarcharType;
 import io.trino.tpch.Distributions;
@@ -369,7 +368,7 @@ public class TpchMetadata
             if (columnType.equals(BIGINT) || columnType.equals(INTEGER) || columnType.equals(DATE)) {
                 return ((Number) value).longValue();
             }
-            if (columnType.equals(DOUBLE) || columnType instanceof DecimalType) {
+            if (columnType.equals(DOUBLE)) {
                 return ((Number) value).doubleValue();
             }
         }

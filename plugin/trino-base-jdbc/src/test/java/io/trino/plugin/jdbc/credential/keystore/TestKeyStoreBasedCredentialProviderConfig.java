@@ -46,7 +46,7 @@ public class TestKeyStoreBasedCredentialProviderConfig
     {
         Path keystoreFile = Files.createTempFile(null, null);
 
-        Map<String, String> properties = ImmutableMap.<String, String>builder()
+        Map<String, String> properties = new ImmutableMap.Builder<String, String>()
                 .put("keystore-file-path", keystoreFile.toString())
                 .put("keystore-type", "JCEKS")
                 .put("keystore-password", "keystore_password")

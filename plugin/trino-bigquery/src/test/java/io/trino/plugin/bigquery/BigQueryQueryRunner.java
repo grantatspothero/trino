@@ -71,7 +71,6 @@ public final class BigQueryQueryRunner
 
             connectorProperties = new HashMap<>(ImmutableMap.copyOf(connectorProperties));
             connectorProperties.putIfAbsent("bigquery.views-enabled", "true");
-            connectorProperties.putIfAbsent("bigquery.view-expire-duration", "30m");
 
             queryRunner.installPlugin(new BigQueryPlugin());
             queryRunner.createCatalog(

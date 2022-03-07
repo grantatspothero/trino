@@ -20,7 +20,6 @@ import org.openjdk.jol.info.ClassLayout;
 
 import java.lang.invoke.MethodHandle;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.function.BiConsumer;
 
 import static io.airlift.slice.SizeOf.sizeOfIntArray;
@@ -55,12 +54,6 @@ public class SingleMapBlock
     public int getPositionCount()
     {
         return positionCount;
-    }
-
-    @Override
-    public OptionalInt fixedSizeInBytesPerPosition()
-    {
-        return OptionalInt.empty();
     }
 
     @Override

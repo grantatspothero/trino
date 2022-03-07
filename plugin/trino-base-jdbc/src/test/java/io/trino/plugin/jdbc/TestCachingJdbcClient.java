@@ -411,7 +411,6 @@ public class TestCachingJdbcClient
         JdbcTableHandle queryOnFirst = new JdbcTableHandle(
                 new JdbcQueryRelationHandle(new PreparedQuery("SELECT * FROM first", List.of())),
                 TupleDomain.all(),
-                ImmutableList.of(),
                 Optional.empty(),
                 OptionalLong.empty(),
                 Optional.empty(),

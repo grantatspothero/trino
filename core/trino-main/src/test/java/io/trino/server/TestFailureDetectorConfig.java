@@ -41,7 +41,7 @@ public class TestFailureDetectorConfig
     @Test
     public void testExplicitPropertyMappings()
     {
-        Map<String, String> properties = ImmutableMap.<String, String>builder()
+        Map<String, String> properties = new ImmutableMap.Builder<String, String>()
                 .put("failure-detector.expiration-grace-interval", "5m")
                 .put("failure-detector.warmup-interval", "60s")
                 .put("failure-detector.heartbeat-interval", "10s")

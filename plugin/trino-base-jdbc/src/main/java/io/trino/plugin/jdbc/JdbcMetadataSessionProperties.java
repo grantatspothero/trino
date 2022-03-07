@@ -32,7 +32,6 @@ import static java.lang.String.format;
 public class JdbcMetadataSessionProperties
         implements SessionPropertiesProvider
 {
-    public static final String COMPLEX_EXPRESSION_PUSHDOWN = "complex_expression_pushdown";
     public static final String JOIN_PUSHDOWN_ENABLED = "join_pushdown_enabled";
     public static final String AGGREGATION_PUSHDOWN_ENABLED = "aggregation_pushdown_enabled";
     public static final String TOPN_PUSHDOWN_ENABLED = "topn_pushdown_enabled";
@@ -45,11 +44,6 @@ public class JdbcMetadataSessionProperties
     {
         validateDomainCompactionThreshold(jdbcMetadataConfig.getDomainCompactionThreshold(), maxDomainCompactionThreshold);
         properties = ImmutableList.<PropertyMetadata<?>>builder()
-                .add(booleanProperty(
-                        COMPLEX_EXPRESSION_PUSHDOWN,
-                        "Allow complex expression pushdown into connectors",
-                        jdbcMetadataConfig.isComplexExpressionPushdownEnabled(),
-                        true))
                 .add(booleanProperty(
                         JOIN_PUSHDOWN_ENABLED,
                         "Enable join pushdown",
@@ -78,11 +72,6 @@ public class JdbcMetadataSessionProperties
     public List<PropertyMetadata<?>> getSessionProperties()
     {
         return properties;
-    }
-
-    public static boolean isComplexExpressionPushdown(ConnectorSession session)
-    {
-        return session.getProperty(COMPLEX_EXPRESSION_PUSHDOWN, Boolean.class);
     }
 
     public static boolean isJoinPushdownEnabled(ConnectorSession session)

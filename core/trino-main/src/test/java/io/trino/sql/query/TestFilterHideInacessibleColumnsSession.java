@@ -15,7 +15,6 @@ package io.trino.sql.query;
 
 import io.trino.FeaturesConfig;
 import io.trino.SystemSessionProperties;
-import io.trino.cost.OptimizerConfig;
 import io.trino.execution.DynamicFilterConfig;
 import io.trino.execution.QueryManagerConfig;
 import io.trino.execution.TaskManagerConfig;
@@ -40,7 +39,6 @@ public class TestFilterHideInacessibleColumnsSession
                 new TaskManagerConfig(),
                 new MemoryManagerConfig(),
                 featuresConfig,
-                new OptimizerConfig(),
                 new NodeMemoryConfig(),
                 new DynamicFilterConfig(),
                 new NodeSchedulerConfig()));
@@ -58,7 +56,6 @@ public class TestFilterHideInacessibleColumnsSession
                 new TaskManagerConfig(),
                 new MemoryManagerConfig(),
                 featuresConfig,
-                new OptimizerConfig(),
                 new NodeMemoryConfig(),
                 new DynamicFilterConfig(),
                 new NodeSchedulerConfig()));
@@ -74,7 +71,6 @@ public class TestFilterHideInacessibleColumnsSession
                 new TaskManagerConfig(),
                 new MemoryManagerConfig(),
                 featuresConfig,
-                new OptimizerConfig(),
                 new NodeMemoryConfig(),
                 new DynamicFilterConfig(),
                 new NodeSchedulerConfig()));
@@ -90,7 +86,6 @@ public class TestFilterHideInacessibleColumnsSession
                 new TaskManagerConfig(),
                 new MemoryManagerConfig(),
                 featuresConfig,
-                new OptimizerConfig(),
                 new NodeMemoryConfig(),
                 new DynamicFilterConfig(),
                 new NodeSchedulerConfig()));

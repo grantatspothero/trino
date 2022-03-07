@@ -48,7 +48,7 @@ public class TestPrometheusConnectorConfig
     @Test
     public void testExplicitPropertyMappings()
     {
-        Map<String, String> properties = ImmutableMap.<String, String>builder()
+        Map<String, String> properties = new ImmutableMap.Builder<String, String>()
                 .put("prometheus.uri", "file://test.json")
                 .put("prometheus.query.chunk.size.duration", "365d")
                 .put("prometheus.max.query.range.duration", "1095d")

@@ -26,4 +26,3 @@ benchmark_outputs
 node_modules
 product-test-reports
 .vscode/
-/gib-impacted.log

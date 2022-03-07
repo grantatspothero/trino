@@ -241,7 +241,7 @@ public class CassandraType
     {
         UserType userType = (UserType) dataType;
         // Using ImmutableMap is important as we exploit the fact that entries iteration order matches the order of putting values via builder
-        ImmutableMap.Builder<String, CassandraType> argumentTypes = ImmutableMap.builder();
+        ImmutableMap.Builder<String, CassandraType> argumentTypes = new ImmutableMap.Builder<>();
         for (UserType.Field field : userType) {
             Optional<CassandraType> cassandraType = CassandraType.toCassandraType(field.getType());
             if (cassandraType.isEmpty()) {

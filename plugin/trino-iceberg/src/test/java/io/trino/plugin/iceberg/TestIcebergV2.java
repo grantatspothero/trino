@@ -31,7 +31,6 @@ import io.trino.testing.QueryRunner;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.iceberg.BaseTable;
-import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.TableMetadata;
@@ -116,17 +115,13 @@ public class TestIcebergV2
         String deleteFileName = "delete_file_" + UUID.randomUUID();
         FileSystem fs = hdfsEnvironment.getFileSystem(new HdfsContext(SESSION), metadataDir);
 
-        Path path = new Path(metadataDir, deleteFileName);
-        PositionDeleteWriter<Record> writer = Parquet.writeDeletes(HadoopOutputFile.fromPath(path, fs))
-                .createWriterFunc(GenericParquetWriter::buildWriter)
+        PositionDeleteWriter<Record> writer = Parquet.writeDeletes(HadoopOutputFile.fromPath(new Path(metadataDir, deleteFileName), fs))
                 .forTable(icebergTable)
                 .overwrite()
-                .rowSchema(icebergTable.schema())
-                .withSpec(PartitionSpec.unpartitioned())
                 .buildPositionWriter();
 
         try (Closeable ignored = writer) {
-            writer.delete(dataFilePath, 0, GenericRecord.create(icebergTable.schema()));
+            writer.delete(dataFilePath, 0);
         }
 
         icebergTable.newRowDelta().addDeletes(writer.toDeleteFile()).commit();

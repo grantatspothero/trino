@@ -206,13 +206,12 @@ public class PhoenixClient
     private final Configuration configuration;
 
     @Inject
-    public PhoenixClient(PhoenixConfig config, ConnectionFactory connectionFactory, QueryBuilder queryBuilder, IdentifierMapping identifierMapping)
+    public PhoenixClient(PhoenixConfig config, ConnectionFactory connectionFactory, IdentifierMapping identifierMapping)
             throws SQLException
     {
         super(
                 ESCAPE_CHARACTER,
                 connectionFactory,
-                queryBuilder,
                 ImmutableSet.of(),
                 identifierMapping);
         this.configuration = new Configuration(false);
@@ -295,7 +294,7 @@ public class PhoenixClient
                 columns,
                 ImmutableMap.of(),
                 split);
-        return queryBuilder.prepareStatement(this, session, connection, preparedQuery);
+        return new QueryBuilder(this).prepareStatement(session, connection, preparedQuery);
     }
 
     @Override
@@ -695,10 +694,6 @@ public class PhoenixClient
                     break;
                 }
             }
-        }
-        catch (org.apache.phoenix.schema.TableNotFoundException e) {
-            // Rethrow as Trino TableNotFoundException to suppress the exception during listing information_schema
-            throw new io.trino.spi.connector.TableNotFoundException(new SchemaTableName(handle.getSchemaName(), handle.getTableName()));
         }
         catch (IOException | SQLException e) {
             throw new TrinoException(PHOENIX_METADATA_ERROR, "Couldn't get Phoenix table properties", e);

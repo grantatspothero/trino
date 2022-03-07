@@ -31,7 +31,7 @@ import static io.trino.matching.Capture.newCapture;
 import static io.trino.plugin.base.aggregation.AggregateFunctionPatterns.basicAggregation;
 import static io.trino.plugin.base.aggregation.AggregateFunctionPatterns.expressionType;
 import static io.trino.plugin.base.aggregation.AggregateFunctionPatterns.functionName;
-import static io.trino.plugin.base.aggregation.AggregateFunctionPatterns.singleArgument;
+import static io.trino.plugin.base.aggregation.AggregateFunctionPatterns.singleInput;
 import static io.trino.plugin.base.aggregation.AggregateFunctionPatterns.variable;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.DoubleType.DOUBLE;
@@ -44,25 +44,25 @@ import static io.trino.spi.type.RealType.REAL;
 public class ImplementSum
         implements AggregateFunctionRule<AggregateExpression>
 {
-    private static final Capture<Variable> ARGUMENT = newCapture();
-    private static final Set<Type> SUPPORTED_ARGUMENT_TYPES = ImmutableSet.of(INTEGER, BIGINT, REAL, DOUBLE);
+    private static final Capture<Variable> INPUT = newCapture();
+    private static final Set<Type> SUPPORTED_INPUT_TYPES = ImmutableSet.of(INTEGER, BIGINT, REAL, DOUBLE);
 
     @Override
     public Pattern<AggregateFunction> getPattern()
     {
         return basicAggregation()
                 .with(functionName().equalTo("sum"))
-                .with(singleArgument().matching(
+                .with(singleInput().matching(
                         variable()
-                                .with(expressionType().matching(SUPPORTED_ARGUMENT_TYPES::contains))
-                                .capturedAs(ARGUMENT)));
+                                .with(expressionType().matching(SUPPORTED_INPUT_TYPES::contains))
+                                .capturedAs(INPUT)));
     }
 
     @Override
     public Optional<AggregateExpression> rewrite(AggregateFunction aggregateFunction, Captures captures, RewriteContext context)
     {
-        Variable argument = captures.get(ARGUMENT);
-        PinotColumnHandle columnHandle = (PinotColumnHandle) context.getAssignment(argument.getName());
+        Variable input = captures.get(INPUT);
+        PinotColumnHandle columnHandle = (PinotColumnHandle) context.getAssignment(input.getName());
         return Optional.of(new AggregateExpression(aggregateFunction.getFunctionName(), context.getIdentifierQuote().apply(columnHandle.getColumnName()), true));
     }
 }

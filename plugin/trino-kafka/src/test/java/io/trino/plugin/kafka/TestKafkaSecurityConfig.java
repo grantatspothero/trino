@@ -41,7 +41,7 @@ public class TestKafkaSecurityConfig
     @Test
     public void testExplicitPropertyMappings()
     {
-        Map<String, String> properties = ImmutableMap.<String, String>builder()
+        Map<String, String> properties = new ImmutableMap.Builder<String, String>()
                 .put("kafka.security-protocol", "SSL")
                 .buildOrThrow();
 

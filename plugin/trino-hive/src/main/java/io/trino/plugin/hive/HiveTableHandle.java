@@ -46,7 +46,6 @@ public class HiveTableHandle
     private final Optional<Map<String, String>> tableParameters;
     private final List<HiveColumnHandle> partitionColumns;
     private final List<HiveColumnHandle> dataColumns;
-    private final Optional<List<String>> partitionNames;
     private final Optional<List<HivePartition>> partitions;
     private final TupleDomain<HiveColumnHandle> compactEffectivePredicate;
     private final TupleDomain<ColumnHandle> enforcedConstraint;
@@ -81,7 +80,6 @@ public class HiveTableHandle
                 partitionColumns,
                 dataColumns,
                 Optional.empty(),
-                Optional.empty(),
                 compactEffectivePredicate,
                 enforcedConstraint,
                 bucketHandle,
@@ -110,7 +108,6 @@ public class HiveTableHandle
                 partitionColumns,
                 dataColumns,
                 Optional.empty(),
-                Optional.empty(),
                 TupleDomain.all(),
                 TupleDomain.all(),
                 bucketHandle,
@@ -130,7 +127,6 @@ public class HiveTableHandle
             Optional<Map<String, String>> tableParameters,
             List<HiveColumnHandle> partitionColumns,
             List<HiveColumnHandle> dataColumns,
-            Optional<List<String>> partitionNames,
             Optional<List<HivePartition>> partitions,
             TupleDomain<HiveColumnHandle> compactEffectivePredicate,
             TupleDomain<ColumnHandle> enforcedConstraint,
@@ -144,13 +140,11 @@ public class HiveTableHandle
             boolean recordScannedFiles,
             Optional<Long> maxSplitFileSize)
     {
-        checkState(partitionNames.isEmpty() || partitions.isEmpty(), "partition names and partitions list cannot be present at same time");
         this.schemaName = requireNonNull(schemaName, "schemaName is null");
         this.tableName = requireNonNull(tableName, "tableName is null");
         this.tableParameters = requireNonNull(tableParameters, "tableParameters is null").map(ImmutableMap::copyOf);
         this.partitionColumns = ImmutableList.copyOf(requireNonNull(partitionColumns, "partitionColumns is null"));
         this.dataColumns = ImmutableList.copyOf(requireNonNull(dataColumns, "dataColumns is null"));
-        this.partitionNames = requireNonNull(partitionNames, "partitionNames is null").map(ImmutableList::copyOf);
         this.partitions = requireNonNull(partitions, "partitions is null").map(ImmutableList::copyOf);
         this.compactEffectivePredicate = requireNonNull(compactEffectivePredicate, "compactEffectivePredicate is null");
         this.enforcedConstraint = requireNonNull(enforcedConstraint, "enforcedConstraint is null");
@@ -173,7 +167,6 @@ public class HiveTableHandle
                 tableParameters,
                 partitionColumns,
                 dataColumns,
-                partitionNames,
                 partitions,
                 compactEffectivePredicate,
                 enforcedConstraint,
@@ -196,7 +189,6 @@ public class HiveTableHandle
                 tableParameters,
                 partitionColumns,
                 dataColumns,
-                partitionNames,
                 partitions,
                 compactEffectivePredicate,
                 enforcedConstraint,
@@ -219,7 +211,6 @@ public class HiveTableHandle
                 tableParameters,
                 partitionColumns,
                 dataColumns,
-                partitionNames,
                 partitions,
                 compactEffectivePredicate,
                 enforcedConstraint,
@@ -243,7 +234,6 @@ public class HiveTableHandle
                 tableParameters,
                 partitionColumns,
                 dataColumns,
-                partitionNames,
                 partitions,
                 compactEffectivePredicate,
                 enforcedConstraint,
@@ -266,7 +256,6 @@ public class HiveTableHandle
                 tableParameters,
                 partitionColumns,
                 dataColumns,
-                partitionNames,
                 partitions,
                 compactEffectivePredicate,
                 enforcedConstraint,
@@ -289,7 +278,6 @@ public class HiveTableHandle
                 tableParameters,
                 partitionColumns,
                 dataColumns,
-                partitionNames,
                 partitions,
                 compactEffectivePredicate,
                 enforcedConstraint,
@@ -312,7 +300,6 @@ public class HiveTableHandle
                 tableParameters,
                 partitionColumns,
                 dataColumns,
-                partitionNames,
                 partitions,
                 compactEffectivePredicate,
                 enforcedConstraint,
@@ -358,23 +345,7 @@ public class HiveTableHandle
         return dataColumns;
     }
 
-    /**
-     * Represents raw partition information as String.
-     * These are partially satisfied by the table filter criteria.
-     * This will be set to `Optional#empty` if parsed partition information are loaded.
-     * Skip serialization as they are not needed on workers
-     */
-    @JsonIgnore
-    public Optional<List<String>> getPartitionNames()
-    {
-        return partitionNames;
-    }
-
-    /**
-     * Represents parsed partition information (which is derived from raw partition string).
-     * These are fully satisfied by the table filter criteria.
-     * Skip serialization as they are not needed on workers
-     */
+    // do not serialize partitions as they are not needed on workers
     @JsonIgnore
     public Optional<List<HivePartition>> getPartitions()
     {
@@ -506,7 +477,6 @@ public class HiveTableHandle
                 Objects.equals(tableName, that.tableName) &&
                 Objects.equals(tableParameters, that.tableParameters) &&
                 Objects.equals(partitionColumns, that.partitionColumns) &&
-                Objects.equals(partitionNames, that.partitionNames) &&
                 Objects.equals(partitions, that.partitions) &&
                 Objects.equals(compactEffectivePredicate, that.compactEffectivePredicate) &&
                 Objects.equals(enforcedConstraint, that.enforcedConstraint) &&
@@ -525,7 +495,6 @@ public class HiveTableHandle
                 tableName,
                 tableParameters,
                 partitionColumns,
-                partitionNames,
                 partitions,
                 compactEffectivePredicate,
                 enforcedConstraint,

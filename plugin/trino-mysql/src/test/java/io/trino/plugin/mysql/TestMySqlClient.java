@@ -15,7 +15,6 @@ package io.trino.plugin.mysql;
 
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ColumnMapping;
-import io.trino.plugin.jdbc.DefaultQueryBuilder;
 import io.trino.plugin.jdbc.JdbcClient;
 import io.trino.plugin.jdbc.JdbcColumnHandle;
 import io.trino.plugin.jdbc.JdbcExpression;
@@ -62,7 +61,6 @@ public class TestMySqlClient
             session -> {
                 throw new UnsupportedOperationException();
             },
-            new DefaultQueryBuilder(),
             TESTING_TYPE_MANAGER,
             new DefaultIdentifierMapping());
 

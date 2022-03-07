@@ -99,7 +99,7 @@ public class TestMemSqlConnectorTest
     protected TestTable createTableWithDefaultColumns()
     {
         return new TestTable(
-                onRemoteDatabase(),
+                this::execute,
                 "tpch.table",
                 "(col_required BIGINT NOT NULL," +
                         "col_nullable BIGINT," +
@@ -178,9 +178,9 @@ public class TestMemSqlConnectorTest
     @Test
     public void testReadFromView()
     {
-        onRemoteDatabase().execute("CREATE VIEW tpch.test_view AS SELECT * FROM tpch.orders");
+        execute("CREATE VIEW tpch.test_view AS SELECT * FROM tpch.orders");
         assertQuery("SELECT orderkey FROM test_view", "SELECT orderkey FROM orders");
-        onRemoteDatabase().execute("DROP VIEW IF EXISTS tpch.test_view");
+        execute("DROP VIEW IF EXISTS tpch.test_view");
     }
 
     @Test
@@ -200,7 +200,7 @@ public class TestMemSqlConnectorTest
     @Test
     public void testMemSqlTinyint()
     {
-        onRemoteDatabase().execute("CREATE TABLE tpch.mysql_test_tinyint1 (c_tinyint tinyint(1))");
+        execute("CREATE TABLE tpch.mysql_test_tinyint1 (c_tinyint tinyint(1))");
 
         MaterializedResult actual = computeActual("SHOW COLUMNS FROM mysql_test_tinyint1");
         MaterializedResult expected = resultBuilder(getSession(), VARCHAR, VARCHAR, VARCHAR, VARCHAR)
@@ -209,7 +209,7 @@ public class TestMemSqlConnectorTest
 
         assertEquals(actual, expected);
 
-        onRemoteDatabase().execute("INSERT INTO tpch.mysql_test_tinyint1 VALUES (127), (-128)");
+        execute("INSERT INTO tpch.mysql_test_tinyint1 VALUES (127), (-128)");
         MaterializedResult materializedRows = computeActual("SELECT * FROM tpch.mysql_test_tinyint1 WHERE c_tinyint = 127");
         assertEquals(materializedRows.getRowCount(), 1);
         MaterializedRow row = getOnlyElement(materializedRows);
@@ -223,7 +223,7 @@ public class TestMemSqlConnectorTest
     @Test
     public void testCharTrailingSpace()
     {
-        onRemoteDatabase().execute("CREATE TABLE tpch.char_trailing_space (x char(10))");
+        execute("CREATE TABLE tpch.char_trailing_space (x char(10))");
         assertUpdate("INSERT INTO char_trailing_space VALUES ('test')", 1);
 
         assertQuery("SELECT * FROM char_trailing_space WHERE x = char 'test'", "VALUES 'test'");
@@ -244,9 +244,9 @@ public class TestMemSqlConnectorTest
     @Test
     public void testColumnComment()
     {
-        // TODO add support for setting comments on existing column and replace the test with io.trino.testing.BaseConnectorTest#testCommentColumn
+        // TODO add support for setting comments on existing column and replace the test with io.trino.testing.AbstractTestDistributedQueries#testCommentColumn
 
-        onRemoteDatabase().execute("CREATE TABLE tpch.test_column_comment (col1 bigint COMMENT 'test comment', col2 bigint COMMENT '', col3 bigint)");
+        execute("CREATE TABLE tpch.test_column_comment (col1 bigint COMMENT 'test comment', col2 bigint COMMENT '', col3 bigint)");
 
         assertQuery(
                 "SELECT column_name, comment FROM information_schema.columns WHERE table_schema = 'tpch' AND table_name = 'test_column_comment'",
@@ -326,7 +326,7 @@ public class TestMemSqlConnectorTest
     @Test
     public void testNativeLargeIn()
     {
-        onRemoteDatabase().execute("SELECT count(*) FROM tpch.orders WHERE " + getLongInClause(0, 300_000));
+        memSqlServer.execute("SELECT count(*) FROM tpch.orders WHERE " + getLongInClause(0, 300_000));
     }
 
     /**
@@ -338,7 +338,7 @@ public class TestMemSqlConnectorTest
         String longInClauses = range(0, 30)
                 .mapToObj(value -> getLongInClause(value * 10_000, 10_000))
                 .collect(joining(" OR "));
-        onRemoteDatabase().execute("SELECT count(*) FROM tpch.orders WHERE " + longInClauses);
+        memSqlServer.execute("SELECT count(*) FROM tpch.orders WHERE " + longInClauses);
     }
 
     private String getLongInClause(int start, int length)
@@ -347,6 +347,11 @@ public class TestMemSqlConnectorTest
                 .mapToObj(Integer::toString)
                 .collect(joining(", "));
         return "orderkey IN (" + longValues + ")";
+    }
+
+    private void execute(String sql)
+    {
+        memSqlServer.execute(sql);
     }
 
     @Override

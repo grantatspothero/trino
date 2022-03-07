@@ -85,10 +85,9 @@ public class RowBlockBuilder
     }
 
     @Override
-    @Nullable
     protected int[] getFieldBlockOffsets()
     {
-        return hasNullRow ? fieldBlockOffsets : null;
+        return fieldBlockOffsets;
     }
 
     @Override
@@ -224,7 +223,7 @@ public class RowBlockBuilder
         for (int i = 0; i < numFields; i++) {
             fieldBlocks[i] = fieldBlockBuilders[i].build();
         }
-        return createRowBlockInternal(0, positionCount, hasNullRow ? rowIsNull : null, hasNullRow ? fieldBlockOffsets : null, fieldBlocks);
+        return createRowBlockInternal(0, positionCount, hasNullRow ? rowIsNull : null, fieldBlockOffsets, fieldBlocks);
     }
 
     @Override

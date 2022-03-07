@@ -41,7 +41,7 @@ public class TestLocalFileConfig
     {
         Path httpRequestLogFile = Files.createTempFile(null, null);
 
-        Map<String, String> properties = ImmutableMap.<String, String>builder()
+        Map<String, String> properties = new ImmutableMap.Builder<String, String>()
                 .put("trino-logs.http-request-log.location", httpRequestLogFile.toString())
                 .put("trino-logs.http-request-log.pattern", "bar")
                 .buildOrThrow();

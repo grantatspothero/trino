@@ -130,9 +130,7 @@ public final class Decimals
 
     public static long encodeShortScaledValue(BigDecimal value, int scale, RoundingMode roundingMode)
     {
-        if (scale < 0) {
-            throw new IllegalArgumentException("scale is negative: " + scale);
-        }
+        checkArgument(scale >= 0);
         return value.setScale(scale, roundingMode).unscaledValue().longValueExact();
     }
 
@@ -143,9 +141,7 @@ public final class Decimals
 
     public static Int128 encodeScaledValue(BigDecimal value, int scale, RoundingMode roundingMode)
     {
-        if (scale < 0) {
-            throw new IllegalArgumentException("scale is negative: " + scale);
-        }
+        checkArgument(scale >= 0);
         return valueOf(value.setScale(scale, roundingMode));
     }
 
@@ -267,6 +263,13 @@ public final class Decimals
     public static boolean isLongDecimal(Type type)
     {
         return type instanceof LongDecimalType;
+    }
+
+    private static void checkArgument(boolean condition)
+    {
+        if (!condition) {
+            throw new IllegalArgumentException();
+        }
     }
 
     /**

@@ -16,6 +16,7 @@ package io.trino.operator.output;
 import com.google.common.collect.ImmutableList;
 import io.airlift.slice.Slice;
 import io.airlift.units.DataSize;
+import io.trino.Session;
 import io.trino.execution.StageId;
 import io.trino.execution.TaskId;
 import io.trino.execution.buffer.OutputBufferStateMachine;
@@ -27,9 +28,12 @@ import io.trino.memory.context.LocalMemoryContext;
 import io.trino.memory.context.SimpleLocalMemoryContext;
 import io.trino.operator.BucketPartitionFunction;
 import io.trino.operator.DriverContext;
+import io.trino.operator.OperatorFactories;
+import io.trino.operator.OutputFactory;
 import io.trino.operator.PartitionFunction;
 import io.trino.operator.PrecomputedHashGenerator;
-import io.trino.operator.output.PartitionedOutputOperator.PartitionedOutputFactory;
+import io.trino.operator.TaskContext;
+import io.trino.operator.TrinoOperatorFactories;
 import io.trino.spi.Page;
 import io.trino.spi.QueryId;
 import io.trino.spi.block.Block;
@@ -78,7 +82,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.airlift.units.DataSize.Unit.BYTE;
 import static io.airlift.units.DataSize.Unit.MEGABYTE;
-import static io.trino.SessionTestUtils.TEST_SESSION;
 import static io.trino.block.BlockAssertions.createLongDictionaryBlock;
 import static io.trino.block.BlockAssertions.createLongsBlock;
 import static io.trino.block.BlockAssertions.createRLEBlock;
@@ -94,6 +97,7 @@ import static io.trino.operator.output.BenchmarkPartitionedOutputOperator.Benchm
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.DecimalType.createDecimalType;
 import static io.trino.spi.type.Decimals.MAX_SHORT_PRECISION;
+import static io.trino.testing.TestingSession.testSessionBuilder;
 import static java.util.Collections.nCopies;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
@@ -109,7 +113,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 @BenchmarkMode(Mode.AverageTime)
 public class BenchmarkPartitionedOutputOperator
 {
-    private static final PositionsAppenderFactory POSITIONS_APPENDER_FACTORY = new PositionsAppenderFactory();
+    private static final OperatorFactories OPERATOR_FACTORIES = new TrinoOperatorFactories();
 
     @Benchmark
     public void addPage(BenchmarkData data)
@@ -138,6 +142,9 @@ public class BenchmarkPartitionedOutputOperator
         private static final ExecutorService EXECUTOR = newCachedThreadPool(daemonThreadsNamed("BenchmarkPartitionedOutputOperator-executor-%s"));
         private static final ScheduledExecutorService SCHEDULER = newScheduledThreadPool(1, daemonThreadsNamed("BenchmarkPartitionedOutputOperator-scheduledExecutor-%s"));
 
+        private final OperatorFactories operatorFactories;
+        private final Session session;
+
         @Param({"2", "16", "256"})
         private int partitionCount = 256;
 
@@ -160,7 +167,6 @@ public class BenchmarkPartitionedOutputOperator
                 "BIGINT_DICTIONARY_PARTITION_CHANNEL_50_PERCENT",
                 "BIGINT_DICTIONARY_PARTITION_CHANNEL_80_PERCENT",
                 "BIGINT_DICTIONARY_PARTITION_CHANNEL_100_PERCENT",
-                "BIGINT_DICTIONARY_PARTITION_CHANNEL_100_PERCENT_MINUS_1",
                 "RLE_PARTITION_BIGINT",
                 "RLE_PARTITION_NULL_BIGINT",
                 "LONG_DECIMAL",
@@ -273,17 +279,6 @@ public class BenchmarkPartitionedOutputOperator
                             createLongDictionaryBlock(0, positionCount, positionCount));
                 }
             },
-            BIGINT_DICTIONARY_PARTITION_CHANNEL_100_PERCENT_MINUS_1(BigintType.BIGINT, 3000) {
-                @Override
-                public Page createPage(List<Type> types, int positionCount, float nullRate)
-                {
-                    return page(
-                            positionCount,
-                            types.size(),
-                            () -> createRandomBlockForType(BigintType.BIGINT, positionCount, nullRate),
-                            createLongDictionaryBlock(0, positionCount, positionCount - 1));
-                }
-            },
             RLE_PARTITION_BIGINT(BigintType.BIGINT, 5000) {
                 @Override
                 public Page createPage(List<Type> types, int positionCount, float nullRate)
@@ -355,6 +350,17 @@ public class BenchmarkPartitionedOutputOperator
             }
         }
 
+        public BenchmarkData()
+        {
+            this(OPERATOR_FACTORIES, testSessionBuilder().build());
+        }
+
+        protected BenchmarkData(OperatorFactories operatorFactories, Session session)
+        {
+            this.operatorFactories = requireNonNull(operatorFactories, "operatorFactories is null");
+            this.session = requireNonNull(session, "session is null");
+        }
+
         public int getPageCount()
         {
             return pageCount;
@@ -377,12 +383,6 @@ public class BenchmarkPartitionedOutputOperator
 
         @Setup
         public void setup(Blackhole blackhole)
-        {
-            setupData(blackhole);
-            pollute();
-        }
-
-        private void setupData(Blackhole blackhole)
         {
             // We don't check blackhole is not null, because blackhole has to be injected by jmh (should not be created manually)
             // and in case of unit test it will be null
@@ -429,27 +429,32 @@ public class BenchmarkPartitionedOutputOperator
             PagesSerdeFactory serdeFactory = new PagesSerdeFactory(new TestingBlockEncodingSerde(), enableCompression);
 
             PartitionedOutputBuffer buffer = createPartitionedOutputBuffer();
+            TaskContext taskContext = createTaskContext();
 
-            PartitionedOutputFactory operatorFactory = new PartitionedOutputFactory(
+            OutputFactory operatorFactory = operatorFactories.partitionedOutput(
+                    taskContext,
                     partitionFunction,
                     ImmutableList.of(types.size() - 1), // hash block is at the last channel
                     ImmutableList.of(Optional.empty()),
                     false,
-                    OptionalInt.empty(),
+                    nullChannel,
                     buffer,
-                    MAX_PARTITION_BUFFER_SIZE,
-                    POSITIONS_APPENDER_FACTORY);
+                    MAX_PARTITION_BUFFER_SIZE);
             return (PartitionedOutputOperator) operatorFactory
                     .createOutputOperator(0, new PlanNodeId("plan-node-0"), types, Function.identity(), serdeFactory)
-                    .createOperator(createDriverContext());
+                    .createOperator(createDriverContext(taskContext));
         }
 
-        private DriverContext createDriverContext()
+        private DriverContext createDriverContext(TaskContext taskContext)
         {
-            return TestingTaskContext.builder(EXECUTOR, SCHEDULER, TEST_SESSION)
-                    .build()
+            return taskContext
                     .addPipelineContext(0, true, true, false)
                     .addDriverContext();
+        }
+
+        private TaskContext createTaskContext()
+        {
+            return TestingTaskContext.builder(EXECUTOR, SCHEDULER, session).build();
         }
 
         private TestingPartitionedOutputBuffer createPartitionedBuffer(OutputBuffers buffers, DataSize dataSize)
@@ -514,8 +519,7 @@ public class BenchmarkPartitionedOutputOperator
                 new TypeOperators());
     }
 
-    private static void pollute()
-    {
+    static {
         try {
             List<TestType> types = List.of(
                     TestType.BIGINT,
@@ -532,7 +536,7 @@ public class BenchmarkPartitionedOutputOperator
             types.forEach(type -> {
                 BenchmarkData data = new BenchmarkData();
                 data.setType(type);
-                data.setupData(null);
+                data.setup(null);
                 data.setPageCount(1);
                 benchmark.addPage(data);
             });

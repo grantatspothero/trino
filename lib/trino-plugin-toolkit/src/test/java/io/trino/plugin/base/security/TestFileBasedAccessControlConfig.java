@@ -48,7 +48,7 @@ public class TestFileBasedAccessControlConfig
     {
         Path securityConfigFile = Files.createTempFile(null, null);
 
-        Map<String, String> properties = ImmutableMap.<String, String>builder()
+        Map<String, String> properties = new ImmutableMap.Builder<String, String>()
                 .put(SECURITY_CONFIG_FILE, securityConfigFile.toString())
                 .put(SECURITY_REFRESH_PERIOD, "1s")
                 .buildOrThrow();

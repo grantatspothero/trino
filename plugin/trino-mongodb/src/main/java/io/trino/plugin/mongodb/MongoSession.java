@@ -53,7 +53,6 @@ import io.trino.spi.type.TypeSignature;
 import io.trino.spi.type.TypeSignatureParameter;
 import io.trino.spi.type.VarcharType;
 import org.bson.Document;
-import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 
 import java.util.ArrayList;
@@ -81,7 +80,6 @@ import static io.trino.spi.type.DoubleType.DOUBLE;
 import static io.trino.spi.type.SmallintType.SMALLINT;
 import static io.trino.spi.type.TimestampType.TIMESTAMP_MILLIS;
 import static io.trino.spi.type.TinyintType.TINYINT;
-import static io.trino.spi.type.VarbinaryType.VARBINARY;
 import static io.trino.spi.type.VarcharType.VARCHAR;
 import static io.trino.spi.type.VarcharType.createUnboundedVarcharType;
 import static java.lang.Math.toIntExact;
@@ -602,9 +600,6 @@ public class MongoSession
         if (value instanceof String) {
             typeSignature = createUnboundedVarcharType().getTypeSignature();
         }
-        if (value instanceof Binary) {
-            typeSignature = VARBINARY.getTypeSignature();
-        }
         else if (value instanceof Integer || value instanceof Long) {
             typeSignature = BIGINT.getTypeSignature();
         }
@@ -703,7 +698,7 @@ public class MongoSession
 
     private boolean isView(String schemaName, String tableName)
     {
-        Document listCollectionsCommand = new Document(ImmutableMap.<String, Object>builder()
+        Document listCollectionsCommand = new Document(new ImmutableMap.Builder<String, Object>()
                 .put("listCollections", 1.0)
                 .put("filter", documentOf("name", tableName))
                 .put("nameOnly", true)

@@ -36,7 +36,7 @@ public class TestRaptorSecurityConfig
     @Test
     public void testExplicitPropertyMappings()
     {
-        Map<String, String> properties = ImmutableMap.<String, String>builder()
+        Map<String, String> properties = new ImmutableMap.Builder<String, String>()
                 .put("raptor.security", "read-only")
                 .buildOrThrow();
 

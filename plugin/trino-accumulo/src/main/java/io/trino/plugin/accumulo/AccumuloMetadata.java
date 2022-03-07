@@ -309,15 +309,13 @@ public class AccumuloMetadata
         Set<String> schemaNames = filterSchema.<Set<String>>map(ImmutableSet::of)
                 .orElseGet(client::getSchemaNames);
 
-        ImmutableSet.Builder<SchemaTableName> builder = ImmutableSet.builder();
+        ImmutableList.Builder<SchemaTableName> builder = ImmutableList.builder();
         for (String schemaName : schemaNames) {
             for (String tableName : client.getTableNames(schemaName)) {
                 builder.add(new SchemaTableName(schemaName, tableName));
             }
         }
-        builder.addAll(listViews(session, filterSchema));
-        // Deduplicate with set because state may change concurrently
-        return builder.build().asList();
+        return builder.build();
     }
 
     @Override

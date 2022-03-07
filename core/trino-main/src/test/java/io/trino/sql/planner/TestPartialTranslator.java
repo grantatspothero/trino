@@ -79,22 +79,22 @@ public class TestPartialTranslator
 
         List<Expression> functionArguments = ImmutableList.of(stringLiteral, dereferenceExpression2);
         Expression functionCallExpression = new FunctionCall(QualifiedName.of("concat"), functionArguments);
-        assertFullTranslation(functionCallExpression);
+        assertPartialTranslation(functionCallExpression, functionArguments);
     }
 
     private void assertPartialTranslation(Expression expression, List<Expression> subexpressions)
     {
-        Map<NodeRef<Expression>, ConnectorExpression> translation = extractPartialTranslations(expression, TEST_SESSION, TYPE_ANALYZER, TYPE_PROVIDER, PLANNER_CONTEXT);
+        Map<NodeRef<Expression>, ConnectorExpression> translation = extractPartialTranslations(expression, TEST_SESSION, TYPE_ANALYZER, TYPE_PROVIDER);
         assertEquals(subexpressions.size(), translation.size());
         for (Expression subexpression : subexpressions) {
-            assertEquals(translation.get(NodeRef.of(subexpression)), translate(TEST_SESSION, subexpression, TYPE_ANALYZER, TYPE_PROVIDER, PLANNER_CONTEXT).get());
+            assertEquals(translation.get(NodeRef.of(subexpression)), translate(TEST_SESSION, subexpression, TYPE_ANALYZER, TYPE_PROVIDER).get());
         }
     }
 
     private void assertFullTranslation(Expression expression)
     {
-        Map<NodeRef<Expression>, ConnectorExpression> translation = extractPartialTranslations(expression, TEST_SESSION, TYPE_ANALYZER, TYPE_PROVIDER, PLANNER_CONTEXT);
+        Map<NodeRef<Expression>, ConnectorExpression> translation = extractPartialTranslations(expression, TEST_SESSION, TYPE_ANALYZER, TYPE_PROVIDER);
         assertEquals(getOnlyElement(translation.keySet()), NodeRef.of(expression));
-        assertEquals(getOnlyElement(translation.values()), translate(TEST_SESSION, expression, TYPE_ANALYZER, TYPE_PROVIDER, PLANNER_CONTEXT).get());
+        assertEquals(getOnlyElement(translation.values()), translate(TEST_SESSION, expression, TYPE_ANALYZER, TYPE_PROVIDER).get());
     }
 }

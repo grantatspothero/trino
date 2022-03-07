@@ -40,7 +40,7 @@ public class TestFileResourceGroupConfig
     {
         Path resourceGroupConfigFile = Files.createTempFile(null, null);
 
-        Map<String, String> properties = ImmutableMap.<String, String>builder()
+        Map<String, String> properties = new ImmutableMap.Builder<String, String>()
                 .put("resource-groups.config-file", resourceGroupConfigFile.toString())
                 .buildOrThrow();
 

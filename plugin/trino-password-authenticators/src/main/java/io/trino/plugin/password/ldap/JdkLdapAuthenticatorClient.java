@@ -17,7 +17,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.airlift.log.Logger;
 import io.airlift.security.pem.PemReader;
-import io.airlift.units.Duration;
 import io.trino.spi.security.AccessDeniedException;
 
 import javax.inject.Inject;
@@ -66,23 +65,11 @@ public class JdkLdapAuthenticatorClient
             log.warn("Passwords will be sent in the clear to the LDAP server. Please consider using SSL to connect.");
         }
 
-        ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
-
-        builder.put(INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory")
+        this.basicEnvironment = ImmutableMap.<String, String>builder()
+                .put(INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory")
                 .put(PROVIDER_URL, ldapUrl)
-                .put(REFERRAL, ldapConfig.isIgnoreReferrals() ? "ignore" : "follow");
-
-        ldapConfig.getLdapConnectionTimeout()
-                .map(Duration::toMillis)
-                .map(String::valueOf)
-                .ifPresent(timeout -> builder.put("com.sun.jndi.ldap.connect.timeout", timeout));
-
-        ldapConfig.getLdapReadTimeout()
-                .map(Duration::toMillis)
-                .map(String::valueOf)
-                .ifPresent(timeout -> builder.put("com.sun.jndi.ldap.read.timeout", timeout));
-
-        this.basicEnvironment = builder.buildOrThrow();
+                .put(REFERRAL, ldapConfig.isIgnoreReferrals() ? "ignore" : "follow")
+                .buildOrThrow();
 
         this.sslContext = Optional.ofNullable(ldapConfig.getTrustCertificate())
                 .map(JdkLdapAuthenticatorClient::createSslContext);

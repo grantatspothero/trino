@@ -24,7 +24,6 @@ import io.trino.testing.QueryRunner;
 import io.trino.testing.TestingConnectorBehavior;
 import io.trino.testing.sql.SqlExecutor;
 import io.trino.testing.sql.TestTable;
-import io.trino.testng.services.Flaky;
 import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
@@ -239,30 +238,6 @@ public class TestPhoenixConnectorTest
                         ")");
     }
 
-    // TODO (https://github.com/trinodb/trino/issues/10904): Test is flaky because tests execute in parallel
-    @Flaky(issue = "https://github.com/trinodb/trino/issues/10904", match = "\\QERROR 1012 (42M03): Table undefined. tableName=")
-    @Test
-    @Override
-    public void testSelectInformationSchemaColumns()
-    {
-        super.testSelectInformationSchemaColumns();
-    }
-
-    @Override
-    public void testReadMetadataWithRelationsConcurrentModifications()
-    {
-        try {
-            super.testReadMetadataWithRelationsConcurrentModifications();
-        }
-        catch (Exception expected) {
-            // The test failure is not guaranteed
-            // TODO (https://github.com/trinodb/trino/issues/10904): shouldn't fail
-            assertThat(expected)
-                    .hasMessageContaining("ERROR 1012 (42M03): Table undefined. tableName=");
-            throw new SkipException("to be fixed");
-        }
-    }
-
     @Override
     public void testCharVarcharComparison()
     {
@@ -357,9 +332,9 @@ public class TestPhoenixConnectorTest
     public void testUnsupportedType()
             throws Exception
     {
-        onRemoteDatabase().execute("CREATE TABLE tpch.test_timestamp (pk bigint primary key, val1 timestamp)");
-        onRemoteDatabase().execute("UPSERT INTO tpch.test_timestamp (pk, val1) VALUES (1, null)");
-        onRemoteDatabase().execute("UPSERT INTO tpch.test_timestamp (pk, val1) VALUES (2, '2002-05-30T09:30:10.5')");
+        executeInPhoenix("CREATE TABLE tpch.test_timestamp (pk bigint primary key, val1 timestamp)");
+        executeInPhoenix("UPSERT INTO tpch.test_timestamp (pk, val1) VALUES (1, null)");
+        executeInPhoenix("UPSERT INTO tpch.test_timestamp (pk, val1) VALUES (2, '2002-05-30T09:30:10.5')");
         assertUpdate("INSERT INTO test_timestamp VALUES (3)", 1);
         assertQuery("SELECT * FROM test_timestamp", "VALUES 1, 2, 3");
         assertQuery(
@@ -380,8 +355,8 @@ public class TestPhoenixConnectorTest
     public void testDefaultDecimalTable()
             throws Exception
     {
-        onRemoteDatabase().execute("CREATE TABLE tpch.test_null_decimal (pk bigint primary key, val1 decimal)");
-        onRemoteDatabase().execute("UPSERT INTO tpch.test_null_decimal (pk, val1) VALUES (1, 2)");
+        executeInPhoenix("CREATE TABLE tpch.test_null_decimal (pk bigint primary key, val1 decimal)");
+        executeInPhoenix("UPSERT INTO tpch.test_null_decimal (pk, val1) VALUES (1, 2)");
         assertQuery("SELECT * FROM tpch.test_null_decimal", "VALUES (1, 2) ");
     }
 
@@ -429,8 +404,8 @@ public class TestPhoenixConnectorTest
             throws Exception
     {
         assertUpdate("CREATE TABLE test_primary_table (pk bigint, val1 double, val2 double, val3 double) with(rowkeys = 'pk')");
-        onRemoteDatabase().execute("CREATE LOCAL INDEX test_local_index ON tpch.test_primary_table (val1)");
-        onRemoteDatabase().execute("CREATE INDEX test_global_index ON tpch.test_primary_table (val2)");
+        executeInPhoenix("CREATE LOCAL INDEX test_local_index ON tpch.test_primary_table (val1)");
+        executeInPhoenix("CREATE INDEX test_global_index ON tpch.test_primary_table (val2)");
         assertUpdate("INSERT INTO test_primary_table VALUES (1, 1.1, 1.2, 1.3)", 1);
         assertQuery("SELECT val1,val3 FROM test_primary_table where val1 < 1.2", "SELECT 1.1,1.3");
         assertQuery("SELECT val2,val3 FROM test_primary_table where val2 < 1.3", "SELECT 1.2,1.3");
@@ -441,7 +416,7 @@ public class TestPhoenixConnectorTest
     public void testCaseInsensitiveNameMatching()
             throws Exception
     {
-        onRemoteDatabase().execute("CREATE TABLE tpch.\"TestCaseInsensitive\" (\"pK\" bigint primary key, \"Val1\" double)");
+        executeInPhoenix("CREATE TABLE tpch.\"TestCaseInsensitive\" (\"pK\" bigint primary key, \"Val1\" double)");
         assertUpdate("INSERT INTO testcaseinsensitive VALUES (1, 1.1)", 1);
         assertQuery("SELECT Val1 FROM testcaseinsensitive where Val1 < 1.2", "SELECT 1.1");
     }
@@ -450,7 +425,7 @@ public class TestPhoenixConnectorTest
     public void testMissingColumnsOnInsert()
             throws Exception
     {
-        onRemoteDatabase().execute("CREATE TABLE tpch.test_col_insert(pk VARCHAR NOT NULL PRIMARY KEY, col1 VARCHAR, col2 VARCHAR)");
+        executeInPhoenix("CREATE TABLE tpch.test_col_insert(pk VARCHAR NOT NULL PRIMARY KEY, col1 VARCHAR, col2 VARCHAR)");
         assertUpdate("INSERT INTO test_col_insert(pk, col1) VALUES('1', 'val1')", 1);
         assertUpdate("INSERT INTO test_col_insert(pk, col2) VALUES('1', 'val2')", 1);
         assertQuery("SELECT * FROM test_col_insert", "SELECT 1, 'val1', 'val2'");
@@ -579,15 +554,21 @@ public class TestPhoenixConnectorTest
     {
         return sql -> {
             try {
-                try (Connection connection = DriverManager.getConnection(testingPhoenixServer.getJdbcUrl());
-                        Statement statement = connection.createStatement()) {
-                    statement.execute(sql);
-                    connection.commit();
-                }
+                executeInPhoenix(sql);
             }
             catch (SQLException e) {
                 throw new RuntimeException(e);
             }
         };
+    }
+
+    private void executeInPhoenix(String sql)
+            throws SQLException
+    {
+        try (Connection connection = DriverManager.getConnection(testingPhoenixServer.getJdbcUrl());
+                Statement statement = connection.createStatement()) {
+            statement.execute(sql);
+            connection.commit();
+        }
     }
 }

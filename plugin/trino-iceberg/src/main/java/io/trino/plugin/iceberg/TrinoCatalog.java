@@ -68,7 +68,7 @@ public interface TrinoCatalog
             String location,
             Map<String, String> properties);
 
-    void dropTable(ConnectorSession session, SchemaTableName schemaTableName);
+    void dropTable(ConnectorSession session, SchemaTableName schemaTableName, boolean purgeData);
 
     void renameTable(ConnectorSession session, SchemaTableName from, SchemaTableName to);
 
@@ -115,6 +115,4 @@ public interface TrinoCatalog
     Optional<ConnectorMaterializedViewDefinition> getMaterializedView(ConnectorSession session, SchemaTableName schemaViewName);
 
     void renameMaterializedView(ConnectorSession session, SchemaTableName source, SchemaTableName target);
-
-    void updateColumnComment(ConnectorSession session, SchemaTableName schemaTableName, ColumnIdentity columnIdentity, Optional<String> comment);
 }

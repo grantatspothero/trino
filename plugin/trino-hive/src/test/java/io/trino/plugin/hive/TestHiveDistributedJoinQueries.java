@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.hive;
 
+import io.trino.FeaturesConfig;
 import io.trino.Session;
 import io.trino.execution.DynamicFilterConfig;
 import io.trino.metadata.QualifiedObjectName;
@@ -25,7 +26,6 @@ import org.testng.annotations.Test;
 
 import static com.google.common.base.Verify.verify;
 import static io.trino.SystemSessionProperties.JOIN_DISTRIBUTION_TYPE;
-import static io.trino.cost.OptimizerConfig.JoinDistributionType.BROADCAST;
 import static io.trino.plugin.hive.HiveQueryRunner.HIVE_CATALOG;
 import static org.testng.Assert.assertEquals;
 
@@ -57,7 +57,7 @@ public class TestHiveDistributedJoinQueries
     public void testJoinWithEmptyBuildSide()
     {
         Session session = Session.builder(getSession())
-                .setSystemProperty(JOIN_DISTRIBUTION_TYPE, BROADCAST.name())
+                .setSystemProperty(JOIN_DISTRIBUTION_TYPE, FeaturesConfig.JoinDistributionType.BROADCAST.name())
                 .build();
         ResultWithQueryId<MaterializedResult> result = getDistributedQueryRunner().executeWithQueryId(
                 session,

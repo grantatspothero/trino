@@ -73,15 +73,13 @@ public abstract class AbstractTestBlock
         assertBlockSize(block);
         assertRetainedSize(block);
 
-        if (block.mayHaveNull()) {
-            assertThatThrownBy(() -> block.isNull(-1))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageMatching(format("(position is not valid|Invalid position -1 in block with %d positions)", block.getPositionCount()));
+        assertThatThrownBy(() -> block.isNull(-1))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageMatching(format("(position is not valid|Invalid position -1 in block with %d positions)", block.getPositionCount()));
 
-            assertThatThrownBy(() -> block.isNull(block.getPositionCount()))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageMatching(format("(position is not valid|Invalid position %d in block with %d positions)", block.getPositionCount(), block.getPositionCount()));
-        }
+        assertThatThrownBy(() -> block.isNull(block.getPositionCount()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageMatching(format("(position is not valid|Invalid position %d in block with %d positions)", block.getPositionCount(), block.getPositionCount()));
     }
 
     private void assertRetainedSize(Block block)
@@ -223,11 +221,11 @@ public abstract class AbstractTestBlock
 
         boolean[] positions = new boolean[block.getPositionCount()];
         fill(positions, 0, firstHalf.getPositionCount(), true);
-        assertEquals(block.getPositionsSizeInBytes(positions, firstHalf.getPositionCount()), expectedFirstHalfSize);
+        assertEquals(block.getPositionsSizeInBytes(positions), expectedFirstHalfSize);
         fill(positions, true);
-        assertEquals(block.getPositionsSizeInBytes(positions, positions.length), expectedBlockSize);
+        assertEquals(block.getPositionsSizeInBytes(positions), expectedBlockSize);
         fill(positions, 0, firstHalf.getPositionCount(), false);
-        assertEquals(block.getPositionsSizeInBytes(positions, positions.length - firstHalf.getPositionCount()), expectedSecondHalfSize);
+        assertEquals(block.getPositionsSizeInBytes(positions), expectedSecondHalfSize);
     }
 
     // expectedValueType is required since otherwise the expected value type is unknown when expectedValue is null.

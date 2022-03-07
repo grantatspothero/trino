@@ -41,7 +41,6 @@ import io.trino.plugin.jdbc.LongReadFunction;
 import io.trino.plugin.jdbc.LongWriteFunction;
 import io.trino.plugin.jdbc.ObjectReadFunction;
 import io.trino.plugin.jdbc.ObjectWriteFunction;
-import io.trino.plugin.jdbc.QueryBuilder;
 import io.trino.plugin.jdbc.RemoteTableName;
 import io.trino.plugin.jdbc.SliceWriteFunction;
 import io.trino.plugin.jdbc.WriteMapping;
@@ -124,6 +123,7 @@ import static io.trino.plugin.jdbc.StandardColumnMappings.smallintWriteFunction;
 import static io.trino.plugin.jdbc.StandardColumnMappings.timeReadFunction;
 import static io.trino.plugin.jdbc.StandardColumnMappings.timestampColumnMapping;
 import static io.trino.plugin.jdbc.StandardColumnMappings.timestampWriteFunction;
+import static io.trino.plugin.jdbc.StandardColumnMappings.tinyintColumnMapping;
 import static io.trino.plugin.jdbc.StandardColumnMappings.tinyintWriteFunction;
 import static io.trino.plugin.jdbc.StandardColumnMappings.varcharReadFunction;
 import static io.trino.plugin.jdbc.StandardColumnMappings.varcharWriteFunction;
@@ -194,9 +194,9 @@ public class SqlServerClient
     private static final int MAX_SUPPORTED_TEMPORAL_PRECISION = 7;
 
     @Inject
-    public SqlServerClient(BaseJdbcConfig config, SqlServerConfig sqlServerConfig, ConnectionFactory connectionFactory, QueryBuilder queryBuilder, IdentifierMapping identifierMapping)
+    public SqlServerClient(BaseJdbcConfig config, SqlServerConfig sqlServerConfig, ConnectionFactory connectionFactory, IdentifierMapping identifierMapping)
     {
-        super(config, "\"", connectionFactory, queryBuilder, identifierMapping);
+        super(config, "\"", connectionFactory, identifierMapping);
 
         requireNonNull(sqlServerConfig, "sqlServerConfig is null");
         snapshotIsolationDisabled = sqlServerConfig.isSnapshotIsolationDisabled();
@@ -284,10 +284,7 @@ public class SqlServerClient
                 return Optional.of(booleanColumnMapping());
 
             case Types.TINYINT:
-                // Map SQL Server TINYINT to Trino SMALLINT because SQL Server TINYINT is actually "unsigned tinyint"
-                // We don't check the range of values, because SQL Server will do it for us, and this behavior has already
-                // been tested in `BaseSqlServerTypeMapping#testUnsupportedTinyint`
-                return Optional.of(smallintColumnMapping());
+                return Optional.of(tinyintColumnMapping());
 
             case Types.SMALLINT:
                 return Optional.of(smallintColumnMapping());
@@ -623,7 +620,7 @@ public class SqlServerClient
     }
 
     @Override
-    protected boolean isSupportedJoinCondition(ConnectorSession session, JdbcJoinCondition joinCondition)
+    protected boolean isSupportedJoinCondition(JdbcJoinCondition joinCondition)
     {
         if (joinCondition.getOperator() == JoinCondition.Operator.IS_DISTINCT_FROM) {
             // Not supported in SQL Server
@@ -784,14 +781,14 @@ public class SqlServerClient
     private static Optional<DataCompression> getTableDataCompression(Handle handle, JdbcTableHandle table)
     {
         return handle.createQuery("" +
-                        "SELECT data_compression_desc FROM sys.partitions p " +
-                        "INNER JOIN sys.tables t ON p.object_id = t.object_id " +
-                        "INNER JOIN sys.schemas s ON t.schema_id = s.schema_id " +
-                        "INNER JOIN sys.indexes i ON t.object_id = i.object_id " +
-                        "WHERE s.name = :schema AND t.name = :table_name " +
-                        "AND p.index_id = 0 " + // Heap
-                        "AND i.type = 0 " + // Heap index type
-                        "AND i.data_space_id NOT IN (SELECT data_space_id FROM sys.partition_schemes)")
+                "SELECT data_compression_desc FROM sys.partitions p " +
+                "INNER JOIN sys.tables t ON p.object_id = t.object_id " +
+                "INNER JOIN sys.schemas s ON t.schema_id = s.schema_id " +
+                "INNER JOIN sys.indexes i ON t.object_id = i.object_id " +
+                "WHERE s.name = :schema AND t.name = :table_name " +
+                "AND p.index_id = 0 " + // Heap
+                "AND i.type = 0 " + // Heap index type
+                "AND i.data_space_id NOT IN (SELECT data_space_id FROM sys.partition_schemes)")
                 .bind("schema", table.getSchemaName())
                 .bind("table_name", table.getTableName())
                 .mapTo(String.class)

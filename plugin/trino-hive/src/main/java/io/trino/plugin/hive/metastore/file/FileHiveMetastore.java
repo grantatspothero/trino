@@ -524,10 +524,12 @@ public class FileHiveMetastore
 
         Path tableMetadataDirectory = getTableMetadataDirectory(databaseName, tableName);
 
-        if (deleteData) {
+        // It is safe to delete the whole meta directory for external tables and views
+        if (!table.getTableType().equals(MANAGED_TABLE.name()) || deleteData) {
             deleteDirectoryAndSchema(TABLE, tableMetadataDirectory);
         }
         else {
+            // in this case we only want to delete the metadata of a managed table
             deleteSchemaFile(TABLE, tableMetadataDirectory);
             deleteTablePrivileges(table);
         }

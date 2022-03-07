@@ -85,7 +85,7 @@ public class MinioStorage
 
     public static Map<String, String> getExchangeManagerProperties(MinioStorage minioStorage)
     {
-        return ImmutableMap.<String, String>builder()
+        return new ImmutableMap.Builder<String, String>()
                 .put("exchange.base-directory", "s3n://" + minioStorage.getBucketName())
                 .put("exchange.s3.aws-access-key", MinioStorage.ACCESS_KEY)
                 .put("exchange.s3.aws-secret-key", MinioStorage.SECRET_KEY)

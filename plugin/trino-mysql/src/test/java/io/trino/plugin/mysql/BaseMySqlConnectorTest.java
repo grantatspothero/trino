@@ -280,7 +280,7 @@ public abstract class BaseMySqlConnectorTest
     @Test
     public void testColumnComment()
     {
-        // TODO add support for setting comments on existing column and replace the test with io.trino.testing.BaseConnectorTest#testCommentColumn
+        // TODO add support for setting comments on existing column and replace the test with io.trino.testing.AbstractTestDistributedQueries#testCommentColumn
 
         onRemoteDatabase().execute("CREATE TABLE tpch.test_column_comment (col1 bigint COMMENT 'test comment', col2 bigint COMMENT '', col3 bigint)");
 
@@ -354,7 +354,7 @@ public abstract class BaseMySqlConnectorTest
         // Using IN list of size 140_000 as bigger list causes error:
         // "com.mysql.jdbc.PacketTooBigException: Packet for query is too large (XXX > 1048576).
         //  You can change this value on the server by setting the max_allowed_packet' variable."
-        onRemoteDatabase().execute("SELECT count(*) FROM tpch.orders WHERE " + getLongInClause(0, 140_000));
+        mySqlServer.execute("SELECT count(*) FROM tpch.orders WHERE " + getLongInClause(0, 140_000));
     }
 
     /**
@@ -366,7 +366,7 @@ public abstract class BaseMySqlConnectorTest
         String longInClauses = range(0, 14)
                 .mapToObj(value -> getLongInClause(value * 10_000, 10_000))
                 .collect(joining(" OR "));
-        onRemoteDatabase().execute("SELECT count(*) FROM tpch.orders WHERE " + longInClauses);
+        mySqlServer.execute("SELECT count(*) FROM tpch.orders WHERE " + longInClauses);
     }
 
     private String getLongInClause(int start, int length)

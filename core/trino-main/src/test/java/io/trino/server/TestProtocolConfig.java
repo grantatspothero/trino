@@ -28,24 +28,18 @@ public class TestProtocolConfig
     public void testDefaults()
     {
         assertRecordedDefaults(recordDefaults(ProtocolConfig.class)
-                .setAlternateHeaderName(null)
-                .setPreparedStatementCompressionThreshold(2 * 1024)
-                .setPreparedStatementCompressionMinimalGain(512));
+                .setAlternateHeaderName(null));
     }
 
     @Test
     public void testExplicitPropertyMappings()
     {
-        Map<String, String> properties = ImmutableMap.<String, String>builder()
+        Map<String, String> properties = new ImmutableMap.Builder<String, String>()
                 .put("protocol.v1.alternate-header-name", "taco")
-                .put("protocol.v1.prepared-statement-compression.length-threshold", "412")
-                .put("protocol.v1.prepared-statement-compression.min-gain", "0")
                 .buildOrThrow();
 
         ProtocolConfig expected = new ProtocolConfig()
-                .setAlternateHeaderName("taco")
-                .setPreparedStatementCompressionThreshold(412)
-                .setPreparedStatementCompressionMinimalGain(0);
+                .setAlternateHeaderName("taco");
 
         assertFullMapping(properties, expected);
     }

@@ -19,7 +19,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.trino.Session;
-import io.trino.execution.SqlTaskManager;
+import io.trino.execution.TaskManager;
 import io.trino.server.BasicQueryInfo;
 import io.trino.server.testing.TestingTrinoServer;
 import io.trino.server.testing.TestingTrinoServer.TestShutdownAction;
@@ -88,7 +88,7 @@ public class TestGracefulShutdown
                     .findFirst()
                     .get();
 
-            SqlTaskManager taskManager = worker.getTaskManager();
+            TaskManager taskManager = worker.getTaskManager();
 
             // wait until tasks show up on the worker
             while (taskManager.getAllTaskInfo().isEmpty()) {

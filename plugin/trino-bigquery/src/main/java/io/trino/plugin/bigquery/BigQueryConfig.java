@@ -20,13 +20,11 @@ import io.airlift.configuration.DefunctConfig;
 import io.airlift.units.Duration;
 import io.airlift.units.MinDuration;
 
-import javax.annotation.PostConstruct;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
 import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 
@@ -40,7 +38,6 @@ public class BigQueryConfig
     private Optional<String> parentProjectId = Optional.empty();
     private Optional<Integer> parallelism = Optional.empty();
     private boolean viewsEnabled;
-    private Duration viewExpireDuration = new Duration(24, HOURS);
     private Optional<String> viewMaterializationProject = Optional.empty();
     private Optional<String> viewMaterializationDataset = Optional.empty();
     private int maxReadRowsRetries = DEFAULT_MAX_READ_ROWS_RETRIES;
@@ -101,17 +98,9 @@ public class BigQueryConfig
         return this;
     }
 
-    @NotNull
-    public Duration getViewExpireDuration()
+    public Duration getViewExpiration()
     {
-        return viewExpireDuration;
-    }
-
-    @Config("bigquery.view-expire-duration")
-    public BigQueryConfig setViewExpireDuration(Duration viewExpireDuration)
-    {
-        this.viewExpireDuration = viewExpireDuration;
-        return this;
+        return new Duration(24, HOURS);
     }
 
     public Optional<String> getViewMaterializationProject()
@@ -196,11 +185,5 @@ public class BigQueryConfig
     {
         this.serviceCacheTtl = serviceCacheTtl;
         return this;
-    }
-
-    @PostConstruct
-    public void validate()
-    {
-        checkState(viewExpireDuration.toMillis() > viewsCacheTtl.toMillis(), "View expiration duration must be longer than view cache TTL");
     }
 }

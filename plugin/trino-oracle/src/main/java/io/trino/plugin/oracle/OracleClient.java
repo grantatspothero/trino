@@ -27,7 +27,6 @@ import io.trino.plugin.jdbc.JdbcTableHandle;
 import io.trino.plugin.jdbc.JdbcTypeHandle;
 import io.trino.plugin.jdbc.LongReadFunction;
 import io.trino.plugin.jdbc.LongWriteFunction;
-import io.trino.plugin.jdbc.QueryBuilder;
 import io.trino.plugin.jdbc.SliceWriteFunction;
 import io.trino.plugin.jdbc.WriteMapping;
 import io.trino.plugin.jdbc.mapping.IdentifierMapping;
@@ -46,7 +45,6 @@ import oracle.jdbc.OracleTypes;
 import javax.inject.Inject;
 
 import java.math.RoundingMode;
-import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -108,10 +106,8 @@ import static io.trino.spi.type.TinyintType.TINYINT;
 import static io.trino.spi.type.VarbinaryType.VARBINARY;
 import static io.trino.spi.type.VarcharType.createUnboundedVarcharType;
 import static io.trino.spi.type.VarcharType.createVarcharType;
-import static java.lang.Character.MAX_RADIX;
 import static java.lang.Float.floatToRawIntBits;
 import static java.lang.Float.intBitsToFloat;
-import static java.lang.Math.abs;
 import static java.lang.Math.floorDiv;
 import static java.lang.Math.floorMod;
 import static java.lang.Math.max;
@@ -126,10 +122,6 @@ public class OracleClient
         extends BaseJdbcClient
 {
     public static final int ORACLE_MAX_LIST_EXPRESSIONS = 1000;
-
-    // Oracle before 12.2 doesn't allow identifiers over 30 characters
-    private static final int ORACLE_MAX_IDENTIFIER_LENGTH = 30;
-    private static final SecureRandom RANDOM = new SecureRandom();
 
     private static final int MAX_BYTES_PER_CHAR = 4;
 
@@ -181,10 +173,9 @@ public class OracleClient
             BaseJdbcConfig config,
             OracleConfig oracleConfig,
             ConnectionFactory connectionFactory,
-            QueryBuilder queryBuilder,
             IdentifierMapping identifierMapping)
     {
-        super(config, "\"", connectionFactory, queryBuilder, identifierMapping);
+        super(config, "\"", connectionFactory, identifierMapping);
 
         requireNonNull(oracleConfig, "oracleConfig is null");
         this.synonymsEnabled = oracleConfig.isSynonymsEnabled();
@@ -220,8 +211,7 @@ public class OracleClient
     @Override
     protected String generateTemporaryTableName()
     {
-        String tableName = "tmp_trino_" + System.nanoTime() + Long.toString(abs(RANDOM.nextLong()), MAX_RADIX);
-        return tableName.substring(0, min(ORACLE_MAX_IDENTIFIER_LENGTH, tableName.length()));
+        return "tmp_trino_" + System.nanoTime();
     }
 
     @Override
@@ -390,7 +380,7 @@ public class OracleClient
     }
 
     @Override
-    protected boolean isSupportedJoinCondition(ConnectorSession session, JdbcJoinCondition joinCondition)
+    protected boolean isSupportedJoinCondition(JdbcJoinCondition joinCondition)
     {
         return joinCondition.getOperator() != JoinCondition.Operator.IS_DISTINCT_FROM;
     }

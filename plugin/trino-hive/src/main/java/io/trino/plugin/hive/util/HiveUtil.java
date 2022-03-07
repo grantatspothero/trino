@@ -90,7 +90,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Properties;
@@ -1129,23 +1128,13 @@ public final class HiveUtil
 
     public static boolean isDeltaLakeTable(Table table)
     {
-        return isDeltaLakeTable(table.getParameters());
-    }
-
-    public static boolean isDeltaLakeTable(Map<String, String> tableParameters)
-    {
-        return tableParameters.containsKey(SPARK_TABLE_PROVIDER_KEY)
-                && tableParameters.get(SPARK_TABLE_PROVIDER_KEY).toLowerCase(ENGLISH).equals(DELTA_LAKE_PROVIDER);
+        return table.getParameters().containsKey(SPARK_TABLE_PROVIDER_KEY)
+                && table.getParameters().get(SPARK_TABLE_PROVIDER_KEY).toLowerCase(ENGLISH).equals(DELTA_LAKE_PROVIDER);
     }
 
     public static boolean isIcebergTable(Table table)
     {
-        return isIcebergTable(table.getParameters());
-    }
-
-    public static boolean isIcebergTable(Map<String, String> tableParameters)
-    {
-        return ICEBERG_TABLE_TYPE_VALUE.equalsIgnoreCase(tableParameters.get(ICEBERG_TABLE_TYPE_NAME));
+        return ICEBERG_TABLE_TYPE_VALUE.equalsIgnoreCase(table.getParameters().get(ICEBERG_TABLE_TYPE_NAME));
     }
 
     public static boolean isSparkBucketedTable(Table table)

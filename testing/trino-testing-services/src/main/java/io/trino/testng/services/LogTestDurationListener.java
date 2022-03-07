@@ -260,7 +260,6 @@ public class LogTestDurationListener
 
     private static String getName(IInvokedMethod method)
     {
-        // See ProgressLoggingListener.formatTestName
-        return format("%s.%s", method.getTestMethod().getTestClass().getName(), method.getTestMethod().getMethodName());
+        return format("%s::%s", method.getTestMethod().getTestClass().getName(), method.getTestMethod().getMethodName());
     }
 }

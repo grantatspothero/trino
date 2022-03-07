@@ -21,7 +21,6 @@ import org.openjdk.jol.info.ClassLayout;
 import javax.annotation.Nullable;
 
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.function.BiConsumer;
 
 import static io.airlift.slice.SizeOf.sizeOf;
@@ -114,12 +113,6 @@ public class VariableWidthBlock
     }
 
     @Override
-    public OptionalInt fixedSizeInBytesPerPosition()
-    {
-        return OptionalInt.empty(); // size varies per element and is not fixed
-    }
-
-    @Override
     public long getSizeInBytes()
     {
         return sizeInBytes;
@@ -132,21 +125,17 @@ public class VariableWidthBlock
     }
 
     @Override
-    public long getPositionsSizeInBytes(boolean[] positions, int selectedPositionsCount)
+    public long getPositionsSizeInBytes(boolean[] positions)
     {
-        if (selectedPositionsCount == 0) {
-            return 0;
-        }
-        if (selectedPositionsCount == positionCount) {
-            return getSizeInBytes();
-        }
         long sizeInBytes = 0;
+        int usedPositionCount = 0;
         for (int i = 0; i < positions.length; ++i) {
             if (positions[i]) {
+                usedPositionCount++;
                 sizeInBytes += offsets[arrayOffset + i + 1] - offsets[arrayOffset + i];
             }
         }
-        return sizeInBytes + (Integer.BYTES + Byte.BYTES) * (long) selectedPositionsCount;
+        return sizeInBytes + (Integer.BYTES + Byte.BYTES) * (long) usedPositionCount;
     }
 
     @Override

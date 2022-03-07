@@ -45,7 +45,7 @@ public class TestHiveAzureConfig
     @Test
     public void testExplicitPropertyMappings()
     {
-        Map<String, String> properties = ImmutableMap.<String, String>builder()
+        Map<String, String> properties = new ImmutableMap.Builder<String, String>()
                 .put("hive.azure.wasb-storage-account", "testwasbstorage")
                 .put("hive.azure.wasb-access-key", "secret")
                 .put("hive.azure.abfs-storage-account", "abfsstorage")

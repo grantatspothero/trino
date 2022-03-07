@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.hive.metastore.cache;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
@@ -578,7 +579,8 @@ public class CachingHiveMetastore
         }
     }
 
-    public void invalidateTable(String databaseName, String tableName)
+    @VisibleForTesting
+    void invalidateTable(String databaseName, String tableName)
     {
         invalidateTableCache(databaseName, tableName);
         tableNamesCache.invalidate(databaseName);

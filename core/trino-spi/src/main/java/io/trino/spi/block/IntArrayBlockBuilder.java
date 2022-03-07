@@ -20,13 +20,13 @@ import org.openjdk.jol.info.ClassLayout;
 import javax.annotation.Nullable;
 
 import java.util.Arrays;
-import java.util.OptionalInt;
 import java.util.function.BiConsumer;
 
 import static io.airlift.slice.SizeOf.sizeOf;
 import static io.trino.spi.block.BlockUtil.calculateBlockResetSize;
 import static io.trino.spi.block.BlockUtil.checkArrayRange;
 import static io.trino.spi.block.BlockUtil.checkValidRegion;
+import static io.trino.spi.block.BlockUtil.countUsedPositions;
 import static java.lang.Math.max;
 
 public class IntArrayBlockBuilder
@@ -70,7 +70,7 @@ public class IntArrayBlockBuilder
         hasNonNullValue = true;
         positionCount++;
         if (blockBuilderStatus != null) {
-            blockBuilderStatus.addBytes(IntArrayBlock.SIZE_IN_BYTES_PER_POSITION);
+            blockBuilderStatus.addBytes(Byte.BYTES + Integer.BYTES);
         }
         return this;
     }
@@ -93,7 +93,7 @@ public class IntArrayBlockBuilder
         hasNullValue = true;
         positionCount++;
         if (blockBuilderStatus != null) {
-            blockBuilderStatus.addBytes(IntArrayBlock.SIZE_IN_BYTES_PER_POSITION);
+            blockBuilderStatus.addBytes(Byte.BYTES + Integer.BYTES);
         }
         return this;
     }
@@ -138,27 +138,21 @@ public class IntArrayBlockBuilder
     }
 
     @Override
-    public OptionalInt fixedSizeInBytesPerPosition()
-    {
-        return OptionalInt.of(IntArrayBlock.SIZE_IN_BYTES_PER_POSITION);
-    }
-
-    @Override
     public long getSizeInBytes()
     {
-        return IntArrayBlock.SIZE_IN_BYTES_PER_POSITION * (long) positionCount;
+        return (Integer.BYTES + Byte.BYTES) * (long) positionCount;
     }
 
     @Override
     public long getRegionSizeInBytes(int position, int length)
     {
-        return IntArrayBlock.SIZE_IN_BYTES_PER_POSITION * (long) length;
+        return (Integer.BYTES + Byte.BYTES) * (long) length;
     }
 
     @Override
-    public long getPositionsSizeInBytes(boolean[] positions, int selectedPositionsCount)
+    public long getPositionsSizeInBytes(boolean[] positions)
     {
-        return IntArrayBlock.SIZE_IN_BYTES_PER_POSITION * (long) selectedPositionsCount;
+        return (Integer.BYTES + Byte.BYTES) * (long) countUsedPositions(positions);
     }
 
     @Override

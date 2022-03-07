@@ -75,7 +75,7 @@ public class TestMinMaxByAggregation
 
     private static List<Type> getTypes()
     {
-        return ImmutableList.<Type>builder()
+        return new ImmutableList.Builder<Type>()
                 .addAll(STANDARD_TYPES)
                 .add(VARCHAR)
                 .add(createDecimalType(1))

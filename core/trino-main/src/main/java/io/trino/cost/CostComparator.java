@@ -15,6 +15,7 @@ package io.trino.cost;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
+import io.trino.FeaturesConfig;
 import io.trino.Session;
 
 import javax.inject.Inject;
@@ -29,7 +30,7 @@ public class CostComparator
     private final double networkWeight;
 
     @Inject
-    public CostComparator(OptimizerConfig featuresConfig)
+    public CostComparator(FeaturesConfig featuresConfig)
     {
         this(featuresConfig.getCpuCostWeight(), featuresConfig.getMemoryCostWeight(), featuresConfig.getNetworkCostWeight());
     }

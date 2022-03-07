@@ -25,7 +25,7 @@ public class TestPinotPasswordBrokerAuthenticationConfig
     @Test
     public void testExplicitPropertyMappings()
     {
-        Map<String, String> properties = ImmutableMap.<String, String>builder()
+        Map<String, String> properties = new ImmutableMap.Builder<String, String>()
                 .put("pinot.broker.authentication.user", "query")
                 .put("pinot.broker.authentication.password", "secret")
                 .buildOrThrow();

@@ -37,7 +37,6 @@ import io.trino.connector.system.SchemaPropertiesSystemTable;
 import io.trino.connector.system.TableCommentSystemTable;
 import io.trino.connector.system.TablePropertiesSystemTable;
 import io.trino.connector.system.TransactionsSystemTable;
-import io.trino.cost.OptimizerConfig;
 import io.trino.cost.ComposableStatsCalculator;
 import io.trino.cost.CostCalculator;
 import io.trino.cost.CostCalculatorUsingExchanges;
@@ -272,7 +271,7 @@ public class LocalQueryRunner
     private final TaskManagerConfig taskManagerConfig;
     private final boolean alwaysRevokeMemory;
     private final NodeSpillConfig nodeSpillConfig;
-    private final OptimizerConfig optimizerConfig;
+    private final FeaturesConfig featuresConfig;
     private final PlanOptimizersProvider planOptimizersProvider;
     private final OperatorFactories operatorFactories;
     private final StatementAnalyzerFactory statementAnalyzerFactory;
@@ -325,8 +324,7 @@ public class LocalQueryRunner
         this.indexManager = new IndexManager();
         NodeSchedulerConfig nodeSchedulerConfig = new NodeSchedulerConfig().setIncludeCoordinator(true);
         NodeScheduler nodeScheduler = new NodeScheduler(new UniformNodeSelectorFactory(nodeManager, nodeSchedulerConfig, new NodeTaskMap(finalizerService)));
-        requireNonNull(featuresConfig, "featuresConfig is null");
-        this.optimizerConfig = new OptimizerConfig();
+        this.featuresConfig = requireNonNull(featuresConfig, "featuresConfig is null");
         this.pageSinkManager = new PageSinkManager();
         this.catalogManager = new CatalogManager();
         this.transactionManager = InMemoryTransactionManager.create(
@@ -359,7 +357,7 @@ public class LocalQueryRunner
         accessControl.loadSystemAccessControl(AllowAllSystemAccessControl.NAME, ImmutableMap.of());
 
         TableProceduresRegistry tableProceduresRegistry = new TableProceduresRegistry();
-        this.sessionPropertyManager = createSessionPropertyManager(extraSessionProperties, taskManagerConfig, featuresConfig, optimizerConfig);
+        this.sessionPropertyManager = createSessionPropertyManager(extraSessionProperties, taskManagerConfig, featuresConfig);
         this.schemaPropertyManager = new SchemaPropertyManager();
         this.columnPropertyManager = new ColumnPropertyManager();
         this.tablePropertyManager = new TablePropertyManager();
@@ -491,8 +489,7 @@ public class LocalQueryRunner
     private static SessionPropertyManager createSessionPropertyManager(
             Set<SystemSessionPropertiesProvider> extraSessionProperties,
             TaskManagerConfig taskManagerConfig,
-            FeaturesConfig featuresConfig,
-            OptimizerConfig optimizerConfig)
+            FeaturesConfig featuresConfig)
     {
         Set<SystemSessionPropertiesProvider> systemSessionProperties = ImmutableSet.<SystemSessionPropertiesProvider>builder()
                 .addAll(requireNonNull(extraSessionProperties, "extraSessionProperties is null"))
@@ -501,7 +498,6 @@ public class LocalQueryRunner
                         taskManagerConfig,
                         new MemoryManagerConfig(),
                         featuresConfig,
-                        optimizerConfig,
                         new NodeMemoryConfig(),
                         new DynamicFilterConfig(),
                         new NodeSchedulerConfig()))
@@ -1011,7 +1007,7 @@ public class LocalQueryRunner
                 scalarStatsCalculator,
                 costCalculator,
                 estimatedExchangesCostCalculator,
-                new CostComparator(optimizerConfig),
+                new CostComparator(featuresConfig),
                 taskCountEstimator,
                 nodePartitioningManager,
                 new RuleStatsRecorder()).get();

@@ -23,7 +23,6 @@ import io.trino.spi.function.SqlType;
 import io.trino.spi.type.LongTimestamp;
 import io.trino.type.DateTimes;
 
-import java.time.DateTimeException;
 import java.time.ZonedDateTime;
 import java.util.regex.Matcher;
 
@@ -75,7 +74,7 @@ public final class VarcharToTimestampCast
 
         Matcher matcher = DateTimes.DATETIME_PATTERN.matcher(value);
         if (!matcher.matches()) {
-            throw new TrinoException(INVALID_CAST_ARGUMENT, "Value cannot be cast to timestamp: " + value);
+            throw new IllegalArgumentException("Invalid timestamp: " + value);
         }
 
         String year = matcher.group("year");
@@ -86,22 +85,16 @@ public final class VarcharToTimestampCast
         String second = matcher.group("second");
         String fraction = matcher.group("fraction");
 
-        long epochSecond;
-        try {
-            epochSecond = ZonedDateTime.of(
-                            Integer.parseInt(year),
-                            Integer.parseInt(month),
-                            Integer.parseInt(day),
-                            hour == null ? 0 : Integer.parseInt(hour),
-                            minute == null ? 0 : Integer.parseInt(minute),
-                            second == null ? 0 : Integer.parseInt(second),
-                            0,
-                            UTC)
-                    .toEpochSecond();
-        }
-        catch (DateTimeException e) {
-            throw new TrinoException(INVALID_CAST_ARGUMENT, "Value cannot be cast to timestamp: " + value, e);
-        }
+        long epochSecond = ZonedDateTime.of(
+                Integer.parseInt(year),
+                Integer.parseInt(month),
+                Integer.parseInt(day),
+                hour == null ? 0 : Integer.parseInt(hour),
+                minute == null ? 0 : Integer.parseInt(minute),
+                second == null ? 0 : Integer.parseInt(second),
+                0,
+                UTC)
+                .toEpochSecond();
 
         int actualPrecision = 0;
         long fractionValue = 0;
@@ -125,7 +118,7 @@ public final class VarcharToTimestampCast
 
         Matcher matcher = DateTimes.DATETIME_PATTERN.matcher(value);
         if (!matcher.matches()) {
-            throw new TrinoException(INVALID_CAST_ARGUMENT, "Value cannot be cast to timestamp: " + value);
+            throw new IllegalArgumentException("Invalid timestamp: " + value);
         }
 
         String year = matcher.group("year");
@@ -136,22 +129,16 @@ public final class VarcharToTimestampCast
         String second = matcher.group("second");
         String fraction = matcher.group("fraction");
 
-        long epochSecond;
-        try {
-            epochSecond = ZonedDateTime.of(
-                            Integer.parseInt(year),
-                            Integer.parseInt(month),
-                            Integer.parseInt(day),
-                            hour == null ? 0 : Integer.parseInt(hour),
-                            minute == null ? 0 : Integer.parseInt(minute),
-                            second == null ? 0 : Integer.parseInt(second),
-                            0,
-                            UTC)
-                    .toEpochSecond();
-        }
-        catch (DateTimeException e) {
-            throw new TrinoException(INVALID_CAST_ARGUMENT, "Value cannot be cast to timestamp: " + value, e);
-        }
+        long epochSecond = ZonedDateTime.of(
+                Integer.parseInt(year),
+                Integer.parseInt(month),
+                Integer.parseInt(day),
+                hour == null ? 0 : Integer.parseInt(hour),
+                minute == null ? 0 : Integer.parseInt(minute),
+                second == null ? 0 : Integer.parseInt(second),
+                0,
+                UTC)
+                .toEpochSecond();
 
         int actualPrecision = 0;
         long fractionValue = 0;

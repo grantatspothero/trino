@@ -33,7 +33,6 @@ import io.trino.plugin.jdbc.JdbcExpression;
 import io.trino.plugin.jdbc.JdbcTableHandle;
 import io.trino.plugin.jdbc.JdbcTypeHandle;
 import io.trino.plugin.jdbc.LongWriteFunction;
-import io.trino.plugin.jdbc.QueryBuilder;
 import io.trino.plugin.jdbc.RemoteTableName;
 import io.trino.plugin.jdbc.SliceWriteFunction;
 import io.trino.plugin.jdbc.WriteMapping;
@@ -172,11 +171,10 @@ public class ClickHouseClient
     public ClickHouseClient(
             BaseJdbcConfig config,
             ConnectionFactory connectionFactory,
-            QueryBuilder queryBuilder,
             TypeManager typeManager,
             IdentifierMapping identifierMapping)
     {
-        super(config, "\"", connectionFactory, queryBuilder, identifierMapping);
+        super(config, "\"", connectionFactory, identifierMapping);
         this.uuidType = typeManager.getType(new TypeSignature(StandardTypes.UUID));
         this.ipAddressType = typeManager.getType(new TypeSignature(StandardTypes.IPADDRESS));
         JdbcTypeHandle bigintTypeHandle = new JdbcTypeHandle(Types.BIGINT, Optional.of("bigint"), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
@@ -268,7 +266,7 @@ public class ClickHouseClient
             statement.setString(2, tableHandle.asPlainTable().getRemoteTableName().getTableName());
 
             try (ResultSet resultSet = statement.executeQuery()) {
-                ImmutableMap.Builder<String, Object> properties = ImmutableMap.builder();
+                ImmutableMap.Builder<String, Object> properties = new ImmutableMap.Builder<>();
                 while (resultSet.next()) {
                     String engine = resultSet.getString("engine");
                     if (!isNullOrEmpty(engine)) {

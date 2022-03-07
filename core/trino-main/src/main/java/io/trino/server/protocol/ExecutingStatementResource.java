@@ -88,7 +88,6 @@ public class ExecutingStatementResource
 
     private final ConcurrentMap<QueryId, Query> queries = new ConcurrentHashMap<>();
     private final ScheduledExecutorService queryPurger = newSingleThreadScheduledExecutor(threadsNamed("execution-query-purger"));
-    private final PreparedStatementEncoder preparedStatementEncoder;
     private final boolean compressionEnabled;
 
     @Inject
@@ -99,7 +98,6 @@ public class ExecutingStatementResource
             QueryInfoUrlFactory queryInfoUrlTemplate,
             @ForStatementResource BoundedExecutor responseExecutor,
             @ForStatementResource ScheduledExecutorService timeoutExecutor,
-            PreparedStatementEncoder preparedStatementEncoder,
             ServerConfig serverConfig)
     {
         this.queryManager = requireNonNull(queryManager, "queryManager is null");
@@ -108,7 +106,6 @@ public class ExecutingStatementResource
         this.queryInfoUrlFactory = requireNonNull(queryInfoUrlTemplate, "queryInfoUrlTemplate is null");
         this.responseExecutor = requireNonNull(responseExecutor, "responseExecutor is null");
         this.timeoutExecutor = requireNonNull(timeoutExecutor, "timeoutExecutor is null");
-        this.preparedStatementEncoder = requireNonNull(preparedStatementEncoder, "preparedStatementEncoder is null");
         this.compressionEnabled = requireNonNull(serverConfig, "serverConfig is null").isQueryResultsCompressionEnabled();
 
         queryPurger.scheduleWithFixedDelay(
@@ -213,12 +210,12 @@ public class ExecutingStatementResource
         }
         ListenableFuture<QueryResults> queryResultsFuture = query.waitForResults(token, uriInfo, wait, targetResultSize);
 
-        ListenableFuture<Response> response = Futures.transform(queryResultsFuture, queryResults -> toResponse(query, queryResults), directExecutor());
+        ListenableFuture<Response> response = Futures.transform(queryResultsFuture, queryResults -> toResponse(query, queryResults, compressionEnabled), directExecutor());
 
         bindAsyncResponse(asyncResponse, response, responseExecutor);
     }
 
-    private Response toResponse(Query query, QueryResults queryResults)
+    private static Response toResponse(Query query, QueryResults queryResults, boolean compressionEnabled)
     {
         ResponseBuilder response = Response.ok(queryResults);
 
@@ -242,7 +239,7 @@ public class ExecutingStatementResource
         // add added prepare statements
         for (Entry<String, String> entry : query.getAddedPreparedStatements().entrySet()) {
             String encodedKey = urlEncode(entry.getKey());
-            String encodedValue = urlEncode(preparedStatementEncoder.encodePreparedStatementForHeader(entry.getValue()));
+            String encodedValue = urlEncode(entry.getValue());
             response.header(protocolHeaders.responseAddedPrepare(), encodedKey + '=' + encodedValue);
         }
 

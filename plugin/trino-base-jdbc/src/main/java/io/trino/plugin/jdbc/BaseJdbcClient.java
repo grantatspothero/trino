@@ -57,7 +57,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -90,7 +89,6 @@ public abstract class BaseJdbcClient
     private static final Logger log = Logger.get(BaseJdbcClient.class);
 
     protected final ConnectionFactory connectionFactory;
-    protected final QueryBuilder queryBuilder;
     protected final String identifierQuote;
     protected final Set<String> jdbcTypesMappedToVarchar;
     private final IdentifierMapping identifierMapping;
@@ -99,13 +97,11 @@ public abstract class BaseJdbcClient
             BaseJdbcConfig config,
             String identifierQuote,
             ConnectionFactory connectionFactory,
-            QueryBuilder queryBuilder,
             IdentifierMapping identifierMapping)
     {
         this(
                 identifierQuote,
                 connectionFactory,
-                queryBuilder,
                 config.getJdbcTypesMappedToVarchar(),
                 identifierMapping);
     }
@@ -113,13 +109,11 @@ public abstract class BaseJdbcClient
     public BaseJdbcClient(
             String identifierQuote,
             ConnectionFactory connectionFactory,
-            QueryBuilder queryBuilder,
             Set<String> jdbcTypesMappedToVarchar,
             IdentifierMapping identifierMapping)
     {
         this.identifierQuote = requireNonNull(identifierQuote, "identifierQuote is null");
         this.connectionFactory = requireNonNull(connectionFactory, "connectionFactory is null");
-        this.queryBuilder = requireNonNull(queryBuilder, "queryBuilder is null");
         this.jdbcTypesMappedToVarchar = ImmutableSortedSet.orderedBy(CASE_INSENSITIVE_ORDER)
                 .addAll(requireNonNull(jdbcTypesMappedToVarchar, "jdbcTypesMappedToVarchar is null"))
                 .build();
@@ -383,7 +377,7 @@ public abstract class BaseJdbcClient
             throws SQLException
     {
         PreparedQuery preparedQuery = prepareQuery(session, connection, table, Optional.empty(), columns, ImmutableMap.of(), Optional.of(split));
-        return queryBuilder.prepareStatement(this, session, connection, preparedQuery);
+        return new QueryBuilder(this).prepareStatement(session, connection, preparedQuery);
     }
 
     protected PreparedQuery prepareQuery(
@@ -395,8 +389,7 @@ public abstract class BaseJdbcClient
             Map<String, String> columnExpressions,
             Optional<JdbcSplit> split)
     {
-        return applyQueryTransformations(table, queryBuilder.prepareSelectQuery(
-                this,
+        return applyQueryTransformations(table, new QueryBuilder(this).prepareQuery(
                 session,
                 connection,
                 table.getRelationHandle(),
@@ -404,17 +397,7 @@ public abstract class BaseJdbcClient
                 columns,
                 columnExpressions,
                 table.getConstraint(),
-                getAdditionalPredicate(table.getConstraintExpressions(), split.flatMap(JdbcSplit::getAdditionalPredicate))));
-    }
-
-    protected static Optional<String> getAdditionalPredicate(List<String> constraintExpressions, Optional<String> splitPredicate)
-    {
-        if (constraintExpressions.isEmpty() && splitPredicate.isEmpty()) {
-            return Optional.empty();
-        }
-        return Optional.of(
-                Stream.concat(constraintExpressions.stream(), splitPredicate.stream())
-                        .collect(joining(" AND ")));
+                split.flatMap(JdbcSplit::getAdditionalPredicate)));
     }
 
     @Override
@@ -429,29 +412,23 @@ public abstract class BaseJdbcClient
             JoinStatistics statistics)
     {
         for (JdbcJoinCondition joinCondition : joinConditions) {
-            if (!isSupportedJoinCondition(session, joinCondition)) {
+            if (!isSupportedJoinCondition(joinCondition)) {
                 return Optional.empty();
             }
         }
 
-        try (Connection connection = this.connectionFactory.openConnection(session)) {
-            return Optional.of(queryBuilder.prepareJoinQuery(
-                    this,
-                    session,
-                    connection,
-                    joinType,
-                    leftSource,
-                    rightSource,
-                    joinConditions,
-                    leftAssignments,
-                    rightAssignments));
-        }
-        catch (SQLException e) {
-            throw new TrinoException(JDBC_ERROR, e);
-        }
+        QueryBuilder queryBuilder = new QueryBuilder(this);
+        return Optional.of(queryBuilder.prepareJoinQuery(
+                session,
+                joinType,
+                leftSource,
+                rightSource,
+                joinConditions,
+                leftAssignments,
+                rightAssignments));
     }
 
-    protected boolean isSupportedJoinCondition(ConnectorSession session, JdbcJoinCondition joinCondition)
+    protected boolean isSupportedJoinCondition(JdbcJoinCondition joinCondition)
     {
         return false;
     }
@@ -993,8 +970,9 @@ public abstract class BaseJdbcClient
         checkArgument(handle.getSortOrder().isEmpty(), "Unable to delete when sort order is set: %s", handle);
         try (Connection connection = connectionFactory.openConnection(session)) {
             verify(connection.getAutoCommit());
-            PreparedQuery preparedQuery = queryBuilder.prepareDeleteQuery(this, session, connection, handle.getRequiredNamedRelation(), handle.getConstraint());
-            try (PreparedStatement preparedStatement = queryBuilder.prepareStatement(this, session, connection, preparedQuery)) {
+            QueryBuilder queryBuilder = new QueryBuilder(this);
+            PreparedQuery preparedQuery = queryBuilder.prepareDelete(session, connection, handle.getRequiredNamedRelation(), handle.getConstraint());
+            try (PreparedStatement preparedStatement = queryBuilder.prepareStatement(session, connection, preparedQuery)) {
                 return OptionalLong.of(preparedStatement.executeUpdate());
             }
         }

@@ -105,7 +105,6 @@ import io.trino.operator.scalar.ArraySliceFunction;
 import io.trino.operator.scalar.ArraySortComparatorFunction;
 import io.trino.operator.scalar.ArraySortFunction;
 import io.trino.operator.scalar.ArrayToArrayCast;
-import io.trino.operator.scalar.ArrayTrimFunction;
 import io.trino.operator.scalar.ArrayUnionFunction;
 import io.trino.operator.scalar.ArraysOverlapFunction;
 import io.trino.operator.scalar.BitwiseFunctions;
@@ -549,7 +548,6 @@ public class FunctionRegistry
                 .scalar(ArrayUnionFunction.class)
                 .scalar(ArrayExceptFunction.class)
                 .scalar(ArraySliceFunction.class)
-                .scalar(ArrayTrimFunction.class)
                 .scalar(ArrayCombinationsFunction.class)
                 .scalar(ArrayNgramsFunction.class)
                 .scalar(ArrayAllMatchFunction.class)

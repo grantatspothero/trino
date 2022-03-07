@@ -41,7 +41,7 @@ public class TestServerConfig
     @Test
     public void testExplicitPropertyMappings()
     {
-        Map<String, String> properties = ImmutableMap.<String, String>builder()
+        Map<String, String> properties = new ImmutableMap.Builder<String, String>()
                 .put("coordinator", "false")
                 .put("experimental.concurrent-startup", "true")
                 .put("http.include-exception-in-response", "false")

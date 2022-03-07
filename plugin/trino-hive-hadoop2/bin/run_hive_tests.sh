@@ -4,8 +4,6 @@ set -euo pipefail -x
 
 . "${BASH_SOURCE%/*}/common.sh"
 
-abort_if_not_gib_impacted
-
 cleanup_hadoop_docker_containers
 start_hadoop_docker_containers
 
@@ -23,7 +21,7 @@ HADOOP_MASTER_IP=$(hadoop_master_ip)
 # run product tests
 pushd "${PROJECT_ROOT}"
 set +e
-./mvnw ${MAVEN_TEST:--B} -pl :trino-hive-hadoop2 test -P test-hive-hadoop2 \
+./mvnw -B -pl :trino-hive-hadoop2 test -P test-hive-hadoop2 \
     -DHADOOP_USER_NAME=hive \
     -Dhive.hadoop2.metastoreHost=localhost \
     -Dhive.hadoop2.metastorePort=9083 \

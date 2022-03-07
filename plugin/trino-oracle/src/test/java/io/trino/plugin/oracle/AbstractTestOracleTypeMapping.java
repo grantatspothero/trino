@@ -106,7 +106,7 @@ public abstract class AbstractTestOracleTypeMapping
 
     private DataSetup trinoCreateAsSelect(String tableNamePrefix)
     {
-        return trinoCreateAsSelect(getSession(), tableNamePrefix);
+        return new CreateAsSelectDataSetup(new TrinoSqlExecutor(getQueryRunner()), tableNamePrefix);
     }
 
     private DataSetup trinoCreateAsSelect(Session session, String tableNamePrefix)
