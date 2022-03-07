@@ -35,9 +35,6 @@ public class TestingKuduServer
         implements Closeable
 {
     private static final String KUDU_IMAGE = "apache/kudu";
-    public static final String EARLIEST_TAG = "1.13.0";
-    public static final String LATEST_TAG = "1.15.0";
-
     private static final Integer KUDU_MASTER_PORT = 7051;
     private static final Integer KUDU_TSERVER_PORT = 7050;
     private static final Integer NUMBER_OF_REPLICA = 3;
@@ -52,7 +49,8 @@ public class TestingKuduServer
 
     public TestingKuduServer()
     {
-        this(LATEST_TAG);
+        // This version should match the kudu client version
+        this("1.15.0");
     }
 
     /**
