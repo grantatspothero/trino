@@ -47,6 +47,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
       - uses: actions/setup-java@v2
         with:
           distribution: 'zulu'
@@ -76,6 +78,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
       - uses: actions/setup-java@v2
         with:
           distribution: 'zulu'
@@ -102,6 +106,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
       - name: Web UI Checks
         run: core/trino-main/bin/check_webui.sh
 
@@ -111,6 +117,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
+          ref: ${{ github.head_ref }}
           fetch-depth: 0 # checkout tags so version in Manifest is set properly
       - uses: actions/setup-java@v2
         with:
@@ -163,6 +170,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
       - uses: actions/setup-java@v2
         with:
           distribution: 'zulu'
@@ -276,6 +285,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
       - uses: actions/setup-java@v2
         with:
           distribution: 'zulu'
@@ -361,6 +372,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
       - uses: actions/setup-java@v2
         with:
           distribution: 'zulu'
@@ -409,6 +422,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
       - uses: actions/setup-java@v2
         with:
           distribution: 'zulu'
@@ -457,6 +472,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
       - uses: actions/setup-java@v2
         with:
           distribution: 'zulu'
@@ -597,6 +614,8 @@ jobs:
     timeout-minutes: 140
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
       - uses: actions/setup-java@v2
         with:
           distribution: 'zulu'
