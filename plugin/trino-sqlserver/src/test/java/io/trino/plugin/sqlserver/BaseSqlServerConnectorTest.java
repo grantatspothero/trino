@@ -147,26 +147,6 @@ public abstract class BaseSqlServerConnectorTest
     }
 
     @Test
-    @Override
-    public void testReadMetadataWithRelationsConcurrentModifications()
-    {
-        try {
-            super.testReadMetadataWithRelationsConcurrentModifications();
-        }
-        catch (Exception expected) {
-            // The test failure is not guaranteed
-            // TODO (https://github.com/trinodb/trino/issues/10846): shouldn't fail
-            assertThat(expected)
-                    .hasMessageMatching("(?s).*(" +
-                            "No task completed before timeout|" +
-                            "was deadlocked on lock resources with another process and has been chosen as the deadlock victim|" +
-                            // E.g. system.metadata.table_comments can return empty results, when underlying metadata list tables call fails
-                            "Expecting actual not to be empty).*");
-            throw new SkipException("to be fixed");
-        }
-    }
-
-    @Test
     public void testColumnComment()
     {
         try (TestTable testTable = new TestTable(onRemoteDatabase(), "test_column_comment", "(col1 bigint, col2 bigint, col3 bigint)")) {

@@ -231,21 +231,6 @@ public class TestPhoenixConnectorTest
     }
 
     @Override
-    public void testReadMetadataWithRelationsConcurrentModifications()
-    {
-        try {
-            super.testReadMetadataWithRelationsConcurrentModifications();
-        }
-        catch (Exception expected) {
-            // The test failure is not guaranteed
-            // TODO (https://github.com/trinodb/trino/issues/10904): shouldn't fail
-            assertThat(expected)
-                    .hasMessageContaining("ERROR 1012 (42M03): Table undefined. tableName=");
-            throw new SkipException("to be fixed");
-        }
-    }
-
-    @Override
     public void testCharVarcharComparison()
     {
         // test overridden because super uses all-space char values ('  ') that are null-out by Phoenix

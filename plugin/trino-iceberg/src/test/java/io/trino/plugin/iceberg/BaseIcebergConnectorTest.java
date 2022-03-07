@@ -902,7 +902,7 @@ public abstract class BaseIcebergConnectorTest
     @Test
     public void testColumnComments()
     {
-        // TODO add support for setting comments on existing column and replace the test with io.trino.testing.BaseConnectorTest#testCommentColumn
+        // TODO add support for setting comments on existing column and replace the test with io.trino.testing.AbstractTestDistributedQueries#testCommentColumn
 
         assertUpdate("CREATE TABLE test_column_comments (_bigint BIGINT COMMENT 'test column comment')");
         assertQuery(
