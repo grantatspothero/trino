@@ -7,6 +7,8 @@ on:
   pull_request:
     paths-ignore:
       - 'docs/**'
+  workflow_dispatch:
+    {}
 
 env:
   # An envar that signals to tests we are executing in the CI environment
