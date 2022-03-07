@@ -13,7 +13,7 @@
  */
 package io.trino.plugin.kudu;
 
-public class KuduConnectorTests
+public class KuduSmokeTests
 {
     private static final String KUDU_VERSION = "1.13.0";
 
@@ -37,7 +37,7 @@ public class KuduConnectorTests
         }
     }
 
-    public static class TestKuduWithStandardInferSchemaConnectorTest
+    public static class TestKuduSmokeTestWithStandardInferSchema
             extends AbstractKuduWithStandardInferSchemaConnectorTest
     {
         @Override

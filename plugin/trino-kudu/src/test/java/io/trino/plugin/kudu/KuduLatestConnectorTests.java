@@ -37,7 +37,7 @@ public class KuduLatestConnectorTests
         }
     }
 
-    public static class TestKuduWithStandardInferSchemaConnectorTest
+    public static class TestKuduSmokeTestWithStandardInferSchema
             extends AbstractKuduWithStandardInferSchemaConnectorTest
     {
         @Override
