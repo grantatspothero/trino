@@ -45,6 +45,7 @@ import org.apache.kudu.Schema;
 import org.apache.kudu.Type;
 import org.apache.kudu.client.AlterTableOptions;
 import org.apache.kudu.client.CreateTableOptions;
+import org.apache.kudu.client.KuduClient;
 import org.apache.kudu.client.KuduException;
 import org.apache.kudu.client.KuduPredicate;
 import org.apache.kudu.client.KuduScanToken;
@@ -77,10 +78,10 @@ public class KuduClientSession
 {
     private static final Logger log = Logger.get(KuduClientSession.class);
     public static final String DEFAULT_SCHEMA = "default";
-    private final KuduClientWrapper client;
+    private final KuduClient client;
     private final SchemaEmulation schemaEmulation;
 
-    public KuduClientSession(KuduClientWrapper client, SchemaEmulation schemaEmulation)
+    public KuduClientSession(KuduClient client, SchemaEmulation schemaEmulation)
     {
         this.client = client;
         this.schemaEmulation = schemaEmulation;
@@ -218,7 +219,7 @@ public class KuduClientSession
     public KuduScanner createScanner(KuduSplit kuduSplit)
     {
         try {
-            return client.deserializeIntoScanner(kuduSplit.getSerializedScanToken());
+            return KuduScanToken.deserializeIntoScanner(kuduSplit.getSerializedScanToken(), client);
         }
         catch (IOException e) {
             throw new RuntimeException(e);
