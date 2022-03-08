@@ -30,6 +30,7 @@ import org.apache.kudu.client.KuduException;
 import org.apache.kudu.client.KuduSession;
 import org.apache.kudu.client.KuduTable;
 import org.apache.kudu.client.PartialRow;
+import org.apache.kudu.client.SessionConfiguration;
 import org.apache.kudu.client.Upsert;
 
 import java.nio.charset.StandardCharsets;
@@ -58,7 +59,6 @@ import static java.lang.Math.toIntExact;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.apache.kudu.client.KuduOperationApplier.applyOperationAndVerifySucceeded;
 
 public class KuduPageSink
         implements ConnectorPageSink
@@ -103,6 +103,7 @@ public class KuduPageSink
 
         this.table = table;
         this.session = clientSession.newSession();
+        this.session.setFlushMode(SessionConfiguration.FlushMode.AUTO_FLUSH_BACKGROUND);
         uuid = UUID.randomUUID().toString();
     }
 
@@ -124,7 +125,7 @@ public class KuduPageSink
             }
 
             try {
-                applyOperationAndVerifySucceeded(session, upsert);
+                session.apply(upsert);
             }
             catch (KuduException e) {
                 throw new RuntimeException(e);

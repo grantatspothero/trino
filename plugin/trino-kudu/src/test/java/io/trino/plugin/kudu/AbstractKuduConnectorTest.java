@@ -40,9 +40,9 @@ public abstract class AbstractKuduConnectorTest
 {
     private TestingKuduServer kuduServer;
 
-    protected abstract String getKuduServerVersion();
-
     protected abstract Optional<String> getKuduSchemaEmulationPrefix();
+
+    protected abstract String getKuduServerVersion();
 
     @Override
     protected QueryRunner createQueryRunner()

@@ -32,6 +32,7 @@ public class TestKuduClientConfig
     {
         assertRecordedDefaults(recordDefaults(KuduClientConfig.class)
                 .setMasterAddresses("")
+                .setDefaultSocketReadTimeout(new Duration(10, SECONDS))
                 .setDefaultAdminOperationTimeout(new Duration(30, SECONDS))
                 .setDefaultOperationTimeout(new Duration(30, SECONDS))
                 .setDisableStatistics(false)
@@ -46,6 +47,7 @@ public class TestKuduClientConfig
     {
         Map<String, String> properties = ImmutableMap.<String, String>builder()
                 .put("kudu.client.master-addresses", "localhost")
+                .put("kudu.client.default-socket-read-timeout", "2m")
                 .put("kudu.client.default-admin-operation-timeout", "1m")
                 .put("kudu.client.default-operation-timeout", "5m")
                 .put("kudu.client.disable-statistics", "true")
@@ -57,6 +59,7 @@ public class TestKuduClientConfig
 
         KuduClientConfig expected = new KuduClientConfig()
                 .setMasterAddresses("localhost")
+                .setDefaultSocketReadTimeout(new Duration(2, MINUTES))
                 .setDefaultAdminOperationTimeout(new Duration(1, MINUTES))
                 .setDefaultOperationTimeout(new Duration(5, MINUTES))
                 .setDisableStatistics(true)
