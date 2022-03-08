@@ -91,6 +91,7 @@ public class KuduModule
         KuduClient.KuduClientBuilder builder = new KuduClient.KuduClientBuilder(config.getMasterAddresses());
         builder.defaultAdminOperationTimeoutMs(config.getDefaultAdminOperationTimeout().toMillis());
         builder.defaultOperationTimeoutMs(config.getDefaultOperationTimeout().toMillis());
+        builder.defaultSocketReadTimeoutMs(config.getDefaultSocketReadTimeout().toMillis());
         if (config.isDisableStatistics()) {
             builder.disableStatistics();
         }
