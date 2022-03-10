@@ -57,6 +57,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -211,7 +212,10 @@ public abstract class BaseJdbcClient
                     return Optional.empty();
                 }
                 if (tableHandles.size() > 1) {
-                    throw new TrinoException(NOT_SUPPORTED, "Multiple tables matched: " + schemaTableName);
+                    String remoteTableNames = tableHandles.stream()
+                            .map(handle -> handle.getRequiredNamedRelation().getRemoteTableName().toString())
+                            .collect(joining(" ; "));
+                    throw new TrinoException(NOT_SUPPORTED, format("Multiple tables matched: %s, Remote table names: %s", schemaTableName, remoteTableNames));
                 }
                 return Optional.of(getOnlyElement(tableHandles));
             }
