@@ -351,6 +351,10 @@
                                     </dependency>
                                     <dependency>
                                         <groupId>org.apache.iceberg</groupId>
+                                        <artifactId>iceberg-nessie</artifactId>
+                                    </dependency>
+                                    <dependency>
+                                        <groupId>org.apache.iceberg</groupId>
                                         <artifactId>iceberg-orc</artifactId>
                                     </dependency>
                                     <dependency>

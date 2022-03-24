@@ -20,6 +20,7 @@ import io.trino.tests.product.launcher.env.environment.EnvMultinodeIcebergTabula
 import io.trino.tests.product.launcher.env.environment.EnvSinglenodeHiveIcebergRedirections;
 import io.trino.tests.product.launcher.env.environment.EnvSinglenodeSparkIceberg;
 import io.trino.tests.product.launcher.env.environment.EnvSinglenodeSparkIcebergJdbcCatalog;
+import io.trino.tests.product.launcher.env.environment.EnvSinglenodeSparkIcebergNessie;
 import io.trino.tests.product.launcher.env.environment.EnvSinglenodeSparkIcebergRest;
 import io.trino.tests.product.launcher.suite.Suite;
 import io.trino.tests.product.launcher.suite.SuiteTestRun;
@@ -53,6 +54,9 @@ public class SuiteIceberg
                         .build(),
                 testOnEnvironment(EnvSinglenodeSparkIcebergJdbcCatalog.class)
                         .withGroups("configured_features", "iceberg_jdbc")
+                        .build(),
+                testOnEnvironment(EnvSinglenodeSparkIcebergNessie.class)
+                        .withGroups("configured_features", "iceberg_nessie")
                         .build());
     }
 }

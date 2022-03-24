@@ -25,6 +25,8 @@
           -->
         <air.test.parallel>instances</air.test.parallel>
         <air.test.jvm.additional-arguments>${extraJavaVectorArgs}</air.test.jvm.additional-arguments>
+        <!-- Nessie version (matching to Iceberg release) must be bumped along with Iceberg version bump to avoid compatibility issues -->
+        <dep.nessie.version>0.51.1</dep.nessie.version>
     </properties>
 
     <dependencies>
@@ -229,6 +231,12 @@
 
         <dependency>
             <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-nessie</artifactId>
+            <version>${dep.iceberg.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-orc</artifactId>
         </dependency>
 
@@ -240,6 +248,18 @@
         <dependency>
             <groupId>org.jdbi</groupId>
             <artifactId>jdbi3-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectnessie.nessie</groupId>
+            <artifactId>nessie-client</artifactId>
+            <version>${dep.nessie.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectnessie.nessie</groupId>
+            <artifactId>nessie-model</artifactId>
+            <version>${dep.nessie.version}</version>
         </dependency>
 
         <dependency>
@@ -551,7 +571,6 @@
                 <groupId>org.antlr</groupId>
                 <artifactId>antlr4-maven-plugin</artifactId>
             </plugin>
-
             <plugin>
                 <groupId>org.basepom.maven</groupId>
                 <artifactId>duplicate-finder-maven-plugin</artifactId>
