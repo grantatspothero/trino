@@ -58,6 +58,7 @@ import io.trino.plugin.deltalake.transactionlog.writer.TransactionConflictExcept
 import io.trino.plugin.deltalake.transactionlog.writer.TransactionLogWriter;
 import io.trino.plugin.deltalake.transactionlog.writer.TransactionLogWriterFactory;
 import io.trino.plugin.hive.HiveType;
+import io.trino.plugin.hive.LocationAccessControl;
 import io.trino.plugin.hive.SchemaAlreadyExistsException;
 import io.trino.plugin.hive.TableAlreadyExistsException;
 import io.trino.plugin.hive.TrinoViewHiveMetastore;
@@ -300,6 +301,7 @@ public class DeltaLakeMetadata
     private static final String ENABLE_NON_CONCURRENT_WRITES_CONFIGURATION_KEY = "delta.enable-non-concurrent-writes";
     public static final Set<String> UPDATABLE_TABLE_PROPERTIES = ImmutableSet.of(CHANGE_DATA_FEED_ENABLED_PROPERTY);
 
+    private final LocationAccessControl locationAccessControl;
     private final DeltaLakeMetastore metastore;
     private final TrinoFileSystemFactory fileSystemFactory;
     private final HdfsEnvironment hdfsEnvironment;
@@ -323,6 +325,7 @@ public class DeltaLakeMetadata
     private final boolean allowManagedTableRename;
 
     public DeltaLakeMetadata(
+            LocationAccessControl locationAccessControl,
             DeltaLakeMetastore metastore,
             TrinoFileSystemFactory fileSystemFactory,
             HdfsEnvironment hdfsEnvironment,
@@ -343,6 +346,7 @@ public class DeltaLakeMetadata
             boolean useUniqueTableLocation,
             boolean allowManagedTableRename)
     {
+        this.locationAccessControl = requireNonNull(locationAccessControl, "locationAccessControl is null");
         this.metastore = requireNonNull(metastore, "metastore is null");
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.hdfsEnvironment = requireNonNull(hdfsEnvironment, "hdfsEnvironment is null");
@@ -630,6 +634,7 @@ public class DeltaLakeMetadata
     public void createSchema(ConnectorSession session, String schemaName, Map<String, Object> properties, TrinoPrincipal owner)
     {
         Optional<String> location = DeltaLakeSchemaProperties.getLocation(properties).map(locationUri -> {
+            locationAccessControl.checkCanUseLocation(session.getIdentity(), locationUri);
             try {
                 fileSystemFactory.create(session).newInputFile(locationUri).exists();
             }
@@ -712,6 +717,9 @@ public class DeltaLakeMetadata
             location = new Path(schemaLocation, tableNameForLocation).toString();
             checkPathContainsNoFiles(session, new Path(location));
             external = false;
+        }
+        else {
+            locationAccessControl.checkCanUseLocation(session.getIdentity(), location);
         }
         Path targetPath = new Path(location);
         ensurePathExists(session, targetPath);
@@ -858,6 +866,9 @@ public class DeltaLakeMetadata
             }
             location = new Path(schemaLocation, tableNameForLocation).toString();
             external = false;
+        }
+        else {
+            locationAccessControl.checkCanUseLocation(session.getIdentity(), location);
         }
         Path targetPath = new Path(location);
         ensurePathExists(session, targetPath);

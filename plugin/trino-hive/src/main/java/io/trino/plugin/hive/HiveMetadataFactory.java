@@ -46,6 +46,7 @@ import static java.util.Objects.requireNonNull;
 public class HiveMetadataFactory
         implements TransactionalMetadataFactory
 {
+    private final LocationAccessControl locationAccessControl;
     private final CatalogName catalogName;
     private final boolean skipDeletionForAlter;
     private final boolean skipTargetCleanupOnRollback;
@@ -82,6 +83,7 @@ public class HiveMetadataFactory
 
     @Inject
     public HiveMetadataFactory(
+            LocationAccessControl locationAccessControl,
             CatalogName catalogName,
             HiveConfig hiveConfig,
             HiveMetastoreConfig hiveMetastoreConfig,
@@ -105,6 +107,7 @@ public class HiveMetadataFactory
             @AllowHiveTableRename boolean allowTableRename)
     {
         this(
+                locationAccessControl,
                 catalogName,
                 metastoreFactory,
                 fileSystemFactory,
@@ -142,6 +145,7 @@ public class HiveMetadataFactory
     }
 
     public HiveMetadataFactory(
+            LocationAccessControl locationAccessControl,
             CatalogName catalogName,
             HiveMetastoreFactory metastoreFactory,
             TrinoFileSystemFactory fileSystemFactory,
@@ -177,6 +181,7 @@ public class HiveMetadataFactory
             PartitionProjectionService partitionProjectionService,
             boolean allowTableRename)
     {
+        this.locationAccessControl = requireNonNull(locationAccessControl, "locationAccessControl is null");
         this.catalogName = requireNonNull(catalogName, "catalogName is null");
         this.skipDeletionForAlter = skipDeletionForAlter;
         this.skipTargetCleanupOnRollback = skipTargetCleanupOnRollback;
@@ -242,6 +247,7 @@ public class HiveMetadataFactory
                 directoryLister);
 
         return new HiveMetadata(
+                locationAccessControl,
                 catalogName,
                 metastore,
                 autoCommit,

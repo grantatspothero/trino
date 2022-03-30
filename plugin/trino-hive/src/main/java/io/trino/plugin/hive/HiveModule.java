@@ -62,6 +62,8 @@ public class HiveModule
     @Override
     public void configure(Binder binder)
     {
+        binder.install(new LocationAccessControlModule());
+
         configBinder(binder).bindConfig(HiveConfig.class);
         configBinder(binder).bindConfig(HiveMetastoreConfig.class);
 

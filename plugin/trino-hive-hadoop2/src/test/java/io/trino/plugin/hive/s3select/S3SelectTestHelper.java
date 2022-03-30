@@ -75,6 +75,7 @@ import static io.trino.plugin.hive.HiveFileSystemTestUtils.filterTable;
 import static io.trino.plugin.hive.HiveFileSystemTestUtils.getSplitsCount;
 import static io.trino.plugin.hive.HiveTestUtils.getDefaultHivePageSourceFactories;
 import static io.trino.plugin.hive.HiveTestUtils.getDefaultHiveRecordCursorProviders;
+import static io.trino.plugin.hive.LocationAccessControl.ALLOW_ALL;
 import static io.trino.plugin.hive.TestingThriftHiveMetastoreBuilder.testingThriftHiveMetastoreBuilder;
 import static io.trino.spi.connector.MetadataProvider.NOOP_METADATA_PROVIDER;
 import static io.trino.spi.type.BigintType.BIGINT;
@@ -140,6 +141,7 @@ public class S3SelectTestHelper
                 new Path(format("s3a://%s/%s/", writableBucket, testDirectory)),
                 hdfsEnvironment);
         metadataFactory = new HiveMetadataFactory(
+                ALLOW_ALL,
                 new CatalogName("hive"),
                 this.hiveConfig,
                 new HiveMetastoreConfig(),

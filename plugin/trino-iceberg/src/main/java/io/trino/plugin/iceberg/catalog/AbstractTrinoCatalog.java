@@ -19,6 +19,7 @@ import dev.failsafe.RetryPolicy;
 import io.trino.filesystem.TrinoFileSystem;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.hive.HiveMetadata;
+import io.trino.plugin.hive.LocationAccessControl;
 import io.trino.plugin.iceberg.ColumnIdentity;
 import io.trino.plugin.iceberg.IcebergMaterializedViewDefinition;
 import io.trino.plugin.iceberg.IcebergUtil;
@@ -205,7 +206,7 @@ public abstract class AbstractTrinoCatalog
                 .collect(toImmutableList());
 
         ConnectorTableMetadata tableMetadata = new ConnectorTableMetadata(storageTable, columns, storageTableProperties, Optional.empty());
-        Transaction transaction = IcebergUtil.newCreateTableTransaction(this, tableMetadata, session);
+        Transaction transaction = IcebergUtil.newCreateTableTransaction(this, tableMetadata, session, LocationAccessControl.ALLOW_ALL);
         AppendFiles appendFiles = transaction.newAppend();
         commit(appendFiles, session);
         transaction.commitTransaction();

@@ -35,6 +35,7 @@ import io.trino.plugin.base.classloader.ClassLoaderSafeSystemTable;
 import io.trino.plugin.hive.HiveApplyProjectionUtil;
 import io.trino.plugin.hive.HiveApplyProjectionUtil.ProjectedColumnRepresentation;
 import io.trino.plugin.hive.HiveWrittenPartitions;
+import io.trino.plugin.hive.LocationAccessControl;
 import io.trino.plugin.iceberg.aggregation.DataSketchStateSerializer;
 import io.trino.plugin.iceberg.aggregation.IcebergThetaSketchForStats;
 import io.trino.plugin.iceberg.catalog.TrinoCatalog;
@@ -196,6 +197,7 @@ import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_INVALID_METADATA;
 import static io.trino.plugin.iceberg.IcebergMetadataColumn.FILE_MODIFIED_TIME;
 import static io.trino.plugin.iceberg.IcebergMetadataColumn.FILE_PATH;
 import static io.trino.plugin.iceberg.IcebergMetadataColumn.isMetadataColumnId;
+import static io.trino.plugin.iceberg.IcebergSchemaProperties.getSchemaLocation;
 import static io.trino.plugin.iceberg.IcebergSessionProperties.getExpireSnapshotMinRetention;
 import static io.trino.plugin.iceberg.IcebergSessionProperties.getRemoveOrphanFilesMinRetention;
 import static io.trino.plugin.iceberg.IcebergSessionProperties.isExtendedStatisticsEnabled;
@@ -280,6 +282,7 @@ public class IcebergMetadata
 
     private static final Integer DELETE_BATCH_SIZE = 1000;
 
+    private final LocationAccessControl locationAccessControl;
     private final TypeManager typeManager;
     private final JsonCodec<CommitTaskData> commitTaskCodec;
     private final TrinoCatalog catalog;
@@ -291,12 +294,14 @@ public class IcebergMetadata
     private Transaction transaction;
 
     public IcebergMetadata(
+            LocationAccessControl locationAccessControl,
             TypeManager typeManager,
             JsonCodec<CommitTaskData> commitTaskCodec,
             TrinoCatalog catalog,
             TrinoFileSystemFactory fileSystemFactory,
             TableStatisticsWriter tableStatisticsWriter)
     {
+        this.locationAccessControl = requireNonNull(locationAccessControl, "locationAccessControl is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.commitTaskCodec = requireNonNull(commitTaskCodec, "commitTaskCodec is null");
         this.catalog = requireNonNull(catalog, "catalog is null");
@@ -643,6 +648,7 @@ public class IcebergMetadata
     @Override
     public void createSchema(ConnectorSession session, String schemaName, Map<String, Object> properties, TrinoPrincipal owner)
     {
+        getSchemaLocation(properties).ifPresent(location -> locationAccessControl.checkCanUseLocation(session.getIdentity(), location));
         catalog.createNamespace(session, schemaName, properties, owner);
     }
 
@@ -705,7 +711,7 @@ public class IcebergMetadata
         if (!schemaExists(session, schemaName)) {
             throw new SchemaNotFoundException(schemaName);
         }
-        transaction = newCreateTableTransaction(catalog, tableMetadata, session);
+        transaction = newCreateTableTransaction(catalog, tableMetadata, session, locationAccessControl);
         String location = transaction.table().location();
         TrinoFileSystem fileSystem = fileSystemFactory.create(session);
         try {

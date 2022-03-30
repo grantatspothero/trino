@@ -21,6 +21,7 @@ import io.trino.plugin.deltalake.statistics.CachingExtendedStatisticsAccess;
 import io.trino.plugin.deltalake.transactionlog.TransactionLogAccess;
 import io.trino.plugin.deltalake.transactionlog.checkpoint.CheckpointWriterManager;
 import io.trino.plugin.deltalake.transactionlog.writer.TransactionLogWriterFactory;
+import io.trino.plugin.hive.LocationAccessControl;
 import io.trino.plugin.hive.NodeVersion;
 import io.trino.plugin.hive.TrinoViewHiveMetastore;
 import io.trino.plugin.hive.metastore.HiveMetastoreFactory;
@@ -39,6 +40,7 @@ import static java.util.Objects.requireNonNull;
 
 public class DeltaLakeMetadataFactory
 {
+    private final LocationAccessControl locationAccessControl;
     private final HiveMetastoreFactory hiveMetastoreFactory;
     private final TrinoFileSystemFactory fileSystemFactory;
     private final HdfsEnvironment hdfsEnvironment;
@@ -64,6 +66,7 @@ public class DeltaLakeMetadataFactory
 
     @Inject
     public DeltaLakeMetadataFactory(
+            LocationAccessControl locationAccessControl,
             HiveMetastoreFactory hiveMetastoreFactory,
             TrinoFileSystemFactory fileSystemFactory,
             HdfsEnvironment hdfsEnvironment,
@@ -81,6 +84,7 @@ public class DeltaLakeMetadataFactory
             @AllowDeltaLakeManagedTableRename boolean allowManagedTableRename,
             NodeVersion nodeVersion)
     {
+        this.locationAccessControl = requireNonNull(locationAccessControl, "locationAccessControl is null");
         this.hiveMetastoreFactory = requireNonNull(hiveMetastoreFactory, "hiveMetastore is null");
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.hdfsEnvironment = requireNonNull(hdfsEnvironment, "hdfsEnvironment is null");
@@ -123,6 +127,7 @@ public class DeltaLakeMetadataFactory
                 trinoVersion,
                 "Trino Delta Lake connector");
         return new DeltaLakeMetadata(
+                locationAccessControl,
                 deltaLakeMetastore,
                 fileSystemFactory,
                 hdfsEnvironment,

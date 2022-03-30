@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import io.trino.hdfs.HdfsContext;
 import io.trino.hdfs.HdfsEnvironment;
 import io.trino.plugin.hive.HiveConfig;
+import io.trino.plugin.hive.LocationAccessControl;
 import io.trino.plugin.hive.PartitionStatistics;
 import io.trino.plugin.hive.TransactionalMetadataFactory;
 import io.trino.plugin.hive.metastore.Partition;
@@ -71,13 +72,15 @@ public class RegisterPartitionProcedure
     private final boolean allowRegisterPartition;
     private final TransactionalMetadataFactory hiveMetadataFactory;
     private final HdfsEnvironment hdfsEnvironment;
+    private final LocationAccessControl locationAccessControl;
 
     @Inject
-    public RegisterPartitionProcedure(HiveConfig hiveConfig, TransactionalMetadataFactory hiveMetadataFactory, HdfsEnvironment hdfsEnvironment)
+    public RegisterPartitionProcedure(HiveConfig hiveConfig, TransactionalMetadataFactory hiveMetadataFactory, HdfsEnvironment hdfsEnvironment, LocationAccessControl locationAccessControl)
     {
         this.allowRegisterPartition = hiveConfig.isAllowRegisterPartition();
         this.hiveMetadataFactory = requireNonNull(hiveMetadataFactory, "hiveMetadataFactory is null");
         this.hdfsEnvironment = requireNonNull(hdfsEnvironment, "hdfsEnvironment is null");
+        this.locationAccessControl = requireNonNull(locationAccessControl, "locationAccessControl is null");
     }
 
     @Override
@@ -138,6 +141,7 @@ public class RegisterPartitionProcedure
             partitionLocation = new Path(table.getStorage().getLocation(), makePartName(partitionColumns, partitionValues));
         }
         else {
+            locationAccessControl.checkCanUseLocation(session.getIdentity(), location);
             partitionLocation = new Path(location);
         }
 

@@ -196,6 +196,7 @@ public abstract class AbstractTestHiveFileSystem
         locationService = new HiveLocationService(hdfsEnvironment);
         JsonCodec<PartitionUpdate> partitionUpdateCodec = JsonCodec.jsonCodec(PartitionUpdate.class);
         metadataFactory = new HiveMetadataFactory(
+                LocationAccessControl.ALLOW_ALL,
                 new CatalogName("hive"),
                 config,
                 new HiveMetastoreConfig(),
