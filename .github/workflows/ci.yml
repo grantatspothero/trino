@@ -68,7 +68,7 @@ jobs:
           fetch-depth: 0 # checkout tags so 'git describe' works
       - uses: actions/setup-java@v1
         with:
-          java-version: 17
+          java-version: 19
       - name: Login to the Docker Registry
         uses: docker/login-action@v1
         with:
@@ -124,7 +124,7 @@ jobs:
       fail-fast: false
       matrix:
         java-version:
-          - 17
+          - 19
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v3
@@ -566,7 +566,7 @@ jobs:
           include:
             - { modules: [ client/trino-jdbc, plugin/trino-base-jdbc, plugin/trino-thrift, plugin/trino-memory ] }
             - { modules: core/trino-main }
-            - { modules: core/trino-main, jdk: 19 }
+            # - { modules: core/trino-main, jdk: 19 } # we always run with 19
             - { modules: plugin/trino-bigquery }
             - { modules: plugin/trino-bigquery, profile: cloud-tests-arrow }
             - { modules: plugin/trino-delta-lake }
@@ -632,7 +632,7 @@ jobs:
                 format('refs/pull/{0}/head', github.event.client_payload.pull_request.number) || '' }}
       - uses: ./.github/actions/setup
         with:
-          java-version: ${{ matrix.jdk != '' && matrix.jdk || '17' }}
+          java-version: ${{ matrix.jdk != '' && matrix.jdk || '19' }}
       - name: Cleanup node
         # This is required as a virtual environment update 20210219.1 left too little space for MemSQL to work
         if: matrix.modules == 'plugin/trino-singlestore'
