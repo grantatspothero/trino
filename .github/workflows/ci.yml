@@ -567,15 +567,11 @@ jobs:
             - { modules: [ client/trino-jdbc, plugin/trino-base-jdbc, plugin/trino-thrift, plugin/trino-memory ] }
             - { modules: core/trino-main }
             - { modules: core/trino-main, jdk: 19 }
-            - { modules: plugin/trino-accumulo }
             - { modules: plugin/trino-bigquery }
             - { modules: plugin/trino-bigquery, profile: cloud-tests-arrow }
-            - { modules: plugin/trino-cassandra }
-            - { modules: plugin/trino-clickhouse }
             - { modules: plugin/trino-delta-lake }
             - { modules: plugin/trino-delta-lake, profile: cloud-tests }
             - { modules: plugin/trino-delta-lake, profile: gcs-tests }
-            - { modules: plugin/trino-druid }
             - { modules: plugin/trino-elasticsearch }
             - { modules: plugin/trino-hive }
             - { modules: plugin/trino-hive, profile: test-parquet }
@@ -583,19 +579,9 @@ jobs:
             - { modules: plugin/trino-iceberg }
             - { modules: plugin/trino-iceberg, profile: additional-catalog-tests }
             - { modules: plugin/trino-iceberg, profile: cloud-tests }
-            - { modules: plugin/trino-ignite }
-            - { modules: plugin/trino-kafka }
-            - { modules: plugin/trino-kudu }
-            - { modules: plugin/trino-mariadb }
             - { modules: plugin/trino-mongodb }
             - { modules: plugin/trino-mysql }
-            - { modules: plugin/trino-oracle }
-            - { modules: plugin/trino-phoenix5 }
-            - { modules: plugin/trino-pinot }
             - { modules: plugin/trino-postgresql }
-            - { modules: plugin/trino-raptor-legacy }
-            - { modules: plugin/trino-redis }
-            - { modules: plugin/trino-singlestore }
             - { modules: plugin/trino-sqlserver }
             - { modules: testing/trino-faulttolerant-tests, profile: default }
             - { modules: plugin/trino-delta-lake, profile: fte-tests }
@@ -926,9 +912,6 @@ jobs:
             #   value of the property, and the exclusion will apply normally.
             - "false"
           include:
-            # this suite is not meant to be run with different configs
-            - config: default
-              suite: suite-6-non-generic
             # this suite is not meant to be run with different configs
             - config: default
               suite: suite-7-non-generic
