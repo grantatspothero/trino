@@ -28,6 +28,7 @@ import io.trino.server.ui.WebUiAuthenticationFilter;
 import javax.inject.Singleton;
 
 import static com.google.common.reflect.Reflection.newProxy;
+import static io.airlift.jaxrs.JaxrsBinder.jaxrsBinder;
 
 public class WorkerModule
         implements Module
@@ -50,6 +51,8 @@ public class WorkerModule
         }));
 
         binder.bind(WebUiAuthenticationFilter.class).to(NoWebUiAuthenticationFilter.class).in(Scopes.SINGLETON);
+
+        jaxrsBinder(binder).bind(GalaxyServerInfoResource.class);
     }
 
     @Provides

@@ -42,12 +42,15 @@ public class GalaxyOperatorAuthenticationFilter
 {
     private static final Logger log = Logger.get(GalaxyOperatorAuthenticationFilter.class);
     private static final String OPERATOR_AUTHENTICATION_HEADER = "X-Operator-Authentication";
+    private static final String OPERATOR_SHARED_SECRET_HEADER = "X-Operator-Shared-Secret";
 
     private final JwtParser jwtParser;
+    private final String operatorSharedSecret;
 
     @Inject
     public GalaxyOperatorAuthenticationFilter(GalaxyConfig galaxyConfig, GalaxyOperatorAuthenticationConfig operatorAuthenticationConfig)
     {
+        operatorSharedSecret = operatorAuthenticationConfig.getOperatorSharedSecret();
         jwtParser = newJwtParserBuilder()
                 .setSigningKey(decodeHmacSha256Key(operatorAuthenticationConfig.getOperatorSharedSecret()))
                 .requireIssuer(operatorAuthenticationConfig.getOperatorTokenIssuer())
@@ -74,6 +77,14 @@ public class GalaxyOperatorAuthenticationFilter
                 throw new ForbiddenException("Invalid Authentication");
             }
             validateOperatorAuthentication(authHeader);
+        }
+
+        if (requestContext.getUriInfo().getPath().startsWith("v1/galaxy/info")) {
+            String envSecret = requestContext.getHeaderString(OPERATOR_SHARED_SECRET_HEADER);
+            if (!operatorSharedSecret.equals(envSecret)) {
+                log.error("Missing or incorrect shared secret header");
+                throw new ForbiddenException("Invalid Authentication");
+            }
         }
     }
 
