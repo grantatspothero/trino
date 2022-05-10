@@ -41,6 +41,7 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.OptionalInt;
 import java.util.UUID;
@@ -48,7 +49,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Verify.verify;
-import static com.google.common.collect.MoreCollectors.onlyElement;
 import static io.trino.plugin.objectstore.MinioStorage.ACCESS_KEY;
 import static io.trino.plugin.objectstore.MinioStorage.SECRET_KEY;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
@@ -64,6 +64,7 @@ import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_RENAME_COLUMN;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_RENAME_TABLE;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_SET_COLUMN_TYPE;
 import static io.trino.testing.TestingNames.randomNameSuffix;
+import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -646,7 +647,13 @@ public abstract class BaseObjectStoreConnectorTest
                 String metadataFileName = minio.listObjects(key).stream()
                         .filter(path -> path.endsWith(".json"))
                         .map(path -> Path.of(path).getFileName().toString())
-                        .collect(onlyElement());
+                        .max(Comparator.comparing((String fileName) -> {
+                            // e.g. "00001-dd701085-154b-4ca3-af16-5a4359ffbdf5.metadata.json"
+                            Matcher matcher = Pattern.compile("(\\d{5})(-[0-9a-f]+){5}\\.metadata\\.json").matcher(fileName);
+                            verify(matcher.matches(), "no match for [%s] in [%s]", matcher.pattern().pattern(), fileName);
+                            return parseInt(matcher.group(1));
+                        }))
+                        .orElseThrow();
                 assertUpdate("CALL system.register_table (CURRENT_SCHEMA, '" + tableName + "', '" + tableLocation + "', '" + metadataFileName + "')");
                 assertQuery("SELECT * FROM " + tableName, "VALUES 1");
             }

@@ -19,6 +19,7 @@ import io.minio.MinioClient;
 import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.iceberg.BaseIcebergMaterializedViewTest;
+import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.server.security.galaxy.GalaxyTestHelper;
 import io.trino.sql.tree.ExplainType;
@@ -73,6 +74,7 @@ public class TestObjectStoreIcebergConnectorMaterializedView
         Map<String, String> properties = createObjectStoreProperties(ICEBERG, locationSecurityServer.getClientConfig(), metastore.getMetastoreConfig(minio.getS3Url()), minio.getHiveS3Config());
         DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder(TEST_CATALOG, storageSchemaName)
                 .setAccountClient(galaxyTestHelper.getAccountClient())
+                .addPlugin(new IcebergPlugin())
                 .addPlugin(new ObjectStorePlugin())
                 .addCatalog(TEST_CATALOG, "galaxy_objectstore", properties)
                 .addPlugin(new TpchPlugin())

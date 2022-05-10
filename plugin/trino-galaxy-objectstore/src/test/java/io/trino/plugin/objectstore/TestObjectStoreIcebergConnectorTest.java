@@ -225,6 +225,12 @@ public class TestObjectStoreIcebergConnectorTest
                 .hasMessage("Table property 'checkpoint_interval' not supported for Iceberg tables");
     }
 
+    @Override
+    protected Double basicTableStatisticsExpectedNdv(int actualNdv)
+    {
+        return (double) actualNdv;
+    }
+
     @Test
     public void testCallRollbackToSnapshot()
     {
