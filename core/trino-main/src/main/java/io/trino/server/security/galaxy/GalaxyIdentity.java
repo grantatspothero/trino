@@ -47,7 +47,24 @@ public final class GalaxyIdentity
 
     private GalaxyIdentity() {}
 
-    public static Identity createIdentity(String username, AccountId accountId, UserId userId, RoleId roleId, String token)
+    public enum GalaxyIdentityType
+    {
+        DEFAULT,
+        INDEXING,
+    }
+
+    public static GalaxyIdentityType toGalaxyIdentityType(String value)
+    {
+        return "galaxy_indexer".equals(value) ? GalaxyIdentityType.INDEXING : GalaxyIdentityType.DEFAULT;
+    }
+
+    public static GalaxyIdentityType getGalaxyIdentityType(Identity identity)
+    {
+        String identityType = identity.getExtraCredentials().get("identityType");
+        return GalaxyIdentityType.INDEXING.name().equals(identityType) ? GalaxyIdentityType.INDEXING : GalaxyIdentityType.DEFAULT;
+    }
+
+    public static Identity createIdentity(String username, AccountId accountId, UserId userId, RoleId roleId, String token, GalaxyIdentityType identityType)
     {
         return Identity.forUser(username)
                 .withPrincipal(createPrincipal(accountId, userId, roleId))
@@ -55,11 +72,12 @@ public final class GalaxyIdentity
                         "accountId", accountId.toString(),
                         "userId", userId.toString(),
                         "roleId", roleId.toString(),
+                        "identityType", identityType.name(),
                         GALAXY_TOKEN_CREDENTIAL, token))
                 .build();
     }
 
-    public static Identity createIdentity(String username, AccountId accountId, UserId userId, RoleId roleId, Set<String> enabledRoles, String token)
+    public static Identity createIdentity(String username, AccountId accountId, UserId userId, RoleId roleId, Set<String> enabledRoles, String token, GalaxyIdentityType identityType)
     {
         return Identity.forUser(username)
                 .withPrincipal(createPrincipal(accountId, userId, roleId))
@@ -67,6 +85,7 @@ public final class GalaxyIdentity
                         "accountId", accountId.toString(),
                         "userId", userId.toString(),
                         "roleId", roleId.toString(),
+                        "identityType", identityType.name(),
                         GALAXY_TOKEN_CREDENTIAL, token))
                 .withEnabledRoles(enabledRoles)
                 .build();

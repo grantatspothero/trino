@@ -26,6 +26,7 @@ import io.starburst.stargate.id.RoleName;
 import io.trino.Session;
 import io.trino.plugin.memory.MemoryPlugin;
 import io.trino.plugin.tpch.TpchPlugin;
+import io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType;
 import io.trino.server.testing.TestingTrinoServer;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.security.Identity;
@@ -900,7 +901,8 @@ public class TestGalaxyQueries
                 accountClient.getAccountId(),
                 accountClient.getAdminUserId(),
                 publicRoleId,
-                accountClient.getAdminTrinoAccessToken());
+                accountClient.getAdminTrinoAccessToken(),
+                GalaxyIdentityType.DEFAULT);
 
         return Session.builder(getSession())
                 .setIdentity(identity)
@@ -932,7 +934,8 @@ public class TestGalaxyQueries
                 accountClient.getAccountId(),
                 user.getUserId(),
                 roleId,
-                accountClient.getAdminTrinoAccessToken());
+                accountClient.getAdminTrinoAccessToken(),
+                GalaxyIdentityType.DEFAULT);
 
         return Session.builder(getSession())
                 .setIdentity(identity)

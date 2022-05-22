@@ -11,31 +11,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.connector;
+package io.trino.server.metadataonly;
 
 import io.airlift.configuration.Config;
+import io.starburst.stargate.id.TrinoPlaneId;
 
 import javax.validation.constraints.NotNull;
 
-public class CatalogManagerConfig
+public class MetadataOnlyConfig
 {
-    public enum CatalogMangerKind
-    {
-        STATIC, DYNAMIC, METADATA_ONLY
-    }
-
-    private CatalogMangerKind catalogMangerKind = CatalogMangerKind.STATIC;
+    private TrinoPlaneId trinoPlaneId;
+    private boolean useKmsCrypto;
 
     @NotNull
-    public CatalogMangerKind getCatalogMangerKind()
+    public TrinoPlaneId getTrinoPlaneId()
     {
-        return catalogMangerKind;
+        return trinoPlaneId;
     }
 
-    @Config("catalog.management")
-    public CatalogManagerConfig setCatalogMangerKind(CatalogMangerKind catalogMangerKind)
+    @Config("trino.plane-id")
+    public MetadataOnlyConfig setTrinoPlaneId(TrinoPlaneId trinoPlaneId)
     {
-        this.catalogMangerKind = catalogMangerKind;
+        this.trinoPlaneId = trinoPlaneId;
+        return this;
+    }
+
+    public boolean getUseKmsCrypto()
+    {
+        return useKmsCrypto;
+    }
+
+    @Config("kms-crypto.enabled")
+    public MetadataOnlyConfig setUseKmsCrypto(boolean useKmsCrypto)
+    {
+        this.useKmsCrypto = useKmsCrypto;
         return this;
     }
 }

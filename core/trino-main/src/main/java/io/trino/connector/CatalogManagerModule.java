@@ -16,6 +16,7 @@ package io.trino.connector;
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.trino.server.metadataonly.MetadataOnlyCatalogManagerModule;
 
 public class CatalogManagerModule
         extends AbstractConfigurationAwareModule
@@ -31,6 +32,7 @@ public class CatalogManagerModule
         switch (config.getCatalogMangerKind()) {
             case STATIC -> install(new StaticCatalogManagerModule());
             case DYNAMIC -> install(new DynamicCatalogManagerModule());
+            case METADATA_ONLY -> install(new MetadataOnlyCatalogManagerModule());
         }
 
         install(new CatalogServiceProviderModule());

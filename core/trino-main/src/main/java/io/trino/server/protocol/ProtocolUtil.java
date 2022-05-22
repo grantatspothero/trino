@@ -54,6 +54,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.execution.QueryState.FAILED;
 import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
@@ -70,6 +71,18 @@ public final class ProtocolUtil
     private static final Logger log = Logger.get(ProtocolUtil.class);
 
     private ProtocolUtil() {}
+
+    public static List<Column> createColumns(List<String> columnNames, List<Type> columnTypes, boolean supportsParametricDateTime)
+    {
+        checkArgument(columnNames.size() == columnTypes.size(), "Column names and types size mismatch");
+
+        ImmutableList.Builder<Column> list = ImmutableList.builder();
+        for (int i = 0; i < columnNames.size(); i++) {
+            list.add(createColumn(columnNames.get(i), columnTypes.get(i), supportsParametricDateTime));
+        }
+        List<Column> columns = list.build();
+        return columns;
+    }
 
     public static Column createColumn(String name, Type type, boolean supportsParametricDateTime)
     {

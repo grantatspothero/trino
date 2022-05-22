@@ -225,10 +225,15 @@ public class TestingTrinoServer
             coordinatorPort = "0";
         }
 
+        String catalogManagement = properties.remove("catalog.management");
+        if (catalogManagement == null) {
+            catalogManagement = "dynamic";
+        }
+
         ImmutableMap.Builder<String, String> serverProperties = ImmutableMap.<String, String>builder()
                 .putAll(properties)
                 .put("coordinator", String.valueOf(coordinator))
-                .put("catalog.management", "dynamic")
+                .put("catalog.management", catalogManagement)
                 .put("task.concurrency", "4")
                 .put("task.max-worker-threads", "4")
                 // Use task.writer-count > 1, as this allows to expose writer-concurrency related bugs.
@@ -241,10 +246,12 @@ public class TestingTrinoServer
         if (coordinator) {
             // TODO: enable failure detector
             serverProperties.put("failure-detector.enabled", "false");
-            serverProperties.put("catalog.store", "memory");
-
             // Reduce memory footprint in tests
             serverProperties.put("query.min-expire-age", "5s");
+
+            if (catalogManagement.equals("dynamic")) {
+                serverProperties.put("catalog.store", "memory");
+            }
         }
 
         serverProperties.put("optimizer.ignore-stats-calculator-failures", "false");

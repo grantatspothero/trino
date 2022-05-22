@@ -30,6 +30,7 @@ import io.starburst.stargate.id.UserId;
 import io.starburst.stargate.identity.DispatchSession;
 import io.trino.Session;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
+import io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType;
 import io.trino.spi.QueryId;
 import io.trino.spi.TrinoException;
 import io.trino.spi.security.AccessDeniedException;
@@ -101,7 +102,7 @@ public class GalaxyTestHelper
         catalogIds = new CatalogIds(ImmutableBiMap.copyOf(catalogs), ImmutableSet.of());
         client = accountClient.getTrinoSecurityApi();
         accessController = new GalaxySystemAccessController(client, catalogIds);
-        accessControl = new GalaxyAccessControl(accessController);
+        accessControl = new GalaxyAccessControl(ignore -> accessController);
         metadataApi = new GalaxySecurityMetadata(client, catalogIds);
 
         // Make the roles
@@ -273,7 +274,8 @@ public class GalaxyTestHelper
                 dispatchSession.getUserId(),
                 dispatchSession.getRoleId(),
                 enabledRoles,
-                dispatchSession.getAccessToken());
+                dispatchSession.getAccessToken(),
+                GalaxyIdentityType.DEFAULT);
     }
 
     public Session session(UserId userId, RoleId roleId)

@@ -132,5 +132,10 @@ public interface QueryExecution
         {
             return noMoreInputs;
         }
+
+        public List<ExchangeInput> getInputs()
+        {
+            return ImmutableList.copyOf(inputsQueue);
+        }
     }
 }

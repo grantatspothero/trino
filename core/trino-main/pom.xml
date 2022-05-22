@@ -315,6 +315,16 @@
 
         <dependency>
             <groupId>io.starburst.stargate</groupId>
+            <artifactId>stargate-common</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.starburst.stargate</groupId>
+            <artifactId>stargate-crypto</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.starburst.stargate</groupId>
             <artifactId>stargate-ids</artifactId>
         </dependency>
 
@@ -540,12 +550,6 @@
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-generator-annprocess</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
             <scope>test</scope>
         </dependency>
 

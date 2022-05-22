@@ -30,7 +30,8 @@ import io.starburst.stargate.identity.DispatchSession;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.galaxy.GalaxySecurityModule;
 import io.trino.server.security.InternalPrincipal;
-import io.trino.server.security.galaxy.GalaxyAccessControl;
+import io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType;
+import io.trino.server.security.galaxy.GalaxyTrinoSystemAccessFactory;
 import io.trino.spi.Plugin;
 import io.trino.spi.security.Identity;
 
@@ -71,6 +72,11 @@ public final class GalaxyQueryRunner
 
     private GalaxyQueryRunner() {}
 
+    public static Builder builder()
+    {
+        return new Builder(null, null);
+    }
+
     public static Builder builder(String defaultSessionCatalog, String defaultSessionSchema)
     {
         return new Builder(defaultSessionCatalog, defaultSessionSchema);
@@ -95,6 +101,7 @@ public final class GalaxyQueryRunner
         private Optional<GalaxyCockroachContainer> cockroach = Optional.empty();
         private final ImmutableList.Builder<Plugin> plugins = ImmutableList.builder();
         private final ImmutableList.Builder<CatalogInit> catalogs = ImmutableList.builder();
+        private boolean installSecurityModule = true;
 
         private Builder(String defaultSessionCatalog, String defaultSessionSchema)
         {
@@ -136,6 +143,12 @@ public final class GalaxyQueryRunner
             return self();
         }
 
+        public Builder setInstallSecurityModule(boolean installSecurityModule)
+        {
+            this.installSecurityModule = installSecurityModule;
+            return self();
+        }
+
         @Override
         public DistributedQueryRunner build()
                 throws Exception
@@ -148,24 +161,19 @@ public final class GalaxyQueryRunner
 
             log.info("URI: " + accountUri);
             URI deploymentUri = URI.create("https://test-sample.trino.local.gate0.net:8888");
-            addExtraProperty("galaxy.account-url", accountUri.toString());
 
             Set<String> catalogNames = catalogs.build().stream().map(CatalogInit::catalogName).collect(toImmutableSet());
             Map<String, CatalogId> catalogIds = catalogNames.stream().collect(toImmutableMap(Function.identity(), accountClient::createCatalog));
             String catalogIdStrings = catalogIds.entrySet().stream()
                     .map(entry -> entry.getKey() + "->" + entry.getValue())
                     .collect(joining(","));
-            addExtraProperty("galaxy.catalog-names", catalogIdStrings);
 
             addExtraProperty("http-server.authentication.type", "galaxy");
 
             addExtraProperty("galaxy.account-id", accountId.toString());
-            addExtraProperty("galaxy.cluster-id", accountClient.getSampleClusterId().toString());
             addExtraProperty("galaxy.deployment-id", accountClient.getSampleDeploymentId().toString());
             addExtraProperty("galaxy.authentication.token-issuer", deploymentUri.toString());
             addExtraProperty("galaxy.authentication.public-key", accountClient.getSampleDeploymentPublicKey());
-            addExtraProperty("galaxy.account-url", accountUri.toString());
-
             addExtraProperty("query.info-url-template", deploymentUri + "/ui/query.html?${QUERY_ID}");
             addExtraProperty("legacy.allow-set-view-authorization", "TRUE");
 
@@ -174,20 +182,29 @@ public final class GalaxyQueryRunner
                     accountId,
                     accountClient.getAdminUserId(),
                     accountClient.getAdminRoleId(),
-                    accountClient.getAdminTrinoAccessToken())));
+                    accountClient.getAdminTrinoAccessToken(),
+                    GalaxyIdentityType.DEFAULT)));
 
-            setSystemAccessControl(new GalaxyAccessControl.Factory()
-                    .create(ImmutableMap.<String, String>builder()
-                            .put("galaxy.account-url", accountUri.toString())
-                            .put("galaxy.catalog-names", catalogIdStrings)
-                            .buildOrThrow()));
+            if (installSecurityModule) {
+                addExtraProperty("galaxy.account-url", accountUri.toString());
+                addExtraProperty("galaxy.catalog-names", catalogIdStrings);
+                addExtraProperty("galaxy.cluster-id", accountClient.getSampleClusterId().toString());
+
+                setSystemAccessControl(new GalaxyTrinoSystemAccessFactory()
+                        .create(ImmutableMap.<String, String>builder()
+                                .put("galaxy.account-url", accountUri.toString())
+                                .put("galaxy.catalog-names", catalogIdStrings)
+                                .buildOrThrow()));
+            }
 
             super.setAdditionalModule(new AbstractConfigurationAwareModule()
             {
                 @Override
                 protected void setup(Binder binder)
                 {
-                    install(new GalaxySecurityModule());
+                    if (installSecurityModule) {
+                        install(new GalaxySecurityModule());
+                    }
                     binder.bind(TestingAccountClient.class).toInstance(accountClient);
                     JaxrsBinder.jaxrsBinder(binder).bind(TestingGalaxyIdentityFilter.class);
                 }
@@ -259,7 +276,8 @@ public final class GalaxyQueryRunner
                     dispatchSession.getAccountId(),
                     dispatchSession.getUserId(),
                     dispatchSession.getRoleId(),
-                    dispatchSession.getAccessToken());
+                    dispatchSession.getAccessToken(),
+                    GalaxyIdentityType.DEFAULT);
 
             setAuthenticatedIdentity(request, identity);
         }

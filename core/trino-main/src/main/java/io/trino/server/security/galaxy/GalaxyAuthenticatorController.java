@@ -24,6 +24,7 @@ import io.starburst.stargate.id.AccountId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.UserId;
 import io.trino.server.security.AuthenticationException;
+import io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType;
 import io.trino.spi.security.Identity;
 
 import javax.ws.rs.BadRequestException;
@@ -41,6 +42,7 @@ import java.util.Optional;
 
 import static com.google.common.hash.Hashing.sha256;
 import static io.trino.server.security.galaxy.GalaxyIdentity.createIdentity;
+import static io.trino.server.security.galaxy.GalaxyIdentity.toGalaxyIdentityType;
 import static io.trino.server.security.jwt.JwtUtil.newJwtParserBuilder;
 import static java.time.Instant.now;
 import static java.util.Objects.requireNonNull;
@@ -134,7 +136,9 @@ public class GalaxyAuthenticatorController
                 }
             }
 
-            return createIdentity(username, accountId, userId, roleId, token);
+            GalaxyIdentityType identityType = toGalaxyIdentityType(claims.get("identity_type", String.class));
+
+            return createIdentity(username, accountId, userId, roleId, token, identityType);
         }
         catch (JwtException e) {
             log.error(e, "Exception parsing JWT token: %s", parseClaimsWithoutValidation(token).orElse("not a JWT token"));

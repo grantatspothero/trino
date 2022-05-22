@@ -91,7 +91,7 @@ public class PluginClassLoader
 
     public String getId()
     {
-        return pluginName + catalogHandle.map(name -> ":" + name).orElse("");
+        return pluginName + catalogHandle.map(name -> ":" + name.getCatalogName() + ":" + name.getVersion()).orElse("");
     }
 
     @Override

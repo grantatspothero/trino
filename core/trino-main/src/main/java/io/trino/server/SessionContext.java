@@ -219,4 +219,31 @@ public class SessionContext
     {
         return traceToken;
     }
+
+    public SessionContext withTransactionId(TransactionId transactionId)
+    {
+        return new SessionContext(
+                protocolHeaders,
+                catalog,
+                schema,
+                path,
+                authenticatedIdentity,
+                identity,
+                selectedRole,
+                source,
+                traceToken,
+                userAgent,
+                remoteUserAddress,
+                timeZoneId,
+                language,
+                clientTags,
+                clientCapabilities,
+                resourceEstimates,
+                systemProperties,
+                catalogSessionProperties,
+                preparedStatements,
+                Optional.of(transactionId),
+                clientTransactionSupport,
+                clientInfo);
+    }
 }

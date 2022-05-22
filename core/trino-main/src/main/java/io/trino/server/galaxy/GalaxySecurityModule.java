@@ -17,6 +17,7 @@ import com.google.inject.Binder;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.metadata.SystemSecurityMetadata;
 import io.trino.server.security.galaxy.GalaxySecurityMetadata;
+import io.trino.server.security.galaxy.GalaxySystemAccessModule;
 
 import static com.google.inject.Scopes.SINGLETON;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
@@ -32,5 +33,6 @@ public class GalaxySecurityModule
         newOptionalBinder(binder, SystemSecurityMetadata.class).setBinding().to(GalaxySecurityMetadata.class).in(SINGLETON);
         binder.bind(GalaxySecurityMetadata.class).in(SINGLETON);
         install(new GalaxyAuthorizationClientModule());
+        install(new GalaxySystemAccessModule());
     }
 }

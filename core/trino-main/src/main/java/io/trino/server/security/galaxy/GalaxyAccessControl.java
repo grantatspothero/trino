@@ -14,9 +14,6 @@
 package io.trino.server.security.galaxy;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.inject.Injector;
-import io.airlift.bootstrap.Bootstrap;
-import io.airlift.json.JsonModule;
 import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
 import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
 import io.starburst.stargate.accesscontrol.privilege.GalaxyPrivilegeInfo;
@@ -30,7 +27,6 @@ import io.starburst.stargate.id.FunctionId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.SchemaId;
 import io.starburst.stargate.id.TableId;
-import io.trino.server.galaxy.GalaxyAuthorizationClientModule;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogSchemaName;
 import io.trino.spi.connector.CatalogSchemaRoutineName;
@@ -41,11 +37,8 @@ import io.trino.spi.function.FunctionKind;
 import io.trino.spi.security.AccessDeniedException;
 import io.trino.spi.security.Identity;
 import io.trino.spi.security.SystemAccessControl;
-import io.trino.spi.security.SystemAccessControlFactory;
 import io.trino.spi.security.SystemSecurityContext;
 import io.trino.spi.security.TrinoPrincipal;
-
-import javax.inject.Inject;
 
 import java.security.Principal;
 import java.util.Collection;
@@ -58,7 +51,6 @@ import java.util.function.Predicate;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.google.inject.Scopes.SINGLETON;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_CATALOG;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_SCHEMA;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_TABLE;
@@ -111,41 +103,11 @@ public class GalaxyAccessControl
 {
     public static final String NAME = "galaxy";
 
-    private final GalaxySystemAccessController controller;
+    private final GalaxyAccessControllerSupplier controllerSupplier;
 
-    @Inject
-    public GalaxyAccessControl(GalaxySystemAccessController controller)
+    public GalaxyAccessControl(GalaxyAccessControllerSupplier controllerSupplier)
     {
-        this.controller = requireNonNull(controller, "controller is null");
-    }
-
-    public static class Factory
-            implements SystemAccessControlFactory
-    {
-        @Override
-        public String getName()
-        {
-            return NAME;
-        }
-
-        @Override
-        public SystemAccessControl create(Map<String, String> properties)
-        {
-            Bootstrap app = new Bootstrap(
-                    new JsonModule(),
-                    new GalaxyAuthorizationClientModule(),
-                    binder -> {
-                        binder.bind(GalaxySystemAccessController.class).in(SINGLETON);
-                        binder.bind(GalaxyAccessControl.class).in(SINGLETON);
-                    });
-
-            Injector injector = app
-                    .doNotInitializeLogging()
-                    .setRequiredConfigurationProperties(properties)
-                    .initialize();
-
-            return injector.getInstance(GalaxyAccessControl.class);
-        }
+        this.controllerSupplier = requireNonNull(controllerSupplier, "controllerSupplier is null");
     }
 
     @Override
@@ -217,7 +179,7 @@ public class GalaxyAccessControl
     @Override
     public Set<String> filterCatalogs(SystemSecurityContext context, Set<String> catalogs)
     {
-        Predicate<String> catalogVisibility = controller.getCatalogVisibility(context);
+        Predicate<String> catalogVisibility = controllerSupplier.apply(context).getCatalogVisibility(context);
         return catalogs.stream()
                 .filter(catalog -> isSystemCatalog(catalog) || catalogVisibility.test(catalog))
                 .collect(toImmutableSet());
@@ -226,7 +188,7 @@ public class GalaxyAccessControl
     @Override
     public void checkCanCreateSchema(SystemSecurityContext context, CatalogSchemaName schema, Map<String, Object> properties)
     {
-        checkCatalogIsWritable(schema.getCatalogName(), explanation -> denyCreateSchema(schema.toString(), explanation));
+        checkCatalogIsWritable(controllerSupplier.apply(context), schema.getCatalogName(), explanation -> denyCreateSchema(schema.toString(), explanation));
         checkHasCatalogPrivilege(context, schema.getCatalogName(), CREATE_SCHEMA, explanation -> denyCreateSchema(schema.toString(), explanation));
     }
 
@@ -288,7 +250,7 @@ public class GalaxyAccessControl
     @Override
     public void checkCanCreateTable(SystemSecurityContext context, CatalogSchemaTableName table, Map<String, Object> properties)
     {
-        checkCatalogIsWritable(table.getCatalogName(), explanation -> denyCreateTable(table.toString(), explanation));
+        checkCatalogIsWritable(controllerSupplier.apply(context), table.getCatalogName(), explanation -> denyCreateTable(table.toString(), explanation));
         checkHasSchemaPrivilege(context, table, CREATE_TABLE, explanation -> denyCreateTable(table.toString(), explanation));
     }
 
@@ -359,7 +321,8 @@ public class GalaxyAccessControl
         if (isSystemCatalog(table.getCatalogName())) {
             return;
         }
-        EntityPrivileges privileges = controller.getEntityPrivileges(context, toTableId(table).orElseThrow(() -> new TableNotFoundException(table.getSchemaTableName())));
+        GalaxySystemAccessController controller = controllerSupplier.apply(context);
+        EntityPrivileges privileges = controller.getEntityPrivileges(context, toTableId(controller, table).orElseThrow(() -> new TableNotFoundException(table.getSchemaTableName())));
 
         // Check that the user has wildcard SELECT column privilege
         ContentsVisibility visibility = privileges.getColumnPrivileges().get(SELECT.name());
@@ -375,7 +338,8 @@ public class GalaxyAccessControl
         if (isSystemCatalog(table.getCatalogName()) || isInformationSchema(table.getSchemaTableName().getSchemaName())) {
             return columns;
         }
-        EntityPrivileges privileges = controller.getEntityPrivileges(context, toTableId(table).orElseThrow(() -> new TableNotFoundException(table.getSchemaTableName())));
+        GalaxySystemAccessController controller = controllerSupplier.apply(context);
+        EntityPrivileges privileges = controller.getEntityPrivileges(context, toTableId(controller, table).orElseThrow(() -> new TableNotFoundException(table.getSchemaTableName())));
         ContentsVisibility visibility = privileges.getColumnPrivileges().get(SELECT.name());
         if (visibility == null) {
             visibility = privileges.getColumnPrivileges().get("VISIBLE");
@@ -451,14 +415,14 @@ public class GalaxyAccessControl
     @Override
     public void checkCanUpdateTableColumns(SystemSecurityContext context, CatalogSchemaTableName table, Set<String> columns)
     {
-        checkCatalogIsWritable(table.getCatalogName(), explanation -> denyUpdateTableColumns(table.toString(), columns, explanation));
+        checkCatalogIsWritable(controllerSupplier.apply(context), table.getCatalogName(), explanation -> denyUpdateTableColumns(table.toString(), columns, explanation));
         checkHasPrivilegeOnColumns(context, UPDATE, false, table, columns, explanation -> denyUpdateTableColumns(table.toString(), columns, explanation));
     }
 
     @Override
     public void checkCanCreateView(SystemSecurityContext context, CatalogSchemaTableName view)
     {
-        checkCatalogIsWritable(view.getCatalogName(), explanation -> denyCreateView(view.toString(), explanation));
+        checkCatalogIsWritable(controllerSupplier.apply(context), view.getCatalogName(), explanation -> denyCreateView(view.toString(), explanation));
         checkHasSchemaPrivilege(context, view, CREATE_TABLE, explanation -> denyCreateView(view.toString(), explanation));
     }
 
@@ -467,7 +431,7 @@ public class GalaxyAccessControl
     {
         Consumer<String> denier = explanation -> denyRenameView(view.toString(), newView.toString(), explanation);
         checkCatalogWritableAndViewOwner(context, view, denier);
-        checkCatalogIsWritable(newView.getCatalogName(), denier);
+        checkCatalogIsWritable(controllerSupplier.apply(context), newView.getCatalogName(), denier);
         checkHasSchemaPrivilege(context, newView, CREATE_TABLE, denier);
     }
 
@@ -493,7 +457,7 @@ public class GalaxyAccessControl
     @Override
     public void checkCanCreateMaterializedView(SystemSecurityContext context, CatalogSchemaTableName materializedView, Map<String, Object> properties)
     {
-        checkCatalogIsWritable(materializedView.getCatalogName(), explanation -> denyCreateMaterializedView(materializedView.toString(), explanation));
+        checkCatalogIsWritable(controllerSupplier.apply(context), materializedView.getCatalogName(), explanation -> denyCreateMaterializedView(materializedView.toString(), explanation));
         checkHasSchemaPrivilege(context, materializedView, CREATE_TABLE, explanation -> denyCreateMaterializedView(materializedView.toString(), explanation));
     }
 
@@ -519,7 +483,7 @@ public class GalaxyAccessControl
     public void checkCanRenameMaterializedView(SystemSecurityContext context, CatalogSchemaTableName materializedView, CatalogSchemaTableName newView)
     {
         checkCatalogWritableAndMaterializedViewOwner(context, materializedView, explanation -> denyRenameMaterializedView(materializedView.toString(), newView.toString(), explanation));
-        checkCatalogIsWritable(newView.getCatalogName(), explanation -> denyRenameMaterializedView(materializedView.toString(), newView.toString(), explanation));
+        checkCatalogIsWritable(controllerSupplier.apply(context), newView.getCatalogName(), explanation -> denyRenameMaterializedView(materializedView.toString(), newView.toString(), explanation));
     }
 
     @Override
@@ -639,6 +603,7 @@ public class GalaxyAccessControl
         if (functionKind != FunctionKind.TABLE) {
             denyExecuteFunction(function.toString(), "Function is of type %s and only TABLE functions are supported".formatted(functionKind));
         }
+        GalaxySystemAccessController controller = controllerSupplier.apply(context);
         Optional<CatalogId> catalogId = controller.getCatalogId(function.getCatalogName());
         if (catalogId.isEmpty()) {
             denyExecuteFunction(function.toString(), "Could not find catalog: %s".formatted(function.getCatalogName()));
@@ -661,35 +626,35 @@ public class GalaxyAccessControl
 
     private void checkRoleOwnsQuery(SystemSecurityContext context, Identity queryOwner, Consumer<String> denier)
     {
-        if (!controller.listEnabledRoles(context).containsValue(getRoleId(queryOwner))) {
+        if (!controllerSupplier.apply(context).listEnabledRoles(context).containsValue(getRoleId(queryOwner))) {
             denier.accept(roleIsNotQueryOwner(context, queryOwner));
         }
     }
 
-    private void checkCatalogIsWritable(String catalogName, Consumer<String> denier)
+    private void checkCatalogIsWritable(GalaxySystemAccessController controller, String catalogName, Consumer<String> denier)
     {
-        if (isReadOnlyCatalog(catalogName)) {
+        if (isReadOnlyCatalog(controller, catalogName)) {
             denier.accept(catalogIsReadOnly(catalogName));
         }
     }
 
     private void checkHasCatalogPrivilege(SystemSecurityContext context, String catalogName, Privilege privilege, Consumer<String> denier)
     {
-        if (!hasEntityPrivilege(context, controller.getCatalogId(catalogName), privilege, false)) {
+        if (!hasEntityPrivilege(context, controllerSupplier.apply(context).getCatalogId(catalogName), privilege, false)) {
             denier.accept(roleLacksPrivilege(context, privilege, "catalog", catalogName));
         }
     }
 
     private void checkHasSchemaPrivilege(SystemSecurityContext context, CatalogSchemaTableName table, Privilege privilege, Consumer<String> denier)
     {
-        if (!hasEntityPrivilege(context, toSchemaId(table), privilege, false)) {
+        if (!hasEntityPrivilege(context, toSchemaId(controllerSupplier.apply(context), table), privilege, false)) {
             denier.accept(roleLacksPrivilege(context, privilege, "schema", new CatalogSchemaName(table.getCatalogName(), table.getSchemaTableName().getSchemaName()).toString()));
         }
     }
 
     private void checkHasTablePrivilege(SystemSecurityContext context, CatalogSchemaTableName table, Privilege privilege, Consumer<String> denier)
     {
-        Optional<TableId> tableId = toTableId(table);
+        Optional<TableId> tableId = toTableId(controllerSupplier.apply(context), table);
         if (!hasEntityPrivilege(context, tableId, privilege, false)) {
             denier.accept(roleLacksPrivilege(context, privilege, "table", table.toString()));
         }
@@ -697,7 +662,8 @@ public class GalaxyAccessControl
 
     private void checkHasPrivilegeOnColumns(SystemSecurityContext context, Privilege privilege, boolean requiresGrantOption, CatalogSchemaTableName table, Set<String> columns, Consumer<String> denier)
     {
-        Optional<TableId> tableId = toTableId(table);
+        GalaxySystemAccessController controller = controllerSupplier.apply(context);
+        Optional<TableId> tableId = toTableId(controller, table);
         if (tableId.isEmpty()) {
             runPrivilegeDenier(context, privilege, columns, denier);
         }
@@ -729,7 +695,7 @@ public class GalaxyAccessControl
 
     private void checkHasAccountPrivilege(SystemSecurityContext context, Privilege privilege, Consumer<String> denier)
     {
-        AccountId accountId = controller.getAccountId(context);
+        AccountId accountId = controllerSupplier.apply(context).getAccountId(context);
         if (!hasEntityPrivilege(context, Optional.of(accountId), privilege, false)) {
             denier.accept(roleLacksPrivilege(context, privilege, "account", accountId.toString()));
         }
@@ -737,25 +703,25 @@ public class GalaxyAccessControl
 
     private void checkCatalogWritableAndSchemaOwner(SystemSecurityContext context, CatalogSchemaName schema, Consumer<String> denier)
     {
-        checkCatalogIsWritable(schema.getCatalogName(), denier);
+        checkCatalogIsWritable(controllerSupplier.apply(context), schema.getCatalogName(), denier);
         checkIsSchemaOwner(context, schema, denier);
     }
 
     private void checkCatalogWritableAndTableOwner(SystemSecurityContext context, CatalogSchemaTableName table, Consumer<String> denier)
     {
-        checkCatalogIsWritable(table.getCatalogName(), denier);
+        checkCatalogIsWritable(controllerSupplier.apply(context), table.getCatalogName(), denier);
         checkIsTableOwner(context, table, denier);
     }
 
     public void checkCatalogWritableAndViewOwner(SystemSecurityContext context, CatalogSchemaTableName view, Consumer<String> denier)
     {
-        checkCatalogIsWritable(view.getCatalogName(), denier);
+        checkCatalogIsWritable(controllerSupplier.apply(context), view.getCatalogName(), denier);
         checkIsViewOwner(context, view, denier);
     }
 
     public void checkCatalogWritableAndMaterializedViewOwner(SystemSecurityContext context, CatalogSchemaTableName view, Consumer<String> denier)
     {
-        checkCatalogIsWritable(view.getCatalogName(), denier);
+        checkCatalogIsWritable(controllerSupplier.apply(context), view.getCatalogName(), denier);
         if (!isTableOwner(context, view)) {
             denier.accept(format("Role %s does not own the materialized view", currentRoleName(context)));
         }
@@ -763,7 +729,7 @@ public class GalaxyAccessControl
 
     private void checkCatalogWritableAndHasTablePrivilege(SystemSecurityContext context, CatalogSchemaTableName table, Privilege privilege, Consumer<String> denier)
     {
-        checkCatalogIsWritable(table.getCatalogName(), denier);
+        checkCatalogIsWritable(controllerSupplier.apply(context), table.getCatalogName(), denier);
         checkHasTablePrivilege(context, table, privilege, denier);
     }
 
@@ -797,7 +763,7 @@ public class GalaxyAccessControl
     {
         return format(
                 "Role %s does not own the query%s",
-                controller.getRoleDisplayName(context, getRoleId(queryOwner)),
+                controllerSupplier.apply(context).getRoleDisplayName(context, getRoleId(queryOwner)),
                 context.getQueryId().map(queryId -> " " + queryId).orElse(""));
     }
 
@@ -820,7 +786,7 @@ public class GalaxyAccessControl
         }
 
         EntityId entityId = entity.get();
-        EntityPrivileges entityPrivileges = controller.getEntityPrivileges(context, entityId);
+        EntityPrivileges entityPrivileges = controllerSupplier.apply(context).getEntityPrivileges(context, entityId);
         boolean privilegeMatch = entityPrivileges.getPrivileges().stream()
                 .filter(privilegeInfo -> privilegeInfo.getPrivilege() == privilege)
                 .anyMatch(privilegeInfo -> !requiresGrantOption || privilegeInfo.isGrantOption());
@@ -843,16 +809,16 @@ public class GalaxyAccessControl
 
     private Predicate<String> getSchemaVisibility(SystemSecurityContext context, String catalogName)
     {
-        Optional<CatalogId> catalogId = controller.getCatalogId(catalogName);
+        Optional<CatalogId> catalogId = controllerSupplier.apply(context).getCatalogId(catalogName);
         if (catalogId.isEmpty()) {
             return ignored -> false;
         }
-        return controller.getSchemaVisibility(context, catalogId.get());
+        return controllerSupplier.apply(context).getSchemaVisibility(context, catalogId.get());
     }
 
     private List<Identity> filterIdentitiesByActiveRoleSet(SystemSecurityContext context, Collection<Identity> identities)
     {
-        Set<RoleId> enabledRoles = ImmutableSet.copyOf(controller.listEnabledRoles(context).values());
+        Set<RoleId> enabledRoles = ImmutableSet.copyOf(controllerSupplier.apply(context).listEnabledRoles(context).values());
         return identities.stream()
                 .filter(identity -> enabledRoles.contains(getRoleId(identity)))
                 .collect(toImmutableList());
@@ -860,12 +826,14 @@ public class GalaxyAccessControl
 
     private boolean isSchemaOwner(SystemSecurityContext context, CatalogSchemaName schema)
     {
-        return isEntityOwner(context, toSchemaId(schema));
+        GalaxySystemAccessController controller = controllerSupplier.apply(context);
+        return isEntityOwner(controller, context, toSchemaId(controller, schema));
     }
 
     private boolean isTableOwner(SystemSecurityContext context, CatalogSchemaTableName tableName)
     {
-        return isEntityOwner(context, toTableId(tableName));
+        GalaxySystemAccessController controller = controllerSupplier.apply(context);
+        return isEntityOwner(controller, context, toTableId(controller, tableName));
     }
 
     private boolean isTableVisible(SystemSecurityContext context, CatalogSchemaTableName tableName)
@@ -876,14 +844,14 @@ public class GalaxyAccessControl
 
     private Predicate<SchemaTableName> getTableVisibility(SystemSecurityContext context, String catalogName, Set<String> schemaNames)
     {
-        Optional<CatalogId> catalogId = controller.getCatalogId(catalogName);
+        Optional<CatalogId> catalogId = controllerSupplier.apply(context).getCatalogId(catalogName);
         if (catalogId.isEmpty()) {
             return ignored -> false;
         }
-        return controller.getTableVisibility(context, catalogId.get(), schemaNames);
+        return controllerSupplier.apply(context).getTableVisibility(context, catalogId.get(), schemaNames);
     }
 
-    private boolean isEntityOwner(SystemSecurityContext context, Optional<? extends EntityId> entity)
+    private boolean isEntityOwner(GalaxySystemAccessController controller, SystemSecurityContext context, Optional<? extends EntityId> entity)
     {
         if (entity.isEmpty()) {
             return false;
@@ -893,32 +861,32 @@ public class GalaxyAccessControl
         return context.getIdentity().getEnabledRoles().contains(owner);
     }
 
-    private Optional<SchemaId> toSchemaId(CatalogSchemaName schema)
+    private Optional<SchemaId> toSchemaId(GalaxySystemAccessController controller, CatalogSchemaName schema)
     {
         return controller.getCatalogId(schema.getCatalogName())
                 .map(catalogId -> new SchemaId(catalogId, schema.getSchemaName()));
     }
 
-    private Optional<SchemaId> toSchemaId(CatalogSchemaTableName table)
+    private Optional<SchemaId> toSchemaId(GalaxySystemAccessController controller, CatalogSchemaTableName table)
     {
         return controller.getCatalogId(table.getCatalogName())
                 .map(catalogId -> new SchemaId(catalogId, table.getSchemaTableName().getSchemaName()));
     }
 
-    private Optional<TableId> toTableId(CatalogSchemaTableName table)
+    private Optional<TableId> toTableId(GalaxySystemAccessController controller, CatalogSchemaTableName table)
     {
         return controller.getCatalogId(table.getCatalogName())
                 .map(catalogId -> new TableId(catalogId, table.getSchemaTableName().getSchemaName(), table.getSchemaTableName().getTableName()));
     }
 
-    private boolean isReadOnlyCatalog(String name)
+    private boolean isReadOnlyCatalog(GalaxySystemAccessController controller, String name)
     {
         return isSystemCatalog(name) || isInformationSchema(name) || controller.isReadOnlyCatalog(name);
     }
 
     private String currentRoleName(SystemSecurityContext context)
     {
-        return controller.getRoleDisplayName(context, getRoleId(context.getIdentity()));
+        return controllerSupplier.apply(context).getRoleDisplayName(context, getRoleId(context.getIdentity()));
     }
 
     private static boolean isSystemCatalog(String name)

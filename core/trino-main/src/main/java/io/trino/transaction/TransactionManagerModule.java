@@ -16,6 +16,8 @@ package io.trino.transaction;
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.trino.connector.CatalogManagerConfig;
+import io.trino.connector.CatalogManagerConfig.CatalogMangerKind;
 import io.trino.server.ServerConfig;
 
 public class TransactionManagerModule
@@ -24,6 +26,10 @@ public class TransactionManagerModule
     @Override
     protected void setup(Binder binder)
     {
+        if (buildConfigObject(CatalogManagerConfig.class).getCatalogMangerKind() == CatalogMangerKind.METADATA_ONLY) {
+            return;
+        }
+
         ServerConfig serverConfig = buildConfigObject(ServerConfig.class);
         if (serverConfig.isCoordinator()) {
             install(new InMemoryTransactionManagerModule());
