@@ -493,6 +493,7 @@ jobs:
             !:trino-elasticsearch,
             !:trino-faulttolerant-tests,
             !:trino-galaxy-objectstore,
+            !:trino-galaxy-synapse,
             !:trino-hive,
             !:trino-hudi,
             !:trino-iceberg,
@@ -578,6 +579,10 @@ jobs:
             # - { modules: core/trino-main, jdk: 19 } # we always run with 19
             - { modules: plugin/trino-bigquery }
             - { modules: plugin/trino-bigquery, profile: cloud-tests-arrow }
+            - { modules: plugin/trino-galaxy-synapse }
+            - { modules: plugin/trino-galaxy-synapse, profile: jdbc-integration-tests }
+            - { modules: plugin/trino-galaxy-synapse, profile: fault-tolerant-tests }
+            - { modules: plugin/trino-galaxy-synapse, profile: type-mapping-tests }
             - { modules: plugin/trino-delta-lake }
             - { modules: plugin/trino-delta-lake, profile: cloud-tests }
             - { modules: plugin/trino-delta-lake, profile: gcs-tests }
@@ -655,6 +660,7 @@ jobs:
       - name: Maven Tests
         if: >-
           matrix.modules != 'plugin/trino-singlestore'
+          && matrix.modules != 'plugin/trino-galaxy-synapse'
           && ! (contains(matrix.modules, 'trino-delta-lake') && contains(matrix.profile, 'cloud-tests'))
           && ! (contains(matrix.modules, 'trino-delta-lake') && contains(matrix.profile, 'gcs-tests'))
           && ! (contains(matrix.modules, 'trino-iceberg') && contains(matrix.profile, 'cloud-tests'))
@@ -696,6 +702,16 @@ jobs:
         if: matrix.modules == 'plugin/trino-singlestore' && env.MEMSQL_LICENSE != ''
         run: |
           $MAVEN test ${MAVEN_TEST} -pl :trino-singlestore -Dmemsql.license=${MEMSQL_LICENSE}
+      - name: Synapse Maven Tests
+        if: matrix.modules == 'plugin/trino-galaxy-synapse'
+        env:
+          SYNAPSE_CONFIG: >-
+            -Dtest.synapse.jdbc.endpoint=${{ secrets.SYNAPSE_ENDPOINT }}
+            -Dtest.synapse.jdbc.user=${{ secrets.SYNAPSE_USER }}
+            -Dtest.synapse.jdbc.password=${{ secrets.SYNAPSE_PASSWORD }}
+        run: |
+          export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
+          $MAVEN test ${MAVEN_TEST} -pl ${{ matrix.modules }} ${{ matrix.profile != '' && format('-P {0}', matrix.profile) || '' }} ${SYNAPSE_CONFIG}
       - name: Cloud BigQuery Tests
         env:
           BIGQUERY_CREDENTIALS_KEY: ${{ secrets.BIGQUERY_CREDENTIALS_KEY }}
@@ -923,6 +939,8 @@ jobs:
             #   value of the property, and the exclusion will apply normally.
             - "false"
           include:
+            - config: default
+              suite: suite-synapse
             # this suite is not meant to be run with different configs
             - config: default
               suite: suite-7-non-generic
@@ -1007,6 +1025,9 @@ jobs:
           DATABRICKS_TOKEN:
           GCP_CREDENTIALS_KEY:
           GCP_STORAGE_BUCKET:
+          SYNAPSE_ENDPOINT:
+          SYNAPSE_USER:
+          SYNAPSE_PASSWORD:
         run: |
           # converts filtered YAML file into JSON
           ./.github/bin/build-pt-matrix-from-impacted-connectors.py -v -m .github/test-pt-matrix.yaml -i impacted-features.log -o matrix.json
@@ -1076,6 +1097,9 @@ jobs:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
           GCP_CREDENTIALS_KEY: ${{ secrets.GCP_CREDENTIALS_KEY }}
           GCP_STORAGE_BUCKET: trino-ci-test-us-east
+          SYNAPSE_ENDPOINT: ${{ secrets.SYNAPSE_ENDPOINT }}
+          SYNAPSE_USER: ${{ secrets.SYNAPSE_USER }}
+          SYNAPSE_PASSWORD: ${{ secrets.SYNAPSE_PASSWORD }}
         run: |
           exec testing/trino-product-tests-launcher/target/trino-product-tests-launcher-*-executable.jar suite run \
             --suite ${{ matrix.suite }} \

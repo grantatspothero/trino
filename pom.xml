@@ -166,6 +166,7 @@
         <module>plugin/trino-exchange-hdfs</module>
         <module>plugin/trino-galaxy-kafka-event-listener</module>
         <module>plugin/trino-galaxy-objectstore</module>
+        <module>plugin/trino-galaxy-synapse</module>
         <module>plugin/trino-geospatial</module>
         <module>plugin/trino-google-sheets</module>
         <module>plugin/trino-hive</module>
@@ -392,6 +393,12 @@
             <dependency>
                 <groupId>io.trino</groupId>
                 <artifactId>trino-galaxy-objectstore</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>trino-galaxy-synapse</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -1487,6 +1494,18 @@
                 <version>${dep.wire.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>com.starburstdata.trino.plugins</groupId>
+                <artifactId>starburst-synapse</artifactId>
+                <type>test-jar</type>
+                <version>${dep.starburst-trino-plugins.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.starburstdata.trino.plugins</groupId>
+                <artifactId>starburst-synapse</artifactId>
+                <version>${dep.starburst-trino-plugins.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>com.teradata</groupId>

@@ -194,6 +194,12 @@
         </artifact>
     </artifactSet>
 
+    <artifactSet to="plugin/galaxy-synapse">
+        <artifact id="${project.groupId}:trino-galaxy-synapse:zip:${project.version}">
+            <unpack />
+        </artifact>
+    </artifactSet>
+
     <artifactSet to="plugin/redshift">
         <artifact id="${project.groupId}:trino-redshift:zip:${project.version}">
             <unpack />
