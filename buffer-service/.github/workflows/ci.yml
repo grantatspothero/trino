@@ -1,0 +1,67 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - 'README.md'
+  pull_request:
+    paths-ignore:
+      - 'README.md'
+
+env:
+  mavenReleaseUsername: ${{ secrets.MAVEN_RELEASE_SERVER_USERNAME }}
+  mavenReleasePassword: ${{ secrets.MAVEN_RELEASE_SERVER_PASSWORD }}
+  mavenSnapshotsUsername: ${{ secrets.MAVEN_SNAPSHOT_SERVER_USERNAME }}
+  mavenSnapshotsPassword: ${{ secrets.MAVEN_SNAPSHOT_SERVER_PASSWORD }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    outputs:
+      tag: ${{ steps.project.outputs.version }}
+    steps:
+      - name: Cleanup workspace
+        run: rm -rf *
+
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v1
+        with:
+          java-version: 17
+
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-mvn-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-mvn-
+
+      - name: Merge with main before building
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin
+          git merge origin/main --ff-only
+
+      - name: Determine the project version
+        id: project
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo ::set-output name=version::pr${{ github.event.number }}-$(git describe --tags)
+          else
+            echo ::set-output name=version::$(git describe --tags)
+          fi
+
+      - name: Maven Install
+        run: ./mvnw install -P ci -T 1C -B -V -DskipTests -Dair.check.skip-all -Drevision=${{ steps.project.outputs.version }}
+
+      - name: Maven Tests
+        run: ./mvnw install -P ci -T 1C -B -P aws -Drevision=${{ steps.project.outputs.version }}
+
+      - name: Maven Deploy
+        run: ./mvnw deploy -P ci -T 1C -s .github/settings.xml -B -DskipTests -Dair.check.skip-all -Drevision=${{ steps.project.outputs.version }}
