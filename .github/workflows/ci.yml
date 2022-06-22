@@ -493,6 +493,7 @@ jobs:
             !:trino-elasticsearch,
             !:trino-faulttolerant-tests,
             !:trino-galaxy-objectstore,
+            !:trino-galaxy-snowflake,
             !:trino-galaxy-synapse,
             !:trino-hive,
             !:trino-hudi,
@@ -579,6 +580,9 @@ jobs:
             # - { modules: core/trino-main, jdk: 19 } # we always run with 19
             - { modules: plugin/trino-bigquery }
             - { modules: plugin/trino-bigquery, profile: cloud-tests-arrow }
+            - { modules: plugin/trino-galaxy-snowflake }
+            - { modules: plugin/trino-galaxy-snowflake, profile: jdbc-integration-tests }
+            - { modules: plugin/trino-galaxy-snowflake, profile: fault-tolerant-tests }
             - { modules: plugin/trino-galaxy-synapse }
             - { modules: plugin/trino-galaxy-synapse, profile: jdbc-integration-tests }
             - { modules: plugin/trino-galaxy-synapse, profile: fault-tolerant-tests }
@@ -661,6 +665,7 @@ jobs:
         if: >-
           matrix.modules != 'plugin/trino-singlestore'
           && matrix.modules != 'plugin/trino-galaxy-synapse'
+          && matrix.modules != 'plugin/trino-galaxy-snowflake'
           && ! (contains(matrix.modules, 'trino-delta-lake') && contains(matrix.profile, 'cloud-tests'))
           && ! (contains(matrix.modules, 'trino-delta-lake') && contains(matrix.profile, 'gcs-tests'))
           && ! (contains(matrix.modules, 'trino-iceberg') && contains(matrix.profile, 'cloud-tests'))
@@ -702,6 +707,35 @@ jobs:
         if: matrix.modules == 'plugin/trino-singlestore' && env.MEMSQL_LICENSE != ''
         run: |
           $MAVEN test ${MAVEN_TEST} -pl :trino-singlestore -Dmemsql.license=${MEMSQL_LICENSE}
+      - name: Snowflake Maven Tests
+        if: matrix.modules == 'plugin/trino-galaxy-snowflake'
+        env:
+          SNOWFLAKE_CONFIG: >-
+            -Dsnowflake.test.server.url=jdbc:snowflake://${{ secrets.SNOWFLAKE_ACCOUNT_NAME }}.snowflakecomputing.com/
+            -Dsnowflake.test.server.user=test_user
+            -Dsnowflake.test.server.password=${{ secrets.SNOWFLAKE_PASSWORD }}
+            -Dsnowflake.test.server.role=test_role
+            -Dsnowflake.test.warehouse=GALAXY_TEST_WH
+            -Dsnowflake.test.account-url=https://${{ secrets.SNOWFLAKE_ACCOUNT_NAME }}.snowflakecomputing.com
+          SNOWFLAKE_AZURE_CONFIG: >-
+            -Dsnowflake.test.server.url=jdbc:snowflake://${{ secrets.SNOWFLAKE_AZURE_ACCOUNT_NAME }}.${{ secrets.SNOWFLAKE_AZURE_REGION }}.azure.snowflakecomputing.com/
+            -Dsnowflake.test.server.user=test_user
+            -Dsnowflake.test.server.password=${{ secrets.SNOWFLAKE_AZURE_PASSWORD }}
+            -Dsnowflake.test.server.role=test_role
+            -Dsnowflake.test.warehouse=GALAXY_TEST_WH
+            -Dsnowflake.test.account-url=https://${{ secrets.SNOWFLAKE_AZURE_ACCOUNT_NAME }}.${{ secrets.SNOWFLAKE_AZURE_REGION }}.azure.snowflakecomputing.com
+          SNOWFLAKE_AWS_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT_NAME }}
+          SNOWFLAKE_AZURE_ACCOUNT: ${{ secrets.SNOWFLAKE_AZURE_ACCOUNT_NAME }}
+        run: |
+          if [[ -z "$SNOWFLAKE_AWS_ACCOUNT" ]] || [[ -z "$SNOWFLAKE_AZURE_ACCOUNT" ]]
+          then
+              echo "SNOWFLAKE_AWS_ACCOUNT: ${SNOWFLAKE_AWS_ACCOUNT:-[Missing or unset]}" >&2
+              echo "SNOWFLAKE_AZURE_ACCOUNT: ${SNOWFLAKE_AZURE_ACCOUNT:-[Missing or unset]}" >&2
+              exit 1
+          fi
+          export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
+          $MAVEN test ${MAVEN_TEST} -pl ${{ matrix.modules }} ${{ matrix.profile != '' && format('-P {0}', matrix.profile) || '' }} ${SNOWFLAKE_CONFIG}
+          $MAVEN test ${MAVEN_TEST} -pl ${{ matrix.modules }} ${{ matrix.profile != '' && format('-P {0}', matrix.profile) || '' }} ${SNOWFLAKE_AZURE_CONFIG}
       - name: Synapse Maven Tests
         if: matrix.modules == 'plugin/trino-galaxy-synapse'
         env:
@@ -1137,6 +1171,91 @@ jobs:
           check_name: ${{ github.job }} with secrets
           conclusion: ${{ job.status }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  # TODO: Don't always run the Snowflake tests; add impact analysis or integrate with above if possible.
+  #       (When integrating with 'pt', make sep-init conditional.)
+  snowflake-pt:
+    runs-on: ubuntu-latest
+    needs: build-pt
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - config-default
+        suite:
+          - suite-snowflake
+        jdk:
+          - 17
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # checkout all commits, as the build result depends on `git describe` equivalent
+      - name: Product tests artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: product tests and server tarball
+      - name: Fix artifact permissions
+        run: |
+          find . -type f -name \*-executable.jar -exec chmod 0777 {} \;
+      - name: Checkout SEP to access the sep-init action
+        uses: actions/checkout@v3
+        with:
+          token: "${{ secrets.gitHubAccessToken }}"
+          path: sep-init
+          repository: starburstdata/starburst-enterprise
+      - uses: ./.github/actions/setup
+      - name: Set up SEP requirements
+        uses: ./sep-init/.github/actions/sep-init
+        id: sep-init
+        with:
+          aws-access-key-id: ${{ secrets.ENG_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.ENG_AWS_SECRET_ACCESS_KEY }}
+          secret-id: ${{ secrets.SEP_SECRETS_AWS_ID }}
+          java-version: 19
+          install-trino: "false"
+      - name: Product Tests
+        if: steps.sep-init.outputs.run-job
+        env:
+          SNOWFLAKE_ACCOUNT_NAME: ${{ env.SNOWFLAKE_ACCOUNT_NAME }}
+          SNOWFLAKE_PASSWORD: ${{ env.SNOWFLAKE_PASSWORD }}
+          SNOWFLAKE_OAUTH_CLIENT_ID: ${{ env.SNOWFLAKE_OAUTH_CLIENT_ID }}
+          SNOWFLAKE_OAUTH_CLIENT_SECRET: ${{ env.SNOWFLAKE_OAUTH_CLIENT_SECRET }}
+        # Suite timeouts after 1h45m, just before job timeouts (2h)
+        run: |
+          if [[ -z "$SNOWFLAKE_ACCOUNT_NAME" ]] || [[ -z "$SNOWFLAKE_PASSWORD" ]]; then
+              [[ -z "$SNOWFLAKE_ACCOUNT_NAME" ]] && echo "SNOWFLAKE_ACCOUNT_NAME is unset or empty" >&2
+              [[ -z "$SNOWFLAKE_PASSWORD" ]] && echo "SNOWFLAKE_PASSWORD is unset or empty" >&2
+              exit 1
+          fi
+          testing/bin/ptl suite run \
+              --suite ${{ matrix.suite }} \
+              --config ${{ matrix.config }} \
+              --logs-dir logs/ \
+              --output PRINT_WRITE \
+              --timeout 105m \
+              --bind=off \
+              --trino-jdk-version zulu_${{ matrix.jdk }}
+      - name: Upload test results
+        uses: actions/upload-artifact@v2
+        if: failure() # TODO: Condition on job running.
+        with:
+          name: results snowflake-product-tests (${{ matrix.config }}, ${{ matrix.suite }}, ${{ matrix.jdk }})
+          path: |
+            presto-product-tests/target/*
+            logs/*
+            **/*.hprof
+          retention-days: 30
+      - name: Upload test report
+        uses: actions/upload-artifact@v2
+        # Always upload the test report for the annotate.yml workflow,
+        # but only the single XML file to keep the artifact small
+        if: always() # TODO: Condition on job running.
+        with:
+          # Name prefix is checked in the `Annotate checks` workflow
+          name: test report pt (${{ matrix.config }}, ${{ matrix.suite }}, ${{ matrix.jdk }})
+          path: testing/trino-product-tests/target/reports/**/testng-results.xml
+          retention-days: ${{ env.TEST_REPORT_RETENTION_DAYS }}
 
   redshift:
     name: test (plugin/trino-redshift)

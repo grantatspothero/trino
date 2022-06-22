@@ -36,6 +36,7 @@ elasticsearch
 exchange-filesystem
 galaxy-kafka-event-listener
 galaxy-objectstore
+galaxy-snowflake
 galaxy-synapse
 geospatial
 google-sheets

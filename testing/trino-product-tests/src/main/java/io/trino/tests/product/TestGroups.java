@@ -55,6 +55,7 @@ public final class TestGroups
     public static final String HIVE_COERCION = "hive_coercion";
     public static final String AZURE = "azure";
     public static final String CASSANDRA = "cassandra";
+    public static final String SNOWFLAKE = "snowflake";
     public static final String SQL_SERVER = "sqlserver";
     public static final String SYNAPSE = "synapse";
     public static final String LDAP = "ldap";
