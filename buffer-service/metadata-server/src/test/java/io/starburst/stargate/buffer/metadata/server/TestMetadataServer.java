@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.testcontainers.containers.MySQLContainer;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
 
@@ -38,6 +39,7 @@ import static io.airlift.http.client.FullJsonResponseHandler.createFullJsonRespo
 import static io.airlift.http.client.Request.Builder.prepareGet;
 import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.airlift.testing.Closeables.closeAll;
+import static io.starburst.stargate.buffer.metadata.database.DatabaseSetup.setupDatabase;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -53,6 +55,7 @@ public class TestMetadataServer
 
     @BeforeAll
     public void setup()
+            throws IOException
     {
         mysql = new MySQLContainer<>("mysql:8.0");
         mysql.start();
@@ -62,6 +65,9 @@ public class TestMetadataServer
                 .put("db.user", mysql.getUsername())
                 .put("db.password", mysql.getPassword())
                 .build();
+
+        // create database schema
+        setupDatabase(properties);
 
         Bootstrap app = new Bootstrap(
                 new TestingNodeModule(),
@@ -82,7 +88,7 @@ public class TestMetadataServer
 
         client = new JettyHttpClient();
 
-        setupDatabase(injector.getInstance(Jdbi.class));
+        boostrapDatabaseContents(injector.getInstance(Jdbi.class));
     }
 
     @AfterAll
@@ -119,10 +125,9 @@ public class TestMetadataServer
         return server.getBaseUrl().resolve(path);
     }
 
-    private static void setupDatabase(Jdbi jdbi)
+    private static void boostrapDatabaseContents(Jdbi jdbi)
     {
         jdbi.useHandle(handle -> {
-            handle.execute("CREATE TABLE chunks (chunk_id INT PRIMARY KEY)");
             handle.execute("INSERT INTO chunks (chunk_id) VALUES (?)", 123);
         });
     }

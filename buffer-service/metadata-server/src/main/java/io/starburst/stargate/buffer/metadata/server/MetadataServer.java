@@ -22,6 +22,8 @@ import io.airlift.tracetoken.TraceTokenModule;
 import io.starburst.stargate.buffer.metadata.database.DatabaseModule;
 import org.weakref.jmx.guice.MBeanModule;
 
+import static io.starburst.stargate.buffer.metadata.database.DatabaseSetup.setupDatabase;
+
 public final class MetadataServer
 {
     private static final Logger log = Logger.get(MetadataServer.class);
@@ -43,6 +45,7 @@ public final class MetadataServer
                 new MainModule());
 
         try {
+            setupDatabase();
             app.strictConfig().initialize();
 
             log.info("======== SERVER STARTED ========");
