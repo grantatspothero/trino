@@ -950,6 +950,13 @@
                 <groupId>io.airlift</groupId>
                 <artifactId>configuration</artifactId>
                 <version>${dep.airlift.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <!-- transitive incompatibility from byte-buddy jna-platform:5.10.0 vs jna-platform:5.8.0 -->
+                        <groupId>net.java.dev.jna</groupId>
+                        <artifactId>jna-platform</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <dependency>
@@ -1671,14 +1678,49 @@
 
             <!-- Stargate -->
             <dependency>
+                <groupId>io.starburst.schema-discovery</groupId>
+                <artifactId>schema-discovery-core</artifactId>
+                <version>${dep.schema-discovery.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.starburst.schema-discovery</groupId>
+                <artifactId>schema-discovery-trino-system-table</artifactId>
+                <version>${dep.schema-discovery.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>io.starburst.stargate</groupId>
                 <artifactId>access-control-client</artifactId>
                 <version>${dep.stargate.version}</version>
+                <exclusions>
+                    <!-- Galaxy uses Swagger 2.1.11 which is causing this incompatibility -->
+                    <exclusion>
+                        <groupId>org.apache.commons</groupId>
+                        <artifactId>commons-lang3</artifactId>
+                    </exclusion>
+                    <!-- google-http-client uses a different version -->
+                    <exclusion>
+                        <groupId>com.amazonaws</groupId>
+                        <artifactId>aws-java-sdk-core</artifactId>
+                    </exclusion>
+                    <!-- the shaded calcite dep already brings this in and it can't be excluded -->
+                    <exclusion>
+                        <groupId>org.yaml</groupId>
+                        <artifactId>snakeyaml</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <dependency>
                 <groupId>io.starburst.stargate</groupId>
                 <artifactId>metastore-client</artifactId>
+                <version>${dep.stargate.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.starburst.stargate</groupId>
+                <artifactId>stargate-common</artifactId>
                 <version>${dep.stargate.version}</version>
             </dependency>
 

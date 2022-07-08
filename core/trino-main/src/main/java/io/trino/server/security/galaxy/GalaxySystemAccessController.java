@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableMap;
 import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
+import io.starburst.stargate.id.AccountId;
 import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.EntityId;
 import io.starburst.stargate.id.FunctionId;
@@ -89,6 +90,11 @@ public class GalaxySystemAccessController
                 .map(CatalogId::toString)
                 .map(catalogVisibility::isVisible)
                 .orElse(false);
+    }
+
+    public AccountId getAccountId(SystemSecurityContext context)
+    {
+        return toDispatchSession(context.getIdentity()).getAccountId();
     }
 
     public Predicate<String> getSchemaVisibility(SystemSecurityContext context, CatalogId catalogId)

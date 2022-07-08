@@ -236,6 +236,16 @@
         </dependency>
 
         <dependency>
+            <groupId>io.starburst.schema-discovery</groupId>
+            <artifactId>schema-discovery-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.starburst.schema-discovery</groupId>
+            <artifactId>schema-discovery-trino-system-table</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>io.starburst.stargate</groupId>
             <artifactId>metastore-client</artifactId>
         </dependency>

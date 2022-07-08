@@ -22,6 +22,7 @@ import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
 import io.starburst.stargate.accesscontrol.privilege.GalaxyPrivilegeInfo;
 import io.starburst.stargate.accesscontrol.privilege.GrantKind;
 import io.starburst.stargate.accesscontrol.privilege.Privilege;
+import io.starburst.stargate.id.AccountId;
 import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.EntityId;
 import io.starburst.stargate.id.EntityKind;
@@ -58,6 +59,7 @@ import java.util.function.Predicate;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.inject.Scopes.SINGLETON;
+import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_CATALOG;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_SCHEMA;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_TABLE;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.DELETE;
@@ -420,7 +422,10 @@ public class GalaxyAccessControl
     @Override
     public void checkCanSelectFromColumns(SystemSecurityContext context, CatalogSchemaTableName table, Set<String> columns)
     {
-        if (!isSystemCatalog(table)) {
+        if (isSchemaDiscovery(table)) {
+            checkHasAccountPrivilege(context, CREATE_CATALOG, explanation -> denySelectColumns(table.toString(), columns, explanation));
+        }
+        else if (!isSystemCatalog(table)) {
             checkHasPrivilegeOnColumns(context, SELECT, false, table, columns, explanation -> denySelectColumns(table.toString(), columns, explanation));
         }
     }
@@ -722,6 +727,14 @@ public class GalaxyAccessControl
         denier.accept(roleLacksPrivilege(context, privilege, kind, "[%s]".formatted(String.join(", ", deniedColumns))));
     }
 
+    private void checkHasAccountPrivilege(SystemSecurityContext context, Privilege privilege, Consumer<String> denier)
+    {
+        AccountId accountId = controller.getAccountId(context);
+        if (!hasEntityPrivilege(context, Optional.of(accountId), privilege, false)) {
+            denier.accept(roleLacksPrivilege(context, privilege, "account", accountId.toString()));
+        }
+    }
+
     private void checkCatalogWritableAndSchemaOwner(SystemSecurityContext context, CatalogSchemaName schema, Consumer<String> denier)
     {
         checkCatalogIsWritable(schema.getCatalogName(), denier);
@@ -916,6 +929,11 @@ public class GalaxyAccessControl
     private static boolean isInformationSchema(String name)
     {
         return "information_schema".equals(name);
+    }
+
+    private static boolean isSchemaDiscovery(CatalogSchemaTableName table)
+    {
+        return table.getSchemaTableName().equals(new SchemaTableName("schema_discovery", "discovery"));
     }
 
     private static boolean isSystemCatalog(CatalogSchemaName name)
