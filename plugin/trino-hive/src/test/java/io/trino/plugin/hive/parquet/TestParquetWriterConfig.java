@@ -15,6 +15,7 @@ package io.trino.plugin.hive.parquet;
 
 import io.airlift.units.DataSize;
 import io.trino.parquet.writer.ParquetWriterOptions;
+import io.trino.plugin.hive.ParquetOptimizedWriterEnabled;
 import org.apache.parquet.hadoop.ParquetWriter;
 import org.testng.annotations.Test;
 
@@ -32,7 +33,7 @@ public class TestParquetWriterConfig
     public void testDefaults()
     {
         assertRecordedDefaults(recordDefaults(ParquetWriterConfig.class)
-                .setParquetOptimizedWriterEnabled(false)
+                .setParquetOptimizedWriterEnabled(ParquetOptimizedWriterEnabled.DEFAULT)
                 .setBlockSize(DataSize.ofBytes(ParquetWriter.DEFAULT_BLOCK_SIZE))
                 .setPageSize(DataSize.ofBytes(ParquetWriter.DEFAULT_PAGE_SIZE))
                 .setBatchSize(ParquetWriterOptions.DEFAULT_BATCH_SIZE)
@@ -69,7 +70,7 @@ public class TestParquetWriterConfig
                 "parquet.optimized-writer.validation-percentage", "10");
 
         ParquetWriterConfig expected = new ParquetWriterConfig()
-                .setParquetOptimizedWriterEnabled(true)
+                .setParquetOptimizedWriterEnabled(ParquetOptimizedWriterEnabled.TRUE)
                 .setBlockSize(DataSize.of(234, MEGABYTE))
                 .setPageSize(DataSize.of(11, MEGABYTE))
                 .setBatchSize(100)

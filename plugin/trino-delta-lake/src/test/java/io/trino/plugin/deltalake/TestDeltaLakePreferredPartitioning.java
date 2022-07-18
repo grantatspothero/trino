@@ -15,6 +15,7 @@ package io.trino.plugin.deltalake;
 
 import com.google.common.collect.ImmutableMap;
 import io.trino.Session;
+import io.trino.plugin.hive.ParquetOptimizedWriterEnabled;
 import io.trino.plugin.hive.containers.HiveMinioDataLake;
 import io.trino.plugin.hive.parquet.ParquetWriterConfig;
 import io.trino.testing.AbstractTestQueryFramework;
@@ -41,7 +42,7 @@ public class TestDeltaLakePreferredPartitioning
             throws Exception
     {
         verify(
-                !new ParquetWriterConfig().isParquetOptimizedWriterEnabled(),
+                !new ParquetWriterConfig().getParquetOptimizedWriterEnabled().equals(ParquetOptimizedWriterEnabled.TRUE),
                 "This test assumes the optimized Parquet writer is disabled by default");
 
         HiveMinioDataLake hiveMinioDataLake = closeAfterClass(new HiveMinioDataLake(TEST_BUCKET_NAME));

@@ -18,6 +18,7 @@ import io.airlift.configuration.ConfigDescription;
 import io.airlift.configuration.LegacyConfig;
 import io.airlift.units.DataSize;
 import io.trino.parquet.writer.ParquetWriterOptions;
+import io.trino.plugin.hive.ParquetOptimizedWriterEnabled;
 import org.apache.parquet.hadoop.ParquetWriter;
 
 import javax.validation.constraints.DecimalMax;
@@ -25,7 +26,7 @@ import javax.validation.constraints.DecimalMin;
 
 public class ParquetWriterConfig
 {
-    private boolean parquetOptimizedWriterEnabled;
+    private ParquetOptimizedWriterEnabled parquetOptimizedWriterEnabled = ParquetOptimizedWriterEnabled.DEFAULT;
 
     private DataSize blockSize = DataSize.ofBytes(ParquetWriter.DEFAULT_BLOCK_SIZE);
     private DataSize pageSize = DataSize.ofBytes(ParquetWriter.DEFAULT_PAGE_SIZE);
@@ -58,7 +59,7 @@ public class ParquetWriterConfig
         return this;
     }
 
-    public boolean isParquetOptimizedWriterEnabled()
+    public ParquetOptimizedWriterEnabled getParquetOptimizedWriterEnabled()
     {
         return parquetOptimizedWriterEnabled;
     }
@@ -66,7 +67,7 @@ public class ParquetWriterConfig
     @Config("parquet.optimized-writer.enabled")
     @LegacyConfig({"hive.parquet.optimized-writer.enabled", "parquet.experimental-optimized-writer.enabled"})
     @ConfigDescription("Enable optimized Parquet writer")
-    public ParquetWriterConfig setParquetOptimizedWriterEnabled(boolean parquetOptimizedWriterEnabled)
+    public ParquetWriterConfig setParquetOptimizedWriterEnabled(ParquetOptimizedWriterEnabled parquetOptimizedWriterEnabled)
     {
         this.parquetOptimizedWriterEnabled = parquetOptimizedWriterEnabled;
         return this;
