@@ -206,6 +206,12 @@
         </artifact>
     </artifactSet>
 
+    <artifactSet to="plugin/galaxy-query-monitor-event-listener">
+        <artifact id="${project.groupId}:trino-galaxy-query-monitor-event-listener:zip:${project.version}">
+            <unpack />
+        </artifact>
+    </artifactSet>
+
     <artifactSet to="plugin/redshift">
         <artifact id="${project.groupId}:trino-redshift:zip:${project.version}">
             <unpack />

@@ -35,6 +35,7 @@ blackhole
 elasticsearch
 exchange-filesystem
 galaxy-kafka-event-listener
+galaxy-query-monitor-event-listener
 galaxy-objectstore
 galaxy-snowflake
 galaxy-synapse
