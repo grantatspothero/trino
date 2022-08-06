@@ -13,9 +13,20 @@
  */
 //@flow
 import React from "react";
+import {GLYPHICON_HIGHLIGHT} from "../utils";
 
 type Props = {
     title: string
+}
+
+type RoleIdAndName = {
+    roleName: string,
+    roleId: string
+}
+
+type CurrentRoleAndUserRoles = {
+    currentRole: string,
+    userRoles: RoleIdAndName[]
 }
 
 type State = {
@@ -25,6 +36,8 @@ type State = {
     lastSuccess: number,
     modalShown: boolean,
     errorText: ?string,
+    userRoles: Map<string, string>,
+    currentRole: ?string
 }
 
 export class PageTitle extends React.Component<Props, State> {
@@ -39,6 +52,8 @@ export class PageTitle extends React.Component<Props, State> {
             lastSuccess: Date.now(),
             modalShown: false,
             errorText: null,
+            userRoles: new Map(),
+            currentRole: undefined
         };
     }
 
@@ -84,6 +99,7 @@ export class PageTitle extends React.Component<Props, State> {
     }
 
     componentDidMount() {
+        this.fetchAndProcessUserRoles();
         this.refreshLoop.bind(this)();
     }
 
@@ -97,6 +113,67 @@ export class PageTitle extends React.Component<Props, State> {
             }
         }
         return <span className="status-light status-light-green" id="status-indicator"/>;
+    }
+
+    fetchAndProcessUserRoles() {
+        fetch('/ui/api/galaxy/user_roles')
+                .then(response => {
+                    if (response.status === 401) {
+                        location.reload();
+                    }
+                    return response.json();
+                })
+                .then(allRoles => this.processUserRoles(allRoles))
+    }
+
+    handleSelectRole(roleName: string) {
+        if (this.state !== undefined) {
+            const roleId = this.state.userRoles.get(roleName);
+            if (roleId !== undefined) {
+
+                // Get a new dispatch token for the chosen role
+                fetch('/ui/api/galaxy/choose_role', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                        // 'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: roleName + '/' + roleId
+                })
+                        .then(ignore => {
+                            this.setState({
+                                currentRole: roleName,
+                            });
+                            this.fetchAndProcessUserRoles()
+                        });
+            }
+        };
+    }
+
+    processUserRoles(allRoles: CurrentRoleAndUserRoles) {
+        this.setState({
+            userRoles: new Map(allRoles.userRoles.map(i => [i.roleName, i.roleId])),
+            currentRole: allRoles.currentRole
+        });
+    }
+
+    renderUserRoles() {
+        let result = [];
+        if (this.state === undefined || this.state.userRoles === undefined) {
+            return result;
+        }
+        const currentRole = this.state.currentRole;
+        const userRoles = this.state.userRoles;
+        for (let [roleName, roleId] of userRoles) {
+            const checkmarkStyle = roleName === currentRole ? GLYPHICON_HIGHLIGHT : {color: '#ffffff'};
+            result.push(<li key={roleName}>
+                <a href="#" onClick={this.handleSelectRole.bind(this, roleName)}>
+                    <span className="glyphicon glyphicon-ok" style={checkmarkStyle}/>
+                    &nbsp;{roleName}
+                </a>
+            </li>);
+        }
+        return result;
     }
 
     render() {
@@ -145,6 +222,16 @@ export class PageTitle extends React.Component<Props, State> {
                                          </span>
                                         &nbsp;
                                         <span className="text" id="uptime">{info.uptime}</span>
+                                    </span>
+                                </li>
+                                <li>
+                                    <span className="navbar-cluster-info">
+                                        <button type="button" className="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                            Role {this.state.currentRole}&nbsp;<span className="caret"/>
+                                        </button>
+                                        <ul className="dropdown-menu">
+                                            {this.renderUserRoles()}
+                                        </ul>
                                     </span>
                                 </li>
                                 <li>
