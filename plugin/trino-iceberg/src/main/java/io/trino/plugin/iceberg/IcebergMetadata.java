@@ -85,6 +85,7 @@ import io.trino.spi.connector.RelationColumnsMetadata;
 import io.trino.spi.connector.RelationCommentMetadata;
 import io.trino.spi.connector.RetryMode;
 import io.trino.spi.connector.RowChangeParadigm;
+import io.trino.spi.connector.SaveMode;
 import io.trino.spi.connector.SchemaNotFoundException;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SchemaTablePrefix;
@@ -866,10 +867,10 @@ public class IcebergMetadata
     }
 
     @Override
-    public void createTable(ConnectorSession session, ConnectorTableMetadata tableMetadata, boolean ignoreExisting)
+    public void createTable(ConnectorSession session, ConnectorTableMetadata tableMetadata, SaveMode saveMode)
     {
         Optional<ConnectorTableLayout> layout = getNewTableLayout(session, tableMetadata);
-        finishCreateTable(session, beginCreateTable(session, tableMetadata, layout, NO_RETRIES), ImmutableList.of(), ImmutableList.of());
+        finishCreateTable(session, beginCreateTable(session, tableMetadata, layout, NO_RETRIES, saveMode == SaveMode.REPLACE), ImmutableList.of(), ImmutableList.of());
     }
 
     @Override
@@ -921,18 +922,26 @@ public class IcebergMetadata
     }
 
     @Override
-    public ConnectorOutputTableHandle beginCreateTable(ConnectorSession session, ConnectorTableMetadata tableMetadata, Optional<ConnectorTableLayout> layout, RetryMode retryMode)
+    public ConnectorOutputTableHandle beginCreateTable(ConnectorSession session, ConnectorTableMetadata tableMetadata, Optional<ConnectorTableLayout> layout, RetryMode retryMode, boolean replace)
     {
         verify(transaction == null, "transaction already set");
         String schemaName = tableMetadata.getTable().getSchemaName();
         if (!schemaExists(session, schemaName)) {
             throw new SchemaNotFoundException(schemaName);
         }
-        transaction = newCreateTableTransaction(catalog, tableMetadata, session, locationAccessControl);
+        if (replace) {
+            IcebergTableHandle table = (IcebergTableHandle) getTableHandle(session, tableMetadata.getTableSchema().getTable(), Optional.empty(), Optional.empty());
+            if (table != null) {
+                verifyTableVersionForUpdate(table);
+                Table icebergTable = catalog.loadTable(session, table.getSchemaTableName());
+                validateNotModifyingOldSnapshot(table, icebergTable);
+            }
+        }
+        transaction = newCreateTableTransaction(catalog, tableMetadata, session, replace, locationAccessControl);
         Location location = Location.of(transaction.table().location());
         TrinoFileSystem fileSystem = fileSystemFactory.create(session);
         try {
-            if (fileSystem.listFiles(location).hasNext()) {
+            if (!replace && fileSystem.listFiles(location).hasNext()) {
                 throw new TrinoException(ICEBERG_FILESYSTEM_ERROR, format("" +
                         "Cannot create a table on a non-empty location: %s, set 'iceberg.unique-table-location=true' in your Iceberg catalog properties " +
                         "to use unique table locations for every table.", location));

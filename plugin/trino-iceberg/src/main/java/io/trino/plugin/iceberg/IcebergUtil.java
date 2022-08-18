@@ -639,7 +639,7 @@ public final class IcebergUtil
         return new Schema(icebergSchema.asStructType().fields());
     }
 
-    public static Transaction newCreateTableTransaction(TrinoCatalog catalog, ConnectorTableMetadata tableMetadata, ConnectorSession session, LocationAccessControl locationAccessControl)
+    public static Transaction newCreateTableTransaction(TrinoCatalog catalog, ConnectorTableMetadata tableMetadata, ConnectorSession session, boolean replace, LocationAccessControl locationAccessControl)
     {
         SchemaTableName schemaTableName = tableMetadata.getTable();
         Schema schema = schemaFromMetadata(tableMetadata.getColumns());
@@ -652,6 +652,9 @@ public final class IcebergUtil
                 })
                 .orElseGet(() -> catalog.defaultTableLocation(session, schemaTableName));
 
+        if (replace) {
+            return catalog.newCreateOrReplaceTableTransaction(session, schemaTableName, schema, partitionSpec, sortOrder, targetPath, createTableProperties(tableMetadata));
+        }
         return catalog.newCreateTableTransaction(session, schemaTableName, schema, partitionSpec, sortOrder, targetPath, createTableProperties(tableMetadata));
     }
 

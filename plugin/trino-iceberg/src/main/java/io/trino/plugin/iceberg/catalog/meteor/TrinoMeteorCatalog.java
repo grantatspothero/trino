@@ -169,6 +169,12 @@ public class TrinoMeteorCatalog
     }
 
     @Override
+    public Transaction newCreateOrReplaceTableTransaction(ConnectorSession session, SchemaTableName schemaTableName, Schema schema, PartitionSpec partitionSpec, SortOrder sortOrder, String location, Map<String, String> properties)
+    {
+        throw new TrinoException(NOT_SUPPORTED, "Operation not supported by Meteor Catalog");
+    }
+
+    @Override
     public void registerTable(ConnectorSession session, SchemaTableName tableName, TableMetadata tableMetadata)
     {
         throw new TrinoException(NOT_SUPPORTED, "Operation not supported by Meteor Catalog");
