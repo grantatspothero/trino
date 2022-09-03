@@ -1457,6 +1457,12 @@ public class TestMultipleDistinctAggregationsToSubqueries
         }
 
         @Override
+        public Optional<Type> getSupportedType(Session session, CatalogHandle catalogHandle, Type type)
+        {
+            return metadata.getSupportedType(session, catalogHandle, type);
+        }
+
+        @Override
         public OutputTableHandle beginCreateTable(Session session, String catalogName, ConnectorTableMetadata tableMetadata, Optional<TableLayout> layout)
         {
             return metadata.beginCreateTable(session, catalogName, tableMetadata, layout);
