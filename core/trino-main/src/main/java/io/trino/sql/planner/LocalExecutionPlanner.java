@@ -467,6 +467,7 @@ public class LocalExecutionPlanner
     private final ExchangeManagerRegistry exchangeManagerRegistry;
     private final PositionsAppenderFactory positionsAppenderFactory;
     private final NodeVersion version;
+    private final boolean specializeAggregationLoops;
 
     private final NonEvictableCache<FunctionKey, AccumulatorFactory> accumulatorFactoryCache = buildNonEvictableCache(CacheBuilder.newBuilder()
             .maximumSize(1000)
@@ -504,7 +505,8 @@ public class LocalExecutionPlanner
             TableExecuteContextManager tableExecuteContextManager,
             ExchangeManagerRegistry exchangeManagerRegistry,
             CacheManagerRegistry cacheManagerRegistry,
-            NodeVersion version)
+            NodeVersion version,
+            CompilerConfig compilerConfig)
     {
         this.plannerContext = requireNonNull(plannerContext, "plannerContext is null");
         this.metadata = plannerContext.getMetadata();
@@ -554,6 +556,7 @@ public class LocalExecutionPlanner
         this.cacheManagerRegistry = requireNonNull(cacheManagerRegistry, "cacheManagerRegistry is null");
         this.positionsAppenderFactory = new PositionsAppenderFactory(blockTypeOperators);
         this.version = requireNonNull(version, "version is null");
+        this.specializeAggregationLoops = compilerConfig.isSpecializeAggregationLoops();
     }
 
     public LocalExecutionPlan plan(
@@ -4000,7 +4003,8 @@ public class LocalExecutionPlanner
                     () -> generateAccumulatorFactory(
                             resolvedFunction.getSignature(),
                             aggregationImplementation,
-                            resolvedFunction.getFunctionNullability()));
+                            resolvedFunction.getFunctionNullability(),
+                            specializeAggregationLoops));
 
             if (aggregation.isDistinct()) {
                 accumulatorFactory = new DistinctAccumulatorFactory(

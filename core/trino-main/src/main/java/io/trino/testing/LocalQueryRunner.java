@@ -181,6 +181,7 @@ import io.trino.sql.gen.PageFunctionCompiler;
 import io.trino.sql.gen.columnar.ColumnarFilterCompiler;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.planner.AlternativesOptimizers;
+import io.trino.sql.planner.CompilerConfig;
 import io.trino.sql.planner.LocalExecutionPlanner;
 import io.trino.sql.planner.LocalExecutionPlanner.LocalExecutionPlan;
 import io.trino.sql.planner.LogicalPlanner;
@@ -1044,7 +1045,8 @@ public class LocalQueryRunner
                 tableExecuteContextManager,
                 exchangeManagerRegistry,
                 cacheManagerRegistry,
-                nodeManager.getCurrentNode().getNodeVersion());
+                nodeManager.getCurrentNode().getNodeVersion(),
+                new CompilerConfig());
 
         // plan query
         LocalExecutionPlan localExecutionPlan = executionPlanner.plan(
