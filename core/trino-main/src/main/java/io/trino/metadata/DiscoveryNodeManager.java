@@ -27,8 +27,6 @@ import io.airlift.http.client.HttpClient;
 import io.airlift.log.Logger;
 import io.airlift.node.NodeInfo;
 import io.trino.client.NodeVersion;
-import io.trino.connector.CatalogManagerConfig;
-import io.trino.connector.CatalogManagerConfig.CatalogMangerKind;
 import io.trino.failuredetector.FailureDetector;
 import io.trino.server.InternalCommunicationConfig;
 import io.trino.spi.connector.CatalogHandle;
@@ -103,8 +101,7 @@ public final class DiscoveryNodeManager
             FailureDetector failureDetector,
             NodeVersion expectedNodeVersion,
             @ForNodeManager HttpClient httpClient,
-            InternalCommunicationConfig internalCommunicationConfig,
-            CatalogManagerConfig catalogManagerConfig)
+            InternalCommunicationConfig internalCommunicationConfig)
     {
         this.serviceSelector = requireNonNull(serviceSelector, "serviceSelector is null");
         this.failureDetector = requireNonNull(failureDetector, "failureDetector is null");
@@ -113,7 +110,12 @@ public final class DiscoveryNodeManager
         this.nodeStateUpdateExecutor = newSingleThreadScheduledExecutor(daemonThreadsNamed("node-state-poller-%s"));
         this.nodeStateEventExecutor = newCachedThreadPool(daemonThreadsNamed("node-state-events-%s"));
         this.httpsRequired = internalCommunicationConfig.isHttpsRequired();
-        this.allCatalogsOnAllNodes = catalogManagerConfig.getCatalogMangerKind() != CatalogMangerKind.STATIC;
+        // Hack to avoid a race condition: The hack is fine for galaxy since we always run the same set of catalogs on every node,
+        // but if you have a heterogeneous trino cluster with some catalogs only available on certain nodes then the hack does not
+        // work since you need service discovery to find which catalogs live on which nodes.
+        // See https://github.com/starburstdata/stargate-trino/issues/109 and https://github.com/starburstdata/stargate-trino/pull/280#discussion_r1061910557 for
+        // more information.
+        this.allCatalogsOnAllNodes = true;
 
         this.currentNode = findCurrentNode(
                 serviceSelector.selectAllServices(),

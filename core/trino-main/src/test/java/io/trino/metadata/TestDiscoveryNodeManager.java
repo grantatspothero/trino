@@ -26,7 +26,6 @@ import io.airlift.http.client.testing.TestingResponse;
 import io.airlift.node.NodeConfig;
 import io.airlift.node.NodeInfo;
 import io.trino.client.NodeVersion;
-import io.trino.connector.CatalogManagerConfig;
 import io.trino.connector.system.GlobalSystemConnector;
 import io.trino.failuredetector.NoOpFailureDetector;
 import io.trino.server.InternalCommunicationConfig;
@@ -104,8 +103,7 @@ public class TestDiscoveryNodeManager
                 new NoOpFailureDetector(),
                 expectedVersion,
                 testHttpClient,
-                internalCommunicationConfig,
-                new CatalogManagerConfig());
+                internalCommunicationConfig);
         try {
             AllNodes allNodes = manager.getAllNodes();
 
@@ -153,8 +151,7 @@ public class TestDiscoveryNodeManager
                 new NoOpFailureDetector(),
                 expectedVersion,
                 testHttpClient,
-                internalCommunicationConfig,
-                new CatalogManagerConfig());
+                internalCommunicationConfig);
         try {
             assertEquals(manager.getCurrentNode(), currentNode);
         }
@@ -172,8 +169,7 @@ public class TestDiscoveryNodeManager
                 new NoOpFailureDetector(),
                 expectedVersion,
                 testHttpClient,
-                internalCommunicationConfig,
-                new CatalogManagerConfig());
+                internalCommunicationConfig);
         try {
             assertEquals(manager.getCoordinators(), ImmutableSet.of(coordinator));
         }
@@ -192,8 +188,7 @@ public class TestDiscoveryNodeManager
                 new NoOpFailureDetector(),
                 expectedVersion,
                 testHttpClient,
-                internalCommunicationConfig,
-                new CatalogManagerConfig());
+                internalCommunicationConfig);
     }
 
     @Test(timeOut = 60000)
@@ -206,8 +201,7 @@ public class TestDiscoveryNodeManager
                 new NoOpFailureDetector(),
                 expectedVersion,
                 testHttpClient,
-                internalCommunicationConfig,
-                new CatalogManagerConfig());
+                internalCommunicationConfig);
         try {
             manager.startPollingNodeStates();
 
