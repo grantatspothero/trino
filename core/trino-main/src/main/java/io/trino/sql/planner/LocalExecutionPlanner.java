@@ -3925,7 +3925,8 @@ public class LocalExecutionPlanner
                     argumentChannels,
                     maskChannel,
                     !aggregation.isDistinct() && aggregation.getOrderingScheme().isEmpty(),
-                    lambdaProviders);
+                    lambdaProviders,
+                    resolvedFunction.getFunctionNullability());
         }
 
         private List<Supplier<Object>> makeLambdaProviders(List<LambdaExpression> lambdaExpressions, List<Class<?>> lambdaInterfaces, List<FunctionType> functionTypes)
