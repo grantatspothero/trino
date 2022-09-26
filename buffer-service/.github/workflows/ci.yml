@@ -11,6 +11,9 @@ on:
       - 'README.md'
 
 env:
+  # An envar that signals to tests we are executing in the CI environment
+  CONTINUOUS_INTEGRATION: true
+
   mavenReleaseUsername: ${{ secrets.MAVEN_RELEASE_SERVER_USERNAME }}
   mavenReleasePassword: ${{ secrets.MAVEN_RELEASE_SERVER_PASSWORD }}
   mavenSnapshotsUsername: ${{ secrets.MAVEN_SNAPSHOT_SERVER_USERNAME }}
