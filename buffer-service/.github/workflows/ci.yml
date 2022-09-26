@@ -68,3 +68,46 @@ jobs:
 
       - name: Maven Deploy
         run: ./mvnw deploy -P ci -T 1C -s .github/settings.xml -B -DskipTests -Dair.check.skip-all -Drevision=${{ steps.project.outputs.version }}
+
+  test-buffer-exchange-failure-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      tag: ${{ steps.project.outputs.version }}
+    steps:
+      - name: Cleanup workspace
+        run: rm -rf *
+
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v1
+        with:
+          java-version: 17
+
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-mvn-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-mvn-
+
+      - name: Merge with main before building
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin
+          git merge origin/main --ff-only
+
+      - name: Determine the project version
+        id: project
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo ::set-output name=version::pr${{ github.event.number }}-$(git describe --tags)
+          else
+            echo ::set-output name=version::$(git describe --tags)
+          fi
+
+      - name: Maven Tests
+        run: ./mvnw install -P ci -T 1C -B -P test-buffer-exchange-failure-recovery -Drevision=${{ steps.project.outputs.version }}
