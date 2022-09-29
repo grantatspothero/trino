@@ -15,10 +15,14 @@ package io.trino.plugin.base.jmx;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
+import com.google.inject.Provides;
 
+import javax.inject.Singleton;
 import javax.management.MBeanServer;
 
 import java.lang.management.ManagementFactory;
+
+import static io.airlift.configuration.ConfigBinder.configBinder;
 
 public class MBeanServerModule
         implements Module
@@ -26,7 +30,14 @@ public class MBeanServerModule
     @Override
     public void configure(Binder binder)
     {
-        MBeanServer platformMBeanServer = ManagementFactory.getPlatformMBeanServer();
-        binder.bind(MBeanServer.class).toInstance(new RebindSafeMBeanServer(platformMBeanServer));
+        configBinder(binder).bindConfig(MBeanServerModuleConfig.class);
+    }
+
+    @Provides
+    @Singleton
+    public MBeanServer getMBeanServer(MBeanServerModuleConfig config)
+    {
+        MBeanServer mBeanServer = config.getPlatformMBeanServerEnabled() ? ManagementFactory.getPlatformMBeanServer() : new NopMBeanServer();
+        return new RebindSafeMBeanServer(mBeanServer);
     }
 }
