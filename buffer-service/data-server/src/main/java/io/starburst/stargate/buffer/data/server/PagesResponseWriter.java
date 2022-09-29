@@ -31,6 +31,7 @@ import java.lang.reflect.Type;
 import java.util.List;
 
 import static io.starburst.stargate.buffer.data.client.HttpDataClient.SERIALIZED_PAGES_MAGIC;
+import static io.starburst.stargate.buffer.data.client.PagesSerdeUtil.DATA_PAGE_HEADER_SIZE;
 import static io.starburst.stargate.buffer.data.client.PagesSerdeUtil.NO_CHECKSUM;
 import static io.starburst.stargate.buffer.data.client.PagesSerdeUtil.calculateChecksum;
 import static io.starburst.stargate.buffer.data.client.TrinoMediaTypes.TRINO_CHUNK_DATA;
@@ -73,7 +74,10 @@ public class PagesResponseWriter
     @Override
     public long getSize(List<DataPage> pages, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType)
     {
-        return -1;
+        return Integer.BYTES // SERIALIZED_PAGES_MAGIC
+                + Long.BYTES // checkSum
+                + Integer.BYTES // list size
+                + pages.stream().mapToInt(dataPage -> DATA_PAGE_HEADER_SIZE + dataPage.data().length()).sum();
     }
 
     @Override
