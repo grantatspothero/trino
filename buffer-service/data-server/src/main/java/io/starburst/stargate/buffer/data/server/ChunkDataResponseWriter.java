@@ -39,7 +39,7 @@ import static java.util.Objects.requireNonNull;
 
 @Provider
 @Produces(TRINO_CHUNK_DATA)
-public class PagesResponseWriter
+public class ChunkDataResponseWriter
         implements MessageBodyWriter<List<DataPage>>
 {
     private static final MediaType TRINO_CHUNK_DATA_TYPE = MediaType.valueOf(TRINO_CHUNK_DATA);
@@ -57,7 +57,7 @@ public class PagesResponseWriter
     private final boolean includeChecksum;
 
     @Inject
-    public PagesResponseWriter(DataServerConfig dataServerConfig)
+    public ChunkDataResponseWriter(DataServerConfig dataServerConfig)
     {
         requireNonNull(dataServerConfig, "dataServerConfig is null");
         this.includeChecksum = dataServerConfig.getIncludeChecksumInDataResponse();
