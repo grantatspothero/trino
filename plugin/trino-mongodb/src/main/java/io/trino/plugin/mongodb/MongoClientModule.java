@@ -35,6 +35,7 @@ import com.mongodb.internal.connection.SocketStream;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.base.session.SessionPropertiesProvider;
 import io.trino.plugin.mongodb.ptf.Query;
 import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.function.table.ConnectorTableFunction;
@@ -71,6 +72,7 @@ public class MongoClientModule
         binder.bind(MongoSplitManager.class).in(Scopes.SINGLETON);
         binder.bind(MongoPageSourceProvider.class).in(Scopes.SINGLETON);
         binder.bind(MongoPageSinkProvider.class).in(Scopes.SINGLETON);
+        newSetBinder(binder, SessionPropertiesProvider.class).addBinding().to(MongoSessionProperties.class).in(Scopes.SINGLETON);
 
         configBinder(binder).bindConfig(MongoClientConfig.class);
         newSetBinder(binder, MongoClientSettingConfigurator.class);
