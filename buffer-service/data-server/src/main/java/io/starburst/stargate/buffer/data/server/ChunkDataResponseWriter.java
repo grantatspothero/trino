@@ -9,12 +9,11 @@
  */
 package io.starburst.stargate.buffer.data.server;
 
-import com.google.common.reflect.TypeToken;
 import io.airlift.slice.OutputStreamSliceOutput;
+import io.airlift.slice.Slice;
 import io.airlift.slice.SliceOutput;
-import io.starburst.stargate.buffer.data.client.DataPage;
+import io.starburst.stargate.buffer.data.execution.Chunk;
 
-import javax.inject.Inject;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
@@ -28,61 +27,35 @@ import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
-import java.util.List;
 
-import static io.starburst.stargate.buffer.data.client.HttpDataClient.SERIALIZED_PAGES_MAGIC;
-import static io.starburst.stargate.buffer.data.client.PagesSerdeUtil.DATA_PAGE_HEADER_SIZE;
-import static io.starburst.stargate.buffer.data.client.PagesSerdeUtil.NO_CHECKSUM;
-import static io.starburst.stargate.buffer.data.client.PagesSerdeUtil.calculateChecksum;
+import static io.starburst.stargate.buffer.data.client.HttpDataClient.SERIALIZED_CHUNK_DATA_MAGIC;
 import static io.starburst.stargate.buffer.data.client.TrinoMediaTypes.TRINO_CHUNK_DATA;
-import static java.util.Objects.requireNonNull;
 
 @Provider
 @Produces(TRINO_CHUNK_DATA)
 public class ChunkDataResponseWriter
-        implements MessageBodyWriter<List<DataPage>>
+        implements MessageBodyWriter<Chunk.ChunkDataRepresentation>
 {
     private static final MediaType TRINO_CHUNK_DATA_TYPE = MediaType.valueOf(TRINO_CHUNK_DATA);
-    private static final Type LIST_GENERIC_TOKEN;
-
-    static {
-        try {
-            LIST_GENERIC_TOKEN = List.class.getMethod("get", int.class).getGenericReturnType();
-        }
-        catch (NoSuchMethodException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private final boolean includeChecksum;
-
-    @Inject
-    public ChunkDataResponseWriter(DataServerConfig dataServerConfig)
-    {
-        requireNonNull(dataServerConfig, "dataServerConfig is null");
-        this.includeChecksum = dataServerConfig.getIncludeChecksumInDataResponse();
-    }
 
     @Override
     public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType)
     {
-        return List.class.isAssignableFrom(type) &&
-                TypeToken.of(genericType).resolveType(LIST_GENERIC_TOKEN).getRawType().equals(DataPage.class) &&
-                mediaType.isCompatible(TRINO_CHUNK_DATA_TYPE);
+        return type == Chunk.ChunkDataRepresentation.class && mediaType.isCompatible(TRINO_CHUNK_DATA_TYPE);
     }
 
     @Override
-    public long getSize(List<DataPage> pages, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType)
+    public long getSize(Chunk.ChunkDataRepresentation chunkDataRepresentation, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType)
     {
-        return Integer.BYTES // SERIALIZED_PAGES_MAGIC
-                + Long.BYTES // checkSum
-                + Integer.BYTES // list size
-                + pages.stream().mapToInt(dataPage -> DATA_PAGE_HEADER_SIZE + dataPage.data().length()).sum();
+        return Integer.BYTES // SERIALIZED_CHUNK_DATA_MAGIC
+                + Long.BYTES // checksum
+                + Integer.BYTES // num of data pages
+                + chunkDataRepresentation.chunkSlices().stream().mapToInt(Slice::length).sum();
     }
 
     @Override
     public void writeTo(
-            List<DataPage> pages,
+            Chunk.ChunkDataRepresentation chunkDataRepresentation,
             Class<?> type,
             Type genericType,
             Annotation[] annotations,
@@ -93,14 +66,11 @@ public class ChunkDataResponseWriter
     {
         try {
             SliceOutput sliceOutput = new OutputStreamSliceOutput(output);
-            sliceOutput.writeInt(SERIALIZED_PAGES_MAGIC);
-            sliceOutput.writeLong(includeChecksum ? calculateChecksum(pages) : NO_CHECKSUM);
-            sliceOutput.writeInt(pages.size());
-            for (DataPage page : pages) {
-                sliceOutput.writeShort(page.taskId()); // addDataPage() guarantees taskId is no more than 32767
-                sliceOutput.writeByte(page.attemptId()); // addDataPage() guarantees attemptId is no more than 127
-                sliceOutput.writeInt(page.data().length());
-                sliceOutput.writeBytes(page.data());
+            sliceOutput.writeInt(SERIALIZED_CHUNK_DATA_MAGIC);
+            sliceOutput.writeLong(chunkDataRepresentation.checksum());
+            sliceOutput.writeInt(chunkDataRepresentation.numDataPages());
+            for (Slice slice : chunkDataRepresentation.chunkSlices()) {
+                sliceOutput.writeBytes(slice);
             }
             // We use flush instead of close, because the underlying stream would be closed and that is not allowed.
             sliceOutput.flush();
