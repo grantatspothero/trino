@@ -75,6 +75,18 @@
 
         <dep.docker.images.version>77</dep.docker.images.version>
 
+        <!-- released from https://github.com/starburstdata/varada -->
+        <dep.warp-speed.version>408.0.1</dep.warp-speed.version>
+        <!-- released from https://github.com/starburstdata/trino-buffer-service -->
+        <dep.trino-buffer-service.version>408-trino-buffer-service-382-g9c087a0</dep.trino-buffer-service.version>
+        <!-- released form https://github.com/starburstdata/schema-discovery -->
+        <dep.schema-discovery.version>schema-discovery-20230206-eddf738</dep.schema-discovery.version>
+        <!-- released from https://github.com/starburstdata/stargate -->
+        <dep.stargate.version>stargate-6225-gd8b53f9d2</dep.stargate.version>
+        <!-- released from https://github.com/starburstdata/starburst-trino-plugins -->
+        <dep.starburst-trino-plugins.version>408</dep.starburst-trino-plugins.version>
+        <dep.cloudevents.version>2.2.0</dep.cloudevents.version>
+
         <!--
           America/Bahia_Banderas has:
            - offset change since 1970 (offset Jan 1970: -08:00, offset Jan 2018: -06:00)
