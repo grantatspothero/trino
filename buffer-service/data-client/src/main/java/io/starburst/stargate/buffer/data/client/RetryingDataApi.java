@@ -1,0 +1,138 @@
+/*
+ * Copyright Starburst Data, Inc. All rights reserved.
+ *
+ * THIS IS UNPUBLISHED PROPRIETARY SOURCE CODE OF STARBURST DATA.
+ * The copyright notice above does not evidence any
+ * actual or intended publication of such source code.
+ *
+ * Redistribution of this material is strictly prohibited.
+ */
+package io.starburst.stargate.buffer.data.client;
+
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
+import io.airlift.concurrent.MoreFutures;
+import io.airlift.slice.Slice;
+
+import java.time.Duration;
+import java.util.List;
+import java.util.OptionalLong;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
+
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+import static java.util.Objects.requireNonNull;
+
+public class RetryingDataApi
+        implements DataApi
+{
+    private final DataApi delegate;
+    private final int maxRetries;
+    private final Duration backoffDelay;
+    private final Duration backoffMaxDelay;
+    private final double backoffDelayFactor;
+    private final double backoffJitter;
+    private final ScheduledExecutorService executor;
+
+    public RetryingDataApi(
+            DataApi delegate,
+            int maxRetries,
+            Duration backoffDelay,
+            Duration backoffMaxDelay,
+            double backoffDelayFactor,
+            double backoffJitter,
+            ScheduledExecutorService executor)
+    {
+        this.delegate = delegate;
+        this.maxRetries = maxRetries;
+        this.backoffDelay = backoffDelay;
+        this.backoffMaxDelay = backoffMaxDelay;
+        this.backoffDelayFactor = backoffDelayFactor;
+        this.backoffJitter = backoffJitter;
+        this.executor = requireNonNull(executor, "executor is null");
+    }
+
+    @Override
+    public ListenableFuture<ChunkList> listClosedChunks(String exchangeId, OptionalLong pagingId)
+    {
+        return runWithRetry(() -> delegate.listClosedChunks(exchangeId, pagingId));
+    }
+
+    @Override
+    public ListenableFuture<Void> registerExchange(String exchangeId)
+    {
+        return runWithRetry(() -> delegate.registerExchange(exchangeId));
+    }
+
+    @Override
+    public ListenableFuture<Void> pingExchange(String exchangeId)
+    {
+        return runWithRetry(() -> pingExchange(exchangeId));
+    }
+
+    @Override
+    public ListenableFuture<Void> removeExchange(String exchangeId)
+    {
+        return runWithRetry(() -> removeExchange(exchangeId));
+    }
+
+    @Override
+    public ListenableFuture<Void> addDataPages(String exchangeId, int partitionId, int taskId, int attemptId, long dataPagesId, List<Slice> dataPages)
+    {
+        return runWithRetry(() -> addDataPages(exchangeId, partitionId, taskId, attemptId, dataPagesId, dataPages));
+    }
+
+    @Override
+    public ListenableFuture<Void> finishExchange(String exchangeId)
+    {
+        return runWithRetry(() -> finishExchange(exchangeId));
+    }
+
+    @Override
+    public ListenableFuture<List<DataPage>> getChunkData(String exchangeId, int partitionId, long chunkId, long bufferNodeId)
+    {
+        return runWithRetry(() -> getChunkData(exchangeId, partitionId, chunkId, bufferNodeId));
+    }
+
+    private <T> ListenableFuture<T> runWithRetry(Callable<ListenableFuture<T>> routine)
+    {
+        RetryPolicy<T> retryPolicy = RetryPolicy.<T>builder()
+                .withBackoff(backoffDelay, backoffMaxDelay, backoffDelayFactor)
+                .withMaxRetries(maxRetries)
+                .withJitter(backoffJitter)
+                .handleIf(throwable -> {
+                    if (!(throwable instanceof DataApiException dataApiException)) {
+                        return true;
+                    }
+                    return dataApiException.getErrorCode() == ErrorCode.INTERNAL_ERROR;
+                })
+                .build();
+
+        CompletableFuture<T> finalFuture =
+                Failsafe.with(retryPolicy)
+                        .with(executor)
+                        .getAsyncExecution(execution -> {
+                            ListenableFuture<T> future = routine.call();
+                            Futures.addCallback(future, new FutureCallback<>()
+                            {
+                                @Override
+                                public void onSuccess(T result)
+                                {
+                                    execution.recordResult(result);
+                                }
+
+                                @Override
+                                public void onFailure(Throwable t)
+                                {
+                                    execution.recordException(t);
+                                }
+                            }, directExecutor());
+                        });
+
+        return MoreFutures.toListenableFuture(finalFuture);
+    }
+}
