@@ -14,6 +14,10 @@ on:
       - 'data-server/README.md'
       - 'discovery-server/README.md'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
 env:
   # An envar that signals to tests we are executing in the CI environment
   CONTINUOUS_INTEGRATION: true
