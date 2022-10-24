@@ -79,7 +79,7 @@ jobs:
         run: ./mvnw install -P ci -T 1C -B -V -DskipTests -Dair.check.skip-all -Drevision=${{ steps.project.outputs.version }}
 
       - name: Maven Tests
-        run: ./mvnw install -P ci -T 1C -B -P aws -Drevision=${{ steps.project.outputs.version }}
+        run: ./mvnw install -P ci -T 1C -B -Drevision=${{ steps.project.outputs.version }}
 
       - name: Maven Deploy
         run: ./mvnw deploy -P ci -T 1C -s .github/settings.xml -B -DskipTests -Dair.check.skip-all -Drevision=${{ steps.project.outputs.version }}
