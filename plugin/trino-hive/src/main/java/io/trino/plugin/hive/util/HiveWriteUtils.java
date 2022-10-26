@@ -126,7 +126,6 @@ import static io.trino.spi.type.VarbinaryType.VARBINARY;
 import static java.lang.Float.intBitsToFloat;
 import static java.lang.Math.floorDiv;
 import static java.lang.Math.floorMod;
-import static java.lang.Math.toIntExact;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.unmodifiableList;
@@ -305,7 +304,7 @@ public final class HiveWriteUtils
             return BIGINT.getLong(block, position);
         }
         if (INTEGER.equals(type)) {
-            return toIntExact(INTEGER.getLong(block, position));
+            return INTEGER.getInt(block, position);
         }
         if (SMALLINT.equals(type)) {
             return SMALLINT.getShort(block, position);
@@ -314,7 +313,7 @@ public final class HiveWriteUtils
             return TINYINT.getByte(block, position);
         }
         if (REAL.equals(type)) {
-            return intBitsToFloat((int) REAL.getLong(block, position));
+            return intBitsToFloat(REAL.getInt(block, position));
         }
         if (DOUBLE.equals(type)) {
             return DOUBLE.getDouble(block, position);
@@ -329,7 +328,7 @@ public final class HiveWriteUtils
             return VARBINARY.getSlice(block, position).getBytes();
         }
         if (DATE.equals(type)) {
-            return Date.ofEpochDay(toIntExact(DATE.getLong(block, position)));
+            return Date.ofEpochDay(DATE.getInt(block, position));
         }
         if (type instanceof TimestampType timestampType) {
             return getHiveTimestamp(localZone, timestampType, block, position);
