@@ -12,7 +12,7 @@ package io.starburst.stargate.buffer.data.server;
 import io.airlift.slice.OutputStreamSliceOutput;
 import io.airlift.slice.Slice;
 import io.airlift.slice.SliceOutput;
-import io.starburst.stargate.buffer.data.execution.Chunk;
+import io.starburst.stargate.buffer.data.execution.ChunkDataHolder;
 
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
@@ -34,28 +34,28 @@ import static io.starburst.stargate.buffer.data.client.TrinoMediaTypes.TRINO_CHU
 @Provider
 @Produces(TRINO_CHUNK_DATA)
 public class ChunkDataResponseWriter
-        implements MessageBodyWriter<Chunk.ChunkDataRepresentation>
+        implements MessageBodyWriter<ChunkDataHolder>
 {
     private static final MediaType TRINO_CHUNK_DATA_TYPE = MediaType.valueOf(TRINO_CHUNK_DATA);
 
     @Override
     public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType)
     {
-        return type == Chunk.ChunkDataRepresentation.class && mediaType.isCompatible(TRINO_CHUNK_DATA_TYPE);
+        return type == ChunkDataHolder.class && mediaType.isCompatible(TRINO_CHUNK_DATA_TYPE);
     }
 
     @Override
-    public long getSize(Chunk.ChunkDataRepresentation chunkDataRepresentation, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType)
+    public long getSize(ChunkDataHolder chunkData, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType)
     {
         return Integer.BYTES // SERIALIZED_CHUNK_DATA_MAGIC
                 + Long.BYTES // checksum
                 + Integer.BYTES // num of data pages
-                + chunkDataRepresentation.chunkSlices().stream().mapToInt(Slice::length).sum();
+                + chunkData.chunkSlices().stream().mapToInt(Slice::length).sum();
     }
 
     @Override
     public void writeTo(
-            Chunk.ChunkDataRepresentation chunkDataRepresentation,
+            ChunkDataHolder chunkData,
             Class<?> type,
             Type genericType,
             Annotation[] annotations,
@@ -67,9 +67,9 @@ public class ChunkDataResponseWriter
         try {
             SliceOutput sliceOutput = new OutputStreamSliceOutput(output);
             sliceOutput.writeInt(SERIALIZED_CHUNK_DATA_MAGIC);
-            sliceOutput.writeLong(chunkDataRepresentation.checksum());
-            sliceOutput.writeInt(chunkDataRepresentation.numDataPages());
-            for (Slice slice : chunkDataRepresentation.chunkSlices()) {
+            sliceOutput.writeLong(chunkData.checksum());
+            sliceOutput.writeInt(chunkData.numDataPages());
+            for (Slice slice : chunkData.chunkSlices()) {
                 sliceOutput.writeBytes(slice);
             }
             // We use flush instead of close, because the underlying stream would be closed and that is not allowed.
