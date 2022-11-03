@@ -35,6 +35,7 @@ import io.trino.spi.type.TypeManager;
 import org.apache.iceberg.AppendFiles;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
+import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.TableOperations;
@@ -157,11 +158,12 @@ public abstract class AbstractTrinoCatalog
             SchemaTableName schemaTableName,
             Schema schema,
             PartitionSpec partitionSpec,
+            SortOrder sortOrder,
             String location,
             Map<String, String> properties,
             Optional<String> owner)
     {
-        TableMetadata metadata = newTableMetadata(schema, partitionSpec, location, properties);
+        TableMetadata metadata = newTableMetadata(schema, partitionSpec, sortOrder, location, properties);
         TableOperations ops = tableOperationsProvider.createTableOperations(
                 this,
                 session,

@@ -39,6 +39,7 @@ import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.iceberg.BaseTable;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
+import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.TableOperations;
@@ -171,9 +172,16 @@ public class TrinoGalaxyCatalog
     }
 
     @Override
-    public Transaction newCreateTableTransaction(ConnectorSession session, SchemaTableName schemaTableName, Schema schema, PartitionSpec partitionSpec, String location, Map<String, String> properties)
+    public Transaction newCreateTableTransaction(
+            ConnectorSession session,
+            SchemaTableName schemaTableName,
+            Schema schema,
+            PartitionSpec partitionSpec,
+            SortOrder sortOrder,
+            String location,
+            Map<String, String> properties)
     {
-        TableMetadata metadata = newTableMetadata(schema, partitionSpec, location, properties);
+        TableMetadata metadata = newTableMetadata(schema, partitionSpec, sortOrder, location, properties);
         TableOperations ops = tableOperationsProvider.createTableOperations(
                 this,
                 session,
