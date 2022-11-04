@@ -31,12 +31,9 @@ public class RetryingDataApi
         implements DataApi
 {
     private final DataApi delegate;
-    private final int maxRetries;
-    private final Duration backoffInitial;
-    private final Duration backoffMax;
-    private final double backoffFactor;
-    private final double backoffJitter;
     private final ScheduledExecutorService executor;
+
+    private final RetryPolicy<Object> retryPolicy;
 
     public RetryingDataApi(
             DataApi delegate,
@@ -48,12 +45,21 @@ public class RetryingDataApi
             ScheduledExecutorService executor)
     {
         this.delegate = delegate;
-        this.maxRetries = maxRetries;
-        this.backoffInitial = backoffInitial;
-        this.backoffMax = backoffMax;
-        this.backoffFactor = backoffFactor;
-        this.backoffJitter = backoffJitter;
         this.executor = requireNonNull(executor, "executor is null");
+        this.retryPolicy = RetryPolicy.builder()
+                .withBackoff(
+                        java.time.Duration.ofMillis(backoffInitial.toMillis()),
+                        java.time.Duration.ofMillis(backoffMax.toMillis()),
+                        backoffFactor)
+                .withMaxRetries(maxRetries)
+                .withJitter(backoffJitter)
+                .handleIf(throwable -> {
+                    if (!(throwable instanceof DataApiException dataApiException)) {
+                        return true;
+                    }
+                    return dataApiException.getErrorCode() == ErrorCode.INTERNAL_ERROR;
+                })
+                .build();
     }
 
     @Override
@@ -100,21 +106,6 @@ public class RetryingDataApi
 
     private <T> ListenableFuture<T> runWithRetry(Callable<ListenableFuture<T>> routine)
     {
-        RetryPolicy<T> retryPolicy = RetryPolicy.<T>builder()
-                .withBackoff(
-                        java.time.Duration.ofMillis(backoffInitial.toMillis()),
-                        java.time.Duration.ofMillis(backoffMax.toMillis()),
-                        backoffFactor)
-                .withMaxRetries(maxRetries)
-                .withJitter(backoffJitter)
-                .handleIf(throwable -> {
-                    if (!(throwable instanceof DataApiException dataApiException)) {
-                        return true;
-                    }
-                    return dataApiException.getErrorCode() == ErrorCode.INTERNAL_ERROR;
-                })
-                .build();
-
         CompletableFuture<T> finalFuture =
                 Failsafe.with(retryPolicy)
                         .with(executor)
