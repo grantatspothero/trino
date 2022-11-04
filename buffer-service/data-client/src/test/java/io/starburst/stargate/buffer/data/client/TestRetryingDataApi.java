@@ -196,7 +196,7 @@ public class TestRetryingDataApi
         }
 
         @Override
-        public synchronized ListenableFuture<Void> addDataPages(String exchangeId, int partitionId, int taskId, int attemptId, long dataPagesId, List<Slice> dataPages)
+        public synchronized ListenableFuture<Void> addDataPages(String exchangeId, int taskId, int attemptId, long dataPagesId, ListMultimap<Integer, Slice> dataPagesByPartition)
         {
             throw new RuntimeException("not implemented");
         }

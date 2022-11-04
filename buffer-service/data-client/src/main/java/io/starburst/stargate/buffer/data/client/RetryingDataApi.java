@@ -9,6 +9,7 @@
  */
 package io.starburst.stargate.buffer.data.client;
 
+import com.google.common.collect.ListMultimap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -87,9 +88,9 @@ public class RetryingDataApi
     }
 
     @Override
-    public ListenableFuture<Void> addDataPages(String exchangeId, int partitionId, int taskId, int attemptId, long dataPagesId, List<Slice> dataPages)
+    public ListenableFuture<Void> addDataPages(String exchangeId, int taskId, int attemptId, long dataPagesId, ListMultimap<Integer, Slice> dataPagesByPartition)
     {
-        return runWithRetry(() -> delegate.addDataPages(exchangeId, partitionId, taskId, attemptId, dataPagesId, dataPages));
+        return runWithRetry(() -> delegate.addDataPages(exchangeId, taskId, attemptId, dataPagesId, dataPagesByPartition));
     }
 
     @Override
