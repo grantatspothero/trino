@@ -32,26 +32,26 @@ public class RetryingDataApi
 {
     private final DataApi delegate;
     private final int maxRetries;
-    private final Duration backoffDelay;
-    private final Duration backoffMaxDelay;
-    private final double backoffDelayFactor;
+    private final Duration backoffInitial;
+    private final Duration backoffMax;
+    private final double backoffFactor;
     private final double backoffJitter;
     private final ScheduledExecutorService executor;
 
     public RetryingDataApi(
             DataApi delegate,
             int maxRetries,
-            Duration backoffDelay,
-            Duration backoffMaxDelay,
-            double backoffDelayFactor,
+            Duration backoffInitial,
+            Duration backoffMax,
+            double backoffFactor,
             double backoffJitter,
             ScheduledExecutorService executor)
     {
         this.delegate = delegate;
         this.maxRetries = maxRetries;
-        this.backoffDelay = backoffDelay;
-        this.backoffMaxDelay = backoffMaxDelay;
-        this.backoffDelayFactor = backoffDelayFactor;
+        this.backoffInitial = backoffInitial;
+        this.backoffMax = backoffMax;
+        this.backoffFactor = backoffFactor;
         this.backoffJitter = backoffJitter;
         this.executor = requireNonNull(executor, "executor is null");
     }
@@ -101,7 +101,7 @@ public class RetryingDataApi
     private <T> ListenableFuture<T> runWithRetry(Callable<ListenableFuture<T>> routine)
     {
         RetryPolicy<T> retryPolicy = RetryPolicy.<T>builder()
-                .withBackoff(backoffDelay, backoffMaxDelay, backoffDelayFactor)
+                .withBackoff(backoffInitial, backoffMax, backoffFactor)
                 .withMaxRetries(maxRetries)
                 .withJitter(backoffJitter)
                 .handleIf(throwable -> {
