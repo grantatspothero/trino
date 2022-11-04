@@ -16,14 +16,13 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import io.airlift.slice.Slice;
+import io.airlift.units.Duration;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +54,7 @@ public class TestRetryingDataApi
             throws InterruptedException
     {
         TestingDataApi delegate = new TestingDataApi();
-        DataApi retryingDataApi = new RetryingDataApi(delegate, 2, Duration.of(500, ChronoUnit.MILLIS), Duration.of(1000, ChronoUnit.MILLIS), 2.0, 0.0, executor);
+        DataApi retryingDataApi = new RetryingDataApi(delegate, 2, Duration.valueOf("500ms"), Duration.valueOf("1000ms"), 2.0, 0.0, executor);
 
         delegate.recordListClosedChunks("exchange-1", OptionalLong.empty(), Futures.immediateFailedFuture(new RuntimeException("random exception")));
         delegate.recordListClosedChunks("exchange-1", OptionalLong.empty(), Futures.immediateFailedFuture(new RuntimeException("random exception")));
@@ -77,7 +76,7 @@ public class TestRetryingDataApi
             throws ExecutionException
     {
         TestingDataApi delegate = new TestingDataApi();
-        DataApi retryingDataApi = new RetryingDataApi(delegate, 2, Duration.of(1, ChronoUnit.MILLIS), Duration.of(2, ChronoUnit.MILLIS), 2.0, 0.0, executor);
+        DataApi retryingDataApi = new RetryingDataApi(delegate, 2, Duration.valueOf("1ms"), Duration.valueOf("2ms"), 2.0, 0.0, executor);
 
         delegate.recordListClosedChunks("exchange-1", OptionalLong.empty(), Futures.immediateFailedFuture(new RuntimeException("random exception")));
         delegate.recordListClosedChunks("exchange-1", OptionalLong.empty(), Futures.immediateFailedFuture(new RuntimeException("random exception")));
@@ -96,7 +95,7 @@ public class TestRetryingDataApi
             throws ExecutionException
     {
         TestingDataApi delegate = new TestingDataApi();
-        DataApi retryingDataApi = new RetryingDataApi(delegate, 2, Duration.of(1, ChronoUnit.MILLIS), Duration.of(2, ChronoUnit.MILLIS), 2.0, 0.0, executor);
+        DataApi retryingDataApi = new RetryingDataApi(delegate, 2, Duration.valueOf("1ms"), Duration.valueOf("2ms"), 2.0, 0.0, executor);
 
         delegate.recordListClosedChunks("exchange-1", OptionalLong.empty(), Futures.immediateFailedFuture(new DataApiException(ErrorCode.INTERNAL_ERROR, "blah")));
         delegate.recordListClosedChunks("exchange-1", OptionalLong.empty(), Futures.immediateFailedFuture(new DataApiException(ErrorCode.INTERNAL_ERROR, "blah")));
@@ -118,7 +117,7 @@ public class TestRetryingDataApi
             return; // skip
         }
         TestingDataApi delegate = new TestingDataApi();
-        DataApi retryingDataApi = new RetryingDataApi(delegate, 2, Duration.of(1, ChronoUnit.MILLIS), Duration.of(2, ChronoUnit.MILLIS), 2.0, 0.0, executor);
+        DataApi retryingDataApi = new RetryingDataApi(delegate, 2, Duration.valueOf("1ms"), Duration.valueOf("2ms"), 2.0, 0.0, executor);
 
         delegate.recordListClosedChunks("exchange-1", OptionalLong.empty(), Futures.immediateFailedFuture(new DataApiException(errorCode, "blah")));
         ListenableFuture<ChunkList> future = retryingDataApi.listClosedChunks("exchange-1", OptionalLong.empty());
@@ -136,7 +135,7 @@ public class TestRetryingDataApi
             throws ExecutionException
     {
         TestingDataApi delegate = new TestingDataApi();
-        DataApi retryingDataApi = new RetryingDataApi(delegate, 2, Duration.of(1000, ChronoUnit.MILLIS), Duration.of(2000, ChronoUnit.MILLIS), 2.0, 0.0, executor);
+        DataApi retryingDataApi = new RetryingDataApi(delegate, 2, Duration.valueOf("1000ms"), Duration.valueOf("2000ms"), 2.0, 0.0, executor);
 
         ChunkList result = new ChunkList(ImmutableList.of(), OptionalLong.of(7));
         delegate.recordListClosedChunks("exchange-1", OptionalLong.empty(), Futures.immediateFuture(result));

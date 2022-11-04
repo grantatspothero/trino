@@ -16,8 +16,8 @@ import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import io.airlift.concurrent.MoreFutures;
 import io.airlift.slice.Slice;
+import io.airlift.units.Duration;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.OptionalLong;
 import java.util.concurrent.Callable;
@@ -101,7 +101,10 @@ public class RetryingDataApi
     private <T> ListenableFuture<T> runWithRetry(Callable<ListenableFuture<T>> routine)
     {
         RetryPolicy<T> retryPolicy = RetryPolicy.<T>builder()
-                .withBackoff(backoffInitial, backoffMax, backoffFactor)
+                .withBackoff(
+                        java.time.Duration.ofMillis(backoffInitial.toMillis()),
+                        java.time.Duration.ofMillis(backoffMax.toMillis()),
+                        backoffFactor)
                 .withMaxRetries(maxRetries)
                 .withJitter(backoffJitter)
                 .handleIf(throwable -> {
