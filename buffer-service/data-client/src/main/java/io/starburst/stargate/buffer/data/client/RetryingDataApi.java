@@ -77,31 +77,31 @@ public class RetryingDataApi
     @Override
     public ListenableFuture<Void> pingExchange(String exchangeId)
     {
-        return runWithRetry(() -> pingExchange(exchangeId));
+        return runWithRetry(() -> delegate.pingExchange(exchangeId));
     }
 
     @Override
     public ListenableFuture<Void> removeExchange(String exchangeId)
     {
-        return runWithRetry(() -> removeExchange(exchangeId));
+        return runWithRetry(() -> delegate.removeExchange(exchangeId));
     }
 
     @Override
     public ListenableFuture<Void> addDataPages(String exchangeId, int partitionId, int taskId, int attemptId, long dataPagesId, List<Slice> dataPages)
     {
-        return runWithRetry(() -> addDataPages(exchangeId, partitionId, taskId, attemptId, dataPagesId, dataPages));
+        return runWithRetry(() -> delegate.addDataPages(exchangeId, partitionId, taskId, attemptId, dataPagesId, dataPages));
     }
 
     @Override
     public ListenableFuture<Void> finishExchange(String exchangeId)
     {
-        return runWithRetry(() -> finishExchange(exchangeId));
+        return runWithRetry(() -> delegate.finishExchange(exchangeId));
     }
 
     @Override
     public ListenableFuture<List<DataPage>> getChunkData(String exchangeId, int partitionId, long chunkId, long bufferNodeId)
     {
-        return runWithRetry(() -> getChunkData(exchangeId, partitionId, chunkId, bufferNodeId));
+        return runWithRetry(() -> delegate.getChunkData(exchangeId, partitionId, chunkId, bufferNodeId));
     }
 
     private <T> ListenableFuture<T> runWithRetry(Callable<ListenableFuture<T>> routine)
