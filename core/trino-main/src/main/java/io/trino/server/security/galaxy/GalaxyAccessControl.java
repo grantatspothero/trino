@@ -36,6 +36,8 @@ import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogSchemaName;
 import io.trino.spi.connector.CatalogSchemaRoutineName;
 import io.trino.spi.connector.CatalogSchemaTableName;
+import io.trino.spi.connector.EntityKindAndName;
+import io.trino.spi.connector.EntityPrivilege;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TableNotFoundException;
 import io.trino.spi.eventlistener.EventListener;
@@ -630,6 +632,27 @@ public class GalaxyAccessControl
     {
         validateEntityKindPrivilege(context, "revoked", EntityKind.TABLE, privilege, table.getCatalogName(), table.getSchemaTableName().getSchemaName());
         // Galaxy does the checking
+    }
+
+    @Override
+    public void checkCanGrantEntityPrivilege(SystemSecurityContext context, EntityPrivilege privilege, EntityKindAndName entity, TrinoPrincipal grantee, boolean grantOption)
+    {
+        // TODO(https://github.com/starburstdata/galaxy-trino/issues/1885)
+        SystemAccessControl.super.checkCanGrantEntityPrivilege(context, privilege, entity, grantee, grantOption);
+    }
+
+    @Override
+    public void checkCanDenyEntityPrivilege(SystemSecurityContext context, EntityPrivilege privilege, EntityKindAndName entity, TrinoPrincipal grantee)
+    {
+        // TODO(https://github.com/starburstdata/galaxy-trino/issues/1885)
+        SystemAccessControl.super.checkCanDenyEntityPrivilege(context, privilege, entity, grantee);
+    }
+
+    @Override
+    public void checkCanRevokeEntityPrivilege(SystemSecurityContext context, EntityPrivilege privilege, EntityKindAndName entity, TrinoPrincipal revokee, boolean grantOption)
+    {
+        // TODO(https://github.com/starburstdata/galaxy-trino/issues/1885)
+        SystemAccessControl.super.checkCanRevokeEntityPrivilege(context, privilege, entity, revokee, grantOption);
     }
 
     @Override

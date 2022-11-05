@@ -16,10 +16,14 @@ package io.trino.execution;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.starburst.stargate.id.EntityKind;
+import io.trino.metadata.Metadata;
+import io.trino.spi.TrinoException;
+import io.trino.spi.connector.EntityPrivilege;
 import io.trino.spi.security.Privilege;
 import io.trino.sql.tree.Node;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -58,6 +62,24 @@ public class PrivilegeUtilities
             privileges = getPrivilegesForEntityKind(entityKind);
         }
         return privileges;
+    }
+
+    public static Set<EntityPrivilege> fetchEntityKindPrivileges(String entityKind, Metadata metadata, Optional<List<String>> privileges)
+    {
+        Set<EntityPrivilege> allPrivileges = metadata.getAllEntityKindPrivileges(entityKind);
+        if (privileges.isPresent()) {
+            return privileges.get().stream()
+                    .map(privilege -> {
+                        EntityPrivilege entityPrivilege = new EntityPrivilege(privilege.toUpperCase(Locale.ENGLISH));
+                        if (!allPrivileges.contains(entityPrivilege)) {
+                            throw new TrinoException(INVALID_PRIVILEGE, "Privilege %s is not supported for entity kind %s".formatted(privilege, entityKind));
+                        }
+                        return entityPrivilege;
+                    }).collect(toImmutableSet());
+        }
+        else {
+            return allPrivileges;
+        }
     }
 
     private static Privilege parsePrivilege(Node statement, String privilegeString, EntityKind entityKind)
