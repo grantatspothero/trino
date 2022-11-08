@@ -144,7 +144,11 @@ jobs:
 
   check-commits-dispatcher:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    # Fixup commits can violate the rule of "every commit must build", so we can't have this check for Galaxy. For example, commits A and B, with B depending on A,
+    # if we have a fixup commits A' and B' where A' modifies an API used by B, then A' won't build because the API for B won't be updated until B'.
+    # We enable the check for Rebase PRs only, but only after few initial ci.yml changes are merged into the target branch.
+    # TODO maybe we do not need "only after few initial ci.yml changes are merged" part?
+    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'update/galaxy')
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
