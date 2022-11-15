@@ -122,6 +122,8 @@ import org.apache.iceberg.RowDelta;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.SchemaParser;
 import org.apache.iceberg.Snapshot;
+import org.apache.iceberg.SortField;
+import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.StatisticsFile;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.TableProperties;
@@ -390,6 +392,9 @@ public class IcebergMetadata
                 name.getTableType(),
                 tableSnapshotId,
                 SchemaParser.toJson(tableSchema),
+                table.sortOrder().fields().stream()
+                        .map(TrinoSortField::fromIceberg)
+                        .collect(toImmutableList()),
                 partitionSpec.map(PartitionSpecParser::toJson),
                 table.operations().current().formatVersion(),
                 TupleDomain.all(),
@@ -804,11 +809,36 @@ public class IcebergMetadata
                 SchemaParser.toJson(table.schema()),
                 transformValues(table.specs(), PartitionSpecParser::toJson),
                 table.spec().specId(),
+                getSupportedSortFields(table.schema(), table.sortOrder()),
                 getColumns(table.schema(), typeManager),
                 table.location(),
                 getFileFormat(table),
                 table.properties(),
                 retryMode);
+    }
+
+    private static List<TrinoSortField> getSupportedSortFields(Schema schema, SortOrder sortOrder)
+    {
+        if (!sortOrder.isSorted()) {
+            return ImmutableList.of();
+        }
+        Set<Integer> baseColumnFieldIds = schema.columns().stream()
+                .map(Types.NestedField::fieldId)
+                .collect(toImmutableSet());
+
+        ImmutableList.Builder<TrinoSortField> sortFields = ImmutableList.<TrinoSortField>builder();
+        for (SortField sortField : sortOrder.fields()) {
+            if (!sortField.transform().isIdentity()) {
+                continue;
+            }
+            if (!baseColumnFieldIds.contains(sortField.sourceId())) {
+                continue;
+            }
+
+            sortFields.add(TrinoSortField.fromIceberg(sortField));
+        }
+
+        return sortFields.build();
     }
 
     @Override
@@ -991,6 +1021,7 @@ public class IcebergMetadata
                         tableHandle.getTableSchemaJson(),
                         tableHandle.getPartitionSpecJson().orElseThrow(() -> new VerifyException("Partition spec missing in the table handle")),
                         getColumns(SchemaParser.fromJson(tableHandle.getTableSchemaJson()), typeManager),
+                        tableHandle.getSortOrder(),
                         getFileFormat(tableHandle.getStorageProperties()),
                         tableHandle.getStorageProperties(),
                         maxScannedFileSize,
@@ -2226,6 +2257,7 @@ public class IcebergMetadata
                         table.getTableType(),
                         table.getSnapshotId(),
                         table.getTableSchemaJson(),
+                        table.getSortOrder(),
                         table.getPartitionSpecJson(),
                         table.getFormatVersion(),
                         newUnenforcedConstraint,
@@ -2375,6 +2407,7 @@ public class IcebergMetadata
                         originalHandle.getTableType(),
                         originalHandle.getSnapshotId(),
                         originalHandle.getTableSchemaJson(),
+                        originalHandle.getSortOrder(),
                         originalHandle.getPartitionSpecJson(),
                         originalHandle.getFormatVersion(),
                         originalHandle.getUnenforcedPredicate(),

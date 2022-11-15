@@ -21,6 +21,7 @@ import com.google.inject.multibindings.Multibinder;
 import io.trino.plugin.base.session.SessionPropertiesProvider;
 import io.trino.plugin.hive.FileFormatDataSourceStats;
 import io.trino.plugin.hive.LocationAccessControlModule;
+import io.trino.plugin.hive.SortingFileWriterConfig;
 import io.trino.plugin.hive.metastore.thrift.TranslateHiveViews;
 import io.trino.plugin.hive.orc.OrcReaderConfig;
 import io.trino.plugin.hive.orc.OrcWriterConfig;
@@ -57,6 +58,7 @@ public class IcebergModule
         binder.install(new LocationAccessControlModule());
 
         configBinder(binder).bindConfig(IcebergConfig.class);
+        configBinder(binder).bindConfig(SortingFileWriterConfig.class, "iceberg");
 
         newSetBinder(binder, SessionPropertiesProvider.class).addBinding().to(IcebergSessionProperties.class).in(Scopes.SINGLETON);
         binder.bind(IcebergTableProperties.class).in(Scopes.SINGLETON);
