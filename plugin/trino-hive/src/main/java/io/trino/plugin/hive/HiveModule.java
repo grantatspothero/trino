@@ -78,6 +78,7 @@ public class HiveModule
 
         configBinder(binder).bindConfig(HiveConfig.class);
         configBinder(binder).bindConfig(HiveMetastoreConfig.class);
+        configBinder(binder).bindConfig(SortingFileWriterConfig.class, "hive");
 
         binder.bind(HiveSessionProperties.class).in(Scopes.SINGLETON);
         binder.bind(HiveTableProperties.class).in(Scopes.SINGLETON);
