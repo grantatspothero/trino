@@ -333,6 +333,11 @@ public final class SystemSessionProperties
                         QUERY_MAX_RUN_TIME,
                         "Maximum run time of a query (includes the queueing time)",
                         queryManagerConfig.getQueryMaxRunTime(),
+                        value -> {
+                            if (value.compareTo(queryManagerConfig.getQueryMaxRunTime()) > 0) {
+                                throw new TrinoException(INVALID_SESSION_PROPERTY, format("%s must not exceed default %s: %s", QUERY_MAX_RUN_TIME, queryManagerConfig.getQueryMaxRunTime(), value));
+                            }
+                        },
                         false),
                 durationProperty(
                         QUERY_MAX_EXECUTION_TIME,
