@@ -9,13 +9,20 @@
  */
 package io.starburst.stargate.buffer.data.spooling;
 
+import com.google.common.base.Function;
+import com.google.common.util.concurrent.AsyncFunction;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.airlift.slice.Slice;
 import io.starburst.stargate.buffer.data.execution.ChunkDataHolder;
 import io.starburst.stargate.buffer.data.memory.SliceLease;
 
 import javax.annotation.Nullable;
 
+import java.util.concurrent.ExecutorService;
+
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.Futures.nonCancellationPropagating;
 import static java.util.Objects.requireNonNull;
 
@@ -25,7 +32,7 @@ public class ChunkDataLease
     private final SliceLease sliceLease;
     private final ListenableFuture<ChunkDataHolder> chunkDataHolderFuture;
 
-    public ChunkDataLease(
+    private ChunkDataLease(
             @Nullable SliceLease sliceLease,
             ListenableFuture<ChunkDataHolder> chunkDataHolderFuture)
     {
@@ -44,5 +51,30 @@ public class ChunkDataLease
         if (sliceLease != null) {
             sliceLease.release();
         }
+    }
+
+    public static ChunkDataLease immediate(ChunkDataHolder chunkDataHolder)
+    {
+        return new ChunkDataLease(null, immediateFuture(chunkDataHolder));
+    }
+
+    public static ChunkDataLease forSliceLease(SliceLease sliceLease, Function<Slice, ChunkDataHolder> sliceTransformer, ExecutorService executor)
+    {
+        return new ChunkDataLease(
+                sliceLease,
+                Futures.transform(
+                        sliceLease.getSliceFuture(),
+                        sliceTransformer,
+                        executor));
+    }
+
+    public static ChunkDataLease forSliceLeaseAsync(SliceLease sliceLease, AsyncFunction<Slice, ChunkDataHolder> sliceAsyncTransformer, ExecutorService executor)
+    {
+        return new ChunkDataLease(
+                sliceLease,
+                Futures.transformAsync(
+                        sliceLease.getSliceFuture(),
+                        sliceAsyncTransformer,
+                        executor));
     }
 }
