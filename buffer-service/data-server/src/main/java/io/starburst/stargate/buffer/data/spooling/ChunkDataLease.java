@@ -21,9 +21,10 @@ import javax.annotation.Nullable;
 
 import java.util.concurrent.ExecutorService;
 
-import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Verify.verify;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.Futures.nonCancellationPropagating;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static java.util.Objects.requireNonNull;
 
 public class ChunkDataLease
@@ -47,10 +48,23 @@ public class ChunkDataLease
 
     public void release()
     {
-        checkState(chunkDataHolderFuture.isDone(), "chunkDataHolderFuture is not done");
-        if (sliceLease != null) {
-            sliceLease.release();
+        if (sliceLease == null) {
+            return;
         }
+
+        if (chunkDataHolderFuture.isDone()) {
+            sliceLease.release();
+            return;
+        }
+
+        sliceLease.getSliceFuture().cancel(true);
+        if (sliceLease.getSliceFuture().isCancelled()) {
+            sliceLease.release();
+            return;
+        }
+        verify(sliceLease.getSliceFuture().isDone(), "sliceFuture is expected to be done");
+
+        chunkDataHolderFuture.addListener(sliceLease::release, directExecutor());
     }
 
     public static ChunkDataLease immediate(ChunkDataHolder chunkDataHolder)
