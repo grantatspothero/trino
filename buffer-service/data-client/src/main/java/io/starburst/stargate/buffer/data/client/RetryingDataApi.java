@@ -19,6 +19,7 @@ import dev.failsafe.RetryPolicy;
 import io.airlift.concurrent.MoreFutures;
 import io.airlift.slice.Slice;
 import io.airlift.units.Duration;
+import io.starburst.stargate.buffer.BufferNodeInfo;
 
 import java.util.List;
 import java.util.OptionalLong;
@@ -62,6 +63,13 @@ public class RetryingDataApi
                     return dataApiException.getErrorCode() == ErrorCode.INTERNAL_ERROR;
                 })
                 .build();
+    }
+
+    @Override
+    public BufferNodeInfo getInfo()
+    {
+        return getRetryExecutor()
+                .get(execution -> delegate.getInfo());
     }
 
     @Override
