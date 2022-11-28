@@ -58,6 +58,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static io.trino.testing.TestingNames.randomNameSuffix;
+import static io.trino.type.InternalTypeManager.TESTING_TYPE_MANAGER;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -195,6 +196,7 @@ public class TestBigQueryNetworkUsageTracking
     {
         return new BigQueryClientFactory(
                 new SingletonIdentityCacheMapping(),
+                new BigQueryTypeManager(TESTING_TYPE_MANAGER),
                 bigQueryConfig,
                 new ViewMaterializationCache(bigQueryConfig),
                 new BigQueryLabelFactory(
