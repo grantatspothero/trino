@@ -40,7 +40,9 @@ public class MongoClientConfig
     private int connectionTimeout = 10_000;
     private int socketTimeout;
     private int maxConnectionIdleTime;
-    private boolean tlsEnabled;
+    // TODO: revert sslEnabled back to boolean when galaxy does not support customers configuring connection-url
+    // see: https://github.com/starburstdata/stargate/issues/4474
+    private Boolean tlsEnabled;
     private File keystorePath;
     private String keystorePassword;
     private File truststorePath;
@@ -57,7 +59,7 @@ public class MongoClientConfig
     @AssertTrue(message = "'mongodb.tls.keystore-path', 'mongodb.tls.keystore-password', 'mongodb.tls.truststore-path' and 'mongodb.tls.truststore-password' must be empty when TLS is disabled")
     public boolean isValidTlsConfig()
     {
-        if (!tlsEnabled) {
+        if (tlsEnabled == null || !tlsEnabled) {
             return keystorePath == null && keystorePassword == null && truststorePath == null && truststorePassword == null;
         }
         return true;
@@ -230,14 +232,14 @@ public class MongoClientConfig
         return this;
     }
 
-    public boolean getTlsEnabled()
+    public Boolean getTlsEnabled()
     {
         return this.tlsEnabled;
     }
 
     @Config("mongodb.tls.enabled")
     @LegacyConfig("mongodb.ssl.enabled")
-    public MongoClientConfig setTlsEnabled(boolean tlsEnabled)
+    public MongoClientConfig setTlsEnabled(Boolean tlsEnabled)
     {
         this.tlsEnabled = tlsEnabled;
         return this;

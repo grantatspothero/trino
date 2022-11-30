@@ -42,7 +42,7 @@ public class TestMongoClientConfig
                 .setMaxWaitTime(120_000)
                 .setConnectionTimeout(10_000)
                 .setSocketTimeout(0)
-                .setTlsEnabled(false)
+                .setTlsEnabled(null)
                 .setKeystorePath(null)
                 .setKeystorePassword(null)
                 .setTruststorePath(null)

@@ -74,7 +74,10 @@ public class MongoClientModule
         if (config.getRequiredReplicaSetName() != null) {
             options.applyToClusterSettings(builder -> builder.requiredReplicaSetName(config.getRequiredReplicaSetName()));
         }
-        if (config.getTlsEnabled()) {
+        if (config.getTlsEnabled() == null) {
+            // TODO: unconditionally apply sslEnabled/tlsEnabled (i.e. remove null check) see: https://github.com/starburstdata/stargate/issues/4474
+        }
+        else if (config.getTlsEnabled()) {
             options.applyToSslSettings(builder -> {
                 builder.enabled(true);
                 buildSslContext(config.getKeystorePath(), config.getKeystorePassword(), config.getTruststorePath(), config.getTruststorePassword())
