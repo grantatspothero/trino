@@ -109,9 +109,9 @@ public class RetryingDataApi
     }
 
     @Override
-    public ListenableFuture<List<DataPage>> getChunkData(String exchangeId, int partitionId, long chunkId, long bufferNodeId)
+    public ListenableFuture<List<DataPage>> getChunkData(long bufferNodeId, String exchangeId, int partitionId, long chunkId)
     {
-        return runWithRetry(() -> delegate.getChunkData(exchangeId, partitionId, chunkId, bufferNodeId));
+        return runWithRetry(() -> delegate.getChunkData(bufferNodeId, exchangeId, partitionId, chunkId));
     }
 
     private <T> ListenableFuture<T> runWithRetry(Callable<ListenableFuture<T>> routine)

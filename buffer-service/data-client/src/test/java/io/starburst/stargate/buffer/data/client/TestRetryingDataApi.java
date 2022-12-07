@@ -218,7 +218,7 @@ public class TestRetryingDataApi
         }
 
         @Override
-        public synchronized ListenableFuture<List<DataPage>> getChunkData(String exchangeId, int partitionId, long chunkId, long bufferNodeId)
+        public synchronized ListenableFuture<List<DataPage>> getChunkData(long bufferNodeId, String exchangeId, int partitionId, long chunkId)
         {
             throw new RuntimeException("not implemented");
         }
