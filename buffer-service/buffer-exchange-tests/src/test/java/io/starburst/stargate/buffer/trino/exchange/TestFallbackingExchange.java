@@ -79,7 +79,7 @@ public class TestFallbackingExchange
             assertThat(afterFailureStats.bufferExchangesCreated()).isEqualTo(initialStats.bufferExchangesCreated());
             assertThat(afterFailureStats.filesystemExchangesCreated()).isGreaterThan(initialStats.filesystemExchangesCreated());
 
-            Thread.sleep(1500); // we are past the decay interfval in failure tracking server but still in backoff on the exchange side
+            Thread.sleep(1500); // we are past the decay interval in failure tracking server but still in backoff on the exchange side
             assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).matches("SELECT BIGINT '15000'");
             assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).matches("SELECT BIGINT '15000'");
 
