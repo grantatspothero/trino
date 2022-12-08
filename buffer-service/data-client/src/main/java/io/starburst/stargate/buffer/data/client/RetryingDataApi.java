@@ -14,6 +14,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import dev.failsafe.Failsafe;
+import dev.failsafe.FailsafeExecutor;
 import dev.failsafe.RetryPolicy;
 import io.airlift.concurrent.MoreFutures;
 import io.airlift.slice.Slice;
@@ -107,27 +108,31 @@ public class RetryingDataApi
 
     private <T> ListenableFuture<T> runWithRetry(Callable<ListenableFuture<T>> routine)
     {
-        CompletableFuture<T> finalFuture =
-                Failsafe.with(retryPolicy)
-                        .with(executor)
-                        .getAsyncExecution(execution -> {
-                            ListenableFuture<T> future = routine.call();
-                            Futures.addCallback(future, new FutureCallback<>()
-                            {
-                                @Override
-                                public void onSuccess(T result)
-                                {
-                                    execution.recordResult(result);
-                                }
+        CompletableFuture<T> finalFuture = getRetryExecutor()
+                .getAsyncExecution(execution -> {
+                    ListenableFuture<T> future = routine.call();
+                    Futures.addCallback(future, new FutureCallback<>()
+                    {
+                        @Override
+                        public void onSuccess(T result)
+                        {
+                            execution.recordResult(result);
+                        }
 
-                                @Override
-                                public void onFailure(Throwable t)
-                                {
-                                    execution.recordException(t);
-                                }
-                            }, directExecutor());
-                        });
+                        @Override
+                        public void onFailure(Throwable t)
+                        {
+                            execution.recordException(t);
+                        }
+                    }, directExecutor());
+                });
 
         return MoreFutures.toListenableFuture(finalFuture);
+    }
+
+    private FailsafeExecutor<Object> getRetryExecutor()
+    {
+        return Failsafe.with(retryPolicy)
+                .with(executor);
     }
 }
