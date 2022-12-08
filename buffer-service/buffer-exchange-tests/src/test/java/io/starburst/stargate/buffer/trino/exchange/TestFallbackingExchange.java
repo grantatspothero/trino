@@ -58,8 +58,7 @@ public class TestFallbackingExchange
                 throw new RuntimeException("Expected %s to be FallbackingExchangeManager but was %s".formatted(exchangeManager, exchangeManager.getClass()));
             }
 
-            assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).matches("SELECT BIGINT '15000'");
-            assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).matches("SELECT BIGINT '15000'");
+            assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).skippingTypesCheck().matches("SELECT BIGINT '15000'");
 
             FallbackingExchangeStats.Snapshot initialStats = fallbackingExchangeManager.getStats();
 
@@ -72,24 +71,21 @@ public class TestFallbackingExchange
                 failureTrackingClient.registerFailure(new FailureInfo(Optional.empty(), "some_client", "some_failure"));
             }
 
-            assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).matches("SELECT BIGINT '15000'");
-            assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).matches("SELECT BIGINT '15000'");
+            assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).skippingTypesCheck().matches("SELECT BIGINT '15000'");
 
             FallbackingExchangeStats.Snapshot afterFailureStats = fallbackingExchangeManager.getStats();
             assertThat(afterFailureStats.bufferExchangesCreated()).isEqualTo(initialStats.bufferExchangesCreated());
             assertThat(afterFailureStats.filesystemExchangesCreated()).isGreaterThan(initialStats.filesystemExchangesCreated());
 
             Thread.sleep(1500); // we are past the decay interval in failure tracking server but still in backoff on the exchange side
-            assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).matches("SELECT BIGINT '15000'");
-            assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).matches("SELECT BIGINT '15000'");
+            assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).skippingTypesCheck().matches("SELECT BIGINT '15000'");
 
             FallbackingExchangeStats.Snapshot pastDecayStats = fallbackingExchangeManager.getStats();
             assertThat(pastDecayStats.bufferExchangesCreated()).isEqualTo(afterFailureStats.bufferExchangesCreated());
             assertThat(pastDecayStats.filesystemExchangesCreated()).isGreaterThan(afterFailureStats.filesystemExchangesCreated());
 
             Thread.sleep(1500); // we should recover to buffer service now
-            assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).matches("SELECT BIGINT '15000'");
-            assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).matches("SELECT BIGINT '15000'");
+            assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).skippingTypesCheck().matches("SELECT BIGINT '15000'");
 
             FallbackingExchangeStats.Snapshot recoveredStats = fallbackingExchangeManager.getStats();
             assertThat(recoveredStats.bufferExchangesCreated()).isGreaterThan(pastDecayStats.bufferExchangesCreated());
