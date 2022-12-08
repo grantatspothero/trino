@@ -17,6 +17,7 @@ import dev.failsafe.Failsafe;
 import dev.failsafe.FailsafeExecutor;
 import dev.failsafe.RetryPolicy;
 import io.airlift.concurrent.MoreFutures;
+import io.airlift.log.Logger;
 import io.airlift.slice.Slice;
 import io.airlift.units.Duration;
 import io.starburst.stargate.buffer.BufferNodeInfo;
@@ -33,6 +34,8 @@ import static java.util.Objects.requireNonNull;
 public class RetryingDataApi
         implements DataApi
 {
+    private static final Logger logger = Logger.get(RetryingDataApi.class);
+
     private final DataApi delegate;
     private final ScheduledExecutorService executor;
 
@@ -56,6 +59,7 @@ public class RetryingDataApi
                         backoffFactor)
                 .withMaxRetries(maxRetries)
                 .withJitter(backoffJitter)
+                .onRetry(event -> logger.warn(event.getLastException(), "retrying DataApi request (%s)".formatted(event.getAttemptCount())))
                 .handleIf(throwable -> {
                     if (!(throwable instanceof DataApiException dataApiException)) {
                         return true;
