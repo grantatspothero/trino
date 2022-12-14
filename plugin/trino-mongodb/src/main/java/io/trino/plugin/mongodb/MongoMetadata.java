@@ -550,7 +550,6 @@ public class MongoMetadata
     {
         MongoTableHandle tableHandle = (MongoTableHandle) table;
 
-        Optional<Set<ColumnHandle>> partitioningColumns = Optional.empty(); //TODO: sharding key
         ImmutableList.Builder<LocalProperty<ColumnHandle>> localProperties = ImmutableList.builder();
 
         MongoTable tableInfo = mongoSession.getTable(tableHandle.getSchemaTableName());
@@ -570,7 +569,6 @@ public class MongoMetadata
         return new ConnectorTableProperties(
                 TupleDomain.all(),
                 Optional.empty(),
-                partitioningColumns,
                 Optional.empty(),
                 localProperties.build());
     }

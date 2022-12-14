@@ -2883,7 +2883,6 @@ public class HiveMetadata
         return new ConnectorTableProperties(
                 predicate,
                 tablePartitioning,
-                Optional.empty(),
                 discretePredicates,
                 sortingProperties);
     }
