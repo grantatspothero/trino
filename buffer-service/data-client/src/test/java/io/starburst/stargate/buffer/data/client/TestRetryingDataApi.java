@@ -177,6 +177,12 @@ public class TestRetryingDataApi
             return responses.remove(0);
         }
 
+        @Override
+        public ListenableFuture<Void> markAllClosedChunksReceived(String exchangeId)
+        {
+            throw new RuntimeException("not implemented");
+        }
+
         public synchronized void recordListClosedChunks(String exchangeId, OptionalLong pagingId, ListenableFuture<ChunkList> result)
         {
             listClosedChunksResponses.put(new ListClosedChunksKey(exchangeId, pagingId), result);

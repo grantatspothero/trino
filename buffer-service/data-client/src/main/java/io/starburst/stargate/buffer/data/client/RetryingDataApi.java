@@ -83,6 +83,12 @@ public class RetryingDataApi
     }
 
     @Override
+    public ListenableFuture<Void> markAllClosedChunksReceived(String exchangeId)
+    {
+        return runWithRetry(() -> delegate.markAllClosedChunksReceived(exchangeId));
+    }
+
+    @Override
     public ListenableFuture<Void> registerExchange(String exchangeId)
     {
         return runWithRetry(() -> delegate.registerExchange(exchangeId));
