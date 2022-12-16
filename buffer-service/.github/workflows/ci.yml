@@ -47,13 +47,19 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: 17
+
       - name: Determine the project version
         id: project
         run: |
+          trino_version=$(./mvnw -B help:evaluate -Dexpression=dep.trino.version -q -DforceStdout)
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "version=pr${{ github.event.number }}-$(git describe --tags)" >> $GITHUB_OUTPUT
+            echo "version=pr${{ github.event.number }}-$(git describe --tags)-t${trino_version}" >> $GITHUB_OUTPUT
           else
-            echo "version=$(git describe --tags)" >> $GITHUB_OUTPUT
+            echo "version=$(git describe --tags)-t${trino_version}" >> $GITHUB_OUTPUT
           fi
 
   build:
