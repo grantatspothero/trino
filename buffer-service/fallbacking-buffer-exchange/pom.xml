@@ -10,6 +10,7 @@
 
     <artifactId>fallbacking-buffer-exchange</artifactId>
     <description>Buffer Service based Trino Exchange with fallback capabilities</description>
+    <packaging>trino-plugin</packaging>
 
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>
