@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      tag: ${{ steps.project.outputs.version }}
+      version: ${{ steps.project.outputs.version }}
     steps:
       - name: Cleanup workspace
         run: rm -rf *
@@ -89,13 +89,13 @@ jobs:
           git merge origin/main --ff-only
 
       - name: Maven Install
-        run: ./mvnw install -P ci -T 1C -B -V -DskipTests -Dair.check.skip-all -Drevision=${{ needs.determine-version.outputs.tag }}
+        run: ./mvnw install -P ci -T 1C -B -V -DskipTests -Dair.check.skip-all -Drevision=${{ needs.determine-version.outputs.version }}
 
       - name: Maven Tests
-        run: ./mvnw install -P ci -T 1C -B -Drevision=${{ needs.determine-version.outputs.tag }}
+        run: ./mvnw install -P ci -T 1C -B -Drevision=${{ needs.determine-version.outputs.version }}
 
       - name: Maven Deploy
-        run: ./mvnw deploy -P ci -T 1C -s .github/settings.xml -B -DskipTests -Dair.check.skip-all -Drevision=${{ needs.determine-version.outputs.tag }}
+        run: ./mvnw deploy -P ci -T 1C -s .github/settings.xml -B -DskipTests -Dair.check.skip-all -Drevision=${{ needs.determine-version.outputs.version }}
 
       - name: Determine if we need to build container images
         id: container-images
@@ -159,7 +159,7 @@ jobs:
             -r 179619298502.dkr.ecr.us-east-1.amazonaws.com/galaxy \
             -r us-east1-docker.pkg.dev/starburstdata-saas-prod/starburst-docker-repository/galaxy \
             -r starburstgalaxy.azurecr.io/galaxy \
-            -v ${{ needs.determine-version.outputs.tag }} \
+            -v ${{ needs.determine-version.outputs.version }} \
             -a linux/amd64,linux/arm64 \
             -P
 
@@ -170,7 +170,7 @@ jobs:
             -r 179619298502.dkr.ecr.us-east-1.amazonaws.com/galaxy \
             -r us-east1-docker.pkg.dev/starburstdata-saas-prod/starburst-docker-repository/galaxy \
             -r starburstgalaxy.azurecr.io/galaxy \
-            -v ${{ needs.determine-version.outputs.tag }} \
+            -v ${{ needs.determine-version.outputs.version }} \
             -a linux/amd64,linux/arm64 \
             -P
 
@@ -206,7 +206,7 @@ jobs:
           git merge origin/main --ff-only
 
       - name: Maven Install
-        run: ./mvnw install -P ci -T 1C -B -am -pl :buffer-exchange-tests -DskipTests -Drevision=${{ needs.determine-version.outputs.tag }}
+        run: ./mvnw install -P ci -T 1C -B -am -pl :buffer-exchange-tests -DskipTests -Drevision=${{ needs.determine-version.outputs.version }}
 
       - name: Maven Tests
-        run: ./mvnw install -P ci -T 1C -B -P test-buffer-exchange-failure-recovery -pl :buffer-exchange-tests -Drevision=${{ needs.determine-version.outputs.tag }}
+        run: ./mvnw install -P ci -T 1C -B -P test-buffer-exchange-failure-recovery -pl :buffer-exchange-tests -Drevision=${{ needs.determine-version.outputs.version }}
