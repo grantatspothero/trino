@@ -34,11 +34,33 @@ env:
   mavenSnapshotsPassword: ${{ secrets.MAVEN_SNAPSHOT_SERVER_PASSWORD }}
 
 jobs:
+  determine-version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      tag: ${{ steps.project.outputs.version }}
+    steps:
+      - name: Cleanup workspace
+        run: rm -rf *
+
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Determine the project version
+        id: project
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "version=pr${{ github.event.number }}-$(git describe --tags)" >> $GITHUB_OUTPUT
+          else
+            echo "version=$(git describe --tags)" >> $GITHUB_OUTPUT
+          fi
+
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    outputs:
-      tag: ${{ steps.project.outputs.version }}
+    needs:
+      - determine-version
     steps:
       - name: Cleanup workspace
         run: rm -rf *
@@ -66,23 +88,14 @@ jobs:
           git fetch origin
           git merge origin/main --ff-only
 
-      - name: Determine the project version
-        id: project
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "version=pr${{ github.event.number }}-$(git describe --tags)" >> $GITHUB_OUTPUT
-          else
-            echo "version=$(git describe --tags)" >> $GITHUB_OUTPUT
-          fi
-
       - name: Maven Install
-        run: ./mvnw install -P ci -T 1C -B -V -DskipTests -Dair.check.skip-all -Drevision=${{ steps.project.outputs.version }}
+        run: ./mvnw install -P ci -T 1C -B -V -DskipTests -Dair.check.skip-all -Drevision=${{ needs.determine-version.outputs.tag }}
 
       - name: Maven Tests
-        run: ./mvnw install -P ci -T 1C -B -Drevision=${{ steps.project.outputs.version }}
+        run: ./mvnw install -P ci -T 1C -B -Drevision=${{ needs.determine-version.outputs.tag }}
 
       - name: Maven Deploy
-        run: ./mvnw deploy -P ci -T 1C -s .github/settings.xml -B -DskipTests -Dair.check.skip-all -Drevision=${{ steps.project.outputs.version }}
+        run: ./mvnw deploy -P ci -T 1C -s .github/settings.xml -B -DskipTests -Dair.check.skip-all -Drevision=${{ needs.determine-version.outputs.tag }}
 
       - name: Determine if we need to build container images
         id: container-images
@@ -146,7 +159,7 @@ jobs:
             -r 179619298502.dkr.ecr.us-east-1.amazonaws.com/galaxy \
             -r us-east1-docker.pkg.dev/starburstdata-saas-prod/starburst-docker-repository/galaxy \
             -r starburstgalaxy.azurecr.io/galaxy \
-            -v ${{ steps.project.outputs.version }} \
+            -v ${{ needs.determine-version.outputs.tag }} \
             -a linux/amd64,linux/arm64 \
             -P
 
@@ -157,15 +170,15 @@ jobs:
             -r 179619298502.dkr.ecr.us-east-1.amazonaws.com/galaxy \
             -r us-east1-docker.pkg.dev/starburstdata-saas-prod/starburst-docker-repository/galaxy \
             -r starburstgalaxy.azurecr.io/galaxy \
-            -v ${{ steps.project.outputs.version }} \
+            -v ${{ needs.determine-version.outputs.tag }} \
             -a linux/amd64,linux/arm64 \
             -P
 
   test-buffer-exchange-failure-recovery:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    outputs:
-      tag: ${{ steps.project.outputs.version }}
+    needs:
+      - determine-version
     steps:
       - name: Cleanup workspace
         run: rm -rf *
@@ -192,17 +205,8 @@ jobs:
           git fetch origin
           git merge origin/main --ff-only
 
-      - name: Determine the project version
-        id: project
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "version=pr${{ github.event.number }}-$(git describe --tags)" >> $GITHUB_OUTPUT
-          else
-            echo "version=$(git describe --tags)" >> $GITHUB_OUTPUT
-          fi
-
       - name: Maven Install
-        run: ./mvnw install -P ci -T 1C -B -am -pl :buffer-exchange-tests -DskipTests -Drevision=${{ steps.project.outputs.version }}
+        run: ./mvnw install -P ci -T 1C -B -am -pl :buffer-exchange-tests -DskipTests -Drevision=${{ needs.determine-version.outputs.tag }}
 
       - name: Maven Tests
-        run: ./mvnw install -P ci -T 1C -B -P test-buffer-exchange-failure-recovery -pl :buffer-exchange-tests -Drevision=${{ steps.project.outputs.version }}
+        run: ./mvnw install -P ci -T 1C -B -P test-buffer-exchange-failure-recovery -pl :buffer-exchange-tests -Drevision=${{ needs.determine-version.outputs.tag }}
