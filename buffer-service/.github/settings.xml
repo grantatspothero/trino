@@ -1,9 +1,12 @@
-<settings>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                              https://maven.apache.org/xsd/settings-1.0.0.xsd">
     <servers>
         <server>
-            <id>starburstdata.snapshots</id>
-            <username>${env.mavenSnapshotsUsername}</username>
-            <password>${env.mavenSnapshotsPassword}</password>
+            <id>starburstdata-sep.snapshots</id>
+            <username>${env.codeArtifactUsername}</username>
+            <password>${env.codeArtifactPassword}</password>
             <configuration>
                 <httpConfiguration>
                     <all>
@@ -13,9 +16,9 @@
             </configuration>
         </server>
         <server>
-            <id>starburstdata.releases</id>
-            <username>${env.mavenReleaseUsername}</username>
-            <password>${env.mavenReleasePassword}</password>
+            <id>starburstdata-sep.releases</id>
+            <username>${env.codeArtifactUsername}</username>
+            <password>${env.codeArtifactPassword}</password>
             <configuration>
                 <httpConfiguration>
                     <all>

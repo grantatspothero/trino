@@ -95,11 +95,27 @@ jobs:
           git fetch origin
           git merge origin/main --ff-only
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_CICD_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_CICD_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to CodeArtifact
+        uses: starburstdata/codeartifact-login-action@v1
+        with:
+          domain: starburstdata-sep-cicd
+          owner: 843985043183
+          region: us-east-2
+          user-variable: codeArtifactUsername
+          password-variable: codeArtifactPassword
+
       - name: Maven Install
-        run: ./mvnw install -P ci -T 1C -B -V -DskipTests -Dair.check.skip-all -Drevision=${{ needs.determine-version.outputs.version }}
+        run: ./mvnw install -P ci -T 1C -s .github/settings.xml -B -V -DskipTests -Dair.check.skip-all -Drevision=${{ needs.determine-version.outputs.version }}
 
       - name: Maven Tests
-        run: ./mvnw install -P ci -T 1C -B -Drevision=${{ needs.determine-version.outputs.version }}
+        run: ./mvnw install -P ci -T 1C -s .github/settings.xml -B -Drevision=${{ needs.determine-version.outputs.version }}
 
       - name: Maven Deploy
         run: ./mvnw deploy -P ci -T 1C -s .github/settings.xml -B -DskipTests -Dair.check.skip-all -Drevision=${{ needs.determine-version.outputs.version }}
@@ -109,14 +125,6 @@ jobs:
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || contains(github.event.*.labels.*.name, 'with-images')
         run: |
           echo "build=true" >> $GITHUB_OUTPUT
-
-      - name: Configure AWS Credentials
-        if: steps.container-images.outputs.build
-        uses: aws-actions/configure-aws-credentials@v1-node16
-        with:
-          aws-access-key-id: ${{ secrets.AWS_CICD_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_CICD_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
 
       - name: Import Secrets
         if: steps.container-images.outputs.build
@@ -212,8 +220,24 @@ jobs:
           git fetch origin
           git merge origin/main --ff-only
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_CICD_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_CICD_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to CodeArtifact
+        uses: starburstdata/codeartifact-login-action@v1
+        with:
+          domain: starburstdata-sep-cicd
+          owner: 843985043183
+          region: us-east-2
+          user-variable: codeArtifactUsername
+          password-variable: codeArtifactPassword
+
       - name: Maven Install
-        run: ./mvnw install -P ci -T 1C -B -am -pl :buffer-exchange-tests -DskipTests -Drevision=${{ needs.determine-version.outputs.version }}
+        run: ./mvnw install -P ci -T 1C -s .github/settings.xml -B -am -pl :buffer-exchange-tests -DskipTests -Drevision=${{ needs.determine-version.outputs.version }}
 
       - name: Maven Tests
-        run: ./mvnw install -P ci -T 1C -B -P test-buffer-exchange-failure-recovery -pl :buffer-exchange-tests -Drevision=${{ needs.determine-version.outputs.version }}
+        run: ./mvnw install -P ci -T 1C -s .github/settings.xml -B -P test-buffer-exchange-failure-recovery -pl :buffer-exchange-tests -Drevision=${{ needs.determine-version.outputs.version }}
