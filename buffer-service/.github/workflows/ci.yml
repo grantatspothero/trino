@@ -55,11 +55,12 @@ jobs:
       - name: Determine the project version
         id: project
         run: |
+          # we use Trino version as a version prefix as maven assembly plugin does not work well with versions not starting with a number
           trino_version=$(./mvnw -B help:evaluate -Dexpression=dep.trino.version -q -DforceStdout)
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "version=pr${{ github.event.number }}-$(git describe --tags)-t${trino_version}" >> $GITHUB_OUTPUT
+            echo "version=${trino_version}-pr${{ github.event.number }}-$(git describe --tags)" >> $GITHUB_OUTPUT
           else
-            echo "version=$(git describe --tags)-t${trino_version}" >> $GITHUB_OUTPUT
+            echo "version=${trino_version}-$(git describe --tags)" >> $GITHUB_OUTPUT
           fi
 
   build:
