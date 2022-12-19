@@ -33,6 +33,8 @@ PLUGINS="
 bigquery
 blackhole
 elasticsearch
+exchange-buffer
+exchange-fallbacking-buffer
 exchange-filesystem
 galaxy-kafka-event-listener
 galaxy-query-monitor-event-listener
