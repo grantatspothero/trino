@@ -177,12 +177,6 @@ public class TestRetryingDataApi
             return responses.remove(0);
         }
 
-        @Override
-        public ListenableFuture<Void> markAllClosedChunksReceived(String exchangeId)
-        {
-            throw new RuntimeException("not implemented");
-        }
-
         public synchronized void recordListClosedChunks(String exchangeId, OptionalLong pagingId, ListenableFuture<ChunkList> result)
         {
             listClosedChunksResponses.put(new ListClosedChunksKey(exchangeId, pagingId), result);
@@ -191,6 +185,12 @@ public class TestRetryingDataApi
         public synchronized long getListClosedChunksCallCount(String exchangeId, OptionalLong pagingId)
         {
             return listClosedChunksCounters.computeIfAbsent(new ListClosedChunksKey(exchangeId, pagingId), ignored -> new AtomicLong()).get();
+        }
+
+        @Override
+        public ListenableFuture<Void> markAllClosedChunksReceived(String exchangeId)
+        {
+            throw new RuntimeException("not implemented");
         }
 
         @Override
