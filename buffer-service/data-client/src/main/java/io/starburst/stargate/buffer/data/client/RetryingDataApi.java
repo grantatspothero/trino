@@ -13,6 +13,7 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import dev.failsafe.Failsafe;
 import dev.failsafe.FailsafeExecutor;
 import dev.failsafe.RetryPolicy;
@@ -27,6 +28,7 @@ import java.util.OptionalLong;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static java.util.Objects.requireNonNull;
@@ -109,7 +111,42 @@ public class RetryingDataApi
     @Override
     public ListenableFuture<Void> addDataPages(String exchangeId, int taskId, int attemptId, long dataPagesId, ListMultimap<Integer, Slice> dataPagesByPartition)
     {
-        return runWithRetry(() -> delegate.addDataPages(exchangeId, taskId, attemptId, dataPagesId, dataPagesByPartition));
+        AtomicBoolean retryFlag = new AtomicBoolean();
+        Callable<ListenableFuture<Void>> call = () -> {
+            boolean retry = retryFlag.getAndSet(true);
+
+            ListenableFuture<Void> future = delegate.addDataPages(exchangeId, taskId, attemptId, dataPagesId, dataPagesByPartition);
+            if (!retry) {
+                // first try
+                return future;
+            }
+
+            // If we are retrying we need to ensure that we do not propagate DRAINING error to user. We do not know if previous request
+            // was recorded by server or not. If we handle DRAINING, and send data to another buffer service node we may end up with
+            // duplicated data.
+            SettableFuture<Void> resultFuture = SettableFuture.create();
+            Futures.addCallback(future, new FutureCallback<>()
+            {
+                @Override
+                public void onSuccess(Void result)
+                {
+                    resultFuture.set(result);
+                }
+
+                @Override
+                public void onFailure(Throwable failure)
+                {
+                    if ((failure instanceof DataApiException dataApiException) && dataApiException.getErrorCode() == ErrorCode.DRAINING) {
+                        resultFuture.setException(new DataApiException(ErrorCode.USER_ERROR, "Translating DRAINING to USER_ERROR on retry", failure));
+                        return;
+                    }
+                    resultFuture.setException(failure);
+                }
+            }, directExecutor());
+
+            return resultFuture;
+        };
+        return runWithRetry(call);
     }
 
     @Override

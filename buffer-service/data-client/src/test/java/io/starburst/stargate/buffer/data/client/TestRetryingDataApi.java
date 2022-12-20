@@ -11,6 +11,7 @@ package io.starburst.stargate.buffer.data.client;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -135,6 +136,40 @@ public class TestRetryingDataApi
     }
 
     @Test
+    public void testAddDataPagesRetries()
+    {
+        TestingDataApi delegate = new TestingDataApi();
+        DataApi retryingDataApi = new RetryingDataApi(delegate, 2, Duration.valueOf("1ms"), Duration.valueOf("2ms"), 2.0, 0.0, executor);
+
+        // OK after INTERNAL_ERROR
+        delegate.recordAddDataPages("exchange-1", 0, 0, 0, Futures.immediateFailedFuture(new DataApiException(ErrorCode.INTERNAL_ERROR, "blah")));
+        delegate.recordAddDataPages("exchange-1", 0, 0, 0, Futures.immediateVoidFuture());
+        ListenableFuture<Void> future1 = retryingDataApi.addDataPages("exchange-1", 0, 0, 0, ImmutableListMultimap.of());
+        assertThat(future1).succeedsWithin(5, SECONDS);
+        assertThat(delegate.getAddDataPagesCallCount("exchange-1", 0, 0, 0)).isEqualTo(2);
+
+        // Immediate DRAINING
+        delegate.recordAddDataPages("exchange-2", 0, 0, 0, Futures.immediateFailedFuture(new DataApiException(ErrorCode.DRAINING, "blah")));
+        ListenableFuture<Void> future2 = retryingDataApi.addDataPages("exchange-2", 0, 0, 0, ImmutableListMultimap.of());
+        assertThat(future2).failsWithin(1, SECONDS);
+        assertThatThrownBy(() -> Futures.getUnchecked(future2))
+                .isInstanceOf(UncheckedExecutionException.class)
+                .matches(e -> ((DataApiException) e.getCause()).getErrorCode().equals(ErrorCode.DRAINING));
+        assertThat(delegate.getAddDataPagesCallCount("exchange-2", 0, 0, 0)).isEqualTo(1);
+
+        // DRAINING after INTERNAL_ERROR
+        delegate.recordAddDataPages("exchange-3", 0, 0, 0, Futures.immediateFailedFuture(new DataApiException(ErrorCode.INTERNAL_ERROR, "blah")));
+        delegate.recordAddDataPages("exchange-3", 0, 0, 0, Futures.immediateFailedFuture(new DataApiException(ErrorCode.DRAINING, "blah")));
+        ListenableFuture<Void> future3 = retryingDataApi.addDataPages("exchange-3", 0, 0, 0, ImmutableListMultimap.of());
+        assertThat(future3).failsWithin(1, SECONDS);
+        assertThatThrownBy(() -> Futures.getUnchecked(future3))
+                .isInstanceOf(UncheckedExecutionException.class)
+                .matches(e -> ((DataApiException) e.getCause()).getErrorCode().equals(ErrorCode.USER_ERROR))
+                .hasMessageContaining("Translating DRAINING to USER_ERROR on retry");
+        assertThat(delegate.getAddDataPagesCallCount("exchange-3", 0, 0, 0)).isEqualTo(2);
+    }
+
+    @Test
     public void testDoNotRetryOnSuccess()
             throws ExecutionException
     {
@@ -155,9 +190,12 @@ public class TestRetryingDataApi
             implements DataApi
     {
         private record ListClosedChunksKey(String exchangeId, OptionalLong pagingId) {};
+        private record AddDataPagesKey(String exchangeId, int taskId, int attemptId, long dataPagesId) {};
 
         private final ListMultimap<ListClosedChunksKey, ListenableFuture<ChunkList>> listClosedChunksResponses = ArrayListMultimap.create();
         private final Map<ListClosedChunksKey, AtomicLong> listClosedChunksCounters = new HashMap<>();
+        private final ListMultimap<AddDataPagesKey, ListenableFuture<Void>> addDataPagesResponses = ArrayListMultimap.create();
+        private final Map<AddDataPagesKey, AtomicLong> addDataPagesCounters = new HashMap<>();
 
         @Override
         public BufferNodeInfo getInfo()
@@ -214,7 +252,23 @@ public class TestRetryingDataApi
         @Override
         public synchronized ListenableFuture<Void> addDataPages(String exchangeId, int taskId, int attemptId, long dataPagesId, ListMultimap<Integer, Slice> dataPagesByPartition)
         {
-            throw new RuntimeException("not implemented");
+            AddDataPagesKey key = new AddDataPagesKey(exchangeId, taskId, attemptId, dataPagesId);
+            List<ListenableFuture<Void>> responses = addDataPagesResponses.get(key);
+            if (responses.isEmpty()) {
+                throw new IllegalStateException("no response recorded for " + key);
+            }
+            addDataPagesCounters.computeIfAbsent(key, ignored -> new AtomicLong()).incrementAndGet();
+            return responses.remove(0);
+        }
+
+        public synchronized void recordAddDataPages(String exchangeId, int taskId, int attemptId, long dataPagesId, ListenableFuture<Void> result)
+        {
+            addDataPagesResponses.put(new AddDataPagesKey(exchangeId, taskId, attemptId, dataPagesId), result);
+        }
+
+        public synchronized long getAddDataPagesCallCount(String exchangeId, int taskId, int attemptId, long dataPagesId)
+        {
+            return addDataPagesCounters.computeIfAbsent(new AddDataPagesKey(exchangeId, taskId, attemptId, dataPagesId), ignored -> new AtomicLong()).get();
         }
 
         @Override
