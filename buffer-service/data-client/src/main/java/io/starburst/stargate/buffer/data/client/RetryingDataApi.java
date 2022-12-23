@@ -137,7 +137,7 @@ public class RetryingDataApi
                 public void onFailure(Throwable failure)
                 {
                     if ((failure instanceof DataApiException dataApiException) && dataApiException.getErrorCode() == ErrorCode.DRAINING) {
-                        resultFuture.setException(new DataApiException(ErrorCode.USER_ERROR, "Translating DRAINING to USER_ERROR on retry", failure));
+                        resultFuture.setException(new DataApiException(ErrorCode.DRAINING_ON_RETRY, "Received DRAINING error code on retry", failure));
                         return;
                     }
                     resultFuture.setException(failure);

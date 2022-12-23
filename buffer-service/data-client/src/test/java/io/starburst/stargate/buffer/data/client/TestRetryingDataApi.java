@@ -164,8 +164,8 @@ public class TestRetryingDataApi
         assertThat(future3).failsWithin(1, SECONDS);
         assertThatThrownBy(() -> Futures.getUnchecked(future3))
                 .isInstanceOf(UncheckedExecutionException.class)
-                .matches(e -> ((DataApiException) e.getCause()).getErrorCode().equals(ErrorCode.USER_ERROR))
-                .hasMessageContaining("Translating DRAINING to USER_ERROR on retry");
+                .matches(e -> ((DataApiException) e.getCause()).getErrorCode().equals(ErrorCode.DRAINING_ON_RETRY))
+                .hasMessageContaining("Received DRAINING error code on retry");
         assertThat(delegate.getAddDataPagesCallCount("exchange-3", 0, 0, 0)).isEqualTo(2);
     }
 
