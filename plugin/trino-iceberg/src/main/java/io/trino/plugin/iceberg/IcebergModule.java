@@ -31,6 +31,9 @@ import io.trino.plugin.hive.orc.OrcReaderConfig;
 import io.trino.plugin.hive.orc.OrcWriterConfig;
 import io.trino.plugin.hive.parquet.ParquetReaderConfig;
 import io.trino.plugin.hive.parquet.ParquetWriterConfig;
+import io.trino.plugin.iceberg.functions.IcebergFunctionProvider;
+import io.trino.plugin.iceberg.functions.tablechanges.TableChangesFunctionProcessorProvider;
+import io.trino.plugin.iceberg.functions.tablechanges.TableChangesFunctionProvider;
 import io.trino.plugin.iceberg.procedure.DropExtendedStatsTableProcedure;
 import io.trino.plugin.iceberg.procedure.ExpireSnapshotsTableProcedure;
 import io.trino.plugin.iceberg.procedure.OptimizeTableProcedure;
@@ -42,6 +45,8 @@ import io.trino.spi.connector.ConnectorPageSinkProvider;
 import io.trino.spi.connector.ConnectorPageSourceProvider;
 import io.trino.spi.connector.ConnectorSplitManager;
 import io.trino.spi.connector.TableProcedureMetadata;
+import io.trino.spi.function.FunctionProvider;
+import io.trino.spi.function.table.ConnectorTableFunction;
 import io.trino.spi.procedure.Procedure;
 
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
@@ -73,6 +78,7 @@ public class IcebergModule
                 .setDefault().toInstance(true);
         binder.bind(ConnectorSplitManager.class).to(IcebergSplitManager.class).in(Scopes.SINGLETON);
         newOptionalBinder(binder, ConnectorPageSourceProvider.class).setDefault().to(IcebergPageSourceProvider.class).in(Scopes.SINGLETON);
+        binder.bind(IcebergPageSourceProvider.class).in(Scopes.SINGLETON);
         binder.bind(ConnectorPageSinkProvider.class).to(IcebergPageSinkProvider.class).in(Scopes.SINGLETON);
         binder.bind(ConnectorNodePartitioningProvider.class).to(IcebergNodePartitioningProvider.class).in(Scopes.SINGLETON);
 
@@ -115,5 +121,9 @@ public class IcebergModule
                 .annotatedWith(ForDynamicRowFiltering.class)
                 .toInstance(() -> {});
         binder.install(new DynamicRowFilteringModule(() -> true));
+
+        newSetBinder(binder, ConnectorTableFunction.class).addBinding().toProvider(TableChangesFunctionProvider.class).in(Scopes.SINGLETON);
+        binder.bind(FunctionProvider.class).to(IcebergFunctionProvider.class).in(Scopes.SINGLETON);
+        binder.bind(TableChangesFunctionProcessorProvider.class).in(Scopes.SINGLETON);
     }
 }

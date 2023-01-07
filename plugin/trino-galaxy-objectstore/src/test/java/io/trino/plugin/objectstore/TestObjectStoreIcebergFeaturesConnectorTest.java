@@ -189,6 +189,17 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
                 .hasMessage("Connector supported isolation level READ UNCOMMITTED does not meet requested isolation level READ COMMITTED");
     }
 
+    @Override
+    public void testTableChangesFunctionAfterSchemaChange()
+    {
+        // TODO (https://github.com/starburstdata/galaxy-trino/issues/1122) Support Iceberg system.table_changes CDF table function
+        assertThatThrownBy(super::testTableChangesFunctionAfterSchemaChange)
+                .hasMessageFindingMatch("^Execution of 'actual' query.* failed: .*TABLE\\(system.table_changes\\(")
+                .cause()
+                .isInstanceOf(QueryFailedException.class)
+                .hasMessage("line 1:107: Too many arguments. Expected at most 3 arguments, got 4 arguments");
+    }
+
     private void skipDuplicateTestCoverage(String methodName, Class<?>... args)
     {
         HELPER.skipDuplicateTestCoverage(methodName, args);
