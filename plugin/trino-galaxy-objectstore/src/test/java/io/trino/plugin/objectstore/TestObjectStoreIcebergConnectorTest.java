@@ -164,7 +164,8 @@ public class TestObjectStoreIcebergConnectorTest
                         "Unsupported type for temporal table version: .*|" +
                         "Unsupported type for table version: .*|" +
                         "No version history table tpch.nation at or before .*|" +
-                        "Iceberg snapshot ID does not exists: .*");
+                        "Iceberg snapshot ID does not exists: .*|" +
+                        "Cannot find snapshot with reference name: .*");
     }
 
     @Override
