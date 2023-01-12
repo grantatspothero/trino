@@ -25,7 +25,7 @@ public class SpoolingS3ReaderConfig
 {
     private String s3AwsAccessKey;
     private String s3AwsSecretKey;
-    private Region region;
+    private Optional<Region> region = Optional.empty();
     private Optional<String> s3Endpoint = Optional.empty();
     private RetryMode retryMode = RetryMode.ADAPTIVE;
     private int maxErrorRetries = 10;
@@ -55,7 +55,7 @@ public class SpoolingS3ReaderConfig
         return this;
     }
 
-    public Region getRegion()
+    public Optional<Region> getRegion()
     {
         return region;
     }
@@ -64,7 +64,7 @@ public class SpoolingS3ReaderConfig
     public SpoolingS3ReaderConfig setRegion(String region)
     {
         if (region != null) {
-            this.region = Region.of(region.toLowerCase(ENGLISH));
+            this.region = Optional.of(Region.of(region.toLowerCase(ENGLISH)));
         }
         return this;
     }
