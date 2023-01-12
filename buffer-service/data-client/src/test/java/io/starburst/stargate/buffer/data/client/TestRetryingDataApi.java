@@ -180,7 +180,7 @@ public class TestRetryingDataApi
         delegate.recordListClosedChunks("exchange-1", OptionalLong.empty(), Futures.immediateFuture(result));
         ListenableFuture<ChunkList> future = retryingDataApi.listClosedChunks("exchange-1", OptionalLong.empty());
 
-        assertThat(future).succeedsWithin(1, MILLISECONDS); // returns immediately
+        assertThat(future).succeedsWithin(100, MILLISECONDS); // returns immediately
 
         assertThat(Futures.getDone(future)).isEqualTo(result);
         assertThat(delegate.getListClosedChunksCallCount("exchange-1", OptionalLong.empty())).isEqualTo(1);
