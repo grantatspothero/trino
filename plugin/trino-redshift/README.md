@@ -18,3 +18,19 @@ test.redshift.jdbc.password=<password>
 test.redshift.s3.tpch.tables.root=<your_bucket>
 test.redshift.iam.role=<your_iam_arm_to_access_bucket>
 ```
+
+## Redshift Ephemeral Cluster
+
+The CI tests spin up a Redshift cluster on-demand for test execution. The Maven tests run first which populate the users and test data
+needed for the product tests to run. The scripts under `stargate-trino/bin/redshift` control creating and destroying a cluster which
+the `ci.yml` file uses. They can also be used for local development.
+
+### Local Development with Redshift Ephemeral Cluster
+
+1. Make sure you are authenticated to the **starburstdata-engineering (888469412714)** AWS account. e.g. `gimme-aws-creds --role /888469412714/`.
+2. Execute `./bin/redshift/local-setup-aws-redshift.sh`. This will spin up a Redshift cluster via bash scripts.
+    * It takes roughly four minutes for the script to complete
+3. Once finished, you'll see the location of the file containing VM arguments used for Maven tests printed to the terminal.
+   You can use these VM arguments in IntelliJ as well.
+4. Install the `vpn` tool so that the ephemeral Redshift cluster can be connected locally. See instructions at https://github.com/starburstdata/sep-ci-dev-tools/tree/main/vpn.
+5. **Important!** Once you are done, run `./bin/redshift/local-delete-aws-redshift.sh` to delete the cluster.
