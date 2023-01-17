@@ -30,6 +30,9 @@ ${MAVEN} ${MAVEN_TEST}\
     -Dtest.redshift.jdbc.endpoint="${REDSHIFT_ENDPOINT}:${REDSHIFT_PORT}/" \
     -Dtest.redshift.s3.tpch.tables.root="${REDSHIFT_S3_TPCH_TABLES_ROOT}" \
     -Dtest.redshift.iam.role="${REDSHIFT_IAM_ROLES}" \
+    -Dtest.redshift.aws.region="${AWS_REGION}" \
+    -Dtest.redshift.aws.access-key="${AWS_ACCESS_KEY_ID}" \
+    -Dtest.redshift.aws.secret-key="${AWS_SECRET_ACCESS_KEY}" \
     "$@" ||
     suite_exit_code=1
 
