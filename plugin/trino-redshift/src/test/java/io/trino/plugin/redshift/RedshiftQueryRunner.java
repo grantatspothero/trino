@@ -36,6 +36,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import static io.airlift.testing.Closeables.closeAllSuppress;
 import static io.trino.plugin.tpch.TpchMetadata.TINY_SCHEMA_NAME;
@@ -79,8 +80,10 @@ public final class RedshiftQueryRunner
         return createRedshiftQueryRunner(
                 createSession(),
                 extraProperties,
+                Map.of(),
                 connectorProperties,
-                tables);
+                tables,
+                queryRunner -> {});
     }
 
     public static DistributedQueryRunner createRedshiftQueryRunner(
@@ -90,9 +93,46 @@ public final class RedshiftQueryRunner
             Iterable<TpchTable<?>> tables)
             throws Exception
     {
-        DistributedQueryRunner.Builder<?> builder = DistributedQueryRunner.builder(session);
-        extraProperties.forEach(builder::addExtraProperty);
-        DistributedQueryRunner runner = builder.build();
+        return createRedshiftQueryRunner(
+                session,
+                extraProperties,
+                Map.of(),
+                connectorProperties,
+                tables,
+                queryRunner -> {});
+    }
+
+    public static DistributedQueryRunner createRedshiftQueryRunner(
+            Map<String, String> extraProperties,
+            Map<String, String> coordinatorProperties,
+            Map<String, String> connectorProperties,
+            Iterable<TpchTable<?>> tables,
+            Consumer<QueryRunner> additionalSetup)
+            throws Exception
+    {
+        return createRedshiftQueryRunner(
+                createSession(),
+                extraProperties,
+                coordinatorProperties,
+                connectorProperties,
+                tables,
+                additionalSetup);
+    }
+
+    public static DistributedQueryRunner createRedshiftQueryRunner(
+            Session session,
+            Map<String, String> extraProperties,
+            Map<String, String> coordinatorProperties,
+            Map<String, String> connectorProperties,
+            Iterable<TpchTable<?>> tables,
+            Consumer<QueryRunner> additionalSetup)
+            throws Exception
+    {
+        DistributedQueryRunner runner = DistributedQueryRunner.builder(session)
+                .setCoordinatorProperties(coordinatorProperties)
+                .setExtraProperties(extraProperties)
+                .setAdditionalSetup(additionalSetup)
+                .build();
         try {
             runner.installPlugin(new TpchPlugin());
             runner.createCatalog(TPCH_CATALOG, "tpch", Map.of());
@@ -105,7 +145,7 @@ public final class RedshiftQueryRunner
             runner.installPlugin(new RedshiftPlugin());
             runner.createCatalog(TEST_CATALOG, CONNECTOR_NAME, properties);
 
-            executeInRedshift("CREATE SCHEMA IF NOT EXISTS " + TEST_SCHEMA);
+            executeInRedshiftWithRetry("CREATE SCHEMA IF NOT EXISTS " + TEST_SCHEMA);
             createUserIfNotExists(NON_GRANTED_USER, JDBC_PASSWORD);
             createUserIfNotExists(GRANTED_USER, JDBC_PASSWORD);
 

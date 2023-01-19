@@ -11,7 +11,7 @@
 # required environment variables.
 #
 # Usage:
-# run-mvn-tests.sh
+# run-mvn-tests.sh '-pl :trino-redshift'
 
 set -xeuo pipefail
 
@@ -30,7 +30,7 @@ ${MAVEN} ${MAVEN_TEST}\
     -Dtest.redshift.jdbc.endpoint="${REDSHIFT_ENDPOINT}:${REDSHIFT_PORT}/" \
     -Dtest.redshift.s3.tpch.tables.root="${REDSHIFT_S3_TPCH_TABLES_ROOT}" \
     -Dtest.redshift.iam.role="${REDSHIFT_IAM_ROLES}" \
-    -pl :trino-redshift ||
+    "$@" ||
     suite_exit_code=1
 
 echo "$0: exiting with ${suite_exit_code}"
