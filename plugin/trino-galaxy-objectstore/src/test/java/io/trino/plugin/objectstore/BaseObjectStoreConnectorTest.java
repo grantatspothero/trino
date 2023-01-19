@@ -16,6 +16,7 @@ package io.trino.plugin.objectstore;
 import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
+import io.trino.spi.Plugin;
 import io.trino.testing.BaseConnectorTest;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
@@ -25,6 +26,7 @@ import org.intellij.lang.annotations.Language;
 import org.testng.SkipException;
 import org.testng.annotations.Test;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
@@ -56,7 +58,19 @@ public abstract class BaseObjectStoreConnectorTest
     }
 
     @Override
-    protected final QueryRunner createQueryRunner()
+    protected QueryRunner createQueryRunner()
+            throws Exception
+    {
+        return createQueryRunner(
+                tableType,
+                Map.of(),
+                Map.of());
+    }
+
+    protected final QueryRunner createQueryRunner(
+            TableType tableType,
+            Map<String, String> coordinatorProperties,
+            Map<String, String> extraObjectStoreProperties)
             throws Exception
     {
         closeAfterClass(TrinoFileSystemCache.INSTANCE::closeAll);
@@ -77,6 +91,10 @@ public abstract class BaseObjectStoreConnectorTest
                 .withMetastore(metastore)
                 .withLocationSecurityServer(locationSecurityServer)
                 .withMockConnectorPlugin(buildMockConnectorPlugin())
+                .withCoordinatorProperties(coordinatorProperties)
+                .withExtraObjectStoreProperties(extraObjectStoreProperties)
+                .withPlugin(getObjectStorePlugin())
+                .withConnectorName(getObjectStoreConnectorName())
                 .build();
 
         initializeTpchTables(queryRunner, metastore);
@@ -84,6 +102,16 @@ public abstract class BaseObjectStoreConnectorTest
         // Grant select on mock catalog
         queryRunner.execute(format("GRANT SELECT ON \"mock_dynamic_listing\".\"*\".\"*\" TO ROLE %s WITH GRANT OPTION", ACCOUNT_ADMIN));
         return queryRunner;
+    }
+
+    protected Plugin getObjectStorePlugin()
+    {
+        return new ObjectStorePlugin();
+    }
+
+    protected String getObjectStoreConnectorName()
+    {
+        return "galaxy_objectstore";
     }
 
     protected void initializeTpchTables(DistributedQueryRunner queryRunner, TestingGalaxyMetastore metastore)

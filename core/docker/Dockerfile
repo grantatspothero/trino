@@ -33,7 +33,7 @@ RUN \
     rm -rf /var/lib/apt/lists/* && \
     update-alternatives --install /usr/bin/python python /usr/bin/python3 1 && \
     groupadd trino --gid 1000 && \
-    useradd trino --uid 1000 --gid 1000 --create-home && \
+    useradd trino --uid 1000 --gid 1000 --create-home -G disk && \
     mkdir -p /usr/lib/trino /data/trino && \
     chown -R "trino:trino" /usr/lib/trino /data/trino
 

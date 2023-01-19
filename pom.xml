@@ -169,6 +169,7 @@
         <module>plugin/trino-galaxy-query-monitor-event-listener</module>
         <module>plugin/trino-galaxy-snowflake</module>
         <module>plugin/trino-galaxy-synapse</module>
+        <module>plugin/trino-galaxy-warp-speed</module>
         <module>plugin/trino-geospatial</module>
         <module>plugin/trino-google-sheets</module>
         <module>plugin/trino-hive</module>

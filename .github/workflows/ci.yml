@@ -493,6 +493,7 @@ jobs:
             !:trino-elasticsearch,
             !:trino-faulttolerant-tests,
             !:trino-galaxy-objectstore,
+            !:trino-galaxy-warp-speed,
             !:trino-galaxy-snowflake,
             !:trino-galaxy-synapse,
             !:trino-hive,
@@ -592,6 +593,7 @@ jobs:
             - { modules: plugin/trino-delta-lake, profile: gcs-tests }
             - { modules: plugin/trino-elasticsearch }
             - { modules: plugin/trino-galaxy-objectstore }
+            - { modules: plugin/trino-galaxy-warp-speed }
             - { modules: plugin/trino-hive }
             - { modules: plugin/trino-hive, profile: test-galaxy }
             - { modules: plugin/trino-hive, profile: test-parquet }

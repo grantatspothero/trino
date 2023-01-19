@@ -41,6 +41,7 @@ galaxy-query-monitor-event-listener
 galaxy-objectstore
 galaxy-snowflake
 galaxy-synapse
+galaxy-warp-speed
 geospatial
 google-sheets
 hive

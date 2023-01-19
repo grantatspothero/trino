@@ -29,6 +29,7 @@ import io.trino.plugin.hudi.testing.TpchHudiTablesInitializer;
 import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
+import io.trino.spi.Plugin;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.GalaxyQueryRunner;
 import io.trino.tpch.TpchTable;
@@ -74,7 +75,10 @@ public class ObjectStoreQueryRunner
         private Map<String, String> hiveS3Config;
         private TestingGalaxyMetastore metastore;
         private TestingLocationSecurityServer locationSecurityServer;
-
+        private Plugin objectStorePlugin;
+        private String connectorName;
+        private Map<String, String> extraObjectStoreProperties;
+        private Map<String, String> coordinatorProperties = ImmutableMap.of();
         private MockConnectorPlugin mockConnectorPlugin;
         private GalaxyCockroachContainer cockroach;
 
@@ -141,6 +145,34 @@ public class ObjectStoreQueryRunner
             return this;
         }
 
+        @CanIgnoreReturnValue
+        public Builder withPlugin(Plugin objectStorePlugin)
+        {
+            this.objectStorePlugin = objectStorePlugin;
+            return this;
+        }
+
+        @CanIgnoreReturnValue
+        public Builder withConnectorName(String connectorName)
+        {
+            this.connectorName = connectorName;
+            return this;
+        }
+
+        @CanIgnoreReturnValue
+        public Builder withExtraObjectStoreProperties(Map<String, String> properties)
+        {
+            this.extraObjectStoreProperties = properties;
+            return this;
+        }
+
+        @CanIgnoreReturnValue
+        public Builder withCoordinatorProperties(Map<String, String> properties)
+        {
+            this.coordinatorProperties = properties;
+            return this;
+        }
+
         @Override
         public DistributedQueryRunner build()
                 throws Exception
@@ -150,15 +182,17 @@ public class ObjectStoreQueryRunner
                         tableType,
                         locationSecurityServer.getClientConfig(),
                         metastore.getMetastoreConfig(s3Url),
-                        hiveS3Config);
+                        hiveS3Config,
+                        extraObjectStoreProperties);
 
                 DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder("objectstore", "tpch")
                         .setNodeCount(3)
                         .setCockroach(cockroach)
+                        .setCoordinatorProperties(coordinatorProperties)
                         .addPlugin(new TpchPlugin())
                         .addCatalog(TPCH_SCHEMA, TPCH_SCHEMA, ImmutableMap.of())
-                        .addPlugin(new ObjectStorePlugin())
-                        .addCatalog(CATALOG, "galaxy-objectstore", properties)
+                        .addPlugin(objectStorePlugin)
+                        .addCatalog(CATALOG, connectorName, properties)
                         .addPlugin(new IcebergPlugin())
                         .addPlugin(this.mockConnectorPlugin)
                         .addCatalog("mock_dynamic_listing", "mock", Map.of())
@@ -210,6 +244,7 @@ public class ObjectStoreQueryRunner
                 .withLocationSecurityServer(locationSecurityServer)
                 .withCockroach(cockroach)
                 .withMockConnectorPlugin(new MockConnectorPlugin(MockConnectorFactory.create()))
+                .withPlugin(new ObjectStorePlugin())
                 .build();
     }
 

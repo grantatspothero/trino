@@ -28,12 +28,28 @@ public final class TestingObjectStoreUtils
             Map<String, String> metastoreConfig,
             Map<String, String> hiveS3Config)
     {
+        return createObjectStoreProperties(
+                tableType,
+                locationSecurityClientConfig,
+                metastoreConfig,
+                hiveS3Config,
+                Map.of());
+    }
+
+    public static Map<String, String> createObjectStoreProperties(
+            TableType tableType,
+            Map<String, String> locationSecurityClientConfig,
+            Map<String, String> metastoreConfig,
+            Map<String, String> hiveS3Config,
+            Map<String, String> extraObjectStoreProperties)
+    {
         ImmutableMap.Builder<String, String> properties = ImmutableMap.builder();
         properties.putAll(createObjectStoreProperties(tableType));
         addObjectStoreProperties(properties, locationSecurityClientConfig);
         addCommonObjectStoreProperties(properties, locationSecurityClientConfig);
         addCommonObjectStoreProperties(properties, metastoreConfig);
         addCommonObjectStoreProperties(properties, hiveS3Config);
+        properties.putAll(extraObjectStoreProperties);
         return properties.buildOrThrow();
     }
 
