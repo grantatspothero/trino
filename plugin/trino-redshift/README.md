@@ -6,7 +6,7 @@ is a single dc2.large instance. Additionally, you will need a S3 bucket
 containing TPCH tiny data in Parquet format.  The files should be named:
 
 ```
-s3://<your_bucket>/tpch/tiny/<table_name>.parquet
+s3://<your_bucket>/tpch/tiny/<table_name>/*.parquet
 ```
 
 To run the tests set the following system properties:
@@ -19,18 +19,110 @@ test.redshift.s3.tpch.tables.root=<your_bucket>
 test.redshift.iam.role=<your_iam_arm_to_access_bucket>
 ```
 
-## Redshift Ephemeral Cluster
+## Redshift Cluster CI Infrastructure setup
 
-The CI tests spin up a Redshift cluster on-demand for test execution. The Maven tests run first which populate the users and test data
-needed for the product tests to run. The scripts under `stargate-trino/bin/redshift` control creating and destroying a cluster which
-the `ci.yml` file uses. They can also be used for local development.
+### AWS VPC setup
+On _AWS VPC_ service create a VPC - `redshift-vpc`.
+Key properties to configure on the VPC:
 
-### Local Development with Redshift Ephemeral Cluster
+- `IPv4 CIDR`: `192.168.0.0/16`
 
-1. Make sure you are authenticated to the **starburstdata-engineering (888469412714)** AWS account. e.g. `gimme-aws-creds --role /888469412714/`.
-2. Execute `./bin/redshift/local-setup-aws-redshift.sh`. This will spin up a Redshift cluster via bash scripts.
-    * It takes roughly four minutes for the script to complete
-3. Once finished, you can use the instructions printed in the output of the script previously mentioned to connect 
-   directly to AWS Redshift via `psql` or use VM arguments in IntelliJ for the integration tests.
-4. Install the `vpn` tool so that the ephemeral Redshift cluster can be connected locally. See instructions at https://github.com/starburstdata/sep-ci-dev-tools/tree/main/vpn.
-5. **Important!** Once you are done, run `./bin/redshift/local-delete-aws-redshift.sh` to delete the cluster.
+Create for the `redshift-vpc` an Internet Gateway - `redshift-igw`.
+
+Create a subnet for the VPC `redshift-public-subnet`.
+In the route table of the subnet make sure to add the route 
+`Destination 0.0.0.0/0` to `Target` the previously created 
+internet gateway `redshift-igw`.
+
+Create a Security Group `redshift-sg`.
+Make the following adjustments in the security group to allow access to the 
+Redshift cluster from the general purpose Github CI runners:
+
+- add an Inbound rule accepting `All traffic` from Source `0.0.0.0/0`
+- add an Outbound rule for `All traffic` to destination `0.0.0.0/0`
+
+### Amazon Redshift setup
+
+Create a subnet group `cluster-subnet-group-trino-ci` associated with 
+the VPC `redshift-vpc` and the VPC subnet `redshift-public-subnet`.
+
+### AWS IAM setup
+
+Create the AWS IAM role `redshift-ci` and add to it 
+the `AmazonRedshiftAllCommandsFullAccess` policy.
+This role will be passed to the ephemeral Redshift cluster to provide it with 
+the ability to execute `COPY` from AWS S3 bucket.
+
+Ensure that the AWS IAM user used by the CI process does have the ability to 
+create ephemeral Amazon Redshift clusters: 
+
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "PassRoleToRedshiftCluster",
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:iam::894365193301:role/redshift-ci"
+        },
+        {
+            "Sid": "RedshiftClusterManagement",
+            "Effect": "Allow",
+            "Action": [
+                "redshift:DeleteTags",
+                "redshift:DeleteCluster",
+                "redshift:CreateTags",
+                "redshift:CreateCluster",
+                "redshift:DescribeClusters",
+                "redshift:DescribeLoggingStatus"
+            ],
+            "Resource": "arn:aws:redshift:us-east-2:894365193301:cluster:trino-redshift-ci-cluster-*"
+        },
+        {
+            "Sid": "DescribeRedshiftVpcComponents",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:DescribeInternetGateways",
+                "ec2:DescribeAddresses",
+                "ec2:DescribeAvailabilityZones",
+                "ec2:DescribeVpcs",
+                "ec2:DescribeAccountAttributes",
+                "ec2:DescribeSubnets",
+                "ec2:DescribeSecurityGroups"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+### AWS S3 setup
+
+The `trino-redshift` tests rely on a Redshift cluster 
+having TPCH tables filled with data.
+Create an AWS S3 bucket and add to it the parquet content 
+of `tpch` tables saved locally through the `trino-hive` connector 
+via commands like:
+
+```
+CREATE TABLE hive.tiny.table_name WITH (format= 'parquet') AS TABLE tpch.sf1.table_name
+```
+
+The content of the S3 bucket should look like this:
+
+```
+s3://<your_bucket>/tpch/tiny/<table_name>/*.parquet
+```
+
+where `table_name` is:
+
+- `customer`
+- `lineitem`
+- `nation`
+- `orders`
+- `part`
+- `partsupp`
+- `region`
+- `supplier`
+
