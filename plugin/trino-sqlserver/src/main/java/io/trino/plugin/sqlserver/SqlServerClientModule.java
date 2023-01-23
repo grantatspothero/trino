@@ -30,6 +30,7 @@ import io.trino.plugin.jdbc.JdbcJoinPushdownSupportModule;
 import io.trino.plugin.jdbc.JdbcStatisticsConfig;
 import io.trino.plugin.jdbc.MaxDomainCompactionThreshold;
 import io.trino.plugin.jdbc.credential.CredentialProvider;
+import io.trino.plugin.jdbc.ptf.Procedure;
 import io.trino.plugin.jdbc.ptf.Query;
 import io.trino.plugin.sqlserver.galaxy.GalaxySqlServerSocketFactory;
 import io.trino.spi.connector.CatalogHandle;
@@ -44,6 +45,7 @@ import java.util.Properties;
 
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
+import static io.airlift.configuration.ConditionalModule.conditionalModule;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
@@ -69,6 +71,11 @@ public class SqlServerClientModule
         newOptionalBinder(binder, Key.get(int.class, MaxDomainCompactionThreshold.class)).setBinding().toInstance(SQL_SERVER_MAX_LIST_EXPRESSIONS);
         newSetBinder(binder, ConnectorTableFunction.class).addBinding().toProvider(Query.class).in(Scopes.SINGLETON);
         install(new JdbcJoinPushdownSupportModule());
+
+        install(conditionalModule(
+                SqlServerConfig.class,
+                SqlServerConfig::isStoredProcedureTableFunctionEnabled,
+                internalBinder -> newSetBinder(internalBinder, ConnectorTableFunction.class).addBinding().toProvider(Procedure.class).in(Scopes.SINGLETON)));
     }
 
     @Provides
