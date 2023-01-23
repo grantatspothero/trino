@@ -2648,6 +2648,9 @@ public class IcebergMetadata
     {
         Table icebergTable = catalog.loadTable(session, table.getSchemaTableName());
         Snapshot currentSnapshot = icebergTable.currentSnapshot();
+        if (snapshotId.isEmpty() && currentSnapshot == null) {
+            return true;
+        }
         if (snapshotId.isEmpty() || currentSnapshot == null) {
             return false;
         }
