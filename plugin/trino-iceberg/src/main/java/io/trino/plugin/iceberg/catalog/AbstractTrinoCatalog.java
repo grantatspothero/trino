@@ -300,6 +300,7 @@ public abstract class AbstractTrinoCatalog
                 definition.getColumns().stream()
                         .map(column -> new ConnectorMaterializedViewDefinition.Column(column.getName(), column.getType()))
                         .collect(toImmutableList()),
+                definition.getGracePeriod(),
                 definition.getComment(),
                 owner,
                 ImmutableMap.<String, Object>builder()
