@@ -32,6 +32,7 @@ import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_UPDATE;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.testng.Assert.assertFalse;
 
 public class TestObjectStoreHudiConnectorTest
         extends BaseObjectStoreConnectorTest
@@ -230,6 +231,15 @@ public class TestObjectStoreHudiConnectorTest
     {
         skipTestUnless(hasBehavior(SUPPORTS_UPDATE));
         super.testUpdateAllValues();
+    }
+
+    @Override
+    public void testMaterializedViewGracePeriod()
+    {
+        assertFalse(hasBehavior(SUPPORTS_CREATE_TABLE)); // remove override when true
+        assertThatThrownBy(super::testMaterializedViewGracePeriod)
+                .hasMessage("Table creation is not supported for Hudi");
+        throw new SkipException("test not implemented");
     }
 
     @Override

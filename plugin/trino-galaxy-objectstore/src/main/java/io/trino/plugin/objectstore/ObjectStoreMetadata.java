@@ -1023,6 +1023,15 @@ public class ObjectStoreMetadata
 
     private static ConnectorMaterializedViewDefinition withProperties(ConnectorMaterializedViewDefinition definition, Map<String, Object> properties)
     {
-        return new ConnectorMaterializedViewDefinition(definition.getOriginalSql(), definition.getStorageTable(), definition.getCatalog(), definition.getSchema(), definition.getColumns(), definition.getComment(), definition.getOwner(), properties);
+        return new ConnectorMaterializedViewDefinition(
+                definition.getOriginalSql(),
+                definition.getStorageTable(),
+                definition.getCatalog(),
+                definition.getSchema(),
+                definition.getColumns(),
+                definition.getGracePeriod(),
+                definition.getComment(),
+                definition.getOwner(),
+                properties);
     }
 }
