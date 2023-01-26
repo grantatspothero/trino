@@ -32,6 +32,7 @@ import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.JwtParser;
 import io.trino.plugin.base.security.AllowAllSystemAccessControl;
 import io.trino.security.AccessControl;
+import io.trino.security.AccessControlManager;
 import io.trino.server.HttpRequestSessionContextFactory;
 import io.trino.server.ProtocolConfig;
 import io.trino.server.protocol.PreparedStatementEncoder;
@@ -950,6 +951,38 @@ public class TestResourceSecurity
                             .build())
                     .build();
             assertAuthenticationAutomatic(httpServerInfo.getHttpsUri(), clientWithJwt);
+        }
+    }
+
+    @Test
+    public void testResourceSecurityImpersonation()
+            throws Exception
+    {
+        try (TestingTrinoServer server = TestingTrinoServer.builder()
+                .setProperties(ImmutableMap.<String, String>builder()
+                        .putAll(SECURE_PROPERTIES)
+                        .put("password-authenticator.config-files", passwordConfigDummy.toString())
+                        .put("http-server.authentication.type", "password")
+                        .put("http-server.authentication.password.user-mapping.pattern", ALLOWED_USER_MAPPING_PATTERN)
+                        .buildOrThrow())
+                .setAdditionalModule(binder -> jaxrsBinder(binder).bind(TestResource.class))
+                .build()) {
+            server.getInstance(Key.get(PasswordAuthenticatorManager.class)).setAuthenticators(TestResourceSecurity::authenticate);
+            server.getInstance(Key.get(AccessControlManager.class)).setSystemAccessControls(ImmutableList.of(TestSystemAccessControl.NO_IMPERSONATION));
+            HttpServerInfo httpServerInfo = server.getInstance(Key.get(HttpServerInfo.class));
+
+            // Authenticated user TEST_USER_LOGIN impersonates impersonated-user by passing request header X-Trino-Authorization-User
+            Request request = new Request.Builder()
+                    .url(getLocation(httpServerInfo.getHttpsUri(), "/protocol/identity"))
+                    .addHeader("Authorization", Credentials.basic(TEST_USER_LOGIN, TEST_PASSWORD))
+                    .addHeader("X-Trino-Original-User", TEST_USER_LOGIN)
+                    .addHeader("X-Trino-User", "impersonated-user")
+                    .build();
+            try (Response response = client.newCall(request).execute()) {
+                assertEquals(response.code(), SC_OK);
+                assertEquals(response.header("user"), "impersonated-user");
+                assertEquals(response.header("principal"), TEST_USER_LOGIN);
+            }
         }
     }
 

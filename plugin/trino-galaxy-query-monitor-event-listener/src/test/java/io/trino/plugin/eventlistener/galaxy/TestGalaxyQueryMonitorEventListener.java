@@ -168,6 +168,7 @@ public class TestGalaxyQueryMonitorEventListener
                         Optional.empty()),
                 new QueryContext(
                         "user",
+                        "originalUser",
                         Optional.empty(),
                         ImmutableSet.of(),
                         Optional.empty(),
