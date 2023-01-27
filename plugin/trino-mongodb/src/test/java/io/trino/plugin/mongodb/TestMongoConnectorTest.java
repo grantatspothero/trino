@@ -61,7 +61,7 @@ public class TestMongoConnectorTest
         extends BaseConnectorTest
 {
     private MongoServer server;
-    private MongoClient client;
+    protected MongoClient client;
 
     @Override
     protected QueryRunner createQueryRunner()
@@ -73,7 +73,7 @@ public class TestMongoConnectorTest
     }
 
     @AfterClass(alwaysRun = true)
-    public final void destroy()
+    public void destroy()
     {
         server.close();
         server = null;
