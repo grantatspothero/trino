@@ -28,8 +28,10 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.trino.plugin.mongodb.TestingMongoAtlasInfoProvider.getConnectionString;
@@ -44,6 +46,8 @@ public class TestMongoAtlasInstanceCleaner
     // and/or collection(s) will be created as part of corresponding test setup.
     private final Multimap<String, String> retainedCollections = new ImmutableSetMultimap.Builder<String, String>()
             .putAll("tpch", TpchTable.getTables().stream().map(TpchTable::getTableName).toList())
+            .putAll("test", Arrays.stream(TestMongoFederatedDatabaseConnectorTest.predicatePushdownProvider()).map(element -> (String) element[0]).collect(Collectors.toList()))
+            .put("galaxy_integration_tests_db", "galaxy_integration_tests_collection") // Used by Galaxy integration test
             .build();
     private MongoClient client;
 
