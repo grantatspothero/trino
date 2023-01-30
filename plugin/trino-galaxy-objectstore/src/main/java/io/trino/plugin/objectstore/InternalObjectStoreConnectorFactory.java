@@ -35,6 +35,7 @@ import io.trino.spi.connector.ConnectorPageSourceProvider;
 import io.trino.spi.connector.ConnectorSplitManager;
 
 import java.lang.annotation.Annotation;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -57,17 +58,25 @@ public final class InternalObjectStoreConnectorFactory
                     context,
                     new GalaxyLocationSecurityModule());
 
+            Map<String, String> icebergConfig = new HashMap<>(filteredConfig(config, "ICEBERG"));
+            // The procedure is disabled in OSS because of security issues.
+            // In Galaxy, they are addressed by location-based security and the procedure can be enabled by default.
+            icebergConfig.putIfAbsent("iceberg.register-table-procedure.enabled", "true");
             Connector icebergConnector = InternalIcebergConnectorFactory.createConnector(
                     catalogName,
-                    filteredConfig(config, "ICEBERG"),
+                    icebergConfig,
                     context,
                     new GalaxyLocationSecurityModule(),
                     Optional.empty(),
                     Optional.empty());
 
+            Map<String, String> deltaConfig = new HashMap<>(filteredConfig(config, "DELTA"));
+            // The procedure is disabled in OSS because of security issues.
+            // In Galaxy, they are addressed by location-based security and the procedure can be enabled by default.
+            deltaConfig.putIfAbsent("delta.register-table-procedure.enabled", "true");
             Connector deltaConnector = InternalDeltaLakeConnectorFactory.createConnector(
                     catalogName,
-                    filteredConfig(config, "DELTA"),
+                    deltaConfig,
                     context,
                     Optional.empty(),
                     new GalaxyLocationSecurityModule());
