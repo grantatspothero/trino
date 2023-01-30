@@ -66,6 +66,7 @@ public class ObjectStoreConnector
     private final ObjectStoreNodePartitioningProvider nodePartitioningProvider;
     private final ObjectStoreTableProperties tableProperties;
     private final ObjectStoreMaterializedViewProperties materializedViewProperties;
+    private final Set<Procedure> procedures;
 
     @Inject
     public ObjectStoreConnector(
@@ -78,7 +79,8 @@ public class ObjectStoreConnector
             ObjectStorePageSinkProvider pageSinkProvider,
             ObjectStoreNodePartitioningProvider nodePartitioningProvider,
             ObjectStoreTableProperties tableProperties,
-            ObjectStoreMaterializedViewProperties materializedViewProperties)
+            ObjectStoreMaterializedViewProperties materializedViewProperties,
+            Set<Procedure> procedures)
     {
         this.hiveConnector = requireNonNull(hiveConnector, "hiveConnector is null");
         this.icebergConnector = requireNonNull(icebergConnector, "icebergConnector is null");
@@ -90,6 +92,7 @@ public class ObjectStoreConnector
         this.nodePartitioningProvider = requireNonNull(nodePartitioningProvider, "nodePartitioningProvider is null");
         this.tableProperties = requireNonNull(tableProperties, "tableProperties is null");
         this.materializedViewProperties = requireNonNull(materializedViewProperties, "materializedViewProperties is null");
+        this.procedures = ImmutableSet.copyOf(requireNonNull(procedures, "procedures is null"));
     }
 
     @Override
@@ -261,6 +264,7 @@ public class ObjectStoreConnector
     public Set<Procedure> getProcedures()
     {
         Map<String, Procedure> procedures = new HashMap<>();
+        this.procedures.forEach(procedure -> procedures.put(procedure.getName(), procedure));
         for (Connector connector : ImmutableSet.of(hiveConnector, icebergConnector, deltaConnector, hudiConnector)) {
             for (Procedure procedure : connector.getProcedures()) {
                 String name = procedure.getName();

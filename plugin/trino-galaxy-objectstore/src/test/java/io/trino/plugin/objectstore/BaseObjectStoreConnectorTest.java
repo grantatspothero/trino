@@ -24,13 +24,18 @@ import io.trino.testing.TestingConnectorBehavior;
 import io.trino.testing.sql.TestTable;
 import org.intellij.lang.annotations.Language;
 import org.testng.SkipException;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
+import java.nio.file.Path;
 import java.util.Map;
-import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import static com.google.common.base.Verify.verify;
+import static com.google.common.collect.MoreCollectors.onlyElement;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static io.trino.spi.type.DoubleType.DOUBLE;
 import static io.trino.spi.type.VarcharType.VARCHAR;
@@ -51,6 +56,8 @@ public abstract class BaseObjectStoreConnectorTest
         extends BaseConnectorTest
 {
     private final TableType tableType;
+    private MinioStorage minio;
+    private TestingGalaxyMetastore metastore;
 
     protected BaseObjectStoreConnectorTest(TableType tableType)
     {
@@ -76,12 +83,12 @@ public abstract class BaseObjectStoreConnectorTest
         closeAfterClass(TrinoFileSystemCache.INSTANCE::closeAll);
 
         GalaxyCockroachContainer galaxyCockroachContainer = closeAfterClass(new GalaxyCockroachContainer());
-        MinioStorage minio = closeAfterClass(new MinioStorage("test-bucket"));
+        minio = closeAfterClass(new MinioStorage("test-bucket"));
         minio.start();
 
-        TestingGalaxyMetastore metastore = closeAfterClass(new TestingGalaxyMetastore(Optional.of(galaxyCockroachContainer)));
+        metastore = closeAfterClass(new TestingGalaxyMetastore());
 
-        TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> false));
+        TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> !location.contains("denied")));
 
         DistributedQueryRunner queryRunner = ObjectStoreQueryRunner.builder()
                 .withTableType(tableType)
@@ -122,6 +129,13 @@ public abstract class BaseObjectStoreConnectorTest
     // mock catalog init inside create query runner to assign catalog ID to it
     @Override
     public void initMockCatalog() {}
+
+    @AfterClass(alwaysRun = true)
+    public void tearDown()
+    {
+        metastore = null; // closed by closeAfterClass
+        minio = null; // closed by closeAfterClass
+    }
 
     @Override
     @SuppressWarnings("DuplicateBranchesInSwitch")
@@ -509,8 +523,8 @@ public abstract class BaseObjectStoreConnectorTest
     @Test
     public void testCreateSchemaWithLocation()
     {
-        assertQueryFails("CREATE SCHEMA test_location_create WITH (location = 's3://test-bucket/junk')",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/junk");
+        assertQueryFails("CREATE SCHEMA test_location_create WITH (location = 's3://test-bucket/denied')",
+                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied");
     }
 
     @Test
@@ -518,11 +532,11 @@ public abstract class BaseObjectStoreConnectorTest
     {
         skipTestUnless(hasBehavior(SUPPORTS_CREATE_TABLE));
 
-        assertQueryFails("CREATE TABLE test_location_create (x int) WITH (location = 's3://test-bucket/junk')",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/junk");
+        assertQueryFails("CREATE TABLE test_location_create (x int) WITH (location = 's3://test-bucket/denied')",
+                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied");
 
-        assertQueryFails("CREATE TABLE test_location_create (x int) WITH (location = 's3://test-bucket/tpch/test_location_create')",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/tpch/test_location_create");
+        assertQueryFails("CREATE TABLE test_location_create (x int) WITH (location = 's3://test-bucket/denied/test_location_create')",
+                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied/test_location_create");
     }
 
     @Test
@@ -530,11 +544,11 @@ public abstract class BaseObjectStoreConnectorTest
     {
         skipTestUnless(hasBehavior(SUPPORTS_CREATE_TABLE));
 
-        assertQueryFails("CREATE TABLE test_location_ctas WITH (location = 's3://test-bucket/junk') AS SELECT 123 x",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/junk");
+        assertQueryFails("CREATE TABLE test_location_ctas WITH (location = 's3://test-bucket/denied') AS SELECT 123 x",
+                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied");
 
-        assertQueryFails("CREATE TABLE test_location_ctas WITH (location = 's3://test-bucket/tpch/test_location_ctas') AS SELECT 123 x",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/tpch/test_location_ctas");
+        assertQueryFails("CREATE TABLE test_location_ctas WITH (location = 's3://test-bucket/denied/test_location_ctas') AS SELECT 123 x",
+                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied/test_location_ctas");
     }
 
     @Test
@@ -579,6 +593,101 @@ public abstract class BaseObjectStoreConnectorTest
                         "('objectstore', 'partitions', '', 'array(array(varchar))', 'Partitions to be analyzed'), " +
                         "('objectstore', 'columns', '', 'array(varchar)', 'Columns to be analyzed'), " +
                         "('objectstore', 'files_modified_after', '' , 'timestamp(3) with time zone', 'Take into account only files modified after given timestamp') ");
+    }
+
+    @Test
+    public void testRegisterTableProcedure()
+            throws Exception
+    {
+        String tableName = "test_register_table_" + randomNameSuffix();
+
+        assertUpdate("CREATE TABLE " + tableName + " AS SELECT 1 x", 1);
+
+        String tableLocation = getTableLocation(tableName);
+        metastore.getMetastore().dropTable("tpch", tableName);
+
+        assertQueryFails("SELECT * FROM " + tableName, ".*Table '.*' does not exist");
+
+        assertUpdate("CALL system.register_table (CURRENT_SCHEMA, '" + tableName + "', '" + tableLocation + "')");
+
+        assertQuery("SELECT * FROM " + tableName, "VALUES 1");
+
+        assertUpdate("DROP TABLE " + tableName);
+    }
+
+    @Test
+    public void testRegisterTableProcedureIcebergSpecificArgument()
+            throws Exception
+    {
+        String tableName = "test_register_table_iceberg_specific_argument_" + randomNameSuffix();
+
+        assertUpdate("CREATE TABLE " + tableName + " AS SELECT 1 x", 1);
+
+        String tableLocation = getTableLocation(tableName);
+        metastore.getMetastore().dropTable("tpch", tableName);
+
+        switch (tableType) {
+            case ICEBERG -> {
+                String key = tableLocation.substring(minio.getS3Url().length()) + "/metadata/";
+                String metadataFileName = minio.listObjects(key).stream()
+                        .filter(path -> path.endsWith(".json"))
+                        .map(path -> Path.of(path).getFileName().toString())
+                        .collect(onlyElement());
+                assertUpdate("CALL system.register_table (CURRENT_SCHEMA, '" + tableName + "', '" + tableLocation + "', '" + metadataFileName + "')");
+                assertQuery("SELECT * FROM " + tableName, "VALUES 1");
+            }
+            case DELTA -> {
+                assertQueryFails(
+                        "CALL system.register_table (CURRENT_SCHEMA, '" + tableName + "', '" + tableLocation + "', 'dummy metadata_file_name argument')",
+                        "Unsupported metadata_file_name argument.*");
+                assertQueryFails("SELECT * FROM " + tableName, ".*Table '.*' does not exist");
+            }
+            case HUDI, HIVE -> {
+                assertQueryFails(
+                        "CALL system.register_table (CURRENT_SCHEMA, '" + tableName + "', '" + tableLocation + "', 'dummy metadata_file_name argument')",
+                        "Unsupported table type");
+                assertQueryFails("SELECT * FROM " + tableName, ".*Table '.*' does not exist");
+            }
+        }
+
+        assertUpdate("DROP TABLE IF EXISTS " + tableName);
+    }
+
+    @Test
+    public void testRegisterTableTypesFailure()
+    {
+        String tableName = "test_register_table_types_" + randomNameSuffix();
+
+        String tableLocation = "s3://test-bucket/" + tableName;
+
+        minio.putObject(tableName + "/metadata/dummy_metadata.json", "dummy");
+        minio.putObject(tableName + "/_delta_log/dummy_transaction.json", "dummy");
+        minio.putObject(tableName + "/.hoodie/dummy.commit", "dummy");
+
+        assertQueryFails(
+                "CALL system.register_table (CURRENT_SCHEMA, '" + tableName + "', '" + tableLocation + "')",
+                "Cannot determine any one of Iceberg, Delta Lake, Hudi table types");
+        assertQueryFails("SELECT * FROM " + tableName, ".*Table '.*' does not exist");
+    }
+
+    @Test
+    public void testRegisterTableAccessControl()
+    {
+        String tableName = "test_register_table_" + randomNameSuffix();
+        assertQueryFails("CALL system.register_table (CURRENT_SCHEMA, '" + tableName + "', 's3://test-bucket/denied')",
+                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied");
+    }
+
+    protected String getTableLocation(String tableName)
+    {
+        Pattern locationPattern = Pattern.compile(".*location = '(.*?)'.*", Pattern.DOTALL);
+        Matcher matcher = locationPattern.matcher((String) computeActual("SHOW CREATE TABLE " + tableName).getOnlyValue());
+        if (matcher.find()) {
+            String location = matcher.group(1);
+            verify(!matcher.find(), "Unexpected second match");
+            return location;
+        }
+        throw new IllegalStateException("Location not found in SHOW CREATE TABLE result");
     }
 
     @Override

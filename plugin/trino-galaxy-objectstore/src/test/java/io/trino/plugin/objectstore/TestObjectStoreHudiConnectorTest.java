@@ -288,6 +288,25 @@ public class TestObjectStoreHudiConnectorTest
     }
 
     @Override
+    public void testRegisterTableProcedure()
+    {
+        // Override because Hudi connector doesn't support creating a table
+        // Verify failure by registering an existing table content with different name
+        String tableLocation = getTableLocation("region");
+        assertQueryFails(
+                "CALL system.register_table (CURRENT_SCHEMA, '" + ("test_register_table_" + randomNameSuffix()) + "', '" + tableLocation + "')",
+                "Registering Hudi tables is unsupported");
+    }
+
+    @Override
+    public void testRegisterTableProcedureIcebergSpecificArgument()
+    {
+        // Override because Hudi connector doesn't support creating a table
+        assertThatThrownBy(super::testRegisterTableProcedureIcebergSpecificArgument)
+                .hasMessageContaining("Table creation is not supported for Hudi");
+    }
+
+    @Override
     public void testSelectAll()
     {
         throw new SkipException("Hudi returns extra columns");

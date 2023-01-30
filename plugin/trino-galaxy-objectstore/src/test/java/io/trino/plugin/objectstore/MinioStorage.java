@@ -18,14 +18,17 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.collect.ImmutableMap;
 import io.trino.testing.ResourcePresence;
 import io.trino.testing.containers.Minio;
 import org.testcontainers.containers.Network;
 
 import java.io.Closeable;
+import java.util.List;
 import java.util.Map;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 import static org.testcontainers.containers.Network.newNetwork;
 
@@ -38,6 +41,7 @@ public class MinioStorage
     private final String bucketName;
     private final Network network;
     private final Minio minio;
+    private AmazonS3 s3;
 
     public MinioStorage(String bucketName)
     {
@@ -56,7 +60,7 @@ public class MinioStorage
     {
         minio.start();
 
-        AmazonS3 s3 = AmazonS3ClientBuilder.standard()
+        s3 = AmazonS3ClientBuilder.standard()
                 .withPathStyleAccessEnabled(true)
                 .withEndpointConfiguration(new EndpointConfiguration(getEndpoint(), null))
                 .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY)))
@@ -71,6 +75,18 @@ public class MinioStorage
     {
         try (network; minio) {
         }
+    }
+
+    public List<String> listObjects(String key)
+    {
+        return s3.listObjects(bucketName, key).getObjectSummaries().stream()
+                .map(S3ObjectSummary::getKey)
+                .collect(toImmutableList());
+    }
+
+    public void putObject(String key, String content)
+    {
+        s3.putObject(bucketName, key, content);
     }
 
     @SuppressWarnings("HttpUrlsUsage")

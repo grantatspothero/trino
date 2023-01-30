@@ -94,11 +94,11 @@ public class TestObjectStoreHiveConnectorTest
         assertThatThrownBy(super::testCreateTableWithLocation)
                 .hasStackTraceContaining("Table property 'location' not supported for Hive tables");
 
-        assertQueryFails("CREATE TABLE test_location_create (x int) WITH (external_location = 's3://test-bucket/junk')",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/junk");
+        assertQueryFails("CREATE TABLE test_location_create (x int) WITH (external_location = 's3://test-bucket/denied')",
+                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied");
 
-        assertQueryFails("CREATE TABLE test_location_create (x int) WITH (external_location = 's3://test-bucket/tpch/test_location_create')",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/tpch/test_location_create");
+        assertQueryFails("CREATE TABLE test_location_create (x int) WITH (external_location = 's3://test-bucket/denied/test_location_create')",
+                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied/test_location_create");
     }
 
     @Override
@@ -107,11 +107,11 @@ public class TestObjectStoreHiveConnectorTest
         assertThatThrownBy(super::testCreateTableAsWithLocation)
                 .hasStackTraceContaining("Table property 'location' not supported for Hive tables");
 
-        assertQueryFails("CREATE TABLE test_location_ctas WITH (external_location = 's3://test-bucket/junk') AS SELECT 123 x",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/junk");
+        assertQueryFails("CREATE TABLE test_location_ctas WITH (external_location = 's3://test-bucket/denied') AS SELECT 123 x",
+                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied");
 
-        assertQueryFails("CREATE TABLE test_location_ctas WITH (external_location = 's3://test-bucket/tpch/test_location_ctas') AS SELECT 123 x",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/tpch/test_location_ctas");
+        assertQueryFails("CREATE TABLE test_location_ctas WITH (external_location = 's3://test-bucket/denied/test_location_ctas') AS SELECT 123 x",
+                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied/test_location_ctas");
     }
 
     @Test
@@ -126,8 +126,8 @@ public class TestObjectStoreHiveConnectorTest
                 "  partitioned_by = ARRAY['part'] " +
                 ")");
 
-        assertQueryFails("CALL system.register_partition('tpch', '" + tableName + "', ARRAY['part'], ARRAY['first'], 's3://test-bucket/junk')",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/junk");
+        assertQueryFails("CALL system.register_partition('tpch', '" + tableName + "', ARRAY['part'], ARRAY['first'], 's3://test-bucket/denied')",
+                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied");
 
         assertUpdate("DROP TABLE " + tableName);
     }
@@ -372,6 +372,19 @@ public class TestObjectStoreHiveConnectorTest
     protected Double basicTableStatisticsExpectedNdv(int actualNdv)
     {
         return 1.0;
+    }
+
+    @Override
+    public void testRegisterTableProcedure()
+    {
+        assertThatThrownBy(super::testRegisterTableProcedure)
+                .hasMessage("Unsupported table type");
+    }
+
+    @Override
+    protected String getTableLocation(String tableName)
+    {
+        return "s3://test-bucket/tpch/" + tableName;
     }
 
     @Test

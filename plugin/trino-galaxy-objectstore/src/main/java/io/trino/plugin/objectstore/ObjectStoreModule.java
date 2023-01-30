@@ -16,7 +16,11 @@ package io.trino.plugin.objectstore;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
+import com.google.inject.multibindings.Multibinder;
+import io.trino.plugin.objectstore.procedure.ObjectStoreRegisterTableProcedure;
+import io.trino.spi.procedure.Procedure;
 
+import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 
 public class ObjectStoreModule
@@ -32,6 +36,9 @@ public class ObjectStoreModule
         binder.bind(ObjectStoreNodePartitioningProvider.class).in(Scopes.SINGLETON);
         binder.bind(ObjectStoreTableProperties.class).in(Scopes.SINGLETON);
         binder.bind(ObjectStoreMaterializedViewProperties.class).in(Scopes.SINGLETON);
+
+        Multibinder<Procedure> procedures = newSetBinder(binder, Procedure.class);
+        procedures.addBinding().toProvider(ObjectStoreRegisterTableProcedure.class).in(Scopes.SINGLETON);
 
         configBinder(binder).bindConfig(ObjectStoreConfig.class);
     }

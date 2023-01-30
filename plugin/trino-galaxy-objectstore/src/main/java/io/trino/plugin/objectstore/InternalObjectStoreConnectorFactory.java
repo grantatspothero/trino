@@ -16,8 +16,14 @@ package io.trino.plugin.objectstore;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import io.airlift.bootstrap.Bootstrap;
+import io.trino.filesystem.hdfs.HdfsFileSystemModule;
+import io.trino.hdfs.HdfsModule;
+import io.trino.hdfs.authentication.HdfsAuthenticationModule;
 import io.trino.plugin.deltalake.InternalDeltaLakeConnectorFactory;
 import io.trino.plugin.hive.InternalHiveConnectorFactory;
+import io.trino.plugin.hive.azure.HiveAzureModule;
+import io.trino.plugin.hive.gcs.HiveGcsModule;
+import io.trino.plugin.hive.s3.HiveS3Module;
 import io.trino.plugin.hudi.InternalHudiConnectorFactory;
 import io.trino.plugin.iceberg.InternalIcebergConnectorFactory;
 import io.trino.spi.classloader.ThreadContextClassLoader;
@@ -79,7 +85,13 @@ public final class InternalObjectStoreConnectorFactory
                     connectorModule(ForDelta.class, deltaConnector),
                     connectorModule(ForHudi.class, hudiConnector),
                     new ObjectStoreModule(),
-                    new GalaxyLocationSecurityModule());
+                    new GalaxyLocationSecurityModule(),
+                    new HdfsModule(),
+                    new HiveS3Module(),
+                    new HiveGcsModule(),
+                    new HiveAzureModule(),
+                    new HdfsAuthenticationModule(),
+                    new HdfsFileSystemModule());
 
             Injector injector = app
                     .doNotInitializeLogging()
