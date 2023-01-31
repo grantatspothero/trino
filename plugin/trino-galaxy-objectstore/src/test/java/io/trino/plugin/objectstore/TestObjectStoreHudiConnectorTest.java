@@ -24,6 +24,8 @@ import org.testng.annotations.Test;
 import static io.trino.plugin.objectstore.TableType.HUDI;
 import static io.trino.spi.type.VarcharType.VARCHAR;
 import static io.trino.testing.MaterializedResult.resultBuilder;
+import static io.trino.testing.TestingAccessControlManager.TestingPrivilegeType.DROP_TABLE;
+import static io.trino.testing.TestingAccessControlManager.privilege;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_CREATE_TABLE;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_INSERT;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_UPDATE;
@@ -304,6 +306,25 @@ public class TestObjectStoreHudiConnectorTest
         // Override because Hudi connector doesn't support creating a table
         assertThatThrownBy(super::testRegisterTableProcedureIcebergSpecificArgument)
                 .hasMessageContaining("Table creation is not supported for Hudi");
+    }
+
+    @Override
+    public void testUnregisterTableProcedure()
+    {
+        // Override because Hudi connector doesn't support creating a table
+        // Use an existing table to verify the failure
+        assertQueryFails("CALL system.unregister_table(CURRENT_SCHEMA, 'region')", "Unsupported table type");
+    }
+
+    @Override
+    public void testUnregisterTableAccessControl()
+    {
+        // Override because Hudi connector doesn't support creating a table
+        // Use an existing table to verify the failure
+        assertAccessDenied(
+                "CALL system.unregister_table(CURRENT_SCHEMA, 'region')",
+                "Cannot drop table .*",
+                privilege("region", DROP_TABLE));
     }
 
     @Override

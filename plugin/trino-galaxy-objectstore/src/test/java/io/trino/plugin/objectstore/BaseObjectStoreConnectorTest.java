@@ -40,6 +40,8 @@ import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static io.trino.spi.type.DoubleType.DOUBLE;
 import static io.trino.spi.type.VarcharType.VARCHAR;
 import static io.trino.testing.MaterializedResult.resultBuilder;
+import static io.trino.testing.TestingAccessControlManager.TestingPrivilegeType.DROP_TABLE;
+import static io.trino.testing.TestingAccessControlManager.privilege;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_ADD_COLUMN;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_CREATE_TABLE;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_RENAME_COLUMN;
@@ -50,6 +52,7 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 public abstract class BaseObjectStoreConnectorTest
@@ -676,6 +679,42 @@ public abstract class BaseObjectStoreConnectorTest
         String tableName = "test_register_table_" + randomNameSuffix();
         assertQueryFails("CALL system.register_table (CURRENT_SCHEMA, '" + tableName + "', 's3://test-bucket/denied')",
                 "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied");
+    }
+
+    @Test
+    public void testUnregisterTableProcedure()
+    {
+        String tableName = "test_unregister_table_" + randomNameSuffix();
+        String unregisterTableName = tableName + "_new";
+
+        assertUpdate("CREATE TABLE " + tableName + " AS SELECT 1 x", 1);
+
+        String tableLocation = getTableLocation(tableName);
+
+        assertUpdate("CALL system.register_table(CURRENT_SCHEMA, '" + unregisterTableName + "', '" + tableLocation + "')");
+        assertTrue(getQueryRunner().tableExists(getSession(), unregisterTableName));
+
+        assertUpdate("CALL system.unregister_table(CURRENT_SCHEMA, '" + unregisterTableName + "')");
+        assertFalse(getQueryRunner().tableExists(getSession(), unregisterTableName));
+
+        assertQuery("SELECT * FROM " + tableName, "VALUES 1");
+
+        assertUpdate("DROP TABLE " + tableName);
+    }
+
+    @Test
+    public void testUnregisterTableAccessControl()
+    {
+        String tableName = "test_unregister_table_access_control_" + randomNameSuffix();
+        assertUpdate("CREATE TABLE " + tableName + " AS SELECT 1 a", 1);
+
+        assertAccessDenied(
+                "CALL system.unregister_table(CURRENT_SCHEMA, '" + tableName + "')",
+                "Cannot drop table .*",
+                privilege(tableName, DROP_TABLE));
+
+        assertQuery("SELECT * FROM " + tableName, "VALUES 1");
+        assertUpdate("DROP TABLE " + tableName);
     }
 
     protected String getTableLocation(String tableName)

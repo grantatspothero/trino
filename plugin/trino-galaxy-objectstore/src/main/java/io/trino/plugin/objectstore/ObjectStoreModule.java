@@ -18,6 +18,7 @@ import com.google.inject.Module;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
 import io.trino.plugin.objectstore.procedure.ObjectStoreRegisterTableProcedure;
+import io.trino.plugin.objectstore.procedure.ObjectStoreUnregisterTableProcedure;
 import io.trino.spi.procedure.Procedure;
 
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
@@ -39,6 +40,7 @@ public class ObjectStoreModule
 
         Multibinder<Procedure> procedures = newSetBinder(binder, Procedure.class);
         procedures.addBinding().toProvider(ObjectStoreRegisterTableProcedure.class).in(Scopes.SINGLETON);
+        procedures.addBinding().toProvider(ObjectStoreUnregisterTableProcedure.class).in(Scopes.SINGLETON);
 
         configBinder(binder).bindConfig(ObjectStoreConfig.class);
     }

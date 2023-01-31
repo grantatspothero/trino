@@ -382,6 +382,13 @@ public class TestObjectStoreHiveConnectorTest
     }
 
     @Override
+    public void testUnregisterTableProcedure()
+    {
+        assertThatThrownBy(super::testUnregisterTableProcedure)
+                .hasMessage("Unsupported table type");
+    }
+
+    @Override
     protected String getTableLocation(String tableName)
     {
         return "s3://test-bucket/tpch/" + tableName;
