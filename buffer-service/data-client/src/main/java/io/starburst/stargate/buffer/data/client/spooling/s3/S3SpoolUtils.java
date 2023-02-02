@@ -11,8 +11,8 @@ package io.starburst.stargate.buffer.data.client.spooling.s3;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider;
 
 import javax.annotation.Nullable;
 
@@ -38,7 +38,7 @@ public final class S3SpoolUtils
             return StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey.get(), secretKey.get()));
         }
         if (accessKey.isEmpty() && secretKey.isEmpty()) {
-            return DefaultCredentialsProvider.create();
+            return WebIdentityTokenFileCredentialsProvider.create();
         }
         throw new IllegalArgumentException("AWS access key and secret key should be either both set or both not set");
     }
