@@ -23,6 +23,9 @@ public class HiveFormatsConfig
     private boolean csvNativeWriterEnabled;
     private boolean jsonNativeReaderEnabled;
     private boolean jsonNativeWriterEnabled;
+    // Keep enabled for Galaxy because there is nothing to fallback to
+    private boolean openXJsonNativeReaderEnabled = true;
+    private boolean openXJsonNativeWriterEnabled = true;
     private boolean regexNativeReaderEnabled;
     private boolean textFileNativeReaderEnabled;
     private boolean textFileNativeWriterEnabled;
@@ -78,6 +81,32 @@ public class HiveFormatsConfig
     public HiveFormatsConfig setJsonNativeWriterEnabled(boolean jsonNativeWriterEnabled)
     {
         this.jsonNativeWriterEnabled = jsonNativeWriterEnabled;
+        return this;
+    }
+
+    public boolean isOpenXJsonNativeReaderEnabled()
+    {
+        return openXJsonNativeReaderEnabled;
+    }
+
+    @Config("openx-json.native-reader.enabled")
+    @ConfigDescription("Use native OpenXJson reader")
+    public HiveFormatsConfig setOpenXJsonNativeReaderEnabled(boolean openXJsonNativeReaderEnabled)
+    {
+        this.openXJsonNativeReaderEnabled = openXJsonNativeReaderEnabled;
+        return this;
+    }
+
+    public boolean isOpenXJsonNativeWriterEnabled()
+    {
+        return openXJsonNativeWriterEnabled;
+    }
+
+    @Config("openx-json.native-writer.enabled")
+    @ConfigDescription("Use native OpenXJson writer")
+    public HiveFormatsConfig setOpenXJsonNativeWriterEnabled(boolean openXJsonNativeWriterEnabled)
+    {
+        this.openXJsonNativeWriterEnabled = openXJsonNativeWriterEnabled;
         return this;
     }
 

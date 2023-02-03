@@ -24,6 +24,7 @@ public enum HiveFileFormat
     RCTEXT,
     SEQUENCEFILE,
     JSON,
+    OPENX_JSON,
     TEXTFILE,
     CSV,
     REGEX,
@@ -39,6 +40,7 @@ public enum HiveFileFormat
             case RCTEXT -> HiveStorageFormat.RCTEXT;
             case SEQUENCEFILE -> HiveStorageFormat.SEQUENCEFILE;
             case JSON -> HiveStorageFormat.JSON;
+            case OPENX_JSON -> HiveStorageFormat.OPENX_JSON;
             case TEXTFILE -> HiveStorageFormat.TEXTFILE;
             case CSV -> HiveStorageFormat.CSV;
             case REGEX -> HiveStorageFormat.REGEX;
@@ -56,6 +58,7 @@ public enum HiveFileFormat
             case RCTEXT -> RCTEXT;
             case SEQUENCEFILE -> SEQUENCEFILE;
             case JSON -> JSON;
+            case OPENX_JSON -> OPENX_JSON;
             case TEXTFILE -> TEXTFILE;
             case CSV -> CSV;
             case REGEX -> REGEX;
