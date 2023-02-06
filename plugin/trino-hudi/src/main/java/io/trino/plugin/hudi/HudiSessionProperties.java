@@ -47,11 +47,12 @@ public class HudiSessionProperties
     private static final String PARQUET_NATIVE_ZSTD_DECOMPRESSOR_ENABLED = "parquet_native_zstd_decompressor_enabled";
     private static final String PARQUET_NATIVE_SNAPPY_DECOMPRESSOR_ENABLED = "parquet_native_snappy_decompressor_enabled";
     private static final String PARQUET_VECTORIZED_DECODING_ENABLED = "parquet_vectorized_decoding_enabled";
-    private static final String MIN_PARTITION_BATCH_SIZE = "min_partition_batch_size";
-    private static final String MAX_PARTITION_BATCH_SIZE = "max_partition_batch_size";
     private static final String SIZE_BASED_SPLIT_WEIGHTS_ENABLED = "size_based_split_weights_enabled";
     private static final String STANDARD_SPLIT_WEIGHT_SIZE = "standard_split_weight_size";
     private static final String MINIMUM_ASSIGNED_SPLIT_WEIGHT = "minimum_assigned_split_weight";
+    private static final String MAX_SPLITS_PER_SECOND = "max_splits_per_second";
+    private static final String MAX_OUTSTANDING_SPLITS = "max_outstanding_splits";
+    private static final String SPLIT_GENERATOR_PARALLELISM = "split_generator_parallelism";
 
     private final List<PropertyMetadata<?>> sessionProperties;
 
@@ -105,16 +106,6 @@ public class HudiSessionProperties
                         "Enable using Java Vector API for faster decoding of parquet files",
                         parquetReaderConfig.isVectorizedDecodingEnabled(),
                         false),
-                integerProperty(
-                        MIN_PARTITION_BATCH_SIZE,
-                        "Minimum number of partitions returned in a single batch.",
-                        hudiConfig.getMinPartitionBatchSize(),
-                        false),
-                integerProperty(
-                        MAX_PARTITION_BATCH_SIZE,
-                        "Maximum number of partitions returned in a single batch.",
-                        hudiConfig.getMaxPartitionBatchSize(),
-                        false),
                 booleanProperty(
                         SIZE_BASED_SPLIT_WEIGHTS_ENABLED,
                         "Enable estimating split weights based on size in bytes",
@@ -134,6 +125,21 @@ public class HudiSessionProperties
                                 throw new TrinoException(INVALID_SESSION_PROPERTY, format("%s must be > 0 and <= 1.0: %s", MINIMUM_ASSIGNED_SPLIT_WEIGHT, value));
                             }
                         },
+                        false),
+                integerProperty(
+                        MAX_SPLITS_PER_SECOND,
+                        "Rate at which splits are enqueued for processing. The queue will throttle if this rate limit is breached.",
+                        hudiConfig.getMaxSplitsPerSecond(),
+                        false),
+                integerProperty(
+                        MAX_OUTSTANDING_SPLITS,
+                        "Maximum outstanding splits in a batch enqueued for processing.",
+                        hudiConfig.getMaxOutstandingSplits(),
+                        false),
+                integerProperty(
+                        SPLIT_GENERATOR_PARALLELISM,
+                        "Number of threads to generate splits from partitions",
+                        hudiConfig.getSplitGeneratorParallelism(),
                         false));
     }
 
@@ -184,16 +190,6 @@ public class HudiSessionProperties
         return session.getProperty(PARQUET_VECTORIZED_DECODING_ENABLED, Boolean.class);
     }
 
-    public static int getMinPartitionBatchSize(ConnectorSession session)
-    {
-        return session.getProperty(MIN_PARTITION_BATCH_SIZE, Integer.class);
-    }
-
-    public static int getMaxPartitionBatchSize(ConnectorSession session)
-    {
-        return session.getProperty(MAX_PARTITION_BATCH_SIZE, Integer.class);
-    }
-
     public static boolean isSizeBasedSplitWeightsEnabled(ConnectorSession session)
     {
         return session.getProperty(SIZE_BASED_SPLIT_WEIGHTS_ENABLED, Boolean.class);
@@ -207,5 +203,20 @@ public class HudiSessionProperties
     public static double getMinimumAssignedSplitWeight(ConnectorSession session)
     {
         return session.getProperty(MINIMUM_ASSIGNED_SPLIT_WEIGHT, Double.class);
+    }
+
+    public static int getMaxSplitsPerSecond(ConnectorSession session)
+    {
+        return session.getProperty(MAX_SPLITS_PER_SECOND, Integer.class);
+    }
+
+    public static int getMaxOutstandingSplits(ConnectorSession session)
+    {
+        return session.getProperty(MAX_OUTSTANDING_SPLITS, Integer.class);
+    }
+
+    public static int getSplitGeneratorParallelism(ConnectorSession session)
+    {
+        return session.getProperty(SPLIT_GENERATOR_PARALLELISM, Integer.class);
     }
 }
