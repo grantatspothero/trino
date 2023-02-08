@@ -15,6 +15,8 @@ import io.trino.spi.exchange.ExchangeSinkHandle;
 import io.trino.spi.exchange.ExchangeSinkInstanceHandle;
 import io.trino.spi.exchange.ExchangeSourceHandleSource;
 
+import java.util.concurrent.CompletableFuture;
+
 import static java.util.Objects.requireNonNull;
 
 public class FallbackingBufferExchange
@@ -48,13 +50,13 @@ public class FallbackingBufferExchange
     }
 
     @Override
-    public ExchangeSinkInstanceHandle instantiateSink(ExchangeSinkHandle sinkHandle, int taskAttemptId)
+    public CompletableFuture<ExchangeSinkInstanceHandle> instantiateSink(ExchangeSinkHandle sinkHandle, int taskAttemptId)
     {
         return fallbackSelector.handleCall(() -> exchange.instantiateSink(sinkHandle, taskAttemptId));
     }
 
     @Override
-    public ExchangeSinkInstanceHandle updateSinkInstanceHandle(ExchangeSinkHandle sinkHandle, int taskAttemptId)
+    public CompletableFuture<ExchangeSinkInstanceHandle> updateSinkInstanceHandle(ExchangeSinkHandle sinkHandle, int taskAttemptId)
     {
         return fallbackSelector.handleCall(() -> exchange.updateSinkInstanceHandle(sinkHandle, taskAttemptId));
     }

@@ -15,6 +15,8 @@ import io.trino.spi.exchange.ExchangeSinkHandle;
 import io.trino.spi.exchange.ExchangeSinkInstanceHandle;
 import io.trino.spi.exchange.ExchangeSourceHandleSource;
 
+import java.util.concurrent.CompletableFuture;
+
 import static java.util.Objects.requireNonNull;
 
 public class DelegatingExchange
@@ -46,13 +48,13 @@ public class DelegatingExchange
     }
 
     @Override
-    public ExchangeSinkInstanceHandle instantiateSink(ExchangeSinkHandle sinkHandle, int taskAttemptId)
+    public CompletableFuture<ExchangeSinkInstanceHandle> instantiateSink(ExchangeSinkHandle sinkHandle, int taskAttemptId)
     {
         return delegate.instantiateSink(sinkHandle, taskAttemptId);
     }
 
     @Override
-    public ExchangeSinkInstanceHandle updateSinkInstanceHandle(ExchangeSinkHandle sinkHandle, int taskAttemptId)
+    public CompletableFuture<ExchangeSinkInstanceHandle> updateSinkInstanceHandle(ExchangeSinkHandle sinkHandle, int taskAttemptId)
     {
         return updateSinkInstanceHandle(sinkHandle, taskAttemptId);
     }
