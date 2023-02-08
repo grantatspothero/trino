@@ -53,6 +53,7 @@ public class WorkerModule
         binder.bind(WebUiAuthenticationFilter.class).to(NoWebUiAuthenticationFilter.class).in(Scopes.SINGLETON);
 
         jaxrsBinder(binder).bind(GalaxyServerInfoResource.class);
+        jaxrsBinder(binder).bind(GalaxyWorkerHealthResource.class);
     }
 
     @Provides

@@ -70,7 +70,8 @@ public class GalaxyOperatorAuthenticationFilter
     public void filter(ContainerRequestContext requestContext)
             throws IOException
     {
-        if (requestContext.getUriInfo().getPath().startsWith("v1/statement/drainState")) {
+        String requestPath = requestContext.getUriInfo().getPath();
+        if (requestPath.startsWith("v1/statement/drainState") || requestPath.startsWith("v1/galaxy/health")) {
             String authHeader = requestContext.getHeaderString(OPERATOR_AUTHENTICATION_HEADER);
             if (authHeader == null || authHeader.isEmpty()) {
                 log.error("Missing or empty authentication header");
@@ -79,7 +80,7 @@ public class GalaxyOperatorAuthenticationFilter
             validateOperatorAuthentication(authHeader);
         }
 
-        if (requestContext.getUriInfo().getPath().startsWith("v1/galaxy/info")) {
+        if (requestPath.startsWith("v1/galaxy/info")) {
             String envSecret = requestContext.getHeaderString(OPERATOR_SHARED_SECRET_HEADER);
             if (!operatorSharedSecret.equals(envSecret)) {
                 log.error("Missing or incorrect shared secret header");
@@ -98,7 +99,7 @@ public class GalaxyOperatorAuthenticationFilter
             throw new ForbiddenException("Invalid Authentication", e);
         }
         catch (RuntimeException e) {
-            log.error(e, "Exception while authenticating DrainState request");
+            log.error(e, "Exception while authenticating request from operator");
             throw new ForbiddenException("Authentication error", e);
         }
     }
