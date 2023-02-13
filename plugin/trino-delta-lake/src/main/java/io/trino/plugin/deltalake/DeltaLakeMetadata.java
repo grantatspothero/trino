@@ -249,10 +249,8 @@ import static io.trino.spi.type.TypeUtils.isFloatingPointNaN;
 import static io.trino.spi.type.VarcharType.VARCHAR;
 import static java.lang.String.format;
 import static java.time.Instant.EPOCH;
-import static java.util.Collections.emptyIterator;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.unmodifiableMap;
-import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static java.util.UUID.randomUUID;
 import static java.util.function.Function.identity;
@@ -364,10 +362,7 @@ public class DeltaLakeMetadata
     public List<String> listSchemaNames(ConnectorSession session)
     {
         return metastore.getAllDatabases().stream()
-                .filter(schema -> {
-                    String schemaName = schema.toLowerCase(ENGLISH);
-                    return !(schemaName.equals("information_schema") || schemaName.equals("sys"));
-                })
+                .filter(schema -> !schema.equalsIgnoreCase("sys"))
                 .collect(toImmutableList());
     }
 
@@ -489,10 +484,6 @@ public class DeltaLakeMetadata
     @Override
     public List<SchemaTableName> listTables(ConnectorSession session, Optional<String> schemaName)
     {
-        if (schemaName.isPresent() && schemaName.get().equals("information_schema")) {
-            // TODO https://github.com/trinodb/trino/issues/1559 information_schema should be handled by the engine fully
-            return ImmutableList.of();
-        }
         return schemaName.map(Collections::singletonList)
                 .orElseGet(() -> listSchemaNames(session))
                 .stream()
@@ -560,11 +551,6 @@ public class DeltaLakeMetadata
     @Override
     public Iterator<TableColumnsMetadata> streamTableColumns(ConnectorSession session, SchemaTablePrefix prefix)
     {
-        if (prefix.getSchema().isPresent() && prefix.getSchema().get().equals("information_schema")) {
-            // TODO https://github.com/trinodb/trino/issues/1559 information_schema should be handled by the engine fully
-            return emptyIterator();
-        }
-
         List<SchemaTableName> tables = prefix.getTable()
                 .map(ignored -> singletonList(prefix.toSchemaTableName()))
                 .orElseGet(() -> listTables(session, prefix.getSchema()));
