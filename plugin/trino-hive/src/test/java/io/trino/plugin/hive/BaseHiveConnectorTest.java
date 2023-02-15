@@ -703,6 +703,20 @@ public abstract class BaseHiveConnectorTest
         assertUpdate(admin, "DROP ROLE authorized_users IN hive");
     }
 
+    @Override
+    public void testCreateSchemaWithNonLowercaseOwnerName()
+    {
+        // Override because HivePrincipal's username is case-sensitive unlike TrinoPrincipal
+        assertThatThrownBy(super::testCreateSchemaWithNonLowercaseOwnerName)
+                .hasMessageContaining("Access Denied: Cannot create schema")
+                .hasStackTraceContaining("CREATE SCHEMA");
+    }
+
+    protected void testCreateSchemaWithNonLowercaseOwnerNameOriginalTest()
+    {
+        super.testCreateSchemaWithNonLowercaseOwnerName();
+    }
+
     @Test
     public void testCreateSchemaWithAuthorizationForUser()
     {

@@ -186,4 +186,10 @@ public class TestGalaxyHiveConnectorTest
         assertQueryFails("CREATE TABLE acid_unsupported (x int) WITH (transactional = true)", "GalaxyHiveMetastore does not support ACID tables");
         assertQueryFails("CREATE TABLE acid_unsupported WITH (transactional = true) AS SELECT 123 x", "GalaxyHiveMetastore does not support ACID tables");
     }
+
+    @Override
+    public void testCreateSchemaWithNonLowercaseOwnerName()
+    {
+        testCreateSchemaWithNonLowercaseOwnerNameOriginalTest();
+    }
 }
