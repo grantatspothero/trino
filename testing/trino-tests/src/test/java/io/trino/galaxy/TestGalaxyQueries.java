@@ -30,6 +30,7 @@ import io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType;
 import io.trino.server.testing.TestingTrinoServer;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.security.Identity;
+import io.trino.spi.security.Privilege;
 import io.trino.spi.security.PrivilegeInfo;
 import io.trino.spi.security.TrinoPrincipal;
 import io.trino.testing.AbstractTestQueryFramework;
@@ -679,6 +680,50 @@ public class TestGalaxyQueries
         assertUpdate(publicSession(), "DROP VIEW memory.my_schema.my_view");
 
         assertUpdate("DROP SCHEMA memory.my_schema");
+    }
+
+    @Test
+    public void testViewPrivileges()
+    {
+        assertUpdate("CREATE SCHEMA memory.my_schema");
+
+        assertUpdate("CREATE VIEW memory.my_schema.my_view AS SELECT 'value' as my_value");
+        assertThat(query("SELECT * FROM memory.my_schema.my_view"))
+                .skippingTypesCheck()
+                .isEqualTo(MaterializedResult.resultBuilder(getSession(), createVarcharType(5))
+                        .row("value")
+                        .build());
+
+        MaterializedResult emptyResult = MaterializedResult.resultBuilder(getSession(), createVarcharType(5)).build();
+
+        // Revoke all privileges to make it easy to identify added ones
+        assertUpdate("REVOKE SELECT, UPDATE, INSERT, DELETE ON memory.my_schema.my_view FROM ROLE accountadmin");
+        assertThat(query("SHOW GRANTS ON memory.my_schema.my_view")).skippingTypesCheck().matches(emptyResult);
+
+        assertUpdate("CREATE ROLE view_privileges_role");
+
+        for (Privilege privilege : ImmutableList.of(SELECT, UPDATE, INSERT, DELETE)) {
+            // Show that we can grant the privilege on the view to a role
+            assertUpdate("GRANT %s ON memory.my_schema.my_view TO ROLE view_privileges_role".formatted(privilege));
+            assertThat(query("SHOW GRANTS ON memory.my_schema.my_view"))
+                    .skippingTypesCheck()
+                    .containsAll("SELECT NULL AS VARCHAR, NULL AS VARCHAR, 'view_privileges_role', 'ROLE', 'memory', 'my_schema', 'my_view', '%s', 'NO', NULL AS VARCHAR".formatted(privilege));
+            assertUpdate("REVOKE %s ON memory.my_schema.my_view FROM ROLE view_privileges_role".formatted(privilege));
+
+            // Show that we can deny the privilege...
+            assertUpdate("DENY %s ON memory.my_schema.my_view TO ROLE view_privileges_role".formatted(privilege));
+
+            // It's there but Trino doesn't show it yet :(
+            assertThat(query("SHOW GRANTS ON memory.my_schema.my_view")).skippingTypesCheck().matches(emptyResult);
+
+            // Revoke it
+            assertUpdate("REVOKE %s ON memory.my_schema.my_view FROM ROLE view_privileges_role".formatted(privilege));
+        }
+
+        // Clean up
+        assertUpdate("DROP view memory.my_schema.my_view");
+        assertUpdate("DROP schema memory.my_schema");
+        assertUpdate("DROP ROLE view_privileges_role");
     }
 
     @Test
