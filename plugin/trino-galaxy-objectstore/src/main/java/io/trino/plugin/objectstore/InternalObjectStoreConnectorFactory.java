@@ -79,6 +79,7 @@ public final class InternalObjectStoreConnectorFactory
                     deltaConfig,
                     context,
                     Optional.empty(),
+                    Optional.empty(),
                     new GalaxyLocationSecurityModule());
 
             Connector hudiConnector = InternalHudiConnectorFactory.createConnector(
