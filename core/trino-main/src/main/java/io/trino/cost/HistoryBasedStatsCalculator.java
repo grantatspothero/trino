@@ -37,7 +37,6 @@ import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.sql.DynamicFilters;
 import io.trino.sql.planner.Symbol;
-import io.trino.sql.planner.TypeProvider;
 import io.trino.sql.planner.iterative.Lookup;
 import io.trino.sql.planner.plan.AggregationNode;
 import io.trino.sql.planner.plan.AssignUniqueId;
@@ -127,11 +126,11 @@ public class HistoryBasedStatsCalculator
     }
 
     @Override
-    public PlanNodeStatsEstimate calculateStats(PlanNode node, StatsProvider sourceStats, Lookup lookup, Session session, TypeProvider types, TableStatsProvider tableStatsProvider)
+    public PlanNodeStatsEstimate calculateStats(PlanNode node, Context context)
     {
-        PlanNodeStatsEstimate calculatedStats = delegate.calculateStats(node, sourceStats, lookup, session, types, tableStatsProvider);
-        Optional<Double> outputRowCount = getOutputRowCount(node, lookup, session);
-        return outputRowCount.map(rowCount -> statsNormalizer.normalize(new PlanNodeStatsEstimate(rowCount, calculatedStats.getSymbolStatistics()), types))
+        PlanNodeStatsEstimate calculatedStats = delegate.calculateStats(node, context);
+        Optional<Double> outputRowCount = getOutputRowCount(node, context.lookup(), context.session());
+        return outputRowCount.map(rowCount -> statsNormalizer.normalize(new PlanNodeStatsEstimate(rowCount, calculatedStats.getSymbolStatistics()), context.types()))
                 .orElse(calculatedStats);
     }
 

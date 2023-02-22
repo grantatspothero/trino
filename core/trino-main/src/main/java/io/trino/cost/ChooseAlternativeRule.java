@@ -13,10 +13,7 @@
  */
 package io.trino.cost;
 
-import io.trino.Session;
 import io.trino.matching.Pattern;
-import io.trino.sql.planner.TypeProvider;
-import io.trino.sql.planner.iterative.Lookup;
 import io.trino.sql.planner.plan.ChooseAlternativeNode;
 
 import java.util.Optional;
@@ -40,11 +37,11 @@ public class ChooseAlternativeRule
     }
 
     @Override
-    protected Optional<PlanNodeStatsEstimate> doCalculate(ChooseAlternativeNode node, StatsProvider statsProvider, Lookup lookup, Session session, TypeProvider types, TableStatsProvider tableStatsProvider)
+    protected Optional<PlanNodeStatsEstimate> doCalculate(ChooseAlternativeNode node, StatsCalculator.Context context)
     {
         // All alternatives describe the same dataset, therefore it would be wasteful to calculate stats for each alternative.
         // Instead, we calculate only for the first alternative which is the most pessimistic and therefore probably contains
         // the broadest filter (so it's most informative)
-        return Optional.of(statsProvider.getStats(node.getSources().get(0)));
+        return Optional.of(context.statsProvider().getStats(node.getSources().get(0)));
     }
 }
