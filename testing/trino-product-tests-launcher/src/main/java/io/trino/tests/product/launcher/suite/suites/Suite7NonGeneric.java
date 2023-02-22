@@ -19,6 +19,7 @@ import io.trino.tests.product.launcher.env.EnvironmentDefaults;
 import io.trino.tests.product.launcher.env.environment.EnvMultinodePostgresql;
 import io.trino.tests.product.launcher.env.environment.EnvMultinodeSqlserver;
 import io.trino.tests.product.launcher.env.environment.EnvSinglenodeSparkHive;
+import io.trino.tests.product.launcher.env.environment.EnvSinglenodeSparkHiveNoStatsFallback;
 import io.trino.tests.product.launcher.env.environment.EnvTwoMixedHives;
 import io.trino.tests.product.launcher.suite.Suite;
 import io.trino.tests.product.launcher.suite.SuiteTestRun;
@@ -45,6 +46,9 @@ public class Suite7NonGeneric
                         .build(),
                 testOnEnvironment(EnvSinglenodeSparkHive.class)
                         .withGroups("configured_features", "hive_spark")
+                        .build(),
+                testOnEnvironment(EnvSinglenodeSparkHiveNoStatsFallback.class)
+                        .withGroups("configured_features", "hive_spark_no_stats_fallback")
                         .build(),
                 // Disable kerberized tests for Galaxy Trino, since kerberos feature isn't used
 //                testOnEnvironment(EnvSinglenodeKerberosHdfsImpersonationCrossRealm.class)
