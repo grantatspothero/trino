@@ -19,9 +19,14 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.auth.StsAssumeRoleWithWebIdentityCredentialsProvider;
+import software.amazon.awssdk.services.sts.model.AssumeRoleWithWebIdentityRequest;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -37,6 +42,8 @@ import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
 import static java.time.temporal.ChronoField.SECOND_OF_MINUTE;
 import static java.time.temporal.ChronoField.YEAR;
 import static java.util.Objects.requireNonNull;
+import static software.amazon.awssdk.core.SdkSystemSetting.AWS_ROLE_ARN;
+import static software.amazon.awssdk.core.SdkSystemSetting.AWS_WEB_IDENTITY_TOKEN_FILE;
 
 public final class KafkaDeadLetter
 {
@@ -80,9 +87,24 @@ public final class KafkaDeadLetter
 
         public S3KafkaDeadLetterWriter(String bucket, String prefix)
         {
+            StsAssumeRoleWithWebIdentityCredentialsProvider provider;
+            try {
+                provider = StsAssumeRoleWithWebIdentityCredentialsProvider.builder()
+                        .stsClient(StsClient.create())
+                        .refreshRequest(AssumeRoleWithWebIdentityRequest.builder()
+                                .roleArn(AWS_ROLE_ARN.getStringValueOrThrow())
+                                .roleSessionName("galaxy-kafka-dead-letter")
+                                .webIdentityToken(Files.readString(Paths.get(AWS_WEB_IDENTITY_TOKEN_FILE.getStringValueOrThrow())))
+                                .build())
+                        .build();
+            }
+            catch (IOException e) {
+                throw new RuntimeException(e);
+            }
             // Most dropped messages are from eu-west1
             this.s3Client = S3Client.builder()
                     .region(Region.EU_WEST_1)
+                    .credentialsProvider(provider)
                     .build();
             this.bucket = requireNonNull(bucket, "bucket is null");
             this.prefix = requireNonNull(prefix, "prefix is null");

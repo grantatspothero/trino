@@ -99,6 +99,11 @@
             <artifactId>sdk-core</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sts</artifactId>
+        </dependency>
+
         <!-- for testing -->
         <dependency>
             <groupId>io.airlift</groupId>
