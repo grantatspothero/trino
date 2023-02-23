@@ -26,6 +26,7 @@ public enum HiveFileFormat
     JSON,
     TEXTFILE,
     CSV,
+    REGEX,
     HUDI;
 
     HiveStorageFormat toHiveStorageFormat()
@@ -40,6 +41,7 @@ public enum HiveFileFormat
             case JSON -> HiveStorageFormat.JSON;
             case TEXTFILE -> HiveStorageFormat.TEXTFILE;
             case CSV -> HiveStorageFormat.CSV;
+            case REGEX -> HiveStorageFormat.REGEX;
             case HUDI -> throw new UnsupportedOperationException("HUDI");
         };
     }
@@ -56,6 +58,7 @@ public enum HiveFileFormat
             case JSON -> JSON;
             case TEXTFILE -> TEXTFILE;
             case CSV -> CSV;
+            case REGEX -> REGEX;
         };
     }
 }

@@ -497,6 +497,10 @@ public abstract class AbstractTestHiveFileSystem
                 // CSV supports only unbounded VARCHAR type
                 continue;
             }
+            if (storageFormat == HiveStorageFormat.REGEX) {
+                // REGEX format is read-only
+                continue;
+            }
             createTable(temporaryCreateTable, storageFormat);
             dropTable(temporaryCreateTable);
         }
