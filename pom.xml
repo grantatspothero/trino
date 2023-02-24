@@ -81,7 +81,7 @@
         <!-- released from https://github.com/starburstdata/trino-buffer-service -->
         <dep.trino-buffer-service.version>408-trino-buffer-service-382-g9c087a0</dep.trino-buffer-service.version>
         <!-- released form https://github.com/starburstdata/schema-discovery -->
-        <dep.schema-discovery.version>schema-discovery-20230206-eddf738</dep.schema-discovery.version>
+        <dep.schema-discovery.version>408.schema-discovery-20230303-94c4041</dep.schema-discovery.version>
         <!-- released from https://github.com/starburstdata/stargate -->
         <dep.stargate.version>stargate-6225-gd8b53f9d2</dep.stargate.version>
         <!-- released from https://github.com/starburstdata/starburst-trino-plugins -->

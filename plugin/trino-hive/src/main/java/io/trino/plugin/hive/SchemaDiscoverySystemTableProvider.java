@@ -19,7 +19,9 @@ import io.starburst.schema.discovery.formats.orc.CopiedHdfsOrcDataSource;
 import io.starburst.schema.discovery.formats.orc.OrcDataSourceFactory;
 import io.starburst.schema.discovery.formats.parquet.CopiedHdfsParquetDataSource;
 import io.starburst.schema.discovery.formats.parquet.ParquetDataSourceFactory;
+import io.starburst.schema.discovery.trino.system.table.DiscoveryLocationAccessControlAdapter;
 import io.starburst.schema.discovery.trino.system.table.SchemaDiscoverySystemTable;
+import io.starburst.schema.discovery.trino.system.table.ShallowDiscoverySystemTable;
 import io.trino.hdfs.HdfsContext;
 import io.trino.hdfs.HdfsEnvironment;
 import io.trino.parquet.ParquetReaderOptions;
@@ -48,13 +50,16 @@ public class SchemaDiscoverySystemTableProvider
     private final HdfsEnvironment hdfsEnvironment;
     private final ExecutorService executor;
     private final ObjectMapper objectMapper;
+    private final DiscoveryLocationAccessControlAdapter discoveryLocationAccessControlAdapter;
 
     @Inject
-    public SchemaDiscoverySystemTableProvider(HdfsEnvironment hdfsEnvironment, ExecutorService executor, ObjectMapper objectMapper)
+    public SchemaDiscoverySystemTableProvider(HdfsEnvironment hdfsEnvironment, ExecutorService executor, ObjectMapper objectMapper, LocationAccessControl locationAccessControl)
     {
         this.hdfsEnvironment = requireNonNull(hdfsEnvironment, "hdfsEnvironment is null");
         this.executor = requireNonNull(executor, "executor is null");
         this.objectMapper = requireNonNull(objectMapper, "objectMapper is null");
+        requireNonNull(locationAccessControl, "locationAccessControl is null");
+        this.discoveryLocationAccessControlAdapter = locationAccessControl::checkCanUseLocation;
     }
 
     @Override
@@ -67,21 +72,31 @@ public class SchemaDiscoverySystemTableProvider
     public Optional<SystemTable> getSystemTable(HiveMetadata metadata, ConnectorSession session, SchemaTableName tableName)
     {
         if (tableName.equals(SchemaDiscoverySystemTable.SCHEMA_TABLE_NAME)) {
-            HdfsContext hdfsContext = new HdfsContext(session);
-            Function<URI, FileSystem> fileSystemProvider = uri -> {
-                try {
-                    return hdfsEnvironment.getFileSystem(hdfsContext, new Path(uri));
-                }
-                catch (IOException e) {
-                    throw new TrinoException(INVALID_ARGUMENTS, "Invalid uri: " + uri, e);
-                }
-            };
-            OrcDataSourceFactory orcDataSourceFactory = (id, size, options, inputStream) -> new CopiedHdfsOrcDataSource(id, size, options, inputStream, new FileFormatDataSourceStats());
-            ParquetDataSourceFactory parquetDataSourceFactory = (id, estimatedSize, inputStream) -> new CopiedHdfsParquetDataSource(id, estimatedSize, inputStream, new FileFormatDataSourceStats(), new ParquetReaderOptions());
-            SchemaDiscoveryController controller = new SchemaDiscoveryController(fileSystemProvider, parquetDataSourceFactory, orcDataSourceFactory, executor);
-            SchemaDiscoverySystemTable systemTable = new SchemaDiscoverySystemTable(controller, objectMapper);
+            SchemaDiscoveryController controller = createSchemaDiscoveryController(session);
+            SchemaDiscoverySystemTable systemTable = new SchemaDiscoverySystemTable(controller, objectMapper, discoveryLocationAccessControlAdapter);
+            return Optional.of(new ClassLoaderSafeSystemTable(systemTable, getClass().getClassLoader()));
+        }
+        if (tableName.equals(ShallowDiscoverySystemTable.SCHEMA_TABLE_NAME)) {
+            SchemaDiscoveryController controller = createSchemaDiscoveryController(session);
+            ShallowDiscoverySystemTable systemTable = new ShallowDiscoverySystemTable(controller, objectMapper, discoveryLocationAccessControlAdapter);
             return Optional.of(new ClassLoaderSafeSystemTable(systemTable, getClass().getClassLoader()));
         }
         return Optional.empty();
+    }
+
+    private SchemaDiscoveryController createSchemaDiscoveryController(ConnectorSession session)
+    {
+        HdfsContext hdfsContext = new HdfsContext(session);
+        Function<URI, FileSystem> fileSystemProvider = uri -> {
+            try {
+                return hdfsEnvironment.getFileSystem(hdfsContext, new Path(uri));
+            }
+            catch (IOException e) {
+                throw new TrinoException(INVALID_ARGUMENTS, "Invalid uri: " + uri, e);
+            }
+        };
+        OrcDataSourceFactory orcDataSourceFactory = (id, size, options, inputStream) -> new CopiedHdfsOrcDataSource(id, size, options, inputStream, new FileFormatDataSourceStats());
+        ParquetDataSourceFactory parquetDataSourceFactory = (id, estimatedSize, inputStream) -> new CopiedHdfsParquetDataSource(id, estimatedSize, inputStream, new FileFormatDataSourceStats(), new ParquetReaderOptions());
+        return new SchemaDiscoveryController(fileSystemProvider, parquetDataSourceFactory, orcDataSourceFactory, executor);
     }
 }
