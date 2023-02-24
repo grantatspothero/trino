@@ -882,7 +882,8 @@ public abstract class AbstractTestHive
                 countingDirectoryLister,
                 1000,
                 new PartitionProjectionService(hiveConfig, ImmutableMap.of(), new TestingTypeManager()),
-                true);
+                true,
+                HiveTimestampPrecision.DEFAULT_PRECISION);
         transactionManager = new HiveTransactionManager(metadataFactory);
         splitManager = new HiveSplitManager(
                 transactionManager,

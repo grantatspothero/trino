@@ -400,6 +400,7 @@ public class HiveMetadata
     private final PartitionProjectionService partitionProjectionService;
     private final boolean allowTableRename;
     private final long maxPartitionDropsPerQuery;
+    private final HiveTimestampPrecision hiveViewsTimestampPrecision;
 
     public HiveMetadata(
             LocationAccessControl locationAccessControl,
@@ -427,7 +428,8 @@ public class HiveMetadata
             DirectoryLister directoryLister,
             PartitionProjectionService partitionProjectionService,
             boolean allowTableRename,
-            long maxPartitionDropsPerQuery)
+            long maxPartitionDropsPerQuery,
+            HiveTimestampPrecision hiveViewsTimestampPrecision)
     {
         this.locationAccessControl = requireNonNull(locationAccessControl, "locationAccessControl is null");
         this.catalogName = requireNonNull(catalogName, "catalogName is null");
@@ -455,6 +457,7 @@ public class HiveMetadata
         this.partitionProjectionService = requireNonNull(partitionProjectionService, "partitionProjectionService is null");
         this.allowTableRename = allowTableRename;
         this.maxPartitionDropsPerQuery = maxPartitionDropsPerQuery;
+        this.hiveViewsTimestampPrecision = requireNonNull(hiveViewsTimestampPrecision, "hiveViewsTimestampPrecision is null");
     }
 
     @Override
@@ -2721,7 +2724,7 @@ public class HiveMetadata
                         throw new HiveViewNotSupportedException(viewName);
                     }
 
-                    ConnectorViewDefinition definition = createViewReader(metastore, session, view, typeManager, this::redirectTable, metadataProvider, hiveViewsRunAsInvoker)
+                    ConnectorViewDefinition definition = createViewReader(metastore, session, view, typeManager, this::redirectTable, metadataProvider, hiveViewsRunAsInvoker, hiveViewsTimestampPrecision)
                             .decodeViewData(view.getViewOriginalText().get(), view, catalogName);
                     // use owner from table metadata if it exists
                     if (view.getOwner().isPresent() && !definition.isRunAsInvoker()) {
