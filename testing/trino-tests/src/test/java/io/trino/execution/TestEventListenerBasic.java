@@ -1138,6 +1138,31 @@ public class TestEventListenerBasic
                                 new ColumnDetail("tpch", "sf1", "orders", "custkey"))));
     }
 
+    @Test
+    public void testIgnoreTDigest()
+            throws Exception
+    {
+        String sql = "SELECT COUNT(1) FROM tpch.tiny.nation";
+        QueryEvents queryEvents = runQueryAndWaitForEvents(sql).getQueryEvents();
+        QueryCompletedEvent queryCompletedEvent = queryEvents.getQueryCompletedEvent();
+        assertThat(queryCompletedEvent.getMetadata().getPayload()).hasValueSatisfying(s ->
+                assertThat(s)
+                        .contains("\"min\":")
+                        .contains("\"max\":")
+                        .contains("\"p95\":")
+                        .contains("\"p99\":"));
+        assertThat(queryCompletedEvent.getStatistics().getOperatorSummaries()).allSatisfy(s ->
+                assertThat(s)
+                        .contains("\"min\":")
+                        .contains("\"max\":")
+                        .contains("\"p95\":")
+                        .contains("\"p99\":"));
+        String json = JsonCodec.jsonCodec(QueryCompletedEvent.class).toJson(queryCompletedEvent);
+        assertThat(json)
+                .doesNotContain("\"digest\":")
+                .doesNotContain("\\\"digest\\\":");
+    }
+
     @DataProvider
     public Object[][] setOperator()
     {
