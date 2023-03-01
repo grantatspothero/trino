@@ -23,7 +23,7 @@ runs:
     - uses: ./.github/actions/setup
       if: steps.check-compile-commit-success.outputs.cache-hit != 'true'
       with:
-        # They are downloaded below separately, with flexible MAVEN.
+        # Dependencies are downloaded explicitly below, after MAVEN has been set here. This allows modifications to the MAVEN setup with a PR.
         download_dependencies: false
     - name: Check if a specified commit compiles
       shell: bash
