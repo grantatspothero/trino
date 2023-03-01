@@ -17,14 +17,14 @@ import io.trino.plugin.varada.configuration.GlobalConfiguration;
 import io.trino.plugin.varada.configuration.ProxiedConnectorConfiguration;
 import io.trino.plugin.varada.di.CloudVendorStubModule;
 import io.trino.plugin.varada.di.VaradaStubsStorageEngineModule;
-import io.trino.plugin.varada.di.dispatcher.DispatcherWorkerDALModule;
 import io.trino.plugin.varada.it.smoke.ProcessRunnerMocker;
 import io.trino.spi.Plugin;
 import io.varada.tools.processes.StubProcessRunnerModule;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
+
+import static io.trino.plugin.warp.WarpSpeedConnectorFactory.WARP_PREFIX;
 
 public abstract class WarpSpeedConnectorTestUtils
 {
@@ -41,12 +41,9 @@ public abstract class WarpSpeedConnectorTestUtils
     public static Map<String, String> getProperties()
     {
         Map<String, String> properties = new HashMap<>();
-        properties.put(GlobalConfiguration.STORE_PATH, "s3://some-bucket/some-folder");
-        properties.put(DispatcherWorkerDALModule.WORKER_DB_CONNECTION_PREFIX, "jdbc:hsqldb:mem:");
-        properties.put(DispatcherWorkerDALModule.WORKER_DB_CONNECTION_PATH,
-                "workerDB/catalogs/" + UUID.randomUUID().toString().substring(0, 4));
-        properties.put("warp-speed.config.device-list", "nvme0n1");
-        properties.put(ProxiedConnectorConfiguration.PASS_THROUGH_DISPATCHER, "hive,hudi,delta-lake,iceberg");
+        properties.put(WARP_PREFIX + GlobalConfiguration.STORE_PATH, "s3://some-bucket/some-folder");
+        properties.put(WARP_PREFIX + "warp-speed.config.device-list", "nvme0n1");
+        properties.put(WARP_PREFIX + ProxiedConnectorConfiguration.PASS_THROUGH_DISPATCHER, "hive,hudi,delta-lake,iceberg");
 
         return properties;
     }

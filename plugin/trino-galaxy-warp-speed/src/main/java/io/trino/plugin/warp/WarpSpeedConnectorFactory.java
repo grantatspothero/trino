@@ -21,15 +21,17 @@ import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
 import io.trino.spi.connector.ConnectorFactory;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
 public class WarpSpeedConnectorFactory
         implements ConnectorFactory
 {
+    public static final String WARP_PREFIX = "WARP__";
     private final DispatcherConnectorFactory dispatcherConnectorFactory;
 
     public static final String NAME = DispatcherConnectorFactory.DISPATCHER_CONNECTOR_NAME;
@@ -48,13 +50,20 @@ public class WarpSpeedConnectorFactory
     @Override
     public Connector create(String catalogName, Map<String, String> config, ConnectorContext context)
     {
-        Map<String, String> clonedConfig = new HashMap<>(config);
-        clonedConfig.put(ProxiedConnectorConfiguration.PROXIED_CONNECTOR, "galaxy_objectstore");
-        clonedConfig.put(DispatcherWorkerDALModule.WORKER_DB_CONNECTION_PREFIX, "jdbc:hsqldb:mem:");
-        clonedConfig.put(DispatcherWorkerDALModule.WORKER_DB_CONNECTION_PATH, "workerDB/");
+        Map<String, String> strippedConfig = Stream.concat(
+                        config.entrySet().stream(),
+                        Map.of(ProxiedConnectorConfiguration.PROXIED_CONNECTOR, "galaxy_objectstore",
+                                        DispatcherWorkerDALModule.WORKER_DB_CONNECTION_PREFIX, "jdbc:hsqldb:mem:",
+                                        DispatcherWorkerDALModule.WORKER_DB_CONNECTION_PATH, "workerDB/")
+                                .entrySet()
+                                .stream())
+                .collect(toImmutableMap(
+                        entry -> entry.getKey().startsWith(WARP_PREFIX) ? entry.getKey().substring(WARP_PREFIX.length()) : entry.getKey(),
+                        Map.Entry::getValue));
+
         return dispatcherConnectorFactory.create(
                 catalogName,
-                clonedConfig,
+                strippedConfig,
                 context,
                 Optional.of(new WarpSpeedObjectStoreModule()),
                 Map.of("galaxy_objectstore", new ObjectStoreProxyConnectorInitializer()));
