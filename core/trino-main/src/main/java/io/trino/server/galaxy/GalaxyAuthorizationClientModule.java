@@ -48,7 +48,7 @@ public class GalaxyAuthorizationClientModule
         httpClientBinder(binder).bindHttpClient("galaxy-access-control", ForGalaxySystemAccessControl.class)
                 .withConfigDefaults(config -> {
                     config.setIdleTimeout(new Duration(30, SECONDS));
-                    config.setRequestTimeout(new Duration(10, SECONDS));
+                    config.setRequestTimeout(new Duration(20, SECONDS));
                     // Automatic https is disabled because this client is for external
                     // communication back to the Galaxy portal.
                     config.setAutomaticHttpsSharedSecret(null);
