@@ -81,8 +81,6 @@ public class ElasticsearchConfig
 
     private Security security;
 
-    private boolean legacyPassThroughQueryEnabled;
-
     @NotNull
     public List<String> getAllowedIpAddresses()
     {
@@ -373,19 +371,6 @@ public class ElasticsearchConfig
     public ElasticsearchConfig setSecurity(Security security)
     {
         this.security = security;
-        return this;
-    }
-
-    public boolean isLegacyPassThroughQueryEnabled()
-    {
-        return legacyPassThroughQueryEnabled;
-    }
-
-    @Config("elasticsearch.legacy-pass-through-query.enabled")
-    @ConfigDescription("Enable legacy Elasticsearch pass-through query")
-    public ElasticsearchConfig setLegacyPassThroughQueryEnabled(boolean legacyPassThroughQuery)
-    {
-        this.legacyPassThroughQueryEnabled = legacyPassThroughQuery;
         return this;
     }
 }
