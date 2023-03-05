@@ -16,10 +16,6 @@ package io.trino.plugin.hive;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import io.trino.hdfs.HdfsConfig;
-import io.trino.hdfs.HdfsConfiguration;
-import io.trino.hdfs.HdfsEnvironment;
-import io.trino.hdfs.authentication.NoHdfsAuthentication;
 import io.trino.spi.SplitWeight;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.predicate.Domain;
@@ -34,7 +30,6 @@ import java.util.OptionalInt;
 import java.util.Properties;
 
 import static io.airlift.slice.Slices.utf8Slice;
-import static io.trino.hadoop.ConfigurationInstantiator.newEmptyConfiguration;
 import static io.trino.plugin.hive.HiveColumnHandle.ColumnType.PARTITION_KEY;
 import static io.trino.plugin.hive.HiveColumnHandle.ColumnType.REGULAR;
 import static io.trino.plugin.hive.HiveColumnHandle.createBaseColumn;
@@ -99,17 +94,12 @@ public class TestHivePageSourceProvider
     @BeforeClass
     public void setup()
     {
-        HdfsConfiguration hdfsConfiguration = (context, uri) -> newEmptyConfiguration();
         HiveConfig config = new HiveConfig()
                 .setDomainCompactionThreshold(2);
-        HdfsEnvironment hdfsEnvironment = new HdfsEnvironment(hdfsConfiguration, new HdfsConfig(), new NoHdfsAuthentication());
         pageSourceProvider = new HivePageSourceProvider(
                 TESTING_TYPE_MANAGER,
-                hdfsEnvironment,
                 config,
-                ImmutableSet.of(),
-                ImmutableSet.of(),
-                new GenericHiveRecordCursorProvider(hdfsEnvironment, config));
+                ImmutableSet.of());
     }
 
     @Test

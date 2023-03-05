@@ -34,6 +34,7 @@ import io.trino.testing.QueryRunner;
 import io.trino.testing.minio.MinioClient;
 import io.trino.testing.sql.TestTable;
 import org.intellij.lang.annotations.Language;
+import org.testng.SkipException;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -1801,6 +1802,9 @@ public abstract class BaseTestHiveOnDataLake
     @Test(dataProvider = "s3SelectFileFormats")
     public void testS3SelectPushdown(String tableProperties)
     {
+        if (true) {
+            throw new SkipException("S3 Select not yet supported");
+        }
         Session usingAppendInserts = Session.builder(getSession())
                 .setCatalogSessionProperty("hive", "insert_existing_partitions_behavior", "APPEND")
                 .build();
@@ -1878,6 +1882,9 @@ public abstract class BaseTestHiveOnDataLake
     @Test(dataProvider = "s3SelectFileFormats")
     public void testS3SelectOnDecimalColumnIsDisabled(String tableProperties)
     {
+        if (true) {
+            throw new SkipException("S3 Select not yet supported");
+        }
         Session usingAppendInserts = Session.builder(getSession())
                 .setCatalogSessionProperty("hive", "insert_existing_partitions_behavior", "APPEND")
                 .build();
@@ -1925,6 +1932,9 @@ public abstract class BaseTestHiveOnDataLake
     @Test
     public void testS3SelectExperimentalPushdown()
     {
+        if (true) {
+            throw new SkipException("S3 Select not yet supported");
+        }
         // Demonstrate correctness issues which have resulted in pushdown for TEXTFILE
         // using CSV support in S3 Select being put behind a separate "experimental" flag.
         // TODO: https://github.com/trinodb/trino/issues/17775
@@ -1938,13 +1948,6 @@ public abstract class BaseTestHiveOnDataLake
                 "4, false, 44");
         Session withS3SelectPushdown = Session.builder(getSession())
                 .setCatalogSessionProperty("hive", "s3_select_pushdown_enabled", "true")
-                .setCatalogSessionProperty("hive", "json_native_reader_enabled", "false")
-                .setCatalogSessionProperty("hive", "text_file_native_reader_enabled", "false")
-                .build();
-
-        Session withoutS3SelectPushdown = Session.builder(getSession())
-                .setCatalogSessionProperty("hive", "json_native_reader_enabled", "false")
-                .setCatalogSessionProperty("hive", "text_file_native_reader_enabled", "false")
                 .build();
 
         try (TestTable table = new TestTable(
@@ -1952,7 +1955,7 @@ public abstract class BaseTestHiveOnDataLake
                 "hive.%s.test_s3_select_pushdown_experimental_features".formatted(HIVE_TEST_SCHEMA),
                 "(id INT, bool_t BOOLEAN, int_t INT) WITH (format = 'TEXTFILE')",
                 values)) {
-            assertQuery(withoutS3SelectPushdown, "SELECT id FROM " + table.getName() + " WHERE int_t IS NULL", "VALUES 3");
+            assertQuery("SELECT id FROM " + table.getName() + " WHERE int_t IS NULL", "VALUES 3");
             assertThat(query(withS3SelectPushdown, "SELECT id FROM " + table.getName() + " WHERE int_t IS NULL")).returnsEmptyResult();
 
             assertQueryFails(
@@ -1973,11 +1976,11 @@ public abstract class BaseTestHiveOnDataLake
                 specialCharacterValues)) {
             // These two should return a result, but incorrectly return nothing
             String selectWithComma = "SELECT id FROM " + table.getName() + " WHERE string_t ='a,comma'";
-            assertQuery(withoutS3SelectPushdown, selectWithComma, "VALUES 1");
+            assertQuery(selectWithComma, "VALUES 1");
             assertThat(query(withS3SelectPushdown, selectWithComma)).returnsEmptyResult();
 
             String selectWithPipe = "SELECT id FROM " + table.getName() + " WHERE string_t ='a|pipe'";
-            assertQuery(withoutS3SelectPushdown, selectWithPipe, "VALUES 2");
+            assertQuery(selectWithPipe, "VALUES 2");
             assertThat(query(withS3SelectPushdown, selectWithPipe)).returnsEmptyResult();
 
             // These two are actually correct
@@ -1990,8 +1993,6 @@ public abstract class BaseTestHiveOnDataLake
     {
         Session withS3SelectPushdown = Session.builder(getSession())
                 .setCatalogSessionProperty("hive", "s3_select_pushdown_enabled", "true")
-                .setCatalogSessionProperty("hive", "json_native_reader_enabled", "false")
-                .setCatalogSessionProperty("hive", "text_file_native_reader_enabled", "false")
                 .build();
 
         MaterializedResult expectedResult = computeActual(expectedValues);
@@ -2013,8 +2014,6 @@ public abstract class BaseTestHiveOnDataLake
     {
         Session withS3SelectPushdown = Session.builder(getSession())
                 .setCatalogSessionProperty("hive", "s3_select_pushdown_enabled", "true")
-                .setCatalogSessionProperty("hive", "json_native_reader_enabled", "false")
-                .setCatalogSessionProperty("hive", "text_file_native_reader_enabled", "false")
                 .build();
 
         MaterializedResult expectedResult = computeActual(expectedValues);
