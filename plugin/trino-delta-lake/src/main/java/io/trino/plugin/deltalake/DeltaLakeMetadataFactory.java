@@ -60,6 +60,8 @@ public class DeltaLakeMetadataFactory
     private final long perTransactionMetastoreCacheMaximumSize;
     private final boolean deleteSchemaLocationsFallback;
     private final boolean useUniqueTableLocation;
+    private final int defaultReaderVersion;
+    private final int defaultWriterVersion;
 
     private final boolean allowManagedTableRename;
     private final String trinoVersion;
@@ -104,6 +106,8 @@ public class DeltaLakeMetadataFactory
         this.perTransactionMetastoreCacheMaximumSize = deltaLakeConfig.getPerTransactionMetastoreCacheMaximumSize();
         this.deleteSchemaLocationsFallback = deltaLakeConfig.isDeleteSchemaLocationsFallback();
         this.useUniqueTableLocation = deltaLakeConfig.isUniqueTableLocation();
+        this.defaultReaderVersion = deltaLakeConfig.getDefaultReaderVersion();
+        this.defaultWriterVersion = deltaLakeConfig.getDefaultWriterVersion();
         this.allowManagedTableRename = allowManagedTableRename;
         this.trinoVersion = requireNonNull(nodeVersion, "nodeVersion is null").toString();
     }
@@ -146,6 +150,8 @@ public class DeltaLakeMetadataFactory
                 deltaLakeRedirectionsProvider,
                 statisticsAccess,
                 useUniqueTableLocation,
-                allowManagedTableRename);
+                allowManagedTableRename,
+                defaultReaderVersion,
+                defaultWriterVersion);
     }
 }
