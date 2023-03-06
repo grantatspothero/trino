@@ -172,7 +172,6 @@ import static io.trino.plugin.deltalake.DeltaLakeColumnHandle.pathColumnHandle;
 import static io.trino.plugin.deltalake.DeltaLakeColumnType.PARTITION_KEY;
 import static io.trino.plugin.deltalake.DeltaLakeColumnType.REGULAR;
 import static io.trino.plugin.deltalake.DeltaLakeColumnType.SYNTHESIZED;
-import static io.trino.plugin.deltalake.DeltaLakeConfig.MAX_WRITER_VERSION;
 import static io.trino.plugin.deltalake.DeltaLakeErrorCode.DELTA_LAKE_BAD_WRITE;
 import static io.trino.plugin.deltalake.DeltaLakeErrorCode.DELTA_LAKE_INVALID_SCHEMA;
 import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.getHiveCatalogName;
@@ -288,6 +287,13 @@ public class DeltaLakeMetadata
     public static final String CHANGE_COLUMN_OPERATION = "CHANGE COLUMN";
     public static final String ISOLATION_LEVEL = "WriteSerializable";
 
+    // The required reader and writer versions used by tables created by Trino
+    public static final int MIN_READER_VERSION = 1;
+    public static final int MIN_WRITER_VERSION = 2;
+    // The highest reader and writer versions Trino supports writing to
+    public static final int MAX_READER_VERSION = 2;
+    public static final int MAX_WRITER_VERSION = 4;
+
     private static final int CDF_SUPPORTED_WRITER_VERSION = 4;
 
     // Matches the dummy column Databricks stores in the metastore
@@ -322,8 +328,6 @@ public class DeltaLakeMetadata
     private final boolean deleteSchemaLocationsFallback;
     private final boolean useUniqueTableLocation;
     private final boolean allowManagedTableRename;
-    private final int defaultReaderVersion;
-    private final int defaultWriterVersion;
 
     public DeltaLakeMetadata(
             LocationAccessControl locationAccessControl,
@@ -345,9 +349,7 @@ public class DeltaLakeMetadata
             DeltaLakeRedirectionsProvider deltaLakeRedirectionsProvider,
             ExtendedStatisticsAccess statisticsAccess,
             boolean useUniqueTableLocation,
-            boolean allowManagedTableRename,
-            int defaultReaderVersion,
-            int defaultWriterVersion)
+            boolean allowManagedTableRename)
     {
         this.locationAccessControl = requireNonNull(locationAccessControl, "locationAccessControl is null");
         this.metastore = requireNonNull(metastore, "metastore is null");
@@ -370,8 +372,6 @@ public class DeltaLakeMetadata
         this.deleteSchemaLocationsFallback = deleteSchemaLocationsFallback;
         this.useUniqueTableLocation = useUniqueTableLocation;
         this.allowManagedTableRename = allowManagedTableRename;
-        this.defaultReaderVersion = defaultReaderVersion;
-        this.defaultWriterVersion = defaultWriterVersion;
     }
 
     @Override
@@ -1787,8 +1787,8 @@ public class DeltaLakeMetadata
             }
         }
         return new ProtocolEntry(
-                readerVersion.orElse(defaultReaderVersion),
-                writerVersion.orElse(defaultWriterVersion));
+                readerVersion.orElse(MIN_READER_VERSION),
+                writerVersion.orElse(MIN_WRITER_VERSION));
     }
 
     private void writeCheckpointIfNeeded(ConnectorSession session, SchemaTableName table, Optional<Long> checkpointInterval, long newVersion)
