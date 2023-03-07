@@ -79,7 +79,7 @@
         <!-- released from https://github.com/starburstdata/varada -->
         <dep.warp-speed.version>408.0.1</dep.warp-speed.version>
         <!-- released from https://github.com/starburstdata/trino-buffer-service -->
-        <dep.trino-buffer-service.version>408-trino-buffer-service-382-g9c087a0</dep.trino-buffer-service.version>
+        <dep.trino-buffer-service.version>408-trino-buffer-service-406-gc827567</dep.trino-buffer-service.version>
         <!-- released form https://github.com/starburstdata/schema-discovery -->
         <dep.schema-discovery.version>408.schema-discovery-20230303-94c4041</dep.schema-discovery.version>
         <!-- released from https://github.com/starburstdata/stargate -->
