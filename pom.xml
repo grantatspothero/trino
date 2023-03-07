@@ -43,7 +43,7 @@
         <dep.accumulo.version>1.10.2</dep.accumulo.version>
         <dep.accumulo-hadoop.version>2.7.7-1</dep.accumulo-hadoop.version>
         <dep.antlr.version>4.11.1</dep.antlr.version>
-        <dep.airlift.version>225</dep.airlift.version>
+        <dep.airlift.version>228</dep.airlift.version>
         <dep.arrow.version>9.0.0</dep.arrow.version>
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
         <dep.aws-sdk.version>1.12.261</dep.aws-sdk.version>
@@ -1015,6 +1015,12 @@
                 <groupId>io.airlift</groupId>
                 <artifactId>jaxrs-testing</artifactId>
                 <version>${dep.airlift.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.hamcrest</groupId>
+                        <artifactId>hamcrest</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <dependency>
@@ -1769,6 +1775,21 @@
                         <groupId>org.yaml</groupId>
                         <artifactId>snakeyaml</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <!-- conflicts with javax.annotation:javax.annotation-api -->
+                        <groupId>jakarta.annotation</groupId>
+                        <artifactId>jakarta.annotation-api</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <!-- conflicts with javax.ws.rs:javax.ws.rs-api -->
+                        <groupId>jakarta.ws.rs</groupId>
+                        <artifactId>jakarta.ws.rs-api</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <!-- conflicts with javax.inject:javax.inject -->
+                        <groupId>org.glassfish.hk2.external</groupId>
+                        <artifactId>jakarta.inject</artifactId>
+                    </exclusion>
                 </exclusions>
             </dependency>
 
@@ -1776,6 +1797,23 @@
                 <groupId>io.starburst.stargate</groupId>
                 <artifactId>metastore-client</artifactId>
                 <version>${dep.stargate.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <!-- conflicts with javax.annotation:javax.annotation-api -->
+                        <groupId>jakarta.annotation</groupId>
+                        <artifactId>jakarta.annotation-api</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <!-- conflicts with javax.ws.rs:javax.ws.rs-api -->
+                        <groupId>jakarta.ws.rs</groupId>
+                        <artifactId>jakarta.ws.rs-api</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <!-- conflicts with javax.inject:javax.inject -->
+                        <groupId>org.glassfish.hk2.external</groupId>
+                        <artifactId>jakarta.inject</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <dependency>
@@ -2088,6 +2126,12 @@
                 <groupId>org.flywaydb</groupId>
                 <artifactId>flyway-core</artifactId>
                 <version>7.15.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.glassfish.jersey.core</groupId>
+                <artifactId>jersey-common</artifactId>
+                <version>2.39</version>
             </dependency>
 
             <!-- force newer version to be used for dependencies -->
