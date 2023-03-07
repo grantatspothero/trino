@@ -177,9 +177,9 @@ public class TestGalaxyHiveConnectorTest
                 .isInstanceOf(AssertionError.class)
                 .hasMessageStartingWith("\n" +
                         "Expecting message:\n" +
-                        "  <\"GalaxyHiveMetastore does not support ACID tables\">\n" +
+                        "  \"GalaxyHiveMetastore does not support ACID tables\"\n" +
                         "to match regex:\n" +
-                        "  <\"FileHiveMetastore does not support ACID tables\">\n" +
+                        "  \"FileHiveMetastore does not support ACID tables\"\n" +
                         "but did not.");
 
         assertQueryFails("CREATE TABLE acid_unsupported (x int) WITH (transactional = true)", "GalaxyHiveMetastore does not support ACID tables");

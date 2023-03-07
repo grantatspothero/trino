@@ -48,6 +48,7 @@ import io.trino.spi.security.SystemAccessControlFactory;
 import io.trino.sql.query.QueryAssertions.QueryAssert;
 import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.DistributedQueryRunner;
+import io.trino.testing.GalaxyQueryRunner;
 import io.trino.testing.MaterializedResult;
 import io.trino.testing.QueryRunner;
 import org.assertj.core.api.AssertProvider;
@@ -74,7 +75,6 @@ import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static io.trino.sql.query.QueryAssertions.QueryAssert.newQueryAssert;
-import static io.trino.testing.GalaxyQueryRunner.builder;
 import static io.trino.testing.MaterializedResult.resultBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
@@ -127,7 +127,7 @@ public class TestMetadataOnlyQueries
         GalaxyCockroachContainer cockroach = closeAfterClass(new GalaxyCockroachContainer());
         TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(cockroach));
 
-        return builder()
+        return GalaxyQueryRunner.builder()
                 .setAccountClient(testingAccountFactory.createAccount())
                 .addExtraProperty("catalog.management", "metadata_only")
                 .addExtraProperty("trino.plane-id", "aws-us-east1-1")

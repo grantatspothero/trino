@@ -766,9 +766,9 @@ public abstract class BaseObjectStoreConnectorTest
                     .hasMessageMatching("""
 
                             Expecting message:
-                              <"Adding columns to .{4,10} tables is not supported">
+                              "Adding columns to .{4,10} tables is not supported"
                             to match regex:
-                              <"This connector does not support setting column types">
+                              "This connector does not support setting column types"
                             but did not.
                             (?s:.*)""");
         }
