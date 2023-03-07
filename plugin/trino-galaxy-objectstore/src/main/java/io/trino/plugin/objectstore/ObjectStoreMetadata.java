@@ -74,6 +74,7 @@ import io.trino.spi.connector.SystemTable;
 import io.trino.spi.connector.TableColumnsMetadata;
 import io.trino.spi.connector.TableScanRedirectApplicationResult;
 import io.trino.spi.expression.ConnectorExpression;
+import io.trino.spi.procedure.Procedure;
 import io.trino.spi.security.TrinoPrincipal;
 import io.trino.spi.session.PropertyMetadata;
 import io.trino.spi.statistics.ComputedStatistics;
@@ -120,6 +121,8 @@ public class ObjectStoreMetadata
     private final PropertyMetadata<?> hiveFormatProperty;
     private final PropertyMetadata<?> hiveSortedByProperty;
     private final PropertyMetadata<?> icebergFormatProperty;
+    private final Procedure migrateHiveToIcebergProcedure;
+    private final boolean hiveRecursiveDirWalkerEnabled;
 
     public ObjectStoreMetadata(
             ConnectorMetadata hiveMetadata,
@@ -127,7 +130,9 @@ public class ObjectStoreMetadata
             ConnectorMetadata deltaMetadata,
             ConnectorMetadata hudiMetadata,
             ObjectStoreTableProperties tableProperties,
-            ObjectStoreMaterializedViewProperties materializedViewProperties)
+            ObjectStoreMaterializedViewProperties materializedViewProperties,
+            Procedure migrateHiveToIcebergProcedure,
+            boolean hiveRecursiveDirWalkerEnabled)
     {
         this.hiveMetadata = requireNonNull(hiveMetadata, "hiveMetadata is null");
         this.icebergMetadata = requireNonNull(icebergMetadata, "icebergMetadata is null");
@@ -138,6 +143,8 @@ public class ObjectStoreMetadata
         this.hiveFormatProperty = tableProperties.getHiveFormatProperty();
         this.hiveSortedByProperty = tableProperties.getHiveSortedByProperty();
         this.icebergFormatProperty = tableProperties.getIcebergFormatProperty();
+        this.migrateHiveToIcebergProcedure = requireNonNull(migrateHiveToIcebergProcedure, "migrateHiveToIcebergProcedure is null");
+        this.hiveRecursiveDirWalkerEnabled = hiveRecursiveDirWalkerEnabled;
     }
 
     @Override
@@ -496,7 +503,35 @@ public class ObjectStoreMetadata
     @Override
     public void setTableProperties(ConnectorSession session, ConnectorTableHandle tableHandle, Map<String, Optional<Object>> properties)
     {
-        delegate(tableHandle).setTableProperties(session, tableHandle, properties);
+        ConnectorMetadata metadata = delegate(tableHandle);
+        if (properties.containsKey("type")) {
+            if (properties.size() > 1) {
+                throw new TrinoException(NOT_SUPPORTED, "Cannot set table properties when changing table type");
+            }
+            TableType newTableType = (TableType) properties.get("type")
+                    .orElseThrow(() -> new IllegalArgumentException("The type property cannot be empty"));
+            migrateTable(session, tableHandle, newTableType);
+            return;
+        }
+        metadata.setTableProperties(session, tableHandle, properties);
+    }
+
+    private void migrateTable(ConnectorSession session, ConnectorTableHandle tableHandle, TableType newTableType)
+    {
+        ConnectorMetadata metadata = delegate(tableHandle);
+        TableType sourceTableType = tableType(metadata);
+        if (sourceTableType == HIVE && newTableType == ICEBERG) {
+            HiveTableHandle hiveTableHandle = (HiveTableHandle) tableHandle;
+            try {
+                String recursiveDirectory = hiveRecursiveDirWalkerEnabled ? "TRUE" : "FALSE";
+                migrateHiveToIcebergProcedure.getMethodHandle().invoke(session, hiveTableHandle.getSchemaName(), hiveTableHandle.getTableName(), recursiveDirectory);
+                return;
+            }
+            catch (Throwable e) {
+                throw new TrinoException(NOT_SUPPORTED, "Failed to migrate table", e);
+            }
+        }
+        throw new TrinoException(NOT_SUPPORTED, "Changing table type from '%s' to '%s' is not supported".formatted(sourceTableType, newTableType));
     }
 
     @Override

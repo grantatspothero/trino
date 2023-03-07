@@ -16,6 +16,7 @@ package io.trino.plugin.objectstore;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import io.trino.plugin.hive.HiveConnector;
 import io.trino.plugin.hive.HiveTransactionHandle;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorCapabilities;
@@ -40,6 +41,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.google.common.base.Verify.verify;
+import static com.google.common.collect.MoreCollectors.onlyElement;
 import static com.google.common.collect.Sets.immutableEnumSet;
 import static com.google.common.collect.Sets.symmetricDifference;
 import static com.google.common.collect.Streams.forEachPair;
@@ -69,6 +71,8 @@ public class ObjectStoreConnector
     private final ObjectStoreMaterializedViewProperties materializedViewProperties;
     private final Set<Procedure> procedures;
     private final List<PropertyMetadata<?>> sessionProperties;
+    private final Procedure migrateHiveToIcebergProcedure;
+    private final boolean hiveRecursiveDirWalkerEnabled;
 
     @Inject
     public ObjectStoreConnector(
@@ -115,6 +119,10 @@ public class ObjectStoreConnector
             }
         }
         this.sessionProperties = ImmutableList.copyOf(sessionProperties.values());
+        this.migrateHiveToIcebergProcedure = icebergConnector.getProcedures().stream()
+                .filter(procedure -> procedure.getName().equals("migrate"))
+                .collect(onlyElement());
+        this.hiveRecursiveDirWalkerEnabled = ((HiveConnector) hiveConnector).isRecursiveDirWalkerEnabled();
     }
 
     @Override
@@ -173,7 +181,15 @@ public class ObjectStoreConnector
         ConnectorMetadata deltaMetadata = deltaConnector.getMetadata(session, handle.getDeltaHandle());
         ConnectorMetadata hudiMetadata = hudiConnector.getMetadata(session, handle.getHudiHandle());
 
-        return new ObjectStoreMetadata(hiveMetadata, icebergMetadata, deltaMetadata, hudiMetadata, tableProperties, materializedViewProperties);
+        return new ObjectStoreMetadata(
+                hiveMetadata,
+                icebergMetadata,
+                deltaMetadata,
+                hudiMetadata,
+                tableProperties,
+                materializedViewProperties,
+                migrateHiveToIcebergProcedure,
+                hiveRecursiveDirWalkerEnabled);
     }
 
     @Override

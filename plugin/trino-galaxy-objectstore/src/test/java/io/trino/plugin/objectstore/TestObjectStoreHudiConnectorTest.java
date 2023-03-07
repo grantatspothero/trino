@@ -339,6 +339,42 @@ public class TestObjectStoreHudiConnectorTest
     }
 
     @Override
+    public void testMigrateToIcebergTable()
+    {
+        // Override because Hudi connector doesn't support creating a table
+        assertQueryFails(
+                "ALTER TABLE region SET PROPERTIES type = 'ICEBERG'",
+                "Changing table type from 'HUDI' to 'ICEBERG' is not supported");
+    }
+
+    @Override
+    public void testMigrateToDeltaTable()
+    {
+        // Override because Hudi connector doesn't support creating a table
+        assertQueryFails(
+                "ALTER TABLE region SET PROPERTIES type = 'DELTA'",
+                "Changing table type from 'HUDI' to 'DELTA' is not supported");
+    }
+
+    @Override
+    public void testMigrateToHiveTable()
+    {
+        // Override because Hudi connector doesn't support creating a table
+        assertQueryFails(
+                "ALTER TABLE region SET PROPERTIES type = 'HIVE'",
+                "Changing table type from 'HUDI' to 'HIVE' is not supported");
+    }
+
+    @Override
+    public void testMigrateToHudiTable()
+    {
+        // Override because Hudi connector doesn't support creating a table
+        assertQueryFails(
+                "ALTER TABLE region SET PROPERTIES type = 'HUDI'",
+                "Changing table type from 'HUDI' to 'HUDI' is not supported");
+    }
+
+    @Override
     public void testSelectAll()
     {
         throw new SkipException("Hudi returns extra columns");

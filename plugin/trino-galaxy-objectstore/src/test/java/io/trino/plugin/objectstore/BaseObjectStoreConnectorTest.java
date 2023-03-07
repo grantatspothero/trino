@@ -536,6 +536,50 @@ public abstract class BaseObjectStoreConnectorTest
     }
 
     @Test
+    public void testMigrateToIcebergTable()
+    {
+        assertUpdate("CREATE TABLE test_migrate_to_iceberg AS SELECT 1 AS abc", 1);
+        switch (tableType) {
+            case HIVE -> {
+                assertUpdate("ALTER TABLE test_migrate_to_iceberg SET PROPERTIES type = 'ICEBERG'");
+                assertThat((String) computeScalar("SHOW CREATE TABLE test_migrate_to_iceberg"))
+                        .contains("type = 'ICEBERG'");
+                assertQuery("SELECT * FROM test_migrate_to_iceberg", "VALUES 1");
+            }
+            case ICEBERG, DELTA, HUDI -> assertQueryFails(
+                    "ALTER TABLE test_migrate_to_iceberg SET PROPERTIES type = 'ICEBERG'",
+                    "Changing table type from '%s' to 'ICEBERG' is not supported".formatted(tableType));
+        }
+    }
+
+    @Test
+    public void testMigrateToDeltaTable()
+    {
+        assertUpdate("CREATE TABLE test_migrate_to_delta AS SELECT 1 AS abc", 1);
+        assertQueryFails(
+                "ALTER TABLE test_migrate_to_delta SET PROPERTIES type = 'DELTA'",
+                "Changing table type from '%s' to 'DELTA' is not supported".formatted(tableType));
+    }
+
+    @Test
+    public void testMigrateToHiveTable()
+    {
+        assertUpdate("CREATE TABLE test_migrate_to_hive AS SELECT 1 AS abc", 1);
+        assertQueryFails(
+                "ALTER TABLE test_migrate_to_hive SET PROPERTIES type = 'HIVE'",
+                "Changing table type from '%s' to 'HIVE' is not supported".formatted(tableType));
+    }
+
+    @Test
+    public void testMigrateToHudiTable()
+    {
+        assertUpdate("CREATE TABLE test_migrate_to_hudi AS SELECT 1 AS abc", 1);
+        assertQueryFails(
+                "ALTER TABLE test_migrate_to_hudi SET PROPERTIES type = 'HUDI'",
+                "Changing table type from '%s' to 'HUDI' is not supported".formatted(tableType));
+    }
+
+    @Test
     public void testCreateSchemaWithLocation()
     {
         assertQueryFails("CREATE SCHEMA test_location_create WITH (location = 's3://test-bucket/denied')",

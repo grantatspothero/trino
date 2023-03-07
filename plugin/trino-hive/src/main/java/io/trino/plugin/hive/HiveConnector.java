@@ -46,6 +46,7 @@ import static java.util.Objects.requireNonNull;
 public class HiveConnector
         implements Connector
 {
+    private final boolean recursiveDirWalkerEnabled;
     private final LifeCycleManager lifeCycleManager;
     private final ConnectorSplitManager splitManager;
     private final ConnectorPageSourceProvider pageSourceProvider;
@@ -68,6 +69,7 @@ public class HiveConnector
     private final boolean singleStatementWritesOnly;
 
     public HiveConnector(
+            boolean recursiveDirWalkerEnabled,
             LifeCycleManager lifeCycleManager,
             HiveTransactionManager transactionManager,
             ConnectorSplitManager splitManager,
@@ -87,6 +89,7 @@ public class HiveConnector
             boolean singleStatementWritesOnly,
             ClassLoader classLoader)
     {
+        this.recursiveDirWalkerEnabled = recursiveDirWalkerEnabled;
         this.lifeCycleManager = requireNonNull(lifeCycleManager, "lifeCycleManager is null");
         this.transactionManager = requireNonNull(transactionManager, "transactionManager is null");
         this.splitManager = requireNonNull(splitManager, "splitManager is null");
@@ -107,6 +110,11 @@ public class HiveConnector
         this.accessControl = requireNonNull(accessControl, "accessControl is null");
         this.singleStatementWritesOnly = singleStatementWritesOnly;
         this.classLoader = requireNonNull(classLoader, "classLoader is null");
+    }
+
+    public boolean isRecursiveDirWalkerEnabled()
+    {
+        return recursiveDirWalkerEnabled;
     }
 
     @Override

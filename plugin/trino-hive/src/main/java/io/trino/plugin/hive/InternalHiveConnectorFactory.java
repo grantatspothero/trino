@@ -163,6 +163,7 @@ public final class InternalHiveConnectorFactory
                     .map(accessControl -> new ClassLoaderSafeConnectorAccessControl(accessControl, classLoader));
 
             return new HiveConnector(
+                    injector.getInstance(HiveConfig.class).getRecursiveDirWalkerEnabled(),
                     lifeCycleManager,
                     transactionManager,
                     new ClassLoaderSafeConnectorSplitManager(splitManager, classLoader),
