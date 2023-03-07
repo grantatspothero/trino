@@ -84,7 +84,7 @@ public class TestFallbackingExchange
             assertThat(pastDecayStats.bufferExchangesCreated()).isEqualTo(afterFailureStats.bufferExchangesCreated());
             assertThat(pastDecayStats.filesystemExchangesCreated()).isGreaterThan(afterFailureStats.filesystemExchangesCreated());
 
-            Thread.sleep(1500); // we should recover to buffer service now
+            Thread.sleep(3500); // we should recover to buffer service now
             assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).skippingTypesCheck().matches("SELECT BIGINT '15000'");
 
             FallbackingExchangeStats.Snapshot recoveredStats = fallbackingExchangeManager.getStats();
@@ -150,8 +150,8 @@ public class TestFallbackingExchange
                     .putAll(fileSystemExchangeManagerProperties)
                     .put("exchange.failure-tracking.uri", bufferService.getDiscoveryServer().getBaseUri().toString())
                     .put("exchange.fallback-recent-failures-count-threshold", "2")
-                    .put("exchange.min-fallback-duration", "3s")
-                    .put("exchange.max-fallback-duration", "3s")
+                    .put("exchange.min-fallback-duration", "5s")
+                    .put("exchange.max-fallback-duration", "5s")
                     .buildOrThrow();
 
             Map<String, String> extraProperties = new HashMap<>();
