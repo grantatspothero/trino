@@ -14,6 +14,8 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableMap;
+import io.minio.ListObjectsArgs;
+import io.minio.MinioClient;
 import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.iceberg.BaseIcebergMaterializedViewTest;
@@ -33,6 +35,7 @@ import java.util.Optional;
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
+import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.testng.Assert.assertEquals;
@@ -41,9 +44,11 @@ public class TestObjectStoreIcebergConnectorMaterializedView
         extends BaseIcebergMaterializedViewTest
 {
     private static final String TEST_CATALOG = "iceberg";
+    private static final String TEST_BUCKET = "test-bucket";
 
     private GalaxyTestHelper galaxyTestHelper;
     private String schemaDirectory;
+    private MinioStorage minio;
 
     @Override
     protected String getSchemaDirectory()
@@ -55,13 +60,13 @@ public class TestObjectStoreIcebergConnectorMaterializedView
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        galaxyTestHelper = new GalaxyTestHelper();
+        galaxyTestHelper = closeAfterClass(new GalaxyTestHelper());
         galaxyTestHelper.initialize();
 
         closeAfterClass(TrinoFileSystemCache.INSTANCE::closeAll);
         TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> false));
 
-        MinioStorage minio = closeAfterClass(new MinioStorage("test-bucket"));
+        minio = closeAfterClass(new MinioStorage(TEST_BUCKET));
         minio.start();
         schemaDirectory = minio.getS3Url() + "/" + storageSchemaName;
         TestingGalaxyMetastore metastore = closeAfterClass(new TestingGalaxyMetastore(Optional.of(galaxyTestHelper.getCockroach())));
@@ -83,8 +88,8 @@ public class TestObjectStoreIcebergConnectorMaterializedView
     public void cleanup()
             throws Exception
     {
-        galaxyTestHelper.close();
         galaxyTestHelper = null;
+        minio = null;
     }
 
     // override to remove non-galaxy supported properties for Iceberg materialized views
@@ -175,5 +180,37 @@ public class TestObjectStoreIcebergConnectorMaterializedView
         assertUpdate("DROP MATERIALIZED VIEW materialized_view_window");
         assertUpdate("DROP MATERIALIZED VIEW materialized_view_union");
         assertUpdate("DROP MATERIALIZED VIEW materialized_view_subquery");
+    }
+
+    @Test
+    public void testDropMaterializedViewData()
+    {
+        String schemaForDroppedMaterializedView = "storage_schema_for_drop_" + randomNameSuffix();
+
+        getQueryRunner().execute("CREATE TABLE test_drop_mv_data_table(value INT)");
+        getQueryRunner().execute("INSERT INTO  test_drop_mv_data_table(value) VALUES 1, 2, 3, 4, 5");
+        getQueryRunner().execute("CREATE SCHEMA %s".formatted(schemaForDroppedMaterializedView));
+        getQueryRunner().execute("CREATE MATERIALIZED VIEW test_drop_mv_data_materialized_view "
+                + " WITH ( storage_schema = '%s' ) ".formatted(schemaForDroppedMaterializedView)
+                + " AS SELECT value as top_two_value FROM test_drop_mv_data_table ORDER BY value DESC LIMIT 2");
+
+        getQueryRunner().execute("REFRESH MATERIALIZED VIEW  test_drop_mv_data_materialized_view");
+        MinioClient client = MinioClient.builder()
+                .endpoint(minio.getEndpoint())
+                .credentials(MinioStorage.ACCESS_KEY, MinioStorage.SECRET_KEY)
+                .build();
+        assertThat(client.listObjects(ListObjectsArgs.builder()
+                .recursive(true)
+                .bucket(TEST_BUCKET)
+                .prefix(schemaForDroppedMaterializedView)
+                .build())).isNotEmpty();
+        getQueryRunner().execute("DROP MATERIALIZED VIEW test_drop_mv_data_materialized_view");
+        assertThat(client.listObjects(ListObjectsArgs.builder()
+                .recursive(true)
+                .bucket(TEST_BUCKET)
+                .prefix(schemaForDroppedMaterializedView)
+                .build())).isEmpty();
+
+        getQueryRunner().execute("DROP SCHEMA %s".formatted(schemaForDroppedMaterializedView));
     }
 }

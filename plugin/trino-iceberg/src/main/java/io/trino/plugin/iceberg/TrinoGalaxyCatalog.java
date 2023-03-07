@@ -442,7 +442,7 @@ public class TrinoGalaxyCatalog
             String storageSchema = Optional.ofNullable(view.getParameters().get(STORAGE_SCHEMA))
                     .orElse(viewName.getSchemaName());
             try {
-                metastore.dropTable(storageSchema, storageTableName, true);
+                dropTable(session, new SchemaTableName(storageSchema, storageTableName));
             }
             catch (TrinoException e) {
                 log.warn(e, "Failed to drop storage table '%s.%s' for materialized view '%s'", storageSchema, storageTableName, viewName);
