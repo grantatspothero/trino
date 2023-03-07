@@ -62,7 +62,7 @@ public class PostgreSqlConnectionFactoryModule
         connectionProperties.put("sslfactory", GalaxyPostgreSqlSslSocketFactory.class.getName());
         addCatalogName(connectionProperties, catalogHandle.getCatalogName());
         addCatalogId(connectionProperties, catalogHandle.getVersion().toString());
-        addCrossRegionAllowed(connectionProperties, false);
+        addCrossRegionAllowed(connectionProperties, regionEnforcementConfig.getAllowCrossRegionAccess());
         addRegionLocalIpAddresses(connectionProperties, regionEnforcementConfig.getAllowedIpAddresses());
 
         SshTunnelProperties.generateFrom(sshTunnelConfig)

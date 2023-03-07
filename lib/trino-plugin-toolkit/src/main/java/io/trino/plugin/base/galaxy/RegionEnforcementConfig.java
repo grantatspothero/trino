@@ -23,6 +23,19 @@ import java.util.List;
 public class RegionEnforcementConfig
 {
     private List<String> allowedIpAddresses = ImmutableList.of("0.0.0.0/0");
+    private boolean allowCrossRegionAccess;
+
+    public boolean getAllowCrossRegionAccess()
+    {
+        return allowCrossRegionAccess;
+    }
+
+    @Config("galaxy.region-enforcement.allow-cross-region-access")
+    public RegionEnforcementConfig setAllowCrossRegionAccess(boolean allowCrossRegionAccess)
+    {
+        this.allowCrossRegionAccess = allowCrossRegionAccess;
+        return this;
+    }
 
     @NotNull
     public List<String> getAllowedIpAddresses()

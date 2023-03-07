@@ -85,7 +85,7 @@ public class SqlServerClientModule
         Properties socketArgs = new Properties();
         addCatalogName(socketArgs, catalogHandle.getCatalogName());
         addCatalogId(socketArgs, catalogHandle.getVersion().toString());
-        addCrossRegionAllowed(socketArgs, false);
+        addCrossRegionAllowed(socketArgs, regionEnforcementConfig.getAllowCrossRegionAccess());
         addRegionLocalIpAddresses(socketArgs, regionEnforcementConfig.getAllowedIpAddresses());
         SshTunnelProperties.generateFrom(sshTunnelConfig)
                 .ifPresent(sshTunnelProperties -> addSshTunnelProperties(socketArgs::setProperty, sshTunnelProperties));

@@ -29,7 +29,8 @@ public class TestRegionEnforcementConfig
     public void testDefaults()
     {
         assertRecordedDefaults(recordDefaults(RegionEnforcementConfig.class)
-                .setAllowedIpAddresses(ImmutableList.of("0.0.0.0/0")));
+                .setAllowedIpAddresses(ImmutableList.of("0.0.0.0/0"))
+                .setAllowCrossRegionAccess(false));
     }
 
     @Test
@@ -37,10 +38,12 @@ public class TestRegionEnforcementConfig
     {
         Map<String, String> properties = ImmutableMap.<String, String>builder()
                 .put("galaxy.region-enforcement.allowed-ip-addresses", "1.2.3.4, 5.6.7.8/29")
+                .put("galaxy.region-enforcement.allow-cross-region-access", "true")
                 .buildOrThrow();
 
         RegionEnforcementConfig expected = new RegionEnforcementConfig()
-                .setAllowedIpAddresses(ImmutableList.of("1.2.3.4", "5.6.7.8/29"));
+                .setAllowedIpAddresses(ImmutableList.of("1.2.3.4", "5.6.7.8/29"))
+                .setAllowCrossRegionAccess(true);
 
         assertFullMapping(properties, expected);
     }

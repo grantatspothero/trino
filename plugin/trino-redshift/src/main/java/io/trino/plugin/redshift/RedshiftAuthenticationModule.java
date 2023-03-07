@@ -148,7 +148,7 @@ public class RedshiftAuthenticationModule
         properties.put("socketFactory", GalaxySqlSocketFactory.class.getName());
         addCatalogName(properties, catalogHandle.getCatalogName());
         addCatalogId(properties, catalogHandle.getVersion().toString());
-        addCrossRegionAllowed(properties, false);
+        addCrossRegionAllowed(properties, regionEnforcementConfig.getAllowCrossRegionAccess());
         addRegionLocalIpAddresses(properties, regionEnforcementConfig.getAllowedIpAddresses());
 
         SshTunnelProperties.generateFrom(sshTunnelConfig)

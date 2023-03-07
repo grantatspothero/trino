@@ -78,7 +78,7 @@ public class MySqlClientModule
         properties.setProperty("socketFactory", GalaxyMySqlSocketFactory.class.getName());
         addCatalogName(properties, catalogHandle.getCatalogName());
         addCatalogId(properties, catalogHandle.getVersion().toString());
-        addCrossRegionAllowed(properties, false);
+        addCrossRegionAllowed(properties, regionEnforcementConfig.getAllowCrossRegionAccess());
         addRegionLocalIpAddresses(properties, regionEnforcementConfig.getAllowedIpAddresses());
 
         SshTunnelProperties.generateFrom(sshTunnelConfig)

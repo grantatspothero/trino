@@ -75,7 +75,7 @@ public class GalaxySnowflakeModule
         properties.setProperty("socketFactory", GalaxySqlSocketFactory.class.getName());
         addCatalogName(properties, catalogHandle.getCatalogName());
         addCatalogId(properties, catalogHandle.getVersion().toString());
-        addCrossRegionAllowed(properties, false);
+        addCrossRegionAllowed(properties, regionEnforcementConfig.getAllowCrossRegionAccess());
         addRegionLocalIpAddresses(properties, regionEnforcementConfig.getAllowedIpAddresses());
 
         return new WarehouseAwareDriverConnectionFactory(
