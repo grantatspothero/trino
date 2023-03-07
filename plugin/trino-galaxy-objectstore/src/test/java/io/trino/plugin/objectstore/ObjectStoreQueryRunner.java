@@ -245,6 +245,8 @@ public class ObjectStoreQueryRunner
                 .withCockroach(cockroach)
                 .withMockConnectorPlugin(new MockConnectorPlugin(MockConnectorFactory.create()))
                 .withPlugin(new ObjectStorePlugin())
+                .withConnectorName("galaxy_objectstore")
+                .withExtraObjectStoreProperties(ImmutableMap.of())
                 .build();
     }
 
