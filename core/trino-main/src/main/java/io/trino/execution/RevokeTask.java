@@ -28,19 +28,17 @@ import io.trino.sql.tree.Revoke;
 
 import javax.inject.Inject;
 
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
 import static io.trino.execution.GalaxyWildcardUtil.isWildcard;
 import static io.trino.execution.GalaxyWildcardUtil.validateWildcard;
+import static io.trino.execution.PrivilegeUtilities.parseStatementPrivileges;
 import static io.trino.metadata.MetadataUtil.createCatalogSchemaName;
 import static io.trino.metadata.MetadataUtil.createPrincipal;
 import static io.trino.metadata.MetadataUtil.createQualifiedObjectName;
-import static io.trino.spi.StandardErrorCode.INVALID_PRIVILEGE;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.StandardErrorCode.SCHEMA_NOT_FOUND;
 import static io.trino.spi.StandardErrorCode.TABLE_NOT_FOUND;
@@ -93,7 +91,7 @@ public class RevokeTask
             throw semanticException(SCHEMA_NOT_FOUND, statement, "Schema '%s' does not exist", schemaName);
         }
 
-        Set<Privilege> privileges = parseStatementPrivileges(statement);
+        Set<Privilege> privileges = parseStatementPrivileges(statement, statement.getPrivileges());
         for (Privilege privilege : privileges) {
             accessControl.checkCanRevokeSchemaPrivilege(session.toSecurityContext(), privilege, schemaName, createPrincipal(statement.getGrantee()), statement.isGrantOptionFor());
         }
@@ -117,37 +115,11 @@ public class RevokeTask
             }
         }
 
-        Set<Privilege> privileges = parseStatementPrivileges(statement);
+        Set<Privilege> privileges = parseStatementPrivileges(statement, statement.getPrivileges());
         for (Privilege privilege : privileges) {
             accessControl.checkCanRevokeTablePrivilege(session.toSecurityContext(), privilege, tableName, createPrincipal(statement.getGrantee()), statement.isGrantOptionFor());
         }
 
         metadata.revokeTablePrivileges(session, tableName, privileges, createPrincipal(statement.getGrantee()), statement.isGrantOptionFor());
-    }
-
-    private static Set<Privilege> parseStatementPrivileges(Revoke statement)
-    {
-        Set<Privilege> privileges;
-        if (statement.getPrivileges().isPresent()) {
-            privileges = statement.getPrivileges().get().stream()
-                    .map(privilege -> parsePrivilege(statement, privilege))
-                    .collect(toImmutableSet());
-        }
-        else {
-            // All privileges
-            privileges = EnumSet.allOf(Privilege.class);
-        }
-        return privileges;
-    }
-
-    private static Privilege parsePrivilege(Revoke statement, String privilegeString)
-    {
-        for (Privilege privilege : Privilege.values()) {
-            if (privilege.name().equalsIgnoreCase(privilegeString)) {
-                return privilege;
-            }
-        }
-
-        throw semanticException(INVALID_PRIVILEGE, statement, "Unknown privilege: '%s'", privilegeString);
     }
 }
