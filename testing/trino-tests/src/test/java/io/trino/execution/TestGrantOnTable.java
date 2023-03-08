@@ -14,6 +14,7 @@
 package io.trino.execution;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import io.trino.Session;
 import io.trino.connector.Grants;
 import io.trino.connector.MockConnectorFactory;
@@ -35,6 +36,7 @@ import org.testng.annotations.Test;
 import java.util.EnumSet;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.Set;
 
 import static io.trino.common.Randoms.randomUsername;
 import static io.trino.spi.security.PrincipalType.USER;
@@ -46,7 +48,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestGrantOnTable
 {
-    private final SchemaTableName table = new SchemaTableName("default", "table_one");
+    private static final SchemaTableName table = new SchemaTableName("default", "table_one");
+    private static final Set<Privilege> TABLE_PRIVILEGES = ImmutableSet.of(Privilege.SELECT, Privilege.UPDATE, Privilege.INSERT, Privilege.DELETE);
+
     private final Session admin = sessionOf("admin");
     private final Grants<SchemaTableName> tableGrants = new MutableGrants<>();
     private DistributedQueryRunner queryRunner;
@@ -67,7 +71,7 @@ public class TestGrantOnTable
         queryRunner.installPlugin(new MockConnectorPlugin(connectorFactory));
         queryRunner.createCatalog("local", "mock");
         assertions = new QueryAssertions(queryRunner);
-        tableGrants.grant(new TrinoPrincipal(USER, "admin"), table, EnumSet.allOf(Privilege.class), true);
+        tableGrants.grant(new TrinoPrincipal(USER, "admin"), table, TABLE_PRIVILEGES, true);
     }
 
     @AfterClass(alwaysRun = true)
@@ -138,7 +142,6 @@ public class TestGrantOnTable
     public static Object[][] privileges()
     {
         return new Object[][] {
-                {"CREATE"},
                 {"SELECT"},
                 {"INSERT"},
                 {"UPDATE"},

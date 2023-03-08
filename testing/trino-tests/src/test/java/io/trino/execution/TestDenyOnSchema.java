@@ -35,7 +35,6 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import java.util.EnumSet;
 import java.util.Set;
 
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
@@ -50,6 +49,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Test(singleThreaded = true)
 public class TestDenyOnSchema
 {
+    private static final Set<Privilege> SCHEMA_PRIVILEGES = ImmutableSet.of(Privilege.CREATE);
+    private static final Set<Privilege> TABLE_PRIVILEGES = ImmutableSet.of(Privilege.SELECT, Privilege.UPDATE, Privilege.INSERT, Privilege.DELETE);
+
     private final SchemaTableName table = new SchemaTableName("default", "table_one");
     private final Session admin = sessionOf("admin");
     private final Grants<SchemaTableName> tableGrants = new MutableGrants<>();
@@ -94,7 +96,7 @@ public class TestDenyOnSchema
         queryRunner.installPlugin(new MockConnectorPlugin(connectorFactory));
         queryRunner.createCatalog("local", "mock");
         assertions = new QueryAssertions(queryRunner);
-        tableGrants.grant(new TrinoPrincipal(USER, "admin"), table, EnumSet.allOf(Privilege.class), true);
+        tableGrants.grant(new TrinoPrincipal(USER, "admin"), table, TABLE_PRIVILEGES, true);
     }
 
     @AfterClass(alwaysRun = true)
@@ -113,7 +115,7 @@ public class TestDenyOnSchema
         denyCalled = false;
         expectedSchemaName = new CatalogSchemaName("local", "default");
         if (privilege.equalsIgnoreCase("all privileges")) {
-            expectedPrivileges = ImmutableSet.copyOf(Privilege.values());
+            expectedPrivileges = SCHEMA_PRIVILEGES;
         }
         else {
             expectedPrivileges = ImmutableSet.of(Privilege.valueOf(privilege.toUpperCase(ROOT)));
@@ -143,10 +145,6 @@ public class TestDenyOnSchema
     {
         return new Object[][] {
                 {"CREATE"},
-                {"SELECT"},
-                {"INSERT"},
-                {"UPDATE"},
-                {"DELETE"},
                 {"ALL PRIVILEGES"}
         };
     }

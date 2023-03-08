@@ -14,6 +14,7 @@
 package io.trino.execution;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import io.trino.Session;
 import io.trino.connector.Grants;
 import io.trino.connector.MockConnectorFactory;
@@ -30,7 +31,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import java.util.EnumSet;
+import java.util.Set;
 
 import static io.trino.common.Randoms.randomUsername;
 import static io.trino.spi.security.PrincipalType.USER;
@@ -41,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestGrantOnSchema
 {
+    private static final Set<Privilege> SCHEMA_PRIVILEGES = ImmutableSet.of(Privilege.CREATE);
     private final Session admin = sessionOf("admin");
     private final Grants<String> schemaGrants = new MutableGrants<>();
     private DistributedQueryRunner queryRunner;
@@ -60,7 +62,7 @@ public class TestGrantOnSchema
         queryRunner.installPlugin(new MockConnectorPlugin(connectorFactory));
         queryRunner.createCatalog("local", "mock");
         assertions = new QueryAssertions(queryRunner);
-        schemaGrants.grant(new TrinoPrincipal(USER, admin.getUser()), "default", EnumSet.allOf(Privilege.class), true);
+        schemaGrants.grant(new TrinoPrincipal(USER, admin.getUser()), "default", SCHEMA_PRIVILEGES, true);
     }
 
     @AfterClass(alwaysRun = true)
@@ -76,7 +78,7 @@ public class TestGrantOnSchema
     {
         String username = randomUsername();
         Session user = sessionOf(username);
-        schemaGrants.grant(new TrinoPrincipal(USER, user.getUser()), "default", EnumSet.allOf(Privilege.class), grantOption);
+        schemaGrants.grant(new TrinoPrincipal(USER, user.getUser()), "default", SCHEMA_PRIVILEGES, grantOption);
 
         assertThat(assertions.query(admin, "SHOW SCHEMAS FROM local")).matches("VALUES (VARCHAR 'information_schema'), (VARCHAR 'default')");
         assertThat(assertions.query(user, "SHOW SCHEMAS FROM local")).matches("VALUES (VARCHAR 'information_schema'), (VARCHAR 'default')");
@@ -137,7 +139,6 @@ public class TestGrantOnSchema
     public static Object[][] privileges()
     {
         return new Object[][] {
-                {"SELECT"},
                 {"CREATE"},
                 {"ALL PRIVILEGES"}
         };

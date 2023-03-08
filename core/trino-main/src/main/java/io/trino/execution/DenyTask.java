@@ -14,6 +14,7 @@
 package io.trino.execution;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import io.starburst.stargate.id.EntityKind;
 import io.trino.Session;
 import io.trino.execution.warnings.WarningCollector;
 import io.trino.metadata.Metadata;
@@ -87,7 +88,7 @@ public class DenyTask
             throw semanticException(SCHEMA_NOT_FOUND, statement, "Schema '%s' does not exist", schemaName);
         }
 
-        Set<Privilege> privileges = parseStatementPrivileges(statement, statement.getPrivileges());
+        Set<Privilege> privileges = parseStatementPrivileges(statement, statement.getPrivileges(), EntityKind.SCHEMA);
         for (Privilege privilege : privileges) {
             accessControl.checkCanDenySchemaPrivilege(session.toSecurityContext(), privilege, schemaName, createPrincipal(statement.getGrantee()));
         }
@@ -111,7 +112,7 @@ public class DenyTask
             }
         }
 
-        Set<Privilege> privileges = parseStatementPrivileges(statement, statement.getPrivileges());
+        Set<Privilege> privileges = parseStatementPrivileges(statement, statement.getPrivileges(), EntityKind.TABLE);
 
         for (Privilege privilege : privileges) {
             accessControl.checkCanDenyTablePrivilege(session.toSecurityContext(), privilege, tableName, createPrincipal(statement.getGrantee()));

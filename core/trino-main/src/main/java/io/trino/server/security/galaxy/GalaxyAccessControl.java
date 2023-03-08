@@ -51,6 +51,7 @@ import java.util.function.Predicate;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static io.starburst.stargate.accesscontrol.client.OperationNotAllowedException.operationNotAllowed;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_CATALOG;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_SCHEMA;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_TABLE;
@@ -59,6 +60,7 @@ import static io.starburst.stargate.accesscontrol.privilege.Privilege.EXECUTE;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.INSERT;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.SELECT;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.UPDATE;
+import static io.trino.execution.PrivilegeUtilities.getPrivilegesForEntityKind;
 import static io.trino.server.security.galaxy.GalaxyIdentity.getRoleId;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.security.AccessDeniedException.denyAddColumn;
@@ -504,36 +506,42 @@ public class GalaxyAccessControl
     @Override
     public void checkCanGrantSchemaPrivilege(SystemSecurityContext context, io.trino.spi.security.Privilege privilege, CatalogSchemaName schema, TrinoPrincipal grantee, boolean grantOption)
     {
+        validateEntityKindPrivilege("granted", EntityKind.SCHEMA, privilege);
         // Galaxy does the checking
     }
 
     @Override
     public void checkCanDenySchemaPrivilege(SystemSecurityContext context, io.trino.spi.security.Privilege privilege, CatalogSchemaName schema, TrinoPrincipal grantee)
     {
+        validateEntityKindPrivilege("denied", EntityKind.SCHEMA, privilege);
         // Galaxy does the checking
     }
 
     @Override
     public void checkCanRevokeSchemaPrivilege(SystemSecurityContext context, io.trino.spi.security.Privilege privilege, CatalogSchemaName schema, TrinoPrincipal revokee, boolean grantOption)
     {
+        validateEntityKindPrivilege("revoked", EntityKind.SCHEMA, privilege);
         // Galaxy does the checking
     }
 
     @Override
     public void checkCanGrantTablePrivilege(SystemSecurityContext context, io.trino.spi.security.Privilege privilege, CatalogSchemaTableName table, TrinoPrincipal grantee, boolean grantOption)
     {
+        validateEntityKindPrivilege("granted", EntityKind.TABLE, privilege);
         // Galaxy does the checking
     }
 
     @Override
     public void checkCanDenyTablePrivilege(SystemSecurityContext context, io.trino.spi.security.Privilege privilege, CatalogSchemaTableName table, TrinoPrincipal grantee)
     {
+        validateEntityKindPrivilege("denied", EntityKind.TABLE, privilege);
         // Galaxy does the checking
     }
 
     @Override
     public void checkCanRevokeTablePrivilege(SystemSecurityContext context, io.trino.spi.security.Privilege privilege, CatalogSchemaTableName table, TrinoPrincipal revokee, boolean grantOption)
     {
+        validateEntityKindPrivilege("revoked", EntityKind.TABLE, privilege);
         // Galaxy does the checking
     }
 
@@ -913,5 +921,12 @@ public class GalaxyAccessControl
     private static boolean isSystemCatalog(CatalogSchemaTableName name)
     {
         return isSystemCatalog(name.getCatalogName()) || isInformationSchema(name.getSchemaTableName().getSchemaName());
+    }
+
+    private static void validateEntityKindPrivilege(String operation, EntityKind entityKind, io.trino.spi.security.Privilege privilege)
+    {
+        if (!getPrivilegesForEntityKind(entityKind).contains(privilege)) {
+            throw operationNotAllowed("Privilege %s may not be %s to entity kind %s".formatted(privilege, operation, entityKind));
+        }
     }
 }

@@ -30,7 +30,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import java.util.EnumSet;
+import java.util.Set;
 
 import static io.trino.common.Randoms.randomUsername;
 import static io.trino.spi.security.PrincipalType.USER;
@@ -43,7 +43,9 @@ public class TestRevokeOnSchema
 {
     private static final Session admin = sessionOf("admin");
     private static final Session userWithAllPrivileges = sessionOf(randomUsername());
-    private static final Session userWithSelect = sessionOf(randomUsername());
+    private static final Session userWithCreate = sessionOf(randomUsername());
+    private static final Set<Privilege> SCHEMA_PRIVILEGES = ImmutableSet.of(Privilege.CREATE);
+
     private DistributedQueryRunner queryRunner;
     private QueryAssertions assertions;
 
@@ -53,9 +55,9 @@ public class TestRevokeOnSchema
     {
         queryRunner = DistributedQueryRunner.builder(userWithAllPrivileges).build();
         Grants<String> schemaGrants = new MutableGrants<>();
-        schemaGrants.grant(new TrinoPrincipal(USER, admin.getUser()), "default", EnumSet.allOf(Privilege.class), true);
-        schemaGrants.grant(new TrinoPrincipal(USER, userWithAllPrivileges.getUser()), "default", EnumSet.allOf(Privilege.class), true);
-        schemaGrants.grant(new TrinoPrincipal(USER, userWithSelect.getUser()), "default", ImmutableSet.of(Privilege.SELECT), true);
+        schemaGrants.grant(new TrinoPrincipal(USER, admin.getUser()), "default", SCHEMA_PRIVILEGES, true);
+        schemaGrants.grant(new TrinoPrincipal(USER, userWithAllPrivileges.getUser()), "default", SCHEMA_PRIVILEGES, true);
+        schemaGrants.grant(new TrinoPrincipal(USER, userWithCreate.getUser()), "default", SCHEMA_PRIVILEGES, true);
         MockConnectorFactory connectorFactory = MockConnectorFactory.builder()
                 .withListSchemaNames(session -> ImmutableList.of("information_schema", "default"))
                 .withSchemaGrants(schemaGrants)
@@ -110,7 +112,7 @@ public class TestRevokeOnSchema
     public static Object[][] privilegesAndUsers()
     {
         return new Object[][] {
-                {"SELECT", userWithSelect},
+                {"CREATE", userWithCreate},
                 {"ALL PRIVILEGES", userWithAllPrivileges}
         };
     }
@@ -120,7 +122,6 @@ public class TestRevokeOnSchema
     {
         return new Object[][] {
                 {"CREATE"},
-                {"SELECT"},
                 {"ALL PRIVILEGES"}
         };
     }

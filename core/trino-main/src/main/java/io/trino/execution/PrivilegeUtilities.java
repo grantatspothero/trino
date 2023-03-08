@@ -13,11 +13,14 @@
  */
 package io.trino.execution;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import io.starburst.stargate.id.EntityKind;
 import io.trino.spi.security.Privilege;
 import io.trino.sql.tree.Node;
 
-import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -29,24 +32,37 @@ public class PrivilegeUtilities
 {
     private PrivilegeUtilities() {}
 
-    public static Set<Privilege> parseStatementPrivileges(Node statement, Optional<List<String>> optionalPrivileges)
+    private static final Map<EntityKind, Set<Privilege>> ENTITY_KIND_PRIVILEGES = ImmutableMap.of(
+                    EntityKind.SCHEMA, ImmutableSet.of(Privilege.CREATE),
+                    EntityKind.TABLE, ImmutableSet.of(Privilege.SELECT, Privilege.UPDATE, Privilege.INSERT, Privilege.DELETE));
+
+    public static Set<Privilege> getPrivilegesForEntityKind(EntityKind entityKind)
+    {
+        Set<Privilege> privileges = ENTITY_KIND_PRIVILEGES.get(entityKind);
+        if (privileges != null) {
+            return privileges;
+        }
+        throw new IllegalArgumentException("Could not find privileges for EntityKind." + entityKind);
+    }
+
+    public static Set<Privilege> parseStatementPrivileges(Node statement, Optional<List<String>> optionalPrivileges, EntityKind entityKind)
     {
         Set<Privilege> privileges;
         if (optionalPrivileges.isPresent()) {
             privileges = optionalPrivileges.get().stream()
-                    .map(privilege -> parsePrivilege(statement, privilege))
+                    .map(privilege -> parsePrivilege(statement, privilege, entityKind))
                     .collect(toImmutableSet());
         }
         else {
             // All privileges
-            privileges = EnumSet.allOf(Privilege.class);
+            privileges = getPrivilegesForEntityKind(entityKind);
         }
         return privileges;
     }
 
-    private static Privilege parsePrivilege(Node statement, String privilegeString)
+    private static Privilege parsePrivilege(Node statement, String privilegeString, EntityKind entityKind)
     {
-        for (Privilege privilege : Privilege.values()) {
+        for (Privilege privilege : getPrivilegesForEntityKind(entityKind)) {
             if (privilege.name().equalsIgnoreCase(privilegeString)) {
                 return privilege;
             }

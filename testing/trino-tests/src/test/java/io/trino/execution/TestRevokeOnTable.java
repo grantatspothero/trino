@@ -32,20 +32,19 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import java.util.EnumSet;
+import java.util.Set;
 
 import static io.trino.common.Randoms.randomUsername;
 import static io.trino.spi.security.PrincipalType.USER;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 import static java.lang.String.format;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestRevokeOnTable
 {
     private static final Session admin = sessionOf("admin");
-    private static final Session userWithAllPrivileges = sessionOf(randomUsername());
-    private static final Session userWithCreate = sessionOf(randomUsername());
+    private static final Set<Privilege> TABLE_PRIVILEGES = ImmutableSet.of(Privilege.SELECT, Privilege.UPDATE, Privilege.INSERT, Privilege.DELETE);
+    private static final Session userWithAllTablePrivileges = sessionOf(randomUsername());
     private static final Session userWithSelect = sessionOf(randomUsername());
     private static final Session userWithInsert = sessionOf(randomUsername());
     private static final Session userWithUpdate = sessionOf(randomUsername());
@@ -58,11 +57,10 @@ public class TestRevokeOnTable
             throws Exception
     {
         SchemaTableName table = new SchemaTableName("default", "table_one");
-        queryRunner = DistributedQueryRunner.builder(userWithAllPrivileges).build();
+        queryRunner = DistributedQueryRunner.builder(userWithAllTablePrivileges).build();
         Grants<SchemaTableName> tableGrants = new MutableGrants<>();
-        tableGrants.grant(new TrinoPrincipal(USER, admin.getUser()), table, EnumSet.allOf(Privilege.class), true);
-        tableGrants.grant(new TrinoPrincipal(USER, userWithAllPrivileges.getUser()), table, EnumSet.allOf(Privilege.class), true);
-        tableGrants.grant(new TrinoPrincipal(USER, userWithCreate.getUser()), table, ImmutableSet.of(Privilege.CREATE), true);
+        tableGrants.grant(new TrinoPrincipal(USER, admin.getUser()), table, TABLE_PRIVILEGES, true);
+        tableGrants.grant(new TrinoPrincipal(USER, userWithAllTablePrivileges.getUser()), table, TABLE_PRIVILEGES, true);
         tableGrants.grant(new TrinoPrincipal(USER, userWithSelect.getUser()), table, ImmutableSet.of(Privilege.SELECT), true);
         tableGrants.grant(new TrinoPrincipal(USER, userWithInsert.getUser()), table, ImmutableSet.of(Privilege.INSERT), true);
         tableGrants.grant(new TrinoPrincipal(USER, userWithUpdate.getUser()), table, ImmutableSet.of(Privilege.UPDATE), true);
@@ -85,16 +83,6 @@ public class TestRevokeOnTable
         assertions.close();
         assertions = null;
         queryRunner = null; // closed by assertions.close
-    }
-
-    @Test(dataProvider = "privilegesAndUsers")
-    public void testRevokeOnSchema(String privilege, Session user)
-    {
-        assertThat(assertions.query(user, "SHOW TABLES FROM default")).matches("VALUES (VARCHAR 'table_one')");
-
-        queryRunner.execute(admin, format("REVOKE %s ON TABLE table_one FROM %s", privilege, user.getUser()));
-
-        assertThat(assertions.query(user, "SHOW TABLES FROM default")).returnsEmptyResult();
     }
 
     @Test(dataProvider = "privilegesAndUsers")
@@ -124,19 +112,18 @@ public class TestRevokeOnTable
         assertThatThrownBy(() -> queryRunner.execute(sessionOf(randomUsername()), format("REVOKE %s ON TABLE table_one FROM %s", privilege, randomUsername())))
                 .hasMessageContaining(
                         "Access Denied: Cannot revoke privilege %s on table default.table_one",
-                        privilege.equals("ALL PRIVILEGES") ? "CREATE" : privilege);
+                        privilege.equals("ALL PRIVILEGES") ? "SELECT" : privilege);
     }
 
     @DataProvider(name = "privilegesAndUsers")
     public static Object[][] privilegesAndUsers()
     {
         return new Object[][] {
-                {"CREATE", userWithCreate},
                 {"SELECT", userWithSelect},
                 {"INSERT", userWithInsert},
                 {"UPDATE", userWithUpdate},
                 {"DELETE", userWithDelete},
-                {"ALL PRIVILEGES", userWithAllPrivileges}
+                {"ALL PRIVILEGES", userWithAllTablePrivileges}
         };
     }
 
@@ -144,7 +131,6 @@ public class TestRevokeOnTable
     public static Object[][] privileges()
     {
         return new Object[][] {
-                {"CREATE"},
                 {"SELECT"},
                 {"INSERT"},
                 {"UPDATE"},

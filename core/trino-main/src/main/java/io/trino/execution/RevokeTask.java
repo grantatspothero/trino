@@ -14,6 +14,7 @@
 package io.trino.execution;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import io.starburst.stargate.id.EntityKind;
 import io.trino.Session;
 import io.trino.execution.warnings.WarningCollector;
 import io.trino.metadata.Metadata;
@@ -91,7 +92,7 @@ public class RevokeTask
             throw semanticException(SCHEMA_NOT_FOUND, statement, "Schema '%s' does not exist", schemaName);
         }
 
-        Set<Privilege> privileges = parseStatementPrivileges(statement, statement.getPrivileges());
+        Set<Privilege> privileges = parseStatementPrivileges(statement, statement.getPrivileges(), EntityKind.SCHEMA);
         for (Privilege privilege : privileges) {
             accessControl.checkCanRevokeSchemaPrivilege(session.toSecurityContext(), privilege, schemaName, createPrincipal(statement.getGrantee()), statement.isGrantOptionFor());
         }
@@ -115,7 +116,7 @@ public class RevokeTask
             }
         }
 
-        Set<Privilege> privileges = parseStatementPrivileges(statement, statement.getPrivileges());
+        Set<Privilege> privileges = parseStatementPrivileges(statement, statement.getPrivileges(), EntityKind.TABLE);
         for (Privilege privilege : privileges) {
             accessControl.checkCanRevokeTablePrivilege(session.toSecurityContext(), privilege, tableName, createPrincipal(statement.getGrantee()), statement.isGrantOptionFor());
         }
