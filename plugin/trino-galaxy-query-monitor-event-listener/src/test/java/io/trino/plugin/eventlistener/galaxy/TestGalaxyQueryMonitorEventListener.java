@@ -156,6 +156,7 @@ public class TestGalaxyQueryMonitorEventListener
                         0,
                         0,
                         0,
+                        0,
                         ImmutableList.of(),
                         1,
                         true,
