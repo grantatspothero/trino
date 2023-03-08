@@ -1,0 +1,38 @@
+name: run-benchmarks
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled]
+
+jobs:
+  benchmarks:
+    name: Run small benchmark suite
+    runs-on: [ sep-cicd, gha-fleet-nano ]
+    if: contains(github.event.pull_request.labels.*.name, 'run-benchmarks')
+    steps:
+      - name: Trigger benchmark run
+        uses: convictional/trigger-workflow-and-wait@v1.6.5
+        id: run-benchmark
+        with:
+          owner: starburstdata
+          repo: benchmarks-gha
+          github_token: ${{ secrets.gitHubAccessToken }}
+          workflow_file_name: benchmark-galaxy-trino.yaml
+          ref: main
+          wait_interval: 30
+          client_payload: '{"TrinoBranchName" : "${{ github.event.pull_request.head.sha }}", "BenchmarkName": "galaxy/s"}'
+          propagate_failure: false
+          trigger_workflow: true
+          wait_workflow: true
+      - name: Add comment in PR
+        uses: peter-evans/create-or-update-comment@v2
+        if: steps.run-benchmark.outputs.conclusion != ''
+        with:
+          token: ${{ secrets.GITHUBACCESSTOKEN }}
+          repository: ${{ github.event.pull_request.base.repo.full_name }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            Finished running benchmark suite for this PR with conclusion: ${{ steps.run-benchmark.outputs.conclusion }}.
+            [link][1] to the workflow.
+
+            [1]: ${{ steps.run-benchmark.outputs.workflow_url }}
