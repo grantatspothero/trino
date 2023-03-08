@@ -112,9 +112,9 @@ public final class GalaxyQueryRunner
                     .build());
         }
 
-        public Builder setAccountClient(TestingAccountClient accountClient)
+        public Builder setAccountClient(Optional<TestingAccountClient> accountClient)
         {
-            this.accountClient = requireNonNull(accountClient, "testingAccountFactory is null");
+            this.accountClient = requireNonNull(accountClient, "accountClient is null").orElse(null);
             return this;
         }
 

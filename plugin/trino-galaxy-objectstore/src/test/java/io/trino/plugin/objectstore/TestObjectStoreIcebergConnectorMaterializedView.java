@@ -73,7 +73,7 @@ public class TestObjectStoreIcebergConnectorMaterializedView
 
         Map<String, String> properties = createObjectStoreProperties(ICEBERG, locationSecurityServer.getClientConfig(), metastore.getMetastoreConfig(minio.getS3Url()), minio.getHiveS3Config());
         DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder(TEST_CATALOG, storageSchemaName)
-                .setAccountClient(galaxyTestHelper.getAccountClient())
+                .setAccountClient(Optional.of(galaxyTestHelper.getAccountClient()))
                 .addPlugin(new ObjectStorePlugin())
                 .addCatalog(TEST_CATALOG, "galaxy_objectstore", properties)
                 .addPlugin(new TpchPlugin())
