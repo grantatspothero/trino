@@ -135,6 +135,7 @@ public class ObjectStoreConnector
         hiveConnector.shutdown();
         icebergConnector.shutdown();
         deltaConnector.shutdown();
+        hudiConnector.shutdown();
     }
 
     @Override
