@@ -10,7 +10,7 @@
 
     <groupId>io.trino</groupId>
     <artifactId>trino-root</artifactId>
-    <version>408-galaxy-1-SNAPSHOT</version>
+    <version>409-galaxy-1-SNAPSHOT</version>
 
     <name>trino-root</name>
     <description>Trino</description>
@@ -26,12 +26,6 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
-
-    <scm>
-        <connection>scm:git:git://github.com/trinodb/trino.git</connection>
-        <url>https://github.com/trinodb/trino</url>
-        <tag>408</tag>
-    </scm>
 
     <properties>
         <air.main.basedir>${project.basedir}</air.main.basedir>
