@@ -18,15 +18,19 @@ import org.testng.annotations.Test;
 import java.io.InputStream;
 import java.util.Properties;
 
-import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.io.Resources.getResource;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestBufferExchangePluginVersion
 {
+    private static final int ALLOWED_VERSION_DRIFT = 1;
+
     /**
      * Ensure Buffer Service based exchange we are using is based on top of OSS version of SPI which
      * matches one which is currently used in stargate-trino.
+     * We allow SPI to be one version newer assuming at least one release backward compatibility of SPI interfaces.
+     * Allowing skew makes it easier to perform galaxy-trino updates after OSS release as we do not to need to bump
+     * buffer service dependency as part of the update.
      */
     @Test
     public void testVersionCompatibility()
@@ -38,18 +42,25 @@ public class TestBufferExchangePluginVersion
         }
 
         String galaxyTrinoVersion = properties.getProperty("project.version");
-        String baseTrinoVersion = galaxyTrinoVersion.replaceFirst("-galaxy-1-SNAPSHOT$", "");
-        checkState(!baseTrinoVersion.equals(galaxyTrinoVersion), "Galaxy Trino version does not match the expected pattern: [%s]", galaxyTrinoVersion);
+        int baseTrinoVersion;
+        try {
+            baseTrinoVersion = Integer.parseInt(galaxyTrinoVersion.replaceFirst("-galaxy-1-SNAPSHOT$", ""));
+        }
+        catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Galaxy Trino version does not match the expected pattern: [%s]".formatted(galaxyTrinoVersion), e);
+        }
 
         String bufferServiceVersion = properties.getProperty("dep.trino-buffer-service.version");
-        String bufferServiceTrinoVersion = bufferServiceVersion.split("-")[0];
+        int bufferServiceTrinoVersion = Integer.parseInt(bufferServiceVersion.split("-")[0]);
 
-        assertThat(bufferServiceTrinoVersion)
+        assertThat(baseTrinoVersion - bufferServiceTrinoVersion)
                 .withFailMessage(
-                        "Buffer Service version [%s] does not match the base Trino version [%s] the Galaxy Trino [%s] is based on.",
+                        "Buffer Service version [%s] does not match the base Trino version [%s] the Galaxy Trino [%s] is based on (allowed SPI version drift is %s)",
                         bufferServiceVersion,
                         baseTrinoVersion,
-                        galaxyTrinoVersion)
-                .isEqualTo(baseTrinoVersion);
+                        galaxyTrinoVersion,
+                        ALLOWED_VERSION_DRIFT)
+                .isLessThanOrEqualTo(ALLOWED_VERSION_DRIFT)
+                .isGreaterThanOrEqualTo(0);
     }
 }
