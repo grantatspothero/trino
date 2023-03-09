@@ -74,12 +74,18 @@ public class TestGalaxySecurityMetadata
         lackeyRoleId = requireNonNull(roles.get(new RoleName(LACKEY_FOLLOWER)), "Didn't find lackey_follower");
     }
 
-    @AfterClass
+    @AfterClass(alwaysRun = true)
     public void cleanup()
             throws Exception
     {
-        helper.close();
+        if (helper != null) {
+            helper.close();
+        }
         helper = null;
+        accessControl = null;
+        metadataApi = null;
+        fearlessRoleId = null;
+        lackeyRoleId = null;
     }
 
     @Test

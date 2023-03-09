@@ -109,12 +109,20 @@ public class TestGalaxyAccessControl
         fearlessAndLackeyIdentities = ImmutableList.of(helper.roleNameToIdentity(FEARLESS_LEADER), helper.roleNameToIdentity(LACKEY_FOLLOWER));
     }
 
-    @AfterClass
+    @AfterClass(alwaysRun = true)
     public void cleanup()
             throws Exception
     {
-        helper.close();
+        if (helper != null) {
+            helper.close();
+        }
         helper = null;
+        accessControl = null;
+        securityMetadata = null;
+        securityApi = null;
+        fearlessRoleId = null;
+        lackeyRoleId = null;
+        fearlessAndLackeyIdentities = null;
     }
 
     @Test

@@ -154,12 +154,26 @@ public class TestGalaxyMetadataApiSpec
         catalogNames = helper.getCatalogIds().getCatalogNames().stream().sorted().collect(toImmutableList());
     }
 
-    @AfterClass
+    @AfterClass(alwaysRun = true)
     public void cleanup()
             throws Exception
     {
-        helper.close();
+        if (helper != null) {
+            helper.close();
+        }
         helper = null;
+        accountClient = null;
+        accountId = null;
+        adminRoleId = null;
+        publicRoleId = null;
+        adminEmail = null;
+        accessControl = null;
+        securityApi = null;
+        client = null;
+        fearlessRoleId = null;
+        lackeyRoleId = null;
+        publicCatalogNames = null;
+        catalogNames = null;
     }
 
     @AfterMethod
