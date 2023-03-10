@@ -345,7 +345,7 @@ public class TestGalaxyAccessControl
 
         finally {
             // Move the ownership and remove the privilege
-            securityApi.revokeEntityPrivileges(toDispatchSession(adminSession()), schemaId, ImmutableSet.of(new RevokeEntityPrivilege(CREATE_SCHEMA, new RoleName(LACKEY_FOLLOWER), false)));
+            securityApi.revokeEntityPrivileges(toDispatchSession(adminSession()), schemaId, ImmutableSet.of(new RevokeEntityPrivilege(CREATE_TABLE, new RoleName(LACKEY_FOLLOWER), false)));
             securityMetadata.setSchemaOwner(adminSession(), name, new TrinoPrincipal(PrincipalType.ROLE, ACCOUNT_ADMIN));
         }
     }
@@ -605,6 +605,7 @@ public class TestGalaxyAccessControl
         securityMetadata.setTableOwner(adminSession(), view, trinoPrincipal(ACCOUNT_ADMIN));
         for (TableId oneTableId : ImmutableList.of(tableId, new TableId(tableId.getCatalogId(), newView.getSchemaTableName().getSchemaName(), newView.getSchemaTableName().getTableName()))) {
             securityApi.revokeEntityPrivileges(toDispatchSession(adminSession()), oneTableId, PRIVILEGE_TRANSLATIONS.values().stream()
+                    .filter(privilege -> privilege != CREATE_TABLE)
                     .map(privilege -> new RevokeEntityPrivilege(privilege, new RoleName(LACKEY_FOLLOWER), false))
                     .collect(Collectors.toSet()));
         }
@@ -918,6 +919,7 @@ public class TestGalaxyAccessControl
         finally {
             // Remove table ownership and privileges
             securityApi.revokeEntityPrivileges(toDispatchSession(adminSession()), tableId, PRIVILEGE_TRANSLATIONS.values().stream()
+                            .filter(privilege -> privilege != CREATE_TABLE)
                             .map(privilege -> new RevokeEntityPrivilege(privilege, new RoleName(LACKEY_FOLLOWER), false))
                             .collect(Collectors.toSet()));
             securityMetadata.setTableOwner(adminSession(), name, new TrinoPrincipal(PrincipalType.ROLE, ACCOUNT_ADMIN));
@@ -971,6 +973,7 @@ public class TestGalaxyAccessControl
         finally {
             // Move the ownership and remove privileges
             securityApi.revokeEntityPrivileges(toDispatchSession(adminSession()), tableId, PRIVILEGE_TRANSLATIONS.values().stream()
+                            .filter(privilege -> privilege != CREATE_TABLE)
                             .map(privilege -> new RevokeEntityPrivilege(privilege, new RoleName(LACKEY_FOLLOWER), false))
                             .collect(Collectors.toSet()));
             securityMetadata.setTableOwner(adminSession(), name, new TrinoPrincipal(PrincipalType.ROLE, ACCOUNT_ADMIN));

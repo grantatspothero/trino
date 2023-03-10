@@ -679,6 +679,9 @@ public class TestGalaxyMetadataApiSpec
                 securityApi.setTableOwner(admin(), table, rolePrincipal(ACCOUNT_ADMIN));
                 for (io.trino.spi.security.Privilege privilege : PRIVILEGE_TRANSLATIONS.keySet()) {
                     Privilege translatedPrivilege = PRIVILEGE_TRANSLATIONS.get(privilege);
+                    if (translatedPrivilege == CREATE_TABLE) {
+                        continue;
+                    }
                     for (GrantKind grantKind : GrantKind.values()) {
                         for (boolean grantOption : grantKind == DENY ? JUST_FALSE : TRUE_AND_FALSE) {
                             Runnable checkNotAllowed = () -> {
@@ -875,6 +878,9 @@ public class TestGalaxyMetadataApiSpec
                 securityApi.setTableOwner(admin(), table, rolePrincipal(ACCOUNT_ADMIN));
                 for (io.trino.spi.security.Privilege privilege : PRIVILEGE_TRANSLATIONS.keySet()) {
                     Privilege translatedPrivilege = PRIVILEGE_TRANSLATIONS.get(privilege);
+                    if (translatedPrivilege == CREATE_TABLE) {
+                        continue;
+                    }
                     Runnable checkNotAllowed = () -> {
                         // The new role has no rights to add entity privileges
                         assertThatThrownBy(() -> securityApi.revokeTablePrivileges(fromRole(roleId), qualifiedTable, ImmutableSet.of(privilege), rolePrincipal(roleName), false))
@@ -1015,6 +1021,9 @@ public class TestGalaxyMetadataApiSpec
 
             for (io.trino.spi.security.Privilege privilege : PRIVILEGE_TRANSLATIONS.keySet()) {
                 Privilege translatedPrivilege = PRIVILEGE_TRANSLATIONS.get(privilege);
+                if (translatedPrivilege == CREATE_TABLE) {
+                    continue;
+                }
                 withNewRole(adminRoleId, (roleName, roleId) -> {
                     Set<TableGrant> catalogGrants = new HashSet<>();
                     SetMultimap<CatalogSchemaName, TableGrant> schemaGrants = HashMultimap.create();
