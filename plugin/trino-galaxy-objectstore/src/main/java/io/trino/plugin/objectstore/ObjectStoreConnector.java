@@ -67,6 +67,7 @@ public class ObjectStoreConnector
     private final ObjectStoreTableProperties tableProperties;
     private final ObjectStoreMaterializedViewProperties materializedViewProperties;
     private final Set<Procedure> procedures;
+    private final List<PropertyMetadata<?>> sessionProperties;
 
     @Inject
     public ObjectStoreConnector(
@@ -93,6 +94,26 @@ public class ObjectStoreConnector
         this.tableProperties = requireNonNull(tableProperties, "tableProperties is null");
         this.materializedViewProperties = requireNonNull(materializedViewProperties, "materializedViewProperties is null");
         this.procedures = ImmutableSet.copyOf(requireNonNull(procedures, "procedures is null"));
+
+        Set<String> ignoredDescriptions = ImmutableSet.<String>builder()
+                .add("compression_codec")
+                .add("projection_pushdown_enabled")
+                .add("timestamp_precision")
+                .add("minimum_assigned_split_weight")
+                .build();
+        Map<String, PropertyMetadata<?>> sessionProperties = new HashMap<>();
+        for (Connector connector : ImmutableSet.of(hiveConnector, icebergConnector, deltaConnector, hudiConnector)) {
+            for (PropertyMetadata<?> property : connector.getSessionProperties()) {
+                PropertyMetadata<?> existing = sessionProperties.putIfAbsent(property.getName(), property);
+                if (existing != null) {
+                    verifyPropertyMetadata(property, existing);
+                    if (!ignoredDescriptions.contains(property.getName())) {
+                        verifyPropertyDescription(property, existing);
+                    }
+                }
+            }
+        }
+        this.sessionProperties = ImmutableList.copyOf(sessionProperties.values());
     }
 
     @Override
@@ -187,26 +208,7 @@ public class ObjectStoreConnector
     @Override
     public List<PropertyMetadata<?>> getSessionProperties()
     {
-        Set<String> ignoredDescriptions = ImmutableSet.<String>builder()
-                .add("compression_codec")
-                .add("projection_pushdown_enabled")
-                .add("timestamp_precision")
-                .add("minimum_assigned_split_weight")
-                .build();
-
-        Map<String, PropertyMetadata<?>> properties = new HashMap<>();
-        for (Connector connector : ImmutableSet.of(hiveConnector, icebergConnector, deltaConnector, hudiConnector)) {
-            for (PropertyMetadata<?> property : connector.getSessionProperties()) {
-                PropertyMetadata<?> existing = properties.putIfAbsent(property.getName(), property);
-                if (existing != null) {
-                    verifyPropertyMetadata(property, existing);
-                    if (!ignoredDescriptions.contains(property.getName())) {
-                        verifyPropertyDescription(property, existing);
-                    }
-                }
-            }
-        }
-        return ImmutableList.copyOf(properties.values());
+        return sessionProperties;
     }
 
     @Override

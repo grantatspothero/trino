@@ -25,6 +25,10 @@ import java.util.Map;
 import static io.trino.spi.transaction.IsolationLevel.READ_UNCOMMITTED;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * @deprecated TODO To be merged with {@link TestObjectStorePlugin}.
+ */
+@Deprecated
 public class TestObjectStoreConnectorFactory
 {
     @Test
