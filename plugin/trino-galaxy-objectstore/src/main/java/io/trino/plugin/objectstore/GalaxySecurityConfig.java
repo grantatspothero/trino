@@ -21,7 +21,7 @@ import javax.validation.constraints.NotEmpty;
 
 import java.net.URI;
 
-public class GalaxyLocationSecurityConfig
+public class GalaxySecurityConfig
 {
     private boolean enabled = true;
     private URI accountUri;
@@ -33,7 +33,7 @@ public class GalaxyLocationSecurityConfig
 
     @Config("galaxy.location-security.enabled")
     @ConfigHidden
-    public GalaxyLocationSecurityConfig setEnabled(boolean enabled)
+    public GalaxySecurityConfig setEnabled(boolean enabled)
     {
         this.enabled = enabled;
         return this;
@@ -47,7 +47,7 @@ public class GalaxyLocationSecurityConfig
 
     @CanIgnoreReturnValue
     @Config("galaxy.account-url")
-    public GalaxyLocationSecurityConfig setAccountUri(URI accountUri)
+    public GalaxySecurityConfig setAccountUri(URI accountUri)
     {
         this.accountUri = accountUri;
         return this;

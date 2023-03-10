@@ -36,7 +36,7 @@ public class GalaxyLocationSecurityModule
     @Override
     protected void setup(Binder binder)
     {
-        if (!buildConfigObject(GalaxyLocationSecurityConfig.class).isEnabled()) {
+        if (!buildConfigObject(GalaxySecurityConfig.class).isEnabled()) {
             install(new DisabledModule());
         }
         else {
@@ -64,7 +64,7 @@ public class GalaxyLocationSecurityModule
             newOptionalBinder(binder, LocationAccessControl.class)
                     .setBinding().to(GalaxyLocationAccessControl.class).in(Scopes.SINGLETON);
 
-            configBinder(binder).bindConfig(GalaxyLocationSecurityConfig.class);
+            configBinder(binder).bindConfig(GalaxySecurityConfig.class);
 
             httpClientBinder(binder).bindHttpClient("galaxy-location-security", ForGalaxyLocationSecurity.class)
                     .withConfigDefaults(config -> {
@@ -75,7 +75,7 @@ public class GalaxyLocationSecurityModule
 
         @Provides
         @Singleton
-        public static TrinoLocationApi createTrinoSecurityApi(@ForGalaxyLocationSecurity HttpClient httpClient, GalaxyLocationSecurityConfig config)
+        public static TrinoLocationApi createTrinoSecurityApi(@ForGalaxyLocationSecurity HttpClient httpClient, GalaxySecurityConfig config)
         {
             return new HttpTrinoLocationClient(config.getAccountUri(), httpClient);
         }

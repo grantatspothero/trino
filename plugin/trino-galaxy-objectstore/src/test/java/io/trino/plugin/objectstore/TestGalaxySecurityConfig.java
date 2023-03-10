@@ -23,12 +23,12 @@ import static io.airlift.configuration.testing.ConfigAssertions.assertFullMappin
 import static io.airlift.configuration.testing.ConfigAssertions.assertRecordedDefaults;
 import static io.airlift.configuration.testing.ConfigAssertions.recordDefaults;
 
-public class TestGalaxyLocationSecurityConfig
+public class TestGalaxySecurityConfig
 {
     @Test
     public void testDefaults()
     {
-        assertRecordedDefaults(recordDefaults(GalaxyLocationSecurityConfig.class)
+        assertRecordedDefaults(recordDefaults(GalaxySecurityConfig.class)
                 .setEnabled(true)
                 .setAccountUri(null));
     }
@@ -41,7 +41,7 @@ public class TestGalaxyLocationSecurityConfig
                 .put("galaxy.account-url", "https://whackadoodle.galaxy.com")
                 .buildOrThrow();
 
-        GalaxyLocationSecurityConfig expected = new GalaxyLocationSecurityConfig()
+        GalaxySecurityConfig expected = new GalaxySecurityConfig()
                 .setEnabled(false)
                 .setAccountUri(URI.create("https://whackadoodle.galaxy.com"));
 
