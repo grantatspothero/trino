@@ -61,7 +61,7 @@ public class TestRedshiftAwsAuthenticationMissingUser
     @Test
     public void testShowSchemasFails()
     {
-        assertQueryFails("SHOW SCHEMAS", "FATAL: user \"IAM:missinguser\" does not exist");
+        assertQueryFails("SHOW SCHEMAS", "Error listing schemas for catalog redshift: FATAL: user \"IAM:missinguser\" does not exist");
     }
 
     private static Session createSession()
