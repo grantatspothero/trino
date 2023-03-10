@@ -49,6 +49,7 @@ public class TestObjectStoreDeltaConnectorTest
         switch (connectorBehavior) {
             case SUPPORTS_DROP_COLUMN:
             case SUPPORTS_RENAME_COLUMN:
+            case SUPPORTS_DROP_FIELD:
             case SUPPORTS_SET_COLUMN_TYPE:
             case SUPPORTS_NOT_NULL_CONSTRAINT:
                 return false;

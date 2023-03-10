@@ -2177,7 +2177,7 @@ public abstract class BaseConnectorTest
             try (TestTable table = new TestTable(getQueryRunner()::execute, "test_drop_field_", "AS SELECT CAST(row(1, 2) AS row(x integer, y integer)) AS col")) {
                 assertQueryFails(
                         "ALTER TABLE " + table.getName() + " DROP COLUMN col.x",
-                        "This connector does not support dropping fields");
+                        "This connector does not support dropping fields|Dropping fields from \\w+ tables is not supported");
             }
             return;
         }

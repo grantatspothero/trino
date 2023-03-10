@@ -329,6 +329,23 @@ public class TestObjectStoreIcebergConnectorTest
         super.testAddAndDropColumnName(columnName);
     }
 
+    @Override
+    public void testDropRowFieldWhenDuplicates()
+    {
+        // Override because Iceberg doesn't allow duplicated field names in a row type
+        assertThatThrownBy(super::testDropRowFieldWhenDuplicates)
+                .hasMessage("Invalid schema: multiple fields for name col.a: 2 and 3");
+    }
+
+    @Override
+    public void testDropAmbiguousRowFieldCaseSensitivity()
+    {
+        // TODO https://github.com/trinodb/trino/issues/16273 The connector can't read row types having ambiguous field names in ORC files. e.g. row(X int, x int)
+        assertThatThrownBy(super::testDropAmbiguousRowFieldCaseSensitivity)
+                .hasMessageContaining("Error opening Iceberg split")
+                .hasStackTraceContaining("Multiple entries with same key");
+    }
+
     @Test
     public void testSystemTables()
     {

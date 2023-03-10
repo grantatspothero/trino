@@ -569,6 +569,20 @@ public class ObjectStoreMetadata
     }
 
     @Override
+    public void dropField(ConnectorSession session, ConnectorTableHandle tableHandle, ColumnHandle column, List<String> fieldPath)
+    {
+        ConnectorMetadata metadata = delegate(tableHandle);
+        TableType tableType = tableType(metadata);
+        switch (tableType) {
+            case HIVE, DELTA, HUDI -> throw new TrinoException(NOT_SUPPORTED, "Dropping fields from %s tables is not supported".formatted(tableType.displayName()));
+            default -> {
+                // handled below
+            }
+        }
+        metadata.dropField(session, tableHandle, column, fieldPath);
+    }
+
+    @Override
     public Optional<ConnectorTableLayout> getNewTableLayout(ConnectorSession session, ConnectorTableMetadata tableMetadata)
     {
         ConnectorMetadata metadata = delegate(tableMetadata);
