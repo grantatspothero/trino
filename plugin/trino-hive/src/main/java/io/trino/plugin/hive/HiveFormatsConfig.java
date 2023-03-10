@@ -18,15 +18,16 @@ import io.airlift.configuration.ConfigDescription;
 
 public class HiveFormatsConfig
 {
-    private boolean csvNativeReaderEnabled = true;
-    private boolean csvNativeWriterEnabled = true;
-    private boolean jsonNativeReaderEnabled = true;
-    private boolean jsonNativeWriterEnabled = true;
-    private boolean regexNativeReaderEnabled = true;
-    private boolean textFileNativeReaderEnabled = true;
-    private boolean textFileNativeWriterEnabled = true;
-    private boolean sequenceFileNativeReaderEnabled = true;
-    private boolean sequenceFileNativeWriterEnabled = true;
+    // TODO: Re-enable native readers and writers for Galaxy after they are vetted in the wild
+    private boolean csvNativeReaderEnabled;
+    private boolean csvNativeWriterEnabled;
+    private boolean jsonNativeReaderEnabled;
+    private boolean jsonNativeWriterEnabled;
+    private boolean regexNativeReaderEnabled;
+    private boolean textFileNativeReaderEnabled;
+    private boolean textFileNativeWriterEnabled;
+    private boolean sequenceFileNativeReaderEnabled;
+    private boolean sequenceFileNativeWriterEnabled;
 
     public boolean isCsvNativeReaderEnabled()
     {

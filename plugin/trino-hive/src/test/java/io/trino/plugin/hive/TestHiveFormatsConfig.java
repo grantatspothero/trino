@@ -28,33 +28,6 @@ public class TestHiveFormatsConfig
     public void testDefaults()
     {
         assertRecordedDefaults(recordDefaults(HiveFormatsConfig.class)
-                .setCsvNativeReaderEnabled(true)
-                .setCsvNativeWriterEnabled(true)
-                .setJsonNativeReaderEnabled(true)
-                .setJsonNativeWriterEnabled(true)
-                .setRegexNativeReaderEnabled(true)
-                .setTextFileNativeReaderEnabled(true)
-                .setTextFileNativeWriterEnabled(true)
-                .setSequenceFileNativeReaderEnabled(true)
-                .setSequenceFileNativeWriterEnabled(true));
-    }
-
-    @Test
-    public void testExplicitPropertyMappings()
-    {
-        Map<String, String> properties = ImmutableMap.<String, String>builder()
-                .put("csv.native-reader.enabled", "false")
-                .put("csv.native-writer.enabled", "false")
-                .put("json.native-reader.enabled", "false")
-                .put("json.native-writer.enabled", "false")
-                .put("regex.native-reader.enabled", "false")
-                .put("text-file.native-reader.enabled", "false")
-                .put("text-file.native-writer.enabled", "false")
-                .put("sequence-file.native-reader.enabled", "false")
-                .put("sequence-file.native-writer.enabled", "false")
-                .buildOrThrow();
-
-        HiveFormatsConfig expected = new HiveFormatsConfig()
                 .setCsvNativeReaderEnabled(false)
                 .setCsvNativeWriterEnabled(false)
                 .setJsonNativeReaderEnabled(false)
@@ -63,7 +36,34 @@ public class TestHiveFormatsConfig
                 .setTextFileNativeReaderEnabled(false)
                 .setTextFileNativeWriterEnabled(false)
                 .setSequenceFileNativeReaderEnabled(false)
-                .setSequenceFileNativeWriterEnabled(false);
+                .setSequenceFileNativeWriterEnabled(false));
+    }
+
+    @Test
+    public void testExplicitPropertyMappings()
+    {
+        Map<String, String> properties = ImmutableMap.<String, String>builder()
+                .put("csv.native-reader.enabled", "true")
+                .put("csv.native-writer.enabled", "true")
+                .put("json.native-reader.enabled", "true")
+                .put("json.native-writer.enabled", "true")
+                .put("regex.native-reader.enabled", "true")
+                .put("text-file.native-reader.enabled", "true")
+                .put("text-file.native-writer.enabled", "true")
+                .put("sequence-file.native-reader.enabled", "true")
+                .put("sequence-file.native-writer.enabled", "true")
+                .buildOrThrow();
+
+        HiveFormatsConfig expected = new HiveFormatsConfig()
+                .setCsvNativeReaderEnabled(true)
+                .setCsvNativeWriterEnabled(true)
+                .setJsonNativeReaderEnabled(true)
+                .setJsonNativeWriterEnabled(true)
+                .setRegexNativeReaderEnabled(true)
+                .setTextFileNativeReaderEnabled(true)
+                .setTextFileNativeWriterEnabled(true)
+                .setSequenceFileNativeReaderEnabled(true)
+                .setSequenceFileNativeWriterEnabled(true);
 
         assertFullMapping(properties, expected);
     }
