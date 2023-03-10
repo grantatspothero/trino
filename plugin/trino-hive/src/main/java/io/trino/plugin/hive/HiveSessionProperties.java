@@ -460,7 +460,7 @@ public final class HiveSessionProperties
                         false),
                 booleanProperty(
                         SORTED_WRITING_ENABLED,
-                        "Enable writing to bucketed sorted tables",
+                        "Enable sorted writes",
                         hiveConfig.isSortedWritingEnabled(),
                         false),
                 booleanProperty(
