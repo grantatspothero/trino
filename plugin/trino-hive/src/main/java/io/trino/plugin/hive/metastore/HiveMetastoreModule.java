@@ -58,7 +58,7 @@ public class HiveMetastoreModule
             bindMetastoreModule("galaxy", new GalaxyMetastoreModule());
         }
 
-        install(new DecoratedHiveMetastoreModule());
+        install(new DecoratedHiveMetastoreModule(true));
     }
 
     private void bindMetastoreModule(String name, Module module)

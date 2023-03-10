@@ -39,7 +39,7 @@ public class IcebergGalaxyMetastoreCatalogModule
         binder.bind(IcebergTableOperationsProvider.class).to(GalaxyMetastoreOperationsProvider.class).in(Scopes.SINGLETON);
         binder.bind(TrinoCatalogFactory.class).to(TrinoGalaxyCatalogFactory.class).in(Scopes.SINGLETON);
         binder.bind(MetastoreValidator.class).asEagerSingleton();
-        install(new DecoratedHiveMetastoreModule());
+        install(new DecoratedHiveMetastoreModule(false));
 
         configBinder(binder).bindConfigDefaults(CachingHiveMetastoreConfig.class, config -> {
             // ensure caching metastore wrapper isn't created, as it's not leveraged by Iceberg
