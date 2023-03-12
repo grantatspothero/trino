@@ -1508,6 +1508,19 @@
 
             <dependency>
                 <groupId>com.starburstdata.trino.plugins</groupId>
+                <artifactId>starburst-dynamic-filtering</artifactId>
+                <version>${dep.starburst-trino-plugins.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.starburstdata.trino.plugins</groupId>
+                <artifactId>starburst-dynamic-filtering</artifactId>
+                <type>test-jar</type>
+                <version>${dep.starburst-trino-plugins.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.starburstdata.trino.plugins</groupId>
                 <artifactId>starburst-snowflake</artifactId>
                 <version>${dep.starburst-trino-plugins.version}</version>
             </dependency>

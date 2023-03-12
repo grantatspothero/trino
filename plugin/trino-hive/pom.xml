@@ -231,6 +231,11 @@
         </dependency>
 
         <dependency>
+            <groupId>com.starburstdata.trino.plugins</groupId>
+            <artifactId>starburst-dynamic-filtering</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>dev.failsafe</groupId>
             <artifactId>failsafe</artifactId>
         </dependency>
@@ -449,6 +454,13 @@
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>testing</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.starburstdata.trino.plugins</groupId>
+            <artifactId>starburst-dynamic-filtering</artifactId>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
 

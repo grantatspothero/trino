@@ -19,6 +19,8 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
+import com.starburstdata.trino.plugins.dynamicfiltering.DynamicRowFilteringModule;
+import com.starburstdata.trino.plugins.dynamicfiltering.ForDynamicRowFiltering;
 import io.airlift.event.client.EventClient;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.filesystem.hdfs.HdfsFileSystemFactory;
@@ -161,6 +163,15 @@ public class HiveModule
         configBinder(binder).bindConfig(ParquetReaderConfig.class);
         configBinder(binder).bindConfig(ParquetWriterConfig.class);
         fileWriterFactoryBinder.addBinding().to(ParquetFileWriterFactory.class).in(Scopes.SINGLETON);
+
+        binder.bind(ConnectorPageSourceProvider.class)
+                .annotatedWith(ForDynamicRowFiltering.class)
+                .to(HivePageSourceProvider.class)
+                .in(Scopes.SINGLETON);
+        binder.bind(Runnable.class)
+                .annotatedWith(ForDynamicRowFiltering.class)
+                .toInstance(() -> {});
+        binder.install(new DynamicRowFilteringModule(() -> true));
     }
 
     @Singleton
