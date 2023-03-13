@@ -98,6 +98,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -142,6 +143,7 @@ public class ObjectStoreMetadata
     private final ConnectorMetadata hudiMetadata;
     private final ObjectStoreTableProperties tableProperties;
     private final ObjectStoreMaterializedViewProperties materializedViewProperties;
+    private final TableTypeCache tableTypeCache;
 
     public ObjectStoreMetadata(
             ConnectorMetadata hiveMetadata,
@@ -149,7 +151,8 @@ public class ObjectStoreMetadata
             ConnectorMetadata deltaMetadata,
             ConnectorMetadata hudiMetadata,
             ObjectStoreTableProperties tableProperties,
-            ObjectStoreMaterializedViewProperties materializedViewProperties)
+            ObjectStoreMaterializedViewProperties materializedViewProperties,
+            TableTypeCache tableTypeCache)
     {
         this.hiveMetadata = requireNonNull(hiveMetadata, "hiveMetadata is null");
         this.icebergMetadata = requireNonNull(icebergMetadata, "icebergMetadata is null");
@@ -157,6 +160,7 @@ public class ObjectStoreMetadata
         this.hudiMetadata = requireNonNull(hudiMetadata, "hudiMetadata is null");
         this.tableProperties = requireNonNull(tableProperties, "tableProperties is null");
         this.materializedViewProperties = requireNonNull(materializedViewProperties, "materializedViewProperties is null");
+        this.tableTypeCache = requireNonNull(tableTypeCache, "tableTypeCache is null");
     }
 
     @Override
@@ -175,34 +179,73 @@ public class ObjectStoreMetadata
     @Override
     public ConnectorTableHandle getTableHandle(ConnectorSession session, SchemaTableName tableName)
     {
-        try {
-            return icebergMetadata.getTableHandle(session, tableName, Optional.empty(), Optional.empty());
+        ConnectorTableHandle tableHandle = getTableHandleInOrder(session, tableName, tableTypeCache.getTableTypeAffinity(tableName));
+        if (tableHandle != null) {
+            tableTypeCache.update(tableName, tableType(tableHandle));
         }
-        catch (TrinoException e) {
-            if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
-                throw e;
+        return tableHandle;
+    }
+
+    @Nullable
+    private ConnectorTableHandle getTableHandleInOrder(ConnectorSession session, SchemaTableName tableName, List<TableType> candidateTypes)
+    {
+        checkArgument(candidateTypes.size() == 4);
+        TrinoException deferredException = null;
+        for (TableType candidateType : candidateTypes) {
+            switch (candidateType) {
+                case ICEBERG -> {
+                    try {
+                        return icebergMetadata.getTableHandle(session, tableName, Optional.empty(), Optional.empty());
+                    }
+                    catch (TrinoException e) {
+                        if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
+                            throw e;
+                        }
+                        deferredException = e;
+                    }
+                }
+
+                case DELTA -> {
+                    try {
+                        return deltaMetadata.getTableHandle(session, tableName);
+                    }
+                    catch (TrinoException e) {
+                        if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
+                            throw e;
+                        }
+                        deferredException = e;
+                    }
+                }
+
+                case HUDI -> {
+                    try {
+                        return hudiMetadata.getTableHandle(session, tableName);
+                    }
+                    catch (TrinoException e) {
+                        if (!isError(e, HUDI_UNKNOWN_TABLE_TYPE)) {
+                            throw e;
+                        }
+                        deferredException = e;
+                    }
+                }
+
+                case HIVE -> {
+                    try {
+                        return hiveMetadata.getTableHandle(session, tableName);
+                    }
+                    catch (TrinoException e) {
+                        if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
+                            throw e;
+                        }
+                        deferredException = e;
+                    }
+                }
             }
         }
 
-        try {
-            return deltaMetadata.getTableHandle(session, tableName);
-        }
-        catch (TrinoException e) {
-            if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
-                throw e;
-            }
-        }
-
-        try {
-            return hudiMetadata.getTableHandle(session, tableName);
-        }
-        catch (TrinoException e) {
-            if (!isError(e, HUDI_UNKNOWN_TABLE_TYPE)) {
-                throw e;
-            }
-        }
-
-        return hiveMetadata.getTableHandle(session, tableName);
+        // Propagate last exception
+        verify(deferredException != null, "deferredException cannot be null");
+        throw deferredException;
     }
 
     @Nullable
@@ -869,6 +912,23 @@ public class ObjectStoreMetadata
             case DELTA -> deltaMetadata;
             case HUDI -> hudiMetadata;
         };
+    }
+
+    private TableType tableType(ConnectorTableHandle handle)
+    {
+        if (handle instanceof HiveTableHandle) {
+            return HIVE;
+        }
+        if (handle instanceof IcebergTableHandle) {
+            return ICEBERG;
+        }
+        if (handle instanceof DeltaLakeTableHandle) {
+            return DELTA;
+        }
+        if (handle instanceof HudiTableHandle) {
+            return HUDI;
+        }
+        throw new VerifyException("Unhandled class: " + handle.getClass().getName());
     }
 
     private ConnectorMetadata delegate(ConnectorTableHandle handle)

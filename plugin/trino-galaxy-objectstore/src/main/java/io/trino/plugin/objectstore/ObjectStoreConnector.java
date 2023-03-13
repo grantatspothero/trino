@@ -68,6 +68,7 @@ public class ObjectStoreConnector
     private final ObjectStoreMaterializedViewProperties materializedViewProperties;
     private final Set<Procedure> procedures;
     private final List<PropertyMetadata<?>> sessionProperties;
+    private final TableTypeCache tableTypeCache = new TableTypeCache();
 
     @Inject
     public ObjectStoreConnector(
@@ -172,7 +173,14 @@ public class ObjectStoreConnector
         ConnectorMetadata deltaMetadata = deltaConnector.getMetadata(session, handle.getDeltaHandle());
         ConnectorMetadata hudiMetadata = hudiConnector.getMetadata(session, handle.getHudiHandle());
 
-        return new ObjectStoreMetadata(hiveMetadata, icebergMetadata, deltaMetadata, hudiMetadata, tableProperties, materializedViewProperties);
+        return new ObjectStoreMetadata(
+                hiveMetadata,
+                icebergMetadata,
+                deltaMetadata,
+                hudiMetadata,
+                tableProperties,
+                materializedViewProperties,
+                tableTypeCache);
     }
 
     @Override
