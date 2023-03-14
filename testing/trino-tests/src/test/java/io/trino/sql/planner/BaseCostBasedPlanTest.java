@@ -225,7 +225,7 @@ public abstract class BaseCostBasedPlanTest
         switch (topDirectoryName) {
             case "trino-tests":
                 return workingDir;
-            case "trino":
+            case "trino", "galaxy-trino":
                 return workingDir.resolve("testing/trino-tests");
             default:
                 throw new IllegalStateException("This class must be executed from trino-tests or Trino source directory");
