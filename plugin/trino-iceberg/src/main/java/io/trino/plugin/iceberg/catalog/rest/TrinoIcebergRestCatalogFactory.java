@@ -14,6 +14,8 @@
 package io.trino.plugin.iceberg.catalog.rest;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import io.trino.hdfs.ConfigurationInitializer;
 import io.trino.hdfs.ConfigurationUtils;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.hive.NodeVersion;
@@ -22,7 +24,9 @@ import io.trino.plugin.iceberg.catalog.TrinoCatalog;
 import io.trino.plugin.iceberg.catalog.TrinoCatalogFactory;
 import io.trino.plugin.iceberg.catalog.rest.IcebergRestCatalogConfig.SessionType;
 import io.trino.spi.security.ConnectorIdentity;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.CatalogProperties;
+import org.apache.iceberg.hadoop.HadoopFileIO;
 import org.apache.iceberg.rest.RESTSessionCatalog;
 
 import javax.annotation.concurrent.GuardedBy;
@@ -30,8 +34,10 @@ import javax.inject.Inject;
 
 import java.net.URI;
 import java.util.Optional;
+import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.iceberg.CatalogProperties.FILE_IO_IMPL;
 
 public class TrinoIcebergRestCatalogFactory
         implements TrinoCatalogFactory
@@ -43,6 +49,7 @@ public class TrinoIcebergRestCatalogFactory
     private final SessionType sessionType;
     private final SecurityProperties securityProperties;
     private final boolean uniqueTableLocation;
+    private final Set<ConfigurationInitializer> configurationInitializers;
 
     @GuardedBy("this")
     private RESTSessionCatalog icebergCatalog;
@@ -53,7 +60,8 @@ public class TrinoIcebergRestCatalogFactory
             IcebergRestCatalogConfig restConfig,
             SecurityProperties securityProperties,
             IcebergConfig icebergConfig,
-            NodeVersion nodeVersion)
+            NodeVersion nodeVersion,
+            Set<ConfigurationInitializer> configurationInitializers)
     {
         this.catalogName = requireNonNull(catalogName, "catalogName is null");
         this.trinoVersion = requireNonNull(nodeVersion, "nodeVersion is null").toString();
@@ -64,6 +72,7 @@ public class TrinoIcebergRestCatalogFactory
         this.securityProperties = requireNonNull(securityProperties, "securityProperties is null");
         requireNonNull(icebergConfig, "icebergConfig is null");
         this.uniqueTableLocation = icebergConfig.isUniqueTableLocation();
+        this.configurationInitializers = ImmutableSet.copyOf(requireNonNull(configurationInitializers, "configurationInitializers is null"));
     }
 
     @Override
@@ -78,7 +87,10 @@ public class TrinoIcebergRestCatalogFactory
             properties.put("trino-version", trinoVersion);
             properties.putAll(securityProperties.get());
             RESTSessionCatalog icebergCatalogInstance = new RESTSessionCatalog();
-            icebergCatalogInstance.setConf(ConfigurationUtils.getInitialConfiguration());
+            Configuration configuration = ConfigurationUtils.getInitialConfiguration();
+            configurationInitializers.forEach(configurationInitializer -> configurationInitializer.initializeConfiguration(configuration));
+            configuration.set(FILE_IO_IMPL, HadoopFileIO.class.getName());
+            icebergCatalogInstance.setConf(configuration);
             icebergCatalogInstance.initialize(catalogName.toString(), properties.buildOrThrow());
 
             icebergCatalog = icebergCatalogInstance;
