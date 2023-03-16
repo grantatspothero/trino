@@ -85,11 +85,11 @@ public class TrinoIcebergRestCatalogFactory
             properties.put(CatalogProperties.URI, serverUri.toString());
             warehouse.ifPresent(location -> properties.put(CatalogProperties.WAREHOUSE_LOCATION, location));
             properties.put("trino-version", trinoVersion);
+            properties.put(FILE_IO_IMPL, HadoopFileIO.class.getName());
             properties.putAll(securityProperties.get());
             RESTSessionCatalog icebergCatalogInstance = new RESTSessionCatalog();
             Configuration configuration = ConfigurationUtils.getInitialConfiguration();
             configurationInitializers.forEach(configurationInitializer -> configurationInitializer.initializeConfiguration(configuration));
-            configuration.set(FILE_IO_IMPL, HadoopFileIO.class.getName());
             icebergCatalogInstance.setConf(configuration);
             icebergCatalogInstance.initialize(catalogName.toString(), properties.buildOrThrow());
 
