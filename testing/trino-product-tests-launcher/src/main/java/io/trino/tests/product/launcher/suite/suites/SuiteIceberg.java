@@ -16,6 +16,7 @@ package io.trino.tests.product.launcher.suite.suites;
 import com.google.common.collect.ImmutableList;
 import io.trino.tests.product.launcher.env.EnvironmentConfig;
 import io.trino.tests.product.launcher.env.EnvironmentDefaults;
+import io.trino.tests.product.launcher.env.environment.EnvMultinodeIcebergTabular;
 import io.trino.tests.product.launcher.env.environment.EnvSinglenodeHiveIcebergRedirections;
 import io.trino.tests.product.launcher.env.environment.EnvSinglenodeSparkIceberg;
 import io.trino.tests.product.launcher.env.environment.EnvSinglenodeSparkIcebergJdbcCatalog;
@@ -46,6 +47,9 @@ public class SuiteIceberg
                         .build(),
                 testOnEnvironment(EnvSinglenodeSparkIcebergRest.class)
                         .withGroups("configured_features", "iceberg_rest")
+                        .build(),
+                testOnEnvironment(EnvMultinodeIcebergTabular.class)
+                        .withGroups("configured_features", "iceberg_tabular")
                         .build(),
                 testOnEnvironment(EnvSinglenodeSparkIcebergJdbcCatalog.class)
                         .withGroups("configured_features", "iceberg_jdbc")

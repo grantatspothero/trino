@@ -21,6 +21,7 @@ import static io.trino.tempto.assertions.QueryAssert.assertQueryFailure;
 import static io.trino.tempto.assertions.QueryAssert.assertThat;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static io.trino.tests.product.TestGroups.ICEBERG;
+import static io.trino.tests.product.TestGroups.ICEBERG_TABULAR;
 import static io.trino.tests.product.TestGroups.PROFILE_SPECIFIC_TESTS;
 import static io.trino.tests.product.utils.QueryExecutors.onTrino;
 import static java.lang.String.format;
@@ -28,7 +29,7 @@ import static java.lang.String.format;
 public class TestIcebergProcedureCalls
         extends ProductTest
 {
-    @Test(groups = {ICEBERG, PROFILE_SPECIFIC_TESTS})
+    @Test(groups = {ICEBERG, ICEBERG_TABULAR, PROFILE_SPECIFIC_TESTS})
     public void testRollbackToSnapshot()
             throws InterruptedException
     {
@@ -48,7 +49,7 @@ public class TestIcebergProcedureCalls
         onTrino().executeQuery(format("DROP TABLE IF EXISTS %s", tableName));
     }
 
-    @Test(groups = {ICEBERG, PROFILE_SPECIFIC_TESTS})
+    @Test(groups = {ICEBERG, ICEBERG_TABULAR, PROFILE_SPECIFIC_TESTS})
     public void testRollbackToSnapshotWithNullArgument()
     {
         onTrino().executeQuery("USE iceberg.default");
