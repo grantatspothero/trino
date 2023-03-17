@@ -411,6 +411,30 @@ public class GalaxySecurityMetadata
         accessControlClient.entityDropped(toDispatchSession(session), toTableEntity(table));
     }
 
+    @Override
+    public void columnCreated(Session session, CatalogSchemaTableName table, String column)
+    {
+        // this will never happen but be safe
+        throwIfSystemCatalog(table);
+        accessControlClient.entityCreated(toDispatchSession(session), toColumnEntity(table, column));
+    }
+
+    @Override
+    public void columnRenamed(Session session, CatalogSchemaTableName table, String oldName, String newName)
+    {
+        // this will never happen but be safe
+        throwIfSystemCatalog(table);
+        accessControlClient.entityRenamed(toDispatchSession(session), toColumnEntity(table, oldName), toColumnEntity(table, newName));
+    }
+
+    @Override
+    public void columnDropped(Session session, CatalogSchemaTableName table, String column)
+    {
+        // this will never happen but be safe
+        throwIfSystemCatalog(table);
+        accessControlClient.entityDropped(toDispatchSession(session), toColumnEntity(table, column));
+    }
+
     // Helper methods
 
     private static GalaxyPrincipal toGalaxyPrincipal(TrinoPrincipal principal)
@@ -462,6 +486,11 @@ public class GalaxySecurityMetadata
     private TableId toTableEntity(CatalogSchemaTableName table)
     {
         return new TableId(translateCatalogNameToId(table.getCatalogName()), table.getSchemaTableName().getSchemaName(), table.getSchemaTableName().getTableName());
+    }
+
+    private ColumnId toColumnEntity(CatalogSchemaTableName table, String columnName)
+    {
+        return new ColumnId(translateCatalogNameToId(table.getCatalogName()), table.getSchemaTableName().getSchemaName(), table.getSchemaTableName().getTableName(), columnName);
     }
 
     private CatalogId translateCatalogNameToId(String catalogName)

@@ -215,6 +215,24 @@ public class MetadataSystemSecurityMetadata
         get(session).tableDropped(session, table);
     }
 
+    @Override
+    public void columnCreated(Session session, CatalogSchemaTableName table, String column)
+    {
+        get(session).columnCreated(session, table, column);
+    }
+
+    @Override
+    public void columnRenamed(Session session, CatalogSchemaTableName table, String oldName, String newName)
+    {
+        get(session).columnRenamed(session, table, oldName, newName);
+    }
+
+    @Override
+    public void columnDropped(Session session, CatalogSchemaTableName table, String column)
+    {
+        get(session).columnDropped(session, table, column);
+    }
+
     private GalaxySecurityMetadata get(Session session)
     {
         TransactionId transactionId = session.getTransactionId().orElseThrow(() -> new IllegalStateException("Transaction ID is not present"));

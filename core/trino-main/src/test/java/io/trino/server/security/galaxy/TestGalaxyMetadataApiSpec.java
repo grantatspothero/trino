@@ -114,6 +114,7 @@ public class TestGalaxyMetadataApiSpec
     private static final AtomicInteger CATALOG_COUNTER = new AtomicInteger(0);
     private static final AtomicInteger SCHEMA_COUNTER = new AtomicInteger(1);
     private static final AtomicInteger TABLE_COUNTER = new AtomicInteger(1);
+    private static final AtomicInteger COLUMN_COUNTER = new AtomicInteger(1);
     private static final List<Boolean> TRUE_AND_FALSE = ImmutableList.of(true, false);
     private static final List<Boolean> JUST_FALSE = ImmutableList.of(false);
 
@@ -1451,6 +1452,7 @@ public class TestGalaxyMetadataApiSpec
                         SchemaId schemaId = makeSchemaId(catalogId);
                         CatalogSchemaName schema = new CatalogSchemaName(catalogName, schemaId.getSchemaName());
                         TableId tableId = makeTableId(schemaId);
+                        ColumnId columnId = makeColumnId(tableId);
                         CatalogSchemaTableName table = new CatalogSchemaTableName(catalogName, tableId.getSchemaName(), tableId.getTableName());
                         List<EntityId> entityIds = ImmutableList.of(schemaId, tableId);
 
@@ -1472,6 +1474,10 @@ public class TestGalaxyMetadataApiSpec
                                 case TABLE -> securityApi.tableCreated(fromRole(newRoleId), table);
                                 default -> throw new IllegalArgumentException("Unrecognized entityKind " + entityId.getEntityKind());
                             }
+
+                            // show that column creation works and defaults to the appropriate owner
+                            securityApi.columnCreated(fromRole(newRoleId), table, columnId.getColumnName());
+                            assertThat(extractPrivileges(client.getEntityPrivileges(dispatchSession(newRoleId), tableId))).isEqualTo(entityId.getEntityKind() == TABLE ? privileges : ImmutableSet.of());
 
                             // Show that the newRoleName has all privileges
                             assertThat(extractPrivileges(client.getEntityPrivileges(dispatchSession(newRoleId), entityId))).isEqualTo(privileges);
@@ -1504,6 +1510,7 @@ public class TestGalaxyMetadataApiSpec
                 TableId newTableId = makeTableId(newSchemaId);
                 SchemaId lastSchemaId = makeSchemaId(catalogId);
                 TableId lastTableId = makeTableId(lastSchemaId);
+                ColumnId columnId = makeColumnId(tableId);
                 Map<EntityId, EntityId> entityIds = ImmutableMap.of(schemaId, newSchemaId, tableId, newTableId);
 
                 entityIds.forEach((entityId, newEntityId) -> {
@@ -1531,6 +1538,19 @@ public class TestGalaxyMetadataApiSpec
                         }
                         assertThat(extractPrivileges(client.getEntityPrivileges(dispatchSession(adminRoleId), entityId))).isEqualTo(privileges);
 
+                        // create some column privileges under the entity, and make sure those work as well
+                        io.trino.spi.security.Privilege columnPrivilege = translatedPrivilege == SELECT ? io.trino.spi.security.Privilege.UPDATE : io.trino.spi.security.Privilege.SELECT;
+                        Map<String, ContentsVisibility> expectedColumnPrivileges = switch (entityId.getEntityKind()) {
+                            case SCHEMA -> ImmutableMap.of(columnPrivilege.name(), new ContentsVisibility(DENY, ImmutableSet.of(columnId.getColumnName())));
+                            case TABLE -> ImmutableMap.of(translatedPrivilege.name(), new ContentsVisibility(ALLOW, ImmutableSet.of()), columnPrivilege.name(), new ContentsVisibility(DENY, ImmutableSet.of(columnId.getColumnName())));
+                            default -> throw new IllegalArgumentException("Unrecognized entityKind " + entityId.getEntityKind());
+                        };
+                        securityApi.grantColumnPrivileges(admin(),
+                                new QualifiedObjectName(catalogName, entityId.getSchemaName(), columnId.getTableName()),
+                                columnId.getColumnName(), ImmutableSet.of(columnPrivilege), rolePrincipal(roleName), false);
+                        assertThat(client.getEntityPrivileges(dispatchSession(roleId), tableId).getColumnPrivileges())
+                                .isEqualTo(expectedColumnPrivileges);
+
                         // Set ownership to roleName and show that it took
                         setEntityOwner(adminRoleId, roleId, entityId);
                         assertThat(accountClient.getEntityOwnership(entityId)).isEqualTo(roleId);
@@ -1543,6 +1563,34 @@ public class TestGalaxyMetadataApiSpec
 
                         // And that there are no privileges on the original entityId
                         assertThat(client.getEntityPrivileges(dispatchSession(adminRoleId), entityId).getPrivileges()).isEmpty();
+
+                        // And that the column privileges were renamed properly as well
+                        // because the role is the owner of the new entity, it has the synthetic VISIBLE privilege as well
+                        expectedColumnPrivileges = switch (entityId.getEntityKind()) {
+                            case SCHEMA -> ImmutableMap.of(columnPrivilege.name(), new ContentsVisibility(DENY, ImmutableSet.of(columnId.getColumnName())),
+                                    "VISIBLE", new ContentsVisibility(ALLOW, ImmutableSet.of()));
+                            case TABLE -> ImmutableMap.of(privilege.name(), new ContentsVisibility(ALLOW, ImmutableSet.of()),
+                                    columnPrivilege.name(), new ContentsVisibility(DENY, ImmutableSet.of(columnId.getColumnName())),
+                                    "VISIBLE", new ContentsVisibility(ALLOW, ImmutableSet.of()));
+                            default -> throw new IllegalArgumentException("Unrecognized entityKind " + entityId.getEntityKind());
+                        };
+                        TableId expectedTableIdForColumn = entityId.getEntityKind() == TABLE ? (TableId) newEntityId : new TableId(columnId.getCatalogId(), newEntityId.getSchemaName(), columnId.getTableName());
+                        assertThat(client.getEntityPrivileges(dispatchSession(roleId), expectedTableIdForColumn).getColumnPrivileges())
+                                .isEqualTo(expectedColumnPrivileges);
+
+                        // renaming column works as well
+                        expectedColumnPrivileges = switch (entityId.getEntityKind()) {
+                            case SCHEMA -> ImmutableMap.of(columnPrivilege.name(), new ContentsVisibility(DENY, ImmutableSet.of("newName")),
+                                    "VISIBLE", new ContentsVisibility(ALLOW, ImmutableSet.of()));
+                            case TABLE -> ImmutableMap.of(privilege.name(), new ContentsVisibility(ALLOW, ImmutableSet.of()),
+                                    columnPrivilege.name(), new ContentsVisibility(DENY, ImmutableSet.of("newName")),
+                                    "VISIBLE", new ContentsVisibility(ALLOW, ImmutableSet.of()));
+                            default -> throw new IllegalArgumentException("Unrecognized entityKind " + entityId.getEntityKind());
+                        };
+                        client.entityRenamed(dispatchSession(adminRoleId),
+                                new ColumnId(expectedTableIdForColumn.getCatalogId(), expectedTableIdForColumn.getSchemaName(), expectedTableIdForColumn.getTableName(), columnId.getColumnName()),
+                                new ColumnId(expectedTableIdForColumn.getCatalogId(), expectedTableIdForColumn.getSchemaName(), expectedTableIdForColumn.getTableName(), "newName"));
+                        assertThat(client.getEntityPrivileges(dispatchSession(roleId), expectedTableIdForColumn).getColumnPrivileges()).isEqualTo(expectedColumnPrivileges);
 
                         // Show that the owned entityId has been updated
                         assertThat(accountClient.getEntityOwnership(newEntityId)).isEqualTo(roleId);
@@ -1607,6 +1655,8 @@ public class TestGalaxyMetadataApiSpec
                 SchemaId newSchemaId = makeSchemaId(catalogId);
                 TableId tableId = makeTableId(schemaId);
                 TableId newTableId = makeTableId(newSchemaId);
+                ColumnId columnId1 = makeColumnId(tableId);
+                ColumnId columnId2 = makeColumnId(tableId);
                 Map<EntityId, EntityId> entityIds = ImmutableMap.of(schemaId, newSchemaId, tableId, newTableId);
                 entityIds.forEach((entityId, newEntityId) -> {
                     for (io.trino.spi.security.Privilege privilege : PRIVILEGE_TRANSLATIONS.keySet()) {
@@ -1635,6 +1685,31 @@ public class TestGalaxyMetadataApiSpec
                             default -> throw new IllegalArgumentException("Unrecognized entityKind " + entityId.getEntityKind());
                         }
 
+                        // grant column privileges as well to make sure they get dropped appropriately
+                        QualifiedObjectName table = new QualifiedObjectName(catalogName, tableId.getSchemaName(), tableId.getTableName());
+                        io.trino.spi.security.Privilege columnPrivilege = translatedPrivilege == SELECT ? io.trino.spi.security.Privilege.UPDATE : io.trino.spi.security.Privilege.SELECT;
+                        securityApi.grantColumnPrivileges(admin(), table, columnId1.getColumnName(), ImmutableSet.of(columnPrivilege), rolePrincipal(otherRoleName), false);
+                        securityApi.grantColumnPrivileges(admin(), table, columnId2.getColumnName(), ImmutableSet.of(columnPrivilege), rolePrincipal(otherRoleName), false);
+
+                        Map<String, ContentsVisibility> expectedColumnPrivileges = switch (entityId.getEntityKind()) {
+                            case SCHEMA -> ImmutableMap.of(columnPrivilege.name(), new ContentsVisibility(DENY, ImmutableSet.of(columnId1.getColumnName(), columnId2.getColumnName())));
+                            case TABLE -> ImmutableMap.of(translatedPrivilege.name(), new ContentsVisibility(ALLOW, ImmutableSet.of()), columnPrivilege.name(), new ContentsVisibility(DENY, ImmutableSet.of(columnId1.getColumnName(), columnId2.getColumnName())));
+                            default -> throw new IllegalArgumentException("Unrecognized entityKind " + entityId.getEntityKind());
+                        };
+                        assertThat(client.getEntityPrivileges(dispatchSession(otherRoleId), tableId).getColumnPrivileges())
+                                .isEqualTo(expectedColumnPrivileges);
+
+                        // drop a column and make sure the privilege is dropped accordingly
+                        securityApi.columnDropped(admin(), new CatalogSchemaTableName(catalogName, columnId1.getSchemaName(), columnId1.getTableName()), columnId1.getColumnName());
+                        expectedColumnPrivileges = switch (entityId.getEntityKind()) {
+                            case SCHEMA -> ImmutableMap.of(columnPrivilege.name(), new ContentsVisibility(DENY, ImmutableSet.of(columnId2.getColumnName())));
+                            case TABLE -> ImmutableMap.of(translatedPrivilege.name(), new ContentsVisibility(ALLOW, ImmutableSet.of()),
+                                    columnPrivilege.name(), new ContentsVisibility(DENY, ImmutableSet.of(columnId2.getColumnName())));
+                            default -> throw new IllegalArgumentException("Unrecognized entityKind " + entityId.getEntityKind());
+                        };
+                        assertThat(client.getEntityPrivileges(dispatchSession(otherRoleId), tableId).getColumnPrivileges())
+                                .isEqualTo(expectedColumnPrivileges);
+
                         // Set ownership to otherRoleName and show that it took
                         setEntityOwner(adminRoleId, otherRoleId, entityId);
                         assertThat(accountClient.getEntityOwnership(entityId)).isEqualTo(otherRoleId);
@@ -1652,8 +1727,10 @@ public class TestGalaxyMetadataApiSpec
                             default -> throw new IllegalArgumentException("Don't handle entityKind " + entityId.getEntityKind());
                         }
 
-                        // Show that the privilege granted is gone
-                        assertThat(extractPrivileges(client.getEntityPrivileges(dispatchSession(otherRoleId), entityId))).isEmpty();
+                        // Show that the privilege granted is gone and the column privilege was dropped when the container entity was dropped
+                        EntityPrivileges entityPrivileges = client.getEntityPrivileges(dispatchSession(otherRoleId), entityId);
+                        assertThat(extractPrivileges(entityPrivileges)).isEmpty();
+                        assertThat(entityPrivileges.getColumnPrivileges()).isEmpty();
 
                         // Show that grant is gone
                         assertThat(securityApi.listRoleGrants(admin(), rolePrincipal)).containsOnly(publicGrant(roleName));
@@ -2061,9 +2138,19 @@ public class TestGalaxyMetadataApiSpec
         return "table" + TABLE_COUNTER.getAndIncrement();
     }
 
+    private static String makeColumnName()
+    {
+        return "column" + COLUMN_COUNTER.getAndIncrement();
+    }
+
     private static TableId makeTableId(SchemaId schemaId)
     {
         return new TableId(schemaId.getCatalogId(), schemaId.getSchemaName(), makeTableName());
+    }
+
+    private static ColumnId makeColumnId(TableId tableId)
+    {
+        return new ColumnId(tableId.getCatalogId(), tableId.getSchemaName(), tableId.getTableName(), makeColumnName());
     }
 
     private static Set<Privilege> extractPrivileges(EntityPrivileges grants)
