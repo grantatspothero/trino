@@ -18,7 +18,10 @@ import io.trino.spi.connector.ConnectorFactory;
 import io.trino.testing.TestingConnectorContext;
 import org.testng.annotations.Test;
 
+import java.util.Map;
+
 import static com.google.common.collect.Iterables.getOnlyElement;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestObjectStorePlugin
 {
@@ -70,6 +73,40 @@ public class TestObjectStorePlugin
                                 .buildOrThrow(),
                         new TestingConnectorContext())
                 .shutdown();
+    }
+
+    @Test
+    public void testCreateConnectorFailsWithUnusedConfig()
+    {
+        assertCreateConnectorFails("DELTA__unused_config", "somevalue", "Configuration property 'unused_config' was not used");
+        assertCreateConnectorFails("HIVE__unused_config", "somevalue", "Configuration property 'unused_config' was not used");
+        assertCreateConnectorFails("ICEBERG__unused_config", "somevalue", "Configuration property 'unused_config' was not used");
+        assertCreateConnectorFails("NOTEXISTS__hive.metastore.uri", "somevalue", "Unused config: NOTEXISTS__hive.metastore.uri");
+    }
+
+    private static void assertCreateConnectorFails(String key, String value, String exceptionString)
+    {
+        ConnectorFactory factory = getConnectorFactory();
+
+        assertThatThrownBy(() -> factory.create(
+                        "test",
+                        ImmutableMap.<String, String>builder()
+                                .put(key, value)
+                                .putAll(withAllTableTypes("hive.metastore.uri", "thrift://localhost:1234"))
+                                .putAll(withAllTableTypes("galaxy.account-url", "https://localhost:1234"))
+                                .buildOrThrow(),
+                        new TestingConnectorContext()))
+                .hasMessageContaining(exceptionString);
+    }
+
+    private static Map<String, String> withAllTableTypes(String key, String value)
+    {
+        return ImmutableMap.<String, String>builder()
+                .put("HIVE__" + key, value)
+                .put("ICEBERG__" + key, value)
+                .put("DELTA__" + key, value)
+                .put("HUDI__" + key, value)
+                .buildOrThrow();
     }
 
     private static ConnectorFactory getConnectorFactory()
