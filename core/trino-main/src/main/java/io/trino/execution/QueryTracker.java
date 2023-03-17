@@ -18,6 +18,7 @@ import io.airlift.log.Logger;
 import io.airlift.units.Duration;
 import io.trino.Session;
 import io.trino.execution.QueryTracker.TrackedQuery;
+import io.trino.server.resultscache.ResultsCacheEntryContext;
 import io.trino.spi.QueryId;
 import io.trino.spi.TrinoException;
 import org.joda.time.DateTime;
@@ -302,5 +303,7 @@ public class QueryTracker<T extends TrackedQuery>
 
         // XXX: This should be removed when the client protocol is improved, so that we don't need to hold onto so much query history
         void pruneInfo();
+
+        Optional<ResultsCacheEntryContext> getResultsCacheEntryContext();
     }
 }

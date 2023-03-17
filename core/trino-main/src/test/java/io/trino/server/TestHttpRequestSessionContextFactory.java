@@ -81,6 +81,7 @@ public class TestHttpRequestSessionContextFactory
                 headers,
                 Optional.of(protocolHeaders.getProtocolName()),
                 Optional.of("testRemote"),
+                Optional.empty(),
                 Optional.empty());
         assertEquals(context.getSource().orElse(null), "testSource");
         assertEquals(context.getCatalog().orElse(null), "testCatalog");
@@ -123,6 +124,7 @@ public class TestHttpRequestSessionContextFactory
                 userHeaders,
                 Optional.of(protocolHeaders.getProtocolName()),
                 Optional.of("testRemote"),
+                Optional.empty(),
                 Optional.empty());
         assertEquals(context.getIdentity(), Identity.forUser("testUser").withGroups(ImmutableSet.of("testUser")).build());
 
@@ -130,14 +132,16 @@ public class TestHttpRequestSessionContextFactory
                 emptyHeaders,
                 Optional.of(protocolHeaders.getProtocolName()),
                 Optional.of("testRemote"),
-                Optional.of(Identity.forUser("mappedUser").withGroups(ImmutableSet.of("test")).build()));
+                Optional.of(Identity.forUser("mappedUser").withGroups(ImmutableSet.of("test")).build()),
+                Optional.empty());
         assertEquals(context.getIdentity(), Identity.forUser("mappedUser").withGroups(ImmutableSet.of("test", "mappedUser")).build());
 
         context = SESSION_CONTEXT_FACTORY.createSessionContext(
                 userHeaders,
                 Optional.of(protocolHeaders.getProtocolName()),
                 Optional.of("testRemote"),
-                Optional.of(Identity.ofUser("mappedUser")));
+                Optional.of(Identity.ofUser("mappedUser")),
+                Optional.empty());
         assertEquals(context.getIdentity(), Identity.forUser("testUser").withGroups(ImmutableSet.of("testUser")).build());
 
         assertThatThrownBy(
@@ -145,6 +149,7 @@ public class TestHttpRequestSessionContextFactory
                         emptyHeaders,
                         Optional.of(protocolHeaders.getProtocolName()),
                         Optional.of("testRemote"),
+                        Optional.empty(),
                         Optional.empty()))
                 .isInstanceOf(WebApplicationException.class)
                 .matches(e -> ((WebApplicationException) e).getResponse().getStatus() == 400);
@@ -176,6 +181,7 @@ public class TestHttpRequestSessionContextFactory
                         headers,
                         Optional.of(protocolHeaders.getProtocolName()),
                         Optional.of("testRemote"),
+                        Optional.empty(),
                         Optional.empty()))
                 .isInstanceOf(WebApplicationException.class)
                 .hasMessageMatching("Invalid " + protocolHeaders.requestPreparedStatement() + " header: line 1:1: mismatched input 'abcdefg'. Expecting: .*");

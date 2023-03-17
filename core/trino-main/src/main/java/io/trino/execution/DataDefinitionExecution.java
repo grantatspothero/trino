@@ -25,6 +25,7 @@ import io.trino.execution.querystats.PlanOptimizersStatsCollector;
 import io.trino.execution.warnings.WarningCollector;
 import io.trino.server.BasicQueryInfo;
 import io.trino.server.protocol.Slug;
+import io.trino.server.resultscache.ResultsCacheEntryContext;
 import io.trino.spi.QueryId;
 import io.trino.sql.planner.Plan;
 import io.trino.sql.tree.Expression;
@@ -277,6 +278,12 @@ public class DataDefinitionExecution<T extends Statement>
     public Optional<Duration> getPlanningTime()
     {
         return stateMachine.getPlanningTime();
+    }
+
+    @Override
+    public Optional<ResultsCacheEntryContext> getResultsCacheEntryContext()
+    {
+        return Optional.empty();
     }
 
     public List<Expression> getParameters()

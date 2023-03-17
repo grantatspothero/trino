@@ -28,6 +28,7 @@ import io.trino.execution.QueryState;
 import io.trino.execution.QueryStateMachine;
 import io.trino.execution.StateMachine.StateChangeListener;
 import io.trino.server.BasicQueryInfo;
+import io.trino.server.resultscache.ResultsCacheEntryContext;
 import io.trino.spi.ErrorCode;
 import io.trino.spi.QueryId;
 import io.trino.spi.TrinoException;
@@ -319,6 +320,12 @@ public class LocalDispatchQuery
     public void addStateChangeListener(StateChangeListener<QueryState> stateChangeListener)
     {
         stateMachine.addStateChangeListener(stateChangeListener);
+    }
+
+    @Override
+    public Optional<ResultsCacheEntryContext> getResultsCacheEntryContext()
+    {
+        return Optional.empty();
     }
 
     private Optional<QueryExecution> tryGetQueryExecution()

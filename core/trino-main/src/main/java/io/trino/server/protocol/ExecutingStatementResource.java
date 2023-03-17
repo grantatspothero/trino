@@ -28,6 +28,8 @@ import io.trino.execution.QueryManager;
 import io.trino.operator.DirectExchangeClientSupplier;
 import io.trino.server.ForStatementResource;
 import io.trino.server.ServerConfig;
+import io.trino.server.resultscache.ResultsCacheEntry;
+import io.trino.server.resultscache.ResultsCacheManager;
 import io.trino.server.security.ResourceSecurity;
 import io.trino.spi.QueryId;
 import io.trino.spi.block.BlockEncodingSerde;
@@ -52,6 +54,7 @@ import javax.ws.rs.core.UriInfo;
 import java.net.URLEncoder;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -92,6 +95,7 @@ public class ExecutingStatementResource
     private final ScheduledExecutorService queryPurger = newSingleThreadScheduledExecutor(threadsNamed("execution-query-purger"));
     private final PreparedStatementEncoder preparedStatementEncoder;
     private final boolean compressionEnabled;
+    private final ResultsCacheManager resultsCacheManager;
 
     @Inject
     public ExecutingStatementResource(
@@ -103,7 +107,8 @@ public class ExecutingStatementResource
             @ForStatementResource BoundedExecutor responseExecutor,
             @ForStatementResource ScheduledExecutorService timeoutExecutor,
             PreparedStatementEncoder preparedStatementEncoder,
-            ServerConfig serverConfig)
+            ServerConfig serverConfig,
+            ResultsCacheManager resultsCacheManager)
     {
         this.queryManager = requireNonNull(queryManager, "queryManager is null");
         this.directExchangeClientSupplier = requireNonNull(directExchangeClientSupplier, "directExchangeClientSupplier is null");
@@ -114,6 +119,7 @@ public class ExecutingStatementResource
         this.timeoutExecutor = requireNonNull(timeoutExecutor, "timeoutExecutor is null");
         this.preparedStatementEncoder = requireNonNull(preparedStatementEncoder, "preparedStatementEncoder is null");
         this.compressionEnabled = serverConfig.isQueryResultsCompressionEnabled();
+        this.resultsCacheManager = requireNonNull(resultsCacheManager, "resultsCacheManager is null");
 
         queryPurger.scheduleWithFixedDelay(
                 () -> {
@@ -197,6 +203,14 @@ public class ExecutingStatementResource
             throw queryNotFound();
         }
 
+        Optional<ResultsCacheEntry> resultsCacheEntry = queryManager.getResultsCacheEntryContext(queryId).map(context ->
+                resultsCacheManager.createResultsCacheEntry(
+                        context.parameters(),
+                        queryId,
+                        context.catalogs(),
+                        context.schemas(),
+                        context.tables()));
+
         query = queries.computeIfAbsent(queryId, id -> Query.create(
                 session,
                 querySlug,
@@ -206,7 +220,8 @@ public class ExecutingStatementResource
                 exchangeManagerRegistry,
                 responseExecutor,
                 timeoutExecutor,
-                blockEncodingSerde));
+                blockEncodingSerde,
+                resultsCacheEntry));
         return query;
     }
 

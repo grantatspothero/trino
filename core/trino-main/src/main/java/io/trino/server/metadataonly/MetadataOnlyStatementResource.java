@@ -180,7 +180,7 @@ public class MetadataOnlyStatementResource
 
         MultivaluedMap<String, String> headers = httpHeaders.getRequestHeaders();
 
-        SessionContext sessionContext = sessionContextFactory.createSessionContext(headers, Optional.empty(), remoteAddress, identity);
+        SessionContext sessionContext = sessionContextFactory.createSessionContext(headers, Optional.empty(), remoteAddress, identity, Optional.empty());
         List<QueryCatalog> decryptedCatalogs = request.catalogs().stream().map(queryCatalog -> decryptCatalog(request.accountId(), queryCatalog)).collect(toImmutableList());
         return executeQuery(transactionId, statement, sessionContext, decryptedCatalogs, request.serviceProperties());
     }

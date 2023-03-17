@@ -25,6 +25,7 @@ import io.trino.client.ProtocolHeaders;
 import io.trino.metadata.Metadata;
 import io.trino.security.AccessControl;
 import io.trino.server.protocol.PreparedStatementEncoder;
+import io.trino.server.resultscache.ResultsCacheParameters;
 import io.trino.spi.security.AccessDeniedException;
 import io.trino.spi.security.GroupProvider;
 import io.trino.spi.security.Identity;
@@ -91,7 +92,8 @@ public class HttpRequestSessionContextFactory
             MultivaluedMap<String, String> headers,
             Optional<String> alternateHeaderName,
             Optional<String> remoteAddress,
-            Optional<Identity> authenticatedIdentity)
+            Optional<Identity> authenticatedIdentity,
+            Optional<ResultsCacheParameters> resultsCacheParameters)
             throws WebApplicationException
     {
         ProtocolHeaders protocolHeaders;
@@ -181,7 +183,8 @@ public class HttpRequestSessionContextFactory
                 preparedStatements,
                 transactionId,
                 clientTransactionSupport,
-                clientInfo);
+                clientInfo,
+                resultsCacheParameters);
     }
 
     public Identity extractAuthorizedIdentity(
