@@ -44,6 +44,7 @@ import io.trino.execution.buffer.PageDeserializer;
 import io.trino.execution.buffer.PagesSerdeFactory;
 import io.trino.memory.context.SimpleLocalMemoryContext;
 import io.trino.operator.DirectExchangeClientSupplier;
+import io.trino.server.resultscache.ResultsCacheEntry;
 import io.trino.spi.ErrorCode;
 import io.trino.spi.Page;
 import io.trino.spi.QueryId;
@@ -168,6 +169,8 @@ class Query
     @GuardedBy("this")
     private Long updateCount;
 
+    private final Optional<ResultsCacheEntry> resultsCacheEntry;
+
     public static Query create(
             Session session,
             Slug slug,
@@ -177,7 +180,8 @@ class Query
             ExchangeManagerRegistry exchangeManagerRegistry,
             Executor dataProcessorExecutor,
             ScheduledExecutorService timeoutExecutor,
-            BlockEncodingSerde blockEncodingSerde)
+            BlockEncodingSerde blockEncodingSerde,
+            Optional<ResultsCacheEntry> resultsCacheEntry)
     {
         ExchangeDataSource exchangeDataSource = new LazyExchangeDataSource(
                 session.getQueryId(),
@@ -188,7 +192,7 @@ class Query
                 getRetryPolicy(session),
                 exchangeManagerRegistry);
 
-        Query result = new Query(session, slug, queryManager, queryInfoUrl, exchangeDataSource, dataProcessorExecutor, timeoutExecutor, blockEncodingSerde);
+        Query result = new Query(session, slug, queryManager, queryInfoUrl, exchangeDataSource, dataProcessorExecutor, timeoutExecutor, blockEncodingSerde, resultsCacheEntry);
 
         result.queryManager.setOutputInfoListener(result.getQueryId(), result::setQueryOutputInfo);
 
@@ -212,7 +216,8 @@ class Query
             ExchangeDataSource exchangeDataSource,
             Executor resultsProcessorExecutor,
             ScheduledExecutorService timeoutExecutor,
-            BlockEncodingSerde blockEncodingSerde)
+            BlockEncodingSerde blockEncodingSerde,
+            Optional<ResultsCacheEntry> resultsCacheEntry)
     {
         requireNonNull(session, "session is null");
         requireNonNull(slug, "slug is null");
@@ -222,6 +227,7 @@ class Query
         requireNonNull(resultsProcessorExecutor, "resultsProcessorExecutor is null");
         requireNonNull(timeoutExecutor, "timeoutExecutor is null");
         requireNonNull(blockEncodingSerde, "blockEncodingSerde is null");
+        requireNonNull(resultsCacheEntry, "resultsCacheEntry is null");
 
         this.queryManager = queryManager;
         this.queryId = session.getQueryId();
@@ -232,6 +238,7 @@ class Query
         this.resultsProcessorExecutor = resultsProcessorExecutor;
         this.timeoutExecutor = timeoutExecutor;
         this.supportsParametricDateTime = session.getClientCapabilities().contains(ClientCapabilities.PARAMETRIC_DATETIME.toString());
+        this.resultsCacheEntry = resultsCacheEntry;
         deserializer = new PagesSerdeFactory(blockEncodingSerde, isExchangeCompressionEnabled(session))
                 .createDeserializer(session.getExchangeEncryptionKey().map(Ciphers::deserializeAesEncryptionKey));
     }
@@ -544,6 +551,11 @@ class Query
         // cache the new result
         lastToken = token;
         lastResult = queryResults;
+
+        resultsCacheEntry.ifPresent(entry -> entry.appendResults(resultRows.getColumns().orElse(null), resultRows, resultRows.countLogicalSizeInBytes()));
+        if (nextResultsUri == null) {
+            resultsCacheEntry.ifPresent(ResultsCacheEntry::done);
+        }
 
         return queryResults;
     }

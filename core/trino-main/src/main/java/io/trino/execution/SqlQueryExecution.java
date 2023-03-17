@@ -47,6 +47,8 @@ import io.trino.operator.RetryPolicy;
 import io.trino.server.BasicQueryInfo;
 import io.trino.server.DynamicFilterService;
 import io.trino.server.protocol.Slug;
+import io.trino.server.resultscache.ResultsCacheParameters;
+import io.trino.server.resultscache.ResultsCacheSessionProperties;
 import io.trino.spi.QueryId;
 import io.trino.spi.TrinoException;
 import io.trino.sql.PlannerContext;
@@ -94,6 +96,8 @@ import static io.trino.execution.ParameterExtractor.bindParameters;
 import static io.trino.execution.QueryState.FAILED;
 import static io.trino.execution.QueryState.PLANNING;
 import static io.trino.server.DynamicFilterService.DynamicFiltersStats;
+import static io.trino.server.resultscache.ResultsCacheSessionProperties.getResultsCacheKey;
+import static io.trino.server.resultscache.ResultsCacheSessionProperties.getResultsCacheTtl;
 import static io.trino.spi.StandardErrorCode.STACK_OVERFLOW;
 import static io.trino.tracing.ScopedSpan.scopedSpan;
 import static java.lang.Thread.currentThread;
@@ -138,6 +142,7 @@ public class SqlQueryExecution
     private final EventDrivenTaskSourceFactory eventDrivenTaskSourceFactory;
     private final TaskDescriptorStorage taskDescriptorStorage;
     private final PlanOptimizersStatsCollector planOptimizersStatsCollector;
+    private final Optional<ResultsCacheParameters> resultsCacheParameters;
 
     private SqlQueryExecution(
             PreparedQuery preparedQuery,
@@ -222,6 +227,7 @@ public class SqlQueryExecution
             this.eventDrivenTaskSourceFactory = requireNonNull(eventDrivenTaskSourceFactory, "taskSourceFactory is null");
             this.taskDescriptorStorage = requireNonNull(taskDescriptorStorage, "taskDescriptorStorage is null");
             this.planOptimizersStatsCollector = requireNonNull(planOptimizersStatsCollector, "planOptimizersStatsCollector is null");
+            this.resultsCacheParameters = createResultsCacheParameters(stateMachine.getSession()).filter(ignore -> isResultSetCacheable(analysis));
         }
     }
 
@@ -703,6 +709,12 @@ public class SqlQueryExecution
         return shouldWaitForMinWorkers(analysis.getStatement());
     }
 
+    @Override
+    public Optional<ResultsCacheParameters> getResultsCacheParameters()
+    {
+        return resultsCacheParameters;
+    }
+
     private boolean shouldWaitForMinWorkers(Statement statement)
     {
         if (statement instanceof Query) {
@@ -713,6 +725,27 @@ public class SqlQueryExecution
                     .allMatch(catalogName -> catalogName.getType().isInternal());
         }
         return true;
+    }
+
+    private static Optional<ResultsCacheParameters> createResultsCacheParameters(Session session)
+    {
+        return getResultsCacheKey(session).flatMap(cacheKey ->
+                getResultsCacheTtl(session).map(ttl ->
+                        new ResultsCacheParameters(
+                                cacheKey,
+                                ttl,
+                                ResultsCacheSessionProperties.getResultsCacheEntryMaxSizeBytes(session))));
+    }
+
+    private static boolean isResultSetCacheable(Analysis analysis)
+    {
+        if (analysis.getStatement() instanceof Query) {
+            // TODO filter queries where tables have per-record permissions/record filters https://github.com/starburstdata/stargate/issues/8499
+            // TODO filter query cases https://github.com/starburstdata/stargate/issues/8513
+
+            return true;
+        }
+        return false;
     }
 
     private static class PlanRoot

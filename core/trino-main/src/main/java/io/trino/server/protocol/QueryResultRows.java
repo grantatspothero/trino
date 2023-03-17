@@ -150,6 +150,15 @@ public class QueryResultRows
                 .toString();
     }
 
+    public long countLogicalSizeInBytes()
+    {
+        long logicalSizeInBytes = 0;
+        for (Page page : pages) {
+            logicalSizeInBytes += page.getLogicalSizeInBytes();
+        }
+        return logicalSizeInBytes;
+    }
+
     public static QueryResultRows empty(Session session)
     {
         return new QueryResultRows(session, Optional.empty(), ImmutableList.of(), null);

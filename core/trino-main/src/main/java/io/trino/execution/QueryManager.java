@@ -18,10 +18,12 @@ import io.trino.Session;
 import io.trino.execution.StateMachine.StateChangeListener;
 import io.trino.server.BasicQueryInfo;
 import io.trino.server.protocol.Slug;
+import io.trino.server.resultscache.ResultsCacheParameters;
 import io.trino.spi.QueryId;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 public interface QueryManager
@@ -122,4 +124,10 @@ public interface QueryManager
      * state, the call is ignored.  If the query does not exist, the call is ignored.
      */
     void cancelStage(StageId stageId);
+
+    /**
+     * @throws NoSuchElementException if query does not exist
+     */
+    Optional<ResultsCacheParameters> getResultsCacheParameters(QueryId queryId)
+            throws NoSuchElementException;
 }

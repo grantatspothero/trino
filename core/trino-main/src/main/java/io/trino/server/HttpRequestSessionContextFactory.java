@@ -150,6 +150,7 @@ public class HttpRequestSessionContextFactory
                 throw badRequest(format("Invalid %s header", protocolHeaders.requestSession()));
             }
         }
+
         requireNonNull(catalogSessionProperties, "catalogSessionProperties is null");
         catalogSessionProperties = catalogSessionProperties.entrySet().stream()
                 .collect(toImmutableMap(Entry::getKey, entry -> ImmutableMap.copyOf(entry.getValue())));
