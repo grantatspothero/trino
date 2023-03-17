@@ -27,7 +27,8 @@ UNPACK_DIR="$(mktemp -d)"
 tar -C ${UNPACK_DIR} -xzf ${TARBALL}
 
 mkdir ${WORK_DIR}/${PREFIX}
-cp -R ${UNPACK_DIR}/${PREFIX}/{bin,lib} ${WORK_DIR}/${PREFIX}
+# `mv` to preserve hardlinks
+mv ${UNPACK_DIR}/${PREFIX}/{bin,lib} ${WORK_DIR}/${PREFIX}
 
 PLUGINS="
 bigquery
@@ -63,7 +64,8 @@ tpch
 mkdir ${WORK_DIR}/${PREFIX}/plugin
 for name in $PLUGINS
 do
-    cp -R ${UNPACK_DIR}/${PREFIX}/plugin/${name} ${WORK_DIR}/${PREFIX}/plugin
+    # `mv` to preserve hardlinks
+    mv ${UNPACK_DIR}/${PREFIX}/plugin/${name} ${WORK_DIR}/${PREFIX}/plugin
 done
 
 rm -r ${UNPACK_DIR}
