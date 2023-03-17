@@ -17,6 +17,7 @@ import com.google.common.base.StandardSystemProperty;
 import com.google.common.primitives.Ints;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Strings.nullToEmpty;
 import static java.lang.String.format;
 
@@ -34,7 +35,9 @@ public final class TrinoServer
             System.exit(100);
         }
 
-        String version = TrinoServer.class.getPackage().getImplementationVersion();
+        String injectedVersion = System.getenv("GALAXY_TRINO_DOCKER_VERSION");
+        checkState(injectedVersion == null || !injectedVersion.isEmpty(), "GALAXY_TRINO_DOCKER_VERSION is set but empty");
+        String version = firstNonNull(injectedVersion, TrinoServer.class.getPackage().getImplementationVersion());
         new Server().start(firstNonNull(version, "unknown"));
     }
 }

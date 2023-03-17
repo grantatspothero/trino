@@ -32,13 +32,27 @@ function test_trino_starts {
     if ! RESULT=$(docker exec "${CONTAINER_ID}" trino --execute "SELECT 'success'" 2>/dev/null); then
         echo "🚨 Failed to execute a query after Trino container started"
     fi
+    if ! VERSION_FROM_CONTAINER=$(docker exec "${CONTAINER_ID}" trino --execute "SELECT version()"  --output-format=CSV_UNQUOTED 2>/dev/null); then
+        echo "🚨 Failed to execute a query after Trino container started"
+    fi
     set -e
 
     cleanup
     trap - EXIT
 
-    # Return proper exit code.
-    [[ ${RESULT} == '"success"' ]]
+    # The version should match.
+    DOCKER_TEST_EXPECTED_TRINO_VERSION="${DOCKER_TEST_EXPECTED_TRINO_VERSION:-expected version not set or empty}"
+    if ! [[ ${VERSION_FROM_CONTAINER} == "${DOCKER_TEST_EXPECTED_TRINO_VERSION}" ]]; then
+        echo "🚨 Version doesn't match: VERSION_FROM_CONTAINER=${VERSION_FROM_CONTAINER}, DOCKER_TEST_EXPECTED_TRINO_VERSION=${DOCKER_TEST_EXPECTED_TRINO_VERSION}." >&2
+        return 1
+    fi
+
+    if ! [[ ${RESULT} == '"success"' ]]; then
+        echo "🚨 Test query didn't return expected result (\"success\")" >&2
+        return 1
+    fi
+
+    return 0
 }
 
 function test_javahome {

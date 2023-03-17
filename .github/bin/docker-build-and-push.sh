@@ -75,12 +75,21 @@ cp -R default ${WORK_DIR}/
 
 cp ${SOURCE_DIR}/client/trino-cli/target/trino-cli-${TRINO_VERSION}-executable.jar ${WORK_DIR}
 
+platforms=(linux/amd64 linux/arm64)
 docker buildx build --pull --push \
-   --platform linux/amd64,linux/arm64 \
+   --platform "$(IFS=,; echo "${platforms[*]}")" \
    --tag "179619298502.dkr.ecr.us-east-1.amazonaws.com/${IMAGE_NAME}" \
    --tag "us-east1-docker.pkg.dev/starburstdata-saas-prod/starburst-docker-repository/${IMAGE_NAME}" \
    --tag "starburstgalaxy.azurecr.io/${IMAGE_NAME}" \
    --build-arg "TRINO_VERSION=${TRINO_VERSION}" \
+   --build-arg "GALAXY_TRINO_DOCKER_VERSION=${IMAGE_TAG}" \
    --file Dockerfile ${WORK_DIR}
 
 rm -r ${WORK_DIR}
+
+echo "🏃 Testing built images"
+source container-test.sh
+for platform in "${platforms[@]}"; do
+    DOCKER_TEST_EXPECTED_TRINO_VERSION="${IMAGE_TAG}" \
+        test_container "179619298502.dkr.ecr.us-east-1.amazonaws.com/${IMAGE_NAME}" "${platform}"
+done

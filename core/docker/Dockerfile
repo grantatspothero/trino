@@ -43,6 +43,9 @@ COPY --chown=trino:trino trino-server-${TRINO_VERSION} /usr/lib/trino
 COPY --chown=trino:trino default/etc /etc/trino
 COPY --chown=trino:trino --from=builder /tmp/jvmkill/libjvmkill.so /usr/lib/trino/bin
 
+ARG GALAXY_TRINO_DOCKER_VERSION
+ENV GALAXY_TRINO_DOCKER_VERSION=${GALAXY_TRINO_DOCKER_VERSION}
+
 EXPOSE 8080
 USER trino:trino
 CMD ["/usr/lib/trino/bin/run-trino"]
