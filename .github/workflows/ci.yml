@@ -108,16 +108,9 @@ jobs:
         run: $MAVEN clean -pl '!:trino-server,!:trino-cli'
       - name: Determine the image tag
         run: |
-          # Logical replacement to `git describe --tags`, but not assuming release-changing commits are tagged.
-          maven_version=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
-          version_changing_commit=$(git blame pom.xml | grep "<version>${maven_version}</version>" | awk '{print $1}')
-          commits_since_version_change=$(git rev-list "${version_changing_commit}..HEAD" | wc -l)
-          current_commit_short=$(git rev-parse --short HEAD)
-          current_described=$(printf "%s-u%s-g%s" "${maven_version%-SNAPSHOT}" "${commits_since_version_change}" "${current_commit_short}")
+          IMAGE_TAG="$(./core/docker/determine-image-tag)"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            IMAGE_TAG="pr${{ github.event.number }}-${current_described}"
-          else
-            IMAGE_TAG="${current_described}"
+            IMAGE_TAG="pr${{ github.event.number }}-${IMAGE_TAG}"
           fi
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
           echo "Image tag: \`$IMAGE_TAG\`" >> $GITHUB_STEP_SUMMARY
