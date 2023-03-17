@@ -20,6 +20,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 import io.airlift.concurrent.SetThreadName;
 import io.airlift.slice.Slice;
 import io.airlift.units.Duration;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
 import io.starburst.stargate.crypto.SecretEncryptionContext;
 import io.starburst.stargate.crypto.SecretSealer;
 import io.starburst.stargate.crypto.SecretSealer.SealedSecret;
@@ -61,6 +64,7 @@ import io.trino.spi.block.BlockEncodingSerde;
 import io.trino.spi.exchange.ExchangeId;
 import io.trino.spi.security.Identity;
 import io.trino.spi.type.Type;
+import io.trino.tracing.TrinoAttributes;
 import io.trino.transaction.TransactionId;
 import io.trino.util.Failures;
 
@@ -120,6 +124,7 @@ public class MetadataOnlyStatementResource
 
     private final HttpRequestSessionContextFactory sessionContextFactory;
     private final DispatchManager dispatchManager;
+    private final Tracer tracer;
     private final QueryManager queryManager;
     private final DirectExchangeClientSupplier directExchangeClientSupplier;
     private final BlockEncodingSerde blockEncodingSerde;
@@ -131,6 +136,7 @@ public class MetadataOnlyStatementResource
     public MetadataOnlyStatementResource(
             HttpRequestSessionContextFactory sessionContextFactory,
             DispatchManager dispatchManager,
+            Tracer tracer,
             QueryManager queryManager,
             DirectExchangeClientSupplier directExchangeClientSupplier,
             BlockEncodingSerde blockEncodingSerde,
@@ -141,6 +147,7 @@ public class MetadataOnlyStatementResource
     {
         this.sessionContextFactory = requireNonNull(sessionContextFactory, "sessionContextFactory is null");
         this.dispatchManager = requireNonNull(dispatchManager, "dispatchManager is null");
+        this.tracer = requireNonNull(tracer, "tracer is null");
         this.queryManager = requireNonNull(queryManager, "queryManager is null");
         this.directExchangeClientSupplier = requireNonNull(directExchangeClientSupplier, "directExchangeClientSupplier is null");
         this.blockEncodingSerde = requireNonNull(blockEncodingSerde, "blockEncodingSerde is null");
@@ -189,28 +196,36 @@ public class MetadataOnlyStatementResource
     private QueryResults executeQuery(TransactionId transactionId, String statement, SessionContext sessionContext, List<QueryCatalog> catalogs, Map<String, String> serviceProperties)
     {
         QueryId queryId = dispatchManager.createQueryId();
+        Span span = tracer.spanBuilder("metadata-query")
+                .setAttribute(TrinoAttributes.QUERY_ID, queryId.toString())
+                .startSpan();
         try (SetThreadName ignored = new SetThreadName("Resource " + queryId.toString())) {
             transactionId = transactionManager.registerQueryCatalogs(sessionContext.getIdentity(), transactionId, queryId, catalogs, serviceProperties);
-            return executeQuery(statement, sessionContext.withTransactionId(transactionId), queryId);
+            return executeQuery(statement, span, sessionContext.withTransactionId(transactionId), queryId);
         }
         catch (Throwable e) {
             dispatchManager.failQuery(queryId, e);
+            span.setStatus(StatusCode.ERROR, e.getMessage())
+                    .recordException(e)
+                    .end();
             return toErrorQueryResult(queryId, e);
         }
         finally {
             if (transactionId != null) {
                 transactionManager.destroyQueryCatalogs(transactionId);
             }
+            span.end();
         }
     }
 
-    private QueryResults executeQuery(String query, SessionContext sessionContext, QueryId queryId)
+    private QueryResults executeQuery(String query, Span span, SessionContext sessionContext, QueryId queryId)
     {
-        getQueryFuture(dispatchManager.createQuery(queryId, Slug.createNew(), sessionContext, query));
+        getQueryFuture(dispatchManager.createQuery(queryId, span, Slug.createNew(), sessionContext, query));
         getQueryFuture(dispatchManager.waitForDispatched(queryId));
 
         DispatchQuery dispatchQuery = dispatchManager.getQuery(queryId);
         if (dispatchQuery.getState().isDone()) {
+            span.setStatus(StatusCode.OK);
             return new QueryResults(
                     queryId.toString(),
                     INFO_URI,
@@ -306,6 +321,7 @@ public class MetadataOnlyStatementResource
             }
         }
 
+        span.setStatus(StatusCode.OK);
         return new QueryResults(
                 queryId.toString(),
                 INFO_URI,

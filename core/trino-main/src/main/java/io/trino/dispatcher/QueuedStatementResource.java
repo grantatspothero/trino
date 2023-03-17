@@ -22,6 +22,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import io.airlift.log.Logger;
 import io.airlift.units.Duration;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
 import io.trino.client.DrainState;
 import io.trino.client.QueryError;
 import io.trino.client.QueryResults;
@@ -42,6 +45,7 @@ import io.trino.spi.ErrorCode;
 import io.trino.spi.QueryId;
 import io.trino.spi.TrinoException;
 import io.trino.spi.security.Identity;
+import io.trino.tracing.TrinoAttributes;
 
 import javax.annotation.Nullable;
 import javax.annotation.PostConstruct;
@@ -137,6 +141,7 @@ public class QueuedStatementResource
 
     private final HttpRequestSessionContextFactory sessionContextFactory;
     private final DispatchManager dispatchManager;
+    private final Tracer tracer;
 
     private final QueryInfoUrlFactory queryInfoUrlFactory;
 
@@ -152,6 +157,7 @@ public class QueuedStatementResource
     public QueuedStatementResource(
             HttpRequestSessionContextFactory sessionContextFactory,
             DispatchManager dispatchManager,
+            Tracer tracer,
             DispatchExecutor executor,
             QueryInfoUrlFactory queryInfoUrlTemplate,
             StartupStatus startupStatus,
@@ -161,6 +167,7 @@ public class QueuedStatementResource
     {
         this.sessionContextFactory = requireNonNull(sessionContextFactory, "sessionContextFactory is null");
         this.dispatchManager = requireNonNull(dispatchManager, "dispatchManager is null");
+        this.tracer = requireNonNull(tracer, "tracer is null");
         this.responseExecutor = executor.getExecutor();
         this.timeoutExecutor = executor.getScheduledExecutor();
         this.queryInfoUrlFactory = requireNonNull(queryInfoUrlTemplate, "queryInfoUrlTemplate is null");
@@ -196,7 +203,7 @@ public class QueuedStatementResource
         }
 
         Query query = registerQueryIfNeeded(servletRequest, httpHeaders, sessionContext ->
-                new Query(statement, sessionContext, dispatchManager, queryInfoUrlFactory));
+                new Query(statement, sessionContext, dispatchManager, queryInfoUrlFactory, tracer));
 
         return createQueryResultsResponse(query.getQueryResults(query.getLastToken(), uriInfo));
     }
@@ -224,7 +231,7 @@ public class QueuedStatementResource
         }
 
         Query query = registerQueryIfNeeded(servletRequest, httpHeaders, sessionContext ->
-                new Query(statement, queryId, Optional.of(slug), sessionContext, dispatchManager, queryInfoUrlFactory));
+                new Query(statement, queryId, Optional.of(slug), sessionContext, dispatchManager, queryInfoUrlFactory, tracer));
 
         if (!query.getSubmitSlug().equals(Optional.of(slug)) || (query.getLastToken() != 0)) {
             throw badRequest(CONFLICT, "Conflict with existing query");
@@ -434,6 +441,7 @@ public class QueuedStatementResource
         private final DispatchManager dispatchManager;
         private final QueryId queryId;
         private final Optional<URI> queryInfoUrl;
+        private final Span querySpan;
         private final Slug slug = Slug.createNew();
         private final Optional<String> submitSlug;
         private final AtomicLong lastToken = new AtomicLong();
@@ -443,9 +451,9 @@ public class QueuedStatementResource
         private final SettableFuture<Void> creationFuture = SettableFuture.create();
         private final ListenableFuture<Void> completionFuture;
 
-        public Query(String query, SessionContext sessionContext, DispatchManager dispatchManager, QueryInfoUrlFactory queryInfoUrlFactory)
+        public Query(String query, SessionContext sessionContext, DispatchManager dispatchManager, QueryInfoUrlFactory queryInfoUrlFactory, Tracer tracer)
         {
-            this(query, dispatchManager.createQueryId(), Optional.empty(), sessionContext, dispatchManager, queryInfoUrlFactory);
+            this(query, dispatchManager.createQueryId(), Optional.empty(), sessionContext, dispatchManager, queryInfoUrlFactory, tracer);
         }
 
         public Query(
@@ -454,7 +462,8 @@ public class QueuedStatementResource
                 Optional<String> submitSlug,
                 SessionContext sessionContext,
                 DispatchManager dispatchManager,
-                QueryInfoUrlFactory queryInfoUrlFactory)
+                QueryInfoUrlFactory queryInfoUrlFactory,
+                Tracer tracer)
         {
             this.query = requireNonNull(query, "query is null");
             this.sessionContext = requireNonNull(sessionContext, "sessionContext is null");
@@ -467,6 +476,12 @@ public class QueuedStatementResource
                     creationFuture,
                     ignored -> dispatchManager.tryGetCompletionFuture(queryId).orElse(immediateVoidFuture()),
                     directExecutor()));
+            requireNonNull(tracer, "tracer is null");
+            this.querySpan = tracer.spanBuilder("query")
+                    .addLink(Span.current().getSpanContext())
+                    .setNoParent()
+                    .setAttribute(TrinoAttributes.QUERY_ID, queryId.toString())
+                    .startSpan();
         }
 
         public QueryId getQueryId()
@@ -517,7 +532,8 @@ public class QueuedStatementResource
         private void submitIfNeeded()
         {
             if (submissionGate.compareAndSet(null, true)) {
-                creationFuture.setFuture(dispatchManager.createQuery(queryId, slug, sessionContext, query));
+                querySpan.addEvent("submit");
+                creationFuture.setFuture(dispatchManager.createQuery(queryId, querySpan, slug, sessionContext, query));
             }
         }
 
@@ -567,6 +583,7 @@ public class QueuedStatementResource
 
         public void destroy()
         {
+            querySpan.setStatus(StatusCode.ERROR).end();
             sessionContext.getIdentity().destroy();
         }
 
