@@ -677,6 +677,7 @@ public abstract class BaseObjectStoreConnectorTest
         assertQuery(
                 "SELECT * FROM system.metadata.analyze_properties WHERE catalog_name = 'objectstore'",
                 "SELECT * FROM VALUES " +
+                        "('objectstore', 'mode', 'INCREMENTAL', 'varchar', 'Analyze mode. Possible values: [INCREMENTAL, FULL_REFRESH]'), " +
                         "('objectstore', 'partitions', '', 'array(array(varchar))', 'Partitions to be analyzed'), " +
                         "('objectstore', 'columns', '', 'array(varchar)', 'Columns to be analyzed'), " +
                         "('objectstore', 'files_modified_after', '' , 'timestamp(3) with time zone', 'Take into account only files modified after given timestamp') ");
