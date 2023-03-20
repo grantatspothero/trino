@@ -10,7 +10,6 @@
 package io.starburst.stargate.buffer.trino.exchange.fallbacking;
 
 import com.google.common.collect.ImmutableMap;
-import io.airlift.units.Duration;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
@@ -20,6 +19,7 @@ import java.util.Map;
 import static io.airlift.configuration.testing.ConfigAssertions.assertFullMapping;
 import static io.airlift.configuration.testing.ConfigAssertions.assertRecordedDefaults;
 import static io.airlift.configuration.testing.ConfigAssertions.recordDefaults;
+import static io.airlift.units.Duration.succinctDuration;
 import static java.util.concurrent.TimeUnit.MINUTES;
 
 class TestFallbackingExchangeConfig
@@ -30,8 +30,8 @@ class TestFallbackingExchangeConfig
         assertRecordedDefaults(recordDefaults(FallbackingExchangeConfig.class)
                 .setFailureTrackingServiceUri(null)
                 .setFallbackRecentFailuresCountThreshold(5)
-                .setMinFallbackModeDuration(Duration.succinctDuration(5, MINUTES))
-                .setMaxFallbackModeDuration(Duration.succinctDuration(15, MINUTES)));
+                .setMinFallbackModeDuration(succinctDuration(5, MINUTES))
+                .setMaxFallbackModeDuration(succinctDuration(15, MINUTES)));
     }
 
     @Test
@@ -48,8 +48,8 @@ class TestFallbackingExchangeConfig
         FallbackingExchangeConfig expected = new FallbackingExchangeConfig()
                 .setFailureTrackingServiceUri(new URI("http://some-failure-tracking-host:123"))
                 .setFallbackRecentFailuresCountThreshold(6)
-                .setMinFallbackModeDuration(Duration.succinctDuration(6, MINUTES))
-                .setMaxFallbackModeDuration(Duration.succinctDuration(16, MINUTES));
+                .setMinFallbackModeDuration(succinctDuration(6, MINUTES))
+                .setMaxFallbackModeDuration(succinctDuration(16, MINUTES));
 
         assertFullMapping(properties, expected);
     }
