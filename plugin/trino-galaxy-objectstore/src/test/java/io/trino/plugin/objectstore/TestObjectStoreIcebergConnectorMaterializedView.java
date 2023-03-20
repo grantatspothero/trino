@@ -36,7 +36,6 @@ import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static io.trino.testing.TestingNames.randomNameSuffix;
-import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.testng.Assert.assertEquals;
 
@@ -72,7 +71,7 @@ public class TestObjectStoreIcebergConnectorMaterializedView
         TestingGalaxyMetastore metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyTestHelper.getCockroach()));
 
         Map<String, String> properties = createObjectStoreProperties(ICEBERG, locationSecurityServer.getClientConfig(), metastore.getMetastoreConfig(minio.getS3Url()), minio.getHiveS3Config());
-        DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder(TEST_CATALOG, storageSchemaName)
+        DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder(TEST_CATALOG, "default")
                 .setAccountClient(galaxyTestHelper.getAccountClient())
                 .addPlugin(new IcebergPlugin())
                 .addPlugin(new ObjectStorePlugin())
@@ -80,7 +79,7 @@ public class TestObjectStoreIcebergConnectorMaterializedView
                 .addPlugin(new TpchPlugin())
                 .addCatalog("tpch", "tpch", ImmutableMap.of())
                 .build();
-        queryRunner.execute(format("CREATE SCHEMA %s.%s", TEST_CATALOG, storageSchemaName));
+        queryRunner.execute("CREATE SCHEMA %s.%s".formatted(TEST_CATALOG, queryRunner.getDefaultSession().getSchema().orElseThrow()));
         queryRunner.execute("GRANT SELECT ON tpch.\"*\".\"*\" TO ROLE %s WITH GRANT OPTION".formatted(ACCOUNT_ADMIN));
         return queryRunner;
     }
@@ -98,6 +97,8 @@ public class TestObjectStoreIcebergConnectorMaterializedView
     @Test
     public void testShowCreate()
     {
+        String schema = getSession().getSchema().orElseThrow();
+
         assertUpdate("CREATE MATERIALIZED VIEW materialized_view_with_property " +
                 "WITH (\n" +
                 "   partitioning = ARRAY['_date'],\n" +
@@ -108,12 +109,12 @@ public class TestObjectStoreIcebergConnectorMaterializedView
 
         assertThat((String) computeScalar("SHOW CREATE MATERIALIZED VIEW materialized_view_with_property"))
                 .matches(
-                        "\\QCREATE MATERIALIZED VIEW iceberg." + storageSchemaName + ".materialized_view_with_property\n" +
+                        "\\QCREATE MATERIALIZED VIEW iceberg." + schema + ".materialized_view_with_property\n" +
                                 "WITH (\n" +
                                 "   orc_bloom_filter_columns = ARRAY['_date'],\n" +
                                 "   orc_bloom_filter_fpp = 1E-1,\n" +
                                 "   partitioning = ARRAY['_date'],\n" +
-                                "   storage_schema = '" + storageSchemaName + "'\n" +
+                                "   storage_schema = '" + schema + "'\n" +
                                 ") AS\n" +
                                 "SELECT\n" +
                                 "  _bigint\n" +
@@ -128,6 +129,8 @@ public class TestObjectStoreIcebergConnectorMaterializedView
     @Test
     public void testSqlFeatures()
     {
+        String schema = getSession().getSchema().orElseThrow();
+
         // Materialized views to test SQL features
         assertUpdate("CREATE MATERIALIZED VIEW materialized_view_window WITH (partitioning = ARRAY['_date']) as select _date, " +
                 "sum(_bigint) OVER (partition by _date order by _date) as sum_ints from base_table1");
@@ -148,7 +151,7 @@ public class TestObjectStoreIcebergConnectorMaterializedView
         plan = getExplainPlan("SELECT * from materialized_view_subquery", ExplainType.Type.IO);
         assertThat(plan).doesNotContain("base_table1");
 
-        String qualifiedMaterializedViewName = "iceberg." + storageSchemaName + ".materialized_view_window";
+        String qualifiedMaterializedViewName = "iceberg." + schema + ".materialized_view_window";
         assertQueryFails("show create view  materialized_view_window",
                 "line 1:1: Relation '" + qualifiedMaterializedViewName + "' is a materialized view, not a view");
 
@@ -156,7 +159,7 @@ public class TestObjectStoreIcebergConnectorMaterializedView
                 .matches("\\QCREATE MATERIALIZED VIEW " + qualifiedMaterializedViewName + "\n" +
                         "WITH (\n" +
                         "   partitioning = ARRAY['_date'],\n" +
-                        "   storage_schema = '" + storageSchemaName + "'\n" +
+                        "   storage_schema = '" + schema + "'\n" +
                         ") AS\n" +
                         "SELECT\n" +
                         "  _date\n" +
