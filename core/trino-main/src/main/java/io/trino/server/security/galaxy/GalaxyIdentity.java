@@ -29,7 +29,9 @@ import io.trino.spi.security.SystemSecurityContext;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -38,11 +40,24 @@ public final class GalaxyIdentity
 {
     private static final String GALAXY_TOKEN_CREDENTIAL = "GalaxyTokenCredential";
     /**
+     * For row filter and column mask identity, we encrypt the access key segment
+     * of the user identity string when creating the ViewExpression, and decrypt
+     * it before making a call to the portal-server using that identity.
+     */
+    private static final GalaxyIdentityCrypto crypto = new GalaxyIdentityCrypto();
+
+    /**
      * The user name provided for a view must include the RoleId of the
      * owner of the view, because Trino in effect indexes view column
      * references by the user name.
      */
     private static final String GALAXY_VIEW_OWNER_USER_NAME_TEMPLATE = "<galaxy role %s>";
+    /**
+     * For row filters and column masks, the identity used for access control
+     * is encoded in the user string of the Identity object.  It can be recognized
+     * from its format, which is &lt;galaxy:accountId:userId:owningRoleId:encrypted_access_token&gt;
+     */
+    private static final Pattern GALAXY_USER_STRING_IDENTITY_MATCHER = Pattern.compile("<galaxy(:[^:]+){4}>");
     private static final Splitter PRINCIPAL_SPLITTER = Splitter.on(':').limit(5);
 
     private GalaxyIdentity() {}
@@ -112,16 +127,37 @@ public final class GalaxyIdentity
         return toDispatchSession(session.getIdentity());
     }
 
+    /**
+     * If the user in the identity object starts with "&lt;galaxy:", get
+     * the roleId from the user string.  Otherwise, if the rolwId is
+     * in the extraCredentiols, return that roleId.  If neither of
+     * these works, get the roleId by splitting the principal string
+     */
     public static RoleId getContextRoleId(SystemSecurityContext context)
     {
-        String roleIdString = context.getIdentity().getExtraCredentials().get("roleId");
-        if (roleIdString == null) {
-            roleIdString = splitPrincipal(context.getIdentity()).get(3);
+        Identity identity = context.getIdentity();
+        String roleIdString;
+        if (isIdentityEncodedInTheUserString(identity)) {
+            roleIdString = PRINCIPAL_SPLITTER.splitToList(identity.getUser()).get(3);
+        }
+        else {
+            roleIdString = context.getIdentity().getExtraCredentials().get("roleId");
+            if (roleIdString == null) {
+                roleIdString = splitPrincipal(context.getIdentity()).get(3);
+            }
         }
         return new RoleId(roleIdString);
     }
 
     public static DispatchSession toDispatchSession(Identity identity)
+    {
+        if (isIdentityEncodedInTheUserString(identity)) {
+            return toDispatchSessionFromUserString(identity.getUser());
+        }
+        return toDispatchSessionFromPrincipal(identity);
+    }
+
+    private static DispatchSession toDispatchSessionFromPrincipal(Identity identity)
     {
         List<String> parts = splitPrincipal(identity);
         return new DispatchSession(
@@ -129,6 +165,22 @@ public final class GalaxyIdentity
                 new UserId(parts.get(2)),
                 new RoleId(parts.get(3)),
                 getGalaxyToken(identity));
+    }
+
+    /**
+     * Return a DispatchSession whose accountId, userId, roleId and token are
+     * extracted from the user string.  This form identity is used in the
+     * Optional&lt;String&gt; ViewExpression.identity for Galaxy row filters
+     * and column masks.
+     */
+    private static DispatchSession toDispatchSessionFromUserString(String user)
+    {
+        List<String> parts = PRINCIPAL_SPLITTER.splitToList(user.substring(1, user.length() - 1));
+        return new DispatchSession(
+                new AccountId(parts.get(1)),
+                new UserId(parts.get(2)),
+                new RoleId(parts.get(3)),
+                crypto.decryptToUtf8(parts.get(4)));
     }
 
     public static Identity createViewOwnerIdentity(Identity identity, RoleName viewOwnerRoleName, RoleId viewOwnerId)
@@ -144,9 +196,28 @@ public final class GalaxyIdentity
                 .build();
     }
 
+    public static Optional<String> getRowFilterAndColumnMaskUserString(Identity identity, RoleId owningRoleId)
+    {
+        if (identity.getPrincipal().isPresent()) {
+            String name = identity.getPrincipal().get().getName();
+            if (name.startsWith("galaxy:")) {
+                List<String> parts = PRINCIPAL_SPLITTER.splitToList(name);
+                if (parts.size() == 4) {
+                    return Optional.of("<galaxy:%s:%s:%s:%s>".formatted(parts.get(1), parts.get(2), owningRoleId, crypto.encryptFromUtf8(getGalaxyToken(identity))));
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
     private static String getGalaxyToken(Identity identity)
     {
         return requireNonNull(identity.getExtraCredentials().get(GALAXY_TOKEN_CREDENTIAL), "token is null");
+    }
+
+    private static boolean isIdentityEncodedInTheUserString(Identity identity)
+    {
+        return GALAXY_USER_STRING_IDENTITY_MATCHER.matcher(identity.getUser()).matches();
     }
 
     private static List<String> splitPrincipal(Identity identity)

@@ -13,6 +13,7 @@
  */
 package io.trino.server.security.galaxy;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
 import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
@@ -39,6 +40,7 @@ import io.trino.spi.security.Identity;
 import io.trino.spi.security.SystemAccessControl;
 import io.trino.spi.security.SystemSecurityContext;
 import io.trino.spi.security.TrinoPrincipal;
+import io.trino.spi.security.ViewExpression;
 
 import java.security.Principal;
 import java.util.Collection;
@@ -627,6 +629,17 @@ public class GalaxyAccessControl
             denyExecuteProcedure(procedure, "Table procedures are not permitted on the system catalog");
         }
         checkIsTableOwner(context, table, explanation -> denyExecuteProcedure(procedure, explanation));
+    }
+
+    @Override
+    public List<ViewExpression> getRowFilters(SystemSecurityContext context, CatalogSchemaTableName tableName)
+    {
+        GalaxySystemAccessController controller = controllerSupplier.apply(context);
+        Optional<TableId> tableId = toTableId(controller, tableName);
+        if (tableId.isEmpty()) {
+            return ImmutableList.of();
+        }
+        return controller.getRowFilters(context, tableId.get());
     }
 
     // Helper methods that provide explanations for denied access

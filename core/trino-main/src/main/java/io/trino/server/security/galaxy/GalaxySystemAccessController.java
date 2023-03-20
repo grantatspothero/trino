@@ -22,21 +22,26 @@ import io.starburst.stargate.id.EntityId;
 import io.starburst.stargate.id.FunctionId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.RoleName;
+import io.starburst.stargate.id.TableId;
 import io.trino.Session;
 import io.trino.server.galaxy.GalaxyPermissionsCache;
 import io.trino.server.galaxy.GalaxyPermissionsCache.GalaxyQueryPermissions;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.security.SystemSecurityContext;
+import io.trino.spi.security.ViewExpression;
 
 import javax.inject.Inject;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.server.security.galaxy.GalaxyIdentity.getContextRoleId;
+import static io.trino.server.security.galaxy.GalaxyIdentity.getRowFilterAndColumnMaskUserString;
 import static io.trino.server.security.galaxy.GalaxyIdentity.toDispatchSession;
 import static java.util.Objects.requireNonNull;
 
@@ -123,6 +128,17 @@ public class GalaxySystemAccessController
     public boolean canExecuteFunction(SystemSecurityContext context, FunctionId functionId)
     {
         return accessControlClient.canExecuteFunction(toDispatchSession(context.getIdentity()), functionId);
+    }
+
+    public List<ViewExpression> getRowFilters(SystemSecurityContext context, TableId tableId)
+    {
+        return getEntityPrivileges(context, tableId).getRowFilters().stream()
+                .map(filter -> new ViewExpression(
+                        getRowFilterAndColumnMaskUserString(context.getIdentity(), filter.owningRoleId()),
+                        catalogIds.getCatalogName(tableId.getCatalogId()),
+                        Optional.of(tableId.getSchemaName()),
+                        filter.expression()))
+                .collect(toImmutableList());
     }
 
     private <V> V withGalaxyPermissions(SystemSecurityContext context, Function<GalaxyQueryPermissions, V> permissionsFunction)

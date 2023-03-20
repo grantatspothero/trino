@@ -21,8 +21,11 @@ import com.google.inject.Key;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.client.testing.TestUser;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
+import io.starburst.stargate.id.PolicyId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.RoleName;
+import io.starburst.stargate.id.RowFilterId;
+import io.starburst.stargate.id.TagId;
 import io.trino.Session;
 import io.trino.plugin.memory.MemoryPlugin;
 import io.trino.plugin.tpch.TpchPlugin;
@@ -38,9 +41,11 @@ import io.trino.spi.security.TrinoPrincipal;
 import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.GalaxyQueryRunner;
 import io.trino.testing.MaterializedResult;
+import io.trino.testing.QueryFailedException;
 import io.trino.testing.QueryRunner;
 import org.intellij.lang.annotations.Language;
 import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.util.Set;
@@ -100,6 +105,15 @@ public class TestGalaxyQueries
         queryRunner.execute(format("CREATE SCHEMA %s.%s", "memory", "tiny"));
 
         return queryRunner;
+    }
+
+    @BeforeMethod(alwaysRun = true)
+    public void setFeatureFlags()
+    {
+        TestingAccountClient accountClient = getTestingAccountClient();
+        accountClient.upsertAccountFeatureFlag("ROW_FILTERS", true);
+        accountClient.upsertAccountFeatureFlag("ABAC_POLICIES", true);
+        accountClient.upsertAccountFeatureFlag("ABAC_TAGS", true);
     }
 
     @AfterMethod(alwaysRun = true)
@@ -927,6 +941,86 @@ public class TestGalaxyQueries
         assertUpdate("DROP ROLE outer_view_owner");
         assertUpdate("DROP ROLE inner_view_owner");
         assertUpdate("DROP ROLE base_table_owner");
+    }
+
+    @Test
+    public void testRowFilterOwnership()
+    {
+        MaterializedResult baseTableContents = MaterializedResult.resultBuilder(getSession(), VARCHAR, BOOLEAN)
+                .row("filtered", true)
+                .row("unfiltered", false)
+                .build();
+        MaterializedResult filteredTableContents = MaterializedResult.resultBuilder(getSession(), VARCHAR, BOOLEAN)
+                .row("filtered", true)
+                .build();
+
+        assertUpdate("CREATE SCHEMA memory.row_filters");
+
+        // filterOwner gets CREATE_TABLE on the schema
+        Session filterOwner = createUserAndGrantedRole("filter_owner");
+        RoleId filterOwnerRoleId = getTrinoSecurityApi().listRoles(toDispatchSession(getSession()))
+                .get(new RoleName("filter_owner"));
+
+        assertUpdate("GRANT CREATE ON schema memory.row_filters TO ROLE filter_owner");
+
+        // Create the base table, insert a row and verify the contents
+        assertUpdate(filterOwner, "CREATE TABLE memory.row_filters.base_table(base_col1 VARCHAR, base_col2 BOOLEAN)");
+        assertUpdate(filterOwner, "INSERT INTO memory.row_filters.base_table VALUES('filtered', true), ('unfiltered', false)", 2);
+        assertThat(query(filterOwner, "SELECT * FROM memory.row_filters.base_table")).matches(baseTableContents);
+
+        // Create the subquery table, insert a row and verify the contents
+        assertUpdate(filterOwner, "CREATE TABLE memory.row_filters.subquery_table(match_column VARCHAR)");
+        assertUpdate(filterOwner, "INSERT INTO memory.row_filters.subquery_table VALUES('filtered')", 1);
+        MaterializedResult subqueryTableContents = MaterializedResult.resultBuilder(getSession(), VARCHAR)
+                .row("filtered")
+                .build();
+        TestingAccountClient client = getTestingAccountClient();
+        assertThat(query(filterOwner, "SELECT * FROM memory.row_filters.subquery_table")).matches(subqueryTableContents);
+
+        // Make the row filter, owned by filterOwner
+        RowFilterId rowFilterId = client.createRowFilter(
+                "base_filter",
+                "EXISTS (SELECT 1 FROM memory.row_filters.subquery_table WHERE match_column = base_col1)",
+                filterOwnerRoleId);
+
+        // Make the policy for the filter
+        createUserAndGrantedRole("policy_enabler");
+        RoleId policyEnablerId = getTrinoSecurityApi().listRoles(toDispatchSession(getSession()))
+                .get(new RoleName("policy_enabler"));
+
+        TagId tagId = client.createTag("tag1");
+        PolicyId policyId = client.createRowFilterPolicy("row_filter_policy", "memory.row_filters.base_table", "has_tag(tag1)", policyEnablerId, rowFilterId);
+
+        // Apply the tag to the base_table
+        client.applyTagToTable(tagId, "memory.row_filters.base_table");
+
+        // Show that the row filter is in effect for filterOwner
+        assertUpdate("GRANT policy_enabler TO ROLE filter_owner");
+        assertThat(query(filterOwner, "SELECT * FROM memory.row_filters.base_table")).matches(filteredTableContents);
+
+        // Create a "reader" who doesn't have access to subquery_table
+        Session tableReaderSession = createUserAndGrantedRole("table_reader");
+        assertUpdate("GRANT SELECT ON table memory.row_filters.base_table TO ROLE table_reader");
+        assertUpdate("GRANT policy_enabler TO ROLE table_reader");
+
+        // Show that directly accessing the subquery_table fails
+        assertThatThrownBy(() -> query(tableReaderSession, "SELECT * FROM memory.row_filters.subquery_table"))
+                .isInstanceOf(QueryFailedException.class)
+                .hasMessage("Access Denied: Cannot select from columns [match_column] in table or view memory.row_filters.subquery_table: Role table_reader does not have the privilege SELECT on the columns ");
+
+        // Show that we only get the filtered row when querying the base_table
+        assertThat(query(tableReaderSession, "SELECT * FROM memory.row_filters.base_table")).matches(filteredTableContents);
+
+        // Clean up
+        client.deletePolicy(policyId);
+        client.deleteRowFilter(rowFilterId);
+        assertUpdate("DROP TABLE memory.row_filters.subquery_table");
+        assertUpdate("DROP TABLE memory.row_filters.base_table");
+        client.deleteTag(tagId);
+        assertUpdate("DROP ROLE policy_enabler");
+        assertUpdate("DROP ROLE table_reader");
+        assertUpdate("DROP ROLE filter_owner");
+        assertUpdate("DROP schema row_filters");
     }
 
     private MaterializedResult varcharColumnResult(String... values)

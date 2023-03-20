@@ -652,7 +652,8 @@ public class TestGalaxyMetadataApiSpec
                                 assertThat(client.getEntityPrivileges(dispatchSession(roleId), tableId))
                                         .isEqualTo(new EntityPrivileges(ACCOUNT_ADMIN_ROLE, adminRoleId, false, ImmutableSet.of(
                                                 new GalaxyPrivilegeInfo(privilege, grantOption)),
-                                                ImmutableMap.of(privilege.name(), new ContentsVisibility(ALLOW, ImmutableSet.of())), ImmutableList.of())));
+                                                ImmutableMap.of(privilege.name(), new ContentsVisibility(ALLOW, ImmutableSet.of())),
+                                                ImmutableList.of())));
                     }
                 }
             });
