@@ -13,14 +13,20 @@
  */
 package io.trino.galaxy.kafka;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
+import io.airlift.log.Logger;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.common.errors.InterruptException;
 import org.apache.kafka.common.errors.SerializationException;
@@ -29,7 +35,10 @@ import org.apache.kafka.common.serialization.ByteArraySerializer;
 
 import javax.annotation.concurrent.ThreadSafe;
 
+import java.time.Duration;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Predicate;
 
 import static com.google.common.util.concurrent.Futures.nonCancellationPropagating;
 import static java.util.Objects.requireNonNull;
@@ -38,11 +47,30 @@ import static java.util.Objects.requireNonNull;
 public class KafkaPublisherClient
         implements KafkaPublisher
 {
+    private static final Logger log = Logger.get(KafkaPublisherClient.class);
+
+    @VisibleForTesting
+    protected static final Predicate<Throwable> UNABLE_TO_RESOLVE_PREDICATE = throwable ->
+            Throwables.getCausalChain(throwable).stream()
+                    .anyMatch(t -> t instanceof ConfigException && t.getMessage().contains("No resolvable bootstrap urls given"));
+
     private final Producer<byte[], byte[]> producer;
 
     public KafkaPublisherClient(KafkaPublisherConfig config)
     {
-        this.producer = new KafkaProducer<>(createKafkaProducerProperties(requireNonNull(config, "config is null")));
+        AtomicLong resolveRetries = new AtomicLong(0);
+        this.producer = Failsafe.with(
+                        RetryPolicy.builder()
+                                .handleIf(UNABLE_TO_RESOLVE_PREDICATE::test)
+                                .withMaxRetries(Integer.MAX_VALUE)
+                                .withMaxDuration(Duration.of((long) config.getKafkaBootstrapServersResolutionTimeout().getValue(), config.getKafkaBootstrapServersResolutionTimeout().getUnit().toChronoUnit()))
+                                .withDelay(Duration.ofSeconds(1), Duration.ofSeconds(5))
+                                .onRetry(ignore -> resolveRetries.incrementAndGet())
+                                .build())
+                .get(() -> new KafkaProducer<>(createKafkaProducerProperties(requireNonNull(config, "config is null"))));
+        if (resolveRetries.get() > 0) {
+            log.warn("Had to retry to resolve bootstrap.urls: %s".formatted(config.getKafkaBootstrapServers()));
+        }
     }
 
     private static Properties createKafkaProducerProperties(KafkaPublisherConfig config)

@@ -15,9 +15,11 @@ package io.trino.galaxy.kafka;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.airlift.units.Duration;
 import org.testng.annotations.Test;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static io.airlift.configuration.testing.ConfigAssertions.assertFullMapping;
 import static io.airlift.configuration.testing.ConfigAssertions.assertRecordedDefaults;
@@ -34,7 +36,8 @@ public class TestKafkaPublisherConfig
                 .setKafkaSaslPassword(null)
                 .setKafkaClientDisplayId(null)
                 .setKafkaDeadLetterS3Bucket(null)
-                .setKafkaDeadLetterS3Prefix(null));
+                .setKafkaDeadLetterS3Prefix(null)
+                .setKafkaBootstrapServersResolutionTimeout(new Duration(2, TimeUnit.MINUTES)));
     }
 
     @Test
@@ -47,6 +50,7 @@ public class TestKafkaPublisherConfig
                 .put("kafka.client.display-id", "my-client")
                 .put("kafka.dead-letter.s3-bucket", "my-bucket")
                 .put("kafka.dead-letter.s3-prefix", "my-prefix")
+                .put("kafka.bootstrap.servers.resolution.timeout", "10m")
                 .buildOrThrow();
 
         KafkaPublisherConfig expected = new KafkaPublisherConfig()
@@ -55,7 +59,8 @@ public class TestKafkaPublisherConfig
                 .setKafkaSaslPassword("password")
                 .setKafkaClientDisplayId("my-client")
                 .setKafkaDeadLetterS3Bucket("my-bucket")
-                .setKafkaDeadLetterS3Prefix("my-prefix");
+                .setKafkaDeadLetterS3Prefix("my-prefix")
+                .setKafkaBootstrapServersResolutionTimeout(new Duration(10, TimeUnit.MINUTES));
 
         assertFullMapping(properties, expected);
     }

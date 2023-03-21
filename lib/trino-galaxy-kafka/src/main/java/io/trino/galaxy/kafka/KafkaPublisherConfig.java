@@ -17,6 +17,7 @@ import com.google.common.collect.ImmutableList;
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;
 import io.airlift.configuration.ConfigSecuritySensitive;
+import io.airlift.units.Duration;
 
 import javax.validation.constraints.AssertTrue;
 import javax.validation.constraints.NotEmpty;
@@ -24,6 +25,7 @@ import javax.validation.constraints.NotNull;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 public class KafkaPublisherConfig
 {
@@ -33,6 +35,7 @@ public class KafkaPublisherConfig
     private String kafkaClientDisplayId;
     private Optional<String> kafkaDeadLetterS3Bucket = Optional.empty();
     private Optional<String> kafkaDeadLetterS3Prefix = Optional.empty();
+    private Duration kafkaBootstrapServersResolutionTimeout = new Duration(2.0, TimeUnit.MINUTES);
 
     @NotEmpty
     public List<String> getKafkaBootstrapServers()
@@ -116,6 +119,20 @@ public class KafkaPublisherConfig
     public KafkaPublisherConfig setKafkaDeadLetterS3Prefix(String kafkaDeadLetterS3Prefix)
     {
         this.kafkaDeadLetterS3Prefix = Optional.ofNullable(kafkaDeadLetterS3Prefix);
+        return this;
+    }
+
+    @NotNull
+    public Duration getKafkaBootstrapServersResolutionTimeout()
+    {
+        return kafkaBootstrapServersResolutionTimeout;
+    }
+
+    @Config("kafka.bootstrap.servers.resolution.timeout")
+    @ConfigDescription("The max amount of time to wait for the kafka bootstrap servers to become DNS resolvable")
+    public KafkaPublisherConfig setKafkaBootstrapServersResolutionTimeout(Duration kafkaBootstrapServersResolutionTimeout)
+    {
+        this.kafkaBootstrapServersResolutionTimeout = kafkaBootstrapServersResolutionTimeout;
         return this;
     }
 
