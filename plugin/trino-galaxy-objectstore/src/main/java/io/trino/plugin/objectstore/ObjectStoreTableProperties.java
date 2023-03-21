@@ -14,12 +14,14 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.base.VerifyException;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.SetMultimap;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.session.PropertyMetadata;
+import io.trino.spi.type.ArrayType;
 
 import javax.inject.Inject;
 
@@ -36,6 +38,7 @@ import static io.trino.plugin.objectstore.TableType.HUDI;
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static io.trino.spi.session.PropertyMetadata.enumProperty;
 import static io.trino.spi.session.PropertyMetadata.stringProperty;
+import static io.trino.spi.type.VarcharType.VARCHAR;
 
 public final class ObjectStoreTableProperties
 {
@@ -63,12 +66,18 @@ public final class ObjectStoreTableProperties
             if (property.getName().equals("format")) {
                 continue;
             }
+            if (property.getName().equals("sorted_by")) {
+                continue;
+            }
             addProperty(properties, property);
             tableTypesForProperty.put(property.getName(), HIVE);
         }
 
         for (PropertyMetadata<?> property : icebergConnector.getTableProperties()) {
             if (property.getName().equals("format")) {
+                continue;
+            }
+            if (property.getName().equals("sorted_by")) {
                 continue;
             }
             PropertyMetadata<?> existing = properties.putIfAbsent(property.getName(), property);
@@ -109,6 +118,16 @@ public final class ObjectStoreTableProperties
             tableTypesForProperty.put(property.getName(), HUDI);
         }
 
+        addProperty(properties, new PropertyMetadata<>(
+                "sorted_by",
+                "Sorted columns",
+                new ArrayType(VARCHAR),
+                List.class,
+                ImmutableList.of(),
+                false,
+                value -> (List<?>) value,
+                value -> value));
+
         addProperty(properties, stringProperty(
                 "format",
                 "File format for the table",
@@ -137,6 +156,9 @@ public final class ObjectStoreTableProperties
             return false;
         }
         if (name.equals("format")) {
+            return (tableType == HIVE) || (tableType == ICEBERG);
+        }
+        if (name.equals("sorted_by")) {
             return (tableType == HIVE) || (tableType == ICEBERG);
         }
         if (tableTypesForProperty.containsEntry(name, tableType)) {

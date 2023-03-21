@@ -13,6 +13,8 @@
  */
 package io.trino.plugin.objectstore;
 
+import io.trino.Session;
+import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.testing.MaterializedResult;
 import io.trino.testing.sql.TestTable;
 import org.testng.annotations.BeforeClass;
@@ -24,6 +26,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import static io.trino.plugin.iceberg.IcebergTestUtils.checkOrcFileSorting;
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static io.trino.spi.type.VarcharType.VARCHAR;
@@ -32,6 +35,7 @@ import static java.lang.String.format;
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.testng.Assert.assertTrue;
 
 public class TestObjectStoreIcebergConnectorTest
         extends BaseObjectStoreConnectorTest
@@ -315,6 +319,37 @@ public class TestObjectStoreIcebergConnectorTest
             assertQueryFails(
                     "ALTER TABLE " + tableName + " ADD COLUMN b_varchar varchar NOT NULL",
                     "This connector does not support adding not null columns");
+        }
+    }
+
+    @Test
+    public void testSortedTable()
+    {
+        Session withSmallRowGroups = Session.builder(getSession())
+                .setCatalogSessionProperty(getSession().getCatalog().orElseThrow(), "orc_writer_max_stripe_rows", "7")
+                .build();
+        try (TestTable table = new TestTable(
+                getQueryRunner()::execute,
+                "test_sorted_table",
+                "(id INTEGER, name VARCHAR) WITH (sorted_by = ARRAY['name'], format = 'ORC')")) {
+            assertUpdate(format("GRANT SELECT ON \"%s$files\" TO ROLE %s", table.getName(), ACCOUNT_ADMIN));
+            String values = " VALUES" +
+                    "(5, 'name5')," +
+                    "(10, 'name10')," +
+                    "(4, 'name4')," +
+                    "(1, 'name1')," +
+                    "(6, 'name6')," +
+                    "(9, 'name9')," +
+                    "(8, 'name8')," +
+                    "(3, 'name3')," +
+                    "(7, 'name7')," +
+                    "(2, 'name2')";
+            assertUpdate(withSmallRowGroups, "INSERT INTO " + table.getName() + values, 10);
+            assertQuery("SELECT * FROM " + table.getName(), values.trim());
+            TrinoFileSystemFactory fileSystemFactory = getTrinoFileSystemFactory();
+            for (Object filePath : computeActual("SELECT file_path from \"" + table.getName() + "$files\"").getOnlyColumnAsSet()) {
+                assertTrue(checkOrcFileSorting(fileSystemFactory, (String) filePath, "name"));
+            }
         }
     }
 

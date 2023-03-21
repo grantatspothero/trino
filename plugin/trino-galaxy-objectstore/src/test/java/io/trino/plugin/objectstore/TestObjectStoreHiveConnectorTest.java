@@ -14,6 +14,7 @@
 package io.trino.plugin.objectstore;
 
 import io.trino.Session;
+import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.testing.TestingConnectorBehavior;
 import io.trino.testing.sql.TestTable;
 import org.intellij.lang.annotations.Language;
@@ -23,6 +24,7 @@ import org.testng.annotations.Test;
 import java.util.Optional;
 
 import static io.trino.plugin.hive.HiveQueryRunner.TPCH_SCHEMA;
+import static io.trino.plugin.iceberg.IcebergTestUtils.checkOrcFileSorting;
 import static io.trino.plugin.objectstore.TableType.HIVE;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static io.trino.spi.type.BigintType.BIGINT;
@@ -32,6 +34,7 @@ import static io.trino.testing.QueryAssertions.assertEqualsIgnoreOrder;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.testng.Assert.assertTrue;
 
 public class TestObjectStoreHiveConnectorTest
         extends BaseObjectStoreConnectorTest
@@ -170,6 +173,46 @@ public class TestObjectStoreHiveConnectorTest
     {
         assertThatThrownBy(super::testDeleteWithComplexPredicate)
                 .hasStackTraceContaining("Modifying Hive table rows is constrained to deletes of whole partitions");
+    }
+
+    @Test
+    public void testSortedTable()
+    {
+        Session withSmallRowGroups = Session.builder(getSession())
+                .setCatalogSessionProperty(getSession().getCatalog().orElseThrow(), "orc_optimized_writer_max_stripe_rows", "6")
+                .build();
+        try (TestTable table = new TestTable(
+                getQueryRunner()::execute,
+                "test_sorted_table",
+                "(id INTEGER, name VARCHAR) WITH (bucketed_by = ARRAY[ 'name' ], bucket_count = 2, sorted_by = ARRAY['name'], format = 'ORC')")) {
+            String values = " VALUES" +
+                    "(5, 'name5')," +
+                    "(10, 'name10')," +
+                    "(4, 'name4')," +
+                    "(11, 'name11')," +
+                    "(15, 'name15')," +
+                    "(17, 'name17')," +
+                    "(20, 'name20')," +
+                    "(12, 'name12')," +
+                    "(13, 'name13')," +
+                    "(1, 'name1')," +
+                    "(6, 'name6')," +
+                    "(19, 'name19')," +
+                    "(18, 'name18')," +
+                    "(9, 'name9')," +
+                    "(16, 'name16')," +
+                    "(8, 'name8')," +
+                    "(3, 'name3')," +
+                    "(14, 'name14')," +
+                    "(7, 'name7')," +
+                    "(2, 'name2')";
+            assertUpdate(withSmallRowGroups, "INSERT INTO " + table.getName() + values, 20);
+            assertQuery("SELECT * FROM " + table.getName(), values.trim());
+            TrinoFileSystemFactory fileSystemFactory = getTrinoFileSystemFactory();
+            for (Object filePath : computeActual("SELECT DISTINCT \"$path\" FROM " + table.getName()).getOnlyColumnAsSet()) {
+                assertTrue(checkOrcFileSorting(fileSystemFactory, (String) filePath, "name"));
+            }
+        }
     }
 
     @Override
