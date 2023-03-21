@@ -16,6 +16,7 @@ package io.trino.plugin.objectstore;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableMap;
 import io.airlift.slice.Slice;
+import io.trino.plugin.deltalake.CorruptedDeltaLakeTableHandle;
 import io.trino.plugin.deltalake.DeltaLakeInsertTableHandle;
 import io.trino.plugin.deltalake.DeltaLakeMergeTableHandle;
 import io.trino.plugin.deltalake.DeltaLakeOutputTableHandle;
@@ -859,7 +860,7 @@ public class ObjectStoreMetadata
         if (handle instanceof IcebergTableHandle) {
             return icebergMetadata;
         }
-        if (handle instanceof DeltaLakeTableHandle) {
+        if (handle instanceof DeltaLakeTableHandle || handle instanceof CorruptedDeltaLakeTableHandle) {
             return deltaMetadata;
         }
         if (handle instanceof HudiTableHandle) {
