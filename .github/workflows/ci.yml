@@ -1275,7 +1275,6 @@ jobs:
       REDSHIFT_IAM_ROLES: arn:aws:iam::888469412714:role/redshift-cicd
       REDSHIFT_VPC_SECURITY_GROUP_IDS: "[\"sg-0ad7ac36a73650b08\", \"sg-012799e2208deb2ab\"]"
       REDSHIFT_S3_TPCH_TABLES_ROOT: "s3://starburstdata-engineering-redshift-test"
-      REDSHIFT_PUBLICLY_ACCESSIBLE: false
     timeout-minutes: 60
     steps:
       - name: "GHA Node Info"

@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 
-# TODO
-# TODO Warning: this is just a temporary version of the script, to be replaced.
-# TODO It has not been tidied up and doesn't yet correspond to how we write scripts.
-# TODO
+set -uo pipefail
 
 REDSHIFT_SCRIPTS_DIR="${BASH_SOURCE%/*}"
 
@@ -18,14 +15,20 @@ echo "Deleting Amazon Redshift cluster $REDSHIFT_CLUSTER_IDENTIFIER"
 REDSHIFT_DELETE_CLUSTER_OUTPUT=$(aws redshift delete-cluster --cluster-identifier $REDSHIFT_CLUSTER_IDENTIFIER --skip-final-cluster-snapshot)
 
 if [ -z "${REDSHIFT_DELETE_CLUSTER_OUTPUT}" ]; then
-    # An exception occurred while trying to delete the cluster
-    exit 1
+    echo ${REDSHIFT_DELETE_CLUSTER_OUTPUT}
+    # Don't fail the build because of cleanup issues
+    exit 0
 fi
 
 echo "Waiting for the Amazon Redshift cluster $REDSHIFT_CLUSTER_IDENTIFIER to be deleted"
 aws redshift wait cluster-deleted \
   --cluster-identifier $REDSHIFT_CLUSTER_IDENTIFIER
-echo "Amazon Redshift cluster $REDSHIFT_CLUSTER_IDENTIFIER has been deleted"
+if [ "$?" -ne 0 ]
+then
+  echo "Amazon Redshift cluster $REDSHIFT_CLUSTER_IDENTIFIER deletion has timed out"
+else
+  echo "Amazon Redshift cluster $REDSHIFT_CLUSTER_IDENTIFIER has been deleted"
+fi
 
 rm -f ${REDSHIFT_SCRIPTS_DIR}/.cluster-identifier
 exit 0

@@ -30,7 +30,7 @@ the `ci.yml` file uses. They can also be used for local development.
 1. Make sure you are authenticated to the **starburstdata-engineering (888469412714)** AWS account. e.g. `gimme-aws-creds --role /888469412714/`.
 2. Execute `./bin/redshift/local-setup-aws-redshift.sh`. This will spin up a Redshift cluster via bash scripts.
     * It takes roughly four minutes for the script to complete
-3. Once finished, you'll see the location of the file containing VM arguments used for Maven tests printed to the terminal.
-   You can use these VM arguments in IntelliJ as well.
+3. Once finished, you can use the instructions printed in the output of the script previously mentioned to connect 
+   directly to AWS Redshift via `psql` or use VM arguments in IntelliJ for the integration tests.
 4. Install the `vpn` tool so that the ephemeral Redshift cluster can be connected locally. See instructions at https://github.com/starburstdata/sep-ci-dev-tools/tree/main/vpn.
 5. **Important!** Once you are done, run `./bin/redshift/local-delete-aws-redshift.sh` to delete the cluster.
