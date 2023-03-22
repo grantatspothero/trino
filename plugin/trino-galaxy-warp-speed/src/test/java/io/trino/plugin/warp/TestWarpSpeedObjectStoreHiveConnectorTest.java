@@ -29,12 +29,6 @@ public class TestWarpSpeedObjectStoreHiveConnectorTest
     }
 
     @Override
-    protected String getObjectStoreConnectorName()
-    {
-        return WarpSpeedConnectorTestUtils.getConnectorName();
-    }
-
-    @Override
     protected QueryRunner createQueryRunner()
             throws Exception
     {

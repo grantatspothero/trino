@@ -46,6 +46,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 
+import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.airlift.testing.Closeables.closeAllSuppress;
 import static io.trino.hadoop.ConfigurationInstantiator.newEmptyConfiguration;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
@@ -80,7 +81,6 @@ public class ObjectStoreQueryRunner
         private TestingGalaxyMetastore metastore;
         private TestingLocationSecurityServer locationSecurityServer;
         private Plugin objectStorePlugin = new ObjectStorePlugin();
-        private String connectorName;
         private Map<String, String> extraObjectStoreProperties = ImmutableMap.of();
         private Map<String, String> coordinatorProperties = ImmutableMap.of();
         private MockConnectorPlugin mockConnectorPlugin;
@@ -158,13 +158,6 @@ public class ObjectStoreQueryRunner
         }
 
         @CanIgnoreReturnValue
-        public Builder withConnectorName(String connectorName)
-        {
-            this.connectorName = connectorName;
-            return this;
-        }
-
-        @CanIgnoreReturnValue
         public Builder withExtraObjectStoreProperties(Map<String, String> properties)
         {
             this.extraObjectStoreProperties = properties;
@@ -204,7 +197,7 @@ public class ObjectStoreQueryRunner
                         .addPlugin(new TpchPlugin())
                         .addCatalog(TPCH_SCHEMA, TPCH_SCHEMA, ImmutableMap.of())
                         .addPlugin(objectStorePlugin)
-                        .addCatalog(CATALOG, connectorName, properties)
+                        .addCatalog(CATALOG, getOnlyElement(objectStorePlugin.getConnectorFactories()).getName(), properties)
                         .addPlugin(new IcebergPlugin())
                         .addPlugin(this.mockConnectorPlugin)
                         .addCatalog("mock_dynamic_listing", "mock", Map.of())
@@ -257,7 +250,6 @@ public class ObjectStoreQueryRunner
                 .withLocationSecurityServer(locationSecurityServer)
                 .withCockroach(cockroach)
                 .withMockConnectorPlugin(new MockConnectorPlugin(MockConnectorFactory.create()))
-                .withConnectorName("galaxy_objectstore")
                 .withAccountClient(account)
                 .build();
     }

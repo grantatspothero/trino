@@ -104,7 +104,6 @@ public abstract class BaseObjectStoreConnectorTest
                 .withCoordinatorProperties(coordinatorProperties)
                 .withExtraObjectStoreProperties(extraObjectStoreProperties)
                 .withPlugin(getObjectStorePlugin())
-                .withConnectorName(getObjectStoreConnectorName())
                 .build();
 
         initializeTpchTables(queryRunner, metastore);
@@ -117,11 +116,6 @@ public abstract class BaseObjectStoreConnectorTest
     protected Plugin getObjectStorePlugin()
     {
         return new ObjectStorePlugin();
-    }
-
-    protected String getObjectStoreConnectorName()
-    {
-        return "galaxy_objectstore";
     }
 
     protected void initializeTpchTables(DistributedQueryRunner queryRunner, TestingGalaxyMetastore metastore)

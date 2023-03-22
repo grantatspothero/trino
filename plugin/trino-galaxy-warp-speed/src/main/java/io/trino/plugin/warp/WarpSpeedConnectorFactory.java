@@ -34,7 +34,7 @@ public class WarpSpeedConnectorFactory
     public static final String WARP_PREFIX = "WARP__";
     private final DispatcherConnectorFactory dispatcherConnectorFactory;
 
-    public static final String NAME = DispatcherConnectorFactory.DISPATCHER_CONNECTOR_NAME;
+    private static final String NAME = DispatcherConnectorFactory.DISPATCHER_CONNECTOR_NAME;
 
     public WarpSpeedConnectorFactory(DispatcherConnectorFactory dispatcherConnectorFactory)
     {

@@ -53,9 +53,4 @@ public abstract class WarpSpeedConnectorTestUtils
         // warp_speed connector currently doesn't support coordinator scheduling
         return Map.of("node-scheduler.include-coordinator", "false");
     }
-
-    public static String getConnectorName()
-    {
-        return WarpSpeedConnectorFactory.NAME;
-    }
 }
