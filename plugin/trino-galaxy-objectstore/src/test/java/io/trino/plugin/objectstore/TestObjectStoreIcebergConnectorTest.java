@@ -386,14 +386,6 @@ public class TestObjectStoreIcebergConnectorTest
                 "This connector does not support versioned tables");
     }
 
-    @Override
-    public void testDropTableCorruptStorage()
-    {
-        // TODO https://github.com/trinodb/trino/issues/12318
-        assertThatThrownBy(super::testDropTableCorruptStorage)
-                .hasMessageMatching("Failed to read file: .*");
-    }
-
     private long getLatestSnapshotId(String tableName)
     {
         return (long) computeActual(format("SELECT snapshot_id FROM \"%s$snapshots\" ORDER BY committed_at DESC LIMIT 1", tableName))

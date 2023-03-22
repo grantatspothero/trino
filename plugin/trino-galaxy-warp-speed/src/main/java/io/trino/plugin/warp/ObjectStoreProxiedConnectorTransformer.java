@@ -21,6 +21,7 @@ import io.trino.plugin.hive.HiveSplit;
 import io.trino.plugin.hive.HiveTableHandle;
 import io.trino.plugin.hudi.HudiSplit;
 import io.trino.plugin.hudi.HudiTableHandle;
+import io.trino.plugin.iceberg.CorruptedIcebergTableHandle;
 import io.trino.plugin.iceberg.IcebergColumnHandle;
 import io.trino.plugin.iceberg.IcebergSplit;
 import io.trino.plugin.iceberg.IcebergTableHandle;
@@ -196,7 +197,7 @@ public class ObjectStoreProxiedConnectorTransformer
         if (connectorTableHandle instanceof HiveTableHandle) {
             return hiveProxiedConnectorTransformer;
         }
-        if (connectorTableHandle instanceof IcebergTableHandle) {
+        if (connectorTableHandle instanceof IcebergTableHandle || connectorTableHandle instanceof CorruptedIcebergTableHandle) {
             return icebergProxiedConnectorTransformer;
         }
         if (connectorTableHandle instanceof HudiTableHandle) {

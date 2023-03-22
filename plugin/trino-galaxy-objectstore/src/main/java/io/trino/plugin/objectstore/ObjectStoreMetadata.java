@@ -29,6 +29,7 @@ import io.trino.plugin.hive.HivePartitioningHandle;
 import io.trino.plugin.hive.HiveTableExecuteHandle;
 import io.trino.plugin.hive.HiveTableHandle;
 import io.trino.plugin.hudi.HudiTableHandle;
+import io.trino.plugin.iceberg.CorruptedIcebergTableHandle;
 import io.trino.plugin.iceberg.IcebergMergeTableHandle;
 import io.trino.plugin.iceberg.IcebergPartitioningHandle;
 import io.trino.plugin.iceberg.IcebergTableHandle;
@@ -1018,7 +1019,7 @@ public class ObjectStoreMetadata
         if (handle instanceof HiveTableHandle) {
             return HIVE;
         }
-        if (handle instanceof IcebergTableHandle) {
+        if (handle instanceof IcebergTableHandle || handle instanceof CorruptedIcebergTableHandle) {
             return ICEBERG;
         }
         if (handle instanceof DeltaLakeTableHandle || handle instanceof CorruptedDeltaLakeTableHandle) {
@@ -1037,6 +1038,9 @@ public class ObjectStoreMetadata
         }
         if (handle instanceof IcebergTableHandle icebergTableHandle) {
             return icebergTableHandle.getSchemaTableName();
+        }
+        if (handle instanceof CorruptedIcebergTableHandle corruptedIcebergTableHandle) {
+            return corruptedIcebergTableHandle.schemaTableName();
         }
         if (handle instanceof DeltaLakeTableHandle deltaLakeTableHandle) {
             return deltaLakeTableHandle.getSchemaTableName();

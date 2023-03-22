@@ -15,9 +15,11 @@ package io.trino.plugin.warp;
 
 import io.trino.plugin.objectstore.TestObjectStoreIcebergConnectorTest;
 import io.trino.spi.Plugin;
+import io.trino.testing.QueryFailedException;
 import io.trino.testing.QueryRunner;
 
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestWarpSpeedIcebergConnectorTest
         extends TestObjectStoreIcebergConnectorTest
@@ -36,5 +38,15 @@ public class TestWarpSpeedIcebergConnectorTest
                 ICEBERG,
                 WarpSpeedConnectorTestUtils.getCoordinatorProperties(),
                 WarpSpeedConnectorTestUtils.getProperties());
+    }
+
+    @Override
+    public void testDropTableCorruptStorage()
+    {
+        // TODO IcebergProxiedConnectorTransformer.getSchemaTableName needs to handle CorruptedIcebergTableHandle
+        assertThatThrownBy(super::testDropTableCorruptStorage)
+                .isInstanceOf(QueryFailedException.class)
+                .hasStackTraceContaining("class io.trino.plugin.iceberg.CorruptedIcebergTableHandle cannot be cast to class io.trino.plugin.iceberg.IcebergTableHandle (io.trino.plugin.iceberg.CorruptedIcebergTableHandle and io.trino.plugin.iceberg.IcebergTableHandle are in unnamed module of loader 'app')")
+                .hasStackTraceContaining("at io.trino.plugin.warp.proxiedconnector.iceberg.IcebergProxiedConnectorTransformer.getSchemaTableName(IcebergProxiedConnectorTransformer.java");
     }
 }
