@@ -190,19 +190,21 @@ public class ObjectStoreQueryRunner
                         hiveS3Config,
                         extraObjectStoreProperties);
 
-                DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder("objectstore", "tpch")
-                        .setNodeCount(3)
-                        .setCockroach(cockroach)
-                        .setCoordinatorProperties(coordinatorProperties)
-                        .addPlugin(new TpchPlugin())
-                        .addCatalog(TPCH_SCHEMA, TPCH_SCHEMA, ImmutableMap.of())
-                        .addPlugin(objectStorePlugin)
-                        .addCatalog(CATALOG, getOnlyElement(objectStorePlugin.getConnectorFactories()).getName(), properties)
-                        .addPlugin(new IcebergPlugin())
-                        .addPlugin(this.mockConnectorPlugin)
-                        .addCatalog("mock_dynamic_listing", "mock", Map.of())
-                        .setAccountClient(Optional.ofNullable(accountClient))
-                        .build();
+                GalaxyQueryRunner.Builder builder = GalaxyQueryRunner.builder("objectstore", "tpch");
+                builder.setNodeCount(3);
+                builder.setCockroach(cockroach);
+                builder.setCoordinatorProperties(coordinatorProperties);
+                builder.addPlugin(new TpchPlugin());
+                builder.addCatalog(TPCH_SCHEMA, TPCH_SCHEMA, ImmutableMap.of());
+                builder.addPlugin(objectStorePlugin);
+                builder.addCatalog(CATALOG, getOnlyElement(objectStorePlugin.getConnectorFactories()).getName(), properties);
+                builder.addPlugin(new IcebergPlugin());
+                if (mockConnectorPlugin != null) {
+                    builder.addPlugin(mockConnectorPlugin);
+                    builder.addCatalog("mock_dynamic_listing", "mock", Map.of());
+                }
+                builder.setAccountClient(Optional.ofNullable(accountClient));
+                DistributedQueryRunner queryRunner = builder.build();
 
                 queryRunner.execute("CREATE SCHEMA objectstore.tpch");
                 return queryRunner;
