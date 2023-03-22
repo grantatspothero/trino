@@ -281,6 +281,8 @@ public class ObjectStoreQueryRunner
 
     public static final class ObjectStoreIcebergQueryRunner
     {
+        private ObjectStoreIcebergQueryRunner() {}
+
         public static void main(String[] args)
                 throws Exception
         {
@@ -292,6 +294,7 @@ public class ObjectStoreQueryRunner
             TestingGalaxyMetastore metastore = new TestingGalaxyMetastore(Optional.of(cockroach));
             TestingLocationSecurityServer locationSecurityServer = new TestingLocationSecurityServer((session, location) -> false);
             minio.start();
+            @SuppressWarnings("resource")
             TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(Optional.of(cockroach));
             TestingAccountClient account = testingAccountFactory.createAccount();
             DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.ICEBERG, minio, metastore, locationSecurityServer, cockroach, account);
@@ -312,6 +315,8 @@ public class ObjectStoreQueryRunner
 
     public static final class ObjectStoreHiveQueryRunner
     {
+        private ObjectStoreHiveQueryRunner() {}
+
         public static void main(String[] args)
                 throws Exception
         {
@@ -323,6 +328,7 @@ public class ObjectStoreQueryRunner
             TestingGalaxyMetastore metastore = new TestingGalaxyMetastore(Optional.of(cockroach));
             TestingLocationSecurityServer locationSecurityServer = new TestingLocationSecurityServer((session, location) -> false);
             minio.start();
+            @SuppressWarnings("resource")
             TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(Optional.of(cockroach));
             TestingAccountClient account = testingAccountFactory.createAccount();
             DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.HIVE, minio, metastore, locationSecurityServer, cockroach, account);
@@ -343,6 +349,8 @@ public class ObjectStoreQueryRunner
 
     public static final class ObjectStoreDeltaLakeQueryRunner
     {
+        private ObjectStoreDeltaLakeQueryRunner() {}
+
         public static void main(String[] args)
                 throws Exception
         {
@@ -354,6 +362,7 @@ public class ObjectStoreQueryRunner
             TestingGalaxyMetastore metastore = new TestingGalaxyMetastore(Optional.of(cockroach));
             TestingLocationSecurityServer locationSecurityServer = new TestingLocationSecurityServer((session, location) -> false);
             minio.start();
+            @SuppressWarnings("resource")
             TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(Optional.of(cockroach));
             TestingAccountClient account = testingAccountFactory.createAccount();
             DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.DELTA, minio, metastore, locationSecurityServer, cockroach, account);
@@ -374,6 +383,8 @@ public class ObjectStoreQueryRunner
 
     public static final class ObjectStoreHudiQueryRunner
     {
+        private ObjectStoreHudiQueryRunner() {}
+
         public static void main(String[] args)
                 throws Exception
         {
@@ -385,6 +396,7 @@ public class ObjectStoreQueryRunner
             TestingGalaxyMetastore metastore = new TestingGalaxyMetastore(Optional.of(cockroach));
             TestingLocationSecurityServer locationSecurityServer = new TestingLocationSecurityServer((session, location) -> false);
             minio.start();
+            @SuppressWarnings("resource")
             TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(Optional.of(cockroach));
             TestingAccountClient account = testingAccountFactory.createAccount();
             DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.HUDI, minio, metastore, locationSecurityServer, cockroach, account);
