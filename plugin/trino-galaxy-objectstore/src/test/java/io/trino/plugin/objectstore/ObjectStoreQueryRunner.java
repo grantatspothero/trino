@@ -79,9 +79,9 @@ public class ObjectStoreQueryRunner
         private Map<String, String> hiveS3Config;
         private TestingGalaxyMetastore metastore;
         private TestingLocationSecurityServer locationSecurityServer;
-        private Plugin objectStorePlugin;
+        private Plugin objectStorePlugin = new ObjectStorePlugin();
         private String connectorName;
-        private Map<String, String> extraObjectStoreProperties;
+        private Map<String, String> extraObjectStoreProperties = ImmutableMap.of();
         private Map<String, String> coordinatorProperties = ImmutableMap.of();
         private MockConnectorPlugin mockConnectorPlugin;
         private GalaxyCockroachContainer cockroach;
@@ -257,9 +257,7 @@ public class ObjectStoreQueryRunner
                 .withLocationSecurityServer(locationSecurityServer)
                 .withCockroach(cockroach)
                 .withMockConnectorPlugin(new MockConnectorPlugin(MockConnectorFactory.create()))
-                .withPlugin(new ObjectStorePlugin())
                 .withConnectorName("galaxy_objectstore")
-                .withExtraObjectStoreProperties(ImmutableMap.of())
                 .withAccountClient(account)
                 .build();
     }
