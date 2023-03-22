@@ -204,6 +204,11 @@ public abstract class BaseObjectStoreConnectorTest
     @Override
     protected OptionalInt maxTableNameLength()
     {
+        return objectStoreTestMaxTableNameLength();
+    }
+
+    public static OptionalInt objectStoreTestMaxTableNameLength()
+    {
         // Limit table name length for MinIO and Galaxy metastore HTTP API
         // (used to be 255 - UUID.randomUUID().toString().length() but minio/minio:RELEASE.2022-10-05T14-58-27Z tightened limit)
         return OptionalInt.of(240 - UUID.randomUUID().toString().length());
@@ -211,6 +216,11 @@ public abstract class BaseObjectStoreConnectorTest
 
     @Override
     protected OptionalInt maxSchemaNameLength()
+    {
+        return objectStoreTestMaxSchemaNameLength();
+    }
+
+    public static OptionalInt objectStoreTestMaxSchemaNameLength()
     {
         // Limit schema name length for MinIO and Galaxy metastore HTTP API
         // (used to be 255 - UUID.randomUUID().toString().length() but minio/minio:RELEASE.2022-10-05T14-58-27Z tightened limit)

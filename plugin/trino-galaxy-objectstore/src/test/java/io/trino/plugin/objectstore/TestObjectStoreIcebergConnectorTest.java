@@ -37,6 +37,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.testng.Assert.assertTrue;
 
+/**
+ * Tests ObjectStore connector with Iceberg backend.
+ *
+ * @see TestObjectStoreIcebergFeaturesConnectorTest
+ */
 public class TestObjectStoreIcebergConnectorTest
         extends BaseObjectStoreConnectorTest
 {
