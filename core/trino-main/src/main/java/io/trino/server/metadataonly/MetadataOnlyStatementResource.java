@@ -90,7 +90,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.Maps.transformEntries;
 import static com.google.common.collect.Maps.transformValues;
 import static io.airlift.concurrent.MoreFutures.whenAnyComplete;
 import static io.trino.SystemSessionProperties.getRetryPolicy;
@@ -378,31 +377,8 @@ public class MetadataOnlyStatementResource
 
     private QueryCatalog decryptCatalog(AccountId accountId, QueryCatalog queryCatalog)
     {
-        Map<String, String> decryptedProperties;
-        if (queryCatalog.secrets().isPresent()) {
-            decryptedProperties = decryptSecrets(accountId, queryCatalog);
-        }
-        else {
-            decryptedProperties = decryptSecretsDeprecated(accountId, queryCatalog);
-        }
+        Map<String, String> decryptedProperties = decryptSecrets(accountId, queryCatalog);
         return new QueryCatalog(queryCatalog.catalogName(), queryCatalog.connectorName(), decryptedProperties, queryCatalog.secretsMap(), queryCatalog.secrets());
-    }
-
-    @Deprecated
-    private Map<String, String> decryptSecretsDeprecated(AccountId accountId, QueryCatalog queryCatalog)
-    {
-        return ImmutableMap.copyOf(transformEntries(queryCatalog.properties(), (secretName, secretValue) -> {
-            if (!SealedSecret.isSealedSecret(secretValue)) {
-                return secretValue;
-            }
-            String originalSecretName = queryCatalog.secretsMap().get(secretName);
-            if (originalSecretName == null) {
-                badRequest(BAD_REQUEST, "Secret mapping not found: " + secretName);
-            }
-            // TODO(jlz) cc Nik - due to time constraints the Metadata specific KMS policy is not ready - for now use the verifier's
-            Map<String, String> metadataEncryptionContext = SecretEncryptionContext.forVerifier(accountId, trinoPlaneId, Optional.of(queryCatalog.catalogName()), originalSecretName);
-            return secretSealer.unsealSecret(SealedSecret.fromString(secretValue), metadataEncryptionContext);
-        }));
     }
 
     private Map<String, String> decryptSecrets(AccountId accountId, QueryCatalog queryCatalog)
