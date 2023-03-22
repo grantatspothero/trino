@@ -9,15 +9,7 @@
  */
 package io.starburst.stargate.buffer.data.client.spooling.s3;
 
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider;
-
-import javax.annotation.Nullable;
-
 import java.net.URI;
-import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.nullToEmpty;
@@ -26,22 +18,6 @@ import static io.starburst.stargate.buffer.data.client.spooling.SpoolUtils.PATH_
 public final class S3SpoolUtils
 {
     private S3SpoolUtils() {}
-
-    public static AwsCredentialsProvider createAwsCredentialsProvider(@Nullable String accessKey, @Nullable String secretKey)
-    {
-        return createAwsCredentialsProvider(Optional.ofNullable(accessKey), Optional.ofNullable(secretKey));
-    }
-
-    public static AwsCredentialsProvider createAwsCredentialsProvider(Optional<String> accessKey, Optional<String> secretKey)
-    {
-        if (accessKey.isPresent() && secretKey.isPresent()) {
-            return StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey.get(), secretKey.get()));
-        }
-        if (accessKey.isEmpty() && secretKey.isEmpty()) {
-            return WebIdentityTokenFileCredentialsProvider.create();
-        }
-        throw new IllegalArgumentException("AWS access key and secret key should be either both set or both not set");
-    }
 
     /**
      * Helper function used to work around the fact that if you use an S3 bucket with an '_' that java.net.URI
