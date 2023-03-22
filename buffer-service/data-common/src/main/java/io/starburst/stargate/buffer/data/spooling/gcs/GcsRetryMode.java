@@ -7,12 +7,11 @@
  *
  * Redistribution of this material is strictly prohibited.
  */
-package io.starburst.stargate.buffer.data.client.spooling;
+package io.starburst.stargate.buffer.data.spooling.gcs;
 
-public enum SpoolingStorageType
+public enum GcsRetryMode
 {
-    NONE,
-    LOCAL,
-    S3,
-    GCS
+    // See StorageRetryStrategy for more information
+    DEFAULT,
+    UNIFORM;
 }
