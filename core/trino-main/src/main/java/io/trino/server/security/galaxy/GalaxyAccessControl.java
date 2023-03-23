@@ -52,7 +52,6 @@ import java.util.function.Predicate;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.starburst.stargate.accesscontrol.client.OperationNotAllowedException.operationNotAllowed;
-import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_CATALOG;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_SCHEMA;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_TABLE;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.DELETE;
@@ -389,7 +388,7 @@ public class GalaxyAccessControl
     public void checkCanSelectFromColumns(SystemSecurityContext context, CatalogSchemaTableName table, Set<String> columns)
     {
         if (isSchemaDiscovery(table)) {
-            checkHasAccountPrivilege(context, CREATE_CATALOG, explanation -> denySelectColumns(table.toString(), columns, explanation));
+            checkHasCatalogPrivilege(context, table.getCatalogName(), CREATE_SCHEMA, explanation -> denySelectColumns(table.toString(), columns, explanation));
         }
         else if (!isSystemCatalog(table)) {
             checkHasPrivilegeOnColumns(context, SELECT, false, table, columns, explanation -> denySelectColumns(table.toString(), columns, explanation));

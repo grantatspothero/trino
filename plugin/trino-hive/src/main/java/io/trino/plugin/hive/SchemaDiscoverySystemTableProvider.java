@@ -19,6 +19,7 @@ import io.starburst.schema.discovery.formats.orc.CopiedHdfsOrcDataSource;
 import io.starburst.schema.discovery.formats.orc.OrcDataSourceFactory;
 import io.starburst.schema.discovery.formats.parquet.CopiedHdfsParquetDataSource;
 import io.starburst.schema.discovery.formats.parquet.ParquetDataSourceFactory;
+import io.starburst.schema.discovery.io.DiscoveryFileSystem;
 import io.starburst.schema.discovery.trino.system.table.DiscoveryLocationAccessControlAdapter;
 import io.starburst.schema.discovery.trino.system.table.SchemaDiscoverySystemTable;
 import io.starburst.schema.discovery.trino.system.table.ShallowDiscoverySystemTable;
@@ -30,7 +31,6 @@ import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SystemTable;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import javax.inject.Inject;
@@ -87,9 +87,9 @@ public class SchemaDiscoverySystemTableProvider
     private SchemaDiscoveryController createSchemaDiscoveryController(ConnectorSession session)
     {
         HdfsContext hdfsContext = new HdfsContext(session);
-        Function<URI, FileSystem> fileSystemProvider = uri -> {
+        Function<URI, DiscoveryFileSystem> fileSystemProvider = uri -> {
             try {
-                return hdfsEnvironment.getFileSystem(hdfsContext, new Path(uri));
+                return new DiscoveryFileSystem(hdfsEnvironment.getFileSystem(hdfsContext, new Path(uri)));
             }
             catch (IOException e) {
                 throw new TrinoException(INVALID_ARGUMENTS, "Invalid uri: " + uri, e);
