@@ -36,7 +36,7 @@ public class Suite2
                         .build(),
                 // Disable kerberized tests for Galaxy Trino, since kerberos feature isn't used. This is just to cut down CI time, so it doesn't fail due to suite-2 timeouts.
 //                testOnEnvironment(EnvSinglenodeKerberosHdfsNoImpersonation.class)
-//                        .withGroups("configured_features", "storage_formats", "hdfs_no_impersonation")
+//                        .withGroups("configured_features", "storage_formats", "hdfs_no_impersonation", "hive_kerberos")
 //                        .build(),
 //                testOnEnvironment(EnvSinglenodeKerberosHiveNoImpersonationWithCredentialCache.class)
 //                        .withGroups("configured_features", "storage_formats", "hdfs_no_impersonation")
@@ -44,9 +44,9 @@ public class Suite2
                 testOnEnvironment(EnvSinglenodeHdfsImpersonation.class)
                         .withGroups("configured_features", "storage_formats", "cli", "hdfs_impersonation")
                         .build());
-                //, Disable kerberized tests for Galaxy Trino, since kerberos feature isn't used. This is just to cut down CI time, so it doesn't fail due to suite-2 timeouts.
+        // Disable kerberized tests for Galaxy Trino, since kerberos feature isn't used. This is just to cut down CI time, so it doesn't fail due to suite-2 timeouts.
 //                testOnEnvironment(EnvSinglenodeKerberosHdfsImpersonation.class)
-//                        .withGroups("configured_features", "storage_formats", "cli", "hdfs_impersonation", "authorization", "hive_file_header")
+//                        .withGroups("configured_features", "storage_formats", "cli", "hdfs_impersonation", "authorization", "hive_file_header", "hive_kerberos")
 //                        .build());
     }
 }

@@ -52,7 +52,7 @@ public class Suite7NonGeneric
                         .build(),
                 // Disable kerberized tests for Galaxy Trino, since kerberos feature isn't used
 //                testOnEnvironment(EnvSinglenodeKerberosHdfsImpersonationCrossRealm.class)
-//                        .withGroups("configured_features", "storage_formats", "cli", "hdfs_impersonation")
+//                        .withGroups("configured_features", "storage_formats", "cli", "hdfs_impersonation", "hive_kerberos")
 //                        .build(),
 //                testOnEnvironment(EnvMultinodeKerberosKudu.class)
 //                        .withGroups("configured_features", "kudu")
