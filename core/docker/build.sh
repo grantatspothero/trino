@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+echo "This script is not used for building Galaxy Trino docker image." >&2
+echo "It would build a different image, do not use it." >&2
+exit 12
+
 set -euo pipefail
 
 usage() {
