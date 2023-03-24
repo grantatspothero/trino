@@ -60,6 +60,8 @@ public final class ExtendedCockroachContainer
             handle.execute("SET CLUSTER SETTING \"enterprise.license\" = ?", getCockroachLicense(clusterId));
             handle.execute("SET CLUSTER SETTING \"kv.closed_timestamp.lead_for_global_reads_override\" = '1ms'");
             handle.execute(format("ALTER DATABASE %s SET PRIMARY REGION \"%s\"", getDatabaseName(), REGION));
+            handle.execute("CREATE DATABASE IF NOT EXISTS %s PRIMARY REGION \"%s\" REGIONS = \"%s\" SURVIVE ZONE FAILURE;"
+                    .formatted(getDatabaseName() + "_query_history", REGION, REGION));
         });
     }
 
