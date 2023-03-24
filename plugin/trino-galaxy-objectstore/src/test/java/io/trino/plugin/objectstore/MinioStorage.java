@@ -21,7 +21,6 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.collect.ImmutableMap;
-import io.trino.testing.ResourcePresence;
 import io.trino.testing.containers.Minio;
 import org.testcontainers.containers.Network;
 
@@ -116,11 +115,5 @@ public class MinioStorage
                 .put("hive.s3.endpoint", getEndpoint())
                 .put("hive.s3.path-style-access", "true")
                 .buildOrThrow();
-    }
-
-    @ResourcePresence
-    public boolean isPresent()
-    {
-        return minio.isPresent();
     }
 }
