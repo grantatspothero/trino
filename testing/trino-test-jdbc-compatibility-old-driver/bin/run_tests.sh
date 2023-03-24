@@ -9,8 +9,13 @@ maven_run_tests="${maven} clean test ${MAVEN_TEST:--B} -pl :trino-test-jdbc-comp
 "${maven}" -version
 
 current_version=$(${maven} help:evaluate -Dexpression=project.version -q -DforceStdout)
+<<<<<<< HEAD
 previous_released_version=$((${current_version%-galaxy-1-SNAPSHOT}-1))
 first_tested_version=352
+=======
+previous_released_version=$((${current_version%-SNAPSHOT}-1))
+first_tested_version=$(git tag --contain $(git rev-list HEAD --since-as-filter='18 month ago' | tail -1) | sort | head -1)
+>>>>>>> 635116ec53 (Update first_tested_version to set 18 month ago in JDBC driver test)
 # test n-th version only
 version_step=7
 
