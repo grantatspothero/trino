@@ -271,6 +271,9 @@ public abstract class BaseObjectStoreConnectorTest
     @Override
     public void testRenameTableToLongTableName()
     {
+        // TODO overridden because it's unknown what table name length would be a problem for ALTER TABLE RENAME TO
+        //  currently, the test doesn't test failure when name is too long and this should be fixed
+
         skipTestUnless(hasBehavior(SUPPORTS_RENAME_TABLE));
 
         String sourceTableName = "test_rename_source_" + randomNameSuffix();
@@ -278,9 +281,7 @@ public abstract class BaseObjectStoreConnectorTest
 
         String baseTableName = "test_rename_target_" + randomNameSuffix();
 
-        int maxLength = maxTableNameLength()
-                // Assume 2^16 is enough for most use cases. Add a bit more to ensure 2^16 isn't actual limit.
-                .orElse(65536 + 5);
+        int maxLength = maxTableNameLength().orElseThrow();
 
         String validTargetTableName = baseTableName + "z".repeat(maxLength - baseTableName.length());
         assertUpdate("ALTER TABLE " + sourceTableName + " RENAME TO " + validTargetTableName);
