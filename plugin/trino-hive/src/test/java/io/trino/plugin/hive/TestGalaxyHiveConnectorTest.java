@@ -65,6 +65,7 @@ public class TestGalaxyHiveConnectorTest
                         .put("hive.security", "allow-all")
                         .buildOrThrow())
                 .setInitialTables(ImmutableList.of(CUSTOMER, NATION, ORDERS, REGION))
+                .setTpchBucketedCatalogEnabled(true)
                 .setMetastore(metastore)
                 .build();
 
