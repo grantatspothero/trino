@@ -74,6 +74,7 @@ import java.net.URI;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -406,6 +407,8 @@ public class QueuedStatementResource
                 StatementStats.builder()
                         .setState(state.toString())
                         .setQueued(state == QUEUED)
+                        .setProgressPercentage(OptionalDouble.empty())
+                        .setRunningPercentage(OptionalDouble.empty())
                         .setElapsedTimeMillis(elapsedTime.toMillis())
                         .setQueuedTimeMillis(queuedTime.toMillis())
                         .build(),

@@ -83,6 +83,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -219,6 +220,8 @@ public class MetadataOnlyStatementResource
                     null,
                     StatementStats.builder()
                             .setState(dispatchQuery.getState().toString())
+                            .setRunningPercentage(OptionalDouble.empty())
+                            .setProgressPercentage(OptionalDouble.empty())
                             .build(),
                     toQueryError(dispatchQuery.getFullQueryInfo()),
                     ImmutableList.of(),
@@ -312,6 +315,8 @@ public class MetadataOnlyStatementResource
                 resultRows,
                 StatementStats.builder()
                         .setState(queryInfo.getState().toString())
+                        .setRunningPercentage(OptionalDouble.empty())
+                        .setProgressPercentage(OptionalDouble.empty())
                         .build(),
                 toQueryError(queryInfo),
                 ImmutableList.of(),
@@ -359,6 +364,8 @@ public class MetadataOnlyStatementResource
                 null,
                 StatementStats.builder()
                         .setState(FAILED.toString())
+                        .setRunningPercentage(OptionalDouble.empty())
+                        .setProgressPercentage(OptionalDouble.empty())
                         .build(),
                 queryError,
                 ImmutableList.of(),
