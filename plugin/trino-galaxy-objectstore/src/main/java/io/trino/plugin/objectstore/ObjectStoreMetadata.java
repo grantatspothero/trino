@@ -14,7 +14,6 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.base.VerifyException;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.airlift.slice.Slice;
 import io.trino.plugin.deltalake.DeltaLakeInsertTableHandle;
@@ -26,13 +25,9 @@ import io.trino.plugin.deltalake.procedure.DeltaLakeTableExecuteHandle;
 import io.trino.plugin.hive.HiveInsertTableHandle;
 import io.trino.plugin.hive.HiveOutputTableHandle;
 import io.trino.plugin.hive.HivePartitioningHandle;
-import io.trino.plugin.hive.HiveStorageFormat;
 import io.trino.plugin.hive.HiveTableExecuteHandle;
 import io.trino.plugin.hive.HiveTableHandle;
-import io.trino.plugin.hive.metastore.SortingColumn;
-import io.trino.plugin.hive.util.HiveUtil;
 import io.trino.plugin.hudi.HudiTableHandle;
-import io.trino.plugin.iceberg.IcebergFileFormat;
 import io.trino.plugin.iceberg.IcebergMergeTableHandle;
 import io.trino.plugin.iceberg.IcebergPartitioningHandle;
 import io.trino.plugin.iceberg.IcebergTableHandle;
@@ -83,7 +78,6 @@ import io.trino.spi.session.PropertyMetadata;
 import io.trino.spi.statistics.ComputedStatistics;
 import io.trino.spi.statistics.TableStatistics;
 import io.trino.spi.statistics.TableStatisticsMetadata;
-import io.trino.spi.type.ArrayType;
 import io.trino.spi.type.Type;
 
 import javax.annotation.Nullable;
@@ -112,31 +106,11 @@ import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static io.trino.spi.StandardErrorCode.INVALID_SESSION_PROPERTY;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.StandardErrorCode.UNSUPPORTED_TABLE_TYPE;
-import static io.trino.spi.session.PropertyMetadata.enumProperty;
-import static io.trino.spi.type.VarcharType.VARCHAR;
 import static java.util.Objects.requireNonNull;
 
 public class ObjectStoreMetadata
         implements ConnectorMetadata
 {
-    private static final PropertyMetadata<HiveStorageFormat> HIVE_FORMAT = enumProperty("format", "", HiveStorageFormat.class, null, false);
-    private static final PropertyMetadata<List> HIVE_SORTED_BY = new PropertyMetadata<>(
-            "sorted_by",
-            "(unused)",
-            new ArrayType(VARCHAR),
-            List.class,
-            ImmutableList.of(),
-            false,
-            value -> ((List<?>) value).stream()
-                    .map(String.class::cast)
-                    .map(HiveUtil::sortingColumnFromString)
-                    .collect(toImmutableList()),
-            value -> ((List<?>) value).stream()
-                    .map(SortingColumn.class::cast)
-                    .map(HiveUtil::sortingColumnToString)
-                    .collect(toImmutableList()));
-    private static final PropertyMetadata<IcebergFileFormat> ICEBERG_FORMAT = enumProperty("format", "", IcebergFileFormat.class, null, false);
-
     private final ConnectorMetadata hiveMetadata;
     private final ConnectorMetadata icebergMetadata;
     private final ConnectorMetadata deltaMetadata;
@@ -144,6 +118,9 @@ public class ObjectStoreMetadata
     private final ObjectStoreTableProperties tableProperties;
     private final ObjectStoreMaterializedViewProperties materializedViewProperties;
     private final TableTypeCache tableTypeCache;
+    private final PropertyMetadata<?> hiveFormatProperty;
+    private final PropertyMetadata<?> hiveSortedByProperty;
+    private final PropertyMetadata<?> icebergFormatProperty;
 
     public ObjectStoreMetadata(
             ConnectorMetadata hiveMetadata,
@@ -161,6 +138,9 @@ public class ObjectStoreMetadata
         this.tableProperties = requireNonNull(tableProperties, "tableProperties is null");
         this.materializedViewProperties = requireNonNull(materializedViewProperties, "materializedViewProperties is null");
         this.tableTypeCache = requireNonNull(tableTypeCache, "tableTypeCache is null");
+        this.hiveFormatProperty = tableProperties.getHiveFormatProperty();
+        this.hiveSortedByProperty = tableProperties.getHiveSortedByProperty();
+        this.icebergFormatProperty = tableProperties.getIcebergFormatProperty();
     }
 
     @Override
@@ -1025,18 +1005,18 @@ public class ObjectStoreMetadata
         return delegate((TableType) properties.get("type"));
     }
 
-    private static Map<String, Object> wrap(TableType tableType, Map<String, Object> tableProperties)
+    private Map<String, Object> wrap(TableType tableType, Map<String, Object> tableProperties)
     {
         Map<String, Object> properties = new HashMap<>(tableProperties);
         switch (tableType) {
             case HIVE -> {
                 Optional.ofNullable(properties.get("format")).ifPresent(value ->
-                        properties.put("format", ((HiveStorageFormat) value).name()));
+                        properties.put("format", encodeProperty(hiveFormatProperty, value)));
                 Optional.ofNullable(properties.get("sorted_by")).ifPresent(value ->
-                        properties.put("sorted_by", encodeProperty(HIVE_SORTED_BY, value)));
+                        properties.put("sorted_by", encodeProperty(hiveSortedByProperty, value)));
             }
             case ICEBERG -> Optional.ofNullable(properties.get("format")).ifPresent(value ->
-                    properties.put("format", ((IcebergFileFormat) value).name()));
+                    properties.put("format", encodeProperty(hiveFormatProperty, value)));
             case DELTA, HUDI -> verify(!properties.containsKey("format"), "%s should not have 'format' property".formatted(tableType));
             default -> throw new VerifyException("Unhandled type: " + tableType);
         }
@@ -1060,12 +1040,12 @@ public class ObjectStoreMetadata
         switch (tableType) {
             case HIVE -> {
                 Optional.ofNullable(properties.get("format")).ifPresent(value ->
-                        properties.put("format", decodeProperty(HIVE_FORMAT, value)));
+                        properties.put("format", decodeProperty(hiveFormatProperty, value)));
                 Optional.ofNullable(properties.get("sorted_by")).ifPresent(value ->
-                        properties.put("sorted_by", decodeProperty(HIVE_SORTED_BY, value)));
+                        properties.put("sorted_by", decodeProperty(hiveSortedByProperty, value)));
             }
             case ICEBERG -> Optional.ofNullable(properties.get("format")).ifPresent(value ->
-                    properties.put("format", decodeProperty(ICEBERG_FORMAT, value)));
+                    properties.put("format", decodeProperty(icebergFormatProperty, value)));
             case DELTA, HUDI -> { /* ignore 'format' property */ }
             default -> throw new VerifyException("Unhandled type: " + tableType);
         }

@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.google.common.collect.MoreCollectors.onlyElement;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.addProperty;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.verifyPropertyDescription;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.verifyPropertyMetadata;
@@ -44,6 +45,9 @@ public final class ObjectStoreTableProperties
 {
     private final ImmutableMap<String, PropertyMetadata<?>> properties;
     private final SetMultimap<String, TableType> tableTypesForProperty;
+    private final PropertyMetadata<?> hiveFormatProperty;
+    private final PropertyMetadata<?> hiveSortedByProperty;
+    private final PropertyMetadata<?> icebergFormatProperty;
 
     @Inject
     public ObjectStoreTableProperties(
@@ -62,6 +66,8 @@ public final class ObjectStoreTableProperties
 
         ImmutableSetMultimap.Builder<String, TableType> tableTypesForProperty = ImmutableSetMultimap.builder();
 
+        hiveFormatProperty = getByName(hiveConnector.getTableProperties(), "format");
+        hiveSortedByProperty = getByName(hiveConnector.getTableProperties(), "sorted_by");
         for (PropertyMetadata<?> property : hiveConnector.getTableProperties()) {
             if (property.getName().equals("format")) {
                 continue;
@@ -73,6 +79,7 @@ public final class ObjectStoreTableProperties
             tableTypesForProperty.put(property.getName(), HIVE);
         }
 
+        icebergFormatProperty = getByName(icebergConnector.getTableProperties(), "format");
         for (PropertyMetadata<?> property : icebergConnector.getTableProperties()) {
             if (property.getName().equals("format")) {
                 continue;
@@ -150,6 +157,21 @@ public final class ObjectStoreTableProperties
         return properties.values().asList();
     }
 
+    public PropertyMetadata<?> getHiveFormatProperty()
+    {
+        return hiveFormatProperty;
+    }
+
+    public PropertyMetadata<?> getHiveSortedByProperty()
+    {
+        return hiveSortedByProperty;
+    }
+
+    public PropertyMetadata<?> getIcebergFormatProperty()
+    {
+        return icebergFormatProperty;
+    }
+
     public boolean validProperty(TableType tableType, String name, Object value)
     {
         if (name.equals("type")) {
@@ -169,5 +191,12 @@ public final class ObjectStoreTableProperties
             throw new VerifyException("Table property '%s' not supported for %s tables".formatted(name, tableType.displayName()));
         }
         return false;
+    }
+
+    private static PropertyMetadata<?> getByName(List<PropertyMetadata<?>> properties, String name)
+    {
+        return properties.stream()
+                .filter(propertyMetadata -> propertyMetadata.getName().equals(name))
+                .collect(onlyElement());
     }
 }
