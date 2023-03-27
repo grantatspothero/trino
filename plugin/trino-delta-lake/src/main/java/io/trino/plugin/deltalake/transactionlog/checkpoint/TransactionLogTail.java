@@ -145,9 +145,23 @@ public class TransactionLogTail
 
             return Optional.of(resultsBuilder.build());
         }
-        catch (FileNotFoundException e) {
-            return Optional.empty();  // end of tail
+        catch (IOException e) {
+            if (isFileNotFoundException(e)) {
+                return Optional.empty();  // end of tail
+            }
+            throw e;
         }
+    }
+
+    public static boolean isFileNotFoundException(IOException e)
+    {
+        if (e instanceof FileNotFoundException) {
+            return true;
+        }
+        if (e.getMessage().contains("The specified key does not exist")) {
+            return true;
+        }
+        return false;
     }
 
     public List<DeltaLakeTransactionLogEntry> getFileEntries()
