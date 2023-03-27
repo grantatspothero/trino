@@ -176,7 +176,7 @@ public class TestGalaxyMetadataApiSpec
         catalogNames = null;
     }
 
-    @AfterMethod
+    @AfterMethod(alwaysRun = true)
     public void verifyCleanup()
     {
         assertThat(securityApi.listRoles(adminSession()))

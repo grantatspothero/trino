@@ -144,7 +144,7 @@ public class TestMetadataOnlyQueries
                 .build();
     }
 
-    @AfterMethod
+    @AfterMethod(alwaysRun = true)
     public void verify()
     {
         MetadataOnlyTransactionManager transactionManager = getDistributedQueryRunner().getCoordinator().getInstance(Key.get(MetadataOnlyTransactionManager.class));

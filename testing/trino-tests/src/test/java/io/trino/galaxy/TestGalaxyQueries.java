@@ -103,7 +103,7 @@ public class TestGalaxyQueries
         return queryRunner;
     }
 
-    @AfterMethod
+    @AfterMethod(alwaysRun = true)
     public void verifyCleanup()
     {
         assertThat(query("SHOW ROLES"))
