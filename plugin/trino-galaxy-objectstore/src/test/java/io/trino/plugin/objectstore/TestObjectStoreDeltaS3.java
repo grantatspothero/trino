@@ -132,7 +132,7 @@ public class TestObjectStoreDeltaS3
         assertUpdate(format("CALL system.drop_extended_stats('%s', '%s')", TPCH_SCHEMA, tableName));
 
         //Check extended statistics collection explicitly
-        assertUpdate("ANALYZE " + tableName);
+        assertUpdate("ANALYZE " + tableName, 4);
 
         if (partitioned) {
             assertQuery("SHOW STATS FOR " + tableName, expectedPartitionedStatistics);
