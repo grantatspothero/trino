@@ -856,4 +856,19 @@ public class TestObjectStoreHiveConnectorTest
             assertUpdate(disableColumnStatsSession, format("CALL system.create_empty_partition('%s', '%s', ARRAY['p_varchar', 'p_bigint'], ARRAY['%s', '%s'])", TPCH_SCHEMA, tableName, "e2", "9"));
         }
     }
+
+    @Override
+    public void testRenameRowField()
+    {
+        // Renaming row field is not supported, but a non-standard exception message is thrown.
+        assertThatThrownBy(super::testRenameRowField)
+                .isInstanceOf(AssertionError.class)
+                .hasMessageStartingWith("""
+
+                        Expecting message:
+                          "Renaming fields in Hive tables is not supported"
+                        to match regex:
+                          "This connector does not support renaming fields"
+                        but did not.""");
+    }
 }

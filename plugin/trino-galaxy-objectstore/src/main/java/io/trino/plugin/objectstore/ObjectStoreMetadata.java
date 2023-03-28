@@ -940,6 +940,17 @@ public class ObjectStoreMetadata
     }
 
     @Override
+    public void renameField(ConnectorSession session, ConnectorTableHandle tableHandle, List<String> fieldPath, String target)
+    {
+        TableType tableType = tableType(tableHandle);
+        if (tableType != ICEBERG) {
+            throw new TrinoException(NOT_SUPPORTED, "Renaming fields in %s tables is not supported".formatted(tableType.displayName()));
+        }
+        delegate(tableType).renameField(unwrap(tableType, session), tableHandle, fieldPath, target);
+        flushMetadataCache(tableName(tableHandle));
+    }
+
+    @Override
     public void dropColumn(ConnectorSession session, ConnectorTableHandle tableHandle, ColumnHandle column)
     {
         TableType tableType = tableType(tableHandle);

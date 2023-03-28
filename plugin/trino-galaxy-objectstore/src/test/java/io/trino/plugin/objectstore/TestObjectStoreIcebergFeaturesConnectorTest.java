@@ -1079,6 +1079,18 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
+    public void testRenameRowField()
+    {
+        skipDuplicateTestCoverage("testRenameRowField");
+    }
+
+    @Override
+    public void testRenameRowFieldCaseSensitivity()
+    {
+        skipDuplicateTestCoverage("testRenameRowFieldCaseSensitivity");
+    }
+
+    @Override
     public void testRenameSchema()
     {
         skipDuplicateTestCoverage("testRenameSchema");

@@ -477,6 +477,21 @@ public class TestObjectStoreDeltaConnectorTest
                 .hasMessageContaining("Cannot rename column in table using column mapping mode NONE");
     }
 
+    @Override
+    public void testRenameRowField()
+    {
+        // Renaming row field is not supported, but a non-standard exception message is thrown.
+        assertThatThrownBy(super::testRenameRowField)
+                .isInstanceOf(AssertionError.class)
+                .hasMessageStartingWith("""
+
+                        Expecting message:
+                          "Renaming fields in Delta Lake tables is not supported"
+                        to match regex:
+                          "This connector does not support renaming fields"
+                        but did not.""");
+    }
+
     private void runAnalyzeVerifySplitCount(String tableName, long expectedSplitCount)
     {
         MaterializedResultWithQueryId analyzeResult = getDistributedQueryRunner().executeWithQueryId(getSession(), "ANALYZE " + tableName);
