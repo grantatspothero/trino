@@ -1,0 +1,40 @@
+name: Dependency updates
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 14 * * 1-5' # 6am UTC-8 on weekdays
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  # credentials for the private repository
+  mavenReleaseUsername: ${{ secrets.CODE_ARTIFACT_USERNAME }}
+  mavenReleasePassword: ${{ secrets.CODE_ARTIFACT_PASSWORD }}
+  mavenSnapshotsUsername: ${{ secrets.CODE_ARTIFACT_USERNAME }}
+  mavenSnapshotsPassword: ${{ secrets.CODE_ARTIFACT_PASSWORD }}
+  # allow overriding Maven command
+  MAVEN: "./mvnw -s .github/settings.xml"
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup
+        with:
+          cache: false
+          download_dependencies: false
+      - run: |
+          $MAVEN versions:update-properties -Dincludes=io.starburst.stargate:\*:\*:\*:\* -pl ':trino-root'
+      - name: Create Pull Request
+        # pin to 4.2.4
+        uses: peter-evans/create-pull-request@38e0b6e68b4c852a5500a94740f0e535e0d7ba54
+        with:
+          title: 'Update Stargate version'
+          commit-message: 'Update Stargate version'
+          branch: 'update-stargate'
+          delete-branch: true
+          team-reviewers: galaxy-trino-maintainers
