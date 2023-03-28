@@ -181,7 +181,7 @@ public class ObjectStoreMetadata
     {
         ConnectorTableHandle tableHandle = getTableHandleInOrder(session, tableName, tableTypeCache.getTableTypeAffinity(tableName));
         if (tableHandle != null) {
-            tableTypeCache.update(tableName, tableType(tableHandle));
+            tableTypeCache.record(tableName, tableType(tableHandle));
         }
         return tableHandle;
     }
