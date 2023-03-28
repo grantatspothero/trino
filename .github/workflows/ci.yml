@@ -1020,6 +1020,11 @@ jobs:
             # this suite is not meant to be run with different configs
             - config: default
               suite: suite-ignite
+            # this suite is not meant to be run with different configs
+            - config: default
+              suite: suite-warp-speed
+              runners: [ self-hosted, sep-cicd, gha-fleet-large ]
+            # this suite is not meant to be run with different configs
           EOF
       - name: Build PT matrix (all)
         if: |
@@ -1072,7 +1077,7 @@ jobs:
         run: rm -rf ~/.m2/repository
 
   pt:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runners != null && matrix.runners || 'ubuntu-latest' }}
     # explicitly define the name to avoid adding the value of the `ignore exclusion if` matrix item
     name: pt (${{ matrix.config }}, ${{ matrix.suite }}, ${{ matrix.jdk }})
     if: needs.build-pt.outputs.matrix != '{}'

@@ -55,7 +55,7 @@ public class ObjectStoreProxyConnectorInitializer
     {
         Map<String, String> objectStoreConfig = config.entrySet()
                 .stream()
-                .filter(e -> !e.getKey().startsWith("warp-speed."))
+                .filter(e -> !e.getKey().startsWith("warp-speed.") && !e.getKey().startsWith("WARP__"))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         Class<? extends Module> module = ObjectStoreConnectorFactory.EmptyModule.class;
