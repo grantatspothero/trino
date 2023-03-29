@@ -29,10 +29,18 @@ jobs:
           download_dependencies: false
       - run: |
           $MAVEN versions:update-properties -Dincludes=io.starburst.stargate:\*:\*:\*:\* -pl ':trino-root'
+      - name: Generate token
+        id: generate_token
+        # fork of tibdex/github-app-token
+        uses: trinodb/github-actions/github-app-token@2c3f458fcad343199d0e92badaaa6e9dd7993b2e
+        with:
+          app_id: ${{ vars.TOKEN_GENERATOR_APP_ID }}
+          private_key: ${{ secrets.TOKEN_GENERATOR_PRIVATE_KEY }}
       - name: Create Pull Request
         # pin to 4.2.4
         uses: peter-evans/create-pull-request@38e0b6e68b4c852a5500a94740f0e535e0d7ba54
         with:
+          token: ${{ steps.generate-token.outputs.token }}
           title: 'Update Stargate version'
           commit-message: 'Update Stargate version'
           branch: 'update-stargate'
