@@ -163,6 +163,7 @@ public class TestGalaxyQueryMonitorEventListener
                         ImmutableList.of(),
                         ImmutableList.of(),
                         ImmutableList.of(),
+                        ImmutableList.of(),
                         Optional.empty()),
                 new QueryContext(
                         "user",

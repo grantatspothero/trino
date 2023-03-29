@@ -230,6 +230,7 @@ public class QueryMonitor
                         ImmutableList.of(),
                         ImmutableList.of(),
                         ImmutableList.of(),
+                        ImmutableList.of(),
                         Optional.empty()),
                 createQueryContext(
                         queryInfo.getSession(),
@@ -338,6 +339,7 @@ public class QueryMonitor
                 getCpuDistributions(queryInfo),
                 getStageOutputBufferUtilizations(queryInfo),
                 operatorSummaries.build(),
+                ImmutableList.copyOf(queryInfo.getQueryStats().getOptimizerRulesSummaries()),
                 serializedPlanNodeStatsAndCosts);
     }
 
