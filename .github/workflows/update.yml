@@ -19,7 +19,7 @@ env:
   MAVEN: "./mvnw -s .github/settings.xml"
 
 jobs:
-  stale:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -27,7 +27,8 @@ jobs:
         with:
           cache: false
           download_dependencies: false
-      - run: |
+      - name: Update POM properties
+        run: |
           $MAVEN versions:update-properties -Dincludes=io.starburst.stargate:\*:\*:\*:\* -pl ':trino-root'
       - name: Generate token
         id: generate_token
