@@ -52,13 +52,15 @@ public class GcsSpooledChunkReader
     {
         this.dataIntegrityVerificationEnabled = dataApiConfig.isDataIntegrityVerificationEnabled();
         this.gcsClient = requireNonNull(gcsClient, "gcsClient is null");
-        this.executor = new ThreadPoolExecutor(
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(
                 gcsClientConfig.getThreadCount(),
                 gcsClientConfig.getThreadCount(),
                 60L,
                 SECONDS,
                 new LinkedBlockingQueue<>(),
                 threadsNamed("gcs-spooling-%s"));
+        executor.allowCoreThreadTimeOut(true);
+        this.executor = executor;
     }
 
     @Override
