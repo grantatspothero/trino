@@ -31,9 +31,10 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.airlift.concurrent.Threads.threadsNamed;
+import static io.starburst.stargate.buffer.data.client.spooling.SpoolUtils.getBucketName;
+import static io.starburst.stargate.buffer.data.client.spooling.SpoolUtils.keyFromUri;
 import static io.starburst.stargate.buffer.data.client.spooling.SpoolUtils.toDataPages;
-import static io.starburst.stargate.buffer.data.client.spooling.gcs.GcsSpoolUtils.getBucketName;
-import static io.starburst.stargate.buffer.data.client.spooling.gcs.GcsSpoolUtils.keyFromUri;
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class GcsSpooledChunkReader
@@ -50,7 +51,7 @@ public class GcsSpooledChunkReader
             Storage gcsClient)
     {
         this.dataIntegrityVerificationEnabled = dataApiConfig.isDataIntegrityVerificationEnabled();
-        this.gcsClient = gcsClient;
+        this.gcsClient = requireNonNull(gcsClient, "gcsClient is null");
         this.executor = new ThreadPoolExecutor(
                 gcsClientConfig.getThreadCount(),
                 gcsClientConfig.getThreadCount(),

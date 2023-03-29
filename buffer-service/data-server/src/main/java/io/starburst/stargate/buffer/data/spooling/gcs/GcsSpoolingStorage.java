@@ -42,7 +42,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.airlift.concurrent.MoreFutures.asVoid;
 import static io.airlift.concurrent.Threads.threadsNamed;
 import static io.starburst.stargate.buffer.data.client.spooling.SpoolUtils.PATH_SEPARATOR;
-import static io.starburst.stargate.buffer.data.client.spooling.gcs.GcsSpoolUtils.getBucketName;
+import static io.starburst.stargate.buffer.data.client.spooling.SpoolUtils.getBucketName;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -66,7 +66,7 @@ public class GcsSpoolingStorage
         super(bufferNodeId, dataServerStats);
 
         this.bucketName = getBucketName(requireNonNull(chunkManagerConfig.getSpoolingDirectory(), "spoolingDirectory is null"));
-        this.gcsClient = gcsClient;
+        this.gcsClient = requireNonNull(gcsClient, "gcsClient is null");
 
         this.executor = new ThreadPoolExecutor(
                 gcsClientConfig.getThreadCount(),
