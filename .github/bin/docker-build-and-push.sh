@@ -2,7 +2,44 @@
 
 set -euo pipefail
 
-IMAGE_TAG="$1"
+usage() {
+    cat <<EOF 1>&2
+Usage: $0 [-h] [-p] [-a <ARCHITECTURES>] [-t <TAG>]
+Builds the Gakaxy-Trino Docker image
+
+-h       Display help
+-a       Build the specified comma-separated architectures, defaults to amd64,arm64
+-t       Tag for docker images, defaults to latest
+-p       If specified, perform push after docker build
+EOF
+}
+
+PERFORM_PUSH=
+IMAGE_TAG="latest"
+ARCHITECTURES=(amd64 arm64)
+
+while getopts ":a:t:ph" o; do
+    case "${o}" in
+        a)
+            IFS=, read -ra ARCHITECTURES <<< "$OPTARG"
+            ;;
+        t)
+            IMAGE_TAG=${OPTARG}
+            ;;
+        p)
+            PERFORM_PUSH="--push"
+            ;;
+        h)
+            usage
+            exit 0
+            ;;
+        *)
+            usage
+            exit 1
+            ;;
+    esac
+done
+shift $((OPTIND - 1))
 
 SOURCE_DIR="../.."
 
@@ -75,8 +112,8 @@ cp -R default ${WORK_DIR}/
 
 cp ${SOURCE_DIR}/client/trino-cli/target/trino-cli-${TRINO_VERSION}-executable.jar ${WORK_DIR}
 
-platforms=(linux/amd64 linux/arm64)
-docker buildx build --pull --push \
+platforms=("${ARCHITECTURES[@]/#/linux\/}")
+docker buildx build --pull ${PERFORM_PUSH} \
    --platform "$(IFS=,; echo "${platforms[*]}")" \
    --tag "179619298502.dkr.ecr.us-east-1.amazonaws.com/${IMAGE_NAME}" \
    --tag "us-east1-docker.pkg.dev/starburstdata-saas-prod/starburst-docker-repository/${IMAGE_NAME}" \
