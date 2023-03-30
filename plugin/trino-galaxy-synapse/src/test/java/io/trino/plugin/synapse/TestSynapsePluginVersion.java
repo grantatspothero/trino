@@ -21,7 +21,6 @@ import java.util.Properties;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.io.Resources.getResource;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestSynapsePluginVersion
 {
@@ -53,17 +52,16 @@ public class TestSynapsePluginVersion
         String baseTrinoVersion = galaxyTrinoVersion.replaceFirst("-galaxy-1-SNAPSHOT$", "");
         checkState(!baseTrinoVersion.equals(galaxyTrinoVersion), "Galaxy Trino version does not match the expected pattern: [%s]", galaxyTrinoVersion);
 
-        assertThatThrownBy(() ->
-                assertThat(pluginsVersion)
-                        .withFailMessage(
-                                "Plugins version [%s] does not match the base Trino version [%s] the Galaxy Trino [%s] is based on." +
-                                        " See this test's documentation for more information. " +
-                                        "TL;DR is: trino-sqlserver and trino-base-jdbc have no backward/forward compatibility guarantees with respect to plugins extending it.",
-                                pluginsVersion,
-                                baseTrinoVersion,
-                                galaxyTrinoVersion)
-                        .isEqualTo(baseTrinoVersion))
-                // TODO restore the previous assertion after updating to version 411 of Trino and Plugins
-                .hasMessageStartingWith("Plugins version [410.1] does not match the base Trino version [410]");
+        String basePluginsVersion = pluginsVersion.replaceFirst("\\..*", "");
+
+        assertThat(basePluginsVersion)
+                .withFailMessage(
+                        "Plugins version [%s] does not match the base Trino version [%s] the Galaxy Trino [%s] is based on." +
+                                " See this test's documentation for more information. " +
+                                "TL;DR is: trino-sqlserver and trino-base-jdbc have no backward/forward compatibility guarantees with respect to plugins extending it.",
+                        pluginsVersion,
+                        baseTrinoVersion,
+                        galaxyTrinoVersion)
+                .isEqualTo(baseTrinoVersion);
     }
 }

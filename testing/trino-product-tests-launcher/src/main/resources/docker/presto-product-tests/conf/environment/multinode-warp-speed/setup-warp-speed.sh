@@ -10,3 +10,5 @@ losetup -d /dev/fakessd0 || true
 losetup /dev/fakessd0 /opt/ssd0
 dd if=/dev/fakessd0 of=/tmp/page count=1 bs=8K
 echo "8388608" > /proc/sys/fs/aio-max-nr
+#disk for native
+mkdir -p /opt/data

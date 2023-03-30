@@ -47,7 +47,7 @@ public class TestWarpSpeedPluginVersion
         checkState(!baseTrinoVersion.equals(galaxyTrinoVersion), "Galaxy Trino version does not match the expected pattern: [%s]", galaxyTrinoVersion);
 
         String warpSpeedVersion = properties.getProperty("dep.warp-speed.version");
-        String baseWarpSpeedVersion = warpSpeedVersion.split("\\.")[0];
+        String baseWarpSpeedVersion = warpSpeedVersion.replaceFirst("\\..*", "");
 
         assertThat(baseWarpSpeedVersion)
                 .withFailMessage(

@@ -17,9 +17,7 @@ import io.trino.plugin.varada.configuration.GlobalConfiguration;
 import io.trino.plugin.varada.configuration.ProxiedConnectorConfiguration;
 import io.trino.plugin.varada.di.CloudVendorStubModule;
 import io.trino.plugin.varada.di.VaradaStubsStorageEngineModule;
-import io.trino.plugin.varada.it.smoke.ProcessRunnerMocker;
 import io.trino.spi.Plugin;
-import io.varada.tools.processes.StubProcessRunnerModule;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,7 +30,6 @@ public abstract class WarpSpeedConnectorTestUtils
     {
         WarpSpeedPlugin warpSpeedPlugin = new WarpSpeedPlugin();
         warpSpeedPlugin.withAmazonModule(new CloudVendorStubModule());
-        warpSpeedPlugin.withProcessRunnerModule(new StubProcessRunnerModule(ProcessRunnerMocker.mockProcessRunner()));
         warpSpeedPlugin.withStorageEngineModule(new VaradaStubsStorageEngineModule());
 
         return warpSpeedPlugin;
