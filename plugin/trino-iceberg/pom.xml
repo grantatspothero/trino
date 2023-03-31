@@ -540,10 +540,11 @@
                                 <exclude>com.google.guava:guava</exclude>
                             </excludes>
                         </requireUpperBoundDeps>
-                        <RestrictImports>
+                        <!-- TODO (https://github.com/starburstdata/team-lakehouse/issues/197) only temporarily disabled for Galaxy (see commit message & also commit 3bf7951e246672d99455d3b5aad0831bc7e6237b) -->
+                        <!--<RestrictImports>
                             <includeTestCode>false</includeTestCode>
                             <bannedImport>org.apache.hadoop.**</bannedImport>
-                        </RestrictImports>
+                        </RestrictImports>-->
                     </rules>
                 </configuration>
             </plugin>
