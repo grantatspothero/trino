@@ -84,10 +84,9 @@ public class TestMongoFederatedDatabaseConnectorTest
             case SUPPORTS_DROP_COLUMN:
                 return false;
             case SUPPORTS_DELETE:
-                return false;
             case SUPPORTS_INSERT:
-                return false;
             case SUPPORTS_UPDATE:
+            case SUPPORTS_MERGE:
                 return false;
             default:
                 return super.hasBehavior(connectorBehavior);
