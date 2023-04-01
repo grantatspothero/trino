@@ -139,6 +139,7 @@ public class TestGalaxyQueryMonitorEventListener
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
+                        Optional.empty(),
                         0,
                         0,
                         0,
