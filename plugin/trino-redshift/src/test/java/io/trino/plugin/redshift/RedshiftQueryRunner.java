@@ -87,22 +87,6 @@ public final class RedshiftQueryRunner
     }
 
     public static DistributedQueryRunner createRedshiftQueryRunner(
-            Session session,
-            Map<String, String> extraProperties,
-            Map<String, String> connectorProperties,
-            Iterable<TpchTable<?>> tables)
-            throws Exception
-    {
-        return createRedshiftQueryRunner(
-                session,
-                extraProperties,
-                Map.of(),
-                connectorProperties,
-                tables,
-                queryRunner -> {});
-    }
-
-    public static DistributedQueryRunner createRedshiftQueryRunner(
             Map<String, String> extraProperties,
             Map<String, String> coordinatorProperties,
             Map<String, String> connectorProperties,
