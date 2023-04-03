@@ -922,6 +922,12 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
+    public void testMergeDeleteWithCTAS()
+    {
+        skipDuplicateTestCoverage("testMergeDeleteWithCTAS");
+    }
+
+    @Override
     public void testMergeFalseJoinCondition()
     {
         skipDuplicateTestCoverage("testMergeFalseJoinCondition");

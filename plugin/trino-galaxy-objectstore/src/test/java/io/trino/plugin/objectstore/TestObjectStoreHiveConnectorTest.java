@@ -176,6 +176,13 @@ public class TestObjectStoreHiveConnectorTest
                 .hasStackTraceContaining("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Override
+    public void testMergeDeleteWithCTAS()
+    {
+        assertThatThrownBy(super::testMergeDeleteWithCTAS)
+                .hasStackTraceContaining("Modifying Hive table rows is constrained to deletes of whole partitions");
+    }
+
     @Test
     public void testSortedTable()
     {
