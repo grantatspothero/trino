@@ -114,6 +114,7 @@ cp ${SOURCE_DIR}/client/trino-cli/target/trino-cli-${TRINO_VERSION}-executable.j
 
 platforms=("${ARCHITECTURES[@]/#/linux\/}")
 docker buildx build --pull ${PERFORM_PUSH} \
+   --progress=plain `# Use plain to show container output` \
    --platform "$(IFS=,; echo "${platforms[*]}")" \
    --tag "179619298502.dkr.ecr.us-east-1.amazonaws.com/${IMAGE_NAME}" \
    --tag "us-east1-docker.pkg.dev/starburstdata-saas-prod/starburst-docker-repository/${IMAGE_NAME}" \
