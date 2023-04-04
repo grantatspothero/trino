@@ -409,6 +409,7 @@ public abstract class BaseObjectStoreConnectorTest
 
     private void assertHiveTableFormat(String format)
     {
+        // Use same table name in all assert*TableFormat methods to verify potential metastore caching doesn't affect table loading after table type changed
         @Language("SQL") String createTable = format("" +
                 "CREATE TABLE objectstore.tpch.test_type_format (\n" +
                 "   abc bigint\n" +
@@ -427,6 +428,7 @@ public abstract class BaseObjectStoreConnectorTest
 
     private void assertIcebergTableFormat(String format)
     {
+        // Use same table name in all assert*TableFormat methods to verify potential metastore caching doesn't affect table loading after table type changed
         assertUpdate(format("" +
                 "CREATE TABLE objectstore.tpch.test_type_format (\n" +
                 "   abc bigint\n" +
@@ -452,6 +454,7 @@ public abstract class BaseObjectStoreConnectorTest
 
     private void assertDeltaTableFormat()
     {
+        // Use same table name in all assert*TableFormat methods to verify potential metastore caching doesn't affect table loading after table type changed
         assertUpdate(format("" +
                 "CREATE TABLE objectstore.tpch.test_type_format (\n" +
                 "   abc bigint\n" +
@@ -474,6 +477,7 @@ public abstract class BaseObjectStoreConnectorTest
 
     private void assertHudiTableFormat()
     {
+        // Use same table name in all assert*TableFormat methods to verify potential metastore caching doesn't affect table loading after table type changed
         assertQueryFails("CREATE TABLE test_type_format (abc bigint) WITH (type = 'HUDI')\n",
                 "Table creation is not supported for Hudi");
     }

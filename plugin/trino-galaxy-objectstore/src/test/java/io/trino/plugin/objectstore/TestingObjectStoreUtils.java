@@ -18,6 +18,8 @@ import com.google.common.collect.ImmutableMap;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.google.common.base.Verify.verify;
+
 public final class TestingObjectStoreUtils
 {
     private TestingObjectStoreUtils() {}
@@ -49,6 +51,15 @@ public final class TestingObjectStoreUtils
         addCommonObjectStoreProperties(properties, locationSecurityClientConfig);
         addCommonObjectStoreProperties(properties, metastoreConfig);
         addCommonObjectStoreProperties(properties, hiveS3Config);
+
+        verify(extraObjectStoreProperties.containsKey("HIVE__hive.metastore-cache-ttl") == extraObjectStoreProperties.containsKey("DELTA__hive.metastore-cache-ttl"), "Configure caching metastore for all or for none of underlying connectors");
+        verify(extraObjectStoreProperties.containsKey("HIVE__hive.metastore-cache-ttl") == extraObjectStoreProperties.containsKey("HUDI__hive.metastore-cache-ttl"), "Configure caching metastore for all or for none of underlying connectors");
+        if (!extraObjectStoreProperties.containsKey("HIVE__hive.metastore-cache-ttl")) {
+            // Galaxy uses CachingHiveMetastore by default
+            properties.put("HIVE__hive.metastore-cache-ttl", "2m");
+            properties.put("DELTA__hive.metastore-cache-ttl", "2m");
+            properties.put("HUDI__hive.metastore-cache-ttl", "2m");
+        }
         properties.putAll(extraObjectStoreProperties);
 
         if (!extraObjectStoreProperties.containsKey("HIVE__hive.metastore")) {
