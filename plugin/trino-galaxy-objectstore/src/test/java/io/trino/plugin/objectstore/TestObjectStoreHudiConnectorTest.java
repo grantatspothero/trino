@@ -385,4 +385,11 @@ public class TestObjectStoreHudiConnectorTest
     {
         throw new SkipException("Hudi returns extra columns");
     }
+
+    @Override
+    public void testDropTableCorruptStorage()
+    {
+        skipTestUnless(hasBehavior(SUPPORTS_CREATE_TABLE));
+        super.testDropTableCorruptStorage();
+    }
 }

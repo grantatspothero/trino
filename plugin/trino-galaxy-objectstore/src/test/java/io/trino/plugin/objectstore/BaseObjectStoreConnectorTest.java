@@ -42,6 +42,7 @@ import org.testng.annotations.Test;
 
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
 import java.util.UUID;
@@ -777,6 +778,26 @@ public abstract class BaseObjectStoreConnectorTest
 
         assertQuery("SELECT * FROM " + tableName, "VALUES 1");
         assertUpdate("DROP TABLE " + tableName);
+    }
+
+    @Test
+    public void testDropTableCorruptStorage()
+    {
+        String tableName = "corrupt_table_" + randomNameSuffix();
+
+        assertUpdate("CREATE TABLE " + tableName + " (name VARCHAR(256), age INTEGER)");
+        assertUpdate("INSERT INTO " + tableName + " VALUES ('Joe', 30)", 1);
+
+        String tableLocation = getTableLocation(tableName);
+        String tableLocationKey = tableLocation.replaceFirst(minio.getS3Url(), "");
+
+        // break the table by deleting all its files including metadata files
+        List<String> keys = minio.listObjects(tableLocationKey);
+        minio.deleteObjects(keys);
+
+        // try to drop table
+        assertUpdate("DROP TABLE " + tableName);
+        assertFalse(getQueryRunner().tableExists(getSession(), tableName));
     }
 
     protected String getTableLocation(String tableName)

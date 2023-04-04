@@ -18,6 +18,7 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.collect.ImmutableMap;
 import io.trino.testing.ResourcePresence;
@@ -82,6 +83,13 @@ public class MinioStorage
         return s3.listObjects(bucketName, key).getObjectSummaries().stream()
                 .map(S3ObjectSummary::getKey)
                 .collect(toImmutableList());
+    }
+
+    public void deleteObjects(List<String> keys)
+    {
+        s3.deleteObjects(new DeleteObjectsRequest(bucketName)
+                .withKeys(keys.toArray(String[]::new))
+                .withQuiet(true));
     }
 
     public void putObject(String key, String content)
