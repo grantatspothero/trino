@@ -44,6 +44,8 @@ jobs:
           token: ${{ steps.generate_token.outputs.token }}
           title: 'Update Stargate version'
           commit-message: 'Update Stargate version'
+          author: starburst-automation <starburst-automation@users.noreply.github.com>
+          committer: starburst-automation <starburst-automation@users.noreply.github.com>
           branch: 'update-stargate'
           delete-branch: true
           team-reviewers: galaxy-trino-maintainers
