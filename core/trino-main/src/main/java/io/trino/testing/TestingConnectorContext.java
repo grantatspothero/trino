@@ -13,6 +13,9 @@
  */
 package io.trino.testing;
 
+import io.airlift.tracing.Tracing;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Tracer;
 import io.trino.connector.ConnectorAwareNodeManager;
 import io.trino.metadata.InMemoryNodeManager;
 import io.trino.operator.GroupByHashPageIndexerFactory;
@@ -54,6 +57,18 @@ public final class TestingConnectorContext
     public CatalogHandle getCatalogHandle()
     {
         return TEST_CATALOG_HANDLE;
+    }
+
+    @Override
+    public OpenTelemetry getOpenTelemetry()
+    {
+        return OpenTelemetry.noop();
+    }
+
+    @Override
+    public Tracer getTracer()
+    {
+        return Tracing.noopTracer();
     }
 
     @Override
