@@ -16,6 +16,8 @@ package io.trino.plugin.objectstore;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import io.airlift.bootstrap.Bootstrap;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Tracer;
 import io.trino.filesystem.hdfs.HdfsFileSystemModule;
 import io.trino.hdfs.HdfsModule;
 import io.trino.hdfs.authentication.HdfsAuthenticationModule;
@@ -101,7 +103,11 @@ public final class InternalObjectStoreConnectorFactory
                     new HiveGcsModule(),
                     new HiveAzureModule(),
                     new HdfsAuthenticationModule(),
-                    new HdfsFileSystemModule());
+                    new HdfsFileSystemModule(),
+                    binder -> {
+                        binder.bind(OpenTelemetry.class).toInstance(context.getOpenTelemetry());
+                        binder.bind(Tracer.class).toInstance(context.getTracer());
+                    });
 
             Injector injector = app
                     .doNotInitializeLogging()
