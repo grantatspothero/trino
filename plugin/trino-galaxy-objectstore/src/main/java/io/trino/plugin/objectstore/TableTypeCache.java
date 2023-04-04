@@ -16,8 +16,6 @@ package io.trino.plugin.objectstore;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
-import io.airlift.stats.DecayCounter;
-import io.airlift.stats.ExponentialDecay;
 import io.trino.spi.connector.SchemaTableName;
 import org.gaul.modernizer_maven_annotations.SuppressModernizer;
 
@@ -25,22 +23,18 @@ import javax.annotation.concurrent.ThreadSafe;
 
 import java.util.EnumMap;
 import java.util.List;
-import java.util.Map;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static io.trino.plugin.objectstore.TableType.DELTA;
 import static io.trino.plugin.objectstore.TableType.HIVE;
 import static io.trino.plugin.objectstore.TableType.HUDI;
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
-import static java.lang.Math.toIntExact;
-import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.HOURS;
-import static java.util.function.Function.identity;
 
 @ThreadSafe
 public final class TableTypeCache
 {
-    private static final TableType DEFAULT_TABLE_TYPE = ICEBERG;
+    private static final TableType DEFAULT_TABLE = ICEBERG;
     private static final List<TableType> DEFAULT_TABLE_TYPE_ORDER = ImmutableList.of(ICEBERG, DELTA, HUDI, HIVE);
     private static final EnumMap<TableType, List<TableType>> ORDER_BY_CACHED_TYPE;
 
@@ -59,7 +53,6 @@ public final class TableTypeCache
     }
 
     private final Cache<SchemaTableName, TableType> cache;
-    private final Map<TableType, DecayCounter> tableTypeCounters;
 
     public TableTypeCache()
     {
@@ -69,10 +62,6 @@ public final class TableTypeCache
         this.cache = buildUnsafeCacheWithInvalidationRace(CacheBuilder.newBuilder()
                 .expireAfterWrite(1, HOURS)
                 .maximumSize(1000));
-
-        tableTypeCounters = DEFAULT_TABLE_TYPE_ORDER.stream()
-                .collect(toImmutableMap(identity(), ignore -> new DecayCounter(ExponentialDecay.seconds(toIntExact(HOURS.toSeconds(1))))));
-        tableTypeCounters.get(DEFAULT_TABLE_TYPE).add(1);
     }
 
     @SuppressModernizer
@@ -83,19 +72,13 @@ public final class TableTypeCache
 
     public List<TableType> getTableTypeAffinity(SchemaTableName tableName)
     {
-        TableType tableType = cache.getIfPresent(tableName);
-        if (tableType == null) {
-            tableType = tableTypeCounters.entrySet().stream()
-                    .max(comparing(entry -> entry.getValue().getRate()))
-                    .orElseThrow().getKey();
-        }
+        TableType tableType = firstNonNull(cache.getIfPresent(tableName), DEFAULT_TABLE);
         return ORDER_BY_CACHED_TYPE.get(tableType);
     }
 
-    public void record(SchemaTableName tableName, TableType currentTableType)
+    public void update(SchemaTableName tableName, TableType currentTableType)
     {
         // it is acceptable for this cache to have a stale value
         cache.put(tableName, currentTableType);
-        tableTypeCounters.get(currentTableType).add(1);
     }
 }
