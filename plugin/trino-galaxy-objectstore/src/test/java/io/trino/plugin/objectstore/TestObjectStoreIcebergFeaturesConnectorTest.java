@@ -1360,6 +1360,12 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
+    public void testUnionAllAboveBroadcastJoin()
+    {
+        skipDuplicateTestCoverage("testUnionAllAboveBroadcastJoin");
+    }
+
+    @Override
     public void testUpdate()
     {
         skipDuplicateTestCoverage("testUpdate");
