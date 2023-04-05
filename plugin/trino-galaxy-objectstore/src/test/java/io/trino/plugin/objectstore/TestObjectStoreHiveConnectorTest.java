@@ -156,6 +156,17 @@ public class TestObjectStoreHiveConnectorTest
     }
 
     @Override
+    public void testAddNotNullColumnToEmptyTable()
+    {
+        // Override because the connector throws a slightly different error message
+        try (TestTable table = new TestTable(getQueryRunner()::execute, "test_add_notnull_col", "(a_varchar varchar)")) {
+            assertQueryFails(
+                    "ALTER TABLE " + table.getName() + " ADD COLUMN b_varchar varchar NOT NULL",
+                    "Hive tables do not support NOT NULL columns");
+        }
+    }
+
+    @Override
     public void testDelete()
     {
         assertThatThrownBy(super::testDelete)

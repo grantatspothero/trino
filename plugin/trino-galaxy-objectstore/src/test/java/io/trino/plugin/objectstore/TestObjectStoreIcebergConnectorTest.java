@@ -319,20 +319,6 @@ public class TestObjectStoreIcebergConnectorTest
                 "Invalid Iceberg table name: test_iceberg_read_versioned_table@%d".formatted(v1SnapshotId));
     }
 
-    @Override
-    @Test
-    public void testAddNotNullColumnToNonEmptyTable()
-    {
-        // Override because the connector supports both ADD COLUMN and NOT NULL constraint, but it doesn't support adding NOT NULL columns
-        try (TestTable table = new TestTable(getQueryRunner()::execute, "test_add_notnull_col", "(a_varchar varchar)")) {
-            String tableName = table.getName();
-
-            assertQueryFails(
-                    "ALTER TABLE " + tableName + " ADD COLUMN b_varchar varchar NOT NULL",
-                    "This connector does not support adding not null columns");
-        }
-    }
-
     @Test
     public void testSortedTable()
     {

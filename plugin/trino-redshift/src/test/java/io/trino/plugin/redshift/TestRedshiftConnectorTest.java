@@ -71,6 +71,7 @@ public class TestRedshiftConnectorTest
             case SUPPORTS_CREATE_TABLE_WITH_COLUMN_COMMENT:
                 return false;
 
+            case SUPPORTS_ADD_COLUMN_NOT_NULL_CONSTRAINT:
             case SUPPORTS_ADD_COLUMN_WITH_COMMENT:
             case SUPPORTS_SET_COLUMN_TYPE:
                 return false;
@@ -165,6 +166,17 @@ public class TestRedshiftConnectorTest
             assertThat(query("SHOW COLUMNS FROM %s LIKE 'value'".formatted(view.getName())))
                     .skippingTypesCheck()
                     .matches("VALUES ('value', '%s', '', '')".formatted(trinoType));
+        }
+    }
+
+    @Override
+    public void testAddNotNullColumnToEmptyTable()
+    {
+        // Override because the connector throws a different error message
+        try (TestTable table = new TestTable(getQueryRunner()::execute, "test_add_nn_to_empty", "(a_varchar varchar)")) {
+            assertQueryFails(
+                    "ALTER TABLE " + table.getName() + " ADD COLUMN b_varchar varchar NOT NULL",
+                    "ERROR: ALTER TABLE ADD COLUMN defined as NOT NULL must have a non-null default expression");
         }
     }
 
@@ -631,13 +643,6 @@ public class TestRedshiftConnectorTest
     {
         assertThatThrownBy(super::testDeleteWithLike)
                 .hasStackTraceContaining("TrinoException: This connector does not support modifying table rows");
-    }
-
-    @Test
-    @Override
-    public void testAddNotNullColumnToNonEmptyTable()
-    {
-        throw new SkipException("Redshift ALTER TABLE ADD COLUMN defined as NOT NULL must have a non-null default expression");
     }
 
     private static class TestView

@@ -60,6 +60,7 @@ import static io.trino.testing.MaterializedResult.resultBuilder;
 import static io.trino.testing.TestingAccessControlManager.TestingPrivilegeType.DROP_TABLE;
 import static io.trino.testing.TestingAccessControlManager.privilege;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_ADD_COLUMN;
+import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_ADD_COLUMN_NOT_NULL_CONSTRAINT;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_CREATE_TABLE;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_RENAME_COLUMN;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_RENAME_TABLE;
@@ -173,6 +174,8 @@ public abstract class BaseObjectStoreConnectorTest
             case SUPPORTS_RENAME_MATERIALIZED_VIEW:
                 return true;
             case SUPPORTS_RENAME_MATERIALIZED_VIEW_ACROSS_SCHEMAS:
+                return false;
+            case SUPPORTS_ADD_COLUMN_NOT_NULL_CONSTRAINT:
                 return false;
 
             default:
@@ -821,21 +824,6 @@ public abstract class BaseObjectStoreConnectorTest
             return location;
         }
         throw new IllegalStateException("Location not found in SHOW CREATE TABLE result");
-    }
-
-    @Override
-    public void testAddNotNullColumnToNonEmptyTable()
-    {
-        skipTestUnless(hasBehavior(SUPPORTS_ADD_COLUMN));
-
-        // Override because the connector supports both ADD COLUMN and NOT NULL constraint, but it doesn't support adding NOT NULL columns
-        try (TestTable table = new TestTable(getQueryRunner()::execute, "test_add_notnull_col", "(a_varchar varchar)")) {
-            String tableName = table.getName();
-
-            assertQueryFails(
-                    "ALTER TABLE " + tableName + " ADD COLUMN b_varchar varchar NOT NULL",
-                    ".* do not support NOT NULL columns");
-        }
     }
 
     @Override // ObjectStore supports this partially, so has non-standard error message

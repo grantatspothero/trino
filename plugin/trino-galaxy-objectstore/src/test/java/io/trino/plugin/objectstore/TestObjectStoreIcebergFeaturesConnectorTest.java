@@ -298,6 +298,18 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
+    public void testAddNotNullColumn()
+    {
+        skipDuplicateTestCoverage("testAddNotNullColumn");
+    }
+
+    @Override
+    public void testAddNotNullColumnToEmptyTable()
+    {
+        skipDuplicateTestCoverage("testAddNotNullColumnToEmptyTable");
+    }
+
+    @Override
     public void testAggregation()
     {
         skipDuplicateTestCoverage("testAggregation");
