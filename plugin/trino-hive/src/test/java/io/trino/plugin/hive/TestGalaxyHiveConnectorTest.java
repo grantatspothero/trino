@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastore;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
+import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import org.testng.annotations.AfterClass;
@@ -43,7 +44,8 @@ public class TestGalaxyHiveConnectorTest
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        testingGalaxyMetastore = new TestingGalaxyMetastore();
+        GalaxyCockroachContainer cockroach = closeAfterClass(new GalaxyCockroachContainer());
+        testingGalaxyMetastore = new TestingGalaxyMetastore(cockroach);
 
         Function<DistributedQueryRunner, HiveMetastore> metastore = queryRunner -> {
             File baseDir = queryRunner.getCoordinator().getBaseDataDir().resolve("hive_data").toFile();

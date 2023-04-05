@@ -27,6 +27,7 @@ import io.starburst.stargate.id.UserId;
 import io.trino.Session;
 import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
+import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
@@ -60,10 +61,11 @@ public class TestObjectStoreCorruptDeltaTable
     {
         closeAfterClass(TrinoFileSystemCache.INSTANCE::closeAll);
 
+        GalaxyCockroachContainer cockroach = closeAfterClass(new GalaxyCockroachContainer());
         minio = closeAfterClass(new MinioStorage("test-bucket"));
         minio.start();
 
-        TestingGalaxyMetastore metastore = closeAfterClass(new TestingGalaxyMetastore());
+        TestingGalaxyMetastore metastore = closeAfterClass(new TestingGalaxyMetastore(cockroach));
 
         TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> false));
 

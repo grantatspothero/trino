@@ -283,7 +283,7 @@ public class ObjectStoreQueryRunner
 
             MinioStorage minio = new MinioStorage("test-bucket");
             GalaxyCockroachContainer cockroach = new GalaxyCockroachContainer();
-            TestingGalaxyMetastore metastore = new TestingGalaxyMetastore(Optional.of(cockroach));
+            TestingGalaxyMetastore metastore = new TestingGalaxyMetastore(cockroach);
             TestingLocationSecurityServer locationSecurityServer = new TestingLocationSecurityServer((session, location) -> false);
             minio.start();
             @SuppressWarnings("resource")
@@ -317,7 +317,7 @@ public class ObjectStoreQueryRunner
 
             MinioStorage minio = new MinioStorage("test-bucket");
             GalaxyCockroachContainer cockroach = new GalaxyCockroachContainer();
-            TestingGalaxyMetastore metastore = new TestingGalaxyMetastore(Optional.of(cockroach));
+            TestingGalaxyMetastore metastore = new TestingGalaxyMetastore(cockroach);
             TestingLocationSecurityServer locationSecurityServer = new TestingLocationSecurityServer((session, location) -> false);
             minio.start();
             @SuppressWarnings("resource")
@@ -351,7 +351,7 @@ public class ObjectStoreQueryRunner
 
             MinioStorage minio = new MinioStorage("test-bucket");
             GalaxyCockroachContainer cockroach = new GalaxyCockroachContainer();
-            TestingGalaxyMetastore metastore = new TestingGalaxyMetastore(Optional.of(cockroach));
+            TestingGalaxyMetastore metastore = new TestingGalaxyMetastore(cockroach);
             TestingLocationSecurityServer locationSecurityServer = new TestingLocationSecurityServer((session, location) -> false);
             minio.start();
             @SuppressWarnings("resource")
@@ -385,7 +385,7 @@ public class ObjectStoreQueryRunner
 
             MinioStorage minio = new MinioStorage("test-bucket");
             GalaxyCockroachContainer cockroach = new GalaxyCockroachContainer();
-            TestingGalaxyMetastore metastore = new TestingGalaxyMetastore(Optional.of(cockroach));
+            TestingGalaxyMetastore metastore = new TestingGalaxyMetastore(cockroach);
             TestingLocationSecurityServer locationSecurityServer = new TestingLocationSecurityServer((session, location) -> false);
             minio.start();
             @SuppressWarnings("resource")

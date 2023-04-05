@@ -31,7 +31,6 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.sql.Connection;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -54,17 +53,9 @@ public class TestingGalaxyMetastore
     private static final MetastoreId METASTORE_ID = new MetastoreId("ms-1234567890");
     private static final String SHARED_SECRET = "1234567890123456789012345678901234567890123456789012345678901234";
 
-    public TestingGalaxyMetastore()
-    {
-        this(Optional.empty());
-    }
-
-    public TestingGalaxyMetastore(Optional<GalaxyCockroachContainer> providedCockroach)
+    public TestingGalaxyMetastore(GalaxyCockroachContainer cockroach)
     {
         try {
-            GalaxyCockroachContainer cockroach = providedCockroach
-                    .orElseGet(() -> closer.register(new GalaxyCockroachContainer()));
-
             GenericContainer<?> metastoreContainer = new GenericContainer<>(METASTORE_IMAGE);
             metastoreContainer.setNetwork(cockroach.getNetwork());
             metastoreContainer.addExposedPort(8443);

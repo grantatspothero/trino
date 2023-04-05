@@ -15,6 +15,7 @@ package io.trino.plugin.hive.metastore.galaxy;
 
 import io.trino.plugin.hive.AbstractTestHiveLocal;
 import io.trino.plugin.hive.metastore.HiveMetastore;
+import io.trino.server.galaxy.GalaxyCockroachContainer;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -27,6 +28,7 @@ import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
 public class TestGalaxyHiveMetastore
         extends AbstractTestHiveLocal
 {
+    private GalaxyCockroachContainer cockroach;
     private TestingGalaxyMetastore testingGalaxyMetastore;
 
     @BeforeClass(alwaysRun = true)
@@ -34,7 +36,8 @@ public class TestGalaxyHiveMetastore
     public void initialize()
             throws Exception
     {
-        testingGalaxyMetastore = new TestingGalaxyMetastore();
+        cockroach = new GalaxyCockroachContainer();
+        testingGalaxyMetastore = new TestingGalaxyMetastore(cockroach);
         super.initialize();
     }
 
@@ -46,8 +49,12 @@ public class TestGalaxyHiveMetastore
         super.cleanup();
         if (testingGalaxyMetastore != null) {
             testingGalaxyMetastore.close();
+            testingGalaxyMetastore = null;
         }
-        testingGalaxyMetastore = null;
+        if (cockroach != null) {
+            cockroach.close();
+            cockroach = null;
+        }
     }
 
     @Override

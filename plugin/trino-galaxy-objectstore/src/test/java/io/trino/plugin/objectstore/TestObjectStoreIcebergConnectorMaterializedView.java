@@ -69,7 +69,7 @@ public class TestObjectStoreIcebergConnectorMaterializedView
         minio = closeAfterClass(new MinioStorage(TEST_BUCKET));
         minio.start();
         schemaDirectory = minio.getS3Url() + "/" + storageSchemaName;
-        TestingGalaxyMetastore metastore = closeAfterClass(new TestingGalaxyMetastore(Optional.of(galaxyTestHelper.getCockroach())));
+        TestingGalaxyMetastore metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyTestHelper.getCockroach()));
 
         Map<String, String> properties = createObjectStoreProperties(ICEBERG, locationSecurityServer.getClientConfig(), metastore.getMetastoreConfig(minio.getS3Url()), minio.getHiveS3Config());
         DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder(TEST_CATALOG, storageSchemaName)
