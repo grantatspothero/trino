@@ -43,7 +43,6 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 
 import static com.google.common.collect.Iterables.getOnlyElement;
@@ -59,7 +58,7 @@ import static io.trino.testing.TestingSession.testSessionBuilder;
 import static java.lang.String.format;
 import static org.apache.hudi.common.model.HoodieTableType.COPY_ON_WRITE;
 
-public class ObjectStoreQueryRunner
+public final class ObjectStoreQueryRunner
 {
     private static final String CATALOG = "objectstore";
     private static final String TPCH_SCHEMA = "tpch";
@@ -84,7 +83,6 @@ public class ObjectStoreQueryRunner
         private Map<String, String> extraObjectStoreProperties = ImmutableMap.of();
         private Map<String, String> coordinatorProperties = ImmutableMap.of();
         private MockConnectorPlugin mockConnectorPlugin;
-        private GalaxyCockroachContainer cockroach;
         private TestingAccountClient accountClient;
 
         private Builder()
@@ -144,13 +142,6 @@ public class ObjectStoreQueryRunner
         }
 
         @CanIgnoreReturnValue
-        public Builder withCockroach(GalaxyCockroachContainer cockroach)
-        {
-            this.cockroach = cockroach;
-            return this;
-        }
-
-        @CanIgnoreReturnValue
         public Builder withPlugin(Plugin objectStorePlugin)
         {
             this.objectStorePlugin = objectStorePlugin;
@@ -192,7 +183,6 @@ public class ObjectStoreQueryRunner
 
                 GalaxyQueryRunner.Builder builder = GalaxyQueryRunner.builder("objectstore", "tpch");
                 builder.setNodeCount(3);
-                builder.setCockroach(cockroach);
                 builder.setCoordinatorProperties(coordinatorProperties);
                 builder.addPlugin(new TpchPlugin());
                 builder.addCatalog(TPCH_SCHEMA, TPCH_SCHEMA, ImmutableMap.of());
@@ -203,7 +193,7 @@ public class ObjectStoreQueryRunner
                     builder.addPlugin(mockConnectorPlugin);
                     builder.addCatalog("mock_dynamic_listing", "mock", Map.of());
                 }
-                builder.setAccountClient(Optional.ofNullable(accountClient));
+                builder.setAccountClient(accountClient);
                 DistributedQueryRunner queryRunner = builder.build();
 
                 queryRunner.execute("CREATE SCHEMA objectstore.tpch");
@@ -240,7 +230,7 @@ public class ObjectStoreQueryRunner
         }
     }
 
-    private static DistributedQueryRunner buildDefaultQueryRunner(TableType tableType, MinioStorage minio, TestingGalaxyMetastore metastore, TestingLocationSecurityServer locationSecurityServer, GalaxyCockroachContainer cockroach, TestingAccountClient account)
+    private static DistributedQueryRunner buildDefaultQueryRunner(TableType tableType, MinioStorage minio, TestingGalaxyMetastore metastore, TestingLocationSecurityServer locationSecurityServer, TestingAccountClient account)
             throws Exception
     {
         return builder()
@@ -250,7 +240,6 @@ public class ObjectStoreQueryRunner
                 .withHiveS3Config(minio.getHiveS3Config())
                 .withMetastore(metastore)
                 .withLocationSecurityServer(locationSecurityServer)
-                .withCockroach(cockroach)
                 .withMockConnectorPlugin(new MockConnectorPlugin(MockConnectorFactory.create()))
                 .withAccountClient(account)
                 .build();
@@ -289,7 +278,7 @@ public class ObjectStoreQueryRunner
             @SuppressWarnings("resource")
             TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(cockroach);
             TestingAccountClient account = testingAccountFactory.createAccount();
-            DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.ICEBERG, minio, metastore, locationSecurityServer, cockroach, account);
+            DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.ICEBERG, minio, metastore, locationSecurityServer, account);
             initializeTpchTables(queryRunner, TpchTable.getTables());
 
             Logger log = Logger.get(ObjectStoreIcebergQueryRunner.class);
@@ -323,7 +312,7 @@ public class ObjectStoreQueryRunner
             @SuppressWarnings("resource")
             TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(cockroach);
             TestingAccountClient account = testingAccountFactory.createAccount();
-            DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.HIVE, minio, metastore, locationSecurityServer, cockroach, account);
+            DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.HIVE, minio, metastore, locationSecurityServer, account);
             initializeTpchTables(queryRunner, TpchTable.getTables());
 
             Logger log = Logger.get(ObjectStoreHiveQueryRunner.class);
@@ -357,7 +346,7 @@ public class ObjectStoreQueryRunner
             @SuppressWarnings("resource")
             TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(cockroach);
             TestingAccountClient account = testingAccountFactory.createAccount();
-            DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.DELTA, minio, metastore, locationSecurityServer, cockroach, account);
+            DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.DELTA, minio, metastore, locationSecurityServer, account);
             initializeTpchTables(queryRunner, TpchTable.getTables());
 
             Logger log = Logger.get(ObjectStoreDeltaLakeQueryRunner.class);
@@ -391,7 +380,7 @@ public class ObjectStoreQueryRunner
             @SuppressWarnings("resource")
             TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(cockroach);
             TestingAccountClient account = testingAccountFactory.createAccount();
-            DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.HUDI, minio, metastore, locationSecurityServer, cockroach, account);
+            DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.HUDI, minio, metastore, locationSecurityServer, account);
 
             initializeTpchTablesHudi(queryRunner, TpchTable.getTables(), metastore);
 

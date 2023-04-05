@@ -28,6 +28,7 @@ import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.hive.s3.HiveS3Config;
 import io.trino.plugin.hive.s3.TrinoS3ConfigurationInitializer;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
+import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.spi.Plugin;
 import io.trino.testing.BaseConnectorTest;
 import io.trino.testing.DistributedQueryRunner;
@@ -51,6 +52,7 @@ import static com.google.common.collect.MoreCollectors.onlyElement;
 import static io.trino.plugin.objectstore.MinioStorage.ACCESS_KEY;
 import static io.trino.plugin.objectstore.MinioStorage.SECRET_KEY;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
+import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static io.trino.spi.type.DoubleType.DOUBLE;
 import static io.trino.spi.type.VarcharType.VARCHAR;
 import static io.trino.testing.MaterializedResult.resultBuilder;
@@ -106,10 +108,11 @@ public abstract class BaseObjectStoreConnectorTest
         metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyCockroachContainer));
 
         TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> !location.contains("denied")));
+        TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(galaxyCockroachContainer));
 
         DistributedQueryRunner queryRunner = ObjectStoreQueryRunner.builder()
                 .withTableType(tableType)
-                .withCockroach(galaxyCockroachContainer)
+                .withAccountClient(testingAccountFactory.createAccount())
                 .withS3Url(minio.getS3Url())
                 .withHiveS3Config(minio.getHiveS3Config())
                 .withMetastore(metastore)

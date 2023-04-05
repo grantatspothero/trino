@@ -38,8 +38,10 @@ import io.trino.plugin.hive.metastore.HiveMetastoreConfig;
 import io.trino.plugin.hive.metastore.file.FileHiveMetastore;
 import io.trino.plugin.hive.metastore.file.FileHiveMetastoreConfig;
 import io.trino.plugin.tpch.TpchPlugin;
+import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.metadataonly.MetadataOnlyTransactionManager;
 import io.trino.server.security.galaxy.ForGalaxySystemAccessControl;
+import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.server.testing.TestingTrinoServer;
 import io.trino.spi.security.SystemAccessControl;
 import io.trino.spi.security.SystemAccessControlFactory;
@@ -70,6 +72,7 @@ import static io.airlift.http.client.JsonResponseHandler.createJsonResponseHandl
 import static io.airlift.http.client.Request.Builder.preparePost;
 import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
+import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static io.trino.sql.query.QueryAssertions.QueryAssert.newQueryAssert;
 import static io.trino.testing.GalaxyQueryRunner.builder;
 import static io.trino.testing.MaterializedResult.resultBuilder;
@@ -121,7 +124,11 @@ public class TestMetadataOnlyQueries
             metastore = null;
         });
 
+        GalaxyCockroachContainer cockroach = closeAfterClass(new GalaxyCockroachContainer());
+        TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(cockroach));
+
         return builder()
+                .setAccountClient(testingAccountFactory.createAccount())
                 .addExtraProperty("catalog.management", "metadata_only")
                 .addExtraProperty("trino.plane-id", "aws-us-east1-1")
                 .addExtraProperty("kms-crypto.enabled", "false")

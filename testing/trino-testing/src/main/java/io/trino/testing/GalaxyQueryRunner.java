@@ -27,7 +27,6 @@ import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.UserId;
 import io.starburst.stargate.identity.DispatchSession;
-import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.galaxy.GalaxySecurityModule;
 import io.trino.server.security.InternalPrincipal;
 import io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType;
@@ -51,13 +50,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.airlift.testing.Closeables.closeAllSuppress;
 import static io.trino.server.HttpRequestSessionContextFactory.AUTHENTICATED_IDENTITY;
 import static io.trino.server.ServletSecurityUtils.setAuthenticatedIdentity;
 import static io.trino.server.security.galaxy.GalaxyIdentity.createIdentity;
-import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
@@ -98,7 +97,6 @@ public final class GalaxyQueryRunner
         }
 
         private TestingAccountClient accountClient;
-        private Optional<GalaxyCockroachContainer> cockroach = Optional.empty();
         private final ImmutableList.Builder<Plugin> plugins = ImmutableList.builder();
         private final ImmutableList.Builder<CatalogInit> catalogs = ImmutableList.builder();
         private boolean installSecurityModule = true;
@@ -112,15 +110,9 @@ public final class GalaxyQueryRunner
                     .build());
         }
 
-        public Builder setAccountClient(Optional<TestingAccountClient> accountClient)
+        public Builder setAccountClient(TestingAccountClient accountClient)
         {
-            this.accountClient = requireNonNull(accountClient, "accountClient is null").orElse(null);
-            return this;
-        }
-
-        public Builder setCockroach(GalaxyCockroachContainer cockroach)
-        {
-            this.cockroach = Optional.of(requireNonNull(cockroach, "cockroach is null"));
+            this.accountClient = requireNonNull(accountClient, "accountClient is null");
             return this;
         }
 
@@ -153,12 +145,8 @@ public final class GalaxyQueryRunner
         public DistributedQueryRunner build()
                 throws Exception
         {
-            // TODO who will close the container?
-            GalaxyCockroachContainer cockroach = this.cockroach.orElseGet(GalaxyCockroachContainer::new);
-            if (accountClient == null) {
-                // TODO who will close the TestingAccountFactory?
-                accountClient = createTestingAccountFactory(cockroach).createAccount();
-            }
+            checkState(accountClient != null, "accountClient not set");
+
             URI accountUri = accountClient.getBaseUri();
             AccountId accountId = accountClient.getAccountId();
 

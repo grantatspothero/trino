@@ -26,7 +26,9 @@ import io.starburst.stargate.id.RoleName;
 import io.trino.Session;
 import io.trino.plugin.memory.MemoryPlugin;
 import io.trino.plugin.tpch.TpchPlugin;
+import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType;
+import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.server.testing.TestingTrinoServer;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.security.Identity;
@@ -48,6 +50,7 @@ import static com.google.common.base.Verify.verifyNotNull;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.trino.server.security.galaxy.GalaxyIdentity.createIdentity;
 import static io.trino.server.security.galaxy.GalaxyIdentity.toDispatchSession;
+import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static io.trino.spi.security.PrincipalType.USER;
 import static io.trino.spi.security.Privilege.DELETE;
 import static io.trino.spi.security.Privilege.INSERT;
@@ -85,7 +88,10 @@ public class TestGalaxyQueries
     protected QueryRunner createQueryRunner()
             throws Exception
     {
+        GalaxyCockroachContainer cockroach = closeAfterClass(new GalaxyCockroachContainer());
+        TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(cockroach));
         QueryRunner queryRunner = GalaxyQueryRunner.builder("memory", "tiny")
+                .setAccountClient(testingAccountFactory.createAccount())
                 .addPlugin(new TpchPlugin())
                 .addCatalog("tpch", "tpch", ImmutableMap.of())
                 .addPlugin(new MemoryPlugin())

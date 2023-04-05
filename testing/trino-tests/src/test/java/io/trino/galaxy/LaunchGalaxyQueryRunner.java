@@ -27,8 +27,6 @@ import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.GalaxyQueryRunner;
 import io.trino.tpch.TpchTable;
 
-import java.util.Optional;
-
 import static io.trino.testing.QueryAssertions.copyTpchTables;
 import static java.lang.String.format;
 
@@ -68,7 +66,7 @@ public final class LaunchGalaxyQueryRunner
                 .addCatalog("tpch", "tpch", ImmutableMap.of())
                 .addPlugin(new MemoryPlugin())
                 .addCatalog("memory", "memory", ImmutableMap.of())
-                .setAccountClient(Optional.of(account))
+                .setAccountClient(account)
                 .setNodeCount(1)
                 .build();
         queryRunner.execute(format("CREATE SCHEMA %s.%s", "memory", "tiny"));

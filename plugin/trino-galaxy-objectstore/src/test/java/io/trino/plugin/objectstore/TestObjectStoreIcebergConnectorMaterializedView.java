@@ -30,7 +30,6 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import java.util.Map;
-import java.util.Optional;
 
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
@@ -73,7 +72,7 @@ public class TestObjectStoreIcebergConnectorMaterializedView
 
         Map<String, String> properties = createObjectStoreProperties(ICEBERG, locationSecurityServer.getClientConfig(), metastore.getMetastoreConfig(minio.getS3Url()), minio.getHiveS3Config());
         DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder(TEST_CATALOG, storageSchemaName)
-                .setAccountClient(Optional.of(galaxyTestHelper.getAccountClient()))
+                .setAccountClient(galaxyTestHelper.getAccountClient())
                 .addPlugin(new ObjectStorePlugin())
                 .addCatalog(TEST_CATALOG, "galaxy_objectstore", properties)
                 .addPlugin(new TpchPlugin())
