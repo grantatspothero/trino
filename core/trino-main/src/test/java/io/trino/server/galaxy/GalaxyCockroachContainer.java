@@ -41,7 +41,6 @@ public class GalaxyCockroachContainer
     public GalaxyCockroachContainer()
     {
         try {
-            log.info("");
             log.info("Starting Cockroach");
             network = Network.newNetwork();
             cockroach = new ExtendedCockroachContainer();
@@ -49,7 +48,6 @@ public class GalaxyCockroachContainer
             cockroach.setNetworkAliases(ImmutableList.of("cockroach"));
             cockroach.start();
 
-            log.info("");
             log.info("Running Database Migration");
             GenericContainer<?> migration = new GenericContainer<>(MIGRATION_IMAGE);
             migration.setNetwork(network);

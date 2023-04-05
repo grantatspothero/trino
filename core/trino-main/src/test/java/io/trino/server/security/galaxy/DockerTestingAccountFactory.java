@@ -67,7 +67,6 @@ public class DockerTestingAccountFactory
             // The pem is always available on the local file system
             File pemFile = getCertFile("portal");
 
-            log.info("");
             log.info("Running Trino Testing Portal Server");
             portalServer = new GenericContainer<>(PORTAL_SERVER_IMAGE);
             portalServer.setNetwork(cockroach.getNetwork());
