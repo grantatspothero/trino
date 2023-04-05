@@ -13,6 +13,7 @@
  */
 package io.trino.server.galaxy;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
 import io.trino.testing.containers.galaxy.ExtendedCockroachContainer;
@@ -23,6 +24,7 @@ import org.testcontainers.containers.startupcheck.OneShotStartupCheckStrategy;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import static io.trino.server.galaxy.GalaxyImageConstants.STARGATE_DOCKER_REPO;
 import static io.trino.server.galaxy.GalaxyImageConstants.STARGATE_IMAGE_TAG;
@@ -42,13 +44,16 @@ public class GalaxyCockroachContainer
     {
         try {
             log.info("Starting Cockroach");
+            Stopwatch cockroachStart = Stopwatch.createStarted();
             network = Network.newNetwork();
             cockroach = new ExtendedCockroachContainer();
             cockroach.setNetwork(network);
             cockroach.setNetworkAliases(ImmutableList.of("cockroach"));
             cockroach.start();
+            log.info("Cockroach started in %.1f s".formatted(cockroachStart.elapsed(TimeUnit.MILLISECONDS) / 1000.));
 
             log.info("Running Database Migration");
+            Stopwatch databaseMigration = Stopwatch.createStarted();
             try (GenericContainer<?> migration = new GenericContainer<>(MIGRATION_IMAGE)) {
                 migration.setNetwork(network);
                 migration.addEnv("DB_PASSWORD", cockroach.getPassword());
@@ -61,6 +66,7 @@ public class GalaxyCockroachContainer
                 migration.start();
                 migration.stop();
             }
+            log.info("Database migrated in %.1f s".formatted(databaseMigration.elapsed(TimeUnit.MILLISECONDS) / 1000.));
         }
         catch (Throwable t) {
             log.error(t, "Failed to start Galaxy Cockroach container");
