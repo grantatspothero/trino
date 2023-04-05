@@ -287,7 +287,7 @@ public class ObjectStoreQueryRunner
             TestingLocationSecurityServer locationSecurityServer = new TestingLocationSecurityServer((session, location) -> false);
             minio.start();
             @SuppressWarnings("resource")
-            TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(Optional.of(cockroach));
+            TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(cockroach);
             TestingAccountClient account = testingAccountFactory.createAccount();
             DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.ICEBERG, minio, metastore, locationSecurityServer, cockroach, account);
             initializeTpchTables(queryRunner, TpchTable.getTables());
@@ -321,7 +321,7 @@ public class ObjectStoreQueryRunner
             TestingLocationSecurityServer locationSecurityServer = new TestingLocationSecurityServer((session, location) -> false);
             minio.start();
             @SuppressWarnings("resource")
-            TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(Optional.of(cockroach));
+            TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(cockroach);
             TestingAccountClient account = testingAccountFactory.createAccount();
             DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.HIVE, minio, metastore, locationSecurityServer, cockroach, account);
             initializeTpchTables(queryRunner, TpchTable.getTables());
@@ -355,7 +355,7 @@ public class ObjectStoreQueryRunner
             TestingLocationSecurityServer locationSecurityServer = new TestingLocationSecurityServer((session, location) -> false);
             minio.start();
             @SuppressWarnings("resource")
-            TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(Optional.of(cockroach));
+            TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(cockroach);
             TestingAccountClient account = testingAccountFactory.createAccount();
             DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.DELTA, minio, metastore, locationSecurityServer, cockroach, account);
             initializeTpchTables(queryRunner, TpchTable.getTables());
@@ -389,7 +389,7 @@ public class ObjectStoreQueryRunner
             TestingLocationSecurityServer locationSecurityServer = new TestingLocationSecurityServer((session, location) -> false);
             minio.start();
             @SuppressWarnings("resource")
-            TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(Optional.of(cockroach));
+            TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(cockroach);
             TestingAccountClient account = testingAccountFactory.createAccount();
             DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.HUDI, minio, metastore, locationSecurityServer, cockroach, account);
 

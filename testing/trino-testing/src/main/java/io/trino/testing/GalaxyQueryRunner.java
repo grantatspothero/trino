@@ -153,7 +153,10 @@ public final class GalaxyQueryRunner
         public DistributedQueryRunner build()
                 throws Exception
         {
+            // TODO who will close the container?
+            GalaxyCockroachContainer cockroach = this.cockroach.orElseGet(GalaxyCockroachContainer::new);
             if (accountClient == null) {
+                // TODO who will close the TestingAccountFactory?
                 accountClient = createTestingAccountFactory(cockroach).createAccount();
             }
             URI accountUri = accountClient.getBaseUri();

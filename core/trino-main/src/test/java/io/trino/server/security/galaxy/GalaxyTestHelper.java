@@ -86,7 +86,7 @@ public class GalaxyTestHelper
             throws Exception
     {
         cockroach = new GalaxyCockroachContainer();
-        accountFactory = TestingAccountFactory.createTestingAccountFactory(Optional.of(cockroach));
+        accountFactory = TestingAccountFactory.createTestingAccountFactory(cockroach);
         accountClient = accountFactory.createAccount();
 
         // creating auth keys is very slow so cache them

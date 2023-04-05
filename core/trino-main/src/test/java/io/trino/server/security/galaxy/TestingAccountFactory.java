@@ -17,12 +17,11 @@ import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 
 import java.io.Closeable;
-import java.util.Optional;
 
 public interface TestingAccountFactory
         extends Closeable
 {
-    static TestingAccountFactory createTestingAccountFactory(Optional<GalaxyCockroachContainer> cockroach)
+    static TestingAccountFactory createTestingAccountFactory(GalaxyCockroachContainer cockroach)
     {
         if (Boolean.getBoolean("debugPortal")) {
             return new IdeTestingAccountFactory();

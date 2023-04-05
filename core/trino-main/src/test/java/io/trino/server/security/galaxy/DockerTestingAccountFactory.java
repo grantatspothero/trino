@@ -31,7 +31,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.server.galaxy.GalaxyImageConstants.STARGATE_DOCKER_REPO;
@@ -57,13 +56,10 @@ public class DockerTestingAccountFactory
     private final Closer closer = Closer.create();
     private final TestingPortalClient testingPortalClient;
 
-    public DockerTestingAccountFactory(Optional<GalaxyCockroachContainer> providedCockroach)
+    public DockerTestingAccountFactory(GalaxyCockroachContainer cockroach)
     {
         GenericContainer<?> portalServer = null;
         try {
-            GalaxyCockroachContainer cockroach = providedCockroach
-                    .orElseGet(() -> closer.register(new GalaxyCockroachContainer()));
-
             // The pem is always available on the local file system
             File pemFile = getCertFile("portal");
 
