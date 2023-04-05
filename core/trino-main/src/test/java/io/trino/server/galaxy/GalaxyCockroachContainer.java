@@ -49,15 +49,18 @@ public class GalaxyCockroachContainer
             cockroach.start();
 
             log.info("Running Database Migration");
-            GenericContainer<?> migration = new GenericContainer<>(MIGRATION_IMAGE);
-            migration.setNetwork(network);
-            migration.addEnv("DB_PASSWORD", cockroach.getPassword());
-            migration.setCommand(
-                    "--url", "jdbc:postgresql://cockroach:26257/postgres",
-                    "--user", cockroach.getUsername());
-            migration.withStartupCheckStrategy(new OneShotStartupCheckStrategy().withTimeout(ofMinutes(2)));
-            migration.start();
-            migration.stop();
+            try (GenericContainer<?> migration = new GenericContainer<>(MIGRATION_IMAGE)) {
+                migration.setNetwork(network);
+                migration.addEnv("DB_PASSWORD", cockroach.getPassword());
+                migration.setCommand(
+                        "--debug",
+                        "--verbose",
+                        "--url", "jdbc:postgresql://cockroach:26257/postgres",
+                        "--user", cockroach.getUsername());
+                migration.withStartupCheckStrategy(new OneShotStartupCheckStrategy().withTimeout(ofMinutes(2)));
+                migration.start();
+                migration.stop();
+            }
         }
         catch (Throwable t) {
             log.error(t, "Failed to start Galaxy Cockroach container");
