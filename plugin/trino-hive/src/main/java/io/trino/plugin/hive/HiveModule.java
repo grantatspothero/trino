@@ -22,8 +22,6 @@ import com.google.inject.multibindings.Multibinder;
 import com.starburstdata.trino.plugins.dynamicfiltering.DynamicRowFilteringModule;
 import com.starburstdata.trino.plugins.dynamicfiltering.ForDynamicRowFiltering;
 import io.airlift.event.client.EventClient;
-import io.trino.filesystem.TrinoFileSystemFactory;
-import io.trino.filesystem.hdfs.HdfsFileSystemFactory;
 import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.hdfs.TrinoFileSystemCacheStats;
 import io.trino.plugin.base.CatalogName;
@@ -132,7 +130,6 @@ public class HiveModule
                 .as(generator -> generator.generatedNameOf(io.trino.plugin.hive.fs.TrinoFileSystemCache.class));
 
         configBinder(binder).bindConfig(HiveFormatsConfig.class);
-        binder.bind(TrinoFileSystemFactory.class).to(HdfsFileSystemFactory.class).in(Scopes.SINGLETON);
 
         Multibinder<HivePageSourceFactory> pageSourceFactoryBinder = newSetBinder(binder, HivePageSourceFactory.class);
         pageSourceFactoryBinder.addBinding().to(CsvPageSourceFactory.class).in(Scopes.SINGLETON);
