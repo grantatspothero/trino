@@ -41,6 +41,7 @@ import org.testng.annotations.Test;
 
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -103,7 +104,7 @@ public abstract class BaseObjectStoreConnectorTest
         minio = closeAfterClass(new MinioStorage("test-bucket"));
         minio.start();
 
-        metastore = closeAfterClass(new TestingGalaxyMetastore());
+        metastore = closeAfterClass(new TestingGalaxyMetastore(Optional.of(galaxyCockroachContainer)));
 
         TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> !location.contains("denied")));
 
