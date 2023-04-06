@@ -846,6 +846,18 @@ public abstract class BaseObjectStoreConnectorTest
         }
     }
 
+    @Test
+    public void testFlushMetadataCache()
+    {
+        skipTestUnless(hasBehavior(SUPPORTS_CREATE_TABLE));
+
+        assertUpdate("CREATE TABLE test_flush_metadata_cache(a integer)");
+        assertUpdate("CALL system.flush_metadata_cache(schema_name => CURRENT_SCHEMA, table_name => 'test_flush_metadata_cache')");
+        assertUpdate("DROP TABLE test_flush_metadata_cache");
+
+        assertUpdate("CALL system.flush_metadata_cache(schema_name => 'flush_metadata_cache_bogus_schema', table_name => 'flush_metadata_cache_non_existent')");
+    }
+
     // these tests are slow don't test anything specific to the connector
     @Override
     @Test(enabled = false)

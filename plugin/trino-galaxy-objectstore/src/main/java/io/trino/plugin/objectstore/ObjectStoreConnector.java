@@ -289,16 +289,13 @@ public class ObjectStoreConnector
         for (Connector connector : ImmutableSet.of(hiveConnector, icebergConnector, deltaConnector, hudiConnector)) {
             for (Procedure procedure : connector.getProcedures()) {
                 String name = procedure.getName();
-                if (name.equals("migrate") || name.equals("register_table") || name.equals("unregister_table")) {
+                if (name.equals("migrate") || name.equals("register_table") || name.equals("unregister_table") || name.equals("flush_metadata_cache")) {
                     // Ignore connector-specific procedures if they exist.
                     // This needs to be provided in an ObjectStore-specific manner.
                     continue;
                 }
                 Procedure existing = procedures.putIfAbsent(name, procedure);
-                if (existing == null) {
-                    continue;
-                }
-                if (!name.equals("flush_metadata_cache")) {
+                if (existing != null) {
                     throw new VerifyException("Duplicate procedure: " + name);
                 }
             }
