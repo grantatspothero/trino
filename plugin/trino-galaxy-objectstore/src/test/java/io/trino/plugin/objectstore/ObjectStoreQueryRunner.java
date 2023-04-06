@@ -52,6 +52,7 @@ import static io.trino.plugin.tpch.TpchMetadata.TINY_SCHEMA_NAME;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static io.trino.testing.QueryAssertions.copyTpchTables;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 import static org.apache.hudi.common.model.HoodieTableType.COPY_ON_WRITE;
 
 public final class ObjectStoreQueryRunner
@@ -64,11 +65,18 @@ public final class ObjectStoreQueryRunner
 
     public static Builder builder()
     {
-        return new Builder();
+        return builder(CATALOG, TPCH_SCHEMA);
+    }
+
+    public static Builder builder(String catalogName, String schemaName)
+    {
+        return new Builder(catalogName, schemaName);
     }
 
     public static class Builder
     {
+        private final String catalogName;
+        private final String schemaName;
         private TableType tableType;
         private String s3Url;
         private Map<String, String> hiveS3Config;
@@ -80,7 +88,11 @@ public final class ObjectStoreQueryRunner
         private MockConnectorPlugin mockConnectorPlugin;
         private TestingAccountClient accountClient;
 
-        private Builder() {}
+        private Builder(String catalogName, String schemaName)
+        {
+            this.catalogName = requireNonNull(catalogName, "catalogName is null");
+            this.schemaName = requireNonNull(schemaName, "schemaName is null");
+        }
 
         @CanIgnoreReturnValue
         public Builder withTableType(TableType tableType)
@@ -163,13 +175,13 @@ public final class ObjectStoreQueryRunner
                         hiveS3Config,
                         extraObjectStoreProperties);
 
-                GalaxyQueryRunner.Builder builder = GalaxyQueryRunner.builder("objectstore", "tpch");
+                GalaxyQueryRunner.Builder builder = GalaxyQueryRunner.builder(catalogName, schemaName);
                 builder.setNodeCount(3);
                 builder.setCoordinatorProperties(coordinatorProperties);
                 builder.addPlugin(new TpchPlugin());
                 builder.addCatalog(TPCH_SCHEMA, TPCH_SCHEMA, ImmutableMap.of());
                 builder.addPlugin(objectStorePlugin);
-                builder.addCatalog(CATALOG, getOnlyElement(objectStorePlugin.getConnectorFactories()).getName(), properties);
+                builder.addCatalog(catalogName, getOnlyElement(objectStorePlugin.getConnectorFactories()).getName(), properties);
                 builder.addPlugin(new IcebergPlugin());
                 if (mockConnectorPlugin != null) {
                     builder.addPlugin(mockConnectorPlugin);
@@ -178,7 +190,7 @@ public final class ObjectStoreQueryRunner
                 builder.setAccountClient(accountClient);
                 DistributedQueryRunner queryRunner = builder.build();
 
-                queryRunner.execute("CREATE SCHEMA objectstore.tpch");
+                queryRunner.execute("CREATE SCHEMA %s.%s".formatted(catalogName, schemaName));
                 return queryRunner;
             }
             catch (Exception e) {
