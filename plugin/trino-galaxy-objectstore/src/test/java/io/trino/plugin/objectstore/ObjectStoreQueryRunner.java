@@ -171,7 +171,9 @@ public final class ObjectStoreQueryRunner
                 Map<String, String> properties = createObjectStoreProperties(
                         tableType,
                         locationSecurityServer.getClientConfig(),
-                        metastore.getMetastoreConfig(s3Url),
+                        metastore != null
+                                ? metastore.getMetastoreConfig(s3Url)
+                                : Map.of(),
                         hiveS3Config,
                         extraObjectStoreProperties);
 

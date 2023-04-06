@@ -67,12 +67,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 public abstract class BaseTestHiveOnDataLake
         extends AbstractTestQueryFramework
 {
-    private static final String HIVE_TEST_SCHEMA = "hive_datalake";
+    protected static final String HIVE_TEST_SCHEMA = "hive_datalake";
     private static final DataSize HIVE_S3_STREAMING_PART_SIZE = DataSize.of(5, MEGABYTE);
 
-    private String bucketName;
-    private HiveMinioDataLake hiveMinioDataLake;
-    private HiveMetastore metastoreClient;
+    protected String bucketName;
+    protected HiveMinioDataLake hiveMinioDataLake;
+    protected HiveMetastore metastoreClient;
 
     private final String hiveHadoopImage;
 

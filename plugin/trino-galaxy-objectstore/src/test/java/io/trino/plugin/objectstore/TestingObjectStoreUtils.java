@@ -50,6 +50,14 @@ public final class TestingObjectStoreUtils
         addCommonObjectStoreProperties(properties, metastoreConfig);
         addCommonObjectStoreProperties(properties, hiveS3Config);
         properties.putAll(extraObjectStoreProperties);
+
+        if (!extraObjectStoreProperties.containsKey("HIVE__hive.metastore")) {
+            properties.put("HIVE__hive.metastore", "galaxy");
+            properties.put("ICEBERG__iceberg.catalog.type", "GALAXY_METASTORE");
+            properties.put("DELTA__hive.metastore", "galaxy");
+            properties.put("HUDI__hive.metastore", "galaxy");
+        }
+
         return properties.buildOrThrow();
     }
 
@@ -73,14 +81,10 @@ public final class TestingObjectStoreUtils
         Map<String, String> properties = new HashMap<>();
 
         properties.put("OBJECTSTORE__object-store.table-type", tableType.toString());
-        properties.put("HIVE__hive.metastore", "galaxy");
         properties.put("HIVE__hive.allow-register-partition-procedure", "true");
         properties.put("HIVE__hive.non-managed-table-writes-enabled", "true");
-        properties.put("ICEBERG__iceberg.catalog.type", "GALAXY_METASTORE");
         properties.put("ICEBERG__iceberg.register-table-procedure.enabled", "true");
-        properties.put("DELTA__hive.metastore", "galaxy");
         properties.put("DELTA__delta.register-table-procedure.enabled", "true");
-        properties.put("HUDI__hive.metastore", "galaxy");
 
         return properties;
     }
