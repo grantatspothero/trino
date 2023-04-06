@@ -19,9 +19,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.airlift.log.Logger;
 import io.airlift.log.Logging;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
-import io.starburst.stargate.id.AccountId;
 import io.starburst.stargate.id.RoleId;
-import io.starburst.stargate.id.UserId;
 import io.trino.connector.MockConnectorFactory;
 import io.trino.connector.MockConnectorPlugin;
 import io.trino.plugin.hive.metastore.HiveMetastore;
@@ -49,12 +47,10 @@ import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.airlift.testing.Closeables.closeAllSuppress;
 import static io.trino.hadoop.ConfigurationInstantiator.newEmptyConfiguration;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
-import static io.trino.plugin.objectstore.GalaxyIdentity.createIdentity;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.plugin.tpch.TpchMetadata.TINY_SCHEMA_NAME;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static io.trino.testing.QueryAssertions.copyTpchTables;
-import static io.trino.testing.TestingSession.testSessionBuilder;
 import static java.lang.String.format;
 import static org.apache.hudi.common.model.HoodieTableType.COPY_ON_WRITE;
 
@@ -72,7 +68,6 @@ public final class ObjectStoreQueryRunner
     }
 
     public static class Builder
-            extends DistributedQueryRunner.Builder<Builder>
     {
         private TableType tableType;
         private String s3Url;
@@ -85,19 +80,7 @@ public final class ObjectStoreQueryRunner
         private MockConnectorPlugin mockConnectorPlugin;
         private TestingAccountClient accountClient;
 
-        private Builder()
-        {
-            super(testSessionBuilder()
-                    .setIdentity(createIdentity(
-                            "user",
-                            new AccountId("a-12345678"),
-                            new UserId("u-1234567890"),
-                            new RoleId("r-1234567890"),
-                            "testToken"))
-                    .setCatalog(CATALOG)
-                    .setSchema(TPCH_SCHEMA)
-                    .build());
-        }
+        private Builder() {}
 
         @CanIgnoreReturnValue
         public Builder withTableType(TableType tableType)
@@ -169,7 +152,6 @@ public final class ObjectStoreQueryRunner
             return this;
         }
 
-        @Override
         public DistributedQueryRunner build()
                 throws Exception
         {
