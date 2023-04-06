@@ -78,7 +78,7 @@
         <!-- released form https://github.com/starburstdata/schema-discovery -->
         <dep.schema-discovery.version>411.schema-discovery-20230406-57c3d37</dep.schema-discovery.version>
         <!-- released from https://github.com/starburstdata/stargate -->
-        <dep.stargate.version>stargate-7365-g37e224b99</dep.stargate.version>
+        <dep.stargate.version>stargate-7500-g2ec6f63ae</dep.stargate.version>
         <!-- released from https://github.com/starburstdata/starburst-trino-plugins -->
         <dep.starburst-trino-plugins.version>411.1</dep.starburst-trino-plugins.version>
         <dep.cloudevents.version>2.2.0</dep.cloudevents.version>
