@@ -51,6 +51,7 @@ public class TestObjectStoreHiveConnectorTest
             case SUPPORTS_DROP_FIELD:
             case SUPPORTS_SET_COLUMN_TYPE:
             case SUPPORTS_NOT_NULL_CONSTRAINT:
+            case SUPPORTS_MATERIALIZED_VIEW_FRESHNESS_FROM_BASE_TABLES:
                 return false;
             default:
                 return super.hasBehavior(connectorBehavior);

@@ -64,6 +64,7 @@ public class TestObjectStoreHudiConnectorTest
             case SUPPORTS_RENAME_COLUMN:
             case SUPPORTS_SET_COLUMN_TYPE:
             case SUPPORTS_COMMENT_ON_COLUMN:
+            case SUPPORTS_MATERIALIZED_VIEW_FRESHNESS_FROM_BASE_TABLES:
                 return false;
             default:
                 return super.hasBehavior(connectorBehavior);
