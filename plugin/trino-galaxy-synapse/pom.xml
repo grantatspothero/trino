@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.trino</groupId>
         <artifactId>trino-root</artifactId>
-        <version>411-galaxy-1-SNAPSHOT</version>
+        <version>412-galaxy-1-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -146,6 +146,13 @@
             <groupId>com.starburstdata.trino.plugins</groupId>
             <artifactId>starburst-synapse</artifactId>
             <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>5.0.0</version>
             <scope>test</scope>
         </dependency>
 
