@@ -145,6 +145,12 @@ jobs:
         run: |
           export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
           $MAVEN clean verify -B --strict-checksums -V -T 1C -DskipTests -P ci -pl '!:trino-server-rpm'
+      - name: Test JDBC shading
+        # Run only integration tests to verify JDBC driver shading
+        run: |
+          export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
+          $MAVEN clean install ${MAVEN_FAST_INSTALL} -pl :trino-jdbc -am
+          $MAVEN failsafe:integration-test -B --strict-checksums -P ci -pl :trino-jdbc
 
   check-commits-dispatcher:
     runs-on: ubuntu-latest
