@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.airlift.concurrent.SetThreadName;
+import io.airlift.log.Logger;
 import io.airlift.slice.Slice;
 import io.airlift.units.Duration;
 import io.opentelemetry.api.trace.Span;
@@ -119,6 +120,8 @@ import static javax.ws.rs.core.Response.Status.FORBIDDEN;
 @Path("/galaxy/metadata/v1/statement")
 public class MetadataOnlyStatementResource
 {
+    private static final Logger log = Logger.get(MetadataOnlyStatementResource.class);
+
     private static final URI INFO_URI = URI.create("info:/");
     private final Duration maxWaitTime;
 
@@ -131,6 +134,7 @@ public class MetadataOnlyStatementResource
     private final MetadataOnlyTransactionManager transactionManager;
     private final SecretSealer secretSealer;
     private final TrinoPlaneId trinoPlaneId;
+    private final MetadataOnlySystemState systemState;
 
     @Inject
     public MetadataOnlyStatementResource(
@@ -143,7 +147,8 @@ public class MetadataOnlyStatementResource
             MetadataOnlyTransactionManager transactionManager,
             SecretSealer secretSealer,
             MetadataOnlyConfig config,
-            QueryManagerConfig queryManagerConfig)
+            QueryManagerConfig queryManagerConfig,
+            MetadataOnlySystemState systemState)
     {
         this.sessionContextFactory = requireNonNull(sessionContextFactory, "sessionContextFactory is null");
         this.dispatchManager = requireNonNull(dispatchManager, "dispatchManager is null");
@@ -155,6 +160,7 @@ public class MetadataOnlyStatementResource
         this.secretSealer = requireNonNull(secretSealer, "secretSealer is null");
         trinoPlaneId = config.getTrinoPlaneId();
         this.maxWaitTime = queryManagerConfig.getClientTimeout();
+        this.systemState = requireNonNull(systemState, "systemState is null");
     }
 
     /**
@@ -171,6 +177,10 @@ public class MetadataOnlyStatementResource
             @Context HttpHeaders httpHeaders,
             @Context UriInfo uriInfo)
     {
+        if (systemState.isShuttingDown()) {
+            throw new WebApplicationException(Status.SERVICE_UNAVAILABLE);
+        }
+
         String statement = request.statement();
         if (isNullOrEmpty(statement)) {
             throw badRequest(BAD_REQUEST, "SQL statement is empty");
@@ -190,7 +200,17 @@ public class MetadataOnlyStatementResource
 
         SessionContext sessionContext = sessionContextFactory.createSessionContext(headers, Optional.empty(), remoteAddress, identity);
         List<QueryCatalog> decryptedCatalogs = request.catalogs().stream().map(queryCatalog -> decryptCatalog(request.accountId(), queryCatalog)).collect(toImmutableList());
-        return executeQuery(transactionId, statement, sessionContext, decryptedCatalogs, request.serviceProperties());
+
+        systemState.incrementActiveRequests();
+        try {
+            return executeQuery(transactionId, statement, sessionContext, decryptedCatalogs, request.serviceProperties());
+        }
+        finally {
+            if ((systemState.decrementAndGetActiveRequests() <= 0) && systemState.isShuttingDown()) {
+                log.info("Shutdown requested and all active requests have completed. Exiting.");
+                System.exit(0);
+            }
+        }
     }
 
     private QueryResults executeQuery(TransactionId transactionId, String statement, SessionContext sessionContext, List<QueryCatalog> catalogs, Map<String, String> serviceProperties)

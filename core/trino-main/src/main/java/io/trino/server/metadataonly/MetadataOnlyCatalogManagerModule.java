@@ -49,10 +49,13 @@ public class MetadataOnlyCatalogManagerModule
     protected void setup(Binder binder)
     {
         jaxrsBinder(binder).bind(MetadataOnlyStatementResource.class);
+        jaxrsBinder(binder).bind(MetadataOnlySystemResource.class);
+
         binder.bind(MetadataOnlyTransactionManager.class).in(Scopes.SINGLETON);
         binder.bind(TransactionManager.class).to(MetadataOnlyTransactionManager.class).in(Scopes.SINGLETON);
         binder.bind(WebUiAuthenticationFilter.class).to(NoWebUiAuthenticationFilter.class).in(Scopes.SINGLETON);
         binder.bind(MetadataOnlyLogging.class).asEagerSingleton();
+        binder.bind(MetadataOnlySystemState.class).in(Scopes.SINGLETON);
 
         binder.bind(ConnectorServicesProvider.class).to(MetadataOnlyTransactionManager.class).in(Scopes.SINGLETON);
         binder.bind(CatalogManager.class).to(MetadataOnlyCatalogManager.class).in(Scopes.SINGLETON);
