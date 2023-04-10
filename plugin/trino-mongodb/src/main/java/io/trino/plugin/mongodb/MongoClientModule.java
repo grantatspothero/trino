@@ -14,7 +14,6 @@
 package io.trino.plugin.mongodb;
 
 import com.google.inject.Binder;
-import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.ProvidesIntoSet;
@@ -32,10 +31,10 @@ import com.mongodb.connection.Stream;
 import com.mongodb.connection.StreamFactory;
 import com.mongodb.internal.connection.PowerOfTwoBufferPool;
 import com.mongodb.internal.connection.SocketStream;
+import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
 import io.trino.plugin.mongodb.ptf.Query;
-import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.ptf.ConnectorTableFunction;
 import io.trino.spi.type.TypeManager;
@@ -43,33 +42,28 @@ import io.trino.sshtunnel.SshTunnelConfig;
 import io.trino.sshtunnel.SshTunnelProperties;
 
 import javax.inject.Singleton;
-import javax.net.ssl.SSLContext;
 
-import java.io.File;
-import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
+import static io.airlift.configuration.ConditionalModule.conditionalModule;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionAllowed;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addRegionLocalIpAddresses;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addTlsEnabled;
-import static io.trino.plugin.base.ssl.SslUtils.createSSLContext;
-import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class MongoClientModule
-        implements Module
+        extends AbstractConfigurationAwareModule
 {
     @Override
-    public void configure(Binder binder)
+    public void setup(Binder binder)
     {
         configBinder(binder).bindConfig(SshTunnelConfig.class);
         configBinder(binder).bindConfig(RegionEnforcementConfig.class);
@@ -81,6 +75,11 @@ public class MongoClientModule
 
         configBinder(binder).bindConfig(MongoClientConfig.class);
         newSetBinder(binder, MongoClientSettingConfigurator.class);
+
+        install(conditionalModule(
+                MongoClientConfig.class,
+                config -> config.getTlsEnabled() != null && config.getTlsEnabled(),
+                new MongoSslModule()));
 
         newSetBinder(binder, ConnectorTableFunction.class).addBinding().toProvider(Query.class).in(Scopes.SINGLETON);
     }
@@ -124,48 +123,12 @@ public class MongoClientModule
 
     @ProvidesIntoSet
     @Singleton
-    public MongoClientSettingConfigurator sslSpecificConfigurator(MongoClientConfig config)
-    {
-        if (config.getTlsEnabled() == null) {
-            // TODO: unconditionally apply sslEnabled/tlsEnabled (i.e. remove null check) see: https://github.com/starburstdata/stargate/issues/4474
-        }
-        else if (config.getTlsEnabled()) {
-            return options -> options.applyToSslSettings(builder -> {
-                builder.enabled(true);
-                buildSslContext(config.getKeystorePath(), config.getKeystorePassword(), config.getTruststorePath(), config.getTruststorePassword())
-                        .ifPresent(builder::context);
-            });
-        }
-        return options -> {};
-    }
-
-    @ProvidesIntoSet
-    @Singleton
     public MongoClientSettingConfigurator sshTunnelConfigurator(CatalogHandle catalogHandle, RegionEnforcementConfig regionEnforcementConfig, SshTunnelConfig sshConfig)
     {
         Optional<SshTunnelProperties> sshProperties = SshTunnelProperties.generateFrom(sshConfig);
 
         return options -> options.streamFactoryFactory((SocketSettings socketSettings, SslSettings sslSettings) ->
                 new GalaxyStreamFactory(socketSettings, sslSettings, regionEnforcementConfig, sshProperties, catalogHandle));
-    }
-
-    // TODO https://github.com/trinodb/trino/issues/15247 Add test for x.509 certificates
-    private static Optional<SSLContext> buildSslContext(
-            Optional<File> keystorePath,
-            Optional<String> keystorePassword,
-            Optional<File> truststorePath,
-            Optional<String> truststorePassword)
-    {
-        if (keystorePath.isEmpty() && truststorePath.isEmpty()) {
-            return Optional.empty();
-        }
-
-        try {
-            return Optional.of(createSSLContext(keystorePath, keystorePassword, truststorePath, truststorePassword));
-        }
-        catch (GeneralSecurityException | IOException e) {
-            throw new TrinoException(GENERIC_INTERNAL_ERROR, e);
-        }
     }
 
     private static class GalaxyStreamFactory

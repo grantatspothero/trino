@@ -17,15 +17,10 @@ import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigSecuritySensitive;
 import io.airlift.configuration.DefunctConfig;
 import io.airlift.configuration.LegacyConfig;
-import io.airlift.configuration.validation.FileExists;
 
-import javax.validation.constraints.AssertTrue;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
-
-import java.io.File;
-import java.util.Optional;
 
 @DefunctConfig({"mongodb.connection-per-host", "mongodb.socket-keep-alive", "mongodb.seeds", "mongodb.credentials"})
 public class MongoClientConfig
@@ -43,10 +38,6 @@ public class MongoClientConfig
     // TODO: revert sslEnabled back to boolean when galaxy does not support customers configuring connection-url
     // see: https://github.com/starburstdata/stargate/issues/4474
     private Boolean tlsEnabled;
-    private File keystorePath;
-    private String keystorePassword;
-    private File truststorePath;
-    private String truststorePassword;
 
     // query configurations
     private int cursorBatchSize; // use driver default
@@ -55,15 +46,6 @@ public class MongoClientConfig
     private WriteConcernType writeConcern = WriteConcernType.ACKNOWLEDGED;
     private String requiredReplicaSetName;
     private String implicitRowFieldPrefix = "_pos";
-
-    @AssertTrue(message = "'mongodb.tls.keystore-path', 'mongodb.tls.keystore-password', 'mongodb.tls.truststore-path' and 'mongodb.tls.truststore-password' must be empty when TLS is disabled")
-    public boolean isValidTlsConfig()
-    {
-        if (tlsEnabled == null || !tlsEnabled) {
-            return keystorePath == null && keystorePassword == null && truststorePath == null && truststorePassword == null;
-        }
-        return true;
-    }
 
     @NotNull
     public String getSchemaCollection()
@@ -242,56 +224,6 @@ public class MongoClientConfig
     public MongoClientConfig setTlsEnabled(Boolean tlsEnabled)
     {
         this.tlsEnabled = tlsEnabled;
-        return this;
-    }
-
-    public Optional<@FileExists File> getKeystorePath()
-    {
-        return Optional.ofNullable(keystorePath);
-    }
-
-    @Config("mongodb.tls.keystore-path")
-    public MongoClientConfig setKeystorePath(File keystorePath)
-    {
-        this.keystorePath = keystorePath;
-        return this;
-    }
-
-    public Optional<String> getKeystorePassword()
-    {
-        return Optional.ofNullable(keystorePassword);
-    }
-
-    @Config("mongodb.tls.keystore-password")
-    @ConfigSecuritySensitive
-    public MongoClientConfig setKeystorePassword(String keystorePassword)
-    {
-        this.keystorePassword = keystorePassword;
-        return this;
-    }
-
-    public Optional<@FileExists File> getTruststorePath()
-    {
-        return Optional.ofNullable(truststorePath);
-    }
-
-    @Config("mongodb.tls.truststore-path")
-    public MongoClientConfig setTruststorePath(File truststorePath)
-    {
-        this.truststorePath = truststorePath;
-        return this;
-    }
-
-    public Optional<String> getTruststorePassword()
-    {
-        return Optional.ofNullable(truststorePassword);
-    }
-
-    @Config("mongodb.tls.truststore-password")
-    @ConfigSecuritySensitive
-    public MongoClientConfig setTruststorePassword(String truststorePassword)
-    {
-        this.truststorePassword = truststorePassword;
         return this;
     }
 
