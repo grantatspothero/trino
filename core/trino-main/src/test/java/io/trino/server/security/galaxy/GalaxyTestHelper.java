@@ -56,6 +56,7 @@ import static io.trino.collect.cache.SafeCaches.buildNonEvictableCache;
 import static io.trino.server.security.galaxy.GalaxyIdentity.createIdentity;
 import static io.trino.server.security.galaxy.GalaxyIdentity.createPrincipalString;
 import static io.trino.server.security.galaxy.GalaxyIdentity.toDispatchSession;
+import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -86,7 +87,7 @@ public class GalaxyTestHelper
             throws Exception
     {
         cockroach = new GalaxyCockroachContainer();
-        accountFactory = TestingAccountFactory.createTestingAccountFactory(cockroach);
+        accountFactory = createTestingAccountFactory(() -> cockroach);
         accountClient = accountFactory.createAccount();
 
         // creating auth keys is very slow so cache them

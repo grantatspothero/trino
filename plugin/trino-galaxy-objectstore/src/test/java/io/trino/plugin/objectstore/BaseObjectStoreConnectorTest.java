@@ -109,7 +109,7 @@ public abstract class BaseObjectStoreConnectorTest
         metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyCockroachContainer));
 
         TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> !location.contains("denied")));
-        TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(galaxyCockroachContainer));
+        TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> galaxyCockroachContainer));
 
         DistributedQueryRunner queryRunner = ObjectStoreQueryRunner.builder()
                 .withTableType(tableType)

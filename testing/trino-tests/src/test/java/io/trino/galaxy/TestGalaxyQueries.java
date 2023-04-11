@@ -88,8 +88,7 @@ public class TestGalaxyQueries
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        GalaxyCockroachContainer cockroach = closeAfterClass(new GalaxyCockroachContainer());
-        TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(cockroach));
+        TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> closeAfterClass(new GalaxyCockroachContainer())));
         QueryRunner queryRunner = GalaxyQueryRunner.builder("memory", "tiny")
                 .setAccountClient(testingAccountFactory.createAccount())
                 .addPlugin(new TpchPlugin())

@@ -124,8 +124,7 @@ public class TestMetadataOnlyQueries
             metastore = null;
         });
 
-        GalaxyCockroachContainer cockroach = closeAfterClass(new GalaxyCockroachContainer());
-        TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(cockroach));
+        TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> closeAfterClass(new GalaxyCockroachContainer())));
 
         return GalaxyQueryRunner.builder()
                 .setAccountClient(testingAccountFactory.createAccount())
