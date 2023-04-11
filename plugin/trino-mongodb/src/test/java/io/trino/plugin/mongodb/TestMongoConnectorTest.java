@@ -60,7 +60,7 @@ import static org.testng.Assert.assertNotNull;
 public class TestMongoConnectorTest
         extends BaseConnectorTest
 {
-    private MongoServer server;
+    protected MongoServer server;
     protected MongoClient client;
 
     @Override
