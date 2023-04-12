@@ -16,14 +16,15 @@ package io.trino.plugin.hive.metastore.galaxy;
 import io.trino.plugin.hive.AbstractTestHiveLocal;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
+import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.IOException;
 
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestGalaxyHiveMetastore
         extends AbstractTestHiveLocal
@@ -63,10 +64,17 @@ public class TestGalaxyHiveMetastore
         return new GalaxyHiveMetastore(testingGalaxyMetastore.getMetastore(), HDFS_ENVIRONMENT, tempDir.getAbsolutePath());
     }
 
-    @Test(enabled = false)
     @Override
     public void testHideDeltaLakeTables()
     {
-        // Delta tables aren't supported at all so there is no need to ignore them
+        assertThatThrownBy(super::testHideDeltaLakeTables)
+                .hasMessageMatching("(?s)\n" +
+                        "Expecting\n" +
+                        "  \\[.*\\b(\\w+.tmp_trino_test_trino_delta_lake_table_\\w+)\\b.*]\n" +
+                        "not to contain\n" +
+                        "  \\[\\1]\n" +
+                        "but found.*");
+
+        throw new SkipException("not supported");
     }
 }

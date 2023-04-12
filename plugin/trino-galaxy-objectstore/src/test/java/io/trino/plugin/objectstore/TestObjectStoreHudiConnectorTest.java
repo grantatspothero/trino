@@ -19,7 +19,6 @@ import io.trino.testing.MaterializedResult;
 import io.trino.testing.TestingConnectorBehavior;
 import org.intellij.lang.annotations.Language;
 import org.testng.SkipException;
-import org.testng.annotations.Test;
 
 import static io.trino.plugin.objectstore.TableType.HUDI;
 import static io.trino.spi.type.VarcharType.VARCHAR;
@@ -101,12 +100,16 @@ public class TestObjectStoreHudiConnectorTest
     @Override
     public void testDescribeTable()
     {
+        // The Hudi connector includes additional metadata columns which are not hidden. This means the nation table does not have the expected schema.
+        // This is a copy of the test from the base class with any `SELECT *`s replaced with explicit column lists.
         assertColumns("DESCRIBE orders");
     }
 
     @Override
     public void testShowColumns()
     {
+        // The Hudi connector includes additional metadata columns which are not hidden. This means the nation table does not have the expected schema.
+        // This is a copy of the test from the base class with any `SELECT *`s replaced with explicit column lists.
         assertColumns("SHOW COLUMNS FROM orders");
     }
 
@@ -135,13 +138,23 @@ public class TestObjectStoreHudiConnectorTest
         assertThat(actual).isEqualTo(expected);
     }
 
-    // The Hudi connector includes additional metadata columns which are not hidden. This means the nation table does not have the expected schema.
-    // This is a copy of the test from the base class with any `SELECT *`s replaced with explicit column lists.
-
-    @SuppressWarnings("deprecation")
     @Override
-    @Test(enabled = false)
-    public void testMaterializedView() {}
+    public void testMaterializedView()
+    {
+        assertThatThrownBy(super::testMaterializedView)
+                .hasMessageMatching("""
+
+                        \\QThe following assertion failed:
+                        1) [Rows for query [SHOW COLUMNS FROM test_materialized_view_\\E\\w+\\Q projected with [Column]]]\s
+                        Expecting actual:
+                          (_hoodie_commit_time), (_hoodie_commit_seqno), (_hoodie_record_key), (_hoodie_partition_path), (_hoodie_file_name), (nationkey), (name), (regionkey), (comment), (_uuid)
+                        to contain exactly in any order:
+                          [(nationkey), (name), (regionkey), (comment)]
+                        but the following elements were unexpected:
+                          (_hoodie_commit_time), (_hoodie_commit_seqno), (_hoodie_record_key), (_hoodie_partition_path), (_hoodie_file_name), (_uuid)
+
+                        """);
+    }
 
     @Override
     public void testCreateTable()

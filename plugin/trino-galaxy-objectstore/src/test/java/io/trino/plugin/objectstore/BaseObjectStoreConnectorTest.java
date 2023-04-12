@@ -62,6 +62,8 @@ import static io.trino.testing.TestingAccessControlManager.TestingPrivilegeType.
 import static io.trino.testing.TestingAccessControlManager.privilege;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_ADD_COLUMN;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_CREATE_TABLE;
+import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_CREATE_TABLE_WITH_DATA;
+import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_CREATE_VIEW;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_RENAME_COLUMN;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_RENAME_TABLE;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_SET_COLUMN_TYPE;
@@ -862,46 +864,71 @@ public abstract class BaseObjectStoreConnectorTest
         assertUpdate("CALL system.flush_metadata_cache(schema_name => 'flush_metadata_cache_bogus_schema', table_name => 'flush_metadata_cache_non_existent')");
     }
 
-    // these tests are slow don't test anything specific to the connector
     @Override
-    @Test(enabled = false)
-    public void testLargeIn(int valuesCount) {}
+    public void testCreateViewSchemaNotFound()
+    {
+        if (!hasBehavior(SUPPORTS_CREATE_VIEW)) {
+            super.testCreateViewSchemaNotFound();
+            return;
+        }
+
+        // GalaxyAccessControl.checkCanCreateView maybe should throw "Schema xxxx not found"?
+        assertThatThrownBy(super::testCreateViewSchemaNotFound)
+                .isInstanceOf(AssertionError.class)
+                .hasMessageFindingMatch("""
+
+                        Expecting message:
+                          "Access Denied: Cannot create view objectstore.test_schema_\\S*.test_view_create_no_schema_\\S*: Role accountadmin does not have the privilege CREATE_TABLE on the schema objectstore.test_schema_\\S*"
+                        to match regex:
+                          "Schema test_schema_\\S* not found"
+                        but did not.
+                        """)
+                .hasStackTraceContaining("at io.trino.server.security.galaxy.GalaxyAccessControl.checkCanCreateView");
+    }
 
     @Override
-    @Test(enabled = false)
-    public void testTableSampleBernoulli() {}
+    public void testCreateTableSchemaNotFound()
+    {
+        if (!hasBehavior(SUPPORTS_CREATE_TABLE)) {
+            super.testCreateTableAsSelectSchemaNotFound();
+            return;
+        }
+
+        // GalaxyAccessControl.checkCanCreateTable maybe should throw "Schema xxxx not found"?
+        assertThatThrownBy(super::testCreateTableSchemaNotFound)
+                .isInstanceOf(AssertionError.class)
+                .hasMessageFindingMatch("""
+
+                        Expecting message:
+                          "Access Denied: Cannot create table objectstore.test_schema_\\S*.test_create_no_schema_\\S*: Role accountadmin does not have the privilege CREATE_TABLE on the schema objectstore.test_schema_\\S*"
+                        to match regex:
+                          "Schema test_schema_\\S* not found"
+                        but did not.
+                        """)
+                .hasStackTraceContaining("at io.trino.server.security.galaxy.GalaxyAccessControl.checkCanCreateTable");
+    }
 
     @Override
-    @Test(enabled = false)
-    public void testTableSampleBernoulliBoundaryValues() {}
+    public void testCreateTableAsSelectSchemaNotFound()
+    {
+        if (!hasBehavior(SUPPORTS_CREATE_TABLE_WITH_DATA)) {
+            super.testCreateTableAsSelectSchemaNotFound();
+            return;
+        }
 
-    @Override
-    @Test(enabled = false)
-    public void testTableSampleSystem() {}
+        // GalaxyAccessControl.checkCanCreateTable maybe should throw "Schema xxxx not found"?
+        assertThatThrownBy(super::testCreateTableAsSelectSchemaNotFound)
+                .isInstanceOf(AssertionError.class)
+                .hasMessageFindingMatch("""
 
-    @Override
-    @Test(enabled = false)
-    public void testColumnName(String columnName) {}
-
-    // Override here and in BaseIcebergConnectorTest
-    @Override
-    @Test(enabled = false)
-    public void testViewAndMaterializedViewTogether() {}
-
-    // galaxy security message overrides schema not found message
-    @Override
-    @Test(enabled = false)
-    public void testCreateTableAsSelectSchemaNotFound() {}
-
-    // galaxy security message overrides schema not found message
-    @Override
-    @Test(enabled = false)
-    public void testCreateTableSchemaNotFound() {}
-
-    // galaxy security message overrides schema not found message
-    @Override
-    @Test(enabled = false)
-    public void testCreateViewSchemaNotFound() {}
+                        Expecting message:
+                          "Access Denied: Cannot create table objectstore.test_schema_\\S*.test_ctas_no_schema_\\S*: Role accountadmin does not have the privilege CREATE_TABLE on the schema objectstore.test_schema_\\S*"
+                        to match regex:
+                          "Schema test_schema_\\S* not found"
+                        but did not.
+                        """)
+                .hasStackTraceContaining("at io.trino.server.security.galaxy.GalaxyAccessControl.checkCanCreateTable");
+    }
 
     // increased timeout to be able to handle galaxy security RTT addition
     // TODO improve tests' speed, decrease the timeout back
@@ -921,7 +948,11 @@ public abstract class BaseObjectStoreConnectorTest
     }
 
     @Override
-    protected void checkInformationSchemaViewsForMaterializedView(String schemaName, String viewName) {}
+    protected void checkInformationSchemaViewsForMaterializedView(String schemaName, String viewName)
+    {
+        assertThatThrownBy(() -> super.checkInformationSchemaViewsForMaterializedView(schemaName, viewName))
+                .hasMessageFindingMatch("(?s)Expecting.*to contain:.*\\Q[(" + viewName + ")]");
+    }
 
     protected void assertQueryReturns(@Language("SQL") String sql, String result)
     {
