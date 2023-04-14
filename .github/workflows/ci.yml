@@ -632,6 +632,7 @@ jobs:
             - { modules: plugin/trino-iceberg }
             - { modules: plugin/trino-iceberg, profile: minio-and-avro }
             - { modules: plugin/trino-iceberg, profile: cloud-tests }
+            - { modules: plugin/trino-mariadb }
             - { modules: plugin/trino-mongodb }
             - { modules: plugin/trino-mysql }
             - { modules: plugin/trino-postgresql }
