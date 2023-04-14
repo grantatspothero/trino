@@ -16,6 +16,7 @@ package io.trino.plugin.objectstore;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import io.airlift.http.client.HttpClient;
 import io.airlift.units.Duration;
@@ -35,7 +36,7 @@ public class GalaxyLocationSecurityModule
     public void configure(Binder binder)
     {
         newOptionalBinder(binder, LocationAccessControl.class)
-                .setBinding().to(GalaxyLocationAccessControl.class);
+                .setBinding().to(GalaxyLocationAccessControl.class).in(Scopes.SINGLETON);
 
         configBinder(binder).bindConfig(GalaxyLocationSecurityConfig.class);
 
