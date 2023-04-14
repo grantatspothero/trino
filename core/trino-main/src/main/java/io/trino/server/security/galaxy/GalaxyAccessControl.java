@@ -683,21 +683,22 @@ public class GalaxyAccessControl
         }
         ContentsVisibility visibility = privileges.getColumnPrivileges().get(privilege.name());
         Set<String> deniedColumns;
-        if (visibility == null) {
-            deniedColumns = columns;
+        // If there is no column visibility, or if default column visibility is DENY and there are no overrides, all columns are denied
+        if (visibility == null || (visibility.defaultVisibility() == GrantKind.DENY && visibility.overrideVisibility().isEmpty())) {
+            runPrivilegeDenier(context, privilege, ImmutableSet.of(), denier);
         }
         else {
             deniedColumns = columns.stream().filter(column -> !visibility.isVisible(column)).collect(toImmutableSet());
-        }
-        if (!deniedColumns.isEmpty()) {
-            runPrivilegeDenier(context, privilege, deniedColumns, denier);
+            if (!deniedColumns.isEmpty()) {
+                runPrivilegeDenier(context, privilege, deniedColumns, denier);
+            }
         }
     }
 
     private void runPrivilegeDenier(SystemSecurityContext context, Privilege privilege, Set<String> deniedColumns, Consumer<String> denier)
     {
-        String kind = deniedColumns.size() > 1 ? "columns" : "column";
-        denier.accept(roleLacksPrivilege(context, privilege, kind, "[%s]".formatted(String.join(", ", deniedColumns))));
+        String kind = deniedColumns.size() == 1 ? "column" : "columns";
+        denier.accept(roleLacksPrivilege(context, privilege, kind, deniedColumns.isEmpty() ? "" : "[%s]".formatted(String.join(", ", deniedColumns))));
     }
 
     private void checkHasAccountPrivilege(SystemSecurityContext context, Privilege privilege, Consumer<String> denier)

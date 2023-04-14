@@ -545,6 +545,29 @@ public class TestGalaxyAccessControl
     }
 
     @Test
+    public void testSelectCountStarWithAllDeniedColumns()
+    {
+        QualifiedObjectName name = new QualifiedObjectName(helper.getAnyCatalogName(), newSchemaName(), newTableName());
+        // Grant SELECT to fearless leader, and DENY SELECT to lackey follower
+        securityMetadata.grantTablePrivileges(adminSession(), name, ImmutableSet.of(SELECT), new TrinoPrincipal(PrincipalType.ROLE, FEARLESS_LEADER), false);
+        securityMetadata.denyTablePrivileges(adminSession(), name, ImmutableSet.of(SELECT), new TrinoPrincipal(PrincipalType.ROLE, LACKEY_FOLLOWER));
+
+        // Now for both roles we checkCanSelectFromColumns give the appropriate error on an empty set of columns
+        CatalogSchemaTableName cname = new CatalogSchemaTableName(helper.getAnyCatalogName(), newSchemaName(), newTableName());
+        assertThatThrownBy(() -> accessControl.checkCanSelectFromColumns(lackeyContext(), cname, ImmutableSet.of()))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessage("Access Denied: Cannot select from columns [] in table or view %s: Role lackey_follower does not have the privilege SELECT on the columns ".formatted(cname));
+
+        assertThatThrownBy(() -> accessControl.checkCanSelectFromColumns(fearlessContext(), cname, ImmutableSet.of()))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessage("Access Denied: Cannot select from columns [] in table or view %s: Role fearless_leader does not have the privilege SELECT on the columns ".formatted(cname));
+
+        // Clean up
+        securityMetadata.revokeTablePrivileges(adminSession(), name, ImmutableSet.of(SELECT), new TrinoPrincipal(PrincipalType.ROLE, LACKEY_FOLLOWER), false);
+        securityMetadata.revokeTablePrivileges(adminSession(), name, ImmutableSet.of(SELECT), new TrinoPrincipal(PrincipalType.ROLE, FEARLESS_LEADER), false);
+    }
+
+    @Test
     public void testCheckCanInsertIntoTable()
     {
         withTablePrivilege(INSERT, "Cannot insert into table", (context, name) -> accessControl.checkCanInsertIntoTable(context, name));
