@@ -1126,12 +1126,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testReportWrittenBytes()
-    {
-        skipDuplicateTestCoverage("testReportWrittenBytes");
-    }
-
-    @Override
     public void testRollback()
     {
         skipDuplicateTestCoverage("testRollback");
@@ -1435,6 +1429,12 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     public void testWriteNotAllowedInTransaction()
     {
         skipDuplicateTestCoverage("testWriteNotAllowedInTransaction");
+    }
+
+    @Override
+    public void testWrittenDataSize()
+    {
+        skipDuplicateTestCoverage("testWrittenDataSize");
     }
 
     @Override
