@@ -53,7 +53,7 @@ import java.util.Set;
 
 import static com.google.inject.util.Modules.EMPTY_MODULE;
 
-public class InternalHudiConnectorFactory
+public final class InternalHudiConnectorFactory
 {
     private InternalHudiConnectorFactory() {}
 
