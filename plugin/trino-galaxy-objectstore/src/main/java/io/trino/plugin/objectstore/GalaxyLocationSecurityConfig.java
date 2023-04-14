@@ -15,6 +15,7 @@ package io.trino.plugin.objectstore;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.airlift.configuration.Config;
+import io.airlift.configuration.ConfigHidden;
 
 import javax.validation.constraints.NotEmpty;
 
@@ -22,7 +23,21 @@ import java.net.URI;
 
 public class GalaxyLocationSecurityConfig
 {
+    private boolean enabled = true;
     private URI accountUri;
+
+    public boolean isEnabled()
+    {
+        return enabled;
+    }
+
+    @Config("galaxy.location-security.enabled")
+    @ConfigHidden
+    public GalaxyLocationSecurityConfig setEnabled(boolean enabled)
+    {
+        this.enabled = enabled;
+        return this;
+    }
 
     @NotEmpty
     public URI getAccountUri()

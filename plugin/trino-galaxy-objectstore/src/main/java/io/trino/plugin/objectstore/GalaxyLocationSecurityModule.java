@@ -18,6 +18,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
+import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.airlift.http.client.HttpClient;
 import io.airlift.units.Duration;
 import io.starburst.stargate.accesscontrol.client.HttpTrinoLocationClient;
@@ -30,27 +31,53 @@ import static io.airlift.http.client.HttpClientBinder.httpClientBinder;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class GalaxyLocationSecurityModule
-        implements Module
+        extends AbstractConfigurationAwareModule
 {
     @Override
-    public void configure(Binder binder)
+    protected void setup(Binder binder)
     {
-        newOptionalBinder(binder, LocationAccessControl.class)
-                .setBinding().to(GalaxyLocationAccessControl.class).in(Scopes.SINGLETON);
-
-        configBinder(binder).bindConfig(GalaxyLocationSecurityConfig.class);
-
-        httpClientBinder(binder).bindHttpClient("galaxy-location-security", ForGalaxyLocationSecurity.class)
-                .withConfigDefaults(config -> {
-                    config.setIdleTimeout(new Duration(30, SECONDS));
-                    config.setRequestTimeout(new Duration(10, SECONDS));
-                });
+        if (!buildConfigObject(GalaxyLocationSecurityConfig.class).isEnabled()) {
+            install(new DisabledModule());
+        }
+        else {
+            install(new EnabledModule());
+        }
     }
 
-    @Provides
-    @Singleton
-    public static TrinoLocationApi createTrinoSecurityApi(@ForGalaxyLocationSecurity HttpClient httpClient, GalaxyLocationSecurityConfig config)
+    public static class DisabledModule
+            implements Module
     {
-        return new HttpTrinoLocationClient(config.getAccountUri(), httpClient);
+        @Override
+        public void configure(Binder binder)
+        {
+            newOptionalBinder(binder, LocationAccessControl.class)
+                    .setBinding().toInstance(LocationAccessControl.ALLOW_ALL);
+        }
+    }
+
+    public static class EnabledModule
+            implements Module
+    {
+        @Override
+        public void configure(Binder binder)
+        {
+            newOptionalBinder(binder, LocationAccessControl.class)
+                    .setBinding().to(GalaxyLocationAccessControl.class).in(Scopes.SINGLETON);
+
+            configBinder(binder).bindConfig(GalaxyLocationSecurityConfig.class);
+
+            httpClientBinder(binder).bindHttpClient("galaxy-location-security", ForGalaxyLocationSecurity.class)
+                    .withConfigDefaults(config -> {
+                        config.setIdleTimeout(new Duration(30, SECONDS));
+                        config.setRequestTimeout(new Duration(10, SECONDS));
+                    });
+        }
+
+        @Provides
+        @Singleton
+        public static TrinoLocationApi createTrinoSecurityApi(@ForGalaxyLocationSecurity HttpClient httpClient, GalaxyLocationSecurityConfig config)
+        {
+            return new HttpTrinoLocationClient(config.getAccountUri(), httpClient);
+        }
     }
 }

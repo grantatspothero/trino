@@ -29,6 +29,7 @@ public class TestGalaxyLocationSecurityConfig
     public void testDefaults()
     {
         assertRecordedDefaults(recordDefaults(GalaxyLocationSecurityConfig.class)
+                .setEnabled(true)
                 .setAccountUri(null));
     }
 
@@ -36,10 +37,12 @@ public class TestGalaxyLocationSecurityConfig
     public void testExplicitPropertyMappings()
     {
         Map<String, String> properties = ImmutableMap.<String, String>builder()
+                .put("galaxy.location-security.enabled", "false")
                 .put("galaxy.account-url", "https://whackadoodle.galaxy.com")
                 .buildOrThrow();
 
         GalaxyLocationSecurityConfig expected = new GalaxyLocationSecurityConfig()
+                .setEnabled(false)
                 .setAccountUri(URI.create("https://whackadoodle.galaxy.com"));
 
         assertFullMapping(properties, expected);
