@@ -3,7 +3,9 @@ name: Dependency updates
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 14 * * 1-5' # 6am UTC-8 on weekdays
+    # Bump dep.stargate.version regularly, but not too often. Every time dep.stargate.version is changed, engineers
+    # will have to download pretty sizable images used for testing.
+    - cron: '0 4 * * 1' # 6am UTC+2 on Monday
 
 permissions:
   contents: write
