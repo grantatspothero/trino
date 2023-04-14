@@ -18,6 +18,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
+import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
 import io.trino.plugin.jdbc.DecimalModule;
@@ -26,13 +27,22 @@ import io.trino.plugin.jdbc.ForBaseJdbc;
 import io.trino.plugin.jdbc.JdbcClient;
 import io.trino.plugin.jdbc.credential.CredentialProvider;
 import io.trino.plugin.jdbc.ptf.Query;
+import io.trino.plugin.mariadb.galaxy.GalaxyMariaDbSocketFactory;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.ptf.ConnectorTableFunction;
+import io.trino.sshtunnel.SshTunnelConfig;
+import io.trino.sshtunnel.SshTunnelProperties;
+import io.trino.sshtunnel.SshTunnelPropertiesMapper;
 import org.mariadb.jdbc.Driver;
 
 import java.util.Properties;
 
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionAllowed;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addRegionLocalIpAddresses;
 
 public class MariaDbClientModule
         implements Module
@@ -49,9 +59,25 @@ public class MariaDbClientModule
     @Provides
     @Singleton
     @ForBaseJdbc
-    public static ConnectionFactory createConnectionFactory(BaseJdbcConfig config, CredentialProvider credentialProvider)
+    public static ConnectionFactory createConnectionFactory(
+            CatalogHandle catalogHandle,
+            BaseJdbcConfig config,
+            CredentialProvider credentialProvider,
+            RegionEnforcementConfig regionEnforcementConfig,
+            SshTunnelConfig sshTunnelConfig)
     {
-        return new DriverConnectionFactory(new Driver(), config.getConnectionUrl(), getConnectionProperties(), credentialProvider);
+        Properties properties = getConnectionProperties();
+        properties.setProperty("socketFactory", GalaxyMariaDbSocketFactory.class.getName());
+
+        addCatalogName(properties, catalogHandle.getCatalogName());
+        addCatalogId(properties, catalogHandle.getVersion().toString());
+        addCrossRegionAllowed(properties, regionEnforcementConfig.getAllowCrossRegionAccess());
+        addRegionLocalIpAddresses(properties, regionEnforcementConfig.getAllowedIpAddresses());
+
+        SshTunnelProperties.generateFrom(sshTunnelConfig)
+                .ifPresent(sshTunnelProperties -> SshTunnelPropertiesMapper.addSshTunnelProperties(properties::setProperty, sshTunnelProperties));
+
+        return new DriverConnectionFactory(new Driver(), config.getConnectionUrl(), properties, credentialProvider);
     }
 
     private static Properties getConnectionProperties()
