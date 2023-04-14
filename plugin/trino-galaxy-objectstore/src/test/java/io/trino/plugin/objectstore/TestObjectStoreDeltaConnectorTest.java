@@ -174,7 +174,6 @@ public class TestObjectStoreDeltaConnectorTest
                 ")\n" +
                 "WITH (\n" +
                 "   location = 's3://test-bucket/tpch/orders-\\E.*\\Q',\n" +
-                "   partitioned_by = ARRAY[],\n" +
                 "   type = 'DELTA'\n" +
                 ")\\E");
     }

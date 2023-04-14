@@ -466,7 +466,6 @@ public abstract class BaseObjectStoreConnectorTest
                 ")\n" +
                 "WITH (\n" +
                 "   location = 's3://test-bucket/tpch/test_type_format\\E" + locationUuidRegex() + "\\Q',\n" +
-                "   partitioned_by = ARRAY[],\n" +
                 "   type = 'DELTA'\n" +
                 ")\\E");
 
@@ -545,7 +544,6 @@ public abstract class BaseObjectStoreConnectorTest
                 "WITH (\n" +
                 "   checkpoint_interval = 42,\n" +
                 "   location = 's3://test-bucket/tpch/test_delta_specific_property\\E" + locationUuidRegex() + "\\Q',\n" +
-                "   partitioned_by = ARRAY[],\n" +
                 "   type = 'DELTA'\n" +
                 ")\\E");
     }
