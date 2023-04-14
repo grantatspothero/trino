@@ -172,6 +172,8 @@ public class QueryMonitor
                                 queryInfo.getSelf(),
                                 Optional.empty(),
                                 Optional.empty(),
+                                Optional.empty(),
+                                Optional.empty(),
                                 Optional.empty())));
     }
 
@@ -188,6 +190,8 @@ public class QueryMonitor
                         ImmutableList.of(),
                         ImmutableList.of(),
                         queryInfo.getSelf(),
+                        Optional.empty(),
+                        Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty()),
@@ -286,7 +290,9 @@ public class QueryMonitor
                 queryInfo.getSelf(),
                 createTextQueryPlan(queryInfo, anonymizer),
                 createJsonQueryPlan(queryInfo, anonymizer),
-                queryInfo.getOutputStage().flatMap(stage -> stageInfoCodec.toJsonWithLengthLimit(stage, maxJsonLimit)));
+                queryInfo.getOutputStage().flatMap(stage -> stageInfoCodec.toJsonWithLengthLimit(stage, maxJsonLimit)),
+                queryInfo.getResultsCacheResultStatus(),
+                queryInfo.getResultsCacheResultSize());
     }
 
     private QueryStatistics createQueryStatistics(QueryInfo queryInfo)

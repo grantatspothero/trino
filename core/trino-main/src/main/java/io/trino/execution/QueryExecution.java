@@ -55,6 +55,8 @@ public interface QueryExecution
 
     QueryInfo getQueryInfo();
 
+    ResultsCacheFinalResultConsumer getResultsCacheFinalResultConsumer();
+
     Slug getSlug();
 
     Duration getTotalCpuTime();

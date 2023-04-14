@@ -103,6 +103,7 @@ import static io.trino.execution.QueryState.WAITING_FOR_RESOURCES;
 import static io.trino.execution.StageInfo.getAllStages;
 import static io.trino.operator.RetryPolicy.TASK;
 import static io.trino.server.DynamicFilterService.DynamicFiltersStats;
+import static io.trino.server.resultscache.ResultsCacheEntry.ResultCacheFinalResult;
 import static io.trino.spi.StandardErrorCode.NOT_FOUND;
 import static io.trino.spi.StandardErrorCode.USER_CANCELED;
 import static io.trino.util.Ciphers.createRandomAesEncryptionKey;
@@ -115,6 +116,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 @ThreadSafe
 public class QueryStateMachine
+        implements ResultsCacheFinalResultConsumer
 {
     private static final Logger QUERY_STATE_LOG = Logger.get(QueryStateMachine.class);
 
@@ -187,6 +189,7 @@ public class QueryStateMachine
 
     private final AtomicBoolean committed = new AtomicBoolean();
     private final AtomicBoolean consumed = new AtomicBoolean();
+    private final AtomicReference<ResultCacheFinalResult> resultsCacheFinalResult = new AtomicReference<>();
 
     private final NodeVersion version;
 
@@ -541,6 +544,8 @@ public class QueryStateMachine
                 setRoles,
                 addedPreparedStatements,
                 deallocatedPreparedStatements,
+                Optional.ofNullable(resultsCacheFinalResult.get()).map(finalResult -> finalResult.status().getDisplay()),
+                Optional.ofNullable(resultsCacheFinalResult.get()).map(ResultCacheFinalResult::resultSetSize),
                 Optional.ofNullable(startedTransactionId.get()),
                 clearTransactionId.get(),
                 updateType.get(),
@@ -1332,6 +1337,8 @@ public class QueryStateMachine
                 queryInfo.getSetRoles(),
                 queryInfo.getAddedPreparedStatements(),
                 queryInfo.getDeallocatedPreparedStatements(),
+                queryInfo.getResultsCacheResultStatus(),
+                queryInfo.getResultsCacheResultSize(),
                 queryInfo.getStartedTransactionId(),
                 queryInfo.isClearTransactionId(),
                 queryInfo.getUpdateType(),
@@ -1350,6 +1357,13 @@ public class QueryStateMachine
                 true,
                 version);
         finalQueryInfo.compareAndSet(finalInfo, Optional.of(prunedQueryInfo));
+    }
+
+    @Override
+    public void setResultsCacheFinalResult(ResultCacheFinalResult finalResult)
+    {
+        requireNonNull(finalResult, "finalResult is null");
+        resultsCacheFinalResult.set(finalResult);
     }
 
     private static QueryStats pruneQueryStats(QueryStats queryStats)

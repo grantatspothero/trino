@@ -18,7 +18,7 @@ import io.trino.Session;
 import io.trino.execution.StateMachine.StateChangeListener;
 import io.trino.server.BasicQueryInfo;
 import io.trino.server.protocol.Slug;
-import io.trino.server.resultscache.ResultsCacheParameters;
+import io.trino.server.resultscache.ResultsCacheState;
 import io.trino.spi.QueryId;
 
 import java.util.List;
@@ -81,6 +81,12 @@ public interface QueryManager
     /**
      * @throws NoSuchElementException if query does not exist
      */
+    ResultsCacheFinalResultConsumer getResultsCacheFinalResultConsumer(QueryId queryId)
+            throws NoSuchElementException;
+
+    /**
+     * @throws NoSuchElementException if query does not exist
+     */
     Session getQuerySession(QueryId queryId);
 
     /**
@@ -128,6 +134,6 @@ public interface QueryManager
     /**
      * @throws NoSuchElementException if query does not exist
      */
-    Optional<ResultsCacheParameters> getResultsCacheParameters(QueryId queryId)
+    Optional<ResultsCacheState> getResultsCacheState(QueryId queryId)
             throws NoSuchElementException;
 }

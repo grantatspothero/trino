@@ -139,6 +139,8 @@ public class TestHttpEventListener
                 URI.create("http://localhost"),
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
                 Optional.empty());
 
         splitStatistics = new SplitStatistics(

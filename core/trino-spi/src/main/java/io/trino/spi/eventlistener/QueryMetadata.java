@@ -45,6 +45,8 @@ public class QueryMetadata
     private final Optional<String> jsonPlan;
 
     private final Optional<String> payload;
+    private final Optional<String> resultsCacheResultStatus;
+    private final Optional<Long> resultsCacheResultSize;
 
     @JsonCreator
     @Unstable
@@ -60,7 +62,9 @@ public class QueryMetadata
             URI uri,
             Optional<String> plan,
             Optional<String> jsonPlan,
-            Optional<String> payload)
+            Optional<String> payload,
+            Optional<String> resultsCacheResultStatus,
+            Optional<Long> resultsCacheResultSize)
     {
         this.queryId = requireNonNull(queryId, "queryId is null");
         this.transactionId = requireNonNull(transactionId, "transactionId is null");
@@ -74,6 +78,8 @@ public class QueryMetadata
         this.plan = requireNonNull(plan, "plan is null");
         this.jsonPlan = requireNonNull(jsonPlan, "jsonPlan is null");
         this.payload = requireNonNull(payload, "payload is null");
+        this.resultsCacheResultStatus = requireNonNull(resultsCacheResultStatus, "resultsCacheResultStatus is null");
+        this.resultsCacheResultSize = requireNonNull(resultsCacheResultSize, "resultsCacheResultSize is null");
     }
 
     @JsonProperty
@@ -146,5 +152,17 @@ public class QueryMetadata
     public Optional<String> getPayload()
     {
         return payload;
+    }
+
+    @JsonProperty
+    public Optional<String> getResultsCacheResultStatus()
+    {
+        return resultsCacheResultStatus;
+    }
+
+    @JsonProperty
+    public Optional<Long> getResultsCacheResultSize()
+    {
+        return resultsCacheResultSize;
     }
 }

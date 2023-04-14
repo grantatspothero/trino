@@ -79,7 +79,9 @@ public class TestMysqlEventListener
             URI.create("http://localhost"),
             Optional.of("plan"),
             Optional.of("jsonplan"),
-            Optional.of("stageInfo"));
+            Optional.of("stageInfo"),
+            Optional.empty(),
+            Optional.empty());
 
     private static final QueryStatistics FULL_QUERY_STATISTICS = new QueryStatistics(
             ofMillis(101),
@@ -234,6 +236,8 @@ public class TestMysqlEventListener
             // not stored
             List.of(),
             URI.create("http://localhost"),
+            Optional.empty(),
+            Optional.empty(),
             Optional.empty(),
             Optional.empty(),
             Optional.empty());

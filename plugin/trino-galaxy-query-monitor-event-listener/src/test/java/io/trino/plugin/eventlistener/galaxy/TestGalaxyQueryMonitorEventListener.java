@@ -123,6 +123,8 @@ public class TestGalaxyQueryMonitorEventListener
                         URI.create("fake://uri"),
                         Optional.empty(),
                         Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
                         Optional.empty()),
                 new QueryStatistics(
                         Duration.ofSeconds(1),

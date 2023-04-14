@@ -51,7 +51,7 @@ import io.trino.server.BasicQueryInfo;
 import io.trino.server.DynamicFilterService;
 import io.trino.server.protocol.Slug;
 import io.trino.server.resultscache.ResultsCacheAnalyzerFactory;
-import io.trino.server.resultscache.ResultsCacheParameters;
+import io.trino.server.resultscache.ResultsCacheState;
 import io.trino.spi.QueryId;
 import io.trino.spi.TrinoException;
 import io.trino.sql.PlannerContext;
@@ -97,6 +97,7 @@ import static io.trino.execution.ParameterExtractor.bindParameters;
 import static io.trino.execution.QueryState.FAILED;
 import static io.trino.execution.QueryState.PLANNING;
 import static io.trino.server.DynamicFilterService.DynamicFiltersStats;
+import static io.trino.server.resultscache.ResultsCacheEntry.ResultCacheFinalResult;
 import static io.trino.server.resultscache.ResultsCacheManager.createResultsCacheParameters;
 import static io.trino.spi.StandardErrorCode.STACK_OVERFLOW;
 import static io.trino.tracing.ScopedSpan.scopedSpan;
@@ -144,7 +145,7 @@ public class SqlQueryExecution
     private final CacheConfig cacheConfig;
     private final TaskDescriptorStorage taskDescriptorStorage;
     private final PlanOptimizersStatsCollector planOptimizersStatsCollector;
-    private final Optional<ResultsCacheParameters> resultsCacheParameters;
+    private final Optional<ResultsCacheState> resultsCacheState;
 
     private SqlQueryExecution(
             PreparedQuery preparedQuery,
@@ -234,9 +235,9 @@ public class SqlQueryExecution
             this.cacheConfig = requireNonNull(cacheConfig, "cacheConfig is null");
             this.taskDescriptorStorage = requireNonNull(taskDescriptorStorage, "taskDescriptorStorage is null");
             this.planOptimizersStatsCollector = requireNonNull(planOptimizersStatsCollector, "planOptimizersStatsCollector is null");
-            this.resultsCacheParameters = createResultsCacheParameters(stateMachine.getSession()).filter(ignore ->
+            this.resultsCacheState = createResultsCacheParameters(stateMachine.getSession()).filter(state ->
                     resultsCacheAnalyzerFactory.createResultsCacheAnalyzer(
-                            stateMachine.getSession().toSecurityContext()).isStatementCacheable(stateMachine.getQueryId(), preparedQuery, analysis));
+                            stateMachine.getSession().toSecurityContext()).isStatementCacheable(stateMachine, stateMachine.getQueryId(), preparedQuery, analysis));
         }
     }
 
@@ -693,6 +694,12 @@ public class SqlQueryExecution
     }
 
     @Override
+    public ResultsCacheFinalResultConsumer getResultsCacheFinalResultConsumer()
+    {
+        return stateMachine;
+    }
+
+    @Override
     public QueryState getState()
     {
         return stateMachine.getQueryState();
@@ -720,9 +727,15 @@ public class SqlQueryExecution
     }
 
     @Override
-    public Optional<ResultsCacheParameters> getResultsCacheParameters()
+    public Optional<ResultsCacheState> getResultsCacheState()
     {
-        return resultsCacheParameters;
+        return resultsCacheState;
+    }
+
+    @Override
+    public void setResultsCacheStatus(ResultCacheFinalResult resultCacheFinalResult)
+    {
+        stateMachine.setResultsCacheFinalResult(resultCacheFinalResult);
     }
 
     private boolean shouldWaitForMinWorkers(Statement statement)

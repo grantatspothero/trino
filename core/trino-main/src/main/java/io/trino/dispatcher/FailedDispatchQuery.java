@@ -240,6 +240,8 @@ public class FailedDispatchQuery
                 ImmutableMap.of(),
                 ImmutableSet.of(),
                 Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
                 false,
                 null,
                 Optional.empty(),

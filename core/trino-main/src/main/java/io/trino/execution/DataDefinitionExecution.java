@@ -261,6 +261,12 @@ public class DataDefinitionExecution<T extends Statement>
     }
 
     @Override
+    public ResultsCacheFinalResultConsumer getResultsCacheFinalResultConsumer()
+    {
+        return stateMachine;
+    }
+
+    @Override
     public Plan getQueryPlan()
     {
         throw new UnsupportedOperationException();

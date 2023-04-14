@@ -22,6 +22,7 @@ import io.airlift.concurrent.MoreFutures;
 import io.airlift.log.Logger;
 import io.airlift.units.DataSize;
 import io.trino.client.Column;
+import io.trino.execution.ResultsCacheFinalResultConsumer;
 import io.trino.server.protocol.QueryResultRows;
 import io.trino.spi.QueryId;
 import io.trino.spi.security.Identity;
@@ -34,6 +35,10 @@ import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.airlift.units.DataSize.Unit.MEGABYTE;
+import static io.trino.server.resultscache.ResultsCacheEntry.ResultCacheFinalResult.ResultStatus.CACHED;
+import static io.trino.server.resultscache.ResultsCacheEntry.ResultCacheFinalResult.ResultStatus.INCOMPLETE;
+import static io.trino.server.resultscache.ResultsCacheEntry.ResultCacheFinalResult.ResultStatus.NO_COLUMNS;
+import static io.trino.server.resultscache.ResultsCacheEntry.ResultCacheFinalResult.ResultStatus.OVER_MAX_SIZE;
 import static java.util.Objects.requireNonNull;
 
 public class ResultsCacheEntry
@@ -49,11 +54,13 @@ public class ResultsCacheEntry
     private final Optional<String> queryType;
     private final Optional<String> updateType;
     private final long maximumSize;
+    private final ResultsCacheFinalResultConsumer queryInfoRegistrar;
     private final ResultsCacheClient client;
     private final ListeningExecutorService executorService;
     private long currentSize;
     private boolean valid = true;
     private Optional<ResultsData> resultsData = Optional.empty();
+    private ResultCacheFinalResult finalResult;
 
     public ResultsCacheEntry(
             Identity identity,
@@ -65,11 +72,13 @@ public class ResultsCacheEntry
             Optional<String> queryType,
             Optional<String> updateType,
             long maximumSize,
+            ResultsCacheFinalResultConsumer queryInfoRegistrar,
             ResultsCacheClient client,
             ListeningExecutorService executorService)
     {
         this.identity = requireNonNull(identity, "identity is null");
         this.key = requireNonNull(key, "key is null");
+        this.finalResult = new ResultCacheFinalResult(INCOMPLETE);
         this.queryId = requireNonNull(queryId, "queryId is null");
         this.query = requireNonNull(query, "query is null");
         this.sessionCatalog = requireNonNull(sessionCatalog, "sessionCatalog is null");
@@ -81,6 +90,7 @@ public class ResultsCacheEntry
             log.warn("Cache entry size: %s is greater than the maximum: %s, using maximum", maximumSize, MAX_SIZE);
         }
         this.maximumSize = Math.min(maximumSize, MAX_SIZE);
+        this.queryInfoRegistrar = requireNonNull(queryInfoRegistrar, "queryInfoRegistrar is null");
         this.client = requireNonNull(client, "client is null");
         this.executorService = requireNonNull(executorService, "executorService is null");
     }
@@ -99,6 +109,7 @@ public class ResultsCacheEntry
             else if (columns == null) {
                 log.debug("QueryId: %s, null columns provided for results cache entry %s, not caching", queryId, key);
                 valid = false;
+                finalResult = new ResultCacheFinalResult(NO_COLUMNS);
                 return;
             }
 
@@ -111,7 +122,7 @@ public class ResultsCacheEntry
         if (currentSize > maximumSize) {
             log.debug("QueryId: %s, results exceeded maximum size of %s bytes, not caching", queryId, maximumSize);
             valid = false;
-            resultsData = Optional.empty();
+            finalResult = new ResultCacheFinalResult(OVER_MAX_SIZE);
             return;
         }
 
@@ -123,6 +134,7 @@ public class ResultsCacheEntry
     {
         if (valid && resultsData.isPresent()) {
             log.debug("QueryId: %s, done called and cache entry is valid, uploading to cache", queryId);
+            finalResult = new ResultCacheFinalResult(CACHED, currentSize);
             submitAsyncUpload(
                     executorService,
                     client,
@@ -144,6 +156,7 @@ public class ResultsCacheEntry
         else {
             log.debug("QueryId: %s, done called and cache entry is invalid", queryId);
         }
+        queryInfoRegistrar.setResultsCacheFinalResult(finalResult);
         valid = false;
     }
 
@@ -176,6 +189,44 @@ public class ResultsCacheEntry
                         createdTime));
         MoreFutures.addExceptionCallback(submitFuture, throwable ->
                 log.error(throwable, "Upload to cache failed"));
+    }
+
+    public record ResultCacheFinalResult(ResultStatus status, long resultSetSize)
+    {
+        public enum ResultStatus
+        {
+            INCOMPLETE("incomplete"),
+            CACHED("cached"),
+            OVER_MAX_SIZE("over max size"),
+            NO_COLUMNS("no columns in result set"),
+            EXECUTE_STATEMENT("execute statement not supported"),
+            NOT_SELECT("not a select statement"),
+            QUERY_HAS_SYSTEM_TABLE("query has system table"),
+            QUERY_HAS_ABAC_RBAC_TABLE("query has table with ABAC/RBAC");
+
+            private final String display;
+
+            ResultStatus(String display)
+            {
+                this.display = display;
+            }
+
+            public String getDisplay()
+            {
+                return display;
+            }
+        }
+
+        public ResultCacheFinalResult(ResultStatus status)
+        {
+            this(status, 0);
+        }
+
+        public ResultCacheFinalResult(ResultStatus status, long resultSetSize)
+        {
+            this.status = requireNonNull(status, "status is null");
+            this.resultSetSize = resultSetSize;
+        }
     }
 
     private static class ResultsData

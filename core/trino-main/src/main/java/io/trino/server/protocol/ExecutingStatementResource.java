@@ -200,7 +200,7 @@ public class ExecutingStatementResource
         }
 
         BasicQueryInfo queryInfo = queryManager.getQueryInfo(queryId);
-        Optional<ResultsCacheEntry> resultsCacheEntry = queryManager.getResultsCacheParameters(queryId).map(parameters ->
+        Optional<ResultsCacheEntry> resultsCacheEntry = queryManager.getResultsCacheState(queryId).map(parameters ->
                 resultsCacheManager.createResultsCacheEntry(
                         session.getIdentity(),
                         parameters,
@@ -209,7 +209,8 @@ public class ExecutingStatementResource
                         session.getCatalog(),
                         session.getSchema(),
                         queryInfo.getQueryType().map(QueryType::name),
-                        queryInfo.getUpdateType()));
+                        queryInfo.getUpdateType(),
+                        queryManager.getResultsCacheFinalResultConsumer(queryId)));
 
         query = queries.computeIfAbsent(queryId, id -> Query.create(
                 session,

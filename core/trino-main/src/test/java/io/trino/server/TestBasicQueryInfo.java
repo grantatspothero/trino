@@ -150,6 +150,8 @@ public class TestBasicQueryInfo
                         ImmutableMap.of(),
                         ImmutableSet.of(),
                         Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
                         false,
                         "33",
                         Optional.empty(),

@@ -115,6 +115,8 @@ public class TestQueryInfo
                 ImmutableMap.of("set_roles", new SelectedRole(SelectedRole.Type.ROLE, Optional.of("role"))),
                 ImmutableMap.of("added_prepared_statement", "statement"),
                 ImmutableSet.of("deallocated_prepared_statement", "statement"),
+                Optional.empty(),
+                Optional.empty(),
                 Optional.of(TransactionId.create()),
                 true,
                 "42",
