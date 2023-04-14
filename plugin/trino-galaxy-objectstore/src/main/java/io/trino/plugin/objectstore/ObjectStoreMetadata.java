@@ -632,6 +632,19 @@ public class ObjectStoreMetadata
     }
 
     @Override
+    public boolean supportsReportingWrittenBytes(ConnectorSession session, ConnectorTableHandle tableHandle)
+    {
+        return delegate(tableHandle).supportsReportingWrittenBytes(session, tableHandle);
+    }
+
+    @Override
+    public boolean supportsReportingWrittenBytes(ConnectorSession session, SchemaTableName schemaTableName, Map<String, Object> tableProperties)
+    {
+        // This is called for a new table
+        return delegate(tableProperties).supportsReportingWrittenBytes(session, schemaTableName, tableProperties);
+    }
+
+    @Override
     public TableStatisticsMetadata getStatisticsCollectionMetadataForWrite(ConnectorSession session, ConnectorTableMetadata tableMetadata)
     {
         ConnectorMetadata metadata = delegate(tableMetadata);
