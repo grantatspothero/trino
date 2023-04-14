@@ -95,6 +95,7 @@ import java.util.stream.Stream;
 
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_UNSUPPORTED_FORMAT;
 import static io.trino.plugin.hive.HiveMetadata.MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE;
@@ -502,7 +503,7 @@ public class ObjectStoreMetadata
     @Override
     public void setTableProperties(ConnectorSession session, ConnectorTableHandle tableHandle, Map<String, Optional<Object>> properties)
     {
-        ConnectorMetadata metadata = delegate(tableHandle);
+        TableType tableType = tableType(tableHandle);
         if (properties.containsKey("type")) {
             if (properties.size() > 1) {
                 throw new TrinoException(NOT_SUPPORTED, "Cannot set table properties when changing table type");
@@ -512,7 +513,13 @@ public class ObjectStoreMetadata
             migrateTable(session, tableHandle, newTableType);
             return;
         }
-        metadata.setTableProperties(session, tableHandle, properties);
+
+        Map<String, Object> nullableProperties = properties.entrySet().stream()
+                .collect(HashMap::new, (accumulator, entry) -> accumulator.put(entry.getKey(), entry.getValue().orElse(null)), HashMap::putAll);
+        nullableProperties = unwrap(tableType, nullableProperties);
+        properties = nullableProperties.entrySet().stream()
+                .collect(toImmutableMap(Map.Entry::getKey, entry -> Optional.ofNullable(entry.getValue())));
+        delegate(tableType).setTableProperties(session, tableHandle, properties);
     }
 
     private void migrateTable(ConnectorSession session, ConnectorTableHandle tableHandle, TableType newTableType)
@@ -899,21 +906,26 @@ public class ObjectStoreMetadata
         };
     }
 
-    private ConnectorMetadata delegate(ConnectorTableHandle handle)
+    private TableType tableType(ConnectorTableHandle handle)
     {
         if (handle instanceof HiveTableHandle) {
-            return hiveMetadata;
+            return HIVE;
         }
         if (handle instanceof IcebergTableHandle) {
-            return icebergMetadata;
+            return ICEBERG;
         }
         if (handle instanceof DeltaLakeTableHandle || handle instanceof CorruptedDeltaLakeTableHandle) {
-            return deltaMetadata;
+            return DELTA;
         }
         if (handle instanceof HudiTableHandle) {
-            return hudiMetadata;
+            return HUDI;
         }
         throw new VerifyException("Unhandled class: " + handle.getClass().getName());
+    }
+
+    private ConnectorMetadata delegate(ConnectorTableHandle handle)
+    {
+        return delegate(tableType(handle));
     }
 
     private ConnectorMetadata delegate(ConnectorInsertTableHandle handle)
