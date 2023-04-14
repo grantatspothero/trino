@@ -268,12 +268,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     /////// ----------------------------------------- please put generated code below this line as well --------------------------------- ///////
 
     @Override
-    public void isReportingWrittenBytesSupported()
-    {
-        skipDuplicateTestCoverage("isReportingWrittenBytesSupported");
-    }
-
-    @Override
     public void testAddColumn()
     {
         skipDuplicateTestCoverage("testAddColumn");
@@ -1129,6 +1123,12 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     public void testRepeatedAggregations()
     {
         skipDuplicateTestCoverage("testRepeatedAggregations");
+    }
+
+    @Override
+    public void testReportWrittenBytes()
+    {
+        skipDuplicateTestCoverage("testReportWrittenBytes");
     }
 
     @Override
