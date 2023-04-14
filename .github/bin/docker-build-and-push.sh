@@ -84,6 +84,7 @@ geospatial
 google-sheets
 hive
 iceberg
+mariadb
 memory
 mongodb
 ml
