@@ -14,6 +14,7 @@
 package io.trino.server.security.galaxy;
 
 import com.google.inject.Inject;
+import io.starburst.stargate.accesscontrol.client.ColumnMaskExpression;
 import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
@@ -138,6 +139,31 @@ public class GalaxySystemAccessController
                         Optional.of(tableId.getSchemaName()),
                         filter.expression()))
                 .collect(toImmutableList());
+    }
+
+    /**
+     * Return the ViewExpression for the column mask corresponding to the columnName,
+     * or Optional.empty() if none exists.  If the specific columnName isn't found,
+     * look up the wildcard columnName "*".  Right now Trino supports at most one
+     * column mask for any column.
+     */
+    public Optional<ViewExpression> getColumnMask(SystemSecurityContext context, String columnName, TableId tableId)
+    {
+        Map<String, ColumnMaskExpression> masks = getEntityPrivileges(context, tableId).getColumnMasks();
+
+        // Use the mask for the column name if it exists, otherwise look for
+        // the mask for the wildcard column name
+        ColumnMaskExpression columnMask = masks.getOrDefault(columnName, masks.get("*"));
+        if (columnMask == null) {
+            // No columnMask matches, so return empty
+            return Optional.empty();
+        }
+
+        return Optional.of(new ViewExpression(
+                getRowFilterAndColumnMaskUserString(context.getIdentity(), columnMask.owningRoleId()),
+                catalogIds.getCatalogName(tableId.getCatalogId()),
+                Optional.of(tableId.getSchemaName()),
+                columnMask.expression()));
     }
 
     private <V> V withGalaxyPermissions(SystemSecurityContext context, Function<GalaxyQueryPermissions, V> permissionsFunction)

@@ -41,6 +41,7 @@ import io.trino.spi.security.SystemAccessControl;
 import io.trino.spi.security.SystemSecurityContext;
 import io.trino.spi.security.TrinoPrincipal;
 import io.trino.spi.security.ViewExpression;
+import io.trino.spi.type.Type;
 
 import java.security.Principal;
 import java.util.Collection;
@@ -643,6 +644,17 @@ public class GalaxyAccessControl
             return ImmutableList.of();
         }
         return controller.getRowFilters(context, tableId.get());
+    }
+
+    @Override
+    public Optional<ViewExpression> getColumnMask(SystemSecurityContext context, CatalogSchemaTableName tableName, String columnName, Type type)
+    {
+        GalaxySystemAccessController controller = controllerSupplier.apply(context);
+        Optional<TableId> tableId = toTableId(controller, tableName);
+        if (tableId.isEmpty()) {
+            return Optional.empty();
+        }
+        return controller.getColumnMask(context, columnName, tableId.get());
     }
 
     // Helper methods that provide explanations for denied access

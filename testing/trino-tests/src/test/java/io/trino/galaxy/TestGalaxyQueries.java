@@ -18,9 +18,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Key;
+import io.starburst.stargate.accesscontrol.client.ColumnMaskType;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.client.testing.TestUser;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
+import io.starburst.stargate.id.ColumnMaskId;
 import io.starburst.stargate.id.EntityKind;
 import io.starburst.stargate.id.PolicyId;
 import io.starburst.stargate.id.RoleId;
@@ -112,6 +114,7 @@ public class TestGalaxyQueries
     public void setFeatureFlags()
     {
         TestingAccountClient accountClient = getTestingAccountClient();
+        accountClient.upsertAccountFeatureFlag("COLUMN_MASKS", true);
         accountClient.upsertAccountFeatureFlag("ROW_FILTERS", true);
         accountClient.upsertAccountFeatureFlag("ABAC_POLICIES", true);
         accountClient.upsertAccountFeatureFlag("ABAC_TAGS", true);
@@ -1022,6 +1025,144 @@ public class TestGalaxyQueries
         assertUpdate("DROP ROLE table_reader");
         assertUpdate("DROP ROLE filter_owner");
         assertUpdate("DROP schema row_filters");
+    }
+
+    @Test
+    public void testColumnMasks()
+    {
+        String maskedColumnValue = "I_AM_MASKED";
+        MaterializedResult unmaskedTableContents = MaterializedResult.resultBuilder(getSession(), VARCHAR, BOOLEAN)
+                .row("unmasked_1", true)
+                .row("unmasked_2", false)
+                .build();
+        MaterializedResult maskedTableContents = MaterializedResult.resultBuilder(getSession(), VARCHAR, BOOLEAN)
+                .row(maskedColumnValue, true)
+                .row(maskedColumnValue, false)
+                .build();
+
+        assertUpdate("CREATE SCHEMA memory.column_masks");
+
+        // maskOwner gets CREATE_TABLE on the schema
+        Session maskOwner = createUserAndGrantedRole("mask_owner");
+        RoleId maskOwnerRoleId = getTrinoSecurityApi().listRoles(toDispatchSession(getSession()))
+                .get(new RoleName("mask_owner"));
+
+        assertUpdate("GRANT CREATE ON schema memory.column_masks TO ROLE mask_owner");
+
+        // Create the base table, insert a row and verify the contents
+        assertUpdate(maskOwner, "CREATE TABLE memory.column_masks.column_mask_test_table(base_col1 VARCHAR, base_col2 BOOLEAN)");
+        assertUpdate(maskOwner, "INSERT INTO memory.column_masks.column_mask_test_table VALUES('unmasked_1', true), ('unmasked_2', false)", 2);
+        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(unmaskedTableContents);
+
+        TestingAccountClient client = getTestingAccountClient();
+
+        // Make the column mask, owned by maskOwner
+        ColumnMaskId columnMaskId = client.createColumnMask(
+                "base_mask",
+                "'I_AM_MASKED'",
+                ColumnMaskType.VARCHAR,
+                maskOwnerRoleId);
+
+        // Make the policy for the mask
+        createUserAndGrantedRole("policy_enabler");
+        RoleId policyEnablerId = getTrinoSecurityApi().listRoles(toDispatchSession(getSession()))
+                .get(new RoleName("policy_enabler"));
+
+        TagId tagId = client.createTag("tag1");
+        PolicyId policyId = client.createColumnMaskPolicy("column_mask_policy", "memory.column_masks.column_mask_test_table", "has_tag(tag1)", policyEnablerId, columnMaskId);
+
+        // Show that before the tag is applied, the mask owner sees unmasked results
+        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(unmaskedTableContents);
+
+        // Apply the tag to base_col1 of the column_mask_test_table
+        client.applyTag(tagId, EntityKind.COLUMN, "memory.column_masks.column_mask_test_table.base_col1");
+
+        // Show that before the enabling role is granted, the mask_owner sees unmasked results
+        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(unmaskedTableContents);
+
+        // Grant the enabling role to mask_owner
+        assertUpdate("GRANT policy_enabler TO ROLE mask_owner");
+
+        // Show that mask_owner sees masked results
+        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(maskedTableContents);
+
+        // Create an unrelated "reader" role, and grant SELECT on the table
+        Session tableReader = createUserAndGrantedRole("table_reader");
+        assertUpdate("GRANT SELECT ON table memory.column_masks.column_mask_test_table TO ROLE table_reader");
+
+        // Show that before being granted , the table_reader sees unmasked results
+        assertThat(query(tableReader, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(unmaskedTableContents);
+
+        // Grant the enabling role to table_reader
+        assertUpdate("GRANT policy_enabler TO ROLE table_reader");
+
+        // Show that table_reader now sees masked results
+        assertThat(query(tableReader, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(maskedTableContents);
+
+        // Update the column mask expression
+        // TODO: Uncomment this when https://github.com/starburstdata/stargate/pull/11103 is merged
+        /* client.updateColumnMask(columnMaskId, "UPDATED_MASK", ColumnMaskType.VARCHAR);
+        MaterializedResult updatedMaskedTableContents = MaterializedResult.resultBuilder(getSession(), VARCHAR, BOOLEAN)
+                .row("UPDATED_MASK", true)
+                .row("UPDATED_MASK", false)
+                .build();
+
+        // Show that mask_owner and table_reader see new results
+        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(updatedMaskedTableContents);
+        assertThat(query(tableReader, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(updatedMaskedTableContents); */
+
+        // Delete that policy and mask
+        client.deletePolicy(policyId);
+        client.deleteColumnMask(columnMaskId);
+
+        // Show that mask_owner and table_reader see unmasked results
+        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(unmaskedTableContents);
+        assertThat(query(tableReader, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(unmaskedTableContents);
+
+        // Create a policy and mask that depends on a table that only mask_owner can access
+        assertUpdate(maskOwner, "CREATE TABLE memory.column_masks.subquery_table(match_column VARCHAR)");
+        assertUpdate(maskOwner, "INSERT INTO memory.column_masks.subquery_table VALUES('_match_proof')", 1);
+        MaterializedResult subqueryTableContents = MaterializedResult.resultBuilder(getSession(), VARCHAR)
+                .row("_match_proof")
+                .build();
+
+        // mask_owner can query subquery_table
+        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.subquery_table")).matches(subqueryTableContents);
+
+        // table_reader cannot query subquery_table
+        assertThatThrownBy(() -> query(tableReader, "SELECT * FROM memory.column_masks.subquery_table"))
+                .isInstanceOf(QueryFailedException.class)
+                .hasMessage("Access Denied: Cannot select from columns [match_column] in table or view memory.column_masks.subquery_table: Role table_reader does not have the privilege SELECT on the columns ");
+
+        // The column mask depends on subquery_table
+        columnMaskId = client.createColumnMask(
+                "new_mask",
+                "concat(base_col1, (SELECT match_column FROM memory.column_masks.subquery_table))",
+                ColumnMaskType.VARCHAR,
+                maskOwnerRoleId);
+
+        // Make the new policy
+        policyId = client.createColumnMaskPolicy("column_mask_policy", "memory.column_masks.column_mask_test_table", "has_tag(tag1)", policyEnablerId, columnMaskId);
+
+        maskedTableContents = MaterializedResult.resultBuilder(getSession(), VARCHAR, BOOLEAN)
+                .row("unmasked_1_match_proof", true)
+                .row("unmasked_2_match_proof", false)
+                .build();
+
+        // Both mask_owner and table_reader see the masked values when querying column_mask_test_table
+        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(maskedTableContents);
+        assertThat(query(tableReader, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(maskedTableContents);
+
+        // Clean up
+        client.deletePolicy(policyId);
+        client.deleteColumnMask(columnMaskId);
+        assertUpdate("DROP TABLE memory.column_masks.column_mask_test_table");
+        assertUpdate("DROP TABLE memory.column_masks.subquery_table");
+        client.deleteTag(tagId);
+        assertUpdate("DROP ROLE policy_enabler");
+        assertUpdate("DROP ROLE table_reader");
+        assertUpdate("DROP ROLE mask_owner");
+        assertUpdate("DROP schema column_masks");
     }
 
     private MaterializedResult varcharColumnResult(String... values)

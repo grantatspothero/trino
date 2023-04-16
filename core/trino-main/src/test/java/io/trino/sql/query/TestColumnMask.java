@@ -866,4 +866,41 @@ public class TestColumnMask
         assertThat(assertions.query("SELECT nested[1] FROM mock.default.view_with_nested"))
                 .matches("VALUES 1, NULL");
     }
+
+    @Test
+    public void testColumnMaskFunctions()
+    {
+        accessControl.reset();
+        accessControl.columnMask(
+                new QualifiedObjectName(LOCAL_CATALOG, "tiny", "orders"),
+                "comment",
+                USER,
+                new ViewExpression(Optional.of(USER), Optional.empty(), Optional.empty(), "\"$sb_internal_mask_varchar_all_but_last_four\"(cast(\"@column\" as varchar))"));
+        assertThat(assertions.query("SELECT comment FROM orders WHERE orderkey = 1")).matches("VALUES CAST('xxxxxxxxxxx xxxxx xxxxxxxxx xxong ' as varchar(79))");
+    }
+
+    @Test
+    public void testColumnMaskWithStringLongerThanResultType()
+    {
+        accessControl.reset();
+        accessControl.columnMask(
+                new QualifiedObjectName(LOCAL_CATALOG, "tiny", "orders"),
+                "comment",
+                USER,
+                new ViewExpression(Optional.of(USER), Optional.empty(), Optional.empty(), "'A very long string that will get truncated because the comment column has type varchar(79)'"));
+        assertThat(assertions.query("SELECT comment FROM orders WHERE orderkey = 1")).matches("VALUES 'A very long string that will get truncated because the comment column has type '");
+    }
+
+    @Test
+    public void testMaskOnlyOneColumn()
+    {
+        accessControl.reset();
+        accessControl.columnMask(
+                new QualifiedObjectName(LOCAL_CATALOG, "tiny", "orders"),
+                "comment",
+                USER,
+                new ViewExpression(Optional.of(USER), Optional.empty(), Optional.empty(), "'foo'"));
+        assertThat(assertions.query("SELECT comment FROM orders WHERE orderkey = 1")).matches("VALUES CAST('foo' as varchar(79))");
+        assertThat(assertions.query("SELECT clerk FROM orders WHERE orderkey = 1")).matches("VALUES 'Clerk#000000951'");
+    }
 }

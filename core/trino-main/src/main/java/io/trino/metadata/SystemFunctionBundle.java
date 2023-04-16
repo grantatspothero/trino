@@ -119,6 +119,7 @@ import io.trino.operator.scalar.ArraysOverlapFunction;
 import io.trino.operator.scalar.BitwiseFunctions;
 import io.trino.operator.scalar.CharacterStringCasts;
 import io.trino.operator.scalar.ColorFunctions;
+import io.trino.operator.scalar.ColumnMaskingFunctions;
 import io.trino.operator.scalar.CombineHashFunction;
 import io.trino.operator.scalar.ConcatWsFunction;
 import io.trino.operator.scalar.DataSizeFunctions;
@@ -588,7 +589,8 @@ public final class SystemFunctionBundle
                 .scalars(WilsonInterval.class)
                 .aggregates(BigintApproximateMostFrequent.class)
                 .aggregates(VarcharApproximateMostFrequent.class)
-                .scalar(ArrayHistogramFunction.class);
+                .scalar(ArrayHistogramFunction.class)
+                .scalars(ColumnMaskingFunctions.class);
 
         // timestamp operators and functions
         builder

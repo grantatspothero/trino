@@ -4785,6 +4785,30 @@ class StatementAnalyzer
             analysis.addCheckConstraints(table, expression);
         }
 
+        private Expression resolveColumnMaskExpression(ViewExpression mask, String column, Table table, QualifiedObjectName tableName)
+        {
+            Expression expression;
+            try {
+                expression = sqlParser.createExpression(mask.getExpression().replace("@column", column), createParsingOptions(session));
+            }
+            catch (ParsingException e) {
+                throw new TrinoException(INVALID_ROW_FILTER, extractLocation(table), format("Invalid column mask for '%s.%s': %s", tableName, column, e.getErrorMessage()), e);
+            }
+
+            return ExpressionTreeRewriter.rewriteWith(new ExpressionRewriter<>()
+            {
+                @Override
+                public Expression rewriteIdentifier(Identifier node, Void context, ExpressionTreeRewriter<Void> treeRewriter)
+                {
+                    String identifier = node.getCanonicalValue();
+                    if (identifier.equals("@column")) {
+                        return new Identifier(column, true);
+                    }
+                    return node;
+                }
+            }, expression);
+        }
+
         private void analyzeColumnMask(String currentIdentity, Table table, QualifiedObjectName tableName, Field field, Scope scope, ViewExpression mask)
         {
             String column = field.getName().orElseThrow();
@@ -4792,13 +4816,7 @@ class StatementAnalyzer
                 throw new TrinoException(INVALID_ROW_FILTER, extractLocation(table), format("Column mask for '%s.%s' is recursive", tableName, column), null);
             }
 
-            Expression expression;
-            try {
-                expression = sqlParser.createExpression(mask.getExpression(), createParsingOptions(session));
-            }
-            catch (ParsingException e) {
-                throw new TrinoException(INVALID_ROW_FILTER, extractLocation(table), format("Invalid column mask for '%s.%s': %s", tableName, column, e.getErrorMessage()), e);
-            }
+            Expression expression = resolveColumnMaskExpression(mask, column, table, tableName);
 
             ExpressionAnalysis expressionAnalysis;
             analysis.registerTableForColumnMasking(tableName, column, currentIdentity);
@@ -4836,7 +4854,7 @@ class StatementAnalyzer
             if (!actualType.equals(expectedType)) {
                 TypeCoercion coercion = new TypeCoercion(plannerContext.getTypeManager()::getType);
 
-                if (!coercion.canCoerce(actualType, field.getType())) {
+                if (!coercion.isCompatible(actualType, field.getType())) {
                     throw new TrinoException(TYPE_MISMATCH, extractLocation(table), format("Expected column mask for '%s.%s' to be of type %s, but was %s", tableName, column, field.getType(), actualType), null);
                 }
 
