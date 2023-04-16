@@ -589,6 +589,7 @@ jobs:
             - { modules: plugin/trino-galaxy-objectstore }
             - { modules: plugin/trino-galaxy-objectstore, profile: iceberg-delta }
             - { modules: plugin/trino-galaxy-warp-speed }
+            - { modules: plugin/trino-galaxy-warp-speed, profile: iceberg-delta }
             - { modules: plugin/trino-hive }
             - { modules: plugin/trino-hive, profile: test-galaxy }
             - { modules: plugin/trino-hive, profile: test-parquet }
