@@ -114,7 +114,6 @@ public class DeltaLakeMetadataFactory
         AccessControlMetadata accessControlMetadata = accessControlMetadataFactory.create(cachingHiveMetastore);
         HiveMetastoreBackedDeltaLakeMetastore deltaLakeMetastore = new HiveMetastoreBackedDeltaLakeMetastore(
                 cachingHiveMetastore,
-                transactionLogAccess,
                 fileSystemFactory);
         FileBasedTableStatisticsProvider tableStatisticsProvider = new FileBasedTableStatisticsProvider(
                 typeManager,
