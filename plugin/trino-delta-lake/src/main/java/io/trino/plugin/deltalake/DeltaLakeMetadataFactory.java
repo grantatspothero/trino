@@ -124,6 +124,7 @@ public class DeltaLakeMetadataFactory
                 "Trino Delta Lake connector");
         return new DeltaLakeMetadata(
                 deltaLakeMetastore,
+                transactionLogAccess,
                 fileSystemFactory,
                 locationAccessControl,
                 typeManager,
