@@ -1488,10 +1488,10 @@ public class DeltaLakeMetadata
     }
 
     @Override
-    public void finishMerge(ConnectorSession session, ConnectorMergeTableHandle tableHandle, Collection<Slice> fragments, Collection<ComputedStatistics> computedStatistics)
+    public void finishMerge(ConnectorSession session, ConnectorMergeTableHandle mergeTableHandle, Collection<Slice> fragments, Collection<ComputedStatistics> computedStatistics)
     {
-        DeltaLakeMergeTableHandle mergeTableHandle = (DeltaLakeMergeTableHandle) tableHandle;
-        DeltaLakeTableHandle handle = mergeTableHandle.getTableHandle();
+        DeltaLakeMergeTableHandle mergeHandle = (DeltaLakeMergeTableHandle) mergeTableHandle;
+        DeltaLakeTableHandle handle = mergeHandle.getTableHandle();
 
         List<DeltaLakeMergeResult> mergeResults = fragments.stream()
                 .map(Slice::getBytes)
@@ -1549,7 +1549,7 @@ public class DeltaLakeMetadata
             }
 
             List<String> partitionColumns = getColumnMappingMode(handle.getMetadataEntry()) == ColumnMappingMode.NAME
-                    ? getPartitionColumnsForNameMapping(handle.getMetadataEntry().getOriginalPartitionColumns(), mergeTableHandle.getInsertTableHandle().getInputColumns())
+                    ? getPartitionColumnsForNameMapping(handle.getMetadataEntry().getOriginalPartitionColumns(), mergeHandle.getInsertTableHandle().getInputColumns())
                     : handle.getMetadataEntry().getOriginalPartitionColumns();
             appendAddFileEntries(transactionLogWriter, newFiles, partitionColumns, true);
 
