@@ -468,8 +468,7 @@ public class DeltaLakeMetadata
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
-                tableSnapshot.getVersion(),
-                false);
+                tableSnapshot.getVersion());
     }
 
     @Override
@@ -1514,7 +1513,7 @@ public class DeltaLakeMetadata
         List<DataFileInfo> newFiles = ImmutableList.copyOf(split.get(true));
         List<DataFileInfo> cdfFiles = ImmutableList.copyOf(split.get(false));
 
-        if (handle.isRetriesEnabled()) {
+        if (mergeHandle.getInsertTableHandle().isRetriesEnabled()) {
             cleanExtraOutputFilesForUpdate(session, handle.getLocation(), allFiles);
         }
 
@@ -2177,8 +2176,7 @@ public class DeltaLakeMetadata
                 tableHandle.getUpdatedColumns(),
                 tableHandle.getUpdateRowIdColumns(),
                 Optional.empty(),
-                tableHandle.getReadVersion(),
-                tableHandle.isRetriesEnabled());
+                tableHandle.getReadVersion());
 
         if (tableHandle.getEnforcedPartitionConstraint().equals(newHandle.getEnforcedPartitionConstraint()) &&
                 tableHandle.getNonPartitionConstraint().equals(newHandle.getNonPartitionConstraint())) {
@@ -2299,8 +2297,7 @@ public class DeltaLakeMetadata
                 Optional.empty(),
                 Optional.empty(),
                 Optional.of(analyzeHandle),
-                handle.getReadVersion(),
-                false);
+                handle.getReadVersion());
 
         TableStatisticsMetadata statisticsMetadata = getStatisticsCollectionMetadata(
                 columnsMetadata.stream().map(DeltaLakeColumnMetadata::getColumnMetadata).collect(toImmutableList()),
