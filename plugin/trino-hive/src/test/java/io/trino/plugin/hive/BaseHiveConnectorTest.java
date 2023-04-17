@@ -708,7 +708,7 @@ public abstract class BaseHiveConnectorTest
     {
         // Override because HivePrincipal's username is case-sensitive unlike TrinoPrincipal
         assertThatThrownBy(super::testCreateSchemaWithNonLowercaseOwnerName)
-                .hasMessageContaining("Access Denied: Cannot create schema")
+                .hasMessageContaining("Access Denied: Cannot set role admin")
                 .hasStackTraceContaining("CREATE SCHEMA");
     }
 
