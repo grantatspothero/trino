@@ -25,7 +25,6 @@ import io.trino.client.ProtocolHeaders;
 import io.trino.metadata.SessionPropertyManager;
 import io.trino.security.AccessControl;
 import io.trino.security.SecurityContext;
-import io.trino.server.resultscache.ResultsCacheParameters;
 import io.trino.spi.QueryId;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogHandle;
@@ -85,7 +84,6 @@ public final class Session
     private final Map<String, String> preparedStatements;
     private final ProtocolHeaders protocolHeaders;
     private final Optional<Slice> exchangeEncryptionKey;
-    private final Optional<ResultsCacheParameters> resultsCacheParameters;
 
     public Session(
             QueryId queryId,
@@ -111,8 +109,7 @@ public final class Session
             SessionPropertyManager sessionPropertyManager,
             Map<String, String> preparedStatements,
             ProtocolHeaders protocolHeaders,
-            Optional<Slice> exchangeEncryptionKey,
-            Optional<ResultsCacheParameters> resultsCacheParameters)
+            Optional<Slice> exchangeEncryptionKey)
     {
         this.queryId = requireNonNull(queryId, "queryId is null");
         this.transactionId = requireNonNull(transactionId, "transactionId is null");
@@ -137,7 +134,6 @@ public final class Session
         this.preparedStatements = requireNonNull(preparedStatements, "preparedStatements is null");
         this.protocolHeaders = requireNonNull(protocolHeaders, "protocolHeaders is null");
         this.exchangeEncryptionKey = requireNonNull(exchangeEncryptionKey, "exchangeEncryptionKey is null");
-        this.resultsCacheParameters = requireNonNull(resultsCacheParameters, "resultsCacheParameters is null");
 
         requireNonNull(catalogProperties, "catalogProperties is null");
         ImmutableMap.Builder<String, Map<String, String>> catalogPropertiesBuilder = ImmutableMap.builder();
@@ -297,11 +293,6 @@ public final class Session
         return exchangeEncryptionKey;
     }
 
-    public Optional<ResultsCacheParameters> getResultsCacheParameters()
-    {
-        return resultsCacheParameters;
-    }
-
     public Session beginTransactionId(TransactionId transactionId, TransactionManager transactionManager, AccessControl accessControl)
     {
         requireNonNull(transactionId, "transactionId is null");
@@ -365,8 +356,7 @@ public final class Session
                 sessionPropertyManager,
                 preparedStatements,
                 protocolHeaders,
-                exchangeEncryptionKey,
-                resultsCacheParameters);
+                exchangeEncryptionKey);
     }
 
     public Session withDefaultProperties(Map<String, String> systemPropertyDefaults, Map<String, Map<String, String>> catalogPropertyDefaults, AccessControl accessControl)
@@ -413,8 +403,7 @@ public final class Session
                 sessionPropertyManager,
                 preparedStatements,
                 protocolHeaders,
-                exchangeEncryptionKey,
-                resultsCacheParameters);
+                exchangeEncryptionKey);
     }
 
     public Session withExchangeEncryption(Slice encryptionKey)
@@ -444,8 +433,7 @@ public final class Session
                 sessionPropertyManager,
                 preparedStatements,
                 protocolHeaders,
-                Optional.of(encryptionKey),
-                resultsCacheParameters);
+                Optional.of(encryptionKey));
     }
 
     public ConnectorSession toConnectorSession()
@@ -495,8 +483,7 @@ public final class Session
                 catalogProperties,
                 identity.getCatalogRoles(),
                 preparedStatements,
-                protocolHeaders.getProtocolName(),
-                resultsCacheParameters);
+                protocolHeaders.getProtocolName());
     }
 
     @Override
@@ -595,7 +582,6 @@ public final class Session
         private final SessionPropertyManager sessionPropertyManager;
         private final Map<String, String> preparedStatements = new HashMap<>();
         private ProtocolHeaders protocolHeaders = TRINO_HEADERS;
-        private Optional<ResultsCacheParameters> resultsCacheParameters = Optional.empty();
 
         private SessionBuilder(SessionPropertyManager sessionPropertyManager)
         {
@@ -629,7 +615,6 @@ public final class Session
                     .forEach((catalog, properties) -> catalogSessionProperties.put(catalog, new HashMap<>(properties)));
             this.preparedStatements.putAll(session.preparedStatements);
             this.protocolHeaders = session.protocolHeaders;
-            this.resultsCacheParameters = session.resultsCacheParameters;
         }
 
         @CanIgnoreReturnValue
@@ -864,13 +849,6 @@ public final class Session
             return this;
         }
 
-        @CanIgnoreReturnValue
-        public SessionBuilder setResultsCacheParameters(Optional<ResultsCacheParameters> resultsCacheParameters)
-        {
-            this.resultsCacheParameters = requireNonNull(resultsCacheParameters, "resultsCacheParameters is null");
-            return this;
-        }
-
         public Session build()
         {
             return new Session(
@@ -897,8 +875,7 @@ public final class Session
                     sessionPropertyManager,
                     preparedStatements,
                     protocolHeaders,
-                    Optional.empty(),
-                    resultsCacheParameters);
+                    Optional.empty());
         }
     }
 

@@ -16,7 +16,6 @@ package io.trino.server;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.trino.client.ProtocolHeaders;
-import io.trino.server.resultscache.ResultsCacheParameters;
 import io.trino.spi.security.Identity;
 import io.trino.spi.security.SelectedRole;
 import io.trino.spi.session.ResourceEstimates;
@@ -60,7 +59,6 @@ public class SessionContext
     private final Optional<TransactionId> transactionId;
     private final boolean clientTransactionSupport;
     private final Optional<String> clientInfo;
-    private final Optional<ResultsCacheParameters> resultsCacheParameters;
 
     public SessionContext(
             ProtocolHeaders protocolHeaders,
@@ -84,8 +82,7 @@ public class SessionContext
             Map<String, String> preparedStatements,
             Optional<TransactionId> transactionId,
             boolean clientTransactionSupport,
-            Optional<String> clientInfo,
-            Optional<ResultsCacheParameters> resultsCacheParameters)
+            Optional<String> clientInfo)
     {
         this.protocolHeaders = requireNonNull(protocolHeaders, "protocolHeaders is null");
         this.catalog = requireNonNull(catalog, "catalog is null");
@@ -111,7 +108,6 @@ public class SessionContext
         this.transactionId = requireNonNull(transactionId, "transactionId is null");
         this.clientTransactionSupport = clientTransactionSupport;
         this.clientInfo = requireNonNull(clientInfo, "clientInfo is null");
-        this.resultsCacheParameters = requireNonNull(resultsCacheParameters, "resultsCacheParameters is null");
     }
 
     public ProtocolHeaders getProtocolHeaders()
@@ -224,11 +220,6 @@ public class SessionContext
         return traceToken;
     }
 
-    public Optional<ResultsCacheParameters> getResultsCacheParameters()
-    {
-        return resultsCacheParameters;
-    }
-
     public SessionContext withTransactionId(TransactionId transactionId)
     {
         return new SessionContext(
@@ -253,7 +244,6 @@ public class SessionContext
                 preparedStatements,
                 Optional.of(transactionId),
                 clientTransactionSupport,
-                clientInfo,
-                resultsCacheParameters);
+                clientInfo);
     }
 }

@@ -28,7 +28,6 @@ import io.trino.execution.StateMachine.StateChangeListener;
 import io.trino.memory.ClusterMemoryManager;
 import io.trino.server.BasicQueryInfo;
 import io.trino.server.protocol.Slug;
-import io.trino.server.resultscache.ResultsCacheEntryContext;
 import io.trino.spi.QueryId;
 import io.trino.spi.TrinoException;
 import io.trino.sql.planner.Plan;
@@ -280,12 +279,6 @@ public class SqlQueryManager
 
         queryTracker.tryGetQuery(stageId.getQueryId())
                 .ifPresent(query -> query.cancelStage(stageId));
-    }
-
-    @Override
-    public Optional<ResultsCacheEntryContext> getResultsCacheEntryContext(QueryId queryId)
-    {
-        return queryTracker.getQuery(queryId).getResultsCacheEntryContext();
     }
 
     @Managed(description = "Query scheduler executor")

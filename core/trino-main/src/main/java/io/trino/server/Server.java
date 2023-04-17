@@ -60,7 +60,6 @@ import io.trino.server.galaxy.GalaxyCorsModule;
 import io.trino.server.galaxy.GalaxyEnabledConfig;
 import io.trino.server.galaxy.GalaxyHeartbeatModule;
 import io.trino.server.galaxy.GalaxyOperatorAuthenticationModule;
-import io.trino.server.resultscache.ResultsCacheModule;
 import io.trino.server.security.CertificateAuthenticatorManager;
 import io.trino.server.security.HeaderAuthenticatorManager;
 import io.trino.server.security.PasswordAuthenticatorManager;
@@ -129,7 +128,6 @@ public class Server
                 new CoordinatorDiscoveryModule(),
                 new CatalogManagerModule(),
                 new TransactionManagerModule(),
-                new ResultsCacheModule(),
                 new ServerMainModule(trinoVersion),
                 conditionalModule(GalaxyEnabledConfig.class, GalaxyEnabledConfig::isGalaxyEnabled, binder -> configBinder(binder).bindConfig(GalaxyConfig.class)),
                 conditionalModule(GalaxyEnabledConfig.class, GalaxyEnabledConfig::isGalaxyCorsEnabled, new GalaxyCorsModule()),

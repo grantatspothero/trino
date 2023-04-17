@@ -36,7 +36,6 @@ import io.trino.server.SessionContext;
 import io.trino.server.StartupStatus;
 import io.trino.server.protocol.QueryInfoUrlFactory;
 import io.trino.server.protocol.Slug;
-import io.trino.server.resultscache.ResultsCacheParameters;
 import io.trino.server.security.InternalPrincipal;
 import io.trino.server.security.ResourceSecurity;
 import io.trino.spi.ErrorCode;
@@ -195,7 +194,7 @@ public class QueuedStatementResource
             throw badRequest(BAD_REQUEST, "SQL statement is empty");
         }
 
-        Query query = registerQueryIfNeeded(servletRequest, httpHeaders, Optional.empty(), sessionContext ->
+        Query query = registerQueryIfNeeded(servletRequest, httpHeaders, sessionContext ->
                 new Query(statement, sessionContext, dispatchManager, queryInfoUrlFactory));
 
         return createQueryResultsResponse(query.getQueryResults(query.getLastToken(), uriInfo));
@@ -211,10 +210,7 @@ public class QueuedStatementResource
             String statement,
             @Context HttpServletRequest servletRequest,
             @Context HttpHeaders httpHeaders,
-            @Context UriInfo uriInfo,
-            @QueryParam("resultsCacheKey") String resultsCacheKey,
-            @QueryParam("expirationInterval") Long expirationSeconds,
-            @QueryParam("maximumSize") Long maximumSizeBytes)
+            @Context UriInfo uriInfo)
     {
         if (isNullOrEmpty(statement)) {
             throw badRequest(BAD_REQUEST, "SQL statement is empty");
@@ -226,10 +222,7 @@ public class QueuedStatementResource
             throw badRequest(SERVICE_UNAVAILABLE, "Trino server is still initializing");
         }
 
-        Optional<ResultsCacheParameters> resultsCacheParameters = (resultsCacheKey != null && expirationSeconds != null) ?
-                Optional.of(new ResultsCacheParameters(resultsCacheKey, new Duration(expirationSeconds, SECONDS), Optional.ofNullable(maximumSizeBytes))) : Optional.empty();
-
-        Query query = registerQueryIfNeeded(servletRequest, httpHeaders, resultsCacheParameters, sessionContext ->
+        Query query = registerQueryIfNeeded(servletRequest, httpHeaders, sessionContext ->
                 new Query(statement, queryId, Optional.of(slug), sessionContext, dispatchManager, queryInfoUrlFactory));
 
         if (!query.getSubmitSlug().equals(Optional.of(slug)) || (query.getLastToken() != 0)) {
@@ -239,7 +232,7 @@ public class QueuedStatementResource
         return createQueryResultsResponse(query.getQueryResults(query.getLastToken(), uriInfo));
     }
 
-    private Query registerQueryIfNeeded(HttpServletRequest servletRequest, HttpHeaders httpHeaders, Optional<ResultsCacheParameters> resultsCacheParameters, Function<SessionContext, Query> queryFactory)
+    private Query registerQueryIfNeeded(HttpServletRequest servletRequest, HttpHeaders httpHeaders, Function<SessionContext, Query> queryFactory)
     {
         Optional<String> remoteAddress = Optional.ofNullable(servletRequest.getRemoteAddr());
         Optional<Identity> identity = Optional.ofNullable((Identity) servletRequest.getAttribute(AUTHENTICATED_IDENTITY));
@@ -249,7 +242,7 @@ public class QueuedStatementResource
 
         MultivaluedMap<String, String> headers = httpHeaders.getRequestHeaders();
 
-        SessionContext sessionContext = sessionContextFactory.createSessionContext(headers, alternateHeaderName, remoteAddress, identity, resultsCacheParameters);
+        SessionContext sessionContext = sessionContextFactory.createSessionContext(headers, alternateHeaderName, remoteAddress, identity);
         Query query = queryManager.registerQuery(() -> queryFactory.apply(sessionContext))
                 .orElseThrow(() -> badRequest(GONE, "Server is shutting down"));
 

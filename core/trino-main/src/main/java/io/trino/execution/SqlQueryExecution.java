@@ -13,7 +13,6 @@
  */
 package io.trino.execution;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.airlift.concurrent.SetThreadName;
 import io.airlift.units.DataSize;
@@ -45,7 +44,6 @@ import io.trino.operator.RetryPolicy;
 import io.trino.server.BasicQueryInfo;
 import io.trino.server.DynamicFilterService;
 import io.trino.server.protocol.Slug;
-import io.trino.server.resultscache.ResultsCacheEntryContext;
 import io.trino.spi.QueryId;
 import io.trino.spi.TrinoException;
 import io.trino.sql.PlannerContext;
@@ -94,7 +92,6 @@ import static io.trino.execution.QueryState.FAILED;
 import static io.trino.execution.QueryState.PLANNING;
 import static io.trino.server.DynamicFilterService.DynamicFiltersStats;
 import static io.trino.spi.StandardErrorCode.STACK_OVERFLOW;
-import static java.lang.String.format;
 import static java.lang.Thread.currentThread;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -136,7 +133,6 @@ public class SqlQueryExecution
     private final EventDrivenTaskSourceFactory eventDrivenTaskSourceFactory;
     private final TaskDescriptorStorage taskDescriptorStorage;
     private final PlanOptimizersStatsCollector planOptimizersStatsCollector;
-    private final Optional<ResultsCacheEntryContext> resultsCacheEntryContext;
 
     private SqlQueryExecution(
             PreparedQuery preparedQuery,
@@ -219,7 +215,6 @@ public class SqlQueryExecution
             this.eventDrivenTaskSourceFactory = requireNonNull(eventDrivenTaskSourceFactory, "taskSourceFactory is null");
             this.taskDescriptorStorage = requireNonNull(taskDescriptorStorage, "taskDescriptorStorage is null");
             this.planOptimizersStatsCollector = requireNonNull(planOptimizersStatsCollector, "queryStatsCollector is null");
-            this.resultsCacheEntryContext = createResultsCacheEntryContext();
         }
     }
 
@@ -692,12 +687,6 @@ public class SqlQueryExecution
         return shouldWaitForMinWorkers(analysis.getStatement());
     }
 
-    @Override
-    public Optional<ResultsCacheEntryContext> getResultsCacheEntryContext()
-    {
-        return resultsCacheEntryContext;
-    }
-
     private boolean shouldWaitForMinWorkers(Statement statement)
     {
         if (statement instanceof Query) {
@@ -708,29 +697,6 @@ public class SqlQueryExecution
                     .allMatch(catalogName -> catalogName.getType().isInternal());
         }
         return true;
-    }
-
-    private Optional<ResultsCacheEntryContext> createResultsCacheEntryContext()
-    {
-        List<io.trino.spi.eventlistener.TableInfo> tableInfo = analysis.getReferencedTables();
-        if (analysis.getStatement() instanceof Query && !tableInfo.isEmpty()) {
-            // TODO filter queries where tables have per-record permissions/record filters https://github.com/starburstdata/stargate/issues/8499
-            // TODO filter query cases https://github.com/starburstdata/stargate/issues/8513
-
-            return stateMachine.getSession().getResultsCacheParameters().map(resultsCacheParameters -> {
-                ImmutableList.Builder<String> catalogs = ImmutableList.builder();
-                ImmutableList.Builder<String> schemas = ImmutableList.builder();
-                ImmutableList.Builder<String> tables = ImmutableList.builder();
-                tableInfo.forEach(table -> {
-                    catalogs.add(table.getCatalog());
-                    schemas.add(format("catalog:\"%s\",schema:\"%s\"", table.getCatalog(), table.getSchema()));
-                    tables.add(format("catalog:\"%s\",schema:\"%s\",table\"%s\"", table.getCatalog(), table.getSchema(), table.getTable()));
-                });
-
-                return new ResultsCacheEntryContext(resultsCacheParameters, catalogs.build(), schemas.build(), tables.build());
-            });
-        }
-        return Optional.empty();
     }
 
     private static class PlanRoot

@@ -19,7 +19,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.airlift.slice.Slice;
 import io.trino.metadata.SessionPropertyManager;
-import io.trino.server.resultscache.ResultsCacheParameters;
 import io.trino.spi.QueryId;
 import io.trino.spi.security.BasicPrincipal;
 import io.trino.spi.security.Identity;
@@ -68,7 +67,6 @@ public final class SessionRepresentation
     private final Map<String, SelectedRole> catalogRoles;
     private final Map<String, String> preparedStatements;
     private final String protocolName;
-    private final Optional<ResultsCacheParameters> resultsCacheParameters;
 
     @JsonCreator
     public SessionRepresentation(
@@ -97,8 +95,7 @@ public final class SessionRepresentation
             @JsonProperty("catalogProperties") Map<String, Map<String, String>> catalogProperties,
             @JsonProperty("catalogRoles") Map<String, SelectedRole> catalogRoles,
             @JsonProperty("preparedStatements") Map<String, String> preparedStatements,
-            @JsonProperty("protocolName") String protocolName,
-            @JsonProperty("resultsCacheParameters") Optional<ResultsCacheParameters> resultsCacheParameters)
+            @JsonProperty("protocolName") String protocolName)
     {
         this.queryId = requireNonNull(queryId, "queryId is null");
         this.transactionId = requireNonNull(transactionId, "transactionId is null");
@@ -131,7 +128,6 @@ public final class SessionRepresentation
             catalogPropertiesBuilder.put(entry.getKey(), ImmutableMap.copyOf(entry.getValue()));
         }
         this.catalogProperties = catalogPropertiesBuilder.buildOrThrow();
-        this.resultsCacheParameters = resultsCacheParameters;
     }
 
     @JsonProperty
@@ -296,12 +292,6 @@ public final class SessionRepresentation
         return timeZoneKey.getId();
     }
 
-    @JsonProperty
-    public Optional<ResultsCacheParameters> getResultsCacheParameters()
-    {
-        return resultsCacheParameters;
-    }
-
     public Identity toIdentity()
     {
         return toIdentity(emptyMap());
@@ -349,7 +339,6 @@ public final class SessionRepresentation
                 sessionPropertyManager,
                 preparedStatements,
                 createProtocolHeaders(protocolName),
-                exchangeEncryptionKey,
-                resultsCacheParameters);
+                exchangeEncryptionKey);
     }
 }

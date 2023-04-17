@@ -73,7 +73,6 @@ import io.trino.server.Server;
 import io.trino.server.ServerMainModule;
 import io.trino.server.SessionPropertyDefaults;
 import io.trino.server.ShutdownAction;
-import io.trino.server.resultscache.ResultsCacheModule;
 import io.trino.server.security.CertificateAuthenticatorManager;
 import io.trino.server.security.ServerSecurityModule;
 import io.trino.spi.ErrorType;
@@ -271,7 +270,6 @@ public class TestingTrinoServer
                 .add(new ServerSecurityModule())
                 .add(new CatalogManagerModule())
                 .add(new TransactionManagerModule())
-                .add(new ResultsCacheModule())
                 .add(new ServerMainModule("testversion"))
                 .add(new TestingWarningCollectorModule())
                 .add(binder -> {

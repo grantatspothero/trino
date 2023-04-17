@@ -28,7 +28,6 @@ import io.trino.execution.QueryStats;
 import io.trino.execution.StateMachine.StateChangeListener;
 import io.trino.operator.RetryPolicy;
 import io.trino.server.BasicQueryInfo;
-import io.trino.server.resultscache.ResultsCacheEntryContext;
 import io.trino.spi.ErrorCode;
 import io.trino.spi.QueryId;
 import io.trino.spi.resourcegroups.ResourceGroupId;
@@ -208,12 +207,6 @@ public class FailedDispatchQuery
     public DataSize getUserMemoryReservation()
     {
         return DataSize.ofBytes(0);
-    }
-
-    @Override
-    public Optional<ResultsCacheEntryContext> getResultsCacheEntryContext()
-    {
-        return Optional.empty();
     }
 
     private static QueryInfo immediateFailureQueryInfo(

@@ -519,8 +519,7 @@ public class LocalQueryRunner
                 sessionPropertyManager,
                 defaultSession.getPreparedStatements(),
                 defaultSession.getProtocolHeaders(),
-                defaultSession.getExchangeEncryptionKey(),
-                defaultSession.getResultsCacheParameters());
+                defaultSession.getExchangeEncryptionKey());
 
         SpillerStats spillerStats = new SpillerStats();
         this.singleStreamSpillerFactory = new FileSingleStreamSpillerFactory(plannerContext.getBlockEncodingSerde(), spillerStats, featuresConfig, nodeSpillConfig);

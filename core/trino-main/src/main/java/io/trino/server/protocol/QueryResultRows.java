@@ -72,9 +72,8 @@ public class QueryResultRows
     private final Optional<Consumer<Throwable>> exceptionConsumer;
     private final long totalRows;
     private final boolean supportsParametricDateTime;
-    private final long logicalSizeInByes;
 
-    private QueryResultRows(Session session, Optional<List<ColumnAndType>> columns, List<Page> pages, Consumer<Throwable> exceptionConsumer, long logicalSizeInByes)
+    private QueryResultRows(Session session, Optional<List<ColumnAndType>> columns, List<Page> pages, Consumer<Throwable> exceptionConsumer)
     {
         this.session = session.toConnectorSession();
         this.columns = requireNonNull(columns, "columns is null");
@@ -82,7 +81,6 @@ public class QueryResultRows
         this.exceptionConsumer = Optional.ofNullable(exceptionConsumer);
         this.totalRows = countRows(pages);
         this.supportsParametricDateTime = session.getClientCapabilities().contains(ClientCapabilities.PARAMETRIC_DATETIME.toString());
-        this.logicalSizeInByes = logicalSizeInByes;
 
         verify(totalRows == 0 || (totalRows > 0 && columns.isPresent()), "data present without columns and types");
     }
@@ -152,14 +150,9 @@ public class QueryResultRows
                 .toString();
     }
 
-    public long getLogicalSizeInByes()
-    {
-        return logicalSizeInByes;
-    }
-
     public static QueryResultRows empty(Session session)
     {
-        return new QueryResultRows(session, Optional.empty(), ImmutableList.of(), null, 0);
+        return new QueryResultRows(session, Optional.empty(), ImmutableList.of(), null);
     }
 
     public static Builder queryResultRowsBuilder(Session session)
@@ -173,27 +166,21 @@ public class QueryResultRows
         private ImmutableList.Builder<Page> pages = ImmutableList.builder();
         private Optional<List<ColumnAndType>> columns = Optional.empty();
         private Consumer<Throwable> exceptionConsumer;
-        private long logicalSizeInBytes;
 
         public Builder(Session session)
         {
             this.session = requireNonNull(session, "session is null");
-            this.logicalSizeInBytes = 0;
         }
 
         public Builder addPage(Page page)
         {
             pages.add(page);
-            logicalSizeInBytes += page.getLogicalSizeInBytes();
             return this;
         }
 
         public Builder addPages(List<Page> page)
         {
             pages.addAll(page);
-            for (Page eachPage : page) {
-                logicalSizeInBytes += eachPage.getLogicalSizeInBytes();
-            }
             return this;
         }
 
@@ -228,8 +215,7 @@ public class QueryResultRows
                     session,
                     columns,
                     pages.build(),
-                    exceptionConsumer,
-                    logicalSizeInBytes);
+                    exceptionConsumer);
         }
 
         private static List<ColumnAndType> combine(@Nullable List<Column> columns, @Nullable List<Type> types)
