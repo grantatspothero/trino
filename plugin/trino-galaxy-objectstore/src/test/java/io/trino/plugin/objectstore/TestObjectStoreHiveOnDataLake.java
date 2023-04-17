@@ -61,7 +61,9 @@ public class TestObjectStoreHiveOnDataLake
         TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> true));
         TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> galaxyCockroachContainer));
 
-        return ObjectStoreQueryRunner.builder("hive", "tpch")
+        return ObjectStoreQueryRunner.builder()
+                .withCatalogName("hive")
+                .withSchemaName("tpch") // as in superclass. Doesn't matter as HIVE_TEST_SCHEMA is used for test tables.
                 .withTableType(TableType.HIVE)
                 .withAccountClient(testingAccountFactory.createAccount())
                 .withHiveS3Config(ImmutableMap.<String, String>builder()

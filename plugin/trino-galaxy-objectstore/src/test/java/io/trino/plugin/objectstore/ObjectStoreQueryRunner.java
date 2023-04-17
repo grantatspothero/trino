@@ -65,18 +65,13 @@ public final class ObjectStoreQueryRunner
 
     public static Builder builder()
     {
-        return builder(CATALOG, TPCH_SCHEMA);
-    }
-
-    public static Builder builder(String catalogName, String schemaName)
-    {
-        return new Builder(catalogName, schemaName);
+        return new Builder();
     }
 
     public static class Builder
     {
-        private final String catalogName;
-        private final String schemaName;
+        private String catalogName = CATALOG;
+        private String schemaName = TPCH_SCHEMA;
         private TableType tableType;
         private String s3Url;
         private Map<String, String> hiveS3Config;
@@ -88,10 +83,20 @@ public final class ObjectStoreQueryRunner
         private MockConnectorPlugin mockConnectorPlugin;
         private TestingAccountClient accountClient;
 
-        private Builder(String catalogName, String schemaName)
+        private Builder() {}
+
+        @CanIgnoreReturnValue
+        public Builder withCatalogName(String catalogName)
         {
             this.catalogName = requireNonNull(catalogName, "catalogName is null");
+            return this;
+        }
+
+        @CanIgnoreReturnValue
+        public Builder withSchemaName(String schemaName)
+        {
             this.schemaName = requireNonNull(schemaName, "schemaName is null");
+            return this;
         }
 
         @CanIgnoreReturnValue
