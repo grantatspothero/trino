@@ -108,6 +108,9 @@ public final class GalaxyQueryRunner
                     .setCatalog(defaultSessionCatalog)
                     .setSchema(defaultSessionSchema)
                     .build());
+
+            // default, may be overridden
+            addExtraProperty("http-server.authentication.type", "galaxy");
         }
 
         public Builder setAccountClient(TestingAccountClient accountClient)
@@ -159,10 +162,6 @@ public final class GalaxyQueryRunner
                     .map(entry -> entry.getKey() + "->" + entry.getValue())
                     .collect(joining(","));
 
-            addExtraProperty("http-server.authentication.type", "galaxy");
-
-            addExtraProperty("galaxy.account-id", accountId.toString());
-            addExtraProperty("galaxy.deployment-id", accountClient.getSampleDeploymentId().toString());
             addExtraProperty("galaxy.authentication.token-issuer", deploymentUri.toString());
             addExtraProperty("galaxy.authentication.public-key", accountClient.getSampleDeploymentPublicKey());
             addExtraProperty("query.info-url-template", deploymentUri + "/ui/query.html?${QUERY_ID}");
@@ -177,6 +176,8 @@ public final class GalaxyQueryRunner
                     GalaxyIdentityType.DEFAULT)));
 
             if (installSecurityModule) {
+                addExtraProperty("galaxy.account-id", accountId.toString());
+                addExtraProperty("galaxy.deployment-id", accountClient.getSampleDeploymentId().toString());
                 addExtraProperty("galaxy.account-url", accountUri.toString());
                 addExtraProperty("galaxy.catalog-names", catalogIdStrings);
                 addExtraProperty("galaxy.cluster-id", accountClient.getSampleClusterId().toString());

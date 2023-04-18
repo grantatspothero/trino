@@ -13,7 +13,6 @@
  */
 package io.trino.galaxy;
 
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
@@ -30,7 +29,6 @@ import io.starburst.stargate.id.IdType;
 import io.starburst.stargate.metadata.QueryCatalog;
 import io.starburst.stargate.metadata.StatementRequest;
 import io.trino.client.QueryResults;
-import io.trino.plugin.base.security.ForwardingSystemAccessControl;
 import io.trino.plugin.hive.NodeVersion;
 import io.trino.plugin.hive.TestingHivePlugin;
 import io.trino.plugin.hive.metastore.HiveMetastore;
@@ -40,11 +38,8 @@ import io.trino.plugin.hive.metastore.file.FileHiveMetastoreConfig;
 import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.metadataonly.MetadataOnlyTransactionManager;
-import io.trino.server.security.galaxy.ForGalaxySystemAccessControl;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.server.testing.TestingTrinoServer;
-import io.trino.spi.security.SystemAccessControl;
-import io.trino.spi.security.SystemAccessControlFactory;
 import io.trino.sql.query.QueryAssertions.QueryAssert;
 import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.DistributedQueryRunner;
@@ -139,7 +134,6 @@ public class TestMetadataOnlyQueries
                 .addPlugin(new TestingHivePlugin(metastore))
                 .setNodeCount(0)
                 .setInstallSecurityModule(false)
-                .setSystemAccessControl(ForwardingSystemAccessControl.of(Suppliers.memoize(this::buildSystemAccessControlSupplier)))
                 .build();
     }
 
@@ -148,15 +142,6 @@ public class TestMetadataOnlyQueries
     {
         MetadataOnlyTransactionManager transactionManager = getDistributedQueryRunner().getCoordinator().getInstance(Key.get(MetadataOnlyTransactionManager.class));
         assertThat(transactionManager.hasActiveTransactions()).isFalse();
-    }
-
-    private SystemAccessControl buildSystemAccessControlSupplier()
-    {
-        // hack to get around how AbstractTestQueryFramework initializes the TestingAccessControlManager
-        // lazily access the bound GalaxyMetadataSystemAccessFactory (see GalaxySystemAccessModule)
-        // this is nested in a memoized supplier so only should be called once the test server has been initialized
-        SystemAccessControlFactory accessControlFactory = getDistributedQueryRunner().getCoordinator().getInstance(Key.get(SystemAccessControlFactory.class, ForGalaxySystemAccessControl.class));
-        return accessControlFactory.create(ImmutableMap.of());
     }
 
     @Test
