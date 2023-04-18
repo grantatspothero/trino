@@ -131,7 +131,7 @@ public class TestMetadataOnlyQueries
                 .addExtraProperty("experimental.concurrent-startup", "true")
                 .addPlugin(new TpchPlugin())
                 .addPlugin(new TestingHivePlugin(metastore))
-                .setNodeCount(0)
+                .setNodeCount(1)
                 .setInstallSecurityModule(false)
                 .build();
     }
