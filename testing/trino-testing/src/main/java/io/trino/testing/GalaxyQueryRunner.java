@@ -20,7 +20,6 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.airlift.jaxrs.JaxrsBinder;
-import io.airlift.log.Logger;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
 import io.starburst.stargate.id.AccountId;
 import io.starburst.stargate.id.CatalogId;
@@ -67,8 +66,6 @@ import static javax.ws.rs.core.Response.Status.FORBIDDEN;
  */
 public final class GalaxyQueryRunner
 {
-    private static final Logger log = Logger.get(GalaxyQueryRunner.class);
-
     private GalaxyQueryRunner() {}
 
     public static Builder builder()
@@ -152,8 +149,6 @@ public final class GalaxyQueryRunner
 
             URI accountUri = accountClient.getBaseUri();
             AccountId accountId = accountClient.getAccountId();
-
-            log.info("URI: " + accountUri);
             URI deploymentUri = URI.create("https://test-sample.trino.local.gate0.net:8888");
 
             Set<String> catalogNames = catalogs.build().stream().map(CatalogInit::catalogName).collect(toImmutableSet());

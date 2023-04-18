@@ -47,14 +47,13 @@ import io.trino.testing.GalaxyQueryRunner;
 import io.trino.testing.MaterializedResult;
 import io.trino.testing.QueryRunner;
 import org.assertj.core.api.AssertProvider;
+import org.intellij.lang.annotations.Language;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Test;
 
 import javax.ws.rs.core.MediaType;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -92,12 +91,7 @@ public class TestMetadataOnlyQueries
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        try {
-            baseDir = Files.createTempDirectory(null).toFile();
-        }
-        catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        baseDir = Files.createTempDirectory(null).toFile();
 
         httpClient = new JettyHttpClient();
 
@@ -181,18 +175,14 @@ public class TestMetadataOnlyQueries
         testingAccountClient.grantFunctionPrivilege(new GrantDetails(Privilege.CREATE_SCHEMA, testingAccountClient.getAdminRoleId(), GrantKind.ALLOW, true, HIVE_CATALOG_ID));
 
         assertThat(metastore.getAllDatabases()).isEmpty();
-
         queryMetadata("CREATE SCHEMA hive.test");
-
         assertThat(metastore.getAllDatabases()).containsExactly("test");
     }
 
-    private AssertProvider<QueryAssert> queryMetadata(String statement)
+    private AssertProvider<QueryAssert> queryMetadata(@Language("SQL") String statement)
     {
         Request request = buildRequest(statement);
-
         MaterializedResult materializedResult = materialized(httpClient.execute(request, createJsonResponseHandler(QUERY_RESULTS_CODEC)));
-
         return newQueryAssert(statement, getDistributedQueryRunner(), getSession(), materializedResult);
     }
 
@@ -206,10 +196,9 @@ public class TestMetadataOnlyQueries
                 new QueryCatalog("hive", "hive", ImmutableMap.of(), ImmutableMap.of(), Optional.empty()));
 
         TestingAccountClient testingAccountClient = getTestingAccountClient();
-
         StatementRequest statementRequest = new StatementRequest(testingAccountClient.getAccountId(), statement, catalogs, ImmutableMap.of(
                 "access-control.name", "galaxy",
-                "galaxy.account-url", getTestingAccountClient().getBaseUri().toString(),
+                "galaxy.account-url", testingAccountClient.getBaseUri().toString(),
                 "galaxy.catalog-names", "tpch->" + TPCH_CATALOG_ID.toString() + ",hive->" + HIVE_CATALOG_ID,
                 "galaxy.read-only-catalogs", ""));
 
