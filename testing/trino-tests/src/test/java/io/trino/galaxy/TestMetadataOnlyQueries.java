@@ -72,6 +72,9 @@ import static io.trino.testing.MaterializedResult.resultBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
+/**
+ * @see TestGalaxyMetadataOnlyQueries
+ */
 // see comment at top of TestGalaxyQueries for debugging GalaxyQueryRunner queries in both Trino and Stargate portal-server!
 @Test(singleThreaded = true)
 public class TestMetadataOnlyQueries

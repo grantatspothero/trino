@@ -16,6 +16,7 @@ package io.trino.plugin.objectstore;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import io.airlift.bootstrap.LifeCycleManager;
 import io.trino.plugin.hive.HiveConnector;
 import io.trino.plugin.hive.HiveTransactionHandle;
 import io.trino.spi.connector.Connector;
@@ -63,6 +64,7 @@ public class ObjectStoreConnector
     private final Connector icebergConnector;
     private final Connector deltaConnector;
     private final Connector hudiConnector;
+    private final LifeCycleManager lifeCycleManager;
     private final ObjectStoreSplitManager splitManager;
     private final ObjectStorePageSourceProvider pageSourceProvider;
     private final ObjectStorePageSinkProvider pageSinkProvider;
@@ -80,6 +82,7 @@ public class ObjectStoreConnector
             @ForIceberg Connector icebergConnector,
             @ForDelta Connector deltaConnector,
             @ForHudi Connector hudiConnector,
+            LifeCycleManager lifeCycleManager,
             ObjectStoreSplitManager splitManager,
             ObjectStorePageSourceProvider pageSourceProvider,
             ObjectStorePageSinkProvider pageSinkProvider,
@@ -92,6 +95,7 @@ public class ObjectStoreConnector
         this.icebergConnector = requireNonNull(icebergConnector, "icebergConnector is null");
         this.deltaConnector = requireNonNull(deltaConnector, "deltaConnector is null");
         this.hudiConnector = requireNonNull(hudiConnector, "hudiConnector is null");
+        this.lifeCycleManager = requireNonNull(lifeCycleManager, "lifeCycleManager is null");
         this.splitManager = requireNonNull(splitManager, "splitManager is null");
         this.pageSourceProvider = requireNonNull(pageSourceProvider, "pageSourceProvider is null");
         this.pageSinkProvider = requireNonNull(pageSinkProvider, "pageSinkProvider is null");
@@ -165,6 +169,7 @@ public class ObjectStoreConnector
     @Override
     public void shutdown()
     {
+        lifeCycleManager.stop();
         hiveConnector.shutdown();
         icebergConnector.shutdown();
         deltaConnector.shutdown();
