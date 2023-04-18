@@ -96,6 +96,7 @@ public final class GalaxyQueryRunner
         private TestingAccountClient accountClient;
         private final ImmutableList.Builder<Plugin> plugins = ImmutableList.builder();
         private final ImmutableList.Builder<CatalogInit> catalogs = ImmutableList.builder();
+        private String httpAuthenticationType = "galaxy";
         private boolean installSecurityModule = true;
 
         private Builder(String defaultSessionCatalog, String defaultSessionSchema)
@@ -105,9 +106,6 @@ public final class GalaxyQueryRunner
                     .setCatalog(defaultSessionCatalog)
                     .setSchema(defaultSessionSchema)
                     .build());
-
-            // default, may be overridden
-            addExtraProperty("http-server.authentication.type", "galaxy");
         }
 
         public Builder setAccountClient(TestingAccountClient accountClient)
@@ -135,6 +133,12 @@ public final class GalaxyQueryRunner
             return self();
         }
 
+        public Builder setHttpAuthenticationType(String httpAuthenticationType)
+        {
+            this.httpAuthenticationType = requireNonNull(httpAuthenticationType, "httpAuthenticationType is null");
+            return self();
+        }
+
         public Builder setInstallSecurityModule(boolean installSecurityModule)
         {
             this.installSecurityModule = installSecurityModule;
@@ -157,6 +161,7 @@ public final class GalaxyQueryRunner
                     .map(entry -> entry.getKey() + "->" + entry.getValue())
                     .collect(joining(","));
 
+            addExtraProperty("http-server.authentication.type", httpAuthenticationType);
             addExtraProperty("galaxy.authentication.token-issuer", deploymentUri.toString());
             addExtraProperty("galaxy.authentication.public-key", accountClient.getSampleDeploymentPublicKey());
             addExtraProperty("query.info-url-template", deploymentUri + "/ui/query.html?${QUERY_ID}");

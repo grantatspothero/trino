@@ -124,7 +124,7 @@ public class TestGalaxyMetadataOnlyQueries
                 .setInstallSecurityModule(false) // MetadataOnlyCatalogManagerModule will install it
                 .addExtraProperty("catalog.management", "metadata_only")
                 .addExtraProperty("web-ui.authentication.type", "none")
-                .addExtraProperty("http-server.authentication.type", "galaxy-metadata")
+                .setHttpAuthenticationType("galaxy-metadata")
                 .addExtraProperty("experimental.concurrent-startup", "true")
                 .addExtraProperty("trino.plane-id", "aws-us-east1-1")
                 .addExtraProperty("query.executor-pool-size", "3") // TODO shouldn't be needed. The pool should not grow to its limit when one query at a time
