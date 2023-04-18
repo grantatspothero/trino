@@ -39,7 +39,6 @@ import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.metadataonly.MetadataOnlyTransactionManager;
 import io.trino.server.security.galaxy.TestingAccountFactory;
-import io.trino.server.testing.TestingTrinoServer;
 import io.trino.sql.query.QueryAssertions.QueryAssert;
 import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.DistributedQueryRunner;
@@ -86,6 +85,7 @@ public class TestMetadataOnlyQueries
     private HttpClient httpClient;
     private File baseDir;
     private HiveMetastore metastore;
+    private TestingAccountClient testingAccountClient;
 
     @Override
     protected QueryRunner createQueryRunner()
@@ -103,6 +103,9 @@ public class TestMetadataOnlyQueries
                         .setCatalogDirectory(baseDir.toURI().toString())
                         .setMetastoreUser("test"));
 
+        TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> closeAfterClass(new GalaxyCockroachContainer())));
+        testingAccountClient = testingAccountFactory.createAccount();
+
         closeAfterClass(() -> {
             deleteRecursively(baseDir.toPath(), ALLOW_INSECURE);
             baseDir = null;
@@ -111,12 +114,11 @@ public class TestMetadataOnlyQueries
             httpClient = null;
 
             metastore = null;
+            testingAccountClient = null;
         });
 
-        TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> closeAfterClass(new GalaxyCockroachContainer())));
-
         return GalaxyQueryRunner.builder()
-                .setAccountClient(testingAccountFactory.createAccount())
+                .setAccountClient(testingAccountClient)
                 .addExtraProperty("catalog.management", "metadata_only")
                 .addExtraProperty("trino.plane-id", "aws-us-east1-1")
                 .addExtraProperty("kms-crypto.enabled", "false")
@@ -170,7 +172,6 @@ public class TestMetadataOnlyQueries
     @Test
     public void testDdl()
     {
-        TestingAccountClient testingAccountClient = getTestingAccountClient();
         testingAccountClient.setEntityOwnership(testingAccountClient.getAdminRoleId(), testingAccountClient.getAdminRoleId(), HIVE_CATALOG_ID);
         testingAccountClient.grantFunctionPrivilege(new GrantDetails(Privilege.CREATE_SCHEMA, testingAccountClient.getAdminRoleId(), GrantKind.ALLOW, true, HIVE_CATALOG_ID));
 
@@ -195,7 +196,6 @@ public class TestMetadataOnlyQueries
                 new QueryCatalog("tpch", "tpch", ImmutableMap.of(), ImmutableMap.of(), Optional.empty()),
                 new QueryCatalog("hive", "hive", ImmutableMap.of(), ImmutableMap.of(), Optional.empty()));
 
-        TestingAccountClient testingAccountClient = getTestingAccountClient();
         StatementRequest statementRequest = new StatementRequest(testingAccountClient.getAccountId(), statement, catalogs, ImmutableMap.of(
                 "access-control.name", "galaxy",
                 "galaxy.account-url", testingAccountClient.getBaseUri().toString(),
@@ -240,11 +240,5 @@ public class TestMetadataOnlyQueries
             resultBuilder.row(values);
         }
         return resultBuilder.build();
-    }
-
-    private TestingAccountClient getTestingAccountClient()
-    {
-        TestingTrinoServer coordinator = this.getDistributedQueryRunner().getCoordinator();
-        return coordinator.getInstance(Key.get(TestingAccountClient.class));
     }
 }
