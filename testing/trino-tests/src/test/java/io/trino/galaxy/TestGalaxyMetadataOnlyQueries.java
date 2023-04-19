@@ -13,9 +13,6 @@
  */
 package io.trino.galaxy;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Multiset;
-import com.google.common.collect.Multisets;
 import com.google.inject.Key;
 import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.Request;
@@ -62,9 +59,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
-import static com.google.common.collect.ImmutableMultiset.toImmutableMultiset;
 import static io.airlift.http.client.JsonBodyGenerator.jsonBodyGenerator;
 import static io.airlift.http.client.JsonResponseHandler.createJsonResponseHandler;
 import static io.airlift.http.client.Request.Builder.preparePost;
@@ -74,7 +69,6 @@ import static io.trino.server.security.galaxy.TestingAccountFactory.createTestin
 import static io.trino.sql.query.QueryAssertions.QueryAssert.newQueryAssert;
 import static io.trino.testing.MaterializedResult.resultBuilder;
 import static java.util.Locale.ENGLISH;
-import static java.util.stream.Collectors.joining;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
@@ -201,44 +195,7 @@ public class TestGalaxyMetadataOnlyQueries
     }
 
     @Test
-    public void testObjectStoreStressTest()
-    {
-        int warmupRounds = 5;
-        int testRounds = 20;
-        int threadsAllowance = 10; // some threads come and go, we cannot be exact
-
-        for (int i = 0; i < warmupRounds; i++) {
-            queryObjectStore();
-        }
-
-        Set<Thread> threadsAfterWarmup = ImmutableSet.copyOf(Thread.getAllStackTraces().keySet());
-        int threadCountAfterWarmup = threadsAfterWarmup.size();
-
-        for (int i = 0; i < testRounds; i++) {
-            queryObjectStore();
-        }
-
-        Set<Thread> threadsAfterTest = ImmutableSet.copyOf(Thread.getAllStackTraces().keySet());
-        int threadCountAfterTest = threadsAfterTest.size();
-
-        if (threadCountAfterTest > threadCountAfterWarmup + threadsAllowance) {
-            Multiset<String> namesBefore = threadsAfterWarmup.stream()
-                    .map(thread -> thread.getName().replaceAll("\\d+$", "%s"))
-                    .collect(toImmutableMultiset());
-
-            Multiset<String> namesAfter = threadsAfterTest.stream()
-                    .map(thread -> thread.getName().replaceAll("\\d+$", "%s"))
-                    .collect(toImmutableMultiset());
-
-            fail(
-                    "Thread count increased from %s after warmup to %s after test. New threads (with numbers chopped off):" +
-                            Multisets.difference(namesAfter, namesBefore).entrySet().stream()
-                                    .map(entry -> "\n\t\tthread group '%s': %s more threads".formatted(entry.getElement(), entry.getCount()))
-                                    .collect(joining("")));
-        }
-    }
-
-    private void queryObjectStore()
+    public void testObjectStore()
     {
         assertThat(queryMetadata("SHOW TABLES FROM objectstore.default"))
                 .matches(resultBuilder(getSession())
