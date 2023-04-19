@@ -67,6 +67,7 @@ public final class DeltaLakeSessionProperties
     public static final String EXTENDED_STATISTICS_ENABLED = "extended_statistics_enabled";
     public static final String EXTENDED_STATISTICS_COLLECT_ON_WRITE = "extended_statistics_collect_on_write";
     public static final String LEGACY_CREATE_TABLE_WITH_EXISTING_LOCATION_ENABLED = "legacy_create_table_with_existing_location_enabled";
+    private static final String PROJECTION_PUSHDOWN_ENABLED = "projection_pushdown_enabled";
 
     private final List<PropertyMetadata<?>> sessionProperties;
 
@@ -188,6 +189,11 @@ public final class DeltaLakeSessionProperties
                                 throw new TrinoException(INVALID_SESSION_PROPERTY, "Unsupported codec: LZ4");
                             }
                         },
+                        false),
+                booleanProperty(
+                        PROJECTION_PUSHDOWN_ENABLED,
+                        "Read only required fields from a struct",
+                        deltaLakeConfig.isProjectionPushdownEnabled(),
                         false));
     }
 
@@ -287,5 +293,10 @@ public final class DeltaLakeSessionProperties
     {
         HiveCompressionOption option = session.getProperty(COMPRESSION_CODEC, HiveCompressionOption.class);
         return option == HiveCompressionOption.DEFAULT ? HiveCompressionCodec.SNAPPY : selectCompressionCodec(option, HiveStorageFormat.PARQUET);
+    }
+
+    public static boolean isProjectionPushdownEnabled(ConnectorSession session)
+    {
+        return session.getProperty(PROJECTION_PUSHDOWN_ENABLED, Boolean.class);
     }
 }
