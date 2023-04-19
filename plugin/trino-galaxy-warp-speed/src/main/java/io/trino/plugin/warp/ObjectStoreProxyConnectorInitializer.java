@@ -15,7 +15,6 @@ package io.trino.plugin.warp;
 
 import com.google.inject.Module;
 import io.trino.plugin.objectstore.InternalObjectStoreConnectorFactory;
-import io.trino.plugin.objectstore.ObjectStoreConnectorFactory;
 import io.trino.plugin.varada.dispatcher.DispatcherProxiedConnectorTransformer;
 import io.trino.plugin.varada.dispatcher.ProxiedConnectorInitializer;
 import io.trino.plugin.warp.proxiedconnector.deltalake.DeltaLakeProxiedConnectorTransformer;
@@ -25,12 +24,11 @@ import io.trino.plugin.warp.proxiedconnector.iceberg.IcebergProxiedConnectorTran
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Throwables.throwIfUnchecked;
+import static com.google.inject.util.Modules.EMPTY_MODULE;
 
 public class ObjectStoreProxyConnectorInitializer
         implements ProxiedConnectorInitializer
@@ -58,23 +56,8 @@ public class ObjectStoreProxyConnectorInitializer
                 .filter(e -> !e.getKey().startsWith("warp-speed.") && !e.getKey().startsWith("WARP__"))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-        Class<? extends Module> module = ObjectStoreConnectorFactory.EmptyModule.class;
-        ClassLoader classLoader = this.getClass().getClassLoader();
-        try {
-            Object moduleInstance = classLoader.loadClass(module.getName()).getConstructor().newInstance();
-            Class<?> moduleClass = classLoader.loadClass(Module.class.getName());
-            return (Connector) classLoader.loadClass(InternalObjectStoreConnectorFactory.class.getName())
-                    .getMethod("createConnector", String.class, Map.class, ConnectorContext.class, moduleClass)
-                    .invoke(null, catalogName, objectStoreConfig, context, moduleInstance);
-        }
-        catch (InvocationTargetException e) {
-            Throwable targetException = e.getTargetException();
-            throwIfUnchecked(targetException);
-            throw new RuntimeException(targetException);
-        }
-        catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
-        }
+        // Because of native code, Warp Speed does not support multiple catalogs and thus doesn't need classloader duplication.
+        return InternalObjectStoreConnectorFactory.createConnector(catalogName, objectStoreConfig, context, EMPTY_MODULE);
     }
 
     @Override
