@@ -42,7 +42,6 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.util.EnumSet;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -125,15 +124,11 @@ public class TrinoFileSystemCache
                     }
                     return new FileSystemHolder(conf, privateCredentials);
                 }
-                else {
-                    // Update file system instance when credentials change.
-                    if (currentFileSystemHolder.credentialsChanged(uri, conf, privateCredentials)) {
-                        return new FileSystemHolder(conf, privateCredentials);
-                    }
-                    else {
-                        return currentFileSystemHolder;
-                    }
+                // Update file system instance when credentials change.
+                if (currentFileSystemHolder.credentialsChanged(uri, conf, privateCredentials)) {
+                    return new FileSystemHolder(conf, privateCredentials);
                 }
+                return currentFileSystemHolder;
             });
 
             // Now create the filesystem object outside of cache's lock
@@ -238,17 +233,15 @@ public class TrinoFileSystemCache
         String proxyUser;
         AuthenticationMethod authenticationMethod = userGroupInformation.getAuthenticationMethod();
         switch (authenticationMethod) {
-            case SIMPLE:
-            case KERBEROS:
+            case SIMPLE, KERBEROS -> {
                 realUser = userGroupInformation.getUserName();
                 proxyUser = null;
-                break;
-            case PROXY:
+            }
+            case PROXY -> {
                 realUser = userGroupInformation.getRealUser().getUserName();
                 proxyUser = userGroupInformation.getUserName();
-                break;
-            default:
-                throw new IllegalArgumentException("Unsupported authentication method: " + authenticationMethod);
+            }
+            default -> throw new IllegalArgumentException("Unsupported authentication method: " + authenticationMethod);
         }
         return new FileSystemKey(scheme, authority, unique, realUser, proxyUser);
     }
@@ -256,16 +249,12 @@ public class TrinoFileSystemCache
     private static Set<?> getPrivateCredentials(UserGroupInformation userGroupInformation)
     {
         AuthenticationMethod authenticationMethod = userGroupInformation.getAuthenticationMethod();
-        switch (authenticationMethod) {
-            case SIMPLE:
-                return ImmutableSet.of();
-            case KERBEROS:
-                return ImmutableSet.copyOf(getSubject(userGroupInformation).getPrivateCredentials());
-            case PROXY:
-                return getPrivateCredentials(userGroupInformation.getRealUser());
-            default:
-                throw new IllegalArgumentException("Unsupported authentication method: " + authenticationMethod);
-        }
+        return switch (authenticationMethod) {
+            case SIMPLE -> ImmutableSet.of();
+            case KERBEROS -> ImmutableSet.copyOf(getSubject(userGroupInformation).getPrivateCredentials());
+            case PROXY -> getPrivateCredentials(userGroupInformation.getRealUser());
+            default -> throw new IllegalArgumentException("Unsupported authentication method: " + authenticationMethod);
+        };
     }
 
     private static boolean isHdfs(URI uri)
@@ -274,56 +263,14 @@ public class TrinoFileSystemCache
         return "hdfs".equals(scheme) || "viewfs".equals(scheme);
     }
 
-    private static class FileSystemKey
+    @SuppressWarnings("unused")
+    private record FileSystemKey(String scheme, String authority, long unique, String realUser, String proxyUser)
     {
-        private final String scheme;
-        private final String authority;
-        private final long unique;
-        private final String realUser;
-        private final String proxyUser;
-
-        public FileSystemKey(String scheme, String authority, long unique, String realUser, String proxyUser)
+        private FileSystemKey
         {
-            this.scheme = requireNonNull(scheme, "scheme is null");
-            this.authority = requireNonNull(authority, "authority is null");
-            this.unique = unique;
-            this.realUser = requireNonNull(realUser, "realUser");
-            this.proxyUser = proxyUser;
-        }
-
-        @Override
-        public boolean equals(Object o)
-        {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            FileSystemKey that = (FileSystemKey) o;
-            return Objects.equals(scheme, that.scheme) &&
-                    Objects.equals(authority, that.authority) &&
-                    Objects.equals(unique, that.unique) &&
-                    Objects.equals(realUser, that.realUser) &&
-                    Objects.equals(proxyUser, that.proxyUser);
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return Objects.hash(scheme, authority, unique, realUser, proxyUser);
-        }
-
-        @Override
-        public String toString()
-        {
-            return toStringHelper(this)
-                    .add("scheme", scheme)
-                    .add("authority", authority)
-                    .add("unique", unique)
-                    .add("realUser", realUser)
-                    .add("proxyUser", proxyUser)
-                    .toString();
+            requireNonNull(scheme, "scheme is null");
+            requireNonNull(authority, "authority is null");
+            requireNonNull(realUser, "realUser");
         }
     }
 
@@ -345,7 +292,7 @@ public class TrinoFileSystemCache
             if (fileSystem == null) {
                 synchronized (this) {
                     if (fileSystem == null) {
-                        fileSystem = TrinoFileSystemCache.createFileSystem(uri, conf);
+                        fileSystem = createFileSystem(uri, conf);
                     }
                 }
             }
@@ -361,8 +308,8 @@ public class TrinoFileSystemCache
             // Kerberos re-login occurs, re-create the file system and cache it using
             // the same key.
             // - Extra credentials are used to authenticate with certain file systems.
-            return (isHdfs(newUri) && !this.privateCredentials.equals(newPrivateCredentials))
-                    || !this.cacheCredentials.equals(newConf.get(CACHE_KEY, ""));
+            return (isHdfs(newUri) && !privateCredentials.equals(newPrivateCredentials))
+                    || !cacheCredentials.equals(newConf.get(CACHE_KEY, ""));
         }
 
         public FileSystem getFileSystem()
