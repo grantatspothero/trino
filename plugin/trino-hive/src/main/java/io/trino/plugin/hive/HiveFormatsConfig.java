@@ -19,6 +19,7 @@ import io.airlift.configuration.ConfigDescription;
 public class HiveFormatsConfig
 {
     // TODO: Re-enable native readers and writers for Galaxy after they are vetted in the wild
+    private boolean avroFileNativeReaderEnabled;
     private boolean csvNativeReaderEnabled;
     private boolean csvNativeWriterEnabled;
     private boolean jsonNativeReaderEnabled;
@@ -31,6 +32,19 @@ public class HiveFormatsConfig
     private boolean textFileNativeWriterEnabled;
     private boolean sequenceFileNativeReaderEnabled;
     private boolean sequenceFileNativeWriterEnabled;
+
+    public boolean isAvroFileNativeReaderEnabled()
+    {
+        return avroFileNativeReaderEnabled;
+    }
+
+    @Config("avro.native-reader.enabled")
+    @ConfigDescription("Use native Avro file reader")
+    public HiveFormatsConfig setAvroFileNativeReaderEnabled(boolean avroFileNativeReaderEnabled)
+    {
+        this.avroFileNativeReaderEnabled = avroFileNativeReaderEnabled;
+        return this;
+    }
 
     public boolean isCsvNativeReaderEnabled()
     {

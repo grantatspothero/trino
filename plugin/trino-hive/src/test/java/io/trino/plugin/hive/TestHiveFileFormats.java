@@ -24,6 +24,7 @@ import io.trino.filesystem.hdfs.HdfsFileSystemFactory;
 import io.trino.hive.formats.compression.CompressionKind;
 import io.trino.orc.OrcReaderOptions;
 import io.trino.orc.OrcWriterOptions;
+import io.trino.plugin.hive.avro.AvroHivePageSourceFactory;
 import io.trino.plugin.hive.line.CsvFileWriterFactory;
 import io.trino.plugin.hive.line.CsvPageSourceFactory;
 import io.trino.plugin.hive.line.JsonFileWriterFactory;
@@ -173,6 +174,9 @@ public class TestHiveFileFormats
         verify(!formatsConfig.isSequenceFileNativeReaderEnabled() && !formatsConfig.isSequenceFileNativeWriterEnabled(), "Native SequenceFile enabled by default");
         formatsConfig.setSequenceFileNativeReaderEnabled(true);
         formatsConfig.setSequenceFileNativeWriterEnabled(true);
+
+        verify(!formatsConfig.isAvroFileNativeReaderEnabled(), "Native Avro enabled by default");
+        formatsConfig.setAvroFileNativeReaderEnabled(true);
 
         // TODO once nativeFormatsEnabled is same as SESSION, remove the field completely
         nativeFormatsEnabled = getHiveSession(formatsConfig);
@@ -458,9 +462,11 @@ public class TestHiveFileFormats
             throws Exception
     {
         assertThatFileFormat(AVRO)
+                .withSession(nativeFormatsEnabled)
                 .withColumns(getTestColumnsSupportedByAvro())
                 .withRowsCount(rowCount)
                 .withFileSizePadding(fileSizePadding)
+                .isReadableByPageSource(new AvroHivePageSourceFactory(FILE_SYSTEM_FACTORY, STATS))
                 .isReadableByRecordCursor(createGenericHiveRecordCursorProvider(HDFS_ENVIRONMENT));
     }
 
@@ -477,6 +483,7 @@ public class TestHiveFileFormats
             splitProperties.setProperty(FILE_INPUT_FORMAT, SymlinkTextInputFormat.class.getName());
             splitProperties.setProperty(SERIALIZATION_LIB, AVRO.getSerde());
             testCursorProvider(createGenericHiveRecordCursorProvider(HDFS_ENVIRONMENT), split, splitProperties, getTestColumnsSupportedByAvro(), SESSION, file.length(), rowCount);
+            testPageSourceFactory(new AvroHivePageSourceFactory(FILE_SYSTEM_FACTORY, STATS), split, AVRO, getTestColumnsSupportedByAvro(), nativeFormatsEnabled, file.length(), rowCount);
         }
         finally {
             //noinspection ResultOfMethodCallIgnored
@@ -621,9 +628,11 @@ public class TestHiveFileFormats
                 .isReadableByPageSource(PARQUET_PAGE_SOURCE_FACTORY);
 
         assertThatFileFormat(AVRO)
+                .withSession(nativeFormatsEnabled)
                 .withWriteColumns(ImmutableList.of(writeColumn))
                 .withReadColumns(ImmutableList.of(readColumn))
-                .isReadableByRecordCursor(createGenericHiveRecordCursorProvider(HDFS_ENVIRONMENT));
+                .isReadableByRecordCursor(createGenericHiveRecordCursorProvider(HDFS_ENVIRONMENT))
+                .isReadableByPageSource(new AvroHivePageSourceFactory(FILE_SYSTEM_FACTORY, STATS));
 
         assertThatFileFormat(SEQUENCEFILE)
                 .withSession(nativeFormatsEnabled)
@@ -659,10 +668,12 @@ public class TestHiveFileFormats
         List<TestColumn> readColumns = readeColumnsBuilder.addAll(partitionColumns).build();
 
         assertThatFileFormat(AVRO)
+                .withSession(nativeFormatsEnabled)
                 .withWriteColumns(writeColumns)
                 .withReadColumns(readColumns)
                 .withRowsCount(rowCount)
-                .isReadableByRecordCursorPageSource(createGenericHiveRecordCursorProvider(HDFS_ENVIRONMENT));
+                .isReadableByRecordCursorPageSource(createGenericHiveRecordCursorProvider(HDFS_ENVIRONMENT))
+                .isReadableByPageSource(new AvroHivePageSourceFactory(FILE_SYSTEM_FACTORY, STATS));
     }
 
     @Test(dataProvider = "rowCount")

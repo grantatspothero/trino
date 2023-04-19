@@ -28,6 +28,7 @@ public class TestHiveFormatsConfig
     public void testDefaults()
     {
         assertRecordedDefaults(recordDefaults(HiveFormatsConfig.class)
+                .setAvroFileNativeReaderEnabled(false)
                 .setCsvNativeReaderEnabled(false)
                 .setCsvNativeWriterEnabled(false)
                 .setJsonNativeReaderEnabled(false)
@@ -45,6 +46,7 @@ public class TestHiveFormatsConfig
     public void testExplicitPropertyMappings()
     {
         Map<String, String> properties = ImmutableMap.<String, String>builder()
+                .put("avro.native-reader.enabled", "true")
                 .put("csv.native-reader.enabled", "true")
                 .put("csv.native-writer.enabled", "true")
                 .put("json.native-reader.enabled", "true")
@@ -59,6 +61,7 @@ public class TestHiveFormatsConfig
                 .buildOrThrow();
 
         HiveFormatsConfig expected = new HiveFormatsConfig()
+                .setAvroFileNativeReaderEnabled(true)
                 .setCsvNativeReaderEnabled(true)
                 .setCsvNativeWriterEnabled(true)
                 .setJsonNativeReaderEnabled(true)
