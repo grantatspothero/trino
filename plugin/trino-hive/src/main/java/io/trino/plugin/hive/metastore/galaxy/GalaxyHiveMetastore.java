@@ -242,6 +242,13 @@ public class GalaxyHiveMetastore
     }
 
     @Override
+    public Optional<List<SchemaTableName>> getAllTables()
+    {
+        // TODO (https://github.com/starburstdata/stargate/issues/10034) implement
+        return Optional.empty();
+    }
+
+    @Override
     public List<String> getTablesWithParameter(String databaseName, String parameterKey, String parameterValue)
     {
         try {
@@ -261,6 +268,13 @@ public class GalaxyHiveMetastore
         catch (MetastoreException e) {
             throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
         }
+    }
+
+    @Override
+    public Optional<List<SchemaTableName>> getAllViews()
+    {
+        // TODO (https://github.com/starburstdata/stargate/issues/10034) implement
+        return Optional.empty();
     }
 
     @Override
