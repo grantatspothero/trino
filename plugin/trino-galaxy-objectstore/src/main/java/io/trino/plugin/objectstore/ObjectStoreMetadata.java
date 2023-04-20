@@ -39,6 +39,7 @@ import io.trino.spi.TrinoException;
 import io.trino.spi.connector.AggregateFunction;
 import io.trino.spi.connector.AggregationApplicationResult;
 import io.trino.spi.connector.BeginTableExecuteResult;
+import io.trino.spi.connector.CatalogSchemaTableName;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.ColumnMetadata;
 import io.trino.spi.connector.ConnectorAnalyzeMetadata;
@@ -93,6 +94,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -104,6 +106,7 @@ import static io.trino.plugin.objectstore.TableType.DELTA;
 import static io.trino.plugin.objectstore.TableType.HIVE;
 import static io.trino.plugin.objectstore.TableType.HUDI;
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
+import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.trino.spi.StandardErrorCode.INVALID_SESSION_PROPERTY;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.StandardErrorCode.UNSUPPORTED_TABLE_TYPE;
@@ -121,6 +124,7 @@ public class ObjectStoreMetadata
     private final PropertyMetadata<?> hiveFormatProperty;
     private final PropertyMetadata<?> hiveSortedByProperty;
     private final PropertyMetadata<?> icebergFormatProperty;
+    private final Procedure flushMetadataCache;
     private final Procedure migrateHiveToIcebergProcedure;
     private final boolean hiveRecursiveDirWalkerEnabled;
 
@@ -131,6 +135,7 @@ public class ObjectStoreMetadata
             ConnectorMetadata hudiMetadata,
             ObjectStoreTableProperties tableProperties,
             ObjectStoreMaterializedViewProperties materializedViewProperties,
+            Procedure flushMetadataCache,
             Procedure migrateHiveToIcebergProcedure,
             boolean hiveRecursiveDirWalkerEnabled)
     {
@@ -143,6 +148,7 @@ public class ObjectStoreMetadata
         this.hiveFormatProperty = tableProperties.getHiveFormatProperty();
         this.hiveSortedByProperty = tableProperties.getHiveSortedByProperty();
         this.icebergFormatProperty = tableProperties.getIcebergFormatProperty();
+        this.flushMetadataCache = requireNonNull(flushMetadataCache, "flushMetadataCache is null");
         this.migrateHiveToIcebergProcedure = requireNonNull(migrateHiveToIcebergProcedure, "migrateHiveToIcebergProcedure is null");
         this.hiveRecursiveDirWalkerEnabled = hiveRecursiveDirWalkerEnabled;
     }
@@ -311,12 +317,19 @@ public class ObjectStoreMetadata
     public void createMaterializedView(ConnectorSession session, SchemaTableName viewName, ConnectorMaterializedViewDefinition definition, boolean replace, boolean ignoreExisting)
     {
         icebergMetadata.createMaterializedView(session, viewName, withProperties(definition, materializedViewProperties.addIcebergPropertyOverrides(definition.getProperties())), replace, ignoreExisting);
+        flushMetadataCache(session, viewName);
     }
 
     @Override
     public void dropMaterializedView(ConnectorSession session, SchemaTableName viewName)
     {
+        Optional<ConnectorMaterializedViewDefinition> materializedView = icebergMetadata.getMaterializedView(session, viewName);
         icebergMetadata.dropMaterializedView(session, viewName);
+        flushMetadataCache(session, viewName);
+        materializedView
+                .flatMap(ConnectorMaterializedViewDefinition::getStorageTable)
+                .map(CatalogSchemaTableName::getSchemaTableName)
+                .ifPresent(storageTable -> flushMetadataCache(session, storageTable));
     }
 
     @Override
@@ -348,12 +361,15 @@ public class ObjectStoreMetadata
     public void renameMaterializedView(ConnectorSession session, SchemaTableName source, SchemaTableName target)
     {
         icebergMetadata.renameMaterializedView(session, source, target);
+        flushMetadataCache(session, source);
+        flushMetadataCache(session, target);
     }
 
     @Override
     public void setMaterializedViewProperties(ConnectorSession session, SchemaTableName viewName, Map<String, Optional<Object>> properties)
     {
         icebergMetadata.setMaterializedViewProperties(session, viewName, properties);
+        flushMetadataCache(session, viewName);
     }
 
     @Override
@@ -445,18 +461,21 @@ public class ObjectStoreMetadata
     public void createSchema(ConnectorSession session, String schemaName, Map<String, Object> properties, TrinoPrincipal owner)
     {
         hiveMetadata.createSchema(session, schemaName, properties, owner);
+        flushMetadataCache(session);
     }
 
     @Override
     public void dropSchema(ConnectorSession session, String schemaName)
     {
         hiveMetadata.dropSchema(session, schemaName);
+        flushMetadataCache(session);
     }
 
     @Override
     public void renameSchema(ConnectorSession session, String source, String target)
     {
         hiveMetadata.renameSchema(session, source, target);
+        flushMetadataCache(session);
     }
 
     @Override
@@ -472,6 +491,7 @@ public class ObjectStoreMetadata
         }
         tableMetadata = unwrap(tableType, tableMetadata);
         metadata.createTable(session, tableMetadata, ignoreExisting);
+        flushMetadataCache(session, tableMetadata.getTable());
     }
 
     @Override
@@ -482,12 +502,14 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "Dropping Hudi tables is not supported");
         }
         metadata.dropTable(session, tableHandle);
+        flushMetadataCache(session, tableName(tableHandle));
     }
 
     @Override
     public void truncateTable(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
         delegate(tableHandle).truncateTable(session, tableHandle);
+        flushMetadataCache(session, tableName(tableHandle));
     }
 
     @Override
@@ -498,6 +520,8 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "Renaming Hudi tables is not supported");
         }
         metadata.renameTable(session, tableHandle, newTableName);
+        flushMetadataCache(session, tableName(tableHandle));
+        flushMetadataCache(session, newTableName);
     }
 
     @Override
@@ -511,6 +535,7 @@ public class ObjectStoreMetadata
             TableType newTableType = (TableType) properties.get("type")
                     .orElseThrow(() -> new IllegalArgumentException("The type property cannot be empty"));
             migrateTable(session, tableHandle, newTableType);
+            flushMetadataCache(session, tableName(tableHandle));
             return;
         }
 
@@ -520,6 +545,7 @@ public class ObjectStoreMetadata
         properties = nullableProperties.entrySet().stream()
                 .collect(toImmutableMap(Map.Entry::getKey, entry -> Optional.ofNullable(entry.getValue())));
         delegate(tableType).setTableProperties(session, tableHandle, properties);
+        flushMetadataCache(session, tableName(tableHandle));
     }
 
     private void migrateTable(ConnectorSession session, ConnectorTableHandle tableHandle, TableType newTableType)
@@ -548,6 +574,7 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "Setting comments for Hudi tables is not supported");
         }
         metadata.setTableComment(session, tableHandle, comment);
+        flushMetadataCache(session, tableName(tableHandle));
     }
 
     @Override
@@ -558,6 +585,7 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "Setting column comments in Hudi tables is not supported");
         }
         metadata.setColumnComment(session, tableHandle, column, comment);
+        flushMetadataCache(session, tableName(tableHandle));
     }
 
     @Override
@@ -572,6 +600,7 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "%s tables do not support NOT NULL columns".formatted(tableType.displayName()));
         }
         delegate.addColumn(session, tableHandle, column);
+        flushMetadataCache(session, tableName(tableHandle));
     }
 
     @Override
@@ -588,6 +617,7 @@ public class ObjectStoreMetadata
             }
             throw e;
         }
+        flushMetadataCache(session, tableName(tableHandle));
     }
 
     @Override
@@ -598,6 +628,7 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "Renaming columns in Hudi tables is not supported");
         }
         metadata.renameColumn(session, tableHandle, source, target);
+        flushMetadataCache(session, tableName(tableHandle));
     }
 
     @Override
@@ -608,6 +639,7 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "Dropping columns from Hudi tables is not supported");
         }
         metadata.dropColumn(session, tableHandle, column);
+        flushMetadataCache(session, tableName(tableHandle));
     }
 
     @Override
@@ -622,6 +654,7 @@ public class ObjectStoreMetadata
             }
         }
         metadata.dropField(session, tableHandle, column, fieldPath);
+        flushMetadataCache(session, tableName(tableHandle));
     }
 
     @Override
@@ -686,7 +719,9 @@ public class ObjectStoreMetadata
     @Override
     public Optional<ConnectorOutputMetadata> finishCreateTable(ConnectorSession session, ConnectorOutputTableHandle outputHandle, Collection<Slice> fragments, Collection<ComputedStatistics> computedStatistics)
     {
-        return delegate(outputHandle).finishCreateTable(session, outputHandle, fragments, computedStatistics);
+        Optional<ConnectorOutputMetadata> outputMetadata = delegate(outputHandle).finishCreateTable(session, outputHandle, fragments, computedStatistics);
+        flushMetadataCache(session, tableName(outputHandle));
+        return outputMetadata;
     }
 
     @Override
@@ -760,18 +795,22 @@ public class ObjectStoreMetadata
     public void createView(ConnectorSession session, SchemaTableName viewName, ConnectorViewDefinition definition, boolean replace)
     {
         hiveMetadata.createView(session, viewName, definition, replace);
+        flushMetadataCache(session, viewName);
     }
 
     @Override
     public void renameView(ConnectorSession session, SchemaTableName source, SchemaTableName target)
     {
         hiveMetadata.renameView(session, source, target);
+        flushMetadataCache(session, source);
+        flushMetadataCache(session, target);
     }
 
     @Override
     public void dropView(ConnectorSession session, SchemaTableName viewName)
     {
         hiveMetadata.dropView(session, viewName);
+        flushMetadataCache(session, viewName);
     }
 
     @Override
@@ -878,6 +917,32 @@ public class ObjectStoreMetadata
         hiveMetadata.cleanupQuery(session);
     }
 
+    private void flushMetadataCache(ConnectorSession session)
+    {
+        try {
+            flushMetadataCache.getMethodHandle().invoke(session, null, null, null, null, null, null);
+        }
+        catch (TrinoException | Error e) {
+            throw e;
+        }
+        catch (Throwable e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Failed to flush metadata cache: " + firstNonNull(e.toString(), e), e);
+        }
+    }
+
+    private void flushMetadataCache(ConnectorSession session, SchemaTableName table)
+    {
+        try {
+            flushMetadataCache.getMethodHandle().invoke(session, table.getSchemaName(), table.getTableName(), null, null, null, null);
+        }
+        catch (TrinoException | Error e) {
+            throw e;
+        }
+        catch (Throwable e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Failed to flush metadata cache: " + firstNonNull(e.toString(), e), e);
+        }
+    }
+
     @SuppressWarnings("ObjectEquality")
     private TableType tableType(ConnectorMetadata metadata)
     {
@@ -923,6 +988,26 @@ public class ObjectStoreMetadata
         throw new VerifyException("Unhandled class: " + handle.getClass().getName());
     }
 
+    private SchemaTableName tableName(ConnectorTableHandle handle)
+    {
+        if (handle instanceof HiveTableHandle hiveTableHandle) {
+            return hiveTableHandle.getSchemaTableName();
+        }
+        if (handle instanceof IcebergTableHandle icebergTableHandle) {
+            return icebergTableHandle.getSchemaTableName();
+        }
+        if (handle instanceof DeltaLakeTableHandle deltaLakeTableHandle) {
+            return deltaLakeTableHandle.getSchemaTableName();
+        }
+        if (handle instanceof CorruptedDeltaLakeTableHandle corruptedDeltaLakeTableHandle) {
+            return corruptedDeltaLakeTableHandle.schemaTableName();
+        }
+        if (handle instanceof HudiTableHandle hudiTableHandle) {
+            return hudiTableHandle.getSchemaTableName();
+        }
+        throw new VerifyException("Unhandled class: " + handle.getClass().getName());
+    }
+
     private ConnectorMetadata delegate(ConnectorTableHandle handle)
     {
         return delegate(tableType(handle));
@@ -952,6 +1037,20 @@ public class ObjectStoreMetadata
         }
         if (handle instanceof DeltaLakeOutputTableHandle) {
             return deltaMetadata;
+        }
+        throw new VerifyException("Unhandled class: " + handle.getClass().getName());
+    }
+
+    private SchemaTableName tableName(ConnectorOutputTableHandle handle)
+    {
+        if (handle instanceof HiveOutputTableHandle hiveOutputTableHandle) {
+            return hiveOutputTableHandle.getSchemaTableName();
+        }
+        if (handle instanceof IcebergWritableTableHandle icebergWritableTableHandle) {
+            return icebergWritableTableHandle.getName();
+        }
+        if (handle instanceof DeltaLakeOutputTableHandle deltaLakeOutputTableHandle) {
+            return new SchemaTableName(deltaLakeOutputTableHandle.getSchemaName(), deltaLakeOutputTableHandle.getTableName());
         }
         throw new VerifyException("Unhandled class: " + handle.getClass().getName());
     }

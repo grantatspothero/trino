@@ -73,6 +73,7 @@ public class ObjectStoreConnector
     private final ObjectStoreMaterializedViewProperties materializedViewProperties;
     private final Set<Procedure> procedures;
     private final List<PropertyMetadata<?>> sessionProperties;
+    private final Procedure flushMetadataCache;
     private final Procedure migrateHiveToIcebergProcedure;
     private final boolean hiveRecursiveDirWalkerEnabled;
 
@@ -123,6 +124,9 @@ public class ObjectStoreConnector
             }
         }
         this.sessionProperties = ImmutableList.copyOf(sessionProperties.values());
+        this.flushMetadataCache = procedures.stream()
+                .filter(procedure -> procedure.getName().equals("flush_metadata_cache"))
+                .collect(onlyElement());
         this.migrateHiveToIcebergProcedure = icebergConnector.getProcedures().stream()
                 .filter(procedure -> procedure.getName().equals("migrate"))
                 .collect(onlyElement());
@@ -193,6 +197,7 @@ public class ObjectStoreConnector
                 hudiMetadata,
                 tableProperties,
                 materializedViewProperties,
+                flushMetadataCache,
                 migrateHiveToIcebergProcedure,
                 hiveRecursiveDirWalkerEnabled);
     }
