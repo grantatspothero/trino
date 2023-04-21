@@ -42,6 +42,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static io.airlift.configuration.ConfigurationAwareModule.combine;
 
 public final class InternalObjectStoreConnectorFactory
 {
@@ -58,7 +59,9 @@ public final class InternalObjectStoreConnectorFactory
                     catalogName,
                     filteredConfig(config, "HIVE"),
                     context,
-                    new GalaxyLocationSecurityModule());
+                    combine(
+                            new ConfigureCachingMetastoreModule(),
+                            new GalaxyLocationSecurityModule()));
 
             Map<String, String> icebergConfig = new HashMap<>(filteredConfig(config, "ICEBERG"));
             // The procedure is disabled in OSS because of security issues.
@@ -68,7 +71,9 @@ public final class InternalObjectStoreConnectorFactory
                     catalogName,
                     icebergConfig,
                     context,
-                    new GalaxyLocationSecurityModule(),
+                    combine(
+                            new ConfigureCachingMetastoreModule(),
+                            new GalaxyLocationSecurityModule()),
                     Optional.empty(),
                     Optional.empty());
 
@@ -82,14 +87,18 @@ public final class InternalObjectStoreConnectorFactory
                     context,
                     Optional.empty(),
                     Optional.empty(),
-                    new GalaxyLocationSecurityModule());
+                    combine(
+                            new ConfigureCachingMetastoreModule(),
+                            new GalaxyLocationSecurityModule()));
 
             Connector hudiConnector = InternalHudiConnectorFactory.createConnector(
                     catalogName,
                     filteredConfig(config, "HUDI"),
                     context,
                     Optional.empty(),
-                    Optional.of(new GalaxyLocationSecurityModule()));
+                    Optional.of(combine(
+                            new ConfigureCachingMetastoreModule(),
+                            new GalaxyLocationSecurityModule())));
 
             Bootstrap app = new Bootstrap(
                     connectorModule(ForHive.class, hiveConnector),
