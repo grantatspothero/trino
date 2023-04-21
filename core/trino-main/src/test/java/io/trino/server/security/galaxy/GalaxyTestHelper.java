@@ -68,7 +68,6 @@ public class GalaxyTestHelper
     public static final String PUBLIC = "public";
     public static final String FEARLESS_LEADER = "fearless_leader";
     public static final String LACKEY_FOLLOWER = "lackey_follower";
-    public static final String user = "dain@example.com";
 
     private GalaxyCockroachContainer cockroach;
     private TestingAccountFactory accountFactory;
