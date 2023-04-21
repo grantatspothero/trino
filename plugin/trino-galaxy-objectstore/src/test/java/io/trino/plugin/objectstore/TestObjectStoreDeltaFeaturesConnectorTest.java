@@ -187,6 +187,12 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
+    public void testAddRowField()
+    {
+        skipDuplicateTestCoverage("testAddRowField");
+    }
+
+    @Override
     public void testAggregation()
     {
         skipDuplicateTestCoverage("testAggregation");

@@ -734,6 +734,22 @@ public class ObjectStoreMetadata
     }
 
     @Override
+    public void addField(ConnectorSession session, ConnectorTableHandle tableHandle, List<String> parentPath, String fieldName, Type type, boolean ignoreExisting)
+    {
+        TableType tableType = tableType(tableHandle);
+        try {
+            delegate(tableType).addField(unwrap(tableType, session), tableHandle, parentPath, fieldName, type, ignoreExisting);
+        }
+        catch (TrinoException e) {
+            if (isError(e, NOT_SUPPORTED)) {
+                throw new TrinoException(NOT_SUPPORTED, "Adding fields to %s tables is not supported".formatted(tableType.displayName()), e);
+            }
+            throw e;
+        }
+        flushMetadataCache(tableName(tableHandle));
+    }
+
+    @Override
     public void setColumnType(ConnectorSession session, ConnectorTableHandle tableHandle, ColumnHandle column, Type type)
     {
         TableType tableType = tableType(tableHandle);
@@ -742,7 +758,7 @@ public class ObjectStoreMetadata
         }
         catch (TrinoException e) {
             if (isError(e, NOT_SUPPORTED) && "This connector does not support setting column types".equals(e.getMessage())) {
-                throw new TrinoException(NOT_SUPPORTED, "Adding columns to %s tables is not supported".formatted(tableType.displayName()), e);
+                throw new TrinoException(NOT_SUPPORTED, "Setting column type on %s tables is not supported".formatted(tableType.displayName()), e);
             }
             throw e;
         }

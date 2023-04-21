@@ -62,11 +62,13 @@ import static io.trino.testing.MaterializedResult.resultBuilder;
 import static io.trino.testing.TestingAccessControlManager.TestingPrivilegeType.DROP_TABLE;
 import static io.trino.testing.TestingAccessControlManager.privilege;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_ADD_COLUMN;
+import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_ADD_FIELD;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_CREATE_TABLE;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_CREATE_TABLE_WITH_DATA;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_CREATE_VIEW;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_RENAME_COLUMN;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_RENAME_TABLE;
+import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_ROW_TYPE;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_SET_COLUMN_TYPE;
 import static io.trino.testing.TestingConnectorSession.SESSION;
 import static io.trino.testing.TestingNames.randomNameSuffix;
@@ -859,9 +861,30 @@ public abstract class BaseObjectStoreConnectorTest
                     .hasMessageMatching("""
 
                             Expecting message:
-                              "Adding columns to .{4,10} tables is not supported"
+                              "Setting column type on .{4,10} tables is not supported"
                             to match regex:
                               "This connector does not support setting column types"
+                            but did not.
+                            (?s:.*)""");
+        }
+    }
+
+    @Override // ObjectStore supports this partially, so has non-standard error message
+    public void testAddRowField()
+    {
+        skipTestUnless(hasBehavior(SUPPORTS_CREATE_TABLE_WITH_DATA) && hasBehavior(SUPPORTS_ROW_TYPE));
+
+        if (hasBehavior(SUPPORTS_ADD_FIELD)) {
+            super.testAddRowField();
+        }
+        else {
+            assertThatThrownBy(super::testAddRowField)
+                    .hasMessageMatching("""
+
+                            Expecting message:
+                              "Adding fields to .{4,10} tables is not supported"
+                            to match regex:
+                              "This connector does not support adding fields"
                             but did not.
                             (?s:.*)""");
         }
