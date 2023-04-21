@@ -637,13 +637,13 @@ public class TestGalaxyMetadataApiSpec
 
                     withGrantedPrivilege(adminRoleId, catalogId, CREATE_SCHEMA, ALLOW, roleName, grantOption, () ->
                             assertThat(client.getEntityPrivileges(dispatchSession(roleId), catalogId))
-                                    .isEqualTo(new EntityPrivileges(ACCOUNT_ADMIN_ROLE, adminRoleId, true, ImmutableSet.of(new GalaxyPrivilegeInfo(CREATE_SCHEMA, grantOption)), ImmutableMap.of())));
+                                    .isEqualTo(new EntityPrivileges(ACCOUNT_ADMIN_ROLE, adminRoleId, true, ImmutableSet.of(new GalaxyPrivilegeInfo(CREATE_SCHEMA, grantOption)), ImmutableMap.of(), ImmutableList.of())));
 
                     // Test schema privileges
                     SchemaId schemaId = makeSchemaId(catalogId);
                     withGrantedPrivilege(adminRoleId, schemaId, CREATE_TABLE, ALLOW, roleName, grantOption, () ->
                             assertThat(client.getEntityPrivileges(dispatchSession(roleId), schemaId))
-                                    .isEqualTo(new EntityPrivileges(ACCOUNT_ADMIN_ROLE, adminRoleId, false, ImmutableSet.of(new GalaxyPrivilegeInfo(CREATE_TABLE, grantOption)), ImmutableMap.of())));
+                                    .isEqualTo(new EntityPrivileges(ACCOUNT_ADMIN_ROLE, adminRoleId, false, ImmutableSet.of(new GalaxyPrivilegeInfo(CREATE_TABLE, grantOption)), ImmutableMap.of(), ImmutableList.of())));
 
                     // Test table privileges
                     TableId tableId = makeTableId(schemaId);
@@ -652,7 +652,7 @@ public class TestGalaxyMetadataApiSpec
                                 assertThat(client.getEntityPrivileges(dispatchSession(roleId), tableId))
                                         .isEqualTo(new EntityPrivileges(ACCOUNT_ADMIN_ROLE, adminRoleId, false, ImmutableSet.of(
                                                 new GalaxyPrivilegeInfo(privilege, grantOption)),
-                                                ImmutableMap.of(privilege.name(), new ContentsVisibility(ALLOW, ImmutableSet.of())))));
+                                                ImmutableMap.of(privilege.name(), new ContentsVisibility(ALLOW, ImmutableSet.of())), ImmutableList.of())));
                     }
                 }
             });

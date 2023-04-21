@@ -13,6 +13,7 @@
  */
 package io.trino.server.security.galaxy;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
@@ -73,7 +74,7 @@ public class GalaxyIndexerTrinoSecurityApi
     @Override
     public EntityPrivileges getEntityPrivileges(DispatchSession session, RoleId roleId, EntityId entityId)
     {
-        return new EntityPrivileges(new RoleName("indexer"), roleId, false, ImmutableSet.of(), ImmutableMap.of(SELECT.name(), ALLOW_ALL));
+        return new EntityPrivileges(new RoleName("indexer"), roleId, false, ImmutableSet.of(), ImmutableMap.of(SELECT.name(), ALLOW_ALL), ImmutableList.of());
     }
 
     @Override
