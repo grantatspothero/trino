@@ -102,7 +102,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_UNSUPPORTED_FORMAT;
 import static io.trino.plugin.hive.HiveMetadata.MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE;
-import static io.trino.plugin.hudi.HudiErrorCode.HUDI_UNKNOWN_TABLE_TYPE;
 import static io.trino.plugin.objectstore.TableType.DELTA;
 import static io.trino.plugin.objectstore.TableType.HIVE;
 import static io.trino.plugin.objectstore.TableType.HUDI;
@@ -216,7 +215,7 @@ public class ObjectStoreMetadata
                         return hudiMetadata.getTableHandle(session, tableName);
                     }
                     catch (TrinoException e) {
-                        if (!isError(e, HUDI_UNKNOWN_TABLE_TYPE)) {
+                        if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
                             throw e;
                         }
                         deferredException = e;
