@@ -141,6 +141,7 @@ public class TestCachingHiveMetastore
                 .cacheTtl(new Duration(5, TimeUnit.MINUTES))
                 .refreshInterval(new Duration(1, TimeUnit.MINUTES))
                 .maximumSize(1000)
+                .cacheMissing(new CachingHiveMetastoreConfig().isCacheMissing())
                 .partitionCacheEnabled(true)
                 .build();
         statsCacheMetastore = CachingHiveMetastore.builder()
@@ -151,6 +152,7 @@ public class TestCachingHiveMetastore
                 .cacheTtl(new Duration(5, TimeUnit.MINUTES))
                 .refreshInterval(new Duration(1, TimeUnit.MINUTES))
                 .maximumSize(1000)
+                .cacheMissing(new CachingHiveMetastoreConfig().isCacheMissing())
                 .partitionCacheEnabled(true)
                 .build();
         stats = ((ThriftHiveMetastore) thriftHiveMetastore).getStats();
@@ -812,6 +814,7 @@ public class TestCachingHiveMetastore
                 .cacheTtl(new Duration(5, TimeUnit.MINUTES))
                 .refreshInterval(new Duration(1, TimeUnit.MINUTES))
                 .maximumSize(1000)
+                .cacheMissing(new CachingHiveMetastoreConfig().isCacheMissing())
                 .partitionCacheEnabled(true)
                 .build();
     }
@@ -975,6 +978,7 @@ public class TestCachingHiveMetastore
                 .cacheTtl(new Duration(5, TimeUnit.MINUTES))
                 .refreshInterval(new Duration(1, TimeUnit.MINUTES))
                 .maximumSize(1000)
+                .cacheMissing(new CachingHiveMetastoreConfig().isCacheMissing())
                 .partitionCacheEnabled(true)
                 .build();
 
@@ -1115,6 +1119,7 @@ public class TestCachingHiveMetastore
                     .cacheTtl(new Duration(5, TimeUnit.MINUTES))
                     .refreshInterval(new Duration(1, TimeUnit.MINUTES))
                     .maximumSize(1000)
+                    .cacheMissing(true)
                     .partitionCacheEnabled(false)
                     .build();
         }
@@ -1167,6 +1172,7 @@ public class TestCachingHiveMetastore
                 .cacheTtl(config.getMetastoreCacheTtl())
                 .refreshInterval(config.getMetastoreRefreshInterval())
                 .maximumSize(config.getMetastoreCacheMaximumSize())
+                .cacheMissing(config.isCacheMissing())
                 .partitionCacheEnabled(config.isPartitionCacheEnabled())
                 .build();
     }
