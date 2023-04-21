@@ -299,6 +299,7 @@ public class CachingHiveMetastore
             requireNonNull(statsCacheEnabled, "statsCacheEnabled is null");
             requireNonNull(delegate, "delegate not set");
             requireNonNull(maximumSize, "maximumSize not set");
+            requireNonNull(cacheMissing, "cacheMissing not set");
             return new CachingHiveMetastore(
                     delegate,
                     metadataCacheEnabled,
