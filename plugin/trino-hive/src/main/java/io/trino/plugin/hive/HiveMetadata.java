@@ -988,7 +988,7 @@ public class HiveMetadata
                 .collect(toImmutableList());
         checkPartitionTypesSupported(partitionColumns);
 
-        Optional<Path> targetPath;
+        Optional<Location> targetPath;
         boolean external;
         String externalLocation = getExternalLocation(tableMetadata.getProperties());
         if (externalLocation != null) {
@@ -998,8 +998,8 @@ public class HiveMetadata
             }
 
             external = true;
-            targetPath = Optional.of(getExternalLocationAsPath(externalLocation));
-            checkExternalPath(new HdfsContext(session), targetPath.get());
+            targetPath = Optional.of(getValidatedExternalLocation(externalLocation));
+            checkExternalPath(new HdfsContext(session), new Path(targetPath.get().toString()));
         }
         else {
             external = false;
@@ -1246,10 +1246,10 @@ public class HiveMetadata
         }
     }
 
-    private static Path getExternalLocationAsPath(String location)
+    private static Location getValidatedExternalLocation(String location)
     {
         try {
-            return new Path(location);
+            return Location.of(location);
         }
         catch (IllegalArgumentException e) {
             throw new TrinoException(INVALID_TABLE_PROPERTY, "External location is not a valid file system URI: " + location, e);
@@ -1288,7 +1288,7 @@ public class HiveMetadata
             List<String> partitionedBy,
             Optional<HiveBucketProperty> bucketProperty,
             Map<String, String> additionalTableParameters,
-            Optional<Path> targetPath,
+            Optional<Location> targetPath,
             boolean external,
             String prestoVersion,
             boolean usingSystemSecurity)
@@ -1579,8 +1579,8 @@ public class HiveMetadata
     @Override
     public HiveOutputTableHandle beginCreateTable(ConnectorSession session, ConnectorTableMetadata tableMetadata, Optional<ConnectorTableLayout> layout, RetryMode retryMode)
     {
-        Optional<Path> externalLocation = Optional.ofNullable(getExternalLocation(tableMetadata.getProperties()))
-                .map(HiveMetadata::getExternalLocationAsPath);
+        Optional<Location> externalLocation = Optional.ofNullable(getExternalLocation(tableMetadata.getProperties()))
+                .map(HiveMetadata::getValidatedExternalLocation);
         externalLocation.ifPresent(location -> locationAccessControl.checkCanUseLocation(session.getIdentity(), location.toString()));
         if (!createsOfNonManagedTablesEnabled && externalLocation.isPresent()) {
             throw new TrinoException(NOT_SUPPORTED, "Creating non-managed Hive tables is disabled");
@@ -1668,7 +1668,7 @@ public class HiveMetadata
                 retryMode != NO_RETRIES);
 
         WriteInfo writeInfo = locationService.getQueryWriteInfo(locationHandle);
-        metastore.declareIntentionToWrite(session, writeInfo.getWriteMode(), writeInfo.getWritePath(), schemaTableName);
+        metastore.declareIntentionToWrite(session, writeInfo.writeMode(), writeInfo.writePath(), schemaTableName);
 
         return result;
     }
@@ -1694,7 +1694,7 @@ public class HiveMetadata
                 handle.getPartitionedBy(),
                 handle.getBucketProperty(),
                 handle.getAdditionalTableParameters(),
-                Optional.of(writeInfo.getTargetPath()),
+                Optional.of(writeInfo.targetPath()),
                 handle.isExternal(),
                 prestoVersion,
                 accessControlMetadata.isUsingSystemSecurity());
@@ -1739,6 +1739,7 @@ public class HiveMetadata
             tableStatistics = new PartitionStatistics(createEmptyStatistics(), ImmutableMap.of());
         }
 
+        Optional<Path> writePath = Optional.of(new Path(writeInfo.writePath().toString()));
         if (handle.getPartitionedBy().isEmpty()) {
             List<String> fileNames;
             if (partitionUpdates.isEmpty()) {
@@ -1748,10 +1749,10 @@ public class HiveMetadata
             else {
                 fileNames = getOnlyElement(partitionUpdates).getFileNames();
             }
-            metastore.createTable(session, table, principalPrivileges, Optional.of(writeInfo.getWritePath()), Optional.of(fileNames), false, tableStatistics, handle.isRetriesEnabled());
+            metastore.createTable(session, table, principalPrivileges, writePath, Optional.of(fileNames), false, tableStatistics, handle.isRetriesEnabled());
         }
         else {
-            metastore.createTable(session, table, principalPrivileges, Optional.of(writeInfo.getWritePath()), Optional.empty(), false, tableStatistics, false);
+            metastore.createTable(session, table, principalPrivileges, writePath, Optional.empty(), false, tableStatistics, false);
         }
 
         if (!handle.getPartitionedBy().isEmpty()) {
@@ -1974,7 +1975,7 @@ public class HiveMetadata
 
         LocationHandle locationHandle = locationService.forExistingTable(metastore, session, table);
         WriteInfo writeInfo = locationService.getQueryWriteInfo(locationHandle);
-        metastore.finishMerge(session, table.getDatabaseName(), table.getTableName(), writeInfo.getWritePath(), partitionMergeResults, partitions);
+        metastore.finishMerge(session, table.getDatabaseName(), table.getTableName(), writeInfo.writePath(), partitionMergeResults, partitions);
     }
 
     @Override
@@ -2045,7 +2046,7 @@ public class HiveMetadata
 
         WriteInfo writeInfo = locationService.getQueryWriteInfo(locationHandle);
         if (getInsertExistingPartitionsBehavior(session) == InsertExistingPartitionsBehavior.OVERWRITE
-                && writeInfo.getWriteMode() == DIRECT_TO_TARGET_EXISTING_DIRECTORY) {
+                && writeInfo.writeMode() == DIRECT_TO_TARGET_EXISTING_DIRECTORY) {
             if (isTransactional) {
                 throw new TrinoException(NOT_SUPPORTED, "Overwriting existing partition in transactional tables doesn't support DIRECT_TO_TARGET_EXISTING_DIRECTORY write mode");
             }
@@ -2055,7 +2056,7 @@ public class HiveMetadata
                 throw new TrinoException(NOT_SUPPORTED, "Overwriting existing partition in non auto commit context doesn't support DIRECT_TO_TARGET_EXISTING_DIRECTORY write mode");
             }
         }
-        metastore.declareIntentionToWrite(session, writeInfo.getWriteMode(), writeInfo.getWritePath(), tableName);
+        metastore.declareIntentionToWrite(session, writeInfo.writeMode(), writeInfo.writePath(), tableName);
         return result;
     }
 
@@ -2426,7 +2427,7 @@ public class HiveMetadata
         HiveTableHandle hiveSourceTableHandle = (HiveTableHandle) sourceTableHandle;
 
         WriteInfo writeInfo = locationService.getQueryWriteInfo(hiveExecuteHandle.getLocationHandle());
-        String writeDeclarationId = metastore.declareIntentionToWrite(session, writeInfo.getWriteMode(), writeInfo.getWritePath(), hiveExecuteHandle.getSchemaTableName());
+        String writeDeclarationId = metastore.declareIntentionToWrite(session, writeInfo.writeMode(), writeInfo.writePath(), hiveExecuteHandle.getSchemaTableName());
 
         return new BeginTableExecuteResult<>(
                 hiveExecuteHandle
