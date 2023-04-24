@@ -374,7 +374,7 @@ public class ObjectStoreMetadata
     public void createMaterializedView(ConnectorSession session, SchemaTableName viewName, ConnectorMaterializedViewDefinition definition, boolean replace, boolean ignoreExisting)
     {
         icebergMetadata.createMaterializedView(unwrap(ICEBERG, session), viewName, withProperties(definition, materializedViewProperties.addIcebergPropertyOverrides(definition.getProperties())), replace, ignoreExisting);
-        flushMetadataCache(session, viewName);
+        flushMetadataCache(viewName);
     }
 
     @Override
@@ -383,11 +383,11 @@ public class ObjectStoreMetadata
         ConnectorSession icebergSession = unwrap(ICEBERG, session);
         Optional<ConnectorMaterializedViewDefinition> materializedView = icebergMetadata.getMaterializedView(icebergSession, viewName);
         icebergMetadata.dropMaterializedView(icebergSession, viewName);
-        flushMetadataCache(session, viewName);
+        flushMetadataCache(viewName);
         materializedView
                 .flatMap(ConnectorMaterializedViewDefinition::getStorageTable)
                 .map(CatalogSchemaTableName::getSchemaTableName)
-                .ifPresent(storageTable -> flushMetadataCache(session, storageTable));
+                .ifPresent(storageTable -> flushMetadataCache(storageTable));
     }
 
     @Override
@@ -419,15 +419,15 @@ public class ObjectStoreMetadata
     public void renameMaterializedView(ConnectorSession session, SchemaTableName source, SchemaTableName target)
     {
         icebergMetadata.renameMaterializedView(unwrap(ICEBERG, session), source, target);
-        flushMetadataCache(session, source);
-        flushMetadataCache(session, target);
+        flushMetadataCache(source);
+        flushMetadataCache(target);
     }
 
     @Override
     public void setMaterializedViewProperties(ConnectorSession session, SchemaTableName viewName, Map<String, Optional<Object>> properties)
     {
         icebergMetadata.setMaterializedViewProperties(unwrap(ICEBERG, session), viewName, properties);
-        flushMetadataCache(session, viewName);
+        flushMetadataCache(viewName);
     }
 
     @Override
@@ -531,21 +531,21 @@ public class ObjectStoreMetadata
     public void createSchema(ConnectorSession session, String schemaName, Map<String, Object> properties, TrinoPrincipal owner)
     {
         hiveMetadata.createSchema(unwrap(HIVE, session), schemaName, properties, owner);
-        flushMetadataCache(session);
+        flushMetadataCache();
     }
 
     @Override
     public void dropSchema(ConnectorSession session, String schemaName)
     {
         hiveMetadata.dropSchema(unwrap(HIVE, session), schemaName);
-        flushMetadataCache(session);
+        flushMetadataCache();
     }
 
     @Override
     public void renameSchema(ConnectorSession session, String source, String target)
     {
         hiveMetadata.renameSchema(unwrap(HIVE, session), source, target);
-        flushMetadataCache(session);
+        flushMetadataCache();
     }
 
     @Override
@@ -560,7 +560,7 @@ public class ObjectStoreMetadata
         }
         tableMetadata = unwrap(tableType, tableMetadata);
         delegate(tableType).createTable(unwrap(tableType, session), tableMetadata, ignoreExisting);
-        flushMetadataCache(session, tableMetadata.getTable());
+        flushMetadataCache(tableMetadata.getTable());
     }
 
     @Override
@@ -571,7 +571,7 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "Dropping Hudi tables is not supported");
         }
         delegate(tableType).dropTable(unwrap(tableType, session), tableHandle);
-        flushMetadataCache(session, tableName(tableHandle));
+        flushMetadataCache(tableName(tableHandle));
     }
 
     @Override
@@ -579,7 +579,7 @@ public class ObjectStoreMetadata
     {
         TableType tableType = tableType(tableHandle);
         delegate(tableType).truncateTable(unwrap(tableType, session), tableHandle);
-        flushMetadataCache(session, tableName(tableHandle));
+        flushMetadataCache(tableName(tableHandle));
     }
 
     @Override
@@ -590,8 +590,8 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "Renaming Hudi tables is not supported");
         }
         delegate(tableType).renameTable(unwrap(tableType, session), tableHandle, newTableName);
-        flushMetadataCache(session, tableName(tableHandle));
-        flushMetadataCache(session, newTableName);
+        flushMetadataCache(tableName(tableHandle));
+        flushMetadataCache(newTableName);
     }
 
     @Override
@@ -605,7 +605,7 @@ public class ObjectStoreMetadata
             TableType newTableType = (TableType) properties.get("type")
                     .orElseThrow(() -> new IllegalArgumentException("The type property cannot be empty"));
             migrateTable(session, tableHandle, newTableType);
-            flushMetadataCache(session, tableName(tableHandle));
+            flushMetadataCache(tableName(tableHandle));
             return;
         }
 
@@ -615,7 +615,7 @@ public class ObjectStoreMetadata
         properties = nullableProperties.entrySet().stream()
                 .collect(toImmutableMap(Map.Entry::getKey, entry -> Optional.ofNullable(entry.getValue())));
         delegate(tableType).setTableProperties(unwrap(tableType, session), tableHandle, properties);
-        flushMetadataCache(session, tableName(tableHandle));
+        flushMetadataCache(tableName(tableHandle));
     }
 
     private void migrateTable(ConnectorSession session, ConnectorTableHandle tableHandle, TableType newTableType)
@@ -643,7 +643,7 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "Setting comments for Hudi tables is not supported");
         }
         delegate(tableType).setTableComment(unwrap(tableType, session), tableHandle, comment);
-        flushMetadataCache(session, tableName(tableHandle));
+        flushMetadataCache(tableName(tableHandle));
     }
 
     @Override
@@ -654,7 +654,7 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "Setting column comments in Hudi tables is not supported");
         }
         delegate(tableType).setColumnComment(unwrap(tableType, session), tableHandle, column, comment);
-        flushMetadataCache(session, tableName(tableHandle));
+        flushMetadataCache(tableName(tableHandle));
     }
 
     @Override
@@ -668,7 +668,7 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "%s tables do not support NOT NULL columns".formatted(tableType.displayName()));
         }
         delegate(tableType).addColumn(unwrap(tableType, session), tableHandle, column);
-        flushMetadataCache(session, tableName(tableHandle));
+        flushMetadataCache(tableName(tableHandle));
     }
 
     @Override
@@ -684,7 +684,7 @@ public class ObjectStoreMetadata
             }
             throw e;
         }
-        flushMetadataCache(session, tableName(tableHandle));
+        flushMetadataCache(tableName(tableHandle));
     }
 
     @Override
@@ -695,7 +695,7 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "Renaming columns in Hudi tables is not supported");
         }
         delegate(tableType).renameColumn(unwrap(tableType, session), tableHandle, source, target);
-        flushMetadataCache(session, tableName(tableHandle));
+        flushMetadataCache(tableName(tableHandle));
     }
 
     @Override
@@ -706,7 +706,7 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "Dropping columns from Hudi tables is not supported");
         }
         delegate(tableType).dropColumn(unwrap(tableType, session), tableHandle, column);
-        flushMetadataCache(session, tableName(tableHandle));
+        flushMetadataCache(tableName(tableHandle));
     }
 
     @Override
@@ -720,7 +720,7 @@ public class ObjectStoreMetadata
             }
         }
         delegate(tableType).dropField(unwrap(tableType, session), tableHandle, column, fieldPath);
-        flushMetadataCache(session, tableName(tableHandle));
+        flushMetadataCache(tableName(tableHandle));
     }
 
     @Override
@@ -791,7 +791,7 @@ public class ObjectStoreMetadata
     {
         TableType tableType = tableType(outputHandle);
         Optional<ConnectorOutputMetadata> outputMetadata = delegate(tableType).finishCreateTable(unwrap(tableType, session), outputHandle, fragments, computedStatistics);
-        flushMetadataCache(session, tableName(outputHandle));
+        flushMetadataCache(tableName(outputHandle));
         return outputMetadata;
     }
 
@@ -870,36 +870,36 @@ public class ObjectStoreMetadata
     public void createView(ConnectorSession session, SchemaTableName viewName, ConnectorViewDefinition definition, boolean replace)
     {
         hiveMetadata.createView(unwrap(HIVE, session), viewName, definition, replace);
-        flushMetadataCache(session, viewName);
+        flushMetadataCache(viewName);
     }
 
     @Override
     public void renameView(ConnectorSession session, SchemaTableName source, SchemaTableName target)
     {
         hiveMetadata.renameView(unwrap(HIVE, session), source, target);
-        flushMetadataCache(session, source);
-        flushMetadataCache(session, target);
+        flushMetadataCache(source);
+        flushMetadataCache(target);
     }
 
     @Override
     public void dropView(ConnectorSession session, SchemaTableName viewName)
     {
         hiveMetadata.dropView(unwrap(HIVE, session), viewName);
-        flushMetadataCache(session, viewName);
+        flushMetadataCache(viewName);
     }
 
     @Override
     public void setViewComment(ConnectorSession session, SchemaTableName viewName, Optional<String> comment)
     {
         hiveMetadata.setViewComment(unwrap(HIVE, session), viewName, comment);
-        flushMetadataCache(session, viewName);
+        flushMetadataCache(viewName);
     }
 
     @Override
     public void setViewColumnComment(ConnectorSession session, SchemaTableName viewName, String columnName, Optional<String> comment)
     {
         hiveMetadata.setViewColumnComment(unwrap(HIVE, session), viewName, columnName, comment);
-        flushMetadataCache(session, viewName);
+        flushMetadataCache(viewName);
     }
 
     @Override
@@ -1028,10 +1028,10 @@ public class ObjectStoreMetadata
         return delegate(tableType(tableHandle)).getCacheColumnId(tableHandle, columnHandle);
     }
 
-    private void flushMetadataCache(ConnectorSession session)
+    private void flushMetadataCache()
     {
         try {
-            flushMetadataCache.getMethodHandle().invoke(session, null, null, null, null, null, null);
+            flushMetadataCache.getMethodHandle().invoke(null, null, null, null, null, null);
         }
         catch (TrinoException | Error e) {
             throw e;
@@ -1041,10 +1041,10 @@ public class ObjectStoreMetadata
         }
     }
 
-    private void flushMetadataCache(ConnectorSession session, SchemaTableName table)
+    private void flushMetadataCache(SchemaTableName table)
     {
         try {
-            flushMetadataCache.getMethodHandle().invoke(session, table.getSchemaName(), table.getTableName(), null, null, null, null);
+            flushMetadataCache.getMethodHandle().invoke(table.getSchemaName(), table.getTableName(), null, null, null, null);
         }
         catch (TrinoException | Error e) {
             throw e;

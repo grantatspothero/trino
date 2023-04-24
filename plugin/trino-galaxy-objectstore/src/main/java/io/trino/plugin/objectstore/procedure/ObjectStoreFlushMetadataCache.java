@@ -21,11 +21,9 @@ import io.trino.plugin.objectstore.ForDelta;
 import io.trino.plugin.objectstore.ForHive;
 import io.trino.plugin.objectstore.ForHudi;
 import io.trino.plugin.objectstore.ForIceberg;
-import io.trino.plugin.objectstore.ObjectStoreSessionProperties;
 import io.trino.spi.TrinoException;
 import io.trino.spi.classloader.ThreadContextClassLoader;
 import io.trino.spi.connector.Connector;
-import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.TableNotFoundException;
 import io.trino.spi.procedure.Procedure;
 import io.trino.spi.type.ArrayType;
@@ -42,11 +40,9 @@ import static com.google.common.base.Throwables.throwIfUnchecked;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.Maps.uniqueIndex;
 import static com.google.common.collect.MoreCollectors.onlyElement;
-import static io.trino.plugin.objectstore.TableType.DELTA;
 import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.trino.spi.type.VarcharType.VARCHAR;
 import static java.lang.invoke.MethodHandles.lookup;
-import static java.util.Objects.requireNonNull;
 
 public final class ObjectStoreFlushMetadataCache
         implements Provider<Procedure>
@@ -66,7 +62,7 @@ public final class ObjectStoreFlushMetadataCache
     static {
         try {
             FLUSH_METADATA_CACHE = lookup().unreflect(ObjectStoreFlushMetadataCache.class.getMethod(
-                    "flushMetadataCache", ConnectorSession.class, String.class, String.class, List.class, List.class, List.class, List.class));
+                    "flushMetadataCache", String.class, String.class, List.class, List.class, List.class, List.class));
         }
         catch (ReflectiveOperationException e) {
             throw new TrinoException(GENERIC_INTERNAL_ERROR, e);
@@ -75,15 +71,13 @@ public final class ObjectStoreFlushMetadataCache
 
     private final Procedure hiveFlushMetadata;
     private final Procedure deltaFlushMetadata;
-    private final ObjectStoreSessionProperties sessionProperties;
 
     @Inject
     public ObjectStoreFlushMetadataCache(
             @ForHive Connector hiveConnector,
             @ForIceberg Connector icebergConnector,
             @ForDelta Connector deltaConnector,
-            @ForHudi Connector hudiConnector,
-            ObjectStoreSessionProperties sessionProperties)
+            @ForHudi Connector hudiConnector)
     {
         this.hiveFlushMetadata = hiveConnector.getProcedures().stream()
                 .filter(procedure -> procedure.getName().equals(PROCEDURE_NAME))
@@ -104,8 +98,6 @@ public final class ObjectStoreFlushMetadataCache
                         .noneMatch(procedure -> procedure.getName().equals(PROCEDURE_NAME)),
                 "Unexpected %s procedure in Hudi",
                 PROCEDURE_NAME);
-
-        this.sessionProperties = requireNonNull(sessionProperties, "sessionProperties is null");
     }
 
     @Override
@@ -145,7 +137,6 @@ public final class ObjectStoreFlushMetadataCache
     }
 
     public void flushMetadataCache(
-            ConnectorSession session,
             @Nullable String schemaName,
             @Nullable String tableName,
             @Nullable List<String> partitionColumns,
@@ -157,7 +148,7 @@ public final class ObjectStoreFlushMetadataCache
             // hiveFlushMetadata needs to be invoked regardless of table type, since it flushes also table listings
             hiveFlushMetadata.getMethodHandle().invoke(schemaName, tableName, partitionColumns, partitionValues, partitionColumn, partitionValue);
             try {
-                deltaFlushMetadata.getMethodHandle().invoke(sessionProperties.unwrap(DELTA, session), schemaName, tableName);
+                deltaFlushMetadata.getMethodHandle().invoke(schemaName, tableName);
             }
             catch (NotADeltaLakeTableException ignore) {
                 // Sure, we didn't check whether this is a Delta table.
