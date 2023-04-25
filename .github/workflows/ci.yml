@@ -120,6 +120,13 @@ jobs:
       - uses: docker/setup-buildx-action@v1
       - name: Build and Push Docker Images
         run: .github/bin/docker-build-and-push.sh -t "${IMAGE_TAG}" -p
+      - name: Tag release commit
+        if: github.event_name == 'push'
+        run: |
+          git config user.name 'Galaxy Trino Automation'
+          git config user.email ''
+          git tag -m '' "${IMAGE_TAG}" HEAD
+          git push origin "${IMAGE_TAG}"
 
   maven-checks:
     runs-on: ubuntu-latest
