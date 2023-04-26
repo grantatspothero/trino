@@ -16,8 +16,10 @@ package io.trino.plugin.objectstore;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigHidden;
+import io.starburst.stargate.id.CatalogId;
 
 import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
 
 import java.net.URI;
 
@@ -25,6 +27,7 @@ public class GalaxySecurityConfig
 {
     private boolean enabled = true;
     private URI accountUri;
+    private CatalogId catalogId;
 
     public boolean isEnabled()
     {
@@ -50,6 +53,20 @@ public class GalaxySecurityConfig
     public GalaxySecurityConfig setAccountUri(URI accountUri)
     {
         this.accountUri = accountUri;
+        return this;
+    }
+
+    @NotNull
+    public CatalogId getCatalogId()
+    {
+        return catalogId;
+    }
+
+    @CanIgnoreReturnValue
+    @Config("galaxy.catalog-id")
+    public GalaxySecurityConfig setCatalogId(CatalogId catalogId)
+    {
+        this.catalogId = catalogId;
         return this;
     }
 }

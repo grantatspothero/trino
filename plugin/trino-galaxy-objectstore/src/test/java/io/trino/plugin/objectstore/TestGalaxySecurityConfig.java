@@ -14,6 +14,7 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableMap;
+import io.starburst.stargate.id.CatalogId;
 import org.testng.annotations.Test;
 
 import java.net.URI;
@@ -30,7 +31,8 @@ public class TestGalaxySecurityConfig
     {
         assertRecordedDefaults(recordDefaults(GalaxySecurityConfig.class)
                 .setEnabled(true)
-                .setAccountUri(null));
+                .setAccountUri(null)
+                .setCatalogId(null));
     }
 
     @Test
@@ -39,11 +41,13 @@ public class TestGalaxySecurityConfig
         Map<String, String> properties = ImmutableMap.<String, String>builder()
                 .put("galaxy.location-security.enabled", "false")
                 .put("galaxy.account-url", "https://whackadoodle.galaxy.com")
+                .put("galaxy.catalog-id", "c-1234567890")
                 .buildOrThrow();
 
         GalaxySecurityConfig expected = new GalaxySecurityConfig()
                 .setEnabled(false)
-                .setAccountUri(URI.create("https://whackadoodle.galaxy.com"));
+                .setAccountUri(URI.create("https://whackadoodle.galaxy.com"))
+                .setCatalogId(new CatalogId("c-1234567890"));
 
         assertFullMapping(properties, expected);
     }

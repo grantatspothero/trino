@@ -70,7 +70,14 @@ public class TestObjectStoreIcebergConnectorMaterializedView
         schemaDirectory = minio.getS3Url() + "/" + storageSchemaName;
         TestingGalaxyMetastore metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyTestHelper.getCockroach()));
 
-        Map<String, String> properties = createObjectStoreProperties(ICEBERG, locationSecurityServer.getClientConfig(), metastore.getMetastoreConfig(minio.getS3Url()), minio.getHiveS3Config());
+        Map<String, String> properties = createObjectStoreProperties(
+                ICEBERG,
+                ImmutableMap.<String, String>builder()
+                        .putAll(locationSecurityServer.getClientConfig())
+                        .put("galaxy.catalog-id", "c-1234567890")
+                        .buildOrThrow(),
+                metastore.getMetastoreConfig(minio.getS3Url()),
+                minio.getHiveS3Config());
         DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder(TEST_CATALOG, "default")
                 .setAccountClient(galaxyTestHelper.getAccountClient())
                 .addPlugin(new IcebergPlugin())

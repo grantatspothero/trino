@@ -175,7 +175,10 @@ public final class ObjectStoreQueryRunner
             try {
                 Map<String, String> properties = createObjectStoreProperties(
                         tableType,
-                        locationSecurityServer.getClientConfig(),
+                        ImmutableMap.<String, String>builder()
+                                .putAll(locationSecurityServer.getClientConfig())
+                                .put("galaxy.catalog-id", accountClient.createCatalog("objectstore").getCatalogId().toString())
+                                .buildOrThrow(),
                         metastore != null
                                 ? metastore.getMetastoreConfig(s3Url)
                                 : Map.of(),

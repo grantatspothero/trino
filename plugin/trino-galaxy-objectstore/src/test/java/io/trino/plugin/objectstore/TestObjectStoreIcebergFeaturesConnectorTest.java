@@ -85,25 +85,30 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
                     .put("HIVE__hive.metastore.catalog.dir", metastoreDirectory)
                     .put("HIVE__galaxy.location-security.enabled", "false")
                     .put("HIVE__galaxy.account-url", "https://localhost:1234")
+                    .put("HIVE__galaxy.catalog-id", "c-1234567890")
                     // Iceberg
                     .put("ICEBERG__iceberg.catalog.type", "TESTING_FILE_METASTORE")
                     .put("ICEBERG__hive.metastore.catalog.dir", metastoreDirectory)
                     .put("ICEBERG__galaxy.location-security.enabled", "false")
                     .put("ICEBERG__galaxy.account-url", "https://localhost:1234")
+                    .put("ICEBERG__galaxy.catalog-id", "c-1234567890")
                     // Delta
                     .put("DELTA__hive.metastore", "file")
                     .put("DELTA__hive.metastore.catalog.dir", metastoreDirectory)
                     .put("DELTA__galaxy.location-security.enabled", "false")
                     .put("DELTA__galaxy.account-url", "https://localhost:1234")
+                    .put("DELTA__galaxy.catalog-id", "c-1234567890")
                     // Hudi
                     .put("HUDI__hive.metastore", "file")
                     .put("HUDI__hive.metastore.catalog.dir", metastoreDirectory)
                     .put("HUDI__galaxy.location-security.enabled", "false")
                     .put("HUDI__galaxy.account-url", "https://localhost:1234")
+                    .put("HUDI__galaxy.catalog-id", "c-1234567890")
                     // ObjectStore
                     .put("OBJECTSTORE__object-store.table-type", TableType.ICEBERG.name())
                     .put("OBJECTSTORE__galaxy.location-security.enabled", "false")
                     .put("OBJECTSTORE__galaxy.account-url", "https://localhost:1234")
+                    .put("OBJECTSTORE__galaxy.catalog-id", "c-1234567890")
                     .buildOrThrow());
 
             queryRunner.execute("CREATE SCHEMA %s.%s".formatted(catalog, schema));

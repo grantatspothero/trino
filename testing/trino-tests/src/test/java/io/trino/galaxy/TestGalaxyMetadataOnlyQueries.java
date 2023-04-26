@@ -13,6 +13,7 @@
  */
 package io.trino.galaxy;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
 import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.Request;
@@ -109,7 +110,10 @@ public class TestGalaxyMetadataOnlyQueries
 
         objectStoreProperties = createObjectStoreProperties(
                 TableType.HIVE,
-                locationSecurityServer.getClientConfig(),
+                ImmutableMap.<String, String>builder()
+                        .putAll(locationSecurityServer.getClientConfig())
+                        .put("galaxy.catalog-id", "c-1234567890")
+                        .buildOrThrow(),
                 metastore.getMetastoreConfig(minio.getS3Url()),
                 minio.getHiveS3Config(),
                 Map.of());

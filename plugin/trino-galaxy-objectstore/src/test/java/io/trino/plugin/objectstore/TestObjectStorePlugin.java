@@ -26,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 public class TestObjectStorePlugin
 {
     private static final String TESTING_ACCOUNT_URL = "https://whackadoodle.galaxy.com";
+    private static final String TESTING_CATALOG_ID = "c-1234567890";
 
     @Test
     public void testCreateConnector()
@@ -37,13 +38,18 @@ public class TestObjectStorePlugin
                         "test",
                         ImmutableMap.<String, String>builder()
                                 .put("OBJECTSTORE__galaxy.account-url", TESTING_ACCOUNT_URL)
+                                .put("OBJECTSTORE__galaxy.catalog-id", TESTING_CATALOG_ID)
                                 .put("HIVE__galaxy.account-url", TESTING_ACCOUNT_URL)
+                                .put("HIVE__galaxy.catalog-id", TESTING_CATALOG_ID)
                                 .put("HIVE__hive.metastore.uri", "thrift://foo:1234")
                                 .put("ICEBERG__galaxy.account-url", TESTING_ACCOUNT_URL)
+                                .put("ICEBERG__galaxy.catalog-id", TESTING_CATALOG_ID)
                                 .put("ICEBERG__hive.metastore.uri", "thrift://foo:1234")
                                 .put("DELTA__galaxy.account-url", TESTING_ACCOUNT_URL)
+                                .put("DELTA__galaxy.catalog-id", TESTING_CATALOG_ID)
                                 .put("DELTA__hive.metastore.uri", "thrift://foo:1234")
                                 .put("HUDI__galaxy.account-url", TESTING_ACCOUNT_URL)
+                                .put("HUDI__galaxy.catalog-id", TESTING_CATALOG_ID)
                                 .put("HUDI__hive.metastore.uri", "thrift://foo:1234")
                                 .buildOrThrow(),
                         new TestingConnectorContext())
@@ -59,16 +65,21 @@ public class TestObjectStorePlugin
                         "test",
                         ImmutableMap.<String, String>builder()
                                 .put("OBJECTSTORE__galaxy.account-url", TESTING_ACCOUNT_URL)
+                                .put("OBJECTSTORE__galaxy.catalog-id", TESTING_CATALOG_ID)
                                 .put("HIVE__galaxy.account-url", TESTING_ACCOUNT_URL)
+                                .put("HIVE__galaxy.catalog-id", TESTING_CATALOG_ID)
                                 .put("HIVE__hive.metastore", "glue")
                                 .put("HIVE__hive.metastore.glue.region", "us-east-2")
                                 .put("ICEBERG__galaxy.account-url", TESTING_ACCOUNT_URL)
+                                .put("ICEBERG__galaxy.catalog-id", TESTING_CATALOG_ID)
                                 .put("ICEBERG__iceberg.catalog.type", "glue")
                                 .put("ICEBERG__hive.metastore.glue.region", "us-east-2")
                                 .put("DELTA__galaxy.account-url", TESTING_ACCOUNT_URL)
+                                .put("DELTA__galaxy.catalog-id", TESTING_CATALOG_ID)
                                 .put("DELTA__hive.metastore", "glue")
                                 .put("DELTA__hive.metastore.glue.region", "us-east-2")
                                 .put("HUDI__galaxy.account-url", TESTING_ACCOUNT_URL)
+                                .put("HUDI__galaxy.catalog-id", TESTING_CATALOG_ID)
                                 .put("HUDI__hive.metastore", "glue")
                                 .buildOrThrow(),
                         new TestingConnectorContext())
@@ -94,6 +105,7 @@ public class TestObjectStorePlugin
                                 .put(key, value)
                                 .putAll(withAllTableTypes("hive.metastore.uri", "thrift://localhost:1234"))
                                 .putAll(withAllTableTypes("galaxy.account-url", "https://localhost:1234"))
+                                .putAll(withAllTableTypes("galaxy.catalog-id", "c-1234567890"))
                                 .buildOrThrow(),
                         new TestingConnectorContext()))
                 .hasMessageContaining(exceptionString);

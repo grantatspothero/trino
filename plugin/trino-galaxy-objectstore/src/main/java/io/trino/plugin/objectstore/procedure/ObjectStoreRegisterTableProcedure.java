@@ -14,6 +14,8 @@
 package io.trino.plugin.objectstore.procedure;
 
 import com.google.common.collect.ImmutableList;
+import io.starburst.stargate.id.CatalogId;
+import io.starburst.stargate.id.TableId;
 import io.trino.filesystem.TrinoFileSystem;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.deltalake.transactionlog.TransactionLogUtil;
@@ -21,6 +23,8 @@ import io.trino.plugin.hive.LocationAccessControl;
 import io.trino.plugin.iceberg.IcebergUtil;
 import io.trino.plugin.objectstore.ForDelta;
 import io.trino.plugin.objectstore.ForIceberg;
+import io.trino.plugin.objectstore.GalaxySecurityConfig;
+import io.trino.plugin.objectstore.TrinoSecurityControl;
 import io.trino.spi.TrinoException;
 import io.trino.spi.classloader.ThreadContextClassLoader;
 import io.trino.spi.connector.Connector;
@@ -38,6 +42,7 @@ import java.util.stream.Stream;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.MoreCollectors.onlyElement;
 import static io.trino.plugin.base.util.Procedures.checkProcedureArgument;
+import static io.trino.plugin.objectstore.GalaxyIdentity.toDispatchSession;
 import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.type.VarcharType.VARCHAR;
@@ -71,6 +76,8 @@ public final class ObjectStoreRegisterTableProcedure
 
     private final ClassLoader classLoader;
     private final LocationAccessControl locationAccessControl;
+    private final TrinoSecurityControl securityControl;
+    private final CatalogId catalogId;
     private final TrinoFileSystemFactory fileSystemFactory;
     private final Procedure icebergRegisterTable;
     private final Procedure deltaRegisterTable;
@@ -79,12 +86,16 @@ public final class ObjectStoreRegisterTableProcedure
     public ObjectStoreRegisterTableProcedure(
             TrinoFileSystemFactory fileSystemFactory,
             LocationAccessControl locationAccessControl,
+            TrinoSecurityControl securityControl,
+            GalaxySecurityConfig securityConfig,
             @ForIceberg Connector icebergConnector,
             @ForDelta Connector deltaConnector)
     {
         this.classLoader = getClass().getClassLoader();
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.locationAccessControl = requireNonNull(locationAccessControl, "locationAccessControl is null");
+        this.securityControl = requireNonNull(securityControl, "securityControl is null");
+        this.catalogId = securityConfig.getCatalogId();
         this.icebergRegisterTable = icebergConnector.getProcedures().stream()
                 .filter(procedure -> procedure.getName().equals("register_table"))
                 .collect(onlyElement());
@@ -131,10 +142,13 @@ public final class ObjectStoreRegisterTableProcedure
 
             if (isIcebergTable) {
                 icebergRegisterTable.getMethodHandle().invoke(session, schemaName, tableName, tableLocation, metadataFileName);
+                // TODO https://github.com/starburstdata/team-lakehouse/issues/213 Move the following TrinoSecurityApi.entityCreated to Iceberg connector considering Tabular integration
+                securityControl.entityCreated(toDispatchSession(session.getIdentity()), new TableId(catalogId, schemaName, tableName));
             }
             else if (isDeltaLakeTable) {
                 checkProcedureArgument(metadataFileName == null, "Unsupported metadata_file_name argument for Delta Lake table");
                 deltaRegisterTable.getMethodHandle().invoke(session, schemaName, tableName, tableLocation);
+                securityControl.entityCreated(toDispatchSession(session.getIdentity()), new TableId(catalogId, schemaName, tableName));
             }
             else if (isHudiTable) {
                 throw new TrinoException(NOT_SUPPORTED, "Registering Hudi tables is unsupported");
