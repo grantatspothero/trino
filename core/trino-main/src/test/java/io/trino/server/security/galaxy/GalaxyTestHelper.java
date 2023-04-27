@@ -88,7 +88,7 @@ public class GalaxyTestHelper
     {
         cockroach = new GalaxyCockroachContainer();
         accountFactory = createTestingAccountFactory(() -> cockroach);
-        accountClient = accountFactory.createAccount();
+        accountClient = accountFactory.createAccountClient();
 
         // creating auth keys is very slow so cache them
         // todo figure out why this is slow

@@ -106,7 +106,7 @@ public class TestGalaxyMetadataOnlyQueries
 
         TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> true));
         TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> galaxyCockroachContainer));
-        testingAccountClient = testingAccountFactory.createAccount();
+        testingAccountClient = testingAccountFactory.createAccountClient();
 
         objectStoreProperties = createObjectStoreProperties(
                 TableType.HIVE,

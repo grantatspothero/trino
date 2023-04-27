@@ -90,7 +90,7 @@ public class TestGalaxyQueries
     {
         TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> closeAfterClass(new GalaxyCockroachContainer())));
         QueryRunner queryRunner = GalaxyQueryRunner.builder("memory", "tiny")
-                .setAccountClient(testingAccountFactory.createAccount())
+                .setAccountClient(testingAccountFactory.createAccountClient())
                 .addPlugin(new TpchPlugin())
                 .addCatalog("tpch", "tpch", ImmutableMap.of())
                 .addPlugin(new MemoryPlugin())

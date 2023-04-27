@@ -115,7 +115,7 @@ public abstract class BaseObjectStoreConnectorTest
 
         DistributedQueryRunner queryRunner = ObjectStoreQueryRunner.builder()
                 .withTableType(tableType)
-                .withAccountClient(testingAccountFactory.createAccount())
+                .withAccountClient(testingAccountFactory.createAccountClient())
                 .withS3Url(minio.getS3Url())
                 .withHiveS3Config(minio.getHiveS3Config())
                 .withMetastore(metastore)

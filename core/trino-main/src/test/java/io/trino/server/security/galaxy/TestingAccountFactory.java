@@ -30,5 +30,5 @@ public interface TestingAccountFactory
         return new DockerTestingAccountFactory(cockroach.get());
     }
 
-    TestingAccountClient createAccount();
+    TestingAccountClient createAccountClient();
 }

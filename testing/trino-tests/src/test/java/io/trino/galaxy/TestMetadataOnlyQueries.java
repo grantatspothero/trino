@@ -107,7 +107,7 @@ public class TestMetadataOnlyQueries
                         .setMetastoreUser("test"));
 
         TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> closeAfterClass(new GalaxyCockroachContainer())));
-        testingAccountClient = testingAccountFactory.createAccount();
+        testingAccountClient = testingAccountFactory.createAccountClient();
 
         closeAfterClass(() -> {
             deleteRecursively(baseDir.toPath(), ALLOW_INSECURE);

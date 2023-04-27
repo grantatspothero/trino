@@ -59,7 +59,7 @@ public final class LaunchGalaxyQueryRunner
 
         // There is a docker version available also
         TestingAccountFactory testingAccountFactory = new IdeTestingAccountFactory();
-        TestingAccountClient account = testingAccountFactory.createAccount();
+        TestingAccountClient account = testingAccountFactory.createAccountClient();
         DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder("memory", "tiny")
                 .setExtraProperties(ImmutableMap.of("http-server.http.port", "8080"))
                 .addPlugin(new TpchPlugin())

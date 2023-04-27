@@ -110,7 +110,7 @@ public class DockerTestingAccountFactory
     }
 
     @Override
-    public TestingAccountClient createAccount()
+    public TestingAccountClient createAccountClient()
     {
         return testingPortalClient.createAccount();
     }

@@ -65,7 +65,7 @@ public class TestObjectStoreHiveOnDataLake
                 .withCatalogName("hive")
                 .withSchemaName("tpch") // as in superclass. Doesn't matter as HIVE_TEST_SCHEMA is used for test tables.
                 .withTableType(TableType.HIVE)
-                .withAccountClient(testingAccountFactory.createAccount())
+                .withAccountClient(testingAccountFactory.createAccountClient())
                 .withHiveS3Config(ImmutableMap.<String, String>builder()
                         .put("hive.s3.aws-access-key", MINIO_ACCESS_KEY)
                         .put("hive.s3.aws-secret-key", MINIO_SECRET_KEY)
