@@ -432,6 +432,12 @@ public class ObjectStoreMetadata
     }
 
     @Override
+    public SchemaTableName getTableName(ConnectorSession session, ConnectorTableHandle tableHandle)
+    {
+        return delegate(tableHandle).getTableName(session, tableHandle);
+    }
+
+    @Override
     public ConnectorTableSchema getTableSchema(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
         return delegate(tableHandle).getTableSchema(session, tableHandle);
