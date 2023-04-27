@@ -198,46 +198,9 @@
                 </excludes>
             </testResource>
         </testResources>
-
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <configuration>
-                        <dependenciesToScan>
-                            <dependency>com.starburstdata.trino.plugins:starburst-synapse:test-jar</dependency>
-                        </dependenciesToScan>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </pluginManagement>
     </build>
 
     <profiles>
-        <profile>
-            <id>default</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <threadCount>4</threadCount>
-                            <excludes>
-                                <exclude>**/TestSynapseTypeMapping.java</exclude>
-                                <exclude>**/TestSynapseConnectorTest.java</exclude>
-                                <exclude>**/TestSynapseQueryFailureRecoveryTest.java</exclude>
-                                <exclude>**/TestSynapseTaskFailureRecoveryTest.java</exclude>
-                            </excludes>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
         <profile>
             <id>jdbc-integration-tests</id>
             <build>
@@ -249,42 +212,12 @@
                             <!-- 6 was seen to improve TestSynapseConnectorTest compared to 4 threads -->
                             <threadCount>6</threadCount>
                             <includes>
+                                <include>**/TestSynapseInstanceCleaner.java</include>
                                 <include>**/TestSynapseConnectorTest.java</include>
                             </includes>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <!-- type mapping tests separated to avoid 60 min timeout in the default profile -->
-        <profile>
-            <id>type-mapping-tests</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <includes>
-                                <include>**/TestSynapseTypeMapping.java</include>
-                            </includes>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>fault-tolerant-tests</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <includes>
-                                <include>**/TestSynapseQueryFailureRecoveryTest.java</include>
-                                <include>**/TestSynapseTaskFailureRecoveryTest.java</include>
-                            </includes>
+                            <dependenciesToScan>
+                                <dependency>com.starburstdata.trino.plugins:starburst-synapse:test-jar</dependency>
+                            </dependenciesToScan>
                         </configuration>
                     </plugin>
                 </plugins>
