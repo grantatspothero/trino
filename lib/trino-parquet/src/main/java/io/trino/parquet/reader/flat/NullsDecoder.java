@@ -22,6 +22,7 @@ import static io.trino.parquet.ParquetReaderUtils.castToByteNegate;
 import static io.trino.parquet.ParquetReaderUtils.readUleb128Int;
 import static io.trino.parquet.reader.flat.BitPackingUtils.bitCount;
 import static io.trino.parquet.reader.flat.BitPackingUtils.unpack;
+import static io.trino.parquet.reader.flat.BitPackingUtils.vectorUnpackAndInvert8;
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
 
@@ -47,6 +48,12 @@ public class NullsDecoder
     private byte bitPackedValue;
     // Number of bits already read in the current byte while reading bit-packed values
     private int bitPackedValueOffset;
+    private final boolean vectorizedDecodingEnabled;
+
+    public NullsDecoder(boolean vectorizedDecodingEnabled)
+    {
+        this.vectorizedDecodingEnabled = vectorizedDecodingEnabled;
+    }
 
     @Override
     public void init(Slice input)
@@ -94,15 +101,29 @@ public class NullsDecoder
                 int chunkSize = min(length, valuesLeftInGroup);
                 int leftToRead = chunkSize;
                 // All values read from input are inverted as Trino uses 1 for null but Parquet uses 1 for non-null value
-                while (leftToRead >= Long.SIZE) {
-                    nonNullCount += unpack(values, offset, ~input.readLong());
-                    offset += Long.SIZE;
-                    leftToRead -= Long.SIZE;
+                if (vectorizedDecodingEnabled) {
+                    byte[] inputArr = input.getByteArray();
+                    int inputOffset = input.getByteArrayOffset();
+                    int inputBytesRead = 0;
+                    while (leftToRead >= Byte.SIZE) {
+                        nonNullCount += vectorUnpackAndInvert8(values, offset, inputArr[inputOffset + inputBytesRead]);
+                        offset += Byte.SIZE;
+                        leftToRead -= Byte.SIZE;
+                        inputBytesRead++;
+                    }
+                    input.skip(inputBytesRead);
                 }
-                while (leftToRead >= Byte.SIZE) {
-                    nonNullCount += unpack(values, offset, (byte) ~input.readByte());
-                    offset += Byte.SIZE;
-                    leftToRead -= Byte.SIZE;
+                else {
+                    while (leftToRead >= Long.SIZE) {
+                        nonNullCount += unpack(values, offset, ~input.readLong());
+                        offset += Long.SIZE;
+                        leftToRead -= Long.SIZE;
+                    }
+                    while (leftToRead >= Byte.SIZE) {
+                        nonNullCount += unpack(values, offset, (byte) ~input.readByte());
+                        offset += Byte.SIZE;
+                        leftToRead -= Byte.SIZE;
+                    }
                 }
                 if (leftToRead > 0) {
                     bitPackedValue = (byte) ~input.readByte();

@@ -118,6 +118,7 @@
         <air.repository.release.id>starburstdata-sep.releases</air.repository.release.id>
         <air.repository.release.name>Starburstdata Releases</air.repository.release.name>
         <air.repository.release.url>https://starburstdata-sep-cicd-843985043183.d.codeartifact.us-east-2.amazonaws.com/maven/releases/</air.repository.release.url>
+        <extraJavaVectorArgs>--add-modules=jdk.incubator.vector</extraJavaVectorArgs>
     </properties>
 
     <modules>

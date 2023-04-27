@@ -27,6 +27,7 @@ import java.util.stream.Stream;
 import static io.trino.parquet.reader.TestData.generateMixedData;
 import static io.trino.testing.DataProviders.cartesianProduct;
 import static io.trino.testing.DataProviders.toDataProvider;
+import static io.trino.testing.DataProviders.trueFalse;
 import static java.lang.Math.min;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -49,12 +50,12 @@ public class TestNullsDecoder
     }
 
     @Test(dataProvider = "dataSets")
-    public void testDecoding(NullValuesProvider nullValuesProvider, int batchSize)
+    public void testDecoding(NullValuesProvider nullValuesProvider, int batchSize, boolean vectorizedDecodingEnabled)
             throws IOException
     {
         boolean[] values = nullValuesProvider.getPositions();
         byte[] encoded = encode(values);
-        NullsDecoder decoder = new NullsDecoder();
+        NullsDecoder decoder = new NullsDecoder(vectorizedDecodingEnabled);
         decoder.init(Slices.wrappedBuffer(encoded));
         boolean[] result = new boolean[N];
         int nonNullCount = 0;
@@ -70,12 +71,12 @@ public class TestNullsDecoder
     }
 
     @Test(dataProvider = "dataSets")
-    public void testSkippedDecoding(NullValuesProvider nullValuesProvider, int batchSize)
+    public void testSkippedDecoding(NullValuesProvider nullValuesProvider, int batchSize, boolean vectorizedDecodingEnabled)
             throws IOException
     {
         boolean[] values = nullValuesProvider.getPositions();
         byte[] encoded = encode(values);
-        NullsDecoder decoder = new NullsDecoder();
+        NullsDecoder decoder = new NullsDecoder(vectorizedDecodingEnabled);
         decoder.init(Slices.wrappedBuffer(encoded));
         int nonNullCount = 0;
         int numberOfBatches = (N + batchSize - 1) / batchSize;
@@ -110,7 +111,8 @@ public class TestNullsDecoder
     {
         return cartesianProduct(
                 Arrays.stream(NullValuesProvider.values()).collect(toDataProvider()),
-                Stream.of(1, 3, 16, 100, 1000).collect(toDataProvider()));
+                Stream.of(1, 3, 16, 100, 1000).collect(toDataProvider()),
+                trueFalse());
     }
 
     private enum NullValuesProvider

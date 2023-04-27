@@ -7,4 +7,6 @@ if ! grep -s -q 'node.id' /etc/trino/node.properties; then
     launcher_opts+=("-Dnode.id=${HOSTNAME}")
 fi
 
+launcher_opts+=("-J--add-modules=jdk.incubator.vector")
+
 exec /usr/lib/trino/bin/launcher run "${launcher_opts[@]}" "$@"

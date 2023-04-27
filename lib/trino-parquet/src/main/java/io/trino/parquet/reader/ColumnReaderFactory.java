@@ -17,11 +17,9 @@ import io.trino.memory.context.AggregatedMemoryContext;
 import io.trino.memory.context.LocalMemoryContext;
 import io.trino.parquet.ParquetReaderOptions;
 import io.trino.parquet.PrimitiveField;
-import io.trino.parquet.reader.decoders.ValueDecoder;
 import io.trino.parquet.reader.decoders.ValueDecoders;
 import io.trino.parquet.reader.flat.ColumnAdapter;
 import io.trino.parquet.reader.flat.FlatColumnReader;
-import io.trino.parquet.reader.flat.FlatDefinitionLevelDecoder;
 import io.trino.spi.TrinoException;
 import io.trino.spi.type.AbstractIntType;
 import io.trino.spi.type.AbstractLongType;
@@ -34,6 +32,7 @@ import io.trino.spi.type.TimestampType;
 import io.trino.spi.type.TimestampWithTimeZoneType;
 import io.trino.spi.type.Type;
 import io.trino.spi.type.VarcharType;
+import jdk.incubator.vector.VectorShape;
 import org.apache.parquet.schema.LogicalTypeAnnotation;
 import org.apache.parquet.schema.LogicalTypeAnnotation.DateLogicalTypeAnnotation;
 import org.apache.parquet.schema.LogicalTypeAnnotation.DecimalLogicalTypeAnnotation;
@@ -50,11 +49,13 @@ import java.util.Optional;
 import static io.trino.parquet.ParquetEncoding.PLAIN;
 import static io.trino.parquet.ParquetTypeUtils.createDecimalType;
 import static io.trino.parquet.reader.decoders.ValueDecoder.ValueDecodersProvider;
+import static io.trino.parquet.reader.decoders.ValueDecoder.createLevelsDecoder;
 import static io.trino.parquet.reader.flat.BinaryColumnAdapter.BINARY_ADAPTER;
 import static io.trino.parquet.reader.flat.ByteColumnAdapter.BYTE_ADAPTER;
 import static io.trino.parquet.reader.flat.DictionaryDecoder.DictionaryDecoderProvider;
 import static io.trino.parquet.reader.flat.DictionaryDecoder.getDictionaryDecoder;
 import static io.trino.parquet.reader.flat.Fixed12ColumnAdapter.FIXED12_ADAPTER;
+import static io.trino.parquet.reader.flat.FlatDefinitionLevelDecoder.getFlatDefinitionLevelDecoder;
 import static io.trino.parquet.reader.flat.Int128ColumnAdapter.INT128_ADAPTER;
 import static io.trino.parquet.reader.flat.IntColumnAdapter.INT_ADAPTER;
 import static io.trino.parquet.reader.flat.LongColumnAdapter.LONG_ADAPTER;
@@ -86,15 +87,19 @@ import static org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.INT96;
 
 public final class ColumnReaderFactory
 {
+    private static final int PREFERRED_BIT_WIDTH = VectorShape.preferredShape().vectorBitSize();
+
     private final DateTimeZone timeZone;
     private final boolean useBatchColumnReaders;
     private final boolean useBatchNestedColumnReaders;
+    private final boolean vectorizedDecodingEnabled;
 
     public ColumnReaderFactory(DateTimeZone timeZone, ParquetReaderOptions readerOptions)
     {
         this.timeZone = requireNonNull(timeZone, "dateTimeZone is null");
         this.useBatchColumnReaders = readerOptions.useBatchColumnReaders();
         this.useBatchNestedColumnReaders = readerOptions.useBatchNestedColumnReaders();
+        this.vectorizedDecodingEnabled = readerOptions.isVectorizedDecodingEnabled() && isVectorizedDecodingSupported();
     }
 
     public ColumnReader create(PrimitiveField field, AggregatedMemoryContext aggregatedMemoryContext)
@@ -104,7 +109,7 @@ public final class ColumnReaderFactory
         LogicalTypeAnnotation annotation = field.getDescriptor().getPrimitiveType().getLogicalTypeAnnotation();
         LocalMemoryContext memoryContext = aggregatedMemoryContext.newLocalMemoryContext(ColumnReader.class.getSimpleName());
         if (useBatchedColumnReaders(field)) {
-            ValueDecoders valueDecoders = new ValueDecoders(field);
+            ValueDecoders valueDecoders = new ValueDecoders(field, vectorizedDecodingEnabled);
             if (BOOLEAN.equals(type) && primitiveType == PrimitiveTypeName.BOOLEAN) {
                 return createColumnReader(field, valueDecoders::getBooleanDecoder, BYTE_ADAPTER, memoryContext);
             }
@@ -334,7 +339,7 @@ public final class ColumnReaderFactory
         };
     }
 
-    private static <T> ColumnReader createColumnReader(
+    private <T> ColumnReader createColumnReader(
             PrimitiveField field,
             ValueDecodersProvider<T> decodersProvider,
             ColumnAdapter<T> columnAdapter,
@@ -344,12 +349,13 @@ public final class ColumnReaderFactory
                 dictionaryPage,
                 columnAdapter,
                 decodersProvider.create(PLAIN),
-                isNonNull);
+                isNonNull,
+                vectorizedDecodingEnabled);
         if (isFlatColumn(field)) {
             return new FlatColumnReader<>(
                     field,
                     decodersProvider,
-                    FlatDefinitionLevelDecoder::getFlatDefinitionLevelDecoder,
+                    maxDefinitionLevel -> getFlatDefinitionLevelDecoder(maxDefinitionLevel, vectorizedDecodingEnabled),
                     dictionaryDecoderProvider,
                     columnAdapter,
                     memoryContext);
@@ -357,7 +363,7 @@ public final class ColumnReaderFactory
         return new NestedColumnReader<>(
                 field,
                 decodersProvider,
-                ValueDecoder::createLevelsDecoder,
+                maxLevel -> createLevelsDecoder(maxLevel, vectorizedDecodingEnabled),
                 dictionaryDecoderProvider,
                 columnAdapter,
                 memoryContext);
@@ -430,5 +436,12 @@ public final class ColumnReaderFactory
     private static TrinoException unsupportedException(Type type, PrimitiveField field)
     {
         return new TrinoException(NOT_SUPPORTED, format("Unsupported Trino column type (%s) for Parquet column (%s)", type, field.getDescriptor()));
+    }
+
+    private static boolean isVectorizedDecodingSupported()
+    {
+        // Performance gains with vectorized decoding are validated only when the hardware platform provides at least 256 bit width registers
+        // Graviton 2 machines return false here, whereas x86 and Graviton 3 machines return true
+        return PREFERRED_BIT_WIDTH >= 256;
     }
 }

@@ -19,6 +19,7 @@ import java.util.Random;
 
 import static io.trino.parquet.reader.flat.BitPackingUtils.bitCount;
 import static io.trino.parquet.reader.flat.BitPackingUtils.unpack;
+import static io.trino.parquet.reader.flat.BitPackingUtils.vectorUnpackAndInvert8;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestBitPackingUtils
@@ -88,6 +89,22 @@ public class TestBitPackingUtils
     }
 
     @Test
+    public void testVectorUnpackAndInvert8()
+    {
+        Random random = new Random(0);
+        boolean[] values = new boolean[100 + 8];
+        for (int packedByte = 0; packedByte < 256; packedByte++) {
+            int offset = random.nextInt(100);
+            int nonNullCount = vectorUnpackAndInvert8(values, offset, (byte) packedByte);
+            assertThat(nonNullCount).isEqualTo(Integer.bitCount(packedByte));
+
+            for (int bit = 0; bit < 8; bit++) {
+                assertThat(values[offset + bit]).isEqualTo(((packedByte >>> bit) & 1) == 0);
+            }
+        }
+    }
+
+    @Test
     public void testUnpack8FromByte()
     {
         Random random = new Random(0);
@@ -95,6 +112,21 @@ public class TestBitPackingUtils
         for (int packedByte = 0; packedByte < 256; packedByte++) {
             int offset = random.nextInt(100);
             BitPackingUtils.unpack8FromByte(values, offset, (byte) packedByte);
+
+            for (int bit = 0; bit < 8; bit++) {
+                assertThat(values[offset + bit]).isEqualTo((byte) ((packedByte >>> bit) & 1));
+            }
+        }
+    }
+
+    @Test
+    public void testVectorUnpack8FromByte()
+    {
+        Random random = new Random(0);
+        byte[] values = new byte[100 + 8];
+        for (int packedByte = 0; packedByte < 256; packedByte++) {
+            int offset = random.nextInt(100);
+            BitPackingUtils.vectorUnpack8FromByte(values, offset, (byte) packedByte);
 
             for (int bit = 0; bit < 8; bit++) {
                 assertThat(values[offset + bit]).isEqualTo((byte) ((packedByte >>> bit) & 1));

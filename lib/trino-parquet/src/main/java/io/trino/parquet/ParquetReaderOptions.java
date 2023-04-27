@@ -37,6 +37,7 @@ public class ParquetReaderOptions
     private final boolean useBloomFilter;
     private final boolean nativeZstdDecompressorEnabled;
     private final boolean nativeSnappyDecompressorEnabled;
+    private final boolean vectorizedDecodingEnabled;
 
     public ParquetReaderOptions()
     {
@@ -51,6 +52,7 @@ public class ParquetReaderOptions
         useBloomFilter = true;
         nativeZstdDecompressorEnabled = true;
         nativeSnappyDecompressorEnabled = true;
+        vectorizedDecodingEnabled = false;
     }
 
     private ParquetReaderOptions(
@@ -64,7 +66,8 @@ public class ParquetReaderOptions
             boolean useBatchNestedColumnReaders,
             boolean useBloomFilter,
             boolean nativeZstdDecompressorEnabled,
-            boolean nativeSnappyDecompressorEnabled)
+            boolean nativeSnappyDecompressorEnabled,
+            boolean vectorizedDecodingEnabled)
     {
         this.ignoreStatistics = ignoreStatistics;
         this.maxReadBlockSize = requireNonNull(maxReadBlockSize, "maxReadBlockSize is null");
@@ -78,6 +81,7 @@ public class ParquetReaderOptions
         this.useBloomFilter = useBloomFilter;
         this.nativeZstdDecompressorEnabled = nativeZstdDecompressorEnabled;
         this.nativeSnappyDecompressorEnabled = nativeSnappyDecompressorEnabled;
+        this.vectorizedDecodingEnabled = vectorizedDecodingEnabled;
     }
 
     public boolean isIgnoreStatistics()
@@ -125,6 +129,11 @@ public class ParquetReaderOptions
         return nativeSnappyDecompressorEnabled;
     }
 
+    public boolean isVectorizedDecodingEnabled()
+    {
+        return vectorizedDecodingEnabled;
+    }
+
     public DataSize getMaxBufferSize()
     {
         return maxBufferSize;
@@ -148,7 +157,8 @@ public class ParquetReaderOptions
                 useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
-                nativeSnappyDecompressorEnabled);
+                nativeSnappyDecompressorEnabled,
+                vectorizedDecodingEnabled);
     }
 
     public ParquetReaderOptions withMaxReadBlockSize(DataSize maxReadBlockSize)
@@ -164,7 +174,8 @@ public class ParquetReaderOptions
                 useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
-                nativeSnappyDecompressorEnabled);
+                nativeSnappyDecompressorEnabled,
+                vectorizedDecodingEnabled);
     }
 
     public ParquetReaderOptions withMaxReadBlockRowCount(int maxReadBlockRowCount)
@@ -180,7 +191,8 @@ public class ParquetReaderOptions
                 useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
-                nativeSnappyDecompressorEnabled);
+                nativeSnappyDecompressorEnabled,
+                vectorizedDecodingEnabled);
     }
 
     public ParquetReaderOptions withMaxMergeDistance(DataSize maxMergeDistance)
@@ -196,7 +208,8 @@ public class ParquetReaderOptions
                 useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
-                nativeSnappyDecompressorEnabled);
+                nativeSnappyDecompressorEnabled,
+                vectorizedDecodingEnabled);
     }
 
     public ParquetReaderOptions withMaxBufferSize(DataSize maxBufferSize)
@@ -212,7 +225,8 @@ public class ParquetReaderOptions
                 useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
-                nativeSnappyDecompressorEnabled);
+                nativeSnappyDecompressorEnabled,
+                vectorizedDecodingEnabled);
     }
 
     public ParquetReaderOptions withUseColumnIndex(boolean useColumnIndex)
@@ -228,7 +242,8 @@ public class ParquetReaderOptions
                 useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
-                nativeSnappyDecompressorEnabled);
+                nativeSnappyDecompressorEnabled,
+                vectorizedDecodingEnabled);
     }
 
     public ParquetReaderOptions withBatchColumnReaders(boolean useBatchColumnReaders)
@@ -244,7 +259,8 @@ public class ParquetReaderOptions
                 useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
-                nativeSnappyDecompressorEnabled);
+                nativeSnappyDecompressorEnabled,
+                vectorizedDecodingEnabled);
     }
 
     public ParquetReaderOptions withBatchNestedColumnReaders(boolean useBatchNestedColumnReaders)
@@ -260,7 +276,8 @@ public class ParquetReaderOptions
                 useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
-                nativeSnappyDecompressorEnabled);
+                nativeSnappyDecompressorEnabled,
+                vectorizedDecodingEnabled);
     }
 
     public ParquetReaderOptions withBloomFilter(boolean useBloomFilter)
@@ -276,7 +293,8 @@ public class ParquetReaderOptions
                 useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
-                nativeSnappyDecompressorEnabled);
+                nativeSnappyDecompressorEnabled,
+                vectorizedDecodingEnabled);
     }
 
     public ParquetReaderOptions withNativeZstdDecompressorEnabled(boolean nativeZstdDecompressorEnabled)
@@ -292,7 +310,8 @@ public class ParquetReaderOptions
                 useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
-                nativeSnappyDecompressorEnabled);
+                nativeSnappyDecompressorEnabled,
+                vectorizedDecodingEnabled);
     }
 
     public ParquetReaderOptions withNativeSnappyDecompressorEnabled(boolean nativeSnappyDecompressorEnabled)
@@ -308,6 +327,24 @@ public class ParquetReaderOptions
                 useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
-                nativeSnappyDecompressorEnabled);
+                nativeSnappyDecompressorEnabled,
+                vectorizedDecodingEnabled);
+    }
+
+    public ParquetReaderOptions withVectorizedDecodingEnabled(boolean vectorizedDecodingEnabled)
+    {
+        return new ParquetReaderOptions(
+                ignoreStatistics,
+                maxReadBlockSize,
+                maxReadBlockRowCount,
+                maxMergeDistance,
+                maxBufferSize,
+                useColumnIndex,
+                useBatchColumnReaders,
+                useBatchNestedColumnReaders,
+                useBloomFilter,
+                nativeZstdDecompressorEnabled,
+                nativeSnappyDecompressorEnabled,
+                vectorizedDecodingEnabled);
     }
 }

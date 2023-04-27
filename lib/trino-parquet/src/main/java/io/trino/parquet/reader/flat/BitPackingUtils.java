@@ -13,10 +13,16 @@
  */
 package io.trino.parquet.reader.flat;
 
+import jdk.incubator.vector.ByteVector;
+import jdk.incubator.vector.VectorOperators;
+
 import static io.trino.parquet.ParquetReaderUtils.castToByteNegate;
 
 public class BitPackingUtils
 {
+    private static final ByteVector MASK_1 = ByteVector.broadcast(ByteVector.SPECIES_64, 1);
+    private static final ByteVector LSHR_BYTE_VECTOR = ByteVector.fromArray(ByteVector.SPECIES_64, new byte[] {0, 1, 2, 3, 4, 5, 6, 7}, 0);
+
     private BitPackingUtils() {}
 
     /**
@@ -50,6 +56,16 @@ public class BitPackingUtils
         values[offset + 7] = ((packedByte >>> 7) & 1) == 1;
 
         return Byte.SIZE - bitCount(packedByte);
+    }
+
+    public static int vectorUnpackAndInvert8(boolean[] values, int offset, byte packedByte)
+    {
+        ByteVector.broadcast(ByteVector.SPECIES_64, packedByte)
+                .lanewise(VectorOperators.LSHR, LSHR_BYTE_VECTOR)
+                .and(MASK_1)
+                .lanewise(VectorOperators.NOT)
+                .intoBooleanArray(values, offset);
+        return bitCount(packedByte);
     }
 
     /**
@@ -148,6 +164,14 @@ public class BitPackingUtils
         values[offset + 5] = (byte) ((packedByte >>> 5) & 1);
         values[offset + 6] = (byte) ((packedByte >>> 6) & 1);
         values[offset + 7] = (byte) ((packedByte >>> 7) & 1);
+    }
+
+    public static void vectorUnpack8FromByte(byte[] values, int offset, byte packedByte)
+    {
+        ByteVector.broadcast(ByteVector.SPECIES_64, packedByte)
+                .lanewise(VectorOperators.LSHR, LSHR_BYTE_VECTOR)
+                .and(MASK_1)
+                .intoArray(values, offset);
     }
 
     public static void unpack64FromLong(byte[] values, int offset, long packedValue)

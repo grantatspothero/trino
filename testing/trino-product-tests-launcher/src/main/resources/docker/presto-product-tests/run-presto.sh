@@ -32,6 +32,7 @@ export PATH="${JAVA_HOME}/bin:${PATH}"
 
 exec /docker/presto-server/bin/launcher \
   -Dnode.id="${HOSTNAME}" \
+  -J--add-modules=jdk.incubator.vector \
   --etc-dir="/docker/presto-product-tests/conf/presto/etc" \
   --data-dir=/var/trino \
   run

@@ -25,7 +25,12 @@ import io.trino.parquet.reader.flat.NullsDecoder;
 public final class RleBitPackingHybridBooleanDecoder
         implements ValueDecoder<byte[]>
 {
-    private final NullsDecoder decoder = new NullsDecoder();
+    private final NullsDecoder decoder;
+
+    public RleBitPackingHybridBooleanDecoder(boolean vectorizedDecodingEnabled)
+    {
+        this.decoder = new NullsDecoder(vectorizedDecodingEnabled);
+    }
 
     @Override
     public void init(SimpleSliceInputStream input)

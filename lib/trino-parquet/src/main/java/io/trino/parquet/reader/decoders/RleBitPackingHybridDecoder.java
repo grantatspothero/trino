@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static io.trino.parquet.ParquetReaderUtils.readFixedWidthInt;
 import static io.trino.parquet.ParquetReaderUtils.readUleb128Int;
 import static io.trino.parquet.reader.decoders.IntBitUnpackers.getIntBitUnpacker;
+import static io.trino.parquet.reader.decoders.VectorIntBitUnpackers.getVectorIntBitUnpacker;
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
 
@@ -55,12 +56,12 @@ public final class RleBitPackingHybridDecoder
     // Number of values already read in the current buffer while reading bit-packed values
     private int alreadyReadInBuffer;
 
-    public RleBitPackingHybridDecoder(int bitWidth)
+    public RleBitPackingHybridDecoder(int bitWidth, boolean vectorizedDecodingEnabled)
     {
         checkArgument(bitWidth >= 0 && bitWidth <= 32, "bit width need to be between 0 and 32");
         this.bitWidth = bitWidth;
         this.byteWidth = byteWidth(bitWidth);
-        this.unpacker = getIntBitUnpacker(bitWidth);
+        this.unpacker = vectorizedDecodingEnabled ? getVectorIntBitUnpacker(bitWidth) : getIntBitUnpacker(bitWidth);
     }
 
     @Override

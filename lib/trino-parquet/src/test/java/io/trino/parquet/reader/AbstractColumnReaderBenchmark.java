@@ -139,7 +139,7 @@ public abstract class AbstractColumnReaderBenchmark<VALUES>
             throws RunnerException
     {
         benchmark(clazz, WarmupMode.BULK)
-                .withOptions(optionsBuilder -> optionsBuilder.jvmArgsAppend("-Xmx4g", "-Xms4g"))
+                .withOptions(optionsBuilder -> optionsBuilder.jvmArgsAppend("-Xmx4g", "-Xms4g", "--add-modules=jdk.incubator.vector"))
                 .run();
     }
 }

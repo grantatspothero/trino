@@ -37,12 +37,12 @@ public interface FlatDefinitionLevelDecoder
         FlatDefinitionLevelDecoder create(int maxDefinitionLevel);
     }
 
-    static FlatDefinitionLevelDecoder getFlatDefinitionLevelDecoder(int maxDefinitionLevel)
+    static FlatDefinitionLevelDecoder getFlatDefinitionLevelDecoder(int maxDefinitionLevel, boolean vectorizedDecodingEnabled)
     {
         checkArgument(maxDefinitionLevel >= 0 && maxDefinitionLevel <= 1, "Invalid max definition level: " + maxDefinitionLevel);
         if (maxDefinitionLevel == 0) {
             return new ZeroDefinitionLevelDecoder();
         }
-        return new NullsDecoder();
+        return new NullsDecoder(vectorizedDecodingEnabled);
     }
 }

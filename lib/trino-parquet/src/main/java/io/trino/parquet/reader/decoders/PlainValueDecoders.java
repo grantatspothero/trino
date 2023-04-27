@@ -147,11 +147,18 @@ public final class PlainValueDecoders
     public static final class BooleanPlainValueDecoder
             implements ValueDecoder<byte[]>
     {
+        private final boolean vectorizedDecodingEnabled;
+
         private SimpleSliceInputStream input;
         // Number of unread bits in the current byte
         private int alreadyReadBits;
         // Partly read byte
         private byte partiallyReadByte;
+
+        public BooleanPlainValueDecoder(boolean vectorizedDecodingEnabled)
+        {
+            this.vectorizedDecodingEnabled = vectorizedDecodingEnabled;
+        }
 
         @Override
         public void init(SimpleSliceInputStream input)
@@ -177,17 +184,31 @@ public final class PlainValueDecoders
 
             // Read full bytes
             int bytesToRead = length / Byte.SIZE;
-            while (bytesToRead >= Long.BYTES) {
-                long packedLong = input.readLong();
-                BitPackingUtils.unpack64FromLong(values, offset, packedLong);
-                bytesToRead -= Long.BYTES;
-                offset += Long.SIZE;
+            if (vectorizedDecodingEnabled) {
+                byte[] inputArr = input.getByteArray();
+                int inputOffset = input.getByteArrayOffset();
+                int inputBytesRead = 0;
+                while (bytesToRead >= Byte.BYTES) {
+                    BitPackingUtils.vectorUnpack8FromByte(values, offset, inputArr[inputOffset + inputBytesRead]);
+                    bytesToRead -= Byte.BYTES;
+                    offset += Byte.SIZE;
+                    inputBytesRead++;
+                }
+                input.skip(inputBytesRead);
             }
-            while (bytesToRead >= Byte.BYTES) {
-                byte packedByte = input.readByte();
-                BitPackingUtils.unpack8FromByte(values, offset, packedByte);
-                bytesToRead -= Byte.BYTES;
-                offset += Byte.SIZE;
+            else {
+                while (bytesToRead >= Long.BYTES) {
+                    long packedLong = input.readLong();
+                    BitPackingUtils.unpack64FromLong(values, offset, packedLong);
+                    bytesToRead -= Long.BYTES;
+                    offset += Long.SIZE;
+                }
+                while (bytesToRead >= Byte.BYTES) {
+                    byte packedByte = input.readByte();
+                    BitPackingUtils.unpack8FromByte(values, offset, packedByte);
+                    bytesToRead -= Byte.BYTES;
+                    offset += Byte.SIZE;
+                }
             }
 
             // Partially read the last byte

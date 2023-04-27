@@ -162,6 +162,7 @@ import static io.trino.plugin.iceberg.IcebergSessionProperties.isParquetNativeSn
 import static io.trino.plugin.iceberg.IcebergSessionProperties.isParquetNativeZstdDecompressorEnabled;
 import static io.trino.plugin.iceberg.IcebergSessionProperties.isParquetOptimizedNestedReaderEnabled;
 import static io.trino.plugin.iceberg.IcebergSessionProperties.isParquetOptimizedReaderEnabled;
+import static io.trino.plugin.iceberg.IcebergSessionProperties.isParquetVectorizedDecodingEnabled;
 import static io.trino.plugin.iceberg.IcebergSessionProperties.isUseFileSizeFromMetadata;
 import static io.trino.plugin.iceberg.IcebergSessionProperties.useParquetBloomFilter;
 import static io.trino.plugin.iceberg.IcebergSplitManager.ICEBERG_DOMAIN_COMPACTION_THRESHOLD;
@@ -519,7 +520,8 @@ public class IcebergPageSourceProvider
                                 .withBloomFilter(useParquetBloomFilter(session))
                                 .withBatchNestedColumnReaders(isParquetOptimizedNestedReaderEnabled(session))
                                 .withNativeZstdDecompressorEnabled(isParquetNativeZstdDecompressorEnabled(session))
-                                .withNativeSnappyDecompressorEnabled(isParquetNativeSnappyDecompressorEnabled(session)),
+                                .withNativeSnappyDecompressorEnabled(isParquetNativeSnappyDecompressorEnabled(session))
+                                .withVectorizedDecodingEnabled(isParquetVectorizedDecodingEnabled(session)),
                         predicate,
                         fileFormatDataSourceStats,
                         nameMapping,

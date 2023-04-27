@@ -92,6 +92,7 @@ import static io.trino.plugin.hudi.HudiSessionProperties.isParquetNativeSnappyDe
 import static io.trino.plugin.hudi.HudiSessionProperties.isParquetNativeZstdDecompressorEnabled;
 import static io.trino.plugin.hudi.HudiSessionProperties.isParquetOptimizedNestedReaderEnabled;
 import static io.trino.plugin.hudi.HudiSessionProperties.isParquetOptimizedReaderEnabled;
+import static io.trino.plugin.hudi.HudiSessionProperties.isParquetVectorizedDecodingEnabled;
 import static io.trino.plugin.hudi.HudiSessionProperties.shouldUseParquetColumnNames;
 import static io.trino.plugin.hudi.HudiUtil.getHudiFileFormat;
 import static io.trino.spi.predicate.Utils.nativeValueToBlock;
@@ -174,7 +175,8 @@ public class HudiPageSourceProvider
                 options.withBatchColumnReaders(isParquetOptimizedReaderEnabled(session))
                         .withBatchNestedColumnReaders(isParquetOptimizedNestedReaderEnabled(session))
                         .withNativeZstdDecompressorEnabled(isParquetNativeZstdDecompressorEnabled(session))
-                        .withNativeSnappyDecompressorEnabled(isParquetNativeSnappyDecompressorEnabled(session)),
+                        .withNativeSnappyDecompressorEnabled(isParquetNativeSnappyDecompressorEnabled(session))
+                        .withVectorizedDecodingEnabled(isParquetVectorizedDecodingEnabled(session)),
                 timeZone);
 
         return new HudiPageSource(

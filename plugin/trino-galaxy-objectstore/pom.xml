@@ -19,6 +19,7 @@
         <!-- ensure only one class is initialized at once due to Hadoop FS cache -->
         <air.test.parallel>instances</air.test.parallel>
         <air.test.thread-count>1</air.test.thread-count>
+        <air.test.jvm.additional-arguments>${extraJavaVectorArgs}</air.test.jvm.additional-arguments>
     </properties>
 
     <dependencies>

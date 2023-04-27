@@ -80,6 +80,7 @@ import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.isParquetNati
 import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.isParquetOptimizedNestedReaderEnabled;
 import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.isParquetOptimizedReaderEnabled;
 import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.isParquetUseColumnIndex;
+import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.isParquetVectorizedDecodingEnabled;
 import static io.trino.plugin.deltalake.transactionlog.DeltaLakeSchemaSupport.extractSchema;
 import static io.trino.plugin.deltalake.transactionlog.DeltaLakeSchemaSupport.getColumnMappingMode;
 import static io.trino.plugin.hive.parquet.ParquetPageSourceFactory.PARQUET_ROW_INDEX_COLUMN;
@@ -190,7 +191,8 @@ public class DeltaLakePageSourceProvider
                 .withBatchColumnReaders(isParquetOptimizedReaderEnabled(session))
                 .withBatchNestedColumnReaders(isParquetOptimizedNestedReaderEnabled(session))
                 .withNativeZstdDecompressorEnabled(isParquetNativeZstdDecompressorEnabled(session))
-                .withNativeSnappyDecompressorEnabled(isParquetNativeSnappyDecompressorEnabled(session));
+                .withNativeSnappyDecompressorEnabled(isParquetNativeSnappyDecompressorEnabled(session))
+                .withVectorizedDecodingEnabled(isParquetVectorizedDecodingEnabled(session));
 
         ColumnMappingMode columnMappingMode = getColumnMappingMode(table.getMetadataEntry());
         Map<Integer, String> parquetFieldIdToName = columnMappingMode == ColumnMappingMode.ID ? loadParquetIdAndNameMapping(inputFile, options) : ImmutableMap.of();

@@ -84,7 +84,19 @@ public class BenchmarkFlatDefinitionLevelDecoder
     public int read()
             throws IOException
     {
-        NullsDecoder decoder = new NullsDecoder();
+        NullsDecoder decoder = new NullsDecoder(false);
+        decoder.init(Slices.wrappedBuffer(data));
+        int nonNullCount = 0;
+        for (int i = 0; i < size; i += BATCH_SIZE) {
+            nonNullCount += decoder.readNext(output, i, Math.min(BATCH_SIZE, size - i));
+        }
+        return nonNullCount;
+    }
+
+    @Benchmark
+    public int readVector()
+    {
+        NullsDecoder decoder = new NullsDecoder(true);
         decoder.init(Slices.wrappedBuffer(data));
         int nonNullCount = 0;
         for (int i = 0; i < size; i += BATCH_SIZE) {
@@ -170,7 +182,7 @@ public class BenchmarkFlatDefinitionLevelDecoder
             throws Exception
     {
         benchmark(BenchmarkFlatDefinitionLevelDecoder.class)
-                .withOptions(optionsBuilder -> optionsBuilder.jvmArgsAppend("-Xmx4g", "-Xms4g"))
+                .withOptions(optionsBuilder -> optionsBuilder.jvmArgsAppend("-Xmx4g", "-Xms4g", "--add-modules=jdk.incubator.vector"))
                 .run();
     }
 }

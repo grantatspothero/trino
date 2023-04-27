@@ -98,10 +98,17 @@ import static org.apache.parquet.schema.LogicalTypeAnnotation.DecimalLogicalType
 public final class ValueDecoders
 {
     private final PrimitiveField field;
+    private final boolean vectorizedDecodingEnabled;
 
     public ValueDecoders(PrimitiveField field)
     {
+        this(field, false);
+    }
+
+    public ValueDecoders(PrimitiveField field, boolean vectorizedDecodingEnabled)
+    {
         this.field = requireNonNull(field, "field is null");
+        this.vectorizedDecodingEnabled = vectorizedDecodingEnabled;
     }
 
     public ValueDecoder<long[]> getDoubleDecoder(ParquetEncoding encoding)
@@ -193,8 +200,8 @@ public final class ValueDecoders
     public ValueDecoder<byte[]> getBooleanDecoder(ParquetEncoding encoding)
     {
         return switch (encoding) {
-            case PLAIN -> new BooleanPlainValueDecoder();
-            case RLE -> new RleBitPackingHybridBooleanDecoder();
+            case PLAIN -> new BooleanPlainValueDecoder(vectorizedDecodingEnabled);
+            case RLE -> new RleBitPackingHybridBooleanDecoder(vectorizedDecodingEnabled);
             // BIT_PACKED is a deprecated encoding which should not be used anymore as per
             // https://github.com/apache/parquet-format/blob/master/Encodings.md#bit-packed-deprecated-bit_packed--4
             // An unoptimized decoder for this encoding is provided here for compatibility with old files or non-compliant writers
