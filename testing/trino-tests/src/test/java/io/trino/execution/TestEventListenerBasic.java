@@ -1198,7 +1198,7 @@ public class TestEventListenerBasic
                                 ImmutableList.of(),
                                 ImmutableList.of(),
                                 ImmutableList.of(new JsonRenderedNode(
-                                        "173",
+                                        "171",
                                         "LocalExchange",
                                         ImmutableMap.of(
                                                 "partitioning", "[connectorHandleType = SystemPartitioningHandle, partitioning = SINGLE, function = SINGLE]",
@@ -1209,7 +1209,7 @@ public class TestEventListenerBasic
                                         ImmutableList.of(),
                                         ImmutableList.of(),
                                         ImmutableList.of(new JsonRenderedNode(
-                                                "140",
+                                                "138",
                                                 "RemoteSource",
                                                 ImmutableMap.of("sourceFragmentIds", "[1]"),
                                                 ImmutableList.of(typedSymbol("symbol_1", "double")),
@@ -1217,7 +1217,7 @@ public class TestEventListenerBasic
                                                 ImmutableList.of(),
                                                 ImmutableList.of()))))))),
                 "1", new JsonRenderedNode(
-                        "139",
+                        "137",
                         "LimitPartial",
                         ImmutableMap.of(
                                 "count", "10",
