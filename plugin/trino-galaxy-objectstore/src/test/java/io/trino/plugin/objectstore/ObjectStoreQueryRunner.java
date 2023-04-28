@@ -45,7 +45,6 @@ import java.util.Properties;
 
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.airlift.testing.Closeables.closeAllSuppress;
-import static io.trino.hadoop.ConfigurationInstantiator.newEmptyConfiguration;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.plugin.tpch.TpchMetadata.TINY_SCHEMA_NAME;
@@ -225,7 +224,7 @@ public final class ObjectStoreQueryRunner
         String dataDir = queryRunner.getCoordinator().getBaseDataDir().resolve("data").toString();
         HiveMetastore hiveMetastore = new GalaxyHiveMetastore(metastore.getMetastore(), HDFS_ENVIRONMENT, dataDir);
         TpchHudiTablesInitializer loader = new TpchHudiTablesInitializer(COPY_ON_WRITE, tables);
-        loader.initializeTables(queryRunner, hiveMetastore, TPCH_SCHEMA, dataDir, newEmptyConfiguration());
+        loader.initializeTables(queryRunner, hiveMetastore, TPCH_SCHEMA, dataDir, HDFS_ENVIRONMENT);
         for (TpchTable<?> table : tables) {
             queryRunner.execute(format("GRANT SELECT ON objectstore.tpch.%s TO ROLE %s WITH GRANT OPTION", table.getTableName(), ACCOUNT_ADMIN));
             queryRunner.execute(format("GRANT UPDATE ON objectstore.tpch.%s TO ROLE %s WITH GRANT OPTION", table.getTableName(), ACCOUNT_ADMIN));
