@@ -51,7 +51,7 @@ public class TestRedshiftAwsAuthentication
         String iamJdbcUser = "iamtrino";
         createUserIfNotExists(dbi, iamJdbcUser, jdbcPassword);
         executeQueryWithRetry(dbi, handle -> handle.execute("CREATE SCHEMA IF NOT EXISTS " + TEST_SCHEMA));
-        executeQuery(dbi, "CREATE OR REPLACE VIEW " + TEST_SCHEMA + ".view_current_user AS SELECT CURRENT_USER AS user");
+        executeQuery(dbi, "CREATE OR REPLACE VIEW " + TEST_SCHEMA + ".view_current_user AS SELECT CAST(CURRENT_USER AS CHAR(256)) AS user");
         executeQueryWithRetry(dbi, handle -> handle.execute("GRANT ALL PRIVILEGES ON DATABASE " + TEST_DATABASE + " TO " + iamJdbcUser));
         executeQuery(dbi, "GRANT ALL PRIVILEGES ON SCHEMA " + TEST_SCHEMA + " TO " + iamJdbcUser);
         executeQuery(dbi, "GRANT SELECT ON ALL TABLES IN SCHEMA " + TEST_SCHEMA + " TO " + iamJdbcUser);
