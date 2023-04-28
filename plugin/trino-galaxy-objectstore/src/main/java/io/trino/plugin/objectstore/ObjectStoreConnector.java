@@ -88,6 +88,8 @@ public class ObjectStoreConnector
     private final Procedure migrateHiveToIcebergProcedure;
     private final boolean hiveRecursiveDirWalkerEnabled;
 
+    private final TableTypeCache tableTypeCache = new TableTypeCache();
+
     @Inject
     public ObjectStoreConnector(
             DelegateConnectors delegates,
@@ -333,7 +335,8 @@ public class ObjectStoreConnector
                 materializedViewProperties,
                 flushMetadataCache,
                 migrateHiveToIcebergProcedure,
-                hiveRecursiveDirWalkerEnabled);
+                hiveRecursiveDirWalkerEnabled,
+                tableTypeCache);
     }
 
     @Override

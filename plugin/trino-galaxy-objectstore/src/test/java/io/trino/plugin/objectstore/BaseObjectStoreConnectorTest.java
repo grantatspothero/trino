@@ -680,6 +680,10 @@ public abstract class BaseObjectStoreConnectorTest
 
         String tableLocation = getTableLocation(tableName);
         metastore.getMetastore().dropTable("tpch", tableName);
+        if (tableType != TableType.ICEBERG) {
+            // Table existence can be cached by the connector, unless we delegate to IcebergMetadata first, which currently does cache between queries.
+            assertUpdate("CALL system.flush_metadata_cache(SCHEMA_NAME => CURRENT_SCHEMA, TABLE_NAME => '" + tableName + "')");
+        }
 
         assertQueryFails("SELECT * FROM " + tableName, ".*Table '.*' does not exist");
 
@@ -700,6 +704,10 @@ public abstract class BaseObjectStoreConnectorTest
 
         String tableLocation = getTableLocation(tableName);
         metastore.getMetastore().dropTable("tpch", tableName);
+        if (tableType != TableType.ICEBERG) {
+            // Table existence can be cached by the connector, unless we delegate to IcebergMetadata first, which currently does cache between queries.
+            assertUpdate("CALL system.flush_metadata_cache(SCHEMA_NAME => CURRENT_SCHEMA, TABLE_NAME => '" + tableName + "')");
+        }
 
         switch (tableType) {
             case ICEBERG -> {

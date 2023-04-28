@@ -95,6 +95,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -127,6 +128,7 @@ public class ObjectStoreMetadata
     private final Procedure flushMetadataCache;
     private final Procedure migrateHiveToIcebergProcedure;
     private final boolean hiveRecursiveDirWalkerEnabled;
+    private final TableTypeCache tableTypeCache;
 
     public ObjectStoreMetadata(
             ConnectorMetadata hiveMetadata,
@@ -137,7 +139,8 @@ public class ObjectStoreMetadata
             ObjectStoreMaterializedViewProperties materializedViewProperties,
             Procedure flushMetadataCache,
             Procedure migrateHiveToIcebergProcedure,
-            boolean hiveRecursiveDirWalkerEnabled)
+            boolean hiveRecursiveDirWalkerEnabled,
+            TableTypeCache tableTypeCache)
     {
         this.hiveMetadata = requireNonNull(hiveMetadata, "hiveMetadata is null");
         this.icebergMetadata = requireNonNull(icebergMetadata, "icebergMetadata is null");
@@ -151,6 +154,7 @@ public class ObjectStoreMetadata
         this.flushMetadataCache = requireNonNull(flushMetadataCache, "flushMetadataCache is null");
         this.migrateHiveToIcebergProcedure = requireNonNull(migrateHiveToIcebergProcedure, "migrateHiveToIcebergProcedure is null");
         this.hiveRecursiveDirWalkerEnabled = hiveRecursiveDirWalkerEnabled;
+        this.tableTypeCache = requireNonNull(tableTypeCache, "tableTypeCache is null");
     }
 
     @Override
@@ -169,34 +173,73 @@ public class ObjectStoreMetadata
     @Override
     public ConnectorTableHandle getTableHandle(ConnectorSession session, SchemaTableName tableName)
     {
-        try {
-            return icebergMetadata.getTableHandle(session, tableName, Optional.empty(), Optional.empty());
+        ConnectorTableHandle tableHandle = getTableHandleInOrder(session, tableName, tableTypeCache.getTableTypeAffinity(tableName));
+        if (tableHandle != null) {
+            tableTypeCache.record(tableName, tableType(tableHandle));
         }
-        catch (TrinoException e) {
-            if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
-                throw e;
+        return tableHandle;
+    }
+
+    @Nullable
+    private ConnectorTableHandle getTableHandleInOrder(ConnectorSession session, SchemaTableName tableName, List<TableType> candidateTypes)
+    {
+        checkArgument(candidateTypes.size() == 4);
+        TrinoException deferredException = null;
+        for (TableType candidateType : candidateTypes) {
+            switch (candidateType) {
+                case ICEBERG -> {
+                    try {
+                        return icebergMetadata.getTableHandle(session, tableName, Optional.empty(), Optional.empty());
+                    }
+                    catch (TrinoException e) {
+                        if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
+                            throw e;
+                        }
+                        deferredException = e;
+                    }
+                }
+
+                case DELTA -> {
+                    try {
+                        return deltaMetadata.getTableHandle(session, tableName);
+                    }
+                    catch (TrinoException e) {
+                        if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
+                            throw e;
+                        }
+                        deferredException = e;
+                    }
+                }
+
+                case HUDI -> {
+                    try {
+                        return hudiMetadata.getTableHandle(session, tableName);
+                    }
+                    catch (TrinoException e) {
+                        if (!isError(e, HUDI_UNKNOWN_TABLE_TYPE)) {
+                            throw e;
+                        }
+                        deferredException = e;
+                    }
+                }
+
+                case HIVE -> {
+                    try {
+                        return hiveMetadata.getTableHandle(session, tableName);
+                    }
+                    catch (TrinoException e) {
+                        if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
+                            throw e;
+                        }
+                        deferredException = e;
+                    }
+                }
             }
         }
 
-        try {
-            return deltaMetadata.getTableHandle(session, tableName);
-        }
-        catch (TrinoException e) {
-            if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
-                throw e;
-            }
-        }
-
-        try {
-            return hudiMetadata.getTableHandle(session, tableName);
-        }
-        catch (TrinoException e) {
-            if (!isError(e, HUDI_UNKNOWN_TABLE_TYPE)) {
-                throw e;
-            }
-        }
-
-        return hiveMetadata.getTableHandle(session, tableName);
+        // Propagate last exception
+        verify(deferredException != null, "deferredException cannot be null");
+        throw deferredException;
     }
 
     @Nullable
