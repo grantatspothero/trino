@@ -48,8 +48,7 @@ public final class InternalObjectStoreConnectorFactory
 {
     private InternalObjectStoreConnectorFactory() {}
 
-    @SuppressWarnings("unused")
-    public static Connector createConnector(String catalogName, Map<String, String> config, ConnectorContext context, Module module)
+    public static Connector createConnector(String catalogName, Map<String, String> config, ConnectorContext context)
     {
         ClassLoader classLoader = InternalObjectStoreConnectorFactory.class.getClassLoader();
         try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {

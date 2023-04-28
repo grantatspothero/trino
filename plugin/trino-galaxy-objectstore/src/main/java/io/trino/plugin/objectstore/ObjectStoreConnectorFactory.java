@@ -13,8 +13,6 @@
  */
 package io.trino.plugin.objectstore;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
 import io.trino.spi.connector.ConnectorFactory;
@@ -25,24 +23,16 @@ import java.util.Map;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.base.Throwables.throwIfUnchecked;
-import static java.util.Objects.requireNonNull;
 
 public class ObjectStoreConnectorFactory
         implements ConnectorFactory
 {
     private final String name;
-    private final Class<? extends Module> module;
 
     public ObjectStoreConnectorFactory(String name)
     {
-        this(name, ObjectStoreConnectorFactory.EmptyModule.class);
-    }
-
-    public ObjectStoreConnectorFactory(String name, Class<? extends Module> module)
-    {
         checkArgument(!isNullOrEmpty(name), "name is null or empty");
         this.name = name;
-        this.module = requireNonNull(module, "module is null");
     }
 
     @Override
@@ -50,11 +40,9 @@ public class ObjectStoreConnectorFactory
     {
         ClassLoader classLoader = context.duplicatePluginClassLoader();
         try {
-            Object moduleInstance = classLoader.loadClass(module.getName()).getConstructor().newInstance();
-            Class<?> moduleClass = classLoader.loadClass(Module.class.getName());
             return (Connector) classLoader.loadClass(InternalObjectStoreConnectorFactory.class.getName())
-                    .getMethod("createConnector", String.class, Map.class, ConnectorContext.class, moduleClass)
-                    .invoke(null, catalogName, config, context, moduleInstance);
+                    .getMethod("createConnector", String.class, Map.class, ConnectorContext.class)
+                    .invoke(null, catalogName, config, context);
         }
         catch (InvocationTargetException e) {
             Throwable targetException = e.getTargetException();
@@ -70,12 +58,5 @@ public class ObjectStoreConnectorFactory
     public String getName()
     {
         return name;
-    }
-
-    public static class EmptyModule
-            implements Module
-    {
-        @Override
-        public void configure(Binder binder) {}
     }
 }

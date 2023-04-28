@@ -28,8 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.google.inject.util.Modules.EMPTY_MODULE;
-
 public class ObjectStoreProxyConnectorInitializer
         implements ProxiedConnectorInitializer
 {
@@ -57,7 +55,7 @@ public class ObjectStoreProxyConnectorInitializer
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         // Because of native code, Warp Speed does not support multiple catalogs and thus doesn't need classloader duplication.
-        return InternalObjectStoreConnectorFactory.createConnector(catalogName, objectStoreConfig, context, EMPTY_MODULE);
+        return InternalObjectStoreConnectorFactory.createConnector(catalogName, objectStoreConfig, context);
     }
 
     @Override
