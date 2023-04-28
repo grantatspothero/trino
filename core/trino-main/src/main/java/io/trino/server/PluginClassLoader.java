@@ -85,6 +85,11 @@ public class PluginClassLoader
                 spiResources);
     }
 
+    public boolean isDuplicate()
+    {
+        return catalogHandle.isPresent();
+    }
+
     public PluginClassLoader withUrl(URL url)
     {
         List<URL> urls = ImmutableList.<URL>builder().add(getURLs()).add(url).build();

@@ -334,6 +334,7 @@ public class ConnectorServices
 
         try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(connector.getClass().getClassLoader())) {
             connector.shutdown();
+            TemporaryMemoryLeakHacks.clearLeaks(connector.getClass().getClassLoader());
         }
         catch (Throwable t) {
             log.error(t, "Error shutting down catalog: %s", catalogHandle);
