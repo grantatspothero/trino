@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import io.airlift.log.Logger;
 import io.opentelemetry.api.trace.Tracer;
+import io.trino.connector.CatalogManagerConfig.CatalogMangerKind;
 import io.trino.metadata.CatalogMetadata.SecurityManagement;
 import io.trino.metadata.CatalogProcedures;
 import io.trino.metadata.CatalogTableFunctions;
@@ -86,15 +87,17 @@ public class ConnectorServices
     private final Map<String, PropertyMetadata<?>> columnProperties;
     private final Map<String, PropertyMetadata<?>> analyzeProperties;
     private final Set<ConnectorCapabilities> capabilities;
+    private final CatalogMangerKind catalogMangerKind;
 
     private final AtomicBoolean shutdown = new AtomicBoolean();
 
-    public ConnectorServices(Tracer tracer, CatalogHandle catalogHandle, Connector connector, Runnable afterShutdown)
+    public ConnectorServices(Tracer tracer, CatalogHandle catalogHandle, Connector connector, Runnable afterShutdown, CatalogMangerKind catalogMangerKind)
     {
         this.tracer = requireNonNull(tracer, "tracer is null");
         this.catalogHandle = requireNonNull(catalogHandle, "catalogHandle is null");
         this.connector = requireNonNull(connector, "connector is null");
         this.afterShutdown = requireNonNull(afterShutdown, "afterShutdown is null");
+        this.catalogMangerKind = requireNonNull(catalogMangerKind, "catalogMangerKind is null");
 
         Set<SystemTable> systemTables = connector.getSystemTables();
         requireNonNull(systemTables, format("Connector '%s' returned a null system tables set", catalogHandle));
@@ -334,7 +337,9 @@ public class ConnectorServices
 
         try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(connector.getClass().getClassLoader())) {
             connector.shutdown();
-            TemporaryMemoryLeakHacks.clearLeaks(connector.getClass().getClassLoader());
+            if (catalogMangerKind == CatalogMangerKind.METADATA_ONLY) {
+                TemporaryMemoryLeakHacks.clearLeaks(connector.getClass().getClassLoader());
+            }
         }
         catch (Throwable t) {
             log.error(t, "Error shutting down catalog: %s", catalogHandle);

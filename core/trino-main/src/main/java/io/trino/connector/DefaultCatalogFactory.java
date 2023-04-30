@@ -73,6 +73,7 @@ public class DefaultCatalogFactory
     private final TypeManager typeManager;
 
     private final boolean schedulerIncludeCoordinator;
+    private final CatalogManagerConfig catalogManagerConfig;
 
     private final ConcurrentMap<ConnectorName, InternalConnectorFactory> connectorFactories = new ConcurrentHashMap<>();
 
@@ -89,7 +90,8 @@ public class DefaultCatalogFactory
             OpenTelemetry openTelemetry,
             TransactionManager transactionManager,
             TypeManager typeManager,
-            NodeSchedulerConfig nodeSchedulerConfig)
+            NodeSchedulerConfig nodeSchedulerConfig,
+            CatalogManagerConfig catalogManagerConfig)
     {
         this.metadata = requireNonNull(metadata, "metadata is null");
         this.accessControl = requireNonNull(accessControl, "accessControl is null");
@@ -103,6 +105,7 @@ public class DefaultCatalogFactory
         this.transactionManager = requireNonNull(transactionManager, "transactionManager is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.schedulerIncludeCoordinator = nodeSchedulerConfig.isIncludeCoordinator();
+        this.catalogManagerConfig = requireNonNull(catalogManagerConfig, "catalogManagerConfig is null");
     }
 
     @Override
@@ -160,13 +163,15 @@ public class DefaultCatalogFactory
                 tracer,
                 catalogHandle,
                 connector,
-                destroy);
+                destroy,
+                catalogManagerConfig.getCatalogMangerKind());
 
         ConnectorServices informationSchemaConnector = new ConnectorServices(
                 tracer,
                 createInformationSchemaCatalogHandle(catalogHandle),
                 new InformationSchemaConnector(catalogHandle.getCatalogName(), nodeManager, metadata, accessControl),
-                () -> {});
+                () -> {},
+                catalogManagerConfig.getCatalogMangerKind());
 
         SystemTablesProvider systemTablesProvider;
         if (nodeManager.getCurrentNode().isCoordinator()) {
@@ -187,7 +192,8 @@ public class DefaultCatalogFactory
                         nodeManager,
                         systemTablesProvider,
                         transactionId -> transactionManager.getConnectorTransaction(transactionId, catalogHandle)),
-                () -> {});
+                () -> {},
+                catalogManagerConfig.getCatalogMangerKind());
 
         return new CatalogConnector(
                 catalogHandle,

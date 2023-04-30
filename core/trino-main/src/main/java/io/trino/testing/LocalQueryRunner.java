@@ -29,6 +29,7 @@ import io.trino.SystemSessionProperties;
 import io.trino.SystemSessionPropertiesProvider;
 import io.trino.client.NodeVersion;
 import io.trino.connector.CatalogFactory;
+import io.trino.connector.CatalogManagerConfig;
 import io.trino.connector.CatalogServiceProviderModule;
 import io.trino.connector.ConnectorName;
 import io.trino.connector.ConnectorServicesProvider;
@@ -413,7 +414,8 @@ public class LocalQueryRunner
                 OpenTelemetry.noop(),
                 transactionManager,
                 typeManager,
-                nodeSchedulerConfig));
+                nodeSchedulerConfig,
+                new CatalogManagerConfig()));
         this.splitManager = new SplitManager(createSplitManagerProvider(catalogManager), tracer, new QueryManagerConfig());
         this.pageSourceManager = new PageSourceManager(createPageSourceProvider(catalogManager));
         this.pageSinkManager = new PageSinkManager(createPageSinkProvider(catalogManager));
