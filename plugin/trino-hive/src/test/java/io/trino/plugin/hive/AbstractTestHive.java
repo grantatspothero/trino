@@ -5306,9 +5306,6 @@ public abstract class AbstractTestHive
             if (hiveRecordCursor instanceof HiveBucketValidationRecordCursor) {
                 hiveRecordCursor = ((HiveBucketValidationRecordCursor) hiveRecordCursor).delegate();
             }
-            if (hiveRecordCursor instanceof HiveCoercionRecordCursor) {
-                hiveRecordCursor = ((HiveCoercionRecordCursor) hiveRecordCursor).getRegularColumnRecordCursor();
-            }
             assertInstanceOf(hiveRecordCursor, recordCursorType(), hiveStorageFormat.name());
         }
         else {
