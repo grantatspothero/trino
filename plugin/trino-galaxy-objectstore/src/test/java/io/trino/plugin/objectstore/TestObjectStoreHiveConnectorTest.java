@@ -14,6 +14,7 @@
 package io.trino.plugin.objectstore;
 
 import io.trino.Session;
+import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.testing.TestingConnectorBehavior;
 import io.trino.testing.sql.TestTable;
@@ -229,7 +230,7 @@ public class TestObjectStoreHiveConnectorTest
             assertQuery("SELECT * FROM " + table.getName(), values.trim());
             TrinoFileSystemFactory fileSystemFactory = getTrinoFileSystemFactory();
             for (Object filePath : computeActual("SELECT DISTINCT \"$path\" FROM " + table.getName()).getOnlyColumnAsSet()) {
-                assertTrue(checkOrcFileSorting(fileSystemFactory, (String) filePath, "name"));
+                assertTrue(checkOrcFileSorting(fileSystemFactory, Location.of((String) filePath), "name"));
             }
         }
     }

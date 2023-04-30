@@ -16,6 +16,7 @@ package io.trino.plugin.objectstore.procedure;
 import com.google.common.collect.ImmutableList;
 import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.TableId;
+import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystem;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.deltalake.transactionlog.TransactionLogUtil;
@@ -162,7 +163,7 @@ public final class ObjectStoreRegisterTableProcedure
     private static boolean exists(TrinoFileSystem fileSystem, String location)
     {
         try {
-            return fileSystem.newInputFile(location).exists();
+            return fileSystem.newInputFile(Location.of(location)).exists();
         }
         catch (IOException e) {
             throw new TrinoException(GENERIC_INTERNAL_ERROR, "Failed to check location: " + location, e);

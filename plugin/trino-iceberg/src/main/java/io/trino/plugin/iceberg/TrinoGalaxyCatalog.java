@@ -15,6 +15,7 @@ package io.trino.plugin.iceberg;
 
 import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
+import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.hive.metastore.Column;
@@ -240,7 +241,7 @@ public class TrinoGalaxyCatalog
 
         String location = metastoreTable.getStorage().getLocation();
         try {
-            fileSystemFactory.create(session).deleteDirectory(location);
+            fileSystemFactory.create(session).deleteDirectory(Location.of(location));
         }
         catch (IOException e) {
             throw new TrinoException(ICEBERG_FILESYSTEM_ERROR, format("Failed to delete directory %s of the table %s", location, schemaTableName), e);

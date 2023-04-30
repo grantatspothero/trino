@@ -14,6 +14,7 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableMap;
+import io.trino.filesystem.Location;
 import io.trino.plugin.iceberg.BaseIcebergConnectorTest;
 import io.trino.plugin.iceberg.IcebergConfig;
 import io.trino.plugin.iceberg.IcebergFileFormat;
@@ -146,7 +147,7 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     @Override
     protected boolean isFileSorted(String path, String sortColumnName)
     {
-        return checkOrcFileSorting(path, sortColumnName);
+        return checkOrcFileSorting(fileSystemFactory, Location.of(path), sortColumnName);
     }
 
     @BeforeMethod(alwaysRun = true)
