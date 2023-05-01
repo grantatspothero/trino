@@ -143,6 +143,7 @@ public class TestFallbackingExchange
                     .put("filesystem.exchange.s3.aws-secret-key", MinioStorage.SECRET_KEY)
                     .put("filesystem.exchange.s3.region", "us-east-1")
                     .put("filesystem.exchange.s3.endpoint", "http://" + minioStorage.getMinio().getMinioApiEndpoint())
+                    .put("filesystem.exchange.s3.path-style-access", "true")
                     .buildOrThrow();
 
             ImmutableMap<String, String> exchangeManagerProperties = ImmutableMap.<String, String>builder()
@@ -156,7 +157,8 @@ public class TestFallbackingExchange
 
             Map<String, String> extraProperties = new HashMap<>();
             extraProperties.putAll(FaultTolerantExecutionConnectorTestHelper.getExtraProperties());
-            extraProperties.put("fault-tolerant-execution-partition-count", "50"); // use more partition to be sure we get some on the drained node
+            extraProperties.put("fault-tolerant-execution-min-partition-count", "50"); // use more partition to be sure we get some on the drained node
+            extraProperties.put("fault-tolerant-execution-max-partition-count", "50");
             extraProperties.put("optimizer.join-reordering-strategy", "NONE");
             extraProperties.put("join-distribution-type", "PARTITIONED");
             extraProperties.put("enable-dynamic-filtering", "false");
