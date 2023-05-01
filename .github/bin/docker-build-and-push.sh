@@ -14,7 +14,7 @@ Builds the Gakaxy-Trino Docker image
 EOF
 }
 
-PERFORM_PUSH=
+PERFORM_PUSH="--load"
 IMAGE_TAG="latest"
 ARCHITECTURES=(amd64 arm64)
 
