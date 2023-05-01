@@ -1472,7 +1472,18 @@ public class TestBackgroundHiveSplitLoader
         @Override
         public FileStatus[] listStatus(Path f)
         {
-            throw new UnsupportedOperationException();
+            FileStatus[] fileStatuses = new FileStatus[files.size()];
+            for (int i = 0; i < files.size(); i++) {
+                LocatedFileStatus locatedFileStatus = files.get(i);
+                fileStatuses[i] = new FileStatus(
+                        locatedFileStatus.getLen(),
+                        locatedFileStatus.isDirectory(),
+                        locatedFileStatus.getReplication(),
+                        locatedFileStatus.getBlockSize(),
+                        locatedFileStatus.getModificationTime(),
+                        locatedFileStatus.getPath());
+            }
+            return fileStatuses;
         }
 
         @Override
@@ -1536,13 +1547,13 @@ public class TestBackgroundHiveSplitLoader
         @Override
         public Path getWorkingDirectory()
         {
-            throw new UnsupportedOperationException();
+            return new Path(getUri());
         }
 
         @Override
         public URI getUri()
         {
-            throw new UnsupportedOperationException();
+            return URI.create("hdfs://VOL1:9000/");
         }
     }
 }
