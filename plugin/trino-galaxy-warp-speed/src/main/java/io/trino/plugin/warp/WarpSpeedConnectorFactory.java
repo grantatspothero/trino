@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.warp;
 
+import com.google.common.collect.ImmutableMap;
 import io.trino.plugin.varada.configuration.ProxiedConnectorConfiguration;
 import io.trino.plugin.varada.di.dispatcher.DispatcherWorkerDALModule;
 import io.trino.plugin.varada.di.objectstore.WarpSpeedObjectStoreModule;
@@ -50,22 +51,37 @@ public class WarpSpeedConnectorFactory
     @Override
     public Connector create(String catalogName, Map<String, String> config, ConnectorContext context)
     {
-        Map<String, String> strippedConfig = Stream.concat(
-                        config.entrySet().stream(),
-                        Map.of(ProxiedConnectorConfiguration.PROXIED_CONNECTOR, "galaxy_objectstore",
-                                        DispatcherWorkerDALModule.WORKER_DB_CONNECTION_PREFIX, "jdbc:hsqldb:mem:",
-                                        DispatcherWorkerDALModule.WORKER_DB_CONNECTION_PATH, "workerDB/")
-                                .entrySet()
-                                .stream())
-                .collect(toImmutableMap(
-                        entry -> entry.getKey().startsWith(WARP_PREFIX) ? entry.getKey().substring(WARP_PREFIX.length()) : entry.getKey(),
-                        Map.Entry::getValue));
+        if (config.getOrDefault(ProxiedConnectorConfiguration.PROXIED_CONNECTOR, ObjectStoreProxyConnectorInitializer.CONNECTOR_NAME).equals(ProxiedConnectorConfiguration.ICEBERG_CONNECTOR_NAME)) {
+            // support for Tabular which should act as warp-speed iceberg.
+            ImmutableMap.Builder<String, String> strippedConfig = ImmutableMap.builder();
+            strippedConfig.putAll(config)
+                    .put(DispatcherWorkerDALModule.WORKER_DB_CONNECTION_PREFIX, "jdbc:hsqldb:mem:")
+                    .put(DispatcherWorkerDALModule.WORKER_DB_CONNECTION_PATH, "workerDB/");
+            return dispatcherConnectorFactory.create(
+                    catalogName,
+                    strippedConfig.buildOrThrow(),
+                    context,
+                    Optional.of(new WarpSpeedObjectStoreModule()),
+                    Map.of(ProxiedConnectorConfiguration.ICEBERG_CONNECTOR_NAME, new IcebergProxiedConnectorInitializer()));
+        }
+        else {
+            Map<String, String> strippedConfig = Stream.concat(
+                            config.entrySet().stream(),
+                            Map.of(ProxiedConnectorConfiguration.PROXIED_CONNECTOR, "galaxy_objectstore",
+                                            DispatcherWorkerDALModule.WORKER_DB_CONNECTION_PREFIX, "jdbc:hsqldb:mem:",
+                                            DispatcherWorkerDALModule.WORKER_DB_CONNECTION_PATH, "workerDB/")
+                                    .entrySet()
+                                    .stream())
+                    .collect(toImmutableMap(
+                            entry -> entry.getKey().startsWith(WARP_PREFIX) ? entry.getKey().substring(WARP_PREFIX.length()) : entry.getKey(),
+                            Map.Entry::getValue));
 
-        return dispatcherConnectorFactory.create(
-                catalogName,
-                strippedConfig,
-                context,
-                Optional.of(new WarpSpeedObjectStoreModule()),
-                Map.of("galaxy_objectstore", new ObjectStoreProxyConnectorInitializer()));
+            return dispatcherConnectorFactory.create(
+                    catalogName,
+                    strippedConfig,
+                    context,
+                    Optional.of(new WarpSpeedObjectStoreModule()),
+                    Map.of(ObjectStoreProxyConnectorInitializer.CONNECTOR_NAME, new ObjectStoreProxyConnectorInitializer()));
+        }
     }
 }

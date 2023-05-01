@@ -31,6 +31,8 @@ import java.util.stream.Collectors;
 public class ObjectStoreProxyConnectorInitializer
         implements ProxiedConnectorInitializer
 {
+    public static final String CONNECTOR_NAME = "galaxy_objectstore";
+
     @Override
     public List<Module> getModules(ConnectorContext context)
     {
@@ -61,6 +63,6 @@ public class ObjectStoreProxyConnectorInitializer
     @Override
     public String getProxiedConnectorName()
     {
-        return "galaxy_objectstore";
+        return CONNECTOR_NAME;
     }
 }
