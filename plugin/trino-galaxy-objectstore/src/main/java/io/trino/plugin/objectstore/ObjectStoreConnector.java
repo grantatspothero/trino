@@ -71,8 +71,8 @@ public class ObjectStoreConnector
     private final ObjectStoreNodePartitioningProvider nodePartitioningProvider;
     private final ObjectStoreTableProperties tableProperties;
     private final ObjectStoreMaterializedViewProperties materializedViewProperties;
-    private final Set<Procedure> procedures;
     private final List<PropertyMetadata<?>> sessionProperties;
+    private final Set<Procedure> procedures;
     private final Procedure flushMetadataCache;
     private final Procedure migrateHiveToIcebergProcedure;
     private final boolean hiveRecursiveDirWalkerEnabled;
@@ -87,7 +87,7 @@ public class ObjectStoreConnector
             ObjectStoreNodePartitioningProvider nodePartitioningProvider,
             ObjectStoreTableProperties tableProperties,
             ObjectStoreMaterializedViewProperties materializedViewProperties,
-            Set<Procedure> procedures)
+            Set<Procedure> objectStoreProcedures)
     {
         this.hiveConnector = delegates.hiveConnector();
         this.icebergConnector = delegates.icebergConnector();
@@ -100,9 +100,9 @@ public class ObjectStoreConnector
         this.nodePartitioningProvider = requireNonNull(nodePartitioningProvider, "nodePartitioningProvider is null");
         this.tableProperties = requireNonNull(tableProperties, "tableProperties is null");
         this.materializedViewProperties = requireNonNull(materializedViewProperties, "materializedViewProperties is null");
-        this.procedures = ImmutableSet.copyOf(requireNonNull(procedures, "procedures is null"));
         this.sessionProperties = sessionProperties(delegates);
-        this.flushMetadataCache = procedures.stream()
+        this.procedures = procedures(delegates, objectStoreProcedures);
+        this.flushMetadataCache = objectStoreProcedures.stream()
                 .filter(procedure -> procedure.getName().equals("flush_metadata_cache"))
                 .collect(onlyElement());
         this.migrateHiveToIcebergProcedure = icebergConnector.getProcedures().stream()
@@ -133,6 +133,27 @@ public class ObjectStoreConnector
             }
         }
         return ImmutableList.copyOf(sessionProperties.values());
+    }
+
+    private static Set<Procedure> procedures(DelegateConnectors delegates, Set<Procedure> objectStoreProcedures)
+    {
+        Map<String, Procedure> procedures = new HashMap<>();
+        objectStoreProcedures.forEach(procedure -> procedures.put(procedure.getName(), procedure));
+        for (Connector connector : delegates.asList()) {
+            for (Procedure procedure : connector.getProcedures()) {
+                String name = procedure.getName();
+                if (name.equals("migrate") || name.equals("register_table") || name.equals("unregister_table") || name.equals("flush_metadata_cache")) {
+                    // Ignore connector-specific procedures if they exist.
+                    // This needs to be provided in an ObjectStore-specific manner.
+                    continue;
+                }
+                Procedure existing = procedures.putIfAbsent(name, procedure);
+                if (existing != null) {
+                    throw new VerifyException("Duplicate procedure: " + name);
+                }
+            }
+        }
+        return ImmutableSet.copyOf(procedures.values());
     }
 
     @Override
@@ -296,23 +317,7 @@ public class ObjectStoreConnector
     @Override
     public Set<Procedure> getProcedures()
     {
-        Map<String, Procedure> procedures = new HashMap<>();
-        this.procedures.forEach(procedure -> procedures.put(procedure.getName(), procedure));
-        for (Connector connector : ImmutableList.of(hiveConnector, icebergConnector, deltaConnector, hudiConnector)) {
-            for (Procedure procedure : connector.getProcedures()) {
-                String name = procedure.getName();
-                if (name.equals("migrate") || name.equals("register_table") || name.equals("unregister_table") || name.equals("flush_metadata_cache")) {
-                    // Ignore connector-specific procedures if they exist.
-                    // This needs to be provided in an ObjectStore-specific manner.
-                    continue;
-                }
-                Procedure existing = procedures.putIfAbsent(name, procedure);
-                if (existing != null) {
-                    throw new VerifyException("Duplicate procedure: " + name);
-                }
-            }
-        }
-        return ImmutableSet.copyOf(procedures.values());
+        return procedures;
     }
 
     @Override
