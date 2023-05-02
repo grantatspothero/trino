@@ -73,6 +73,7 @@ public class ObjectStoreConnector
     private final ObjectStoreMaterializedViewProperties materializedViewProperties;
     private final List<PropertyMetadata<?>> sessionProperties;
     private final Set<Procedure> procedures;
+    private final Set<TableProcedureMetadata> tableProcedures;
     private final Procedure flushMetadataCache;
     private final Procedure migrateHiveToIcebergProcedure;
     private final boolean hiveRecursiveDirWalkerEnabled;
@@ -102,6 +103,7 @@ public class ObjectStoreConnector
         this.materializedViewProperties = requireNonNull(materializedViewProperties, "materializedViewProperties is null");
         this.sessionProperties = sessionProperties(delegates);
         this.procedures = procedures(delegates, objectStoreProcedures);
+        this.tableProcedures = tableProcedures(delegates);
         this.flushMetadataCache = objectStoreProcedures.stream()
                 .filter(procedure -> procedure.getName().equals("flush_metadata_cache"))
                 .collect(onlyElement());
@@ -154,6 +156,49 @@ public class ObjectStoreConnector
             }
         }
         return ImmutableSet.copyOf(procedures.values());
+    }
+
+    private static Set<TableProcedureMetadata> tableProcedures(DelegateConnectors delegates)
+    {
+        Map<String, TableProcedureMetadata> tableProcedures = new HashMap<>();
+        for (Connector connector : delegates.asList()) {
+            for (TableProcedureMetadata procedure : connector.getTableProcedures()) {
+                String name = procedure.getName();
+                verify(name.equals(name.toUpperCase(Locale.ROOT)), "Procedure name is not uppercase: %s", name);
+
+                TableProcedureMetadata existing = tableProcedures.putIfAbsent(name, procedure);
+                if (existing == null) {
+                    continue;
+                }
+
+                if (!name.equals("OPTIMIZE")) {
+                    throw new VerifyException("Duplicate procedure: " + name);
+                }
+
+                verify(procedure.getExecutionMode().isReadsData() == existing.getExecutionMode().isReadsData(),
+                        "Procedure uses different execution mode for reads data: %s", name);
+                verify(procedure.getExecutionMode().supportsFilter() == existing.getExecutionMode().supportsFilter(),
+                        "Procedure uses different execution mode for supports filter: %s", name);
+
+                Set<String> difference = symmetricDifference(
+                        procedure.getProperties().stream()
+                                .map(PropertyMetadata::getName)
+                                .collect(toSet()),
+                        existing.getProperties().stream()
+                                .map(PropertyMetadata::getName)
+                                .collect(toSet()));
+                verify(difference.isEmpty(), "Procedure '%s' has different properties: %s", name, difference);
+
+                forEachPair(
+                        procedure.getProperties().stream().sorted(comparing(PropertyMetadata::getName)),
+                        existing.getProperties().stream().sorted(comparing(PropertyMetadata::getName)),
+                        (property, other) -> {
+                            verifyPropertyMetadata(property, other);
+                            verifyPropertyDescription(property, other);
+                        });
+            }
+        }
+        return ImmutableSet.copyOf(tableProcedures.values());
     }
 
     @Override
@@ -323,44 +368,6 @@ public class ObjectStoreConnector
     @Override
     public Set<TableProcedureMetadata> getTableProcedures()
     {
-        Map<String, TableProcedureMetadata> procedures = new HashMap<>();
-        for (Connector connector : ImmutableList.of(hiveConnector, icebergConnector, deltaConnector, hudiConnector)) {
-            for (TableProcedureMetadata procedure : connector.getTableProcedures()) {
-                String name = procedure.getName();
-                verify(name.equals(name.toUpperCase(Locale.ROOT)), "Procedure name is not uppercase: %s", name);
-
-                TableProcedureMetadata existing = procedures.putIfAbsent(name, procedure);
-                if (existing == null) {
-                    continue;
-                }
-
-                if (!name.equals("OPTIMIZE")) {
-                    throw new VerifyException("Duplicate procedure: " + name);
-                }
-
-                verify(procedure.getExecutionMode().isReadsData() == existing.getExecutionMode().isReadsData(),
-                        "Procedure uses different execution mode for reads data: %s", name);
-                verify(procedure.getExecutionMode().supportsFilter() == existing.getExecutionMode().supportsFilter(),
-                        "Procedure uses different execution mode for supports filter: %s", name);
-
-                Set<String> difference = symmetricDifference(
-                        procedure.getProperties().stream()
-                                .map(PropertyMetadata::getName)
-                                .collect(toSet()),
-                        existing.getProperties().stream()
-                                .map(PropertyMetadata::getName)
-                                .collect(toSet()));
-                verify(difference.isEmpty(), "Procedure '%s' has different properties: %s", name, difference);
-
-                forEachPair(
-                        procedure.getProperties().stream().sorted(comparing(PropertyMetadata::getName)),
-                        existing.getProperties().stream().sorted(comparing(PropertyMetadata::getName)),
-                        (property, other) -> {
-                            verifyPropertyMetadata(property, other);
-                            verifyPropertyDescription(property, other);
-                        });
-            }
-        }
-        return ImmutableSet.copyOf(procedures.values());
+        return tableProcedures;
     }
 }
