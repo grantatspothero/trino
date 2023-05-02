@@ -69,6 +69,7 @@ public class ObjectStoreConnector
     private final ObjectStorePageSourceProvider pageSourceProvider;
     private final ObjectStorePageSinkProvider pageSinkProvider;
     private final ObjectStoreNodePartitioningProvider nodePartitioningProvider;
+    private final List<PropertyMetadata<?>> schemaProperties;
     private final ObjectStoreTableProperties tableProperties;
     private final List<PropertyMetadata<?>> columnProperties;
     private final ObjectStoreMaterializedViewProperties materializedViewProperties;
@@ -101,6 +102,7 @@ public class ObjectStoreConnector
         this.pageSourceProvider = requireNonNull(pageSourceProvider, "pageSourceProvider is null");
         this.pageSinkProvider = requireNonNull(pageSinkProvider, "pageSinkProvider is null");
         this.nodePartitioningProvider = requireNonNull(nodePartitioningProvider, "nodePartitioningProvider is null");
+        this.schemaProperties = schemaProperties();
         this.tableProperties = requireNonNull(tableProperties, "tableProperties is null");
         this.columnProperties = columnProperties(delegates);
         this.materializedViewProperties = requireNonNull(materializedViewProperties, "materializedViewProperties is null");
@@ -115,6 +117,17 @@ public class ObjectStoreConnector
                 .filter(procedure -> procedure.getName().equals("migrate"))
                 .collect(onlyElement());
         this.hiveRecursiveDirWalkerEnabled = ((HiveConnector) hiveConnector).isRecursiveDirWalkerEnabled();
+    }
+
+    private static List<PropertyMetadata<?>> schemaProperties()
+    {
+        return ImmutableList.<PropertyMetadata<?>>builder()
+                .add(stringProperty(
+                        "location",
+                        "Base file system location URI",
+                        null,
+                        false))
+                .build();
     }
 
     private static List<PropertyMetadata<?>> columnProperties(DelegateConnectors delegates)
@@ -340,13 +353,7 @@ public class ObjectStoreConnector
     @Override
     public List<PropertyMetadata<?>> getSchemaProperties()
     {
-        return ImmutableList.<PropertyMetadata<?>>builder()
-                .add(stringProperty(
-                        "location",
-                        "Base file system location URI",
-                        null,
-                        false))
-                .build();
+        return schemaProperties;
     }
 
     @Override
