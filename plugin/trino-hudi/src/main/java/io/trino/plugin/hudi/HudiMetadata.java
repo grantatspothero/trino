@@ -18,7 +18,10 @@ import com.google.common.collect.ImmutableMap;
 import com.uber.hoodie.hadoop.HoodieInputFormat;
 import com.uber.hoodie.hadoop.realtime.HoodieRealtimeInputFormat;
 import io.airlift.log.Logger;
-import io.trino.hdfs.HdfsContext;
+import io.trino.filesystem.FileIterator;
+import io.trino.filesystem.Location;
+import io.trino.filesystem.TrinoFileSystem;
+import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.hdfs.HdfsEnvironment;
 import io.trino.plugin.base.classloader.ClassLoaderSafeSystemTable;
 import io.trino.plugin.hive.HiveColumnHandle;
@@ -41,7 +44,6 @@ import io.trino.spi.connector.TableColumnsMetadata;
 import io.trino.spi.connector.TableNotFoundException;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.type.TypeManager;
-import org.apache.hadoop.fs.Path;
 import org.apache.hudi.common.model.HoodieTableType;
 import org.apache.hudi.hadoop.HoodieParquetInputFormat;
 import org.apache.hudi.hadoop.realtime.HoodieParquetRealtimeInputFormat;
@@ -72,7 +74,6 @@ import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
-import static org.apache.hudi.common.fs.FSUtils.getFs;
 import static org.apache.hudi.common.table.HoodieTableMetaClient.METAFOLDER_NAME;
 import static org.apache.hudi.common.util.StringUtils.isNullOrEmpty;
 
@@ -83,12 +84,14 @@ public class HudiMetadata
 
     private final HiveMetastore metastore;
     private final HdfsEnvironment hdfsEnvironment;
+    private final TrinoFileSystemFactory fileSystemFactory;
     private final TypeManager typeManager;
 
-    public HudiMetadata(HiveMetastore metastore, HdfsEnvironment hdfsEnvironment, TypeManager typeManager)
+    public HudiMetadata(HiveMetastore metastore, HdfsEnvironment hdfsEnvironment, TrinoFileSystemFactory fileSystemFactory, TypeManager typeManager)
     {
         this.metastore = requireNonNull(metastore, "metastore is null");
         this.hdfsEnvironment = requireNonNull(hdfsEnvironment, "hdfsEnvironment is null");
+        this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
     }
 
@@ -240,7 +243,13 @@ public class HudiMetadata
 
         String basePath = table.getStorage().getLocation();
         try {
-            if (!getFs(basePath, hdfsEnvironment.getConfiguration(new HdfsContext(session), new Path(basePath))).getFileStatus(new Path(basePath, METAFOLDER_NAME)).isDirectory()) {
+            Location baseLocation = Location.of(basePath);
+            Location metaLocation = baseLocation.appendPath(METAFOLDER_NAME);
+
+            TrinoFileSystem trinoFileSystem = fileSystemFactory.create(session);
+            FileIterator iterator = trinoFileSystem.listFiles(metaLocation);
+            // If there is at least one file in the .hoodie directory, it's a valid Hudi table
+            if (!iterator.hasNext()) {
                 log.warn("Could not find Hudi table at path '%s'.", basePath);
                 return false;
             }
