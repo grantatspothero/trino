@@ -70,6 +70,7 @@ public class ObjectStoreConnector
     private final ObjectStorePageSinkProvider pageSinkProvider;
     private final ObjectStoreNodePartitioningProvider nodePartitioningProvider;
     private final ObjectStoreTableProperties tableProperties;
+    private final List<PropertyMetadata<?>> columnProperties;
     private final ObjectStoreMaterializedViewProperties materializedViewProperties;
     private final List<PropertyMetadata<?>> sessionProperties;
     private final List<PropertyMetadata<?>> analyzeProperties;
@@ -101,6 +102,7 @@ public class ObjectStoreConnector
         this.pageSinkProvider = requireNonNull(pageSinkProvider, "pageSinkProvider is null");
         this.nodePartitioningProvider = requireNonNull(nodePartitioningProvider, "nodePartitioningProvider is null");
         this.tableProperties = requireNonNull(tableProperties, "tableProperties is null");
+        this.columnProperties = columnProperties(delegates);
         this.materializedViewProperties = requireNonNull(materializedViewProperties, "materializedViewProperties is null");
         this.sessionProperties = sessionProperties(delegates);
         this.analyzeProperties = analyzeProperties(delegates);
@@ -113,6 +115,16 @@ public class ObjectStoreConnector
                 .filter(procedure -> procedure.getName().equals("migrate"))
                 .collect(onlyElement());
         this.hiveRecursiveDirWalkerEnabled = ((HiveConnector) hiveConnector).isRecursiveDirWalkerEnabled();
+    }
+
+    private static List<PropertyMetadata<?>> columnProperties(DelegateConnectors delegates)
+    {
+        verify(delegates.hiveConnector().getColumnProperties().stream().allMatch(
+                property -> property.getName().startsWith("partition_projection_")), "Unexpected Hive column properties");
+        verify(delegates.icebergConnector().getColumnProperties().isEmpty(), "Unexpected Iceberg column properties");
+        verify(delegates.deltaConnector().getColumnProperties().isEmpty(), "Unexpected Delta Lake column properties");
+        verify(delegates.hudiConnector().getColumnProperties().isEmpty(), "Unexpected Hudi column properties");
+        return ImmutableList.of();
     }
 
     private static List<PropertyMetadata<?>> sessionProperties(DelegateConnectors delegates)
@@ -358,12 +370,7 @@ public class ObjectStoreConnector
     @Override
     public List<PropertyMetadata<?>> getColumnProperties()
     {
-        verify(hiveConnector.getColumnProperties().stream().allMatch(
-                property -> property.getName().startsWith("partition_projection_")), "Unexpected Hive column properties");
-        verify(icebergConnector.getColumnProperties().isEmpty(), "Unexpected Iceberg column properties");
-        verify(deltaConnector.getColumnProperties().isEmpty(), "Unexpected Delta Lake column properties");
-        verify(hudiConnector.getColumnProperties().isEmpty(), "Unexpected Hudi column properties");
-        return ImmutableList.of();
+        return columnProperties;
     }
 
     @Override
