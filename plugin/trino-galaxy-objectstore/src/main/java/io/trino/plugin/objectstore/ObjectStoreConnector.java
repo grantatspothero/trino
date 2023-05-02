@@ -112,7 +112,7 @@ public class ObjectStoreConnector
                 .add("minimum_assigned_split_weight")
                 .build();
         Map<String, PropertyMetadata<?>> sessionProperties = new HashMap<>();
-        for (Connector connector : ImmutableSet.of(hiveConnector, icebergConnector, deltaConnector, hudiConnector)) {
+        for (Connector connector : ImmutableList.of(hiveConnector, icebergConnector, deltaConnector, hudiConnector)) {
             for (PropertyMetadata<?> property : connector.getSessionProperties()) {
                 PropertyMetadata<?> existing = sessionProperties.putIfAbsent(property.getName(), property);
                 if (existing != null) {
@@ -268,7 +268,7 @@ public class ObjectStoreConnector
     public List<PropertyMetadata<?>> getAnalyzeProperties()
     {
         Map<String, PropertyMetadata<?>> properties = new HashMap<>();
-        for (Connector connector : ImmutableSet.of(hiveConnector, icebergConnector, deltaConnector, hudiConnector)) {
+        for (Connector connector : ImmutableList.of(hiveConnector, icebergConnector, deltaConnector, hudiConnector)) {
             for (PropertyMetadata<?> property : connector.getAnalyzeProperties()) {
                 PropertyMetadata<?> existing = properties.putIfAbsent(property.getName(), property);
                 if (existing != null) {
@@ -296,7 +296,7 @@ public class ObjectStoreConnector
     {
         Map<String, Procedure> procedures = new HashMap<>();
         this.procedures.forEach(procedure -> procedures.put(procedure.getName(), procedure));
-        for (Connector connector : ImmutableSet.of(hiveConnector, icebergConnector, deltaConnector, hudiConnector)) {
+        for (Connector connector : ImmutableList.of(hiveConnector, icebergConnector, deltaConnector, hudiConnector)) {
             for (Procedure procedure : connector.getProcedures()) {
                 String name = procedure.getName();
                 if (name.equals("migrate") || name.equals("register_table") || name.equals("unregister_table") || name.equals("flush_metadata_cache")) {
@@ -317,7 +317,7 @@ public class ObjectStoreConnector
     public Set<TableProcedureMetadata> getTableProcedures()
     {
         Map<String, TableProcedureMetadata> procedures = new HashMap<>();
-        for (Connector connector : ImmutableSet.of(hiveConnector, icebergConnector, deltaConnector, hudiConnector)) {
+        for (Connector connector : ImmutableList.of(hiveConnector, icebergConnector, deltaConnector, hudiConnector)) {
             for (TableProcedureMetadata procedure : connector.getTableProcedures()) {
                 String name = procedure.getName();
                 verify(name.equals(name.toUpperCase(Locale.ROOT)), "Procedure name is not uppercase: %s", name);
