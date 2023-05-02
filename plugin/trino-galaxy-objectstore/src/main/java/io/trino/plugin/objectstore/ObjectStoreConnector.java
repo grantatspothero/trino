@@ -52,6 +52,7 @@ import static com.google.common.collect.Sets.symmetricDifference;
 import static com.google.common.collect.Streams.forEachPair;
 import static io.trino.plugin.objectstore.FeatureExposure.UNDEFINED;
 import static io.trino.plugin.objectstore.FeatureExposures.procedureExposureDecisions;
+import static io.trino.plugin.objectstore.FeatureExposures.tableProcedureExposureDecisions;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.verifyPropertyDescription;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.verifyPropertyMetadata;
 import static io.trino.spi.connector.ConnectorCapabilities.MATERIALIZED_VIEW_GRACE_PERIOD;
@@ -215,44 +216,54 @@ public class ObjectStoreConnector
 
     private static Set<TableProcedureMetadata> tableProcedures(DelegateConnectors delegates)
     {
+        // Table procedures are currently defined on per-Connector basis. TODO Let engine ask for table procedures via ConnectorMetadata, for given table, so that we don't have to resolve collisions.
+
         Map<String, TableProcedureMetadata> tableProcedures = new HashMap<>();
-        for (Connector connector : delegates.asList()) {
+        Table<TableType, String, FeatureExposure> featureExposures = HashBasedTable.create(tableProcedureExposureDecisions());
+        delegates.byType().forEach((type, connector) -> {
             for (TableProcedureMetadata procedure : connector.getTableProcedures()) {
                 String name = procedure.getName();
                 verify(name.equals(name.toUpperCase(Locale.ROOT)), "Procedure name is not uppercase: %s", name);
 
-                TableProcedureMetadata existing = tableProcedures.putIfAbsent(name, procedure);
-                if (existing == null) {
-                    continue;
+                switch (firstNonNull(featureExposures.remove(type, name), UNDEFINED)) {
+                    case HIDDEN -> { /* skipped */ }
+                    case UNDEFINED -> throw new IllegalStateException("Unknown table procedure provided by %s: %s".formatted(type, name));
+                    case EXPOSED -> {
+                        TableProcedureMetadata existing = tableProcedures.putIfAbsent(name, procedure);
+                        if (existing == null) {
+                            continue;
+                        }
+
+                        verify(procedure.getExecutionMode().isReadsData() == existing.getExecutionMode().isReadsData(),
+                                "Procedure uses different execution mode for reads data: %s", name);
+                        verify(procedure.getExecutionMode().supportsFilter() == existing.getExecutionMode().supportsFilter(),
+                                "Procedure uses different execution mode for supports filter: %s", name);
+
+                        Set<String> difference = symmetricDifference(
+                                procedure.getProperties().stream()
+                                        .map(PropertyMetadata::getName)
+                                        .collect(toSet()),
+                                existing.getProperties().stream()
+                                        .map(PropertyMetadata::getName)
+                                        .collect(toSet()));
+                        verify(difference.isEmpty(), "Procedure '%s' has different properties: %s", name, difference);
+
+                        forEachPair(
+                                procedure.getProperties().stream().sorted(comparing(PropertyMetadata::getName)),
+                                existing.getProperties().stream().sorted(comparing(PropertyMetadata::getName)),
+                                (property, other) -> {
+                                    verifyPropertyMetadata(property, other);
+                                    verifyPropertyDescription(property, other);
+                                });
+                    }
                 }
-
-                if (!name.equals("OPTIMIZE")) {
-                    throw new VerifyException("Duplicate procedure: " + name);
-                }
-
-                verify(procedure.getExecutionMode().isReadsData() == existing.getExecutionMode().isReadsData(),
-                        "Procedure uses different execution mode for reads data: %s", name);
-                verify(procedure.getExecutionMode().supportsFilter() == existing.getExecutionMode().supportsFilter(),
-                        "Procedure uses different execution mode for supports filter: %s", name);
-
-                Set<String> difference = symmetricDifference(
-                        procedure.getProperties().stream()
-                                .map(PropertyMetadata::getName)
-                                .collect(toSet()),
-                        existing.getProperties().stream()
-                                .map(PropertyMetadata::getName)
-                                .collect(toSet()));
-                verify(difference.isEmpty(), "Procedure '%s' has different properties: %s", name, difference);
-
-                forEachPair(
-                        procedure.getProperties().stream().sorted(comparing(PropertyMetadata::getName)),
-                        existing.getProperties().stream().sorted(comparing(PropertyMetadata::getName)),
-                        (property, other) -> {
-                            verifyPropertyMetadata(property, other);
-                            verifyPropertyDescription(property, other);
-                        });
             }
+        });
+
+        if (!featureExposures.isEmpty()) {
+            throw new IllegalStateException("Procedures no longer provided: " + Maps.transformValues(featureExposures.rowMap(), Map::keySet));
         }
+
         return ImmutableSet.copyOf(tableProcedures.values());
     }
 

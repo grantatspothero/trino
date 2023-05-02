@@ -32,7 +32,7 @@ public final class FeatureExposures
                 // sorted by procedure name, then by connector in (Hive, Iceberg, Delta, Hudi) order
                 .put(HIVE, "create_empty_partition", EXPOSED)
                 .put(HIVE, "drop_stats", EXPOSED) // TODO similar to drop_extended_stats exposed by Delta
-                .put(DELTA, "drop_extended_stats", EXPOSED) // TODO similar to drop_stats exposed by hive
+                .put(DELTA, "drop_extended_stats", EXPOSED) // TODO similar to drop_stats exposed by hive and similar to DROP_EXTENDED_STATS *table procedure* exposed by Iceberg
                 .put(HIVE, "flush_metadata_cache", HIDDEN) // see ObjectStoreFlushMetadataCache
                 .put(DELTA, "flush_metadata_cache", HIDDEN) // see ObjectStoreFlushMetadataCache
                 .put(ICEBERG, "migrate", HIDDEN) // supported via ALTER TABLE SET PROPERTIES syntax
@@ -45,6 +45,19 @@ public final class FeatureExposures
                 .put(DELTA, "unregister_table", HIDDEN) // see ObjectStoreUnregisterTableProcedure
                 .put(ICEBERG, "unregister_table", HIDDEN) // see ObjectStoreUnregisterTableProcedure
                 .put(DELTA, "vacuum", EXPOSED)
+                .buildOrThrow();
+    }
+
+    public static Table<TableType, String, FeatureExposure> tableProcedureExposureDecisions()
+    {
+        return ImmutableTable.<TableType, String, FeatureExposure>builder()
+                // sorted by procedure name, then by connector in (Hive, Iceberg, Delta, Hudi) order
+                .put(ICEBERG, "DROP_EXTENDED_STATS", EXPOSED) // TODO similar to drop_extended_stats *procedure* exposed by Delta
+                .put(ICEBERG, "EXPIRE_SNAPSHOTS", EXPOSED)
+                .put(ICEBERG, "REMOVE_ORPHAN_FILES", EXPOSED)
+                .put(HIVE, "OPTIMIZE", EXPOSED)
+                .put(ICEBERG, "OPTIMIZE", EXPOSED)
+                .put(DELTA, "OPTIMIZE", EXPOSED)
                 .buildOrThrow();
     }
 }
