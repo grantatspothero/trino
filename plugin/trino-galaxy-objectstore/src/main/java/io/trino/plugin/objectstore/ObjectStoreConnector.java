@@ -14,8 +14,11 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.base.VerifyException;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Table;
 import io.airlift.bootstrap.LifeCycleManager;
 import io.trino.plugin.hive.HiveConnector;
 import io.trino.plugin.hive.HiveTransactionHandle;
@@ -41,11 +44,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.MoreCollectors.onlyElement;
 import static com.google.common.collect.Sets.immutableEnumSet;
 import static com.google.common.collect.Sets.symmetricDifference;
 import static com.google.common.collect.Streams.forEachPair;
+import static io.trino.plugin.objectstore.FeatureExposure.UNDEFINED;
+import static io.trino.plugin.objectstore.FeatureExposures.procedureExposureDecisions;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.verifyPropertyDescription;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.verifyPropertyMetadata;
 import static io.trino.spi.connector.ConnectorCapabilities.MATERIALIZED_VIEW_GRACE_PERIOD;
@@ -183,20 +189,27 @@ public class ObjectStoreConnector
     {
         Map<String, Procedure> procedures = new HashMap<>();
         objectStoreProcedures.forEach(procedure -> procedures.put(procedure.getName(), procedure));
-        for (Connector connector : delegates.asList()) {
+        Table<TableType, String, FeatureExposure> featureExposures = HashBasedTable.create(procedureExposureDecisions());
+        delegates.byType().forEach((type, connector) -> {
             for (Procedure procedure : connector.getProcedures()) {
                 String name = procedure.getName();
-                if (name.equals("migrate") || name.equals("register_table") || name.equals("unregister_table") || name.equals("flush_metadata_cache")) {
-                    // Ignore connector-specific procedures if they exist.
-                    // This needs to be provided in an ObjectStore-specific manner.
-                    continue;
-                }
-                Procedure existing = procedures.putIfAbsent(name, procedure);
-                if (existing != null) {
-                    throw new VerifyException("Duplicate procedure: " + name);
+                switch (firstNonNull(featureExposures.remove(type, name), UNDEFINED)) {
+                    case HIDDEN -> { /* skipped */ }
+                    case UNDEFINED -> throw new IllegalStateException("Unknown procedure provided by %s: %s".formatted(type, name));
+                    case EXPOSED -> {
+                        Procedure existing = procedures.putIfAbsent(name, procedure);
+                        if (existing != null) {
+                            throw new VerifyException("Duplicate procedure: " + name);
+                        }
+                    }
                 }
             }
+        });
+
+        if (!featureExposures.isEmpty()) {
+            throw new IllegalStateException("Procedures no longer provided: " + Maps.transformValues(featureExposures.rowMap(), Map::keySet));
         }
+
         return ImmutableSet.copyOf(procedures.values());
     }
 

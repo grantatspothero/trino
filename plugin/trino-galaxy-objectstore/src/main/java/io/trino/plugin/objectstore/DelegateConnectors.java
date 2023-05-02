@@ -14,11 +14,13 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.trino.spi.connector.Connector;
 
 import javax.inject.Inject;
 
 import java.util.List;
+import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
 
@@ -43,5 +45,15 @@ public record DelegateConnectors(
     public List<Connector> asList()
     {
         return ImmutableList.of(hiveConnector, icebergConnector, deltaConnector, hudiConnector);
+    }
+
+    public Map<TableType, Connector> byType()
+    {
+        return ImmutableMap.<TableType, Connector>builder()
+                .put(TableType.HIVE, hiveConnector)
+                .put(TableType.ICEBERG, icebergConnector)
+                .put(TableType.DELTA, deltaConnector)
+                .put(TableType.HUDI, hudiConnector)
+                .buildOrThrow();
     }
 }
