@@ -31,6 +31,7 @@ public class ObjectStoreModule
     @Override
     public void configure(Binder binder)
     {
+        binder.bind(DelegateConnectors.class).in(Scopes.SINGLETON);
         binder.bind(ObjectStoreConnector.class).in(Scopes.SINGLETON);
         binder.bind(ObjectStoreSplitManager.class).in(Scopes.SINGLETON);
         binder.bind(ObjectStorePageSourceProvider.class).in(Scopes.SINGLETON);

@@ -79,10 +79,7 @@ public class ObjectStoreConnector
 
     @Inject
     public ObjectStoreConnector(
-            @ForHive Connector hiveConnector,
-            @ForIceberg Connector icebergConnector,
-            @ForDelta Connector deltaConnector,
-            @ForHudi Connector hudiConnector,
+            DelegateConnectors delegates,
             LifeCycleManager lifeCycleManager,
             ObjectStoreSplitManager splitManager,
             ObjectStorePageSourceProvider pageSourceProvider,
@@ -92,10 +89,10 @@ public class ObjectStoreConnector
             ObjectStoreMaterializedViewProperties materializedViewProperties,
             Set<Procedure> procedures)
     {
-        this.hiveConnector = requireNonNull(hiveConnector, "hiveConnector is null");
-        this.icebergConnector = requireNonNull(icebergConnector, "icebergConnector is null");
-        this.deltaConnector = requireNonNull(deltaConnector, "deltaConnector is null");
-        this.hudiConnector = requireNonNull(hudiConnector, "hudiConnector is null");
+        this.hiveConnector = delegates.hiveConnector();
+        this.icebergConnector = delegates.icebergConnector();
+        this.deltaConnector = delegates.deltaConnector();
+        this.hudiConnector = delegates.hudiConnector();
         this.lifeCycleManager = requireNonNull(lifeCycleManager, "lifeCycleManager is null");
         this.splitManager = requireNonNull(splitManager, "splitManager is null");
         this.pageSourceProvider = requireNonNull(pageSourceProvider, "pageSourceProvider is null");
@@ -104,15 +101,27 @@ public class ObjectStoreConnector
         this.tableProperties = requireNonNull(tableProperties, "tableProperties is null");
         this.materializedViewProperties = requireNonNull(materializedViewProperties, "materializedViewProperties is null");
         this.procedures = ImmutableSet.copyOf(requireNonNull(procedures, "procedures is null"));
+        this.sessionProperties = sessionProperties(delegates);
+        this.flushMetadataCache = procedures.stream()
+                .filter(procedure -> procedure.getName().equals("flush_metadata_cache"))
+                .collect(onlyElement());
+        this.migrateHiveToIcebergProcedure = icebergConnector.getProcedures().stream()
+                .filter(procedure -> procedure.getName().equals("migrate"))
+                .collect(onlyElement());
+        this.hiveRecursiveDirWalkerEnabled = ((HiveConnector) hiveConnector).isRecursiveDirWalkerEnabled();
+    }
 
+    private static List<PropertyMetadata<?>> sessionProperties(DelegateConnectors delegates)
+    {
         Set<String> ignoredDescriptions = ImmutableSet.<String>builder()
                 .add("compression_codec")
                 .add("projection_pushdown_enabled")
                 .add("timestamp_precision")
                 .add("minimum_assigned_split_weight")
                 .build();
+
         Map<String, PropertyMetadata<?>> sessionProperties = new HashMap<>();
-        for (Connector connector : ImmutableList.of(hiveConnector, icebergConnector, deltaConnector, hudiConnector)) {
+        for (Connector connector : delegates.asList()) {
             for (PropertyMetadata<?> property : connector.getSessionProperties()) {
                 PropertyMetadata<?> existing = sessionProperties.putIfAbsent(property.getName(), property);
                 if (existing != null) {
@@ -123,14 +132,7 @@ public class ObjectStoreConnector
                 }
             }
         }
-        this.sessionProperties = ImmutableList.copyOf(sessionProperties.values());
-        this.flushMetadataCache = procedures.stream()
-                .filter(procedure -> procedure.getName().equals("flush_metadata_cache"))
-                .collect(onlyElement());
-        this.migrateHiveToIcebergProcedure = icebergConnector.getProcedures().stream()
-                .filter(procedure -> procedure.getName().equals("migrate"))
-                .collect(onlyElement());
-        this.hiveRecursiveDirWalkerEnabled = ((HiveConnector) hiveConnector).isRecursiveDirWalkerEnabled();
+        return ImmutableList.copyOf(sessionProperties.values());
     }
 
     @Override
