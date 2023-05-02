@@ -72,6 +72,7 @@ public class ObjectStoreConnector
     private final ObjectStoreTableProperties tableProperties;
     private final ObjectStoreMaterializedViewProperties materializedViewProperties;
     private final List<PropertyMetadata<?>> sessionProperties;
+    private final List<PropertyMetadata<?>> analyzeProperties;
     private final Set<Procedure> procedures;
     private final Set<TableProcedureMetadata> tableProcedures;
     private final Procedure flushMetadataCache;
@@ -102,6 +103,7 @@ public class ObjectStoreConnector
         this.tableProperties = requireNonNull(tableProperties, "tableProperties is null");
         this.materializedViewProperties = requireNonNull(materializedViewProperties, "materializedViewProperties is null");
         this.sessionProperties = sessionProperties(delegates);
+        this.analyzeProperties = analyzeProperties(delegates);
         this.procedures = procedures(delegates, objectStoreProcedures);
         this.tableProcedures = tableProcedures(delegates);
         this.flushMetadataCache = objectStoreProcedures.stream()
@@ -135,6 +137,21 @@ public class ObjectStoreConnector
             }
         }
         return ImmutableList.copyOf(sessionProperties.values());
+    }
+
+    private static List<PropertyMetadata<?>> analyzeProperties(DelegateConnectors delegates)
+    {
+        Map<String, PropertyMetadata<?>> properties = new HashMap<>();
+        for (Connector connector : delegates.asList()) {
+            for (PropertyMetadata<?> property : connector.getAnalyzeProperties()) {
+                PropertyMetadata<?> existing = properties.putIfAbsent(property.getName(), property);
+                if (existing != null) {
+                    verifyPropertyMetadata(property, existing);
+                    verifyPropertyDescription(property, existing);
+                }
+            }
+        }
+        return ImmutableList.copyOf(properties.values());
     }
 
     private static Set<Procedure> procedures(DelegateConnectors delegates, Set<Procedure> objectStoreProcedures)
@@ -335,17 +352,7 @@ public class ObjectStoreConnector
     @Override
     public List<PropertyMetadata<?>> getAnalyzeProperties()
     {
-        Map<String, PropertyMetadata<?>> properties = new HashMap<>();
-        for (Connector connector : ImmutableList.of(hiveConnector, icebergConnector, deltaConnector, hudiConnector)) {
-            for (PropertyMetadata<?> property : connector.getAnalyzeProperties()) {
-                PropertyMetadata<?> existing = properties.putIfAbsent(property.getName(), property);
-                if (existing != null) {
-                    verifyPropertyMetadata(property, existing);
-                    verifyPropertyDescription(property, existing);
-                }
-            }
-        }
-        return ImmutableList.copyOf(properties.values());
+        return analyzeProperties;
     }
 
     @Override
