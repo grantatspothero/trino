@@ -201,6 +201,7 @@ public class ExecutingStatementResource
 
         Optional<ResultsCacheEntry> resultsCacheEntry = queryManager.getResultsCacheParameters(queryId).map(parameters ->
                 resultsCacheManager.createResultsCacheEntry(
+                        session.getIdentity(),
                         parameters,
                         queryId));
 

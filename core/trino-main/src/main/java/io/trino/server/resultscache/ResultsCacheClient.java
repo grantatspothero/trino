@@ -14,31 +14,41 @@
 
 package io.trino.server.resultscache;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airlift.http.client.HttpClient;
+import io.airlift.json.ObjectMapperProvider;
 import io.airlift.log.Logger;
 import io.airlift.units.Duration;
+import io.starburst.stargate.resultscache.client.CacheClient;
+import io.starburst.stargate.resultscache.model.CacheEntry;
 import io.trino.client.Column;
 import io.trino.spi.QueryId;
+import io.trino.spi.security.Identity;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.function.Supplier;
 
-import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.trino.server.security.galaxy.GalaxyIdentity.toDispatchSession;
 import static java.util.Objects.requireNonNull;
 
 public class ResultsCacheClient
 {
     private static final Logger log = Logger.get(ResultsCacheClient.class);
-    private final HttpClient httpClient;
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapperProvider().get();
+    private final String cacheBaseUri;
+    private final CacheClient cacheClient;
 
-    public ResultsCacheClient(HttpClient httpClient)
+    public ResultsCacheClient(String cacheBaseUri, HttpClient httpClient)
     {
-        this.httpClient = requireNonNull(httpClient, "httpClient is null");
-
-        // Temporary usage of httpClient to pass tests
-        checkState(this.httpClient != null, "httpClient is null");
+        this.cacheBaseUri = requireNonNull(cacheBaseUri, "cacheBaseUri is null");
+        this.cacheClient = new CacheClient(requireNonNull(httpClient, "httpClient is null"));
     }
 
     public void uploadResultsCacheEntry(
+            Identity identity,
             String key,
             QueryId queryId,
             List<Column> columns,
@@ -46,6 +56,41 @@ public class ResultsCacheClient
             Duration expirationInterval)
     {
         log.debug("Sending cache entry %s for query %s to results cache", key, queryId);
-        // TODO https://github.com/starburstdata/stargate/issues/8383
+        try {
+            cacheClient.insertCacheEntry(
+                    cacheBaseUri,
+                    getTokenSupplier(identity),
+                    createCacheEntry(key, queryId, columns, data, expirationInterval));
+        }
+        catch (JsonProcessingException ex) {
+            throw new RuntimeException("Error serializing results to JSON", ex);
+        }
+    }
+
+    private static Supplier<String> getTokenSupplier(Identity identity)
+    {
+        return () -> toDispatchSession(identity).getAccessToken();
+    }
+
+    private static CacheEntry createCacheEntry(
+            String cacheKey,
+            QueryId queryId,
+            List<Column> columns,
+            List<List<Object>> data,
+            Duration expirationInterval) throws JsonProcessingException
+    {
+        Instant expirationTime = Instant.now().plusMillis(expirationInterval.toMillis());
+        List<List<String>> dataStr = data.stream().map(singleRow -> singleRow.stream().map(ResultsCacheClient::serializeObject).collect(toImmutableList())).collect(toImmutableList());
+        return new CacheEntry(cacheKey, queryId.toString(), columns, dataStr, expirationTime);
+    }
+
+    private static String serializeObject(Object object)
+    {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(object);
+        }
+        catch (JsonProcessingException ex) {
+            throw new RuntimeException("Error serializing results to JSON", ex);
+        }
     }
 }

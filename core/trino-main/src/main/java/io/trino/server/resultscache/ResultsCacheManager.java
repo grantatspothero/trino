@@ -19,6 +19,7 @@ import com.google.inject.Inject;
 import io.airlift.http.client.HttpClient;
 import io.airlift.units.DataSize;
 import io.trino.spi.QueryId;
+import io.trino.spi.security.Identity;
 
 import static com.google.common.util.concurrent.MoreExecutors.listeningDecorator;
 import static io.airlift.concurrent.Threads.threadsNamed;
@@ -37,13 +38,16 @@ public class ResultsCacheManager
     public ResultsCacheManager(@ForResultsCache HttpClient httpClient, ResultsCacheConfig config)
     {
         this.executorService = listeningDecorator(newFixedThreadPool(config.getCacheUploadThreads(), threadsNamed("resultscache-upload-%s")));
-        this.resultsCacheClient = new ResultsCacheClient(requireNonNull(httpClient, "httpClient is null"));
+        this.resultsCacheClient = new ResultsCacheClient(
+                config.getCacheEndpoint(),
+                requireNonNull(httpClient, "httpClient is null"));
     }
 
-    public ResultsCacheEntry createResultsCacheEntry(ResultsCacheParameters resultsCacheParameters, QueryId queryId)
+    public ResultsCacheEntry createResultsCacheEntry(Identity identity, ResultsCacheParameters resultsCacheParameters, QueryId queryId)
     {
         long maximumSizeBytes = resultsCacheParameters.maximumSizeBytes().orElse(DEFAULT_MAXIMUM_SIZE_BYTES);
         return new ResultsCacheEntry(
+                identity,
                 resultsCacheParameters.key(),
                 queryId,
                 maximumSizeBytes,

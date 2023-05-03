@@ -353,6 +353,11 @@
         </dependency>
 
         <dependency>
+            <groupId>io.starburst.stargate</groupId>
+            <artifactId>trino-results-cache-client</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>it.unimi.dsi</groupId>
             <artifactId>fastutil</artifactId>
         </dependency>

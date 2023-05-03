@@ -1776,6 +1776,12 @@
                 <version>${dep.stargate.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>io.starburst.stargate</groupId>
+                <artifactId>trino-results-cache-client</artifactId>
+                <version>${dep.stargate.version}</version>
+            </dependency>
+
             <!-- io.confluent:kafka-avro-serializer uses multiple versions of this transitive dependency -->
             <dependency>
                 <groupId>io.swagger</groupId>

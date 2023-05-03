@@ -24,6 +24,7 @@ import io.airlift.units.DataSize;
 import io.airlift.units.Duration;
 import io.trino.client.Column;
 import io.trino.spi.QueryId;
+import io.trino.spi.security.Identity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +38,7 @@ public class ResultsCacheEntry
 {
     private static final Logger log = Logger.get(ResultsCacheEntry.class);
     private static final long MAX_SIZE = DataSize.of(1, MEGABYTE).toBytes();
+    private final Identity identity;
     private final String key;
     private final QueryId queryId;
     private final long maximumSize;
@@ -48,6 +50,7 @@ public class ResultsCacheEntry
     private Optional<ResultsData> resultsData = Optional.empty();
 
     public ResultsCacheEntry(
+            Identity identity,
             String key,
             QueryId queryId,
             long maximumSize,
@@ -55,6 +58,7 @@ public class ResultsCacheEntry
             ResultsCacheClient client,
             ListeningExecutorService executorService)
     {
+        this.identity = requireNonNull(identity, "identity is null");
         this.key = requireNonNull(key, "key is null");
         this.queryId = requireNonNull(queryId, "queryId is null");
         checkArgument(maximumSize > 0, "maximumSize is <= 0");
@@ -90,7 +94,7 @@ public class ResultsCacheEntry
     public void done()
     {
         if (valid) {
-            submitAsyncUpload(executorService, client, key, queryId, expirationInterval, resultsData.orElseThrow());
+            submitAsyncUpload(executorService, client, identity, key, queryId, expirationInterval, resultsData.orElseThrow());
             resultsData = Optional.empty();
         }
         valid = false;
@@ -99,14 +103,14 @@ public class ResultsCacheEntry
     private static void submitAsyncUpload(
             ListeningExecutorService executorService,
             ResultsCacheClient client,
+            Identity identity,
             String cacheKey,
             QueryId queryId,
             Duration expirationInterval,
             ResultsData resultsData)
     {
-        ListenableFuture<?> submitFuture = executorService.submit(() -> {
-            client.uploadResultsCacheEntry(cacheKey, queryId, resultsData.columns, resultsData.data, expirationInterval);
-        });
+        ListenableFuture<?> submitFuture = executorService.submit(() ->
+                client.uploadResultsCacheEntry(identity, cacheKey, queryId, resultsData.columns, resultsData.data, expirationInterval));
 
         MoreFutures.addExceptionCallback(submitFuture, throwable ->
                 log.error("Upload to cache failed: %s", throwable));
