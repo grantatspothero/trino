@@ -227,7 +227,7 @@ public class SqlQueryExecution
             this.eventDrivenTaskSourceFactory = requireNonNull(eventDrivenTaskSourceFactory, "taskSourceFactory is null");
             this.taskDescriptorStorage = requireNonNull(taskDescriptorStorage, "taskDescriptorStorage is null");
             this.planOptimizersStatsCollector = requireNonNull(planOptimizersStatsCollector, "planOptimizersStatsCollector is null");
-            this.resultsCacheParameters = createResultsCacheParameters(stateMachine.getSession()).filter(ignore -> isResultSetCacheable(analysis));
+            this.resultsCacheParameters = createResultsCacheParameters(stateMachine.getSession()).filter(ignore -> isResultSetCacheable(preparedQuery.getStatement(), analysis));
         }
     }
 
@@ -737,11 +737,20 @@ public class SqlQueryExecution
                                 ResultsCacheSessionProperties.getResultsCacheEntryMaxSizeBytes(session))));
     }
 
-    private static boolean isResultSetCacheable(Analysis analysis)
+    private static boolean isResultSetCacheable(Statement originalStatement, Analysis analysis)
     {
-        if (analysis.getStatement() instanceof Query) {
+        if (originalStatement instanceof Query) {
             // TODO filter queries where tables have per-record permissions/record filters https://github.com/starburstdata/stargate/issues/8499
-            // TODO filter query cases https://github.com/starburstdata/stargate/issues/8513
+
+            for (TableHandle tableHandle : analysis.getTables()) {
+                switch (tableHandle.getCatalogHandle().getType()) {
+                    case INFORMATION_SCHEMA:
+                    case SYSTEM:
+                        return false;
+                    case NORMAL:
+                        continue;
+                }
+            }
 
             return true;
         }
