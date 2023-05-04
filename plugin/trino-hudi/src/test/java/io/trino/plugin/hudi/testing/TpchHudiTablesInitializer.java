@@ -52,7 +52,6 @@ import org.apache.hudi.common.util.Option;
 import org.apache.hudi.config.HoodieArchivalConfig;
 import org.apache.hudi.config.HoodieIndexConfig;
 import org.apache.hudi.config.HoodieWriteConfig;
-import org.apache.hudi.hadoop.HoodieParquetInputFormat;
 import org.apache.hudi.index.HoodieIndex;
 import org.intellij.lang.annotations.Language;
 
@@ -171,7 +170,7 @@ public class TpchHudiTablesInitializer
 
         StorageFormat storageFormat = StorageFormat.create(
                 ParquetHiveSerDe.class.getName(),
-                HoodieParquetInputFormat.class.getName(),
+                "org.apache.hudi.hadoop.HoodieParquetInputFormat",
                 MapredParquetOutputFormat.class.getName());
 
         return Table.builder()

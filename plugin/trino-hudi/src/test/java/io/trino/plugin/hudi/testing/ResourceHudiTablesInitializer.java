@@ -31,7 +31,6 @@ import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat;
 import org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe;
 import org.apache.hudi.common.model.HoodieTableType;
-import org.apache.hudi.hadoop.HoodieParquetInputFormat;
 
 import java.io.File;
 import java.io.IOException;
@@ -98,7 +97,7 @@ public class ResourceHudiTablesInitializer
     {
         StorageFormat storageFormat = StorageFormat.create(
                 ParquetHiveSerDe.class.getName(),
-                HoodieParquetInputFormat.class.getName(),
+                "org.apache.hudi.hadoop.HoodieParquetInputFormat",
                 MapredParquetOutputFormat.class.getName());
 
         Table table = Table.builder()
