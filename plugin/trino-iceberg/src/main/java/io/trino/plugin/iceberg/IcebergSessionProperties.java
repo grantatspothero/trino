@@ -203,7 +203,7 @@ public final class IcebergSessionProperties
                         false))
                 .add(booleanProperty(
                         PARQUET_USE_BLOOM_FILTER,
-                        "Parquet: Enable using Parquet bloom filter",
+                        "Use Parquet Bloom filters",
                         parquetReaderConfig.isUseBloomFilter(),
                         false))
                 .add(integerProperty(

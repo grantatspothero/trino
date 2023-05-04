@@ -391,7 +391,7 @@ public final class HiveSessionProperties
                         false),
                 booleanProperty(
                         PARQUET_USE_BLOOM_FILTER,
-                        "Use Parquet bloomfilter",
+                        "Use Parquet Bloom filters",
                         parquetReaderConfig.isUseBloomFilter(),
                         false),
                 dataSizeProperty(
