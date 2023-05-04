@@ -156,6 +156,19 @@ public class ParquetReaderConfig
         return options.useBloomFilter();
     }
 
+    @Config("parquet.native-zstd-decompressor.enabled")
+    @ConfigDescription("Enable using native zstd library for faster decompression of parquet files")
+    public ParquetReaderConfig setNativeZstdDecompressorEnabled(boolean nativeZstdDecompressorEnabled)
+    {
+        options = options.withNativeZstdDecompressorEnabled(nativeZstdDecompressorEnabled);
+        return this;
+    }
+
+    public boolean isNativeZstdDecompressorEnabled()
+    {
+        return options.isNativeZstdDecompressorEnabled();
+    }
+
     public ParquetReaderOptions toParquetReaderOptions()
     {
         return options;

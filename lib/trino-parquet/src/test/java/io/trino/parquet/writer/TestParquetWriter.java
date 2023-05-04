@@ -99,7 +99,8 @@ public class TestParquetWriter
                 chunkMetaData,
                 new ColumnDescriptor(new String[] {"columna"}, new PrimitiveType(REQUIRED, INT32, "columna"), 0, 0),
                 null,
-                Optional.empty());
+                Optional.empty(),
+                true);
 
         pageReader.readDictionaryPage();
         assertThat(pageReader.hasNext()).isTrue();

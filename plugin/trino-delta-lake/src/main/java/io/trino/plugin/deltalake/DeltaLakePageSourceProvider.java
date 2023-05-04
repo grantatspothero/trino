@@ -75,6 +75,7 @@ import static io.trino.plugin.deltalake.DeltaLakeColumnHandle.ROW_ID_COLUMN_NAME
 import static io.trino.plugin.deltalake.DeltaLakeColumnType.REGULAR;
 import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.getParquetMaxReadBlockRowCount;
 import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.getParquetMaxReadBlockSize;
+import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.isParquetNativeZstdDecompressorEnabled;
 import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.isParquetOptimizedNestedReaderEnabled;
 import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.isParquetOptimizedReaderEnabled;
 import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.isParquetUseColumnIndex;
@@ -186,7 +187,8 @@ public class DeltaLakePageSourceProvider
                 .withMaxReadBlockRowCount(getParquetMaxReadBlockRowCount(session))
                 .withUseColumnIndex(isParquetUseColumnIndex(session))
                 .withBatchColumnReaders(isParquetOptimizedReaderEnabled(session))
-                .withBatchNestedColumnReaders(isParquetOptimizedNestedReaderEnabled(session));
+                .withBatchNestedColumnReaders(isParquetOptimizedNestedReaderEnabled(session))
+                .withNativeZstdDecompressorEnabled(isParquetNativeZstdDecompressorEnabled(session));
 
         ColumnMappingMode columnMappingMode = getColumnMappingMode(table.getMetadataEntry());
         Map<Integer, String> parquetFieldIdToName = columnMappingMode == ColumnMappingMode.ID ? loadParquetIdAndNameMapping(inputFile, options) : ImmutableMap.of();

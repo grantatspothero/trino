@@ -35,6 +35,7 @@ public class ParquetReaderOptions
     private final boolean useBatchColumnReaders;
     private final boolean useBatchNestedColumnReaders;
     private final boolean useBloomFilter;
+    private final boolean nativeZstdDecompressorEnabled;
 
     public ParquetReaderOptions()
     {
@@ -47,6 +48,7 @@ public class ParquetReaderOptions
         useBatchColumnReaders = true;
         useBatchNestedColumnReaders = true;
         useBloomFilter = true;
+        nativeZstdDecompressorEnabled = false;
     }
 
     private ParquetReaderOptions(
@@ -58,7 +60,8 @@ public class ParquetReaderOptions
             boolean useColumnIndex,
             boolean useBatchColumnReaders,
             boolean useBatchNestedColumnReaders,
-            boolean useBloomFilter)
+            boolean useBloomFilter,
+            boolean nativeZstdDecompressorEnabled)
     {
         this.ignoreStatistics = ignoreStatistics;
         this.maxReadBlockSize = requireNonNull(maxReadBlockSize, "maxReadBlockSize is null");
@@ -70,6 +73,7 @@ public class ParquetReaderOptions
         this.useBatchColumnReaders = useBatchColumnReaders;
         this.useBatchNestedColumnReaders = useBatchNestedColumnReaders;
         this.useBloomFilter = useBloomFilter;
+        this.nativeZstdDecompressorEnabled = nativeZstdDecompressorEnabled;
     }
 
     public boolean isIgnoreStatistics()
@@ -107,6 +111,11 @@ public class ParquetReaderOptions
         return useBloomFilter;
     }
 
+    public boolean isNativeZstdDecompressorEnabled()
+    {
+        return nativeZstdDecompressorEnabled;
+    }
+
     public DataSize getMaxBufferSize()
     {
         return maxBufferSize;
@@ -128,7 +137,8 @@ public class ParquetReaderOptions
                 useColumnIndex,
                 useBatchColumnReaders,
                 useBatchNestedColumnReaders,
-                useBloomFilter);
+                useBloomFilter,
+                nativeZstdDecompressorEnabled);
     }
 
     public ParquetReaderOptions withMaxReadBlockSize(DataSize maxReadBlockSize)
@@ -142,7 +152,8 @@ public class ParquetReaderOptions
                 useColumnIndex,
                 useBatchColumnReaders,
                 useBatchNestedColumnReaders,
-                useBloomFilter);
+                useBloomFilter,
+                nativeZstdDecompressorEnabled);
     }
 
     public ParquetReaderOptions withMaxReadBlockRowCount(int maxReadBlockRowCount)
@@ -156,7 +167,8 @@ public class ParquetReaderOptions
                 useColumnIndex,
                 useBatchColumnReaders,
                 useBatchNestedColumnReaders,
-                useBloomFilter);
+                useBloomFilter,
+                nativeZstdDecompressorEnabled);
     }
 
     public ParquetReaderOptions withMaxMergeDistance(DataSize maxMergeDistance)
@@ -170,7 +182,8 @@ public class ParquetReaderOptions
                 useColumnIndex,
                 useBatchColumnReaders,
                 useBatchNestedColumnReaders,
-                useBloomFilter);
+                useBloomFilter,
+                nativeZstdDecompressorEnabled);
     }
 
     public ParquetReaderOptions withMaxBufferSize(DataSize maxBufferSize)
@@ -184,7 +197,8 @@ public class ParquetReaderOptions
                 useColumnIndex,
                 useBatchColumnReaders,
                 useBatchNestedColumnReaders,
-                useBloomFilter);
+                useBloomFilter,
+                nativeZstdDecompressorEnabled);
     }
 
     public ParquetReaderOptions withUseColumnIndex(boolean useColumnIndex)
@@ -198,7 +212,8 @@ public class ParquetReaderOptions
                 useColumnIndex,
                 useBatchColumnReaders,
                 useBatchNestedColumnReaders,
-                useBloomFilter);
+                useBloomFilter,
+                nativeZstdDecompressorEnabled);
     }
 
     public ParquetReaderOptions withBatchColumnReaders(boolean useBatchColumnReaders)
@@ -212,7 +227,8 @@ public class ParquetReaderOptions
                 useColumnIndex,
                 useBatchColumnReaders,
                 useBatchNestedColumnReaders,
-                useBloomFilter);
+                useBloomFilter,
+                nativeZstdDecompressorEnabled);
     }
 
     public ParquetReaderOptions withBatchNestedColumnReaders(boolean useBatchNestedColumnReaders)
@@ -226,7 +242,8 @@ public class ParquetReaderOptions
                 useColumnIndex,
                 useBatchColumnReaders,
                 useBatchNestedColumnReaders,
-                useBloomFilter);
+                useBloomFilter,
+                nativeZstdDecompressorEnabled);
     }
 
     public ParquetReaderOptions withBloomFilter(boolean useBloomFilter)
@@ -240,6 +257,22 @@ public class ParquetReaderOptions
                 useColumnIndex,
                 useBatchColumnReaders,
                 useBatchNestedColumnReaders,
-                useBloomFilter);
+                useBloomFilter,
+                nativeZstdDecompressorEnabled);
+    }
+
+    public ParquetReaderOptions withNativeZstdDecompressorEnabled(boolean nativeZstdDecompressorEnabled)
+    {
+        return new ParquetReaderOptions(
+                ignoreStatistics,
+                maxReadBlockSize,
+                maxReadBlockRowCount,
+                maxMergeDistance,
+                maxBufferSize,
+                useColumnIndex,
+                useBatchColumnReaders,
+                useBatchNestedColumnReaders,
+                useBloomFilter,
+                nativeZstdDecompressorEnabled);
     }
 }

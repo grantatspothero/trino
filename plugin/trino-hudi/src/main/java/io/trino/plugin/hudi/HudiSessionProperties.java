@@ -45,6 +45,7 @@ public class HudiSessionProperties
     private static final String USE_PARQUET_COLUMN_NAMES = "use_parquet_column_names";
     private static final String PARQUET_OPTIMIZED_READER_ENABLED = "parquet_optimized_reader_enabled";
     private static final String PARQUET_OPTIMIZED_NESTED_READER_ENABLED = "parquet_optimized_nested_reader_enabled";
+    private static final String PARQUET_NATIVE_ZSTD_DECOMPRESSOR_ENABLED = "parquet_native_zstd_decompressor_enabled";
     private static final String MIN_PARTITION_BATCH_SIZE = "min_partition_batch_size";
     private static final String MAX_PARTITION_BATCH_SIZE = "max_partition_batch_size";
     private static final String SIZE_BASED_SPLIT_WEIGHTS_ENABLED = "size_based_split_weights_enabled";
@@ -87,6 +88,11 @@ public class HudiSessionProperties
                         PARQUET_OPTIMIZED_NESTED_READER_ENABLED,
                         "Use optimized Parquet reader for nested columns",
                         parquetReaderConfig.isOptimizedNestedReaderEnabled(),
+                        false),
+                booleanProperty(
+                        PARQUET_NATIVE_ZSTD_DECOMPRESSOR_ENABLED,
+                        "Enable using native zstd library for faster decompression of parquet files",
+                        parquetReaderConfig.isNativeZstdDecompressorEnabled(),
                         false),
                 integerProperty(
                         MIN_PARTITION_BATCH_SIZE,
@@ -150,6 +156,11 @@ public class HudiSessionProperties
     public static boolean isParquetOptimizedNestedReaderEnabled(ConnectorSession session)
     {
         return session.getProperty(PARQUET_OPTIMIZED_NESTED_READER_ENABLED, Boolean.class);
+    }
+
+    public static boolean isParquetNativeZstdDecompressorEnabled(ConnectorSession session)
+    {
+        return session.getProperty(PARQUET_NATIVE_ZSTD_DECOMPRESSOR_ENABLED, Boolean.class);
     }
 
     public static int getMinPartitionBatchSize(ConnectorSession session)

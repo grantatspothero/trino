@@ -140,7 +140,7 @@ public class TestFlatColumnReader
                 encoding,
                 encoding,
                 PLAIN));
-        return new PageReader(UNCOMPRESSED, pages.iterator(), false, false);
+        return new PageReader(UNCOMPRESSED, pages.iterator(), false, false, true);
     }
 
     private static PageReader getNullOnlyPageReaderMock()
@@ -157,6 +157,6 @@ public class TestFlatColumnReader
                 RLE,
                 RLE,
                 PLAIN));
-        return new PageReader(UNCOMPRESSED, pages.iterator(), false, false);
+        return new PageReader(UNCOMPRESSED, pages.iterator(), false, false, true);
     }
 }

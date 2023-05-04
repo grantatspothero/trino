@@ -107,7 +107,7 @@ public abstract class AbstractColumnReaderBenchmark<VALUES>
                 UTC,
                 newSimpleAggregatedMemoryContext(),
                 new ParquetReaderOptions().withBatchColumnReaders(true));
-        columnReader.setPageReader(new PageReader(UNCOMPRESSED, dataPages.iterator(), false, false), Optional.empty());
+        columnReader.setPageReader(new PageReader(UNCOMPRESSED, dataPages.iterator(), false, false, true), Optional.empty());
         int rowsRead = 0;
         while (rowsRead < dataPositions) {
             int remaining = dataPositions - rowsRead;

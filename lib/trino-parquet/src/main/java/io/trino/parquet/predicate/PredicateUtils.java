@@ -133,7 +133,8 @@ public final class PredicateUtils
             Optional<ColumnIndexStore> columnIndexStore,
             Optional<BloomFilterStore> bloomFilterStore,
             DateTimeZone timeZone,
-            int domainCompactionThreshold)
+            int domainCompactionThreshold,
+            boolean isNativeZstdDecompressorEnabled)
             throws IOException
     {
         if (block.getRowCount() == 0) {
@@ -168,7 +169,8 @@ public final class PredicateUtils
                 dataSource,
                 descriptorsByPath,
                 ImmutableSet.copyOf(candidateColumns.get()),
-                columnIndexStore);
+                columnIndexStore,
+                isNativeZstdDecompressorEnabled);
     }
 
     private static Map<ColumnDescriptor, Statistics<?>> getStatistics(BlockMetaData blockMetadata, Map<List<String>, ColumnDescriptor> descriptorsByPath)
@@ -204,7 +206,8 @@ public final class PredicateUtils
             ParquetDataSource dataSource,
             Map<List<String>, ColumnDescriptor> descriptorsByPath,
             Set<ColumnDescriptor> candidateColumns,
-            Optional<ColumnIndexStore> columnIndexStore)
+            Optional<ColumnIndexStore> columnIndexStore,
+            boolean isNativeZstdDecompressorEnabled)
             throws IOException
     {
         for (ColumnChunkMetaData columnMetaData : blockMetadata.getColumns()) {
@@ -219,7 +222,7 @@ public final class PredicateUtils
                 if (!parquetPredicate.matches(new DictionaryDescriptor(
                         descriptor,
                         nullAllowed,
-                        readDictionaryPage(dataSource, columnMetaData, columnIndexStore)))) {
+                        readDictionaryPage(dataSource, columnMetaData, columnIndexStore, isNativeZstdDecompressorEnabled)))) {
                     return false;
                 }
             }
@@ -230,7 +233,8 @@ public final class PredicateUtils
     private static Optional<DictionaryPage> readDictionaryPage(
             ParquetDataSource dataSource,
             ColumnChunkMetaData columnMetaData,
-            Optional<ColumnIndexStore> columnIndexStore)
+            Optional<ColumnIndexStore> columnIndexStore,
+            boolean isNativeZstdDecompressorEnabled)
             throws IOException
     {
         int dictionaryPageSize;
@@ -254,7 +258,7 @@ public final class PredicateUtils
         }
         // Get the dictionary page header and the dictionary in single read
         Slice buffer = dataSource.readFully(columnMetaData.getStartingPos(), dictionaryPageSize);
-        return readPageHeaderWithData(buffer.getInput()).map(data -> decodeDictionaryPage(data, columnMetaData));
+        return readPageHeaderWithData(buffer.getInput()).map(data -> decodeDictionaryPage(data, columnMetaData, isNativeZstdDecompressorEnabled));
     }
 
     private static Optional<Integer> getDictionaryPageSize(ColumnIndexStore columnIndexStore, ColumnChunkMetaData columnMetaData)
@@ -293,7 +297,7 @@ public final class PredicateUtils
                 inputStream.readSlice(pageHeader.getCompressed_page_size())));
     }
 
-    private static DictionaryPage decodeDictionaryPage(PageHeaderWithData pageHeaderWithData, ColumnChunkMetaData chunkMetaData)
+    private static DictionaryPage decodeDictionaryPage(PageHeaderWithData pageHeaderWithData, ColumnChunkMetaData chunkMetaData, boolean isNativeZstdDecompressorEnabled)
     {
         PageHeader pageHeader = pageHeaderWithData.pageHeader();
         DictionaryPageHeader dicHeader = pageHeader.getDictionary_page_header();
@@ -302,7 +306,10 @@ public final class PredicateUtils
 
         Slice compressedData = pageHeaderWithData.compressedData();
         try {
-            return new DictionaryPage(decompress(chunkMetaData.getCodec().getParquetCompressionCodec(), compressedData, pageHeader.getUncompressed_page_size()), dictionarySize, encoding);
+            return new DictionaryPage(
+                    decompress(chunkMetaData.getCodec().getParquetCompressionCodec(), compressedData, pageHeader.getUncompressed_page_size(), isNativeZstdDecompressorEnabled),
+                    dictionarySize,
+                    encoding);
         }
         catch (IOException e) {
             throw new ParquetDecodingException("Could not decode the dictionary for " + chunkMetaData.getPath(), e);

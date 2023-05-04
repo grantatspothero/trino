@@ -43,6 +43,7 @@ public final class PageReader
     private final CompressionCodec codec;
     private final boolean hasOnlyDictionaryEncodedPages;
     private final boolean hasNoNulls;
+    private final boolean isNativeZstdDecompressorEnabled;
     private final PeekingIterator<Page> compressedPages;
 
     private boolean dictionaryAlreadyRead;
@@ -53,7 +54,8 @@ public final class PageReader
             ColumnChunkMetaData metadata,
             ColumnDescriptor columnDescriptor,
             @Nullable OffsetIndex offsetIndex,
-            Optional<String> fileCreatedBy)
+            Optional<String> fileCreatedBy,
+            boolean isNativeZstdDecompressorEnabled)
     {
         // Parquet schema may specify a column definition as OPTIONAL even though there are no nulls in the actual data.
         // Row-group column statistics can be used to identify such cases and switch to faster non-nullable read
@@ -67,7 +69,12 @@ public final class PageReader
                 metadata,
                 columnChunk,
                 offsetIndex);
-        return new PageReader(metadata.getCodec().getParquetCompressionCodec(), compressedPages, hasOnlyDictionaryEncodedPages, hasNoNulls);
+        return new PageReader(
+                metadata.getCodec().getParquetCompressionCodec(),
+                compressedPages,
+                hasOnlyDictionaryEncodedPages,
+                hasNoNulls,
+                isNativeZstdDecompressorEnabled);
     }
 
     @VisibleForTesting
@@ -75,12 +82,14 @@ public final class PageReader
             CompressionCodec codec,
             Iterator<? extends Page> compressedPages,
             boolean hasOnlyDictionaryEncodedPages,
-            boolean hasNoNulls)
+            boolean hasNoNulls,
+            boolean isNativeZstdDecompressorEnabled)
     {
         this.codec = codec;
         this.compressedPages = Iterators.peekingIterator(compressedPages);
         this.hasOnlyDictionaryEncodedPages = hasOnlyDictionaryEncodedPages;
         this.hasNoNulls = hasNoNulls;
+        this.isNativeZstdDecompressorEnabled = isNativeZstdDecompressorEnabled;
     }
 
     public boolean hasNoNulls()
@@ -104,7 +113,7 @@ public final class PageReader
         try {
             if (compressedPage instanceof DataPageV1 dataPageV1) {
                 return new DataPageV1(
-                        decompress(codec, dataPageV1.getSlice(), dataPageV1.getUncompressedSize()),
+                        decompress(codec, dataPageV1.getSlice(), dataPageV1.getUncompressedSize(), isNativeZstdDecompressorEnabled),
                         dataPageV1.getValueCount(),
                         dataPageV1.getUncompressedSize(),
                         dataPageV1.getFirstRowIndex(),
@@ -126,7 +135,7 @@ public final class PageReader
                     dataPageV2.getRepetitionLevels(),
                     dataPageV2.getDefinitionLevels(),
                     dataPageV2.getDataEncoding(),
-                    decompress(codec, dataPageV2.getSlice(), uncompressedSize),
+                    decompress(codec, dataPageV2.getSlice(), uncompressedSize, isNativeZstdDecompressorEnabled),
                     dataPageV2.getUncompressedSize(),
                     dataPageV2.getFirstRowIndex(),
                     dataPageV2.getStatistics(),
@@ -148,7 +157,7 @@ public final class PageReader
         try {
             DictionaryPage compressedDictionaryPage = (DictionaryPage) compressedPages.next();
             return new DictionaryPage(
-                    decompress(codec, compressedDictionaryPage.getSlice(), compressedDictionaryPage.getUncompressedSize()),
+                    decompress(codec, compressedDictionaryPage.getSlice(), compressedDictionaryPage.getUncompressedSize(), isNativeZstdDecompressorEnabled),
                     compressedDictionaryPage.getDictionarySize(),
                     compressedDictionaryPage.getEncoding());
         }

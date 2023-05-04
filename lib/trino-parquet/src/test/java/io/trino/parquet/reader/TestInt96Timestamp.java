@@ -109,7 +109,7 @@ public class TestInt96Timestamp
         // Read and assert
         ColumnReader reader = ColumnReaderFactory.create(field, DateTimeZone.UTC, newSimpleAggregatedMemoryContext(), new ParquetReaderOptions().withBatchColumnReaders(true));
         reader.setPageReader(
-                new PageReader(UNCOMPRESSED, List.of(dataPage).iterator(), false, false),
+                new PageReader(UNCOMPRESSED, List.of(dataPage).iterator(), false, false, true),
                 Optional.empty());
         reader.prepareNextRead(valueCount);
         Block block = reader.readPrimitive().getBlock();

@@ -39,6 +39,7 @@ public class TestParquetReaderConfig
                 .setUseColumnIndex(true)
                 .setOptimizedReaderEnabled(true)
                 .setOptimizedNestedReaderEnabled(true)
+                .setNativeZstdDecompressorEnabled(false)
                 .setUseBloomFilter(true));
     }
 
@@ -55,6 +56,7 @@ public class TestParquetReaderConfig
                 .put("parquet.optimized-reader.enabled", "false")
                 .put("parquet.optimized-nested-reader.enabled", "false")
                 .put("parquet.use-bloom-filter", "false")
+                .put("parquet.native-zstd-decompressor.enabled", "true")
                 .buildOrThrow();
 
         ParquetReaderConfig expected = new ParquetReaderConfig()
@@ -66,7 +68,8 @@ public class TestParquetReaderConfig
                 .setUseColumnIndex(false)
                 .setOptimizedReaderEnabled(false)
                 .setOptimizedNestedReaderEnabled(false)
-                .setUseBloomFilter(false);
+                .setUseBloomFilter(false)
+                .setNativeZstdDecompressorEnabled(true);
 
         assertFullMapping(properties, expected);
     }
