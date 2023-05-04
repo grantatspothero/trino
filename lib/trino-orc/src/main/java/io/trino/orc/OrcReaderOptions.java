@@ -28,6 +28,7 @@ public class OrcReaderOptions
     private static final DataSize DEFAULT_MAX_BLOCK_SIZE = DataSize.of(16, MEGABYTE);
     private static final boolean DEFAULT_LAZY_READ_SMALL_RANGES = true;
     private static final boolean DEFAULT_NESTED_LAZY = true;
+    private static final boolean DEFAULT_NATIVE_ZSTD_DECOMPRESSOR_ENABLED = false;
 
     private final boolean bloomFiltersEnabled;
 
@@ -38,6 +39,7 @@ public class OrcReaderOptions
     private final DataSize maxBlockSize;
     private final boolean lazyReadSmallRanges;
     private final boolean nestedLazy;
+    private final boolean nativeZstdDecompressorEnabled;
 
     public OrcReaderOptions()
     {
@@ -49,6 +51,7 @@ public class OrcReaderOptions
         maxBlockSize = DEFAULT_MAX_BLOCK_SIZE;
         lazyReadSmallRanges = DEFAULT_LAZY_READ_SMALL_RANGES;
         nestedLazy = DEFAULT_NESTED_LAZY;
+        nativeZstdDecompressorEnabled = DEFAULT_NATIVE_ZSTD_DECOMPRESSOR_ENABLED;
     }
 
     private OrcReaderOptions(
@@ -59,7 +62,8 @@ public class OrcReaderOptions
             DataSize streamBufferSize,
             DataSize maxBlockSize,
             boolean lazyReadSmallRanges,
-            boolean nestedLazy)
+            boolean nestedLazy,
+            boolean nativeZstdDecompressorEnabled)
     {
         this.maxMergeDistance = requireNonNull(maxMergeDistance, "maxMergeDistance is null");
         this.maxBufferSize = requireNonNull(maxBufferSize, "maxBufferSize is null");
@@ -69,6 +73,7 @@ public class OrcReaderOptions
         this.lazyReadSmallRanges = lazyReadSmallRanges;
         this.bloomFiltersEnabled = bloomFiltersEnabled;
         this.nestedLazy = nestedLazy;
+        this.nativeZstdDecompressorEnabled = nativeZstdDecompressorEnabled;
     }
 
     public boolean isBloomFiltersEnabled()
@@ -111,6 +116,11 @@ public class OrcReaderOptions
         return nestedLazy;
     }
 
+    public boolean isNativeZstdDecompressorEnabled()
+    {
+        return nativeZstdDecompressorEnabled;
+    }
+
     public OrcReaderOptions withBloomFiltersEnabled(boolean bloomFiltersEnabled)
     {
         return new OrcReaderOptions(
@@ -121,7 +131,8 @@ public class OrcReaderOptions
                 streamBufferSize,
                 maxBlockSize,
                 lazyReadSmallRanges,
-                nestedLazy);
+                nestedLazy,
+                nativeZstdDecompressorEnabled);
     }
 
     public OrcReaderOptions withMaxMergeDistance(DataSize maxMergeDistance)
@@ -134,7 +145,8 @@ public class OrcReaderOptions
                 streamBufferSize,
                 maxBlockSize,
                 lazyReadSmallRanges,
-                nestedLazy);
+                nestedLazy,
+                nativeZstdDecompressorEnabled);
     }
 
     public OrcReaderOptions withMaxBufferSize(DataSize maxBufferSize)
@@ -147,7 +159,8 @@ public class OrcReaderOptions
                 streamBufferSize,
                 maxBlockSize,
                 lazyReadSmallRanges,
-                nestedLazy);
+                nestedLazy,
+                nativeZstdDecompressorEnabled);
     }
 
     public OrcReaderOptions withTinyStripeThreshold(DataSize tinyStripeThreshold)
@@ -160,7 +173,8 @@ public class OrcReaderOptions
                 streamBufferSize,
                 maxBlockSize,
                 lazyReadSmallRanges,
-                nestedLazy);
+                nestedLazy,
+                nativeZstdDecompressorEnabled);
     }
 
     public OrcReaderOptions withStreamBufferSize(DataSize streamBufferSize)
@@ -173,7 +187,8 @@ public class OrcReaderOptions
                 streamBufferSize,
                 maxBlockSize,
                 lazyReadSmallRanges,
-                nestedLazy);
+                nestedLazy,
+                nativeZstdDecompressorEnabled);
     }
 
     public OrcReaderOptions withMaxReadBlockSize(DataSize maxBlockSize)
@@ -186,7 +201,8 @@ public class OrcReaderOptions
                 streamBufferSize,
                 maxBlockSize,
                 lazyReadSmallRanges,
-                nestedLazy);
+                nestedLazy,
+                nativeZstdDecompressorEnabled);
     }
 
     // TODO remove config option once efficacy is proven
@@ -201,7 +217,8 @@ public class OrcReaderOptions
                 streamBufferSize,
                 maxBlockSize,
                 lazyReadSmallRanges,
-                nestedLazy);
+                nestedLazy,
+                nativeZstdDecompressorEnabled);
     }
 
     // TODO remove config option once efficacy is proven
@@ -216,6 +233,21 @@ public class OrcReaderOptions
                 streamBufferSize,
                 maxBlockSize,
                 lazyReadSmallRanges,
-                nestedLazy);
+                nestedLazy,
+                nativeZstdDecompressorEnabled);
+    }
+
+    public OrcReaderOptions withNativeZstdDecompressorEnabled(boolean nativeZstdDecompressorEnabled)
+    {
+        return new OrcReaderOptions(
+                bloomFiltersEnabled,
+                maxMergeDistance,
+                maxBufferSize,
+                tinyStripeThreshold,
+                streamBufferSize,
+                maxBlockSize,
+                lazyReadSmallRanges,
+                nestedLazy,
+                nativeZstdDecompressorEnabled);
     }
 }

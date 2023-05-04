@@ -93,6 +93,7 @@ import static io.trino.plugin.hive.HiveSessionProperties.getOrcStreamBufferSize;
 import static io.trino.plugin.hive.HiveSessionProperties.getOrcTinyStripeThreshold;
 import static io.trino.plugin.hive.HiveSessionProperties.getTimestampPrecision;
 import static io.trino.plugin.hive.HiveSessionProperties.isOrcBloomFiltersEnabled;
+import static io.trino.plugin.hive.HiveSessionProperties.isOrcNativeZstdDecompressorEnabled;
 import static io.trino.plugin.hive.HiveSessionProperties.isOrcNestedLazy;
 import static io.trino.plugin.hive.HiveSessionProperties.isUseOrcColumnNames;
 import static io.trino.plugin.hive.orc.OrcPageSource.ColumnAdaptation.mergedRowColumns;
@@ -221,7 +222,8 @@ public class OrcPageSourceFactory
                         .withMaxReadBlockSize(getOrcMaxReadBlockSize(session))
                         .withLazyReadSmallRanges(getOrcLazyReadSmallRanges(session))
                         .withNestedLazy(isOrcNestedLazy(session))
-                        .withBloomFiltersEnabled(isOrcBloomFiltersEnabled(session)),
+                        .withBloomFiltersEnabled(isOrcBloomFiltersEnabled(session))
+                        .withNativeZstdDecompressorEnabled(isOrcNativeZstdDecompressorEnabled(session)),
                 acidInfo,
                 bucketNumber,
                 originalFile,
