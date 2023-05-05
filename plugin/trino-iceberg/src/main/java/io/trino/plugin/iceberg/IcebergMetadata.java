@@ -2014,10 +2014,8 @@ public class IcebergMetadata
 
         beginTransaction(icebergTable);
 
-        IcebergTableHandle newTableHandle = table.withRetryMode(retryMode);
         IcebergWritableTableHandle insertHandle = newWritableTableHandle(table.getSchemaTableName(), icebergTable, retryMode);
-
-        return new IcebergMergeTableHandle(newTableHandle, insertHandle);
+        return new IcebergMergeTableHandle(table, insertHandle);
     }
 
     @Override
