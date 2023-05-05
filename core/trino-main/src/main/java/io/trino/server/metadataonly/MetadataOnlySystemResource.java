@@ -20,7 +20,7 @@ import javax.inject.Inject;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 
-import static io.trino.server.security.ResourceSecurity.AccessType.PUBLIC;
+import static io.trino.server.security.ResourceSecurity.AccessType.MANAGEMENT_WRITE;
 import static java.util.Objects.requireNonNull;
 
 @Path("/galaxy/metadata/v1/system")
@@ -38,7 +38,7 @@ public class MetadataOnlySystemResource
 
     @PUT
     @Path("shutdown")
-    @ResourceSecurity(PUBLIC)
+    @ResourceSecurity(MANAGEMENT_WRITE)
     public void shutdown()
     {
         log.info("Shutdown request received");
