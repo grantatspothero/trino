@@ -199,7 +199,7 @@ public abstract class AbstractTestHiveFileSystem
                                 .build()),
                 getBasePath(),
                 hdfsEnvironment);
-        locationService = new HiveLocationService(hdfsEnvironment);
+        locationService = new HiveLocationService(hdfsEnvironment, config);
         JsonCodec<PartitionUpdate> partitionUpdateCodec = JsonCodec.jsonCodec(PartitionUpdate.class);
         metadataFactory = new HiveMetadataFactory(
                 LocationAccessControl.ALLOW_ALL,
