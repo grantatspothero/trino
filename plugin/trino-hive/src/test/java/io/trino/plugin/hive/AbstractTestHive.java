@@ -218,8 +218,6 @@ import static io.trino.plugin.hive.HiveErrorCode.HIVE_INVALID_PARTITION_VALUE;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_PARTITION_SCHEMA_MISMATCH;
 import static io.trino.plugin.hive.HiveMetadata.PRESTO_QUERY_ID_NAME;
 import static io.trino.plugin.hive.HiveMetadata.PRESTO_VERSION_NAME;
-import static io.trino.plugin.hive.HiveSessionProperties.getTemporaryStagingDirectoryPath;
-import static io.trino.plugin.hive.HiveSessionProperties.isTemporaryStagingDirectoryEnabled;
 import static io.trino.plugin.hive.HiveStorageFormat.AVRO;
 import static io.trino.plugin.hive.HiveStorageFormat.CSV;
 import static io.trino.plugin.hive.HiveStorageFormat.JSON;
@@ -821,7 +819,7 @@ public abstract class AbstractTestHive
         metastoreClient = hiveMetastore;
         hdfsEnvironment = hdfsConfiguration;
         HivePartitionManager partitionManager = new HivePartitionManager(hiveConfig);
-        locationService = new HiveLocationService(hdfsEnvironment);
+        locationService = new HiveLocationService(hdfsEnvironment, hiveConfig);
         JsonCodec<PartitionUpdate> partitionUpdateCodec = JsonCodec.jsonCodec(PartitionUpdate.class);
         countingDirectoryLister = new CountingDirectoryLister();
         metadataFactory = new HiveMetadataFactory(
@@ -2854,16 +2852,16 @@ public abstract class AbstractTestHive
             }
 
             HdfsContext context = new HdfsContext(session);
+            HiveConfig config = getHiveConfig();
             // verify we have enough temporary files per bucket to require multiple passes
             Path stagingPathRoot;
-            if (isTemporaryStagingDirectoryEnabled(session)) {
-                stagingPathRoot = new Path(getTemporaryStagingDirectoryPath(session)
+            if (config.isTemporaryStagingDirectoryEnabled()) {
+                stagingPathRoot = new Path(config.getTemporaryStagingDirectoryPath()
                         .replace("${USER}", context.getIdentity().getUser()));
             }
             else {
                 stagingPathRoot = getStagingPathRoot(outputHandle);
             }
-
             assertThat(listAllDataFiles(context, stagingPathRoot))
                     .filteredOn(file -> file.contains(".tmp-sort."))
                     .size().isGreaterThan(bucketCount * getSortingFileWriterConfig().getMaxOpenSortFiles() * 2);
@@ -3056,57 +3054,6 @@ public abstract class AbstractTestHive
             SchemaTableName temporaryCreateEmptyTable = temporaryTable("create_empty");
             try {
                 doCreateEmptyTable(temporaryCreateEmptyTable, storageFormat, CREATE_TABLE_COLUMNS);
-            }
-            finally {
-                dropTable(temporaryCreateEmptyTable);
-            }
-        }
-    }
-
-    @Test
-    public void testCreateEmptyTableShouldNotCreateStagingDirectory()
-            throws IOException
-    {
-        for (HiveStorageFormat storageFormat : createTableFormats) {
-            SchemaTableName temporaryCreateEmptyTable = temporaryTable("create_empty");
-            try {
-                List<Column> columns = ImmutableList.of(new Column("test", HIVE_STRING, Optional.empty()));
-                try (Transaction transaction = newTransaction()) {
-                    final String temporaryStagingPrefix = "hive-temporary-staging-prefix-" + UUID.randomUUID().toString().toLowerCase(ENGLISH).replace("-", "");
-                    ConnectorSession session = newSession(ImmutableMap.of("hive.temporary_staging_directory_path", temporaryStagingPrefix));
-                    String tableOwner = session.getUser();
-                    String schemaName = temporaryCreateEmptyTable.getSchemaName();
-                    String tableName = temporaryCreateEmptyTable.getTableName();
-                    LocationService locationService = getLocationService();
-                    Path targetPath = locationService.forNewTable(transaction.getMetastore(), session, schemaName, tableName);
-                    Table.Builder tableBuilder = Table.builder()
-                            .setDatabaseName(schemaName)
-                            .setTableName(tableName)
-                            .setOwner(Optional.of(tableOwner))
-                            .setTableType(MANAGED_TABLE.name())
-                            .setParameters(ImmutableMap.of(
-                                    PRESTO_VERSION_NAME, TEST_SERVER_VERSION,
-                                    PRESTO_QUERY_ID_NAME, session.getQueryId()))
-                            .setDataColumns(columns);
-                    tableBuilder.getStorageBuilder()
-                            .setLocation(targetPath.toString())
-                            .setStorageFormat(StorageFormat.create(storageFormat.getSerde(), storageFormat.getInputFormat(), storageFormat.getOutputFormat()));
-                    transaction.getMetastore().createTable(
-                            session,
-                            tableBuilder.build(),
-                            testingPrincipalPrivilege(tableOwner, session.getUser()),
-                            Optional.empty(),
-                            Optional.empty(),
-                            true,
-                            EMPTY_TABLE_STATISTICS,
-                            false);
-                    transaction.commit();
-
-                    HdfsContext context = new HdfsContext(session);
-                    Path temporaryRoot = new Path(targetPath, temporaryStagingPrefix);
-                    FileSystem fileSystem = hdfsEnvironment.getFileSystem(context, temporaryRoot);
-                    assertFalse(fileSystem.exists(temporaryRoot), format("Temporary staging directory %s is created.", temporaryRoot));
-                }
             }
             finally {
                 dropTable(temporaryCreateEmptyTable);

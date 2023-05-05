@@ -392,10 +392,4 @@ public class TestHiveAlluxioMetastore
     {
         // Alluxio metastore does not support insert/update/delete operations
     }
-
-    @Override
-    public void testCreateEmptyTableShouldNotCreateStagingDirectory()
-    {
-        // Alluxio metastore does not support create operations
-    }
 }

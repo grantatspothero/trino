@@ -153,10 +153,6 @@ public class TestGalaxyHiveConnectorTest
 
     @Test(enabled = false)
     @Override
-    public void testTemporaryStagingDirectorySessionProperties() {}
-
-    @Test(enabled = false)
-    @Override
     public void testViewAuthorization() {}
 
     @Test(enabled = false)
