@@ -222,6 +222,7 @@
         <module>testing/trino-testing-services</module>
         <module>testing/trino-tests</module>
         <module>testing/trino-tests-galaxy-buffer-exchange</module>
+        <module>testing/trino-tests-schema-discovery</module>
     </modules>
 
     <repositories>
