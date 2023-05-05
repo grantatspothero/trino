@@ -112,7 +112,7 @@ public class WebUiAuthenticationModule
         {
             String authentication = buildConfigObject(WebUiAuthenticationConfig.class).getAuthentication();
             if (authentication != null) {
-                return authentication;
+                return authentication.toLowerCase(ENGLISH);
             }
 
             // no authenticator explicitly set for the web ui, so choose a default:
