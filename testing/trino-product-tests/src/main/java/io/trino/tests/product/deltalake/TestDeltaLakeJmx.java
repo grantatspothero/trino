@@ -35,6 +35,7 @@ public class TestDeltaLakeJmx
     {
         assertThat(onTrino().executeQuery("SHOW TABLES IN jmx.current LIKE '%name=delta%'")).containsOnly(
                 row("com.starburstdata.trino.plugins.dynamicfiltering:catalog=delta,name=delta,type=dynamicpagefiltercache"),
+                row("io.trino.hdfs:name=delta,type=trinohdfsfilesystemstats"),
                 row("io.trino.plugin.hive.metastore.cache:name=delta,type=cachinghivemetastore"),
                 row("io.trino.plugin.hive.metastore.glue:name=delta,type=gluehivemetastore"),
                 row("io.trino.plugin.hive.s3:name=delta,type=trinos3filesystem"),
@@ -47,6 +48,7 @@ public class TestDeltaLakeJmx
     {
         assertThat(onTrino().executeQuery("SHOW TABLES IN jmx.current LIKE '%name=delta%'")).containsOnly(
                 row("com.starburstdata.trino.plugins.dynamicfiltering:catalog=delta,name=delta,type=dynamicpagefiltercache"),
+                row("io.trino.hdfs:name=delta,type=trinohdfsfilesystemstats"),
                 row("io.trino.plugin.hive.metastore.cache:name=delta,type=cachinghivemetastore"),
                 row("io.trino.plugin.hive.metastore.thrift:name=delta,type=thrifthivemetastore"),
                 row("io.trino.plugin.hive.s3:name=delta,type=trinos3filesystem"),
