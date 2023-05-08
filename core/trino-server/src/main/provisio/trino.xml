@@ -146,12 +146,6 @@
         </artifact>
     </artifactSet>
 
-    <artifactSet to="plugin/oracle">
-        <artifact id="${project.groupId}:trino-oracle:zip:${project.version}">
-            <unpack />
-        </artifact>
-    </artifactSet>
-
     <artifactSet to="plugin/phoenix5">
         <artifact id="${project.groupId}:trino-phoenix5:zip:${project.version}">
             <unpack />
@@ -190,6 +184,12 @@
 
     <artifactSet to="plugin/galaxy-objectstore">
         <artifact id="${project.groupId}:trino-galaxy-objectstore:zip:${project.version}">
+            <unpack />
+        </artifact>
+    </artifactSet>
+
+    <artifactSet to="plugin/galaxy-oracle">
+        <artifact id="${project.groupId}:trino-galaxy-oracle:zip:${project.version}">
             <unpack />
         </artifact>
     </artifactSet>

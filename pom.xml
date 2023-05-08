@@ -80,7 +80,7 @@
         <!-- released from https://github.com/starburstdata/stargate -->
         <dep.stargate.version>stargate-8314-gc89c318a2</dep.stargate.version>
         <!-- released from https://github.com/starburstdata/starburst-trino-plugins -->
-        <dep.starburst-trino-plugins.version>417</dep.starburst-trino-plugins.version>
+        <dep.starburst-trino-plugins.version>417.2</dep.starburst-trino-plugins.version>
         <dep.cloudevents.version>2.2.0</dep.cloudevents.version>
 
         <!--
@@ -162,6 +162,7 @@
         <module>plugin/trino-exchange-hdfs</module>
         <module>plugin/trino-galaxy-kafka-event-listener</module>
         <module>plugin/trino-galaxy-objectstore</module>
+        <module>plugin/trino-galaxy-oracle</module>
         <module>plugin/trino-galaxy-query-monitor-event-listener</module>
         <module>plugin/trino-galaxy-snowflake</module>
         <module>plugin/trino-galaxy-synapse</module>
@@ -601,6 +602,19 @@
             <dependency>
                 <groupId>io.trino</groupId>
                 <artifactId>trino-mysql</artifactId>
+                <type>test-jar</type>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>trino-oracle</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>trino-oracle</artifactId>
                 <type>test-jar</type>
                 <version>${project.version}</version>
             </dependency>
@@ -1412,6 +1426,25 @@
             <dependency>
                 <groupId>com.starburstdata.trino.plugins</groupId>
                 <artifactId>starburst-dynamic-filtering</artifactId>
+                <type>test-jar</type>
+                <version>${dep.starburst-trino-plugins.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.starburstdata.trino.plugins</groupId>
+                <artifactId>starburst-license</artifactId>
+                <version>${dep.starburst-trino-plugins.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.starburstdata.trino.plugins</groupId>
+                <artifactId>starburst-oracle</artifactId>
+                <version>${dep.starburst-trino-plugins.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.starburstdata.trino.plugins</groupId>
+                <artifactId>starburst-oracle</artifactId>
                 <type>test-jar</type>
                 <version>${dep.starburst-trino-plugins.version}</version>
             </dependency>

@@ -77,6 +77,7 @@ exchange-filesystem
 galaxy-kafka-event-listener
 galaxy-query-monitor-event-listener
 galaxy-objectstore
+galaxy-oracle
 galaxy-snowflake
 galaxy-synapse
 galaxy-warp-speed

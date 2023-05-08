@@ -528,6 +528,7 @@ jobs:
             !:trino-elasticsearch,
             !:trino-faulttolerant-tests,
             !:trino-galaxy-objectstore,
+            !:trino-galaxy-oracle,
             !:trino-galaxy-warp-speed,
             !:trino-galaxy-snowflake,
             !:trino-galaxy-synapse,
@@ -629,6 +630,7 @@ jobs:
             - { modules: plugin/trino-elasticsearch }
             - { modules: plugin/trino-galaxy-objectstore }
             - { modules: plugin/trino-galaxy-objectstore, profile: iceberg-delta }
+            - { modules: plugin/trino-galaxy-oracle }
             - { modules: plugin/trino-galaxy-warp-speed }
             - { modules: plugin/trino-galaxy-warp-speed, profile: iceberg-delta }
             - { modules: plugin/trino-hive }
@@ -702,6 +704,7 @@ jobs:
       - name: Maven Tests
         if: >-
           matrix.modules != 'plugin/trino-singlestore'
+          && matrix.modules != 'plugin/trino-galaxy-oracle'
           && matrix.modules != 'plugin/trino-galaxy-synapse'
           && matrix.modules != 'plugin/trino-galaxy-snowflake'
           && matrix.modules != 'plugin/trino-mongodb'
@@ -740,6 +743,10 @@ jobs:
         if: matrix.modules == 'plugin/trino-singlestore' && env.MEMSQL_LICENSE != ''
         run: |
           $MAVEN test ${MAVEN_TEST} -pl :trino-singlestore -Dmemsql.license=${MEMSQL_LICENSE}
+      - name: Galaxy Oracle Maven Tests
+        if: matrix.modules == 'plugin/trino-galaxy-oracle'
+        run: |
+          $MAVEN test ${MAVEN_TEST} -pl ${{ matrix.modules }} ${{ matrix.profile != '' && format('-P {0}', matrix.profile) || '' }}
       - name: Snowflake Maven Tests
         if: matrix.modules == 'plugin/trino-galaxy-snowflake'
         env:
