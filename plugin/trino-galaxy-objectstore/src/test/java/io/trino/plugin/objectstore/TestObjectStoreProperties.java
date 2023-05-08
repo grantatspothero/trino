@@ -102,7 +102,7 @@ public class TestObjectStoreProperties
                           , ('objectstore.parquet_writer_batch_size', '10000', '10000', 'integer')
                           -- ObjectStore property that have, had or may have special handling
                           , ('objectstore.compression_codec', 'DEFAULT', 'DEFAULT', 'varchar')
-                          , ('objectstore.parquet_optimized_writer_enabled', 'false', 'false', 'boolean')
+                          , ('objectstore.parquet_optimized_writer_enabled', 'true', 'true', 'boolean')
                           , ('objectstore.projection_pushdown_enabled', 'true', 'true', 'boolean')
                         """);
     }
