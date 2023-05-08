@@ -74,7 +74,7 @@ public class GalaxyIndexerTrinoSecurityApi
     @Override
     public EntityPrivileges getEntityPrivileges(DispatchSession session, RoleId roleId, EntityId entityId)
     {
-        return new EntityPrivileges(new RoleName("indexer"), roleId, false, ImmutableSet.of(), ImmutableMap.of(SELECT.name(), ALLOW_ALL), ImmutableList.of());
+        return new EntityPrivileges(new RoleName("indexer"), roleId, false, false, ImmutableSet.of(), ImmutableMap.of(SELECT.name(), ALLOW_ALL), ImmutableList.of());
     }
 
     @Override

@@ -45,11 +45,13 @@ import io.trino.spi.security.ViewExpression;
 import java.security.Principal;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -105,6 +107,7 @@ public class GalaxyAccessControl
         implements SystemAccessControl
 {
     public static final String NAME = "galaxy";
+    private static final Pattern DML_OPERATION_MATCHER = Pattern.compile("(select|insert|update|delete|merge|with)[ \\t\\(\\[].*");
 
     private final GalaxyAccessControllerSupplier controllerSupplier;
 
@@ -748,6 +751,13 @@ public class GalaxyAccessControl
         }
     }
 
+    public static boolean canSkipListEnabledRoles(String query)
+    {
+        String trimmedQuery = query.trim();
+        String candidateString = trimmedQuery.substring(0, Math.min(10, query.length())).toLowerCase(Locale.ENGLISH);
+        return DML_OPERATION_MATCHER.matcher(candidateString).matches();
+    }
+
     private void checkCatalogWritableAndHasTablePrivilege(SystemSecurityContext context, CatalogSchemaTableName table, Privilege privilege, Consumer<String> denier)
     {
         checkCatalogIsWritable(controllerSupplier.apply(context), table.getCatalogName(), denier);
@@ -878,8 +888,8 @@ public class GalaxyAccessControl
             return false;
         }
 
-        String owner = controller.getEntityPrivileges(context, entity.get()).getOwner().getName();
-        return context.getIdentity().getEnabledRoles().contains(owner);
+        EntityPrivileges entityPrivileges = controller.getEntityPrivileges(context, entity.get());
+        return entityPrivileges.isOwnerInActiveRoleSet();
     }
 
     private Optional<SchemaId> toSchemaId(GalaxySystemAccessController controller, CatalogSchemaName schema)

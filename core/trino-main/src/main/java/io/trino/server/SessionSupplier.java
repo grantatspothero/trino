@@ -17,7 +17,9 @@ import io.opentelemetry.api.trace.Span;
 import io.trino.Session;
 import io.trino.spi.QueryId;
 
+import java.util.Optional;
+
 public interface SessionSupplier
 {
-    Session createSession(QueryId queryId, Span querySpan, SessionContext context);
+    Session createSession(QueryId queryId, Span querySpan, Optional<String> query, SessionContext context);
 }

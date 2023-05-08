@@ -183,7 +183,7 @@ public class DispatchManager
             }
 
             // decode session
-            session = sessionSupplier.createSession(queryId, querySpan, sessionContext);
+            session = sessionSupplier.createSession(queryId, querySpan, Optional.of(query), sessionContext);
 
             // check query execute permissions
             accessControl.checkCanExecuteQuery(sessionContext.getIdentity());

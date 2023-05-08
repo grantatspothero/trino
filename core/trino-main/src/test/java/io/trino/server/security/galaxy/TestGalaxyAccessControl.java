@@ -62,6 +62,7 @@ import static io.starburst.stargate.accesscontrol.privilege.GrantKind.ALLOW;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_SCHEMA;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_TABLE;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.EXECUTE;
+import static io.trino.server.security.galaxy.GalaxyAccessControl.canSkipListEnabledRoles;
 import static io.trino.server.security.galaxy.GalaxyIdentity.toDispatchSession;
 import static io.trino.server.security.galaxy.GalaxySecurityMetadata.PRIVILEGE_TRANSLATIONS;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
@@ -775,6 +776,18 @@ public class TestGalaxyAccessControl
         withGrantedFunctionPrivilege(adminContext(), PUBLIC, function, false, () -> {
             checkAccessMatching(message, allContexts(), ImmutableList.of(), checkTableFunction);
         });
+    }
+
+    @Test
+    public void testCanSkipSqlOperation()
+    {
+        ImmutableList.of("SELECT", "SeLecT", "INSERT", "insert", "DELETE", "dElEtE", "UPDATE", "update").forEach(operation ->
+                ImmutableList.of(" ", "\t", "(", " (", " [").forEach(suffix ->
+                        ImmutableList.of("", " ", "\t").forEach(prefix ->
+                                assertThat(canSkipListEnabledRoles("%s%s%sfruit from bats".formatted(prefix, operation, suffix)))
+                                        .isTrue())));
+        ImmutableList.of("SELECTifyoucan ", "show rolws", "a SELECT FROM troubles", "insert.roles").forEach(query ->
+                assertThat(canSkipListEnabledRoles(query)).isFalse());
     }
 
     private static void checkNotSupported(String message, Runnable consumer)

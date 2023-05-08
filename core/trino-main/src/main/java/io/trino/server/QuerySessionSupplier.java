@@ -18,6 +18,7 @@ import io.trino.Session;
 import io.trino.metadata.Metadata;
 import io.trino.metadata.SessionPropertyManager;
 import io.trino.security.AccessControl;
+import io.trino.server.security.galaxy.GalaxyAccessControl;
 import io.trino.spi.QueryId;
 import io.trino.spi.security.Identity;
 import io.trino.spi.type.TimeZoneKey;
@@ -35,6 +36,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static io.trino.Session.SessionBuilder;
 import static io.trino.SystemSessionProperties.TIME_ZONE_ID;
 import static io.trino.server.HttpRequestSessionContextFactory.addEnabledRoles;
+import static io.trino.server.security.galaxy.GalaxyAccessControl.canSkipListEnabledRoles;
 import static io.trino.spi.type.TimeZoneKey.getTimeZoneKey;
 import static java.util.Map.Entry;
 import static java.util.Objects.requireNonNull;
@@ -70,7 +72,7 @@ public class QuerySessionSupplier
     }
 
     @Override
-    public Session createSession(QueryId queryId, Span querySpan, SessionContext context)
+    public Session createSession(QueryId queryId, Span querySpan, Optional<String> query, SessionContext context)
     {
         Identity identity = context.getIdentity();
         accessControl.checkCanSetUser(identity.getPrincipal(), identity.getUser());
@@ -86,8 +88,16 @@ public class QuerySessionSupplier
             }
         }
 
-        // add the enabled roles
-        identity = addEnabledRoles(identity, context.getSelectedRole(), metadata);
+        /*
+         * In Galaxy, don't add the enabled roles for DML operations, because listEnabledRoles causes
+         * a round-trip to the control-plane, and Galaxy only uses the enabled roles to determine if
+         * an entity is (transitively) owned by a role in the active role set.  getEntityPrivileges, which
+         * is always called for a query, now returns the required ownerInActiveRoleSet boolean.
+         */
+        boolean canSkipListEnabledRoles = query.isPresent() && accessControl instanceof GalaxyAccessControl && canSkipListEnabledRoles(query.get());
+        if (!canSkipListEnabledRoles) {
+            identity = addEnabledRoles(identity, context.getSelectedRole(), metadata);
+        }
 
         SessionBuilder sessionBuilder = Session.builder(sessionPropertyManager)
                 .setQueryId(queryId)
