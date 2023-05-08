@@ -177,12 +177,14 @@ jobs:
       - name: Maven Install
         run: |
           export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
-          $MAVEN clean install ${MAVEN_FAST_INSTALL} -pl '!:trino-docs,!:trino-server-rpm'
+          echo JDBC shading test disabled for Galaxy because this repo does not publish JDBC driver
+          # $MAVEN clean install ${MAVEN_FAST_INSTALL} -pl '!:trino-docs,!:trino-server-rpm'
       - name: Test JDBC shading
         # Run only integration tests to verify JDBC driver shading
         run: |
-          $MAVEN clean install ${MAVEN_FAST_INSTALL} -pl :trino-jdbc -am
-          $MAVEN failsafe:integration-test -B --strict-checksums -P ci -pl :trino-jdbc
+          echo JDBC shading test disabled for Galaxy because this repo does not publish JDBC driver
+          # $MAVEN clean install ${MAVEN_FAST_INSTALL} -pl :trino-jdbc -am
+          # $MAVEN failsafe:integration-test -B --strict-checksums -P ci -pl :trino-jdbc
 
   check-commits-dispatcher:
     runs-on: ubuntu-latest
