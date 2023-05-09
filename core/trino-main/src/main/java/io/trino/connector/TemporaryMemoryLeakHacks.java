@@ -21,8 +21,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 
 final class TemporaryMemoryLeakHacks
 {
@@ -118,19 +116,6 @@ final class TemporaryMemoryLeakHacks
 
     private static void clearConfigurationUtils(ClassLoader connectorClassLoader)
     {
-        Object tags = getStaticField(connectorClassLoader, "io.trino.hdfs.ConfigurationUtils", "TAGS");
-        if (tags instanceof Set<?> set) {
-            set.clear();
-        }
-        Object defaultResources = getStaticField(connectorClassLoader, "io.trino.hdfs.ConfigurationUtils", "defaultResources");
-        if (defaultResources instanceof Map<?, ?> map) {
-            map.clear();
-        }
-        Object deprecationContext = getStaticField(connectorClassLoader, "io.trino.hdfs.ConfigurationUtils", "deprecationContext");
-        if (deprecationContext instanceof AtomicReference<?> reference) {
-            reference.set(null);
-        }
-
         Object configuration = getStaticField(connectorClassLoader, "io.trino.hdfs.ConfigurationUtils", "INITIAL_CONFIGURATION");
 
         clearConfiguration(connectorClassLoader, configuration);
@@ -144,7 +129,6 @@ final class TemporaryMemoryLeakHacks
         clearMap(configuration, "updatingResource");
         clearMap(configuration, "properties");
         clearMap(configuration, "overlay");
-        clearCollection(configuration, "ranges");
         setFieldToNull(connectorClassLoader, configuration, "org.apache.hadoop.conf.Configuration", "classLoader");
     }
 
@@ -220,7 +204,7 @@ final class TemporaryMemoryLeakHacks
                 return field.get(instance);
             }
             catch (ReflectiveOperationException e) {
-                log.warn(e, "Could not getField %s", fieldName);
+                log.warn(e, "Could not getField %s", instance.getClass().getName() + "." + fieldName);
             }
         }
         return null;
