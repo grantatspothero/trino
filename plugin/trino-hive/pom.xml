@@ -220,11 +220,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.qubole.rubix</groupId>
-            <artifactId>rubix-presto-shaded</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>com.starburstdata.trino.plugins</groupId>
             <artifactId>starburst-dynamic-filtering</artifactId>
         </dependency>
