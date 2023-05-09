@@ -40,6 +40,7 @@ import static io.trino.testing.MaterializedResult.resultBuilder;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.testng.Assert.assertTrue;
 
 public class TestMongoFederatedDatabaseConnectorTest
@@ -218,6 +219,46 @@ public class TestMongoFederatedDatabaseConnectorTest
     public void testSetColumnType()
     {
         assertQueryFails("ALTER TABLE nation ALTER COLUMN nationkey SET DATA TYPE bigint", "Setting column data types is not supported on Atlas data federation");
+    }
+
+    @Override
+    public void testProjectionPushdownMultipleRows()
+    {
+        // TODO (https://github.com/trinodb/trino/pull/17957) the base test should auto-disable when CTAS not supported
+        assertThatThrownBy(super::testProjectionPushdownMultipleRows)
+                .hasMessage("Creating tables is not supported on Atlas data federation");
+    }
+
+    @Override
+    public void testProjectionPushdownPhysicalInputSize()
+    {
+        // TODO (https://github.com/trinodb/trino/pull/17957) the base test should auto-disable when CTAS not supported
+        assertThatThrownBy(super::testProjectionPushdownPhysicalInputSize)
+                .hasMessage("Creating tables with data is not supported on Atlas data federation");
+    }
+
+    @Override
+    public void testProjectionPushdownReadsLessData()
+    {
+        // TODO (https://github.com/trinodb/trino/pull/17957) the base test should auto-disable when CTAS not supported
+        assertThatThrownBy(super::testProjectionPushdownReadsLessData)
+                .hasMessage("Creating tables with data is not supported on Atlas data federation");
+    }
+
+    @Override
+    public void testProjectionWithCaseSensitiveField()
+    {
+        // TODO (https://github.com/trinodb/trino/pull/17957) the base test should auto-disable when CTAS not supported
+        assertThatThrownBy(super::testProjectionWithCaseSensitiveField)
+                .hasMessage("Creating tables is not supported on Atlas data federation");
+    }
+
+    @Override
+    public void testReadHighlyNestedData()
+    {
+        // TODO (https://github.com/trinodb/trino/pull/17957) the base test should auto-disable when CTAS not supported
+        assertThatThrownBy(super::testReadHighlyNestedData)
+                .hasMessage("Creating tables is not supported on Atlas data federation");
     }
 
     // Overridden as the data types are different for few columns

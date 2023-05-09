@@ -77,6 +77,13 @@ public class TestObjectStoreIcebergConnectorTest
         }
     }
 
+    @Override
+    protected boolean supportsPhysicalPushdown()
+    {
+        // TODO https://github.com/trinodb/trino/issues/17156
+        return false;
+    }
+
     @BeforeClass
     public void setUp()
             throws InterruptedException

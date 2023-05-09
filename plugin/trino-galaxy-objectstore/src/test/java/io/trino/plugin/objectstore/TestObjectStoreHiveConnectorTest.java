@@ -78,6 +78,14 @@ public class TestObjectStoreHiveConnectorTest
     }
 
     @Override
+    protected boolean supportsPhysicalPushdown()
+    {
+        // Hive table is created using default format which is ORC. Currently ORC reader has issue
+        // pruning dereferenced struct fields https://github.com/trinodb/trino/issues/17201
+        return false;
+    }
+
+    @Override
     protected Optional<DataMappingTestSetup> filterDataMappingSmokeTestData(DataMappingTestSetup dataMappingTestSetup)
     {
         String typeName = dataMappingTestSetup.getTrinoTypeName();
