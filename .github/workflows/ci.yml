@@ -837,7 +837,7 @@ jobs:
             -Dhive.hadoop2.azure-abfs-access-key="${ABFS_ACCESS_KEY}"
       - name: Cloud Redshift Tests ${{ matrix.profile }}
         env:
-          AWS_REGION: us-east-2
+          AWS_REGION: ${{ vars.REDSHIFT_AWS_REGION }}
           AWS_ACCESS_KEY_ID: ${{ secrets.ENG_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.ENG_AWS_SECRET_ACCESS_KEY }}
           REDSHIFT_SUBNET_GROUP_NAME: redshift-cicd-subnet-group
@@ -863,8 +863,8 @@ jobs:
       - name: Cleanup ephemeral Redshift Cluster
         env:
           AWS_REGION: ${{ vars.REDSHIFT_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.REDSHIFT_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.REDSHIFT_AWS_SECRET_ACCESS_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.ENG_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.ENG_AWS_SECRET_ACCESS_KEY }}
         # Cancelled workflows may have left the ephemeral cluster running
         if: always()
         run: .github/bin/redshift/delete-aws-redshift.sh
