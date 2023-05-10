@@ -30,6 +30,7 @@ import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.base.TypeDeserializer;
 import io.trino.plugin.hive.aws.athena.PartitionProjectionService;
 import io.trino.plugin.hive.fs.FileSystemDirectoryLister;
+import io.trino.plugin.hive.fs.TransactionScopeCachingDirectoryListerFactory;
 import io.trino.plugin.hive.metastore.HiveCacheTableId;
 import io.trino.plugin.hive.metastore.HiveMetastoreConfig;
 import io.trino.plugin.hive.metastore.HiveMetastoreFactory;
@@ -106,6 +107,7 @@ public class TestCacheIds
                 new DefaultHiveMaterializedViewMetadataFactory(),
                 SqlStandardAccessControlMetadata::new,
                 new FileSystemDirectoryLister(),
+                new TransactionScopeCachingDirectoryListerFactory(config),
                 new PartitionProjectionService(config, ImmutableMap.of(), new TestingTypeManager()),
                 createJsonCodec(HiveCacheTableId.class),
                 createJsonCodec(HiveColumnHandle.class),
