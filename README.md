@@ -73,6 +73,16 @@ to run, and are thus disabled by the above command. These tests are run by the
 CI system when you submit a pull request. We recommend only running tests
 locally for the areas of code that you change.
 
+## Building images from a PR
+
+If you need to create images from your PR changes, you can add the PR label
+`with-images` when you open the PR. If you have added the label, but github
+has skipped the `ci/docker-images` job, you will need to re-trigger checks.
+You can do so by pushing an empty commit:
+`git commit --allow-empty --only -m empty`
+or amending your head commit and pushing again:
+`git commit --amend --no-edit`
+
 ## Running Trino in your IDE
 
 ### Overview

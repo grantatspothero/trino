@@ -60,6 +60,8 @@ concurrency:
 
 jobs:
   docker-images:
+    # Only build images for merges to galaxy*, or for PRs with the 'with-images' label
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'with-images')
     runs-on: ubuntu-latest
     steps:
       - name: Free Disk Space
