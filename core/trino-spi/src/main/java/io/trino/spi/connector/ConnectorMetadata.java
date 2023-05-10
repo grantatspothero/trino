@@ -16,6 +16,8 @@ package io.trino.spi.connector;
 import io.airlift.slice.Slice;
 import io.trino.spi.Experimental;
 import io.trino.spi.TrinoException;
+import io.trino.spi.cache.ColumnId;
+import io.trino.spi.cache.TableId;
 import io.trino.spi.expression.Call;
 import io.trino.spi.expression.ConnectorExpression;
 import io.trino.spi.expression.Constant;
@@ -1468,5 +1470,29 @@ public interface ConnectorMetadata
     default OptionalInt getMaxWriterTasks(ConnectorSession session)
     {
         return OptionalInt.empty();
+    }
+
+    /**
+     * Returns a unique table identifier. {@link TableId} should represent
+     * transformations (e.g. filters, aggregations, projections) that are performed
+     * in the context of a split. For example, predicate (e.g. on partition column)
+     * should not be part of {@link TableId} if it groups splits into fully-read
+     * and fully-skipped buckets. Table version/transaction id should not be part
+     * of {@link TableId}.
+     */
+    default Optional<TableId> getTableId(ConnectorTableHandle tableHandle)
+    {
+        return Optional.empty();
+    }
+
+    /**
+     * Returns a unique column identifier. {@link ColumnId} is unique
+     * only in the context of related {@link TableId}. {@link ColumnId}
+     * can represent simple column reference or more complex reference
+     * (e.g. map or array dereference expressions).
+     */
+    default Optional<ColumnId> getColumnId(ColumnHandle columnHandle)
+    {
+        return Optional.empty();
     }
 }

@@ -13,8 +13,10 @@
  */
 package io.trino.plugin.base.classloader;
 
+import io.trino.spi.cache.SplitId;
 import io.trino.spi.classloader.ThreadContextClassLoader;
 import io.trino.spi.connector.ConnectorSession;
+import io.trino.spi.connector.ConnectorSplit;
 import io.trino.spi.connector.ConnectorSplitManager;
 import io.trino.spi.connector.ConnectorSplitSource;
 import io.trino.spi.connector.ConnectorTableHandle;
@@ -24,6 +26,8 @@ import io.trino.spi.connector.DynamicFilter;
 import io.trino.spi.ptf.ConnectorTableFunctionHandle;
 
 import javax.inject.Inject;
+
+import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
@@ -61,6 +65,14 @@ public final class ClassLoaderSafeConnectorSplitManager
     {
         try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
             return delegate.getSplits(transaction, session, function);
+        }
+    }
+
+    @Override
+    public Optional<SplitId> getSplitId(ConnectorSplit split)
+    {
+        try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
+            return delegate.getSplitId(split);
         }
     }
 }

@@ -14,6 +14,8 @@
 package io.trino.plugin.base.classloader;
 
 import io.airlift.slice.Slice;
+import io.trino.spi.cache.ColumnId;
+import io.trino.spi.cache.TableId;
 import io.trino.spi.classloader.ThreadContextClassLoader;
 import io.trino.spi.connector.AggregateFunction;
 import io.trino.spi.connector.AggregationApplicationResult;
@@ -1108,6 +1110,22 @@ public class ClassLoaderSafeConnectorMetadata
     {
         try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
             return delegate.getMaxWriterTasks(session);
+        }
+    }
+
+    @Override
+    public Optional<TableId> getTableId(ConnectorTableHandle tableHandle)
+    {
+        try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
+            return delegate.getTableId(tableHandle);
+        }
+    }
+
+    @Override
+    public Optional<ColumnId> getColumnId(ColumnHandle columnHandle)
+    {
+        try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
+            return delegate.getColumnId(columnHandle);
         }
     }
 

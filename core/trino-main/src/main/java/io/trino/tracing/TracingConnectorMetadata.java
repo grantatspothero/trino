@@ -16,6 +16,8 @@ package io.trino.tracing;
 import io.airlift.slice.Slice;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
+import io.trino.spi.cache.ColumnId;
+import io.trino.spi.cache.TableId;
 import io.trino.spi.connector.AggregateFunction;
 import io.trino.spi.connector.AggregationApplicationResult;
 import io.trino.spi.connector.BeginTableExecuteResult;
@@ -1215,6 +1217,24 @@ public class TracingConnectorMetadata
         Span span = startSpan("getMaxWriterTasks");
         try (var ignored = scopedSpan(span)) {
             return delegate.getMaxWriterTasks(session);
+        }
+    }
+
+    @Override
+    public Optional<TableId> getTableId(ConnectorTableHandle tableHandle)
+    {
+        Span span = startSpan("getTableId");
+        try (var ignored = scopedSpan(span)) {
+            return delegate.getTableId(tableHandle);
+        }
+    }
+
+    @Override
+    public Optional<ColumnId> getColumnId(ColumnHandle columnHandle)
+    {
+        Span span = startSpan("getColumnId");
+        try (var ignored = scopedSpan(span)) {
+            return delegate.getColumnId(columnHandle);
         }
     }
 

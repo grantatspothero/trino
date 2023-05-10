@@ -14,7 +14,11 @@
 package io.trino.spi.connector;
 
 import io.trino.spi.Experimental;
+import io.trino.spi.cache.SplitId;
+import io.trino.spi.cache.TableId;
 import io.trino.spi.ptf.ConnectorTableFunctionHandle;
+
+import java.util.Optional;
 
 public interface ConnectorSplitManager
 {
@@ -35,5 +39,17 @@ public interface ConnectorSplitManager
             ConnectorTableFunctionHandle function)
     {
         throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Returns a unique split identifier. {@link SplitId} should represent raw data
+     * (e.g. tuple of filename and file region). {@link SplitId} together with
+     * {@link TableId} uniquely represents transformations (e.g. filters, aggregations, projections)
+     * that are performed in the context of a split. Same {@link SplitId} can be
+     * used with different {@link TableId}.
+     */
+    default Optional<SplitId> getSplitId(ConnectorSplit split)
+    {
+        return Optional.empty();
     }
 }

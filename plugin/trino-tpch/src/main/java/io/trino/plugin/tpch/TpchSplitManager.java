@@ -16,6 +16,7 @@ package io.trino.plugin.tpch;
 import com.google.common.collect.ImmutableList;
 import io.trino.spi.Node;
 import io.trino.spi.NodeManager;
+import io.trino.spi.cache.SplitId;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.ConnectorSplit;
 import io.trino.spi.connector.ConnectorSplitManager;
@@ -27,6 +28,7 @@ import io.trino.spi.connector.DynamicFilter;
 import io.trino.spi.connector.FixedSplitSource;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -73,5 +75,13 @@ public class TpchSplitManager
             }
         }
         return new FixedSplitSource(splits.build());
+    }
+
+    @Override
+    public Optional<SplitId> getSplitId(ConnectorSplit split)
+    {
+        TpchSplit tpchSplit = (TpchSplit) split;
+        // ignore host addresses as it's irrelevant for ID
+        return Optional.of(new SplitId(tpchSplit.getTotalParts() + ":" + tpchSplit.getPartNumber()));
     }
 }
