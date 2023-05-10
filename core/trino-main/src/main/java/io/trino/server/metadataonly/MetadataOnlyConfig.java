@@ -14,14 +14,19 @@
 package io.trino.server.metadataonly;
 
 import io.airlift.configuration.Config;
+import io.airlift.units.Duration;
+import io.airlift.units.MinDuration;
 import io.starburst.stargate.id.TrinoPlaneId;
 
 import javax.validation.constraints.NotNull;
+
+import static java.util.concurrent.TimeUnit.MINUTES;
 
 public class MetadataOnlyConfig
 {
     private TrinoPlaneId trinoPlaneId;
     private boolean useKmsCrypto;
+    private Duration connectorCacheDuration = new Duration(5, MINUTES);
 
     @NotNull
     public TrinoPlaneId getTrinoPlaneId()
@@ -45,6 +50,19 @@ public class MetadataOnlyConfig
     public MetadataOnlyConfig setUseKmsCrypto(boolean useKmsCrypto)
     {
         this.useKmsCrypto = useKmsCrypto;
+        return this;
+    }
+
+    @MinDuration("0s")
+    public Duration getConnectorCacheDuration()
+    {
+        return connectorCacheDuration;
+    }
+
+    @Config("metadata.connector-cache.duration")
+    public MetadataOnlyConfig setConnectorCacheDuration(Duration connectorCacheDuration)
+    {
+        this.connectorCacheDuration = connectorCacheDuration;
         return this;
     }
 }

@@ -56,6 +56,7 @@ public class MetadataOnlyCatalogManagerModule
         binder.bind(WebUiAuthenticationFilter.class).to(NoWebUiAuthenticationFilter.class).in(Scopes.SINGLETON);
         binder.bind(MetadataOnlyLogging.class).asEagerSingleton();
         binder.bind(MetadataOnlySystemState.class).in(Scopes.SINGLETON);
+        binder.bind(CachingCatalogFactory.class).in(Scopes.SINGLETON);
 
         binder.bind(ConnectorServicesProvider.class).to(MetadataOnlyTransactionManager.class).in(Scopes.SINGLETON);
         binder.bind(CatalogManager.class).to(MetadataOnlyCatalogManager.class).in(Scopes.SINGLETON);

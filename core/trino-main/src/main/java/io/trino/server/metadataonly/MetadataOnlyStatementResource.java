@@ -203,7 +203,7 @@ public class MetadataOnlyStatementResource
 
         systemState.incrementActiveRequests();
         try {
-            return executeQuery(transactionId, statement, sessionContext, decryptedCatalogs, request.serviceProperties());
+            return executeQuery(request.accountId(), transactionId, statement, sessionContext, decryptedCatalogs, request.serviceProperties());
         }
         finally {
             if ((systemState.decrementAndGetActiveRequests() <= 0) && systemState.isShuttingDown()) {
@@ -213,14 +213,14 @@ public class MetadataOnlyStatementResource
         }
     }
 
-    private QueryResults executeQuery(TransactionId transactionId, String statement, SessionContext sessionContext, List<QueryCatalog> catalogs, Map<String, String> serviceProperties)
+    private QueryResults executeQuery(AccountId accountId, TransactionId transactionId, String statement, SessionContext sessionContext, List<QueryCatalog> catalogs, Map<String, String> serviceProperties)
     {
         QueryId queryId = dispatchManager.createQueryId();
         Span span = tracer.spanBuilder("metadata-query")
                 .setAttribute(TrinoAttributes.QUERY_ID, queryId.toString())
                 .startSpan();
-        try (SetThreadName ignored = new SetThreadName("Resource " + queryId.toString())) {
-            transactionId = transactionManager.registerQueryCatalogs(sessionContext.getIdentity(), transactionId, queryId, catalogs, serviceProperties);
+        try (SetThreadName ignored = new SetThreadName("Resource " + queryId)) {
+            transactionId = transactionManager.registerQueryCatalogs(accountId, sessionContext.getIdentity(), transactionId, queryId, catalogs, serviceProperties);
             return executeQuery(statement, span, sessionContext.withTransactionId(transactionId), queryId);
         }
         catch (Throwable e) {

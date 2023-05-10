@@ -19,6 +19,7 @@ import io.trino.spi.connector.ConnectorFactory;
 
 import javax.annotation.concurrent.ThreadSafe;
 
+import java.util.Optional;
 import java.util.function.Function;
 
 @ThreadSafe
@@ -29,4 +30,9 @@ public interface CatalogFactory
     CatalogConnector createCatalog(CatalogProperties catalogProperties);
 
     CatalogConnector createCatalog(CatalogHandle catalogHandle, ConnectorName connectorName, Connector connector);
+
+    default CatalogConnector createCatalog(CatalogHandle catalogHandle, ConnectorName connectorName, Connector connector, Optional<CatalogProperties> catalogProperties)
+    {
+        return createCatalog(catalogHandle, connectorName, connector);
+    }
 }

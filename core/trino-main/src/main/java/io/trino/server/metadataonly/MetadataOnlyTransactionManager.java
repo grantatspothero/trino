@@ -24,11 +24,11 @@ import io.airlift.log.Logger;
 import io.airlift.units.Duration;
 import io.starburst.stargate.accesscontrol.client.HttpTrinoSecurityClient;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
+import io.starburst.stargate.id.AccountId;
 import io.starburst.stargate.metadata.QueryCatalog;
 import io.trino.NotInTransactionException;
 import io.trino.Session;
 import io.trino.connector.CatalogConnector;
-import io.trino.connector.CatalogFactory;
 import io.trino.connector.CatalogProperties;
 import io.trino.connector.ConnectorName;
 import io.trino.connector.ConnectorServices;
@@ -104,14 +104,14 @@ public class MetadataOnlyTransactionManager
     private static final TrinoSecurityApi INDEXER_CONTROLLER = new GalaxyIndexerTrinoSecurityApi();
 
     private final ConcurrentMap<TransactionId, TransactionMetadata> transactions = new ConcurrentHashMap<>();
-    private final CatalogFactory catalogFactory;
+    private final CachingCatalogFactory catalogFactory;
     private final HttpClient accessControlClient;
     private final MetadataAccessControllerSupplier accessController;
     private final MetadataSystemSecurityMetadata securityMetadata;
     private final AtomicReference<CatalogConnector> systemConnector = new AtomicReference<>();
 
     @Inject
-    public MetadataOnlyTransactionManager(CatalogFactory catalogFactory, @ForGalaxySystemAccessControl HttpClient accessControlClient, MetadataAccessControllerSupplier accessController, MetadataSystemSecurityMetadata securityMetadata)
+    public MetadataOnlyTransactionManager(CachingCatalogFactory catalogFactory, @ForGalaxySystemAccessControl HttpClient accessControlClient, MetadataAccessControllerSupplier accessController, MetadataSystemSecurityMetadata securityMetadata)
     {
         this.catalogFactory = requireNonNull(catalogFactory, "catalogFactory is null");
         this.accessControlClient = requireNonNull(accessControlClient, "accessControlClient is null");
@@ -119,10 +119,11 @@ public class MetadataOnlyTransactionManager
         this.securityMetadata = requireNonNull(securityMetadata, "securityMetadata is null");
     }
 
-    public TransactionId registerQueryCatalogs(Identity identity, TransactionId transactionId, QueryId queryId, List<QueryCatalog> catalogs, Map<String, String> serviceProperties)
+    public TransactionId registerQueryCatalogs(AccountId accountId, Identity identity, TransactionId transactionId, QueryId queryId, List<QueryCatalog> catalogs, Map<String, String> serviceProperties)
     {
         while (true) {
-            TransactionMetadata transactionMetadata = new TransactionMetadata(identity, queryId, transactionId, catalogs, serviceProperties, catalogFactory, systemConnector.get(), accessControlClient, accessController, securityMetadata);
+            CachingCatalogFactory contextCatalogFactory = catalogFactory.withContextAccountId(accountId);
+            TransactionMetadata transactionMetadata = new TransactionMetadata(identity, queryId, transactionId, catalogs, serviceProperties, contextCatalogFactory, systemConnector.get(), accessControlClient, accessController, securityMetadata);
             TransactionMetadata existingTransaction = transactions.putIfAbsent(transactionId, transactionMetadata);
             if (existingTransaction == null) {
                 return transactionId;
@@ -341,7 +342,7 @@ public class MetadataOnlyTransactionManager
     {
         private final QueryId queryId;
         private final TransactionId transactionId;
-        private final CatalogFactory catalogFactory;
+        private final CachingCatalogFactory catalogFactory;
 
         private final AtomicReference<Boolean> completedSuccessfully = new AtomicReference<>();
 
@@ -364,7 +365,7 @@ public class MetadataOnlyTransactionManager
                 TransactionId transactionId,
                 List<QueryCatalog> catalogs,
                 Map<String, String> serviceProperties,
-                CatalogFactory catalogFactory,
+                CachingCatalogFactory catalogFactory,
                 CatalogConnector systemConnector,
                 HttpClient accessControlClient,
                 MetadataAccessControllerSupplier galaxyMetadataAccessControl,
@@ -570,18 +571,7 @@ public class MetadataOnlyTransactionManager
                 }
             }
 
-            for (CatalogConnector connector : connectors) {
-                try {
-                    connector.shutdown();
-                }
-                catch (Throwable e) {
-                    log.error(e,
-                            "Error shutting down connector %s (catalog %s) for query %s",
-                            connector.getConnectorName(),
-                            connector.getCatalogHandle().getCatalogName(),
-                            queryId);
-                }
-            }
+            connectors.forEach(catalogFactory::releaseCatalogConnector);
         }
 
         private CatalogProperties toCatalogProperties(QueryCatalog queryCatalog, TransactionId transactionId)

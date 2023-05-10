@@ -155,6 +155,12 @@ public class DefaultCatalogFactory
         return createCatalog(catalogHandle, connectorName, connector, () -> {}, Optional.empty());
     }
 
+    @Override
+    public CatalogConnector createCatalog(CatalogHandle catalogHandle, ConnectorName connectorName, Connector connector, Optional<CatalogProperties> catalogProperties)
+    {
+        return createCatalog(catalogHandle, connectorName, connector, () -> {}, catalogProperties);
+    }
+
     private CatalogConnector createCatalog(CatalogHandle catalogHandle, ConnectorName connectorName, Connector connector, Runnable destroy, Optional<CatalogProperties> catalogProperties)
     {
         Tracer tracer = createTracer(catalogHandle);
