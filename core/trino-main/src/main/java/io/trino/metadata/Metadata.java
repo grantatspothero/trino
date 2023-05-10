@@ -569,6 +569,15 @@ public interface Metadata
     Set<String> listEnabledRoles(Identity identity);
 
     /**
+     * List applicable roles, including the transitive grants, for the given session.
+     * Useful because it allows implementations to access session properties like the queryId.
+     */
+    default Set<String> listEnabledRoles(Session session)
+    {
+        return listEnabledRoles(session.getIdentity());
+    }
+
+    /**
      * List applicable roles, including the transitive grants, in given catalog
      *
      * @param catalog if present, the role catalog; otherwise the role is a system role

@@ -79,6 +79,15 @@ public interface SystemSecurityMetadata
     Set<String> listEnabledRoles(Identity identity);
 
     /**
+     * List applicable roles, including the transitive grants, for the given session.
+     * Useful because it allows implementations to access session properties like the queryId.
+     */
+    default Set<String> listEnabledRoles(Session session)
+    {
+        return listEnabledRoles(session.getIdentity());
+    }
+
+    /**
      * Grants the specified privilege to the specified user on the specified schema.
      */
     void grantSchemaPrivileges(Session session, CatalogSchemaName schemaName, Set<Privilege> privileges, TrinoPrincipal grantee, boolean grantOption);

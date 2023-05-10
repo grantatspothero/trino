@@ -1949,6 +1949,12 @@ public final class MetadataManager
     }
 
     @Override
+    public Set<String> listEnabledRoles(Session session)
+    {
+        return systemSecurityMetadata.listEnabledRoles(session);
+    }
+
+    @Override
     public Set<String> listEnabledRoles(Session session, String catalog)
     {
         Optional<CatalogMetadata> catalogMetadata = getOptionalCatalogMetadata(session, catalog);
