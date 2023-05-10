@@ -960,13 +960,6 @@ public abstract class BaseObjectStoreConnectorTest
         testReadMetadataWithRelationsConcurrentModifications(readIterations, testTimeoutSeconds);
     }
 
-    @Override
-    protected void checkInformationSchemaViewsForMaterializedView(String schemaName, String viewName)
-    {
-        assertThatThrownBy(() -> super.checkInformationSchemaViewsForMaterializedView(schemaName, viewName))
-                .hasMessageFindingMatch("(?s)Expecting.*to contain:.*\\Q[(" + viewName + ")]");
-    }
-
     protected void assertQueryReturns(@Language("SQL") String sql, String result)
     {
         assertThat(computeActual(sql).getOnlyValue()).isEqualTo(result);

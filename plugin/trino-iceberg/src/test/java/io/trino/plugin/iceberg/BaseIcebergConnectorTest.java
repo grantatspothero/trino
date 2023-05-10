@@ -343,14 +343,6 @@ public abstract class BaseIcebergConnectorTest
                         ")\\E");
     }
 
-    @Override
-    protected void checkInformationSchemaViewsForMaterializedView(String schemaName, String viewName)
-    {
-        // TODO should probably return materialized view, as it's also a view -- to be double checked
-        assertThatThrownBy(() -> super.checkInformationSchemaViewsForMaterializedView(schemaName, viewName))
-                .hasMessageFindingMatch("(?s)Expecting.*to contain:.*\\Q[(" + viewName + ")]");
-    }
-
     @Test
     public void testPartitionedByRealWithNaN()
     {
