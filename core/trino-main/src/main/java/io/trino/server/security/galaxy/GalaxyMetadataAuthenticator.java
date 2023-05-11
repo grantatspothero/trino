@@ -17,7 +17,6 @@ import com.google.common.annotations.VisibleForTesting;
 import io.trino.server.metadataonly.MetadataOnlyConfig;
 import io.trino.server.security.AuthenticationException;
 import io.trino.server.security.Authenticator;
-import io.trino.server.security.galaxy.GalaxyAuthenticatorController.RequestBodyHashing;
 import io.trino.spi.security.Identity;
 
 import javax.inject.Inject;
@@ -28,7 +27,9 @@ import java.security.GeneralSecurityException;
 import java.security.PublicKey;
 import java.util.Optional;
 
-import static io.trino.server.security.galaxy.GalaxyAuthenticatorController.loadPublicKey;
+import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.RequestBodyHashing;
+import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.extractToken;
+import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.loadPublicKey;
 import static javax.ws.rs.HttpMethod.POST;
 
 public class GalaxyMetadataAuthenticator
@@ -53,7 +54,7 @@ public class GalaxyMetadataAuthenticator
     public Identity authenticate(ContainerRequestContext request)
             throws AuthenticationException
     {
-        String token = GalaxyAuthenticatorController.extractToken(request);
+        String token = extractToken(request);
         Optional<RequestBodyHashing> requestBodyHashing;
         if (request.getMethod().equals(POST) && request.getUriInfo().getRequestUri().getPath().startsWith("/galaxy/metadata/v1/statement")) {
             requestBodyHashing = Optional.of(new RequestBodyHashing(request, "request_hash"));

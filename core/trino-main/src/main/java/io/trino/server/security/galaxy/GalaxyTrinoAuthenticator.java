@@ -16,7 +16,6 @@ package io.trino.server.security.galaxy;
 import com.google.common.annotations.VisibleForTesting;
 import io.trino.server.security.AuthenticationException;
 import io.trino.server.security.Authenticator;
-import io.trino.server.security.galaxy.GalaxyAuthenticatorController.RequestBodyHashing;
 import io.trino.spi.security.Identity;
 
 import javax.inject.Inject;
@@ -27,7 +26,9 @@ import java.security.GeneralSecurityException;
 import java.security.PublicKey;
 import java.util.Optional;
 
-import static io.trino.server.security.galaxy.GalaxyAuthenticatorController.loadPublicKey;
+import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.RequestBodyHashing;
+import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.extractToken;
+import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.loadPublicKey;
 import static javax.ws.rs.HttpMethod.POST;
 import static javax.ws.rs.HttpMethod.PUT;
 
@@ -64,7 +65,7 @@ public class GalaxyTrinoAuthenticator
         else {
             requestBodyHashing = Optional.empty();
         }
-        return authenticate(GalaxyAuthenticatorController.extractToken(request), requestBodyHashing);
+        return authenticate(extractToken(request), requestBodyHashing);
     }
 
     @VisibleForTesting

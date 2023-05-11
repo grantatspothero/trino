@@ -17,7 +17,6 @@ import io.starburst.stargate.id.AccountId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.UserId;
 import io.trino.server.security.AuthenticationException;
-import io.trino.server.security.galaxy.GalaxyAuthenticatorController.RequestBodyHashing;
 import io.trino.spi.security.Identity;
 import org.testng.annotations.Test;
 
@@ -29,8 +28,9 @@ import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.Optional;
 
-import static io.trino.server.security.galaxy.GalaxyAuthenticatorController.REQUEST_EXPIRATION_CLAIM;
-import static io.trino.server.security.galaxy.GalaxyAuthenticatorController.parseClaimsWithoutValidation;
+import static io.trino.server.security.galaxy.AbstractGalaxyAuthenticatorController.REQUEST_EXPIRATION_CLAIM;
+import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.RequestBodyHashing;
+import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.parseClaimsWithoutValidation;
 import static io.trino.server.security.galaxy.GalaxyIdentity.createPrincipalString;
 import static io.trino.server.security.jwt.JwtUtil.newJwtBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,6 +43,16 @@ public abstract class TestGalaxyAuthenticator
     protected static final String USER_ID = "u-1234567890";
     protected static final String ROLE_ID = "r-9876543252";
     protected static final String GALAXY_IDENTITY = createPrincipalString(new AccountId(ACCOUNT_ID), new UserId(USER_ID), new RoleId(ROLE_ID));
+
+    static Date notExpired()
+    {
+        return Date.from(ZonedDateTime.now().plusMinutes(5).toInstant());
+    }
+
+    static Date requestNotExpired()
+    {
+        return Date.from(ZonedDateTime.now().plusSeconds(60).toInstant());
+    }
 
     @FunctionalInterface
     interface TestAuthenticator
@@ -58,10 +68,8 @@ public abstract class TestGalaxyAuthenticator
                 .satisfies(identity -> assertThat(identity.getUser()).isEqualTo("username"))
                 .satisfies(identity -> assertThat(identity.getPrincipal().orElseThrow().toString()).isEqualTo(GALAXY_IDENTITY));
 
-        Date notExpired = Date.from(ZonedDateTime.now().plusMinutes(5).toInstant());
-        Date requestNotExpired = Date.from(ZonedDateTime.now().plusSeconds(60).toInstant());
         RequestBodyHashing requestBodyHashing = new RequestBodyHashing("good", "statement_hash");
-        assertThat(authenticator.authenticate(generateJwt("username", ACCOUNT_ID, subject, keyPair.getPrivate(), notExpired, requestNotExpired, Optional.of("good")), Optional.of(requestBodyHashing)))
+        assertThat(authenticator.authenticate(generateJwt("username", ACCOUNT_ID, subject, keyPair.getPrivate(), notExpired(), requestNotExpired(), Optional.of("good")), Optional.of(requestBodyHashing)))
                 .satisfies(identity -> assertThat(identity.getUser()).isEqualTo("username"))
                 .satisfies(identity -> assertThat(identity.getPrincipal().orElseThrow().toString()).isEqualTo(GALAXY_IDENTITY));
 
@@ -78,17 +86,17 @@ public abstract class TestGalaxyAuthenticator
                 .satisfies(exception -> assertThat(((AuthenticationException) exception).getAuthenticateHeader()).isEqualTo(Optional.of("Galaxy")));
 
         Date expired = new Date(System.currentTimeMillis() - 1000);
-        assertThatThrownBy(() -> authenticator.authenticate(generateJwt("username", ACCOUNT_ID, subject, keyPair.getPrivate(), expired, requestNotExpired, Optional.empty()), Optional.empty()))
+        assertThatThrownBy(() -> authenticator.authenticate(generateJwt("username", ACCOUNT_ID, subject, keyPair.getPrivate(), expired, requestNotExpired(), Optional.empty()), Optional.empty()))
                 .isInstanceOf(AuthenticationException.class)
                 .satisfies(exception -> assertThat(((AuthenticationException) exception).getAuthenticateHeader()).isEqualTo(Optional.of("Galaxy")));
 
         Date requestExpired = Date.from(ZonedDateTime.now().minusSeconds(60).toInstant());
-        assertThatThrownBy(() -> authenticator.authenticate(generateJwt("username", ACCOUNT_ID, subject, keyPair.getPrivate(), notExpired, requestExpired, Optional.of("good")), Optional.of(requestBodyHashing)))
+        assertThatThrownBy(() -> authenticator.authenticate(generateJwt("username", ACCOUNT_ID, subject, keyPair.getPrivate(), notExpired(), requestExpired, Optional.of("good")), Optional.of(requestBodyHashing)))
                 .isInstanceOfSatisfying(AuthenticationException.class, exception -> assertThat(exception.getAuthenticateHeader()).isEqualTo(Optional.of("Galaxy")))
                 .isInstanceOf(AuthenticationException.class)
                 .hasMessage("Token expired");
 
-        assertThatThrownBy(() -> authenticator.authenticate(generateJwt("username", ACCOUNT_ID, subject, keyPair.getPrivate(), notExpired, requestNotExpired, Optional.of("bad")), Optional.of(requestBodyHashing)))
+        assertThatThrownBy(() -> authenticator.authenticate(generateJwt("username", ACCOUNT_ID, subject, keyPair.getPrivate(), notExpired(), requestNotExpired(), Optional.of("bad")), Optional.of(requestBodyHashing)))
                 .isInstanceOf(AuthenticationException.class)
                 .hasMessage("Request body hash does not match")
                 .satisfies(exception -> assertThat(((AuthenticationException) exception).getAuthenticateHeader()).isEqualTo(Optional.of("Galaxy")));
@@ -114,7 +122,7 @@ public abstract class TestGalaxyAuthenticator
 
     private static String generateJwt(String username, String accountId, String subject, PrivateKey privateKey)
     {
-        return generateJwt(username, accountId, subject, privateKey, Date.from(ZonedDateTime.now().plusMinutes(5).toInstant()), Date.from(ZonedDateTime.now().plusSeconds(60).toInstant()), Optional.empty());
+        return generateJwt(username, accountId, subject, privateKey, notExpired(), requestNotExpired(), Optional.empty());
     }
 
     private static String generateJwt(String username, String accountId, String deploymentId, PrivateKey privateKey, Date expiration, Date requestExpiration, Optional<String> statementHash)

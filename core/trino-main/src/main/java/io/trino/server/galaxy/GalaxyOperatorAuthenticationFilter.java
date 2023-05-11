@@ -31,7 +31,7 @@ import java.security.Key;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.io.BaseEncoding.base16;
 import static io.jsonwebtoken.SignatureAlgorithm.HS256;
-import static io.trino.server.security.galaxy.GalaxyAuthenticatorController.parseClaimsWithoutValidation;
+import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.parseClaimsWithoutValidation;
 import static io.trino.server.security.jwt.JwtUtil.newJwtParserBuilder;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
