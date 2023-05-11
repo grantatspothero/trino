@@ -37,6 +37,7 @@ import io.trino.connector.system.GlobalSystemConnector;
 import io.trino.metadata.Catalog;
 import io.trino.metadata.CatalogInfo;
 import io.trino.metadata.CatalogMetadata;
+import io.trino.server.galaxy.GalaxyPermissionsCache;
 import io.trino.server.security.galaxy.CatalogIds;
 import io.trino.server.security.galaxy.ForGalaxySystemAccessControl;
 import io.trino.server.security.galaxy.GalaxyAccessControl;
@@ -108,22 +109,24 @@ public class MetadataOnlyTransactionManager
     private final HttpClient accessControlClient;
     private final MetadataAccessControllerSupplier accessController;
     private final MetadataSystemSecurityMetadata securityMetadata;
+    private final GalaxyPermissionsCache permissionsCache;
     private final AtomicReference<CatalogConnector> systemConnector = new AtomicReference<>();
 
     @Inject
-    public MetadataOnlyTransactionManager(CachingCatalogFactory catalogFactory, @ForGalaxySystemAccessControl HttpClient accessControlClient, MetadataAccessControllerSupplier accessController, MetadataSystemSecurityMetadata securityMetadata)
+    public MetadataOnlyTransactionManager(CachingCatalogFactory catalogFactory, @ForGalaxySystemAccessControl HttpClient accessControlClient, MetadataAccessControllerSupplier accessController, MetadataSystemSecurityMetadata securityMetadata, GalaxyPermissionsCache permissionsCache)
     {
         this.catalogFactory = requireNonNull(catalogFactory, "catalogFactory is null");
         this.accessControlClient = requireNonNull(accessControlClient, "accessControlClient is null");
         this.accessController = requireNonNull(accessController, "accessController is null");
         this.securityMetadata = requireNonNull(securityMetadata, "securityMetadata is null");
+        this.permissionsCache = requireNonNull(permissionsCache, "permissionsCache is null");
     }
 
     public TransactionId registerQueryCatalogs(AccountId accountId, Identity identity, TransactionId transactionId, QueryId queryId, List<QueryCatalog> catalogs, Map<String, String> serviceProperties)
     {
         while (true) {
             CachingCatalogFactory contextCatalogFactory = catalogFactory.withContextAccountId(accountId);
-            TransactionMetadata transactionMetadata = new TransactionMetadata(identity, queryId, transactionId, catalogs, serviceProperties, contextCatalogFactory, systemConnector.get(), accessControlClient, accessController, securityMetadata);
+            TransactionMetadata transactionMetadata = new TransactionMetadata(identity, queryId, transactionId, catalogs, serviceProperties, contextCatalogFactory, systemConnector.get(), accessControlClient, accessController, securityMetadata, permissionsCache);
             TransactionMetadata existingTransaction = transactions.putIfAbsent(transactionId, transactionMetadata);
             if (existingTransaction == null) {
                 return transactionId;
@@ -369,7 +372,8 @@ public class MetadataOnlyTransactionManager
                 CatalogConnector systemConnector,
                 HttpClient accessControlClient,
                 MetadataAccessControllerSupplier galaxyMetadataAccessControl,
-                MetadataSystemSecurityMetadata securityMetadata)
+                MetadataSystemSecurityMetadata securityMetadata,
+                GalaxyPermissionsCache permissionsCache)
         {
             this.queryId = requireNonNull(queryId, "queryId is null");
             this.transactionId = requireNonNull(transactionId, "transactionId is null");
@@ -379,6 +383,7 @@ public class MetadataOnlyTransactionManager
 
             requireNonNull(catalogs, "catalogs is null");
             requireNonNull(systemConnector, "systemConnector is null");
+            requireNonNull(permissionsCache, "permissionsCache is null");
 
             ImmutableMap.Builder<String, CatalogProperties> catalogsBuilder = ImmutableMap.builder();
             catalogsBuilder.put(systemConnector.getConnectorName().toString(), new CatalogProperties(systemConnector.getCatalogHandle(), systemConnector.getConnectorName(), ImmutableMap.of()));
@@ -414,8 +419,8 @@ public class MetadataOnlyTransactionManager
                     .setReadOnlyCatalogs(requiredServiceProperty(serviceProperties, "galaxy.read-only-catalogs"));
             CatalogIds catalogIds = new CatalogIds(galaxyAccessControlConfig);
 
-            galaxyMetadataAccessControl.addController(transactionId, new GalaxySystemAccessController(securityClient, catalogIds));
-            securityMetadata.add(transactionId, new GalaxySecurityMetadata(securityClient, catalogIds));
+            galaxyMetadataAccessControl.addController(transactionId, new GalaxySystemAccessController(securityClient, catalogIds, permissionsCache));
+            securityMetadata.add(transactionId, new GalaxySecurityMetadata(securityClient, catalogIds, permissionsCache));
         }
 
         public void checkOpenTransaction()

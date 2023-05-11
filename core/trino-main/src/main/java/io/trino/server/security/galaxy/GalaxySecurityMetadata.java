@@ -35,6 +35,7 @@ import io.trino.Session;
 import io.trino.metadata.QualifiedObjectName;
 import io.trino.metadata.QualifiedTablePrefix;
 import io.trino.metadata.SystemSecurityMetadata;
+import io.trino.server.galaxy.GalaxyPermissionsCache;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogSchemaName;
 import io.trino.spi.connector.CatalogSchemaTableName;
@@ -86,12 +87,14 @@ public class GalaxySecurityMetadata
 
     private final TrinoSecurityApi accessControlClient;
     private final CatalogIds catalogIds;
+    private final GalaxyPermissionsCache permissionsCache;
 
     @Inject
-    public GalaxySecurityMetadata(TrinoSecurityApi accessControlClient, CatalogIds catalogIds)
+    public GalaxySecurityMetadata(TrinoSecurityApi accessControlClient, CatalogIds catalogIds, GalaxyPermissionsCache permissionsCache)
     {
         this.accessControlClient = requireNonNull(accessControlClient, "accessControlClient is null");
         this.catalogIds = requireNonNull(catalogIds, "catalogIds is null");
+        this.permissionsCache = requireNonNull(permissionsCache, "permissionsCache is null");
     }
 
     @Override
@@ -177,6 +180,13 @@ public class GalaxySecurityMetadata
         return accessControlClient.listEnabledRoles(toDispatchSession(identity)).keySet().stream()
                 .map(RoleName::getName)
                 .collect(toImmutableSet());
+    }
+
+    @Override
+    public Set<String> listEnabledRoles(Session session)
+    {
+        return permissionsCache.withGalaxyPermissions(toDispatchSession(session), Optional.of(session.getQueryId()), permissions ->
+                permissions.listEnabledRoles(accessControlClient).keySet().stream().map(RoleName::getName).collect(toImmutableSet()));
     }
 
     @Override

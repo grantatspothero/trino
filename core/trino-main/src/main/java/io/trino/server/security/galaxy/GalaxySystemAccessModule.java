@@ -15,17 +15,18 @@ package io.trino.server.security.galaxy;
 
 import com.google.inject.Binder;
 import com.google.inject.Key;
-import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.connector.CatalogManagerConfig;
 import io.trino.connector.CatalogManagerConfig.CatalogMangerKind;
 import io.trino.security.AccessControlManager;
 import io.trino.security.DefaultSystemAccessControlName;
 import io.trino.server.galaxy.GalaxyAuthorizationClientModule;
+import io.trino.server.galaxy.GalaxyPermissionsCache;
 import io.trino.spi.security.SystemAccessControlFactory;
 
 import javax.inject.Inject;
 
+import static com.google.inject.Scopes.SINGLETON;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static java.util.Objects.requireNonNull;
 
@@ -47,7 +48,8 @@ public class GalaxySystemAccessModule
         else {
             binder.bind(SystemAccessControlFactory.class).annotatedWith(ForGalaxySystemAccessControl.class).to(GalaxyTrinoSystemAccessFactory.class);
         }
-        binder.bind(LazyRegistration.class).in(Scopes.SINGLETON);
+        binder.bind(GalaxyPermissionsCache.class).in(SINGLETON);
+        binder.bind(LazyRegistration.class).in(SINGLETON);
     }
 
     private static class LazyRegistration

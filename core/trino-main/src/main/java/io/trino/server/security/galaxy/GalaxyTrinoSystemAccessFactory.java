@@ -17,6 +17,7 @@ import com.google.inject.Injector;
 import io.airlift.bootstrap.Bootstrap;
 import io.airlift.json.JsonModule;
 import io.trino.server.galaxy.GalaxyAuthorizationClientModule;
+import io.trino.server.galaxy.GalaxyPermissionsCache;
 import io.trino.spi.security.SystemAccessControl;
 import io.trino.spi.security.SystemAccessControlFactory;
 
@@ -41,7 +42,10 @@ public class GalaxyTrinoSystemAccessFactory
         Bootstrap app = new Bootstrap(
                 new JsonModule(),
                 new GalaxyAuthorizationClientModule(),
-                binder -> binder.bind(GalaxySystemAccessController.class).in(SINGLETON));
+                binder -> {
+                    binder.bind(GalaxyPermissionsCache.class).in(SINGLETON);
+                    binder.bind(GalaxySystemAccessController.class).in(SINGLETON);
+                });
 
         Injector injector = app
                 .doNotInitializeLogging()
