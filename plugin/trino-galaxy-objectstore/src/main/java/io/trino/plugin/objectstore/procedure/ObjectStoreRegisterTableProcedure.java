@@ -40,14 +40,12 @@ import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.util.stream.Stream;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.MoreCollectors.onlyElement;
 import static io.trino.plugin.base.util.Procedures.checkProcedureArgument;
 import static io.trino.plugin.objectstore.GalaxyIdentity.toDispatchSession;
 import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.type.VarcharType.VARCHAR;
-import static java.lang.String.format;
 import static java.lang.invoke.MethodHandles.lookup;
 import static java.util.Objects.requireNonNull;
 
@@ -123,18 +121,19 @@ public final class ObjectStoreRegisterTableProcedure
             ConnectorSession session,
             String schemaName,
             String tableName,
-            String tableLocation,
+            String location,
             String metadataFileName)
             throws Throwable
     {
         try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
-            locationAccessControl.checkCanUseLocation(session.getIdentity(), tableLocation);
+            locationAccessControl.checkCanUseLocation(session.getIdentity(), location);
 
             TrinoFileSystem fileSystem = fileSystemFactory.create(session);
 
-            boolean isIcebergTable = exists(fileSystem, format("%s/%s", stripTrailingSlash(tableLocation), IcebergUtil.METADATA_FOLDER_NAME));
-            boolean isDeltaLakeTable = exists(fileSystem, format("%s/%s", stripTrailingSlash(tableLocation), TransactionLogUtil.TRANSACTION_LOG_DIRECTORY));
-            boolean isHudiTable = exists(fileSystem, format("%s/%s", stripTrailingSlash(tableLocation), HUDI_METADATA_FOLDER_NAME));
+            Location tableLocation = Location.of(location);
+            boolean isIcebergTable = exists(fileSystem, tableLocation.appendPath(IcebergUtil.METADATA_FOLDER_NAME));
+            boolean isDeltaLakeTable = exists(fileSystem, tableLocation.appendPath(TransactionLogUtil.TRANSACTION_LOG_DIRECTORY));
+            boolean isHudiTable = exists(fileSystem, tableLocation.appendPath(HUDI_METADATA_FOLDER_NAME));
 
             long possibleTableTypesCount = Stream.of(isIcebergTable, isDeltaLakeTable, isHudiTable).filter(bool -> bool).count();
             if (possibleTableTypesCount > 1) {
@@ -142,13 +141,13 @@ public final class ObjectStoreRegisterTableProcedure
             }
 
             if (isIcebergTable) {
-                icebergRegisterTable.getMethodHandle().invoke(session, schemaName, tableName, tableLocation, metadataFileName);
+                icebergRegisterTable.getMethodHandle().invoke(session, schemaName, tableName, location, metadataFileName);
                 // TODO https://github.com/starburstdata/team-lakehouse/issues/213 Move the following TrinoSecurityApi.entityCreated to Iceberg connector considering Tabular integration
                 securityControl.entityCreated(toDispatchSession(session.getIdentity()), new TableId(catalogId, schemaName, tableName));
             }
             else if (isDeltaLakeTable) {
                 checkProcedureArgument(metadataFileName == null, "Unsupported metadata_file_name argument for Delta Lake table");
-                deltaRegisterTable.getMethodHandle().invoke(session, schemaName, tableName, tableLocation);
+                deltaRegisterTable.getMethodHandle().invoke(session, schemaName, tableName, location);
                 securityControl.entityCreated(toDispatchSession(session.getIdentity()), new TableId(catalogId, schemaName, tableName));
             }
             else if (isHudiTable) {
@@ -160,19 +159,13 @@ public final class ObjectStoreRegisterTableProcedure
         }
     }
 
-    private static boolean exists(TrinoFileSystem fileSystem, String location)
+    private static boolean exists(TrinoFileSystem fileSystem, Location location)
     {
         try {
-            return fileSystem.newInputFile(Location.of(location)).exists();
+            return fileSystem.newInputFile(location).exists();
         }
         catch (IOException e) {
             throw new TrinoException(GENERIC_INTERNAL_ERROR, "Failed to check location: " + location, e);
         }
-    }
-
-    private static String stripTrailingSlash(String path)
-    {
-        checkArgument(path != null && path.length() > 0, "path must not be null or empty");
-        return path.replaceFirst("/+$", "");
     }
 }
