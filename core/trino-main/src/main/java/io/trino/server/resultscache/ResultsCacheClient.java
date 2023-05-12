@@ -77,7 +77,8 @@ public class ResultsCacheClient
             QueryId queryId,
             List<Column> columns,
             List<List<Object>> data,
-            Duration expirationInterval) throws JsonProcessingException
+            Duration expirationInterval)
+            throws JsonProcessingException
     {
         Instant expirationTime = Instant.now().plusMillis(expirationInterval.toMillis());
         List<List<String>> dataStr = data.stream().map(singleRow -> singleRow.stream().map(ResultsCacheClient::serializeObject).collect(toImmutableList())).collect(toImmutableList());
