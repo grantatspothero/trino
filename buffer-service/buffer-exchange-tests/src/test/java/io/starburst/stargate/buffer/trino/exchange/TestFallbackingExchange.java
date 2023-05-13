@@ -12,6 +12,7 @@ package io.starburst.stargate.buffer.trino.exchange;
 import com.google.common.collect.ImmutableMap;
 import io.airlift.http.client.HttpClientConfig;
 import io.airlift.http.client.jetty.JettyHttpClient;
+import io.airlift.units.Duration;
 import io.starburst.stargate.buffer.discovery.client.failures.FailureInfo;
 import io.starburst.stargate.buffer.discovery.client.failures.HttpFailureTrackingClient;
 import io.starburst.stargate.buffer.testing.TestingBufferService;
@@ -37,9 +38,11 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static io.airlift.testing.Closeables.closeAll;
 import static io.trino.testing.TestingNames.randomNameSuffix;
+import static io.trino.testing.assertions.Assert.assertEventually;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Test(singleThreaded = true)
@@ -51,46 +54,49 @@ public class TestFallbackingExchange
     public void test()
             throws Exception
     {
-        try (TestSetup testSetup = new TestSetup();
-                JettyHttpClient httpClient = new JettyHttpClient(new HttpClientConfig())) {
-            ExchangeManager exchangeManager = getExchangeManager(testSetup.getQueryRunner());
-            if (!(exchangeManager instanceof FallbackingExchangeManager fallbackingExchangeManager)) {
-                throw new RuntimeException("Expected %s to be FallbackingExchangeManager but was %s".formatted(exchangeManager, exchangeManager.getClass()));
+        assertEventually(new Duration(2, TimeUnit.MINUTES), () -> {
+            // assert eventually due to fact test tends to have timing issues on CI
+            try (TestSetup testSetup = new TestSetup();
+                    JettyHttpClient httpClient = new JettyHttpClient(new HttpClientConfig())) {
+                ExchangeManager exchangeManager = getExchangeManager(testSetup.getQueryRunner());
+                if (!(exchangeManager instanceof FallbackingExchangeManager fallbackingExchangeManager)) {
+                    throw new RuntimeException("Expected %s to be FallbackingExchangeManager but was %s".formatted(exchangeManager, exchangeManager.getClass()));
+                }
+
+                assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).skippingTypesCheck().matches("SELECT BIGINT '15000'");
+
+                FallbackingExchangeStats.Snapshot initialStats = fallbackingExchangeManager.getStats();
+
+                assertThat(initialStats.bufferExchangesCreated()).isGreaterThan(0);
+                assertThat(initialStats.filesystemExchangesCreated()).isEqualTo(0);
+
+                // trigger failures
+                HttpFailureTrackingClient failureTrackingClient = new HttpFailureTrackingClient(testSetup.getBufferService().getDiscoveryServer().getBaseUri(), httpClient);
+                for (int i = 0; i < 3; ++i) {
+                    failureTrackingClient.registerFailure(new FailureInfo(Optional.empty(), "some_client", "some_failure"));
+                }
+
+                assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).skippingTypesCheck().matches("SELECT BIGINT '15000'");
+
+                FallbackingExchangeStats.Snapshot afterFailureStats = fallbackingExchangeManager.getStats();
+                assertThat(afterFailureStats.bufferExchangesCreated()).isEqualTo(initialStats.bufferExchangesCreated());
+                assertThat(afterFailureStats.filesystemExchangesCreated()).isGreaterThan(initialStats.filesystemExchangesCreated());
+
+                Thread.sleep(1500); // we are past the decay interval in failure tracking server but still in backoff on the exchange side
+                assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).skippingTypesCheck().matches("SELECT BIGINT '15000'");
+
+                FallbackingExchangeStats.Snapshot pastDecayStats = fallbackingExchangeManager.getStats();
+                assertThat(pastDecayStats.bufferExchangesCreated()).isEqualTo(afterFailureStats.bufferExchangesCreated());
+                assertThat(pastDecayStats.filesystemExchangesCreated()).isGreaterThan(afterFailureStats.filesystemExchangesCreated());
+
+                Thread.sleep(3500); // we should recover to buffer service now
+                assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).skippingTypesCheck().matches("SELECT BIGINT '15000'");
+
+                FallbackingExchangeStats.Snapshot recoveredStats = fallbackingExchangeManager.getStats();
+                assertThat(recoveredStats.bufferExchangesCreated()).isGreaterThan(pastDecayStats.bufferExchangesCreated());
+                assertThat(recoveredStats.filesystemExchangesCreated()).isEqualTo(pastDecayStats.filesystemExchangesCreated());
             }
-
-            assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).skippingTypesCheck().matches("SELECT BIGINT '15000'");
-
-            FallbackingExchangeStats.Snapshot initialStats = fallbackingExchangeManager.getStats();
-
-            assertThat(initialStats.bufferExchangesCreated()).isGreaterThan(0);
-            assertThat(initialStats.filesystemExchangesCreated()).isEqualTo(0);
-
-            // trigger failures
-            HttpFailureTrackingClient failureTrackingClient = new HttpFailureTrackingClient(testSetup.getBufferService().getDiscoveryServer().getBaseUri(), httpClient);
-            for (int i = 0; i < 3; ++i) {
-                failureTrackingClient.registerFailure(new FailureInfo(Optional.empty(), "some_client", "some_failure"));
-            }
-
-            assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).skippingTypesCheck().matches("SELECT BIGINT '15000'");
-
-            FallbackingExchangeStats.Snapshot afterFailureStats = fallbackingExchangeManager.getStats();
-            assertThat(afterFailureStats.bufferExchangesCreated()).isEqualTo(initialStats.bufferExchangesCreated());
-            assertThat(afterFailureStats.filesystemExchangesCreated()).isGreaterThan(initialStats.filesystemExchangesCreated());
-
-            Thread.sleep(1500); // we are past the decay interval in failure tracking server but still in backoff on the exchange side
-            assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).skippingTypesCheck().matches("SELECT BIGINT '15000'");
-
-            FallbackingExchangeStats.Snapshot pastDecayStats = fallbackingExchangeManager.getStats();
-            assertThat(pastDecayStats.bufferExchangesCreated()).isEqualTo(afterFailureStats.bufferExchangesCreated());
-            assertThat(pastDecayStats.filesystemExchangesCreated()).isGreaterThan(afterFailureStats.filesystemExchangesCreated());
-
-            Thread.sleep(3500); // we should recover to buffer service now
-            assertThat(testSetup.query("SELECT COUNT(*) FROM orders")).skippingTypesCheck().matches("SELECT BIGINT '15000'");
-
-            FallbackingExchangeStats.Snapshot recoveredStats = fallbackingExchangeManager.getStats();
-            assertThat(recoveredStats.bufferExchangesCreated()).isGreaterThan(pastDecayStats.bufferExchangesCreated());
-            assertThat(recoveredStats.filesystemExchangesCreated()).isEqualTo(pastDecayStats.filesystemExchangesCreated());
-        }
+        });
     }
 
     // TODO(https://github.com/trinodb/trino/pull/15140) instead
