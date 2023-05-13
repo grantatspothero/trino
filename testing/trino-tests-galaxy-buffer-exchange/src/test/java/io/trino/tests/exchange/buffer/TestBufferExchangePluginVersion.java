@@ -63,4 +63,25 @@ public class TestBufferExchangePluginVersion
                 .isLessThanOrEqualTo(ALLOWED_VERSION_DRIFT)
                 .isGreaterThanOrEqualTo(0);
     }
+
+    @Test
+    public void testJacksonVersionCompatibility()
+            throws Exception
+    {
+        // Ensure runtime version of Jackson library in Trino matches compile time version of Jackson for buffer service based exchange
+        Properties bufferServiceDependenciesVersions = new Properties();
+        try (InputStream inputStream = getResource(getClass(), "/io/starburst/stargate/buffer/trino/exchange/dependencies-versions.properties").openStream()) {
+            bufferServiceDependenciesVersions.load(inputStream);
+        }
+
+        Properties trinoDependenciesVerions = new Properties();
+        try (InputStream inputStream = getResource(getClass(), "test-buffer-exchange-plugin-versions.properties").openStream()) {
+            trinoDependenciesVerions.load(inputStream);
+        }
+
+        String bufferServiceJacksonVersion = bufferServiceDependenciesVersions.getProperty("dep.jackson.version");
+        String trinoJacksonVersion = trinoDependenciesVerions.getProperty("dep.jackson.version");
+
+        assertThat(trinoJacksonVersion).as("buffer service jackson version").isEqualTo(bufferServiceJacksonVersion);
+    }
 }
