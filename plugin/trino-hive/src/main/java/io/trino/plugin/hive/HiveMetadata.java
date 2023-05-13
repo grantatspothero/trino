@@ -169,7 +169,6 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Iterables.concat;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.trino.hdfs.ConfigurationUtils.toJobConf;
-import static io.trino.memory.context.AggregatedMemoryContext.newSimpleAggregatedMemoryContext;
 import static io.trino.plugin.base.cache.CacheUtils.normalizeTupleDomain;
 import static io.trino.plugin.hive.HiveAnalyzeProperties.getColumnNames;
 import static io.trino.plugin.hive.HiveAnalyzeProperties.getPartitionList;
@@ -1926,7 +1925,7 @@ public class HiveMetadata
                 TrinoOutputFile trinoOutputFile = fileSystem.newOutputFile(Location.of(path.toString()).appendPath(fileName));
                 try {
                     // create empty file
-                    trinoOutputFile.create(newSimpleAggregatedMemoryContext()).close();
+                    trinoOutputFile.create().close();
                 }
                 catch (IOException e) {
                     throw new TrinoException(HIVE_WRITER_CLOSE_ERROR, "Error write empty file to Hive", e);
