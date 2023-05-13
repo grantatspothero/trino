@@ -33,7 +33,7 @@ public class TestBufferExchangePluginVersion
      * buffer service dependency as part of the update.
      */
     @Test
-    public void testVersionCompatibility()
+    public void testSPIVersionCompatibility()
             throws Exception
     {
         Properties properties = new Properties();
