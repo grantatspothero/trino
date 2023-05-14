@@ -19,6 +19,7 @@ import io.airlift.bootstrap.Bootstrap;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;
 import io.trino.filesystem.hdfs.HdfsFileSystemModule;
+import io.trino.filesystem.manager.FileSystemModule;
 import io.trino.hdfs.HdfsModule;
 import io.trino.hdfs.authentication.HdfsAuthenticationModule;
 import io.trino.hdfs.azure.HiveAzureModule;
@@ -117,6 +118,7 @@ public final class InternalObjectStoreConnectorFactory
                     connectorModule(ForHudi.class, hudiConnector),
                     new ObjectStoreModule(),
                     new GalaxyLocationSecurityModule(),
+                    new FileSystemModule(),
                     new HdfsModule(),
                     new HiveS3Module(),
                     new HiveGcsModule(),
