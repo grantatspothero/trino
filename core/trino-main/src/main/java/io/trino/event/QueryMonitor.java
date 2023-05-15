@@ -14,7 +14,7 @@
 package io.trino.event;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
+import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
@@ -823,9 +823,12 @@ public class QueryMonitor
             extends JacksonAnnotationIntrospector
     {
         @Override
-        public boolean hasIgnoreMarker(AnnotatedMember m)
+        public Boolean isIgnorableType(AnnotatedClass ac)
         {
-            return m.getRawType() == TDigest.class || super.hasIgnoreMarker(m);
+            if (ac.getRawType() == TDigest.class) {
+                return true;
+            }
+            return super.isIgnorableType(ac);
         }
     }
 }
