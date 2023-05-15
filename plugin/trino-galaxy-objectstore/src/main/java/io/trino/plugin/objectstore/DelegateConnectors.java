@@ -15,9 +15,8 @@ package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import io.trino.spi.connector.Connector;
-
-import javax.inject.Inject;
 
 import java.util.List;
 import java.util.Map;

@@ -76,11 +76,6 @@
             <artifactId>starburst-oracle</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>javax.inject</groupId>
-            <artifactId>javax.inject</artifactId>
-        </dependency>
-
         <!-- Trino SPI -->
         <dependency>
             <groupId>io.trino</groupId>

@@ -16,6 +16,7 @@ package io.trino.server.galaxy;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
 import io.starburst.stargate.id.EntityId;
@@ -24,8 +25,6 @@ import io.starburst.stargate.id.RoleName;
 import io.starburst.stargate.identity.DispatchSession;
 import io.trino.collect.cache.EvictableCacheBuilder;
 import io.trino.spi.QueryId;
-
-import javax.inject.Inject;
 
 import java.util.HashMap;
 import java.util.Map;

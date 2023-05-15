@@ -14,6 +14,8 @@
 package io.trino.plugin.objectstore.procedure;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
+import com.google.inject.Provider;
 import io.trino.plugin.deltalake.metastore.NotADeltaLakeTableException;
 import io.trino.plugin.objectstore.ForDelta;
 import io.trino.plugin.objectstore.ForHive;
@@ -29,8 +31,6 @@ import io.trino.spi.procedure.Procedure;
 import io.trino.spi.type.ArrayType;
 
 import javax.annotation.Nullable;
-import javax.inject.Inject;
-import javax.inject.Provider;
 
 import java.lang.invoke.MethodHandle;
 import java.util.List;

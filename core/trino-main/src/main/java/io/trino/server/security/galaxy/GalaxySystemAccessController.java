@@ -13,6 +13,7 @@
  */
 package io.trino.server.security.galaxy;
 
+import com.google.inject.Inject;
 import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
@@ -29,8 +30,6 @@ import io.trino.server.galaxy.GalaxyPermissionsCache.GalaxyQueryPermissions;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.security.SystemSecurityContext;
 import io.trino.spi.security.ViewExpression;
-
-import javax.inject.Inject;
 
 import java.util.List;
 import java.util.Map;

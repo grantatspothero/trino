@@ -14,10 +14,9 @@
 
 package io.trino.server.resultscache;
 
+import com.google.inject.Inject;
 import io.trino.security.AccessControl;
 import io.trino.security.SecurityContext;
-
-import javax.inject.Inject;
 
 import static java.util.Objects.requireNonNull;
 

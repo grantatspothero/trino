@@ -13,13 +13,12 @@
  */
 package io.trino.plugin.objectstore;
 
+import com.google.inject.Inject;
 import io.starburst.stargate.accesscontrol.client.TrinoLocationApi;
 import io.starburst.stargate.identity.DispatchSession;
 import io.trino.plugin.hive.LocationAccessControl;
 import io.trino.spi.security.AccessDeniedException;
 import io.trino.spi.security.ConnectorIdentity;
-
-import javax.inject.Inject;
 
 import static io.trino.plugin.objectstore.GalaxyIdentity.toDispatchSession;
 import static java.util.Objects.requireNonNull;

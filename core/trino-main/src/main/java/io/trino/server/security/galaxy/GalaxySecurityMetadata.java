@@ -16,6 +16,7 @@ package io.trino.server.security.galaxy;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.Inject;
 import io.starburst.stargate.accesscontrol.client.CreateEntityPrivilege;
 import io.starburst.stargate.accesscontrol.client.CreateRoleGrant;
 import io.starburst.stargate.accesscontrol.client.GalaxyPrincipal;
@@ -46,8 +47,6 @@ import io.trino.spi.security.Privilege;
 import io.trino.spi.security.PrivilegeInfo;
 import io.trino.spi.security.RoleGrant;
 import io.trino.spi.security.TrinoPrincipal;
-
-import javax.inject.Inject;
 
 import java.util.Optional;
 import java.util.Set;

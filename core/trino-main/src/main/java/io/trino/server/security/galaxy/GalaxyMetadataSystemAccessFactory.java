@@ -13,10 +13,9 @@
  */
 package io.trino.server.security.galaxy;
 
+import com.google.inject.Inject;
 import io.trino.spi.security.SystemAccessControl;
 import io.trino.spi.security.SystemAccessControlFactory;
-
-import javax.inject.Inject;
 
 import java.util.Map;
 

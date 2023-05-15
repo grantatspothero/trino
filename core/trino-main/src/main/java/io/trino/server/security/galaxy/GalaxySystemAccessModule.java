@@ -14,6 +14,7 @@
 package io.trino.server.security.galaxy;
 
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Key;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.connector.CatalogManagerConfig;
@@ -23,8 +24,6 @@ import io.trino.security.DefaultSystemAccessControlName;
 import io.trino.server.galaxy.GalaxyAuthorizationClientModule;
 import io.trino.server.galaxy.GalaxyPermissionsCache;
 import io.trino.spi.security.SystemAccessControlFactory;
-
-import javax.inject.Inject;
 
 import static com.google.inject.Scopes.SINGLETON;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;

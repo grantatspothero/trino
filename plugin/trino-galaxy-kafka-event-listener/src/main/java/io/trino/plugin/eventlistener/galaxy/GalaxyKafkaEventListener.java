@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.eventlistener.galaxy;
 
+import com.google.inject.Inject;
 import io.airlift.json.JsonCodec;
 import io.airlift.stats.CounterStat;
 import io.airlift.stats.DistributionStat;
@@ -32,7 +33,6 @@ import org.weakref.jmx.Nested;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import javax.inject.Inject;
 
 import java.net.URI;
 import java.time.OffsetDateTime;

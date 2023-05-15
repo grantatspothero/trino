@@ -14,6 +14,7 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.base.VerifyException;
+import com.google.inject.Inject;
 import io.trino.plugin.deltalake.DeltaLakeSplit;
 import io.trino.plugin.deltalake.DeltaLakeTableHandle;
 import io.trino.plugin.hive.HiveSplit;
@@ -31,8 +32,6 @@ import io.trino.spi.connector.ConnectorTableHandle;
 import io.trino.spi.connector.ConnectorTransactionHandle;
 import io.trino.spi.connector.Constraint;
 import io.trino.spi.connector.DynamicFilter;
-
-import javax.inject.Inject;
 
 import java.util.Optional;
 

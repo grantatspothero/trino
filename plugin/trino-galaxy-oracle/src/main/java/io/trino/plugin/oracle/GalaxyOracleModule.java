@@ -15,9 +15,11 @@
 package io.trino.plugin.oracle;
 
 import com.google.inject.Binder;
+import com.google.inject.BindingAnnotation;
 import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import com.google.inject.Singleton;
 import com.starburstdata.presto.license.LicenseManager;
 import com.starburstdata.trino.plugins.oracle.StarburstOracleClientModule;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
@@ -31,9 +33,6 @@ import io.trino.sshtunnel.SshTunnelConfig;
 import io.trino.sshtunnel.SshTunnelProperties;
 import io.trino.sshtunnel.SshTunnelPropertiesMapper;
 import oracle.jdbc.driver.OracleDriver;
-
-import javax.inject.Qualifier;
-import javax.inject.Singleton;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -111,6 +110,6 @@ public class GalaxyOracleModule
 
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.METHOD)
-    @Qualifier
+    @BindingAnnotation
     public @interface ForOracle {}
 }

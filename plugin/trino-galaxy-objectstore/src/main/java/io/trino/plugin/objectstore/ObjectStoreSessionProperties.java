@@ -18,13 +18,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Table;
+import com.google.inject.Inject;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.security.ConnectorIdentity;
 import io.trino.spi.session.PropertyMetadata;
 import io.trino.spi.type.TimeZoneKey;
 
 import javax.annotation.Nullable;
-import javax.inject.Inject;
 
 import java.time.Instant;
 import java.util.List;

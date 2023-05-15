@@ -14,6 +14,7 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.base.VerifyException;
+import com.google.inject.Inject;
 import io.trino.plugin.deltalake.DeltaLakeInsertTableHandle;
 import io.trino.plugin.deltalake.DeltaLakeMergeTableHandle;
 import io.trino.plugin.deltalake.DeltaLakeOutputTableHandle;
@@ -34,8 +35,6 @@ import io.trino.spi.connector.ConnectorPageSinkProvider;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.ConnectorTableExecuteHandle;
 import io.trino.spi.connector.ConnectorTransactionHandle;
-
-import javax.inject.Inject;
 
 import static io.trino.plugin.objectstore.TableType.DELTA;
 import static io.trino.plugin.objectstore.TableType.HIVE;

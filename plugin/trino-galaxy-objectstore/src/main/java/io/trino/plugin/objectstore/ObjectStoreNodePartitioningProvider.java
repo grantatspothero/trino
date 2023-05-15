@@ -14,6 +14,7 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.base.VerifyException;
+import com.google.inject.Inject;
 import io.trino.plugin.deltalake.DeltaLakePartitioningHandle;
 import io.trino.plugin.deltalake.DeltaLakeUpdateHandle;
 import io.trino.plugin.hive.HivePartitioningHandle;
@@ -27,8 +28,6 @@ import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.ConnectorSplit;
 import io.trino.spi.connector.ConnectorTransactionHandle;
 import io.trino.spi.type.Type;
-
-import javax.inject.Inject;
 
 import java.util.List;
 import java.util.Optional;

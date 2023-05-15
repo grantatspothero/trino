@@ -13,10 +13,9 @@
  */
 package io.trino.server.metadataonly;
 
+import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.airlift.units.Duration;
-
-import javax.inject.Inject;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;

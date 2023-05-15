@@ -13,10 +13,9 @@
  */
 package io.trino.plugin.redshift;
 
+import com.google.inject.Inject;
 import io.trino.plugin.jdbc.credential.CredentialProvider;
 import io.trino.spi.security.ConnectorIdentity;
-
-import javax.inject.Inject;
 
 import java.util.Optional;
 

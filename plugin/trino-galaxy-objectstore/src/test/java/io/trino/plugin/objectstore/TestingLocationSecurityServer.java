@@ -14,6 +14,7 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import io.airlift.bootstrap.Bootstrap;
 import io.airlift.bootstrap.LifeCycleManager;
@@ -25,7 +26,6 @@ import io.airlift.node.testing.TestingNodeModule;
 import io.starburst.stargate.accesscontrol.client.TrinoLocationApi;
 import io.starburst.stargate.identity.DispatchSession;
 
-import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.POST;

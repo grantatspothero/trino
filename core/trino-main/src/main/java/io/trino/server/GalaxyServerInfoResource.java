@@ -13,10 +13,10 @@
  */
 package io.trino.server;
 
+import com.google.inject.Inject;
 import io.trino.metadata.NodeState;
 import io.trino.server.security.ResourceSecurity;
 
-import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;

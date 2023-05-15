@@ -14,6 +14,8 @@
 package io.trino.plugin.objectstore.procedure;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
+import com.google.inject.Provider;
 import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.TableId;
 import io.trino.plugin.objectstore.ForDelta;
@@ -29,9 +31,6 @@ import io.trino.spi.connector.ConnectorAccessControl;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.procedure.Procedure;
 import io.trino.spi.procedure.Procedure.Argument;
-
-import javax.inject.Inject;
-import javax.inject.Provider;
 
 import java.lang.invoke.MethodHandle;
 import java.util.stream.Stream;

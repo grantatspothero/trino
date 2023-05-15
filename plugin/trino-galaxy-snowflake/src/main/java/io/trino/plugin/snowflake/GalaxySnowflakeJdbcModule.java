@@ -15,9 +15,11 @@
 package io.trino.plugin.snowflake;
 
 import com.google.inject.Binder;
+import com.google.inject.BindingAnnotation;
 import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import com.google.inject.Singleton;
 import com.snowflake.client.jdbc.SnowflakeDriver;
 import com.starburstdata.trino.plugins.snowflake.SnowflakeConfig;
 import com.starburstdata.trino.plugins.snowflake.jdbc.SnowflakeJdbcClientModule;
@@ -30,9 +32,6 @@ import io.trino.plugin.jdbc.ConnectionFactory;
 import io.trino.plugin.jdbc.ForBaseJdbc;
 import io.trino.plugin.jdbc.credential.CredentialProvider;
 import io.trino.spi.connector.CatalogHandle;
-
-import javax.inject.Qualifier;
-import javax.inject.Singleton;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -85,6 +84,6 @@ public class GalaxySnowflakeJdbcModule
 
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.METHOD)
-    @Qualifier
+    @BindingAnnotation
     public @interface ForSnowflake {}
 }

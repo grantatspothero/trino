@@ -14,6 +14,7 @@
 package io.trino.plugin.pinot.galaxy;
 
 import com.google.common.net.HostAndPort;
+import com.google.inject.Inject;
 import io.airlift.http.client.HttpRequestFilter;
 import io.airlift.http.client.Request;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
@@ -21,8 +22,6 @@ import io.trino.plugin.base.galaxy.RegionVerifier;
 import io.trino.sshtunnel.SshTunnelConfig;
 import io.trino.sshtunnel.SshTunnelManager;
 import io.trino.sshtunnel.SshTunnelProperties;
-
-import javax.inject.Inject;
 
 import java.util.Optional;
 

@@ -13,11 +13,10 @@
  */
 package io.trino.plugin.objectstore;
 
+import com.google.inject.Inject;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.id.EntityId;
 import io.starburst.stargate.identity.DispatchSession;
-
-import javax.inject.Inject;
 
 import static java.util.Objects.requireNonNull;
 

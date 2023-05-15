@@ -14,6 +14,7 @@
 package io.trino.split;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import io.trino.Session;
 import io.trino.connector.CatalogServiceProvider;
 import io.trino.metadata.Split;
@@ -22,8 +23,6 @@ import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.ConnectorAlternativeChooser;
 import io.trino.spi.connector.ConnectorAlternativePageSourceProvider;
 import io.trino.spi.connector.ConnectorSession;
-
-import javax.inject.Inject;
 
 import java.util.Collection;
 import java.util.List;

@@ -13,6 +13,7 @@
  */
 package io.trino.server;
 
+import com.google.inject.Inject;
 import io.opentelemetry.api.trace.Span;
 import io.trino.Session;
 import io.trino.metadata.Metadata;
@@ -28,7 +29,6 @@ import io.trino.sql.SqlEnvironmentConfig;
 import io.trino.sql.SqlPath;
 
 import javax.annotation.concurrent.ThreadSafe;
-import javax.inject.Inject;
 
 import java.util.List;
 import java.util.Locale;

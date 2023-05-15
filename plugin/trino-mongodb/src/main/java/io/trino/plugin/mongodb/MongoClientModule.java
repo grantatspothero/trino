@@ -16,6 +16,7 @@ package io.trino.plugin.mongodb;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import com.google.inject.Singleton;
 import com.google.inject.multibindings.ProvidesIntoSet;
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientException;
@@ -40,8 +41,6 @@ import io.trino.spi.ptf.ConnectorTableFunction;
 import io.trino.spi.type.TypeManager;
 import io.trino.sshtunnel.SshTunnelConfig;
 import io.trino.sshtunnel.SshTunnelProperties;
-
-import javax.inject.Singleton;
 
 import java.util.Optional;
 import java.util.Properties;

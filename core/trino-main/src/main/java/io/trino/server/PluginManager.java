@@ -14,6 +14,7 @@
 package io.trino.server;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.trino.cache.CacheManagerRegistry;
 import io.trino.connector.CatalogFactory;
@@ -50,7 +51,6 @@ import io.trino.spi.type.ParametricType;
 import io.trino.spi.type.Type;
 
 import javax.annotation.concurrent.ThreadSafe;
-import javax.inject.Inject;
 
 import java.net.URL;
 import java.util.List;

@@ -14,8 +14,8 @@
 package io.trino.server.galaxy;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 
-import javax.inject.Inject;
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.ContainerResponseContext;

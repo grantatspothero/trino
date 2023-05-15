@@ -16,9 +16,8 @@ package io.trino.server.security.galaxy;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.Inject;
 import io.starburst.stargate.id.CatalogId;
-
-import javax.inject.Inject;
 
 import java.util.Map;
 import java.util.Optional;

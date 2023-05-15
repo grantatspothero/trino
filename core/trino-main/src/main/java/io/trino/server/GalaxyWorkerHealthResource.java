@@ -13,6 +13,7 @@
  */
 package io.trino.server;
 
+import com.google.inject.Inject;
 import io.airlift.discovery.client.ForDiscoveryClient;
 import io.airlift.discovery.client.ServiceDescriptor;
 import io.airlift.discovery.client.ServiceDescriptorsRepresentation;
@@ -25,7 +26,6 @@ import io.trino.client.GalaxyWorkerHealthStatus;
 import io.trino.server.security.ResourceSecurity;
 import io.trino.server.security.ResourceSecurity.AccessType;
 
-import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;

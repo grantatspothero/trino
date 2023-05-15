@@ -14,6 +14,7 @@
 package io.trino.server.metadataonly;
 
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.starburst.stargate.crypto.KmsCryptoModule;
@@ -32,8 +33,6 @@ import io.trino.server.security.galaxy.MetadataSystemSecurityMetadata;
 import io.trino.server.ui.NoWebUiAuthenticationFilter;
 import io.trino.server.ui.WebUiAuthenticationFilter;
 import io.trino.transaction.TransactionManager;
-
-import javax.inject.Inject;
 
 import static com.google.inject.Scopes.SINGLETON;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;

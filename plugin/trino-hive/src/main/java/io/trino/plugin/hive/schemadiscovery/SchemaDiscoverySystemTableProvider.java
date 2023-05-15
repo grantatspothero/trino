@@ -15,6 +15,7 @@ package io.trino.plugin.hive.schemadiscovery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import com.google.inject.Inject;
 import io.starburst.schema.discovery.SchemaDiscoveryController;
 import io.starburst.schema.discovery.formats.orc.CopiedHdfsOrcDataSource;
 import io.starburst.schema.discovery.formats.orc.OrcDataSourceFactory;
@@ -38,8 +39,6 @@ import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SystemTable;
 import org.apache.hadoop.fs.Path;
-
-import javax.inject.Inject;
 
 import java.io.IOException;
 import java.net.URI;

@@ -15,12 +15,11 @@ package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.Inject;
 import io.trino.plugin.iceberg.IcebergFileFormat;
 import io.trino.plugin.iceberg.IcebergTableProperties;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.session.PropertyMetadata;
-
-import javax.inject.Inject;
 
 import java.util.HashMap;
 import java.util.List;

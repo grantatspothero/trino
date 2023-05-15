@@ -16,12 +16,12 @@ package io.trino.server.security.galaxy;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.Inject;
 import io.trino.server.metadataonly.MetadataOnlyConfig;
 import io.trino.server.security.AuthenticationException;
 import io.trino.server.security.Authenticator;
 import io.trino.spi.security.Identity;
 
-import javax.inject.Inject;
 import javax.ws.rs.container.ContainerRequestContext;
 
 import java.io.IOException;

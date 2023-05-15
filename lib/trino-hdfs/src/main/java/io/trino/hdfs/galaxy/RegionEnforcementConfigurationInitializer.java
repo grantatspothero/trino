@@ -13,11 +13,10 @@
  */
 package io.trino.hdfs.galaxy;
 
+import com.google.inject.Inject;
 import io.trino.hdfs.ConfigurationInitializer;
 import io.trino.plugin.base.galaxy.CidrBlock;
 import org.apache.hadoop.conf.Configuration;
-
-import javax.inject.Inject;
 
 import java.util.Collection;
 import java.util.List;
