@@ -149,6 +149,7 @@ import io.trino.sql.tree.DropView;
 import io.trino.sql.tree.EmptyTableTreatment;
 import io.trino.sql.tree.Except;
 import io.trino.sql.tree.Execute;
+import io.trino.sql.tree.ExecuteImmediate;
 import io.trino.sql.tree.Explain;
 import io.trino.sql.tree.ExplainAnalyze;
 import io.trino.sql.tree.Expression;
@@ -1314,6 +1315,12 @@ class StatementAnalyzer
 
         @Override
         protected Scope visitExecute(Execute node, Optional<Scope> scope)
+        {
+            return createAndAssignScope(node, scope);
+        }
+
+        @Override
+        protected Scope visitExecuteImmediate(ExecuteImmediate node, Optional<Scope> scope)
         {
             return createAndAssignScope(node, scope);
         }
