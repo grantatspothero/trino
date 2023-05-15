@@ -477,8 +477,6 @@ public class QueuedStatementResource
                     directExecutor()));
             requireNonNull(tracer, "tracer is null");
             this.querySpan = tracer.spanBuilder("query")
-                    .addLink(Span.current().getSpanContext())
-                    .setNoParent()
                     .setAttribute(TrinoAttributes.QUERY_ID, queryId.toString())
                     .startSpan();
         }
