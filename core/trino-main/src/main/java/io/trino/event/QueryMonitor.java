@@ -16,12 +16,14 @@ package io.trino.event;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import io.airlift.json.JsonCodec;
+import io.airlift.json.JsonCodecFactory;
 import io.airlift.log.Logger;
 import io.airlift.node.NodeInfo;
 import io.airlift.stats.Distribution;
@@ -80,8 +82,8 @@ import io.trino.transaction.TransactionId;
 import org.joda.time.DateTime;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 
-import java.lang.reflect.Field;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -123,8 +125,7 @@ public class QueryMonitor
 
     @Inject
     public QueryMonitor(
-            JsonCodec<StageInfo> stageInfoCodec,
-            JsonCodec<OperatorStats> operatorStatsCodec,
+            Provider<ObjectMapper> objectMapperProvider,
             JsonCodec<ExecutionFailureInfo> executionFailureInfoCodec,
             JsonCodec<StatsAndCosts> statsAndCostsCodec,
             EventListenerManager eventListenerManager,
@@ -136,8 +137,9 @@ public class QueryMonitor
             QueryMonitorConfig config)
     {
         this.eventListenerManager = requireNonNull(eventListenerManager, "eventListenerManager is null");
-        this.stageInfoCodec = requireNonNull(ignoreTDigest(stageInfoCodec), "stageInfoCodec is null");
-        this.operatorStatsCodec = requireNonNull(ignoreTDigest(operatorStatsCodec), "operatorStatsCodec is null");
+        requireNonNull(objectMapperProvider, "objectMapperProvider is null");
+        this.stageInfoCodec = ignoreTDigestJsonCodec(objectMapperProvider, StageInfo.class);
+        this.operatorStatsCodec = ignoreTDigestJsonCodec(objectMapperProvider, OperatorStats.class);
         this.statsAndCostsCodec = requireNonNull(statsAndCostsCodec, "statsAndCostsCodec is null");
         this.executionFailureInfoCodec = requireNonNull(executionFailureInfoCodec, "executionFailureInfoCodec is null");
         this.serverVersion = nodeVersion;
@@ -797,25 +799,33 @@ public class QueryMonitor
         }
     }
 
-    private static <T> JsonCodec<T> ignoreTDigest(JsonCodec<T> jsonCodec)
+    private static <T> JsonCodec<T> ignoreTDigestJsonCodec(Provider<ObjectMapper> objectMapperProvider, Class<T> clazz)
     {
         // TDigests are serialized as large base64 strings
         // They inflate payload but are not used for analysis
-        try {
-            Field field = JsonCodec.class.getDeclaredField("mapper");
-            field.setAccessible(true);
-            ObjectMapper mapper = (ObjectMapper) field.get(jsonCodec);
-            mapper.setAnnotationIntrospector(new JacksonAnnotationIntrospector() {
-                @Override
-                public boolean hasIgnoreMarker(AnnotatedMember m)
-                {
-                    return m.getRawType() == TDigest.class || super.hasIgnoreMarker(m);
-                }
-            });
-            return jsonCodec;
+        // JsonCodecs share a single memoized ObjectMapper instance, create a new one instead
+        JsonCodecFactory jsonCodecFactory = new JsonCodecFactory(() -> objectMapperProvider.get().registerModule(new IgnoreTDigestModule()));
+        return jsonCodecFactory.jsonCodec(clazz);
+    }
+
+    private static class IgnoreTDigestModule
+            extends SimpleModule
+    {
+        @Override
+        public void setupModule(SetupContext context)
+        {
+            super.setupModule(context);
+            context.appendAnnotationIntrospector(new IgnoreTDigestIntrospector());
         }
-        catch (IllegalAccessException | NoSuchFieldException e) {
-            throw new RuntimeException(e);
+    }
+
+    private static class IgnoreTDigestIntrospector
+            extends JacksonAnnotationIntrospector
+    {
+        @Override
+        public boolean hasIgnoreMarker(AnnotatedMember m)
+        {
+            return m.getRawType() == TDigest.class || super.hasIgnoreMarker(m);
         }
     }
 }
