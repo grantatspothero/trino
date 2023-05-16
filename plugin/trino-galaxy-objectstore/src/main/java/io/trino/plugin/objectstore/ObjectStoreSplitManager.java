@@ -28,6 +28,10 @@ import io.trino.spi.connector.DynamicFilter;
 
 import javax.inject.Inject;
 
+import static io.trino.plugin.objectstore.TableType.DELTA;
+import static io.trino.plugin.objectstore.TableType.HIVE;
+import static io.trino.plugin.objectstore.TableType.HUDI;
+import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static java.util.Objects.requireNonNull;
 
 public class ObjectStoreSplitManager
@@ -37,18 +41,21 @@ public class ObjectStoreSplitManager
     private final ConnectorSplitManager icebergSplitManager;
     private final ConnectorSplitManager deltaSplitManager;
     private final ConnectorSplitManager hudiSplitManager;
+    private final ObjectStoreSessionProperties sessionProperties;
 
     @Inject
     public ObjectStoreSplitManager(
             @ForHive ConnectorSplitManager hiveSplitManager,
             @ForIceberg ConnectorSplitManager icebergSplitManager,
             @ForDelta ConnectorSplitManager deltaSplitManager,
-            @ForHudi ConnectorSplitManager hudiSplitManager)
+            @ForHudi ConnectorSplitManager hudiSplitManager,
+            ObjectStoreSessionProperties sessionProperties)
     {
         this.hiveSplitManager = requireNonNull(hiveSplitManager, "hiveSplitManager is null");
         this.icebergSplitManager = requireNonNull(icebergSplitManager, "icebergSplitManager is null");
         this.deltaSplitManager = requireNonNull(deltaSplitManager, "deltaSplitManager is null");
         this.hudiSplitManager = requireNonNull(hudiSplitManager, "hudiSplitManager is null");
+        this.sessionProperties = requireNonNull(sessionProperties, "sessionProperties is null");
     }
 
     @Override
@@ -56,17 +63,22 @@ public class ObjectStoreSplitManager
     {
         ObjectStoreTransactionHandle transaction = (ObjectStoreTransactionHandle) transactionHandle;
         if (table instanceof HiveTableHandle) {
-            return hiveSplitManager.getSplits(transaction.getHiveHandle(), session, table, dynamicFilter, constraint);
+            return hiveSplitManager.getSplits(transaction.getHiveHandle(), unwrap(HIVE, session), table, dynamicFilter, constraint);
         }
         if (table instanceof IcebergTableHandle) {
-            return icebergSplitManager.getSplits(transaction.getIcebergHandle(), session, table, dynamicFilter, constraint);
+            return icebergSplitManager.getSplits(transaction.getIcebergHandle(), unwrap(ICEBERG, session), table, dynamicFilter, constraint);
         }
         if (table instanceof DeltaLakeTableHandle) {
-            return deltaSplitManager.getSplits(transaction.getDeltaHandle(), session, table, dynamicFilter, constraint);
+            return deltaSplitManager.getSplits(transaction.getDeltaHandle(), unwrap(DELTA, session), table, dynamicFilter, constraint);
         }
         if (table instanceof HudiTableHandle) {
-            return hudiSplitManager.getSplits(transaction.getHudiHandle(), session, table, dynamicFilter, constraint);
+            return hudiSplitManager.getSplits(transaction.getHudiHandle(), unwrap(HUDI, session), table, dynamicFilter, constraint);
         }
         throw new VerifyException("Unhandled class: " + table.getClass().getName());
+    }
+
+    private ConnectorSession unwrap(TableType tableType, ConnectorSession session)
+    {
+        return sessionProperties.unwrap(tableType, session);
     }
 }

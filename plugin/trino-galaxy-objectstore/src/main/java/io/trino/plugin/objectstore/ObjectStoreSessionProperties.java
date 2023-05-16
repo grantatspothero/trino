@@ -13,21 +13,28 @@
  */
 package io.trino.plugin.objectstore;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.trino.spi.connector.Connector;
+import io.trino.spi.connector.ConnectorSession;
+import io.trino.spi.security.ConnectorIdentity;
 import io.trino.spi.session.PropertyMetadata;
+import io.trino.spi.type.TimeZoneKey;
 
 import javax.inject.Inject;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDescription.IGNORE_DESCRIPTION;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDescription.VERIFY_DESCRIPTION;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.verifyPropertyMetadata;
+import static java.util.Objects.requireNonNull;
 
 public class ObjectStoreSessionProperties
 {
@@ -55,11 +62,96 @@ public class ObjectStoreSessionProperties
                 }
             }
         }
-        this.sessionProperties = ImmutableList.copyOf(sessionProperties.values());
+        this.sessionProperties = sessionProperties.values().stream()
+                .map(ObjectStoreSessionProperties::toWrapped)
+                .collect(toImmutableList());
+    }
+
+    public ConnectorSession unwrap(TableType forType, ConnectorSession session)
+    {
+        return new DelegateSession(forType, session);
     }
 
     public List<PropertyMetadata<?>> getSessionProperties()
     {
         return sessionProperties;
+    }
+
+    private static <T> PropertyMetadata<WrappedPropertyValue> toWrapped(PropertyMetadata<T> propertyMetadata)
+    {
+        // The WrappedValue is a wrapper type making sure we unwrap ConnectorSession properties explicitly
+        // when leaving ObjectStore connector code into delegate connector OR we fail loudly.
+        return propertyMetadata.convert(
+                WrappedPropertyValue.class,
+                WrappedPropertyValue::new,
+                wrappedPropertyValue -> propertyMetadata.getJavaType().cast(wrappedPropertyValue.value()));
+    }
+
+    private static class DelegateSession
+            implements ConnectorSession
+    {
+        private final TableType forType;
+        private final ConnectorSession baseSession; // from engine
+
+        public DelegateSession(TableType forType, ConnectorSession baseSession)
+        {
+            this.forType = requireNonNull(forType, "forType is null");
+            this.baseSession = requireNonNull(baseSession, "baseSession is null");
+        }
+
+        @Override
+        public String getQueryId()
+        {
+            return baseSession.getQueryId();
+        }
+
+        @Override
+        public Optional<String> getSource()
+        {
+            return baseSession.getSource();
+        }
+
+        @Override
+        public String getUser()
+        {
+            return baseSession.getUser();
+        }
+
+        @Override
+        public ConnectorIdentity getIdentity()
+        {
+            return baseSession.getIdentity();
+        }
+
+        @Override
+        public TimeZoneKey getTimeZoneKey()
+        {
+            return baseSession.getTimeZoneKey();
+        }
+
+        @Override
+        public Locale getLocale()
+        {
+            return baseSession.getLocale();
+        }
+
+        @Override
+        public Optional<String> getTraceToken()
+        {
+            return baseSession.getTraceToken();
+        }
+
+        @Override
+        public Instant getStart()
+        {
+            return baseSession.getStart();
+        }
+
+        @Override
+        public <T> T getProperty(String name, Class<T> type)
+        {
+            WrappedPropertyValue wrappedPropertyValue = baseSession.getProperty(name, WrappedPropertyValue.class);
+            return type.cast(wrappedPropertyValue.value());
+        }
     }
 }

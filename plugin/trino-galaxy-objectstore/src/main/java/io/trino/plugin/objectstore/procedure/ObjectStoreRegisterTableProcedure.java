@@ -25,6 +25,7 @@ import io.trino.plugin.iceberg.IcebergUtil;
 import io.trino.plugin.objectstore.ForDelta;
 import io.trino.plugin.objectstore.ForIceberg;
 import io.trino.plugin.objectstore.GalaxySecurityConfig;
+import io.trino.plugin.objectstore.ObjectStoreSessionProperties;
 import io.trino.plugin.objectstore.TrinoSecurityControl;
 import io.trino.spi.TrinoException;
 import io.trino.spi.classloader.ThreadContextClassLoader;
@@ -43,6 +44,8 @@ import java.util.stream.Stream;
 import static com.google.common.collect.MoreCollectors.onlyElement;
 import static io.trino.plugin.base.util.Procedures.checkProcedureArgument;
 import static io.trino.plugin.objectstore.GalaxyIdentity.toDispatchSession;
+import static io.trino.plugin.objectstore.TableType.DELTA;
+import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.type.VarcharType.VARCHAR;
@@ -80,6 +83,7 @@ public final class ObjectStoreRegisterTableProcedure
     private final TrinoFileSystemFactory fileSystemFactory;
     private final Procedure icebergRegisterTable;
     private final Procedure deltaRegisterTable;
+    private final ObjectStoreSessionProperties sessionProperties;
 
     @Inject
     public ObjectStoreRegisterTableProcedure(
@@ -88,7 +92,8 @@ public final class ObjectStoreRegisterTableProcedure
             TrinoSecurityControl securityControl,
             GalaxySecurityConfig securityConfig,
             @ForIceberg Connector icebergConnector,
-            @ForDelta Connector deltaConnector)
+            @ForDelta Connector deltaConnector,
+            ObjectStoreSessionProperties sessionProperties)
     {
         this.classLoader = getClass().getClassLoader();
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
@@ -101,6 +106,7 @@ public final class ObjectStoreRegisterTableProcedure
         this.deltaRegisterTable = deltaConnector.getProcedures().stream()
                 .filter(procedure -> procedure.getName().equals("register_table"))
                 .collect(onlyElement());
+        this.sessionProperties = requireNonNull(sessionProperties, "sessionProperties is null");
     }
 
     @Override
@@ -141,13 +147,13 @@ public final class ObjectStoreRegisterTableProcedure
             }
 
             if (isIcebergTable) {
-                icebergRegisterTable.getMethodHandle().invoke(session, schemaName, tableName, location, metadataFileName);
+                icebergRegisterTable.getMethodHandle().invoke(sessionProperties.unwrap(ICEBERG, session), schemaName, tableName, location, metadataFileName);
                 // TODO https://github.com/starburstdata/team-lakehouse/issues/213 Move the following TrinoSecurityApi.entityCreated to Iceberg connector considering Tabular integration
                 securityControl.entityCreated(toDispatchSession(session.getIdentity()), new TableId(catalogId, schemaName, tableName));
             }
             else if (isDeltaLakeTable) {
                 checkProcedureArgument(metadataFileName == null, "Unsupported metadata_file_name argument for Delta Lake table");
-                deltaRegisterTable.getMethodHandle().invoke(session, schemaName, tableName, location);
+                deltaRegisterTable.getMethodHandle().invoke(sessionProperties.unwrap(DELTA, session), schemaName, tableName, location);
                 securityControl.entityCreated(toDispatchSession(session.getIdentity()), new TableId(catalogId, schemaName, tableName));
             }
             else if (isHudiTable) {

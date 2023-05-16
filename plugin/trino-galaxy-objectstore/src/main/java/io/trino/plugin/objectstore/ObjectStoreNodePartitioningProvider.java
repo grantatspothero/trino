@@ -35,6 +35,9 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.ToIntFunction;
 
+import static io.trino.plugin.objectstore.TableType.DELTA;
+import static io.trino.plugin.objectstore.TableType.HIVE;
+import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static java.util.Objects.requireNonNull;
 
 public class ObjectStoreNodePartitioningProvider
@@ -43,50 +46,66 @@ public class ObjectStoreNodePartitioningProvider
     private final ConnectorNodePartitioningProvider hiveNodePartitioningProvider;
     private final ConnectorNodePartitioningProvider icebergNodePartitioningProvider;
     private final ConnectorNodePartitioningProvider deltaNodePartitioningProvider;
+    private final ObjectStoreSessionProperties sessionProperties;
 
     @Inject
     public ObjectStoreNodePartitioningProvider(
             @ForHive ConnectorNodePartitioningProvider hiveNodePartitioningProvider,
             @ForIceberg ConnectorNodePartitioningProvider icebergNodePartitioningProvider,
-            @ForDelta ConnectorNodePartitioningProvider deltaNodePartitioningProvider)
+            @ForDelta ConnectorNodePartitioningProvider deltaNodePartitioningProvider,
+            ObjectStoreSessionProperties sessionProperties)
     {
         this.hiveNodePartitioningProvider = requireNonNull(hiveNodePartitioningProvider, "hiveNodePartitioningProvider is null");
         this.icebergNodePartitioningProvider = requireNonNull(icebergNodePartitioningProvider, "icebergNodePartitioningProvider is null");
         this.deltaNodePartitioningProvider = requireNonNull(deltaNodePartitioningProvider, "deltaNodePartitioningProvider is null");
+        this.sessionProperties = requireNonNull(sessionProperties, "sessionProperties is null");
     }
 
     @Override
     public Optional<ConnectorBucketNodeMap> getBucketNodeMapping(ConnectorTransactionHandle transactionHandle, ConnectorSession session, ConnectorPartitioningHandle partitioningHandle)
     {
-        return delegate(partitioningHandle, transactionHandle, (partitioningProvider, transaction) ->
-                partitioningProvider.getBucketNodeMapping(transactionHandle, session, partitioningHandle));
+        TableType tableType = tableType(partitioningHandle);
+        return delegate(tableType, transactionHandle, (partitioningProvider, transaction) ->
+                partitioningProvider.getBucketNodeMapping(transactionHandle, sessionProperties.unwrap(tableType, session), partitioningHandle));
     }
 
     @Override
     public ToIntFunction<ConnectorSplit> getSplitBucketFunction(ConnectorTransactionHandle transactionHandle, ConnectorSession session, ConnectorPartitioningHandle partitioningHandle)
     {
-        return delegate(partitioningHandle, transactionHandle, (partitioningProvider, transaction) ->
-                partitioningProvider.getSplitBucketFunction(transactionHandle, session, partitioningHandle));
+        TableType tableType = tableType(partitioningHandle);
+        return delegate(tableType, transactionHandle, (partitioningProvider, transaction) ->
+                partitioningProvider.getSplitBucketFunction(transactionHandle, sessionProperties.unwrap(tableType, session), partitioningHandle));
     }
 
     @Override
     public BucketFunction getBucketFunction(ConnectorTransactionHandle transactionHandle, ConnectorSession session, ConnectorPartitioningHandle partitioningHandle, List<Type> partitionChannelTypes, int bucketCount)
     {
-        return delegate(partitioningHandle, transactionHandle, (partitioningProvider, transaction) ->
-                partitioningProvider.getBucketFunction(transactionHandle, session, partitioningHandle, partitionChannelTypes, bucketCount));
+        TableType tableType = tableType(partitioningHandle);
+        return delegate(tableType, transactionHandle, (partitioningProvider, transaction) ->
+                partitioningProvider.getBucketFunction(transactionHandle, sessionProperties.unwrap(tableType, session), partitioningHandle, partitionChannelTypes, bucketCount));
     }
 
-    private <T> T delegate(ConnectorPartitioningHandle partitioningHandle, ConnectorTransactionHandle transactionHandle, BiFunction<ConnectorNodePartitioningProvider, ConnectorTransactionHandle, T> consumer)
+    private <T> T delegate(TableType tableType, ConnectorTransactionHandle transactionHandle, BiFunction<ConnectorNodePartitioningProvider, ConnectorTransactionHandle, T> consumer)
     {
         ObjectStoreTransactionHandle transaction = (ObjectStoreTransactionHandle) transactionHandle;
+        return switch (tableType) {
+            case HIVE -> consumer.apply(hiveNodePartitioningProvider, transaction.getHiveHandle());
+            case ICEBERG -> consumer.apply(icebergNodePartitioningProvider, transaction.getIcebergHandle());
+            case DELTA -> consumer.apply(deltaNodePartitioningProvider, transaction.getDeltaHandle());
+            case HUDI -> throw new UnsupportedOperationException();
+        };
+    }
+
+    private TableType tableType(ConnectorPartitioningHandle partitioningHandle)
+    {
         if (partitioningHandle instanceof HivePartitioningHandle) {
-            return consumer.apply(hiveNodePartitioningProvider, transaction.getHiveHandle());
+            return HIVE;
         }
         if ((partitioningHandle instanceof IcebergPartitioningHandle) || (partitioningHandle instanceof IcebergUpdateHandle)) {
-            return consumer.apply(icebergNodePartitioningProvider, transaction.getIcebergHandle());
+            return ICEBERG;
         }
         if ((partitioningHandle instanceof DeltaLakePartitioningHandle) || (partitioningHandle instanceof DeltaLakeUpdateHandle)) {
-            return consumer.apply(deltaNodePartitioningProvider, transaction.getDeltaHandle());
+            return DELTA;
         }
         throw new VerifyException("Unhandled class: " + partitioningHandle.getClass().getName());
     }

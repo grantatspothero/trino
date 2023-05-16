@@ -31,6 +31,10 @@ import javax.inject.Inject;
 
 import java.util.List;
 
+import static io.trino.plugin.objectstore.TableType.DELTA;
+import static io.trino.plugin.objectstore.TableType.HIVE;
+import static io.trino.plugin.objectstore.TableType.HUDI;
+import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static java.util.Objects.requireNonNull;
 
 public class ObjectStorePageSourceProvider
@@ -40,18 +44,21 @@ public class ObjectStorePageSourceProvider
     private final ConnectorPageSourceProvider icebergPageSourceProvider;
     private final ConnectorPageSourceProvider deltaPageSourceProvider;
     private final ConnectorPageSourceProvider hudiPageSourceProvider;
+    private final ObjectStoreSessionProperties sessionProperties;
 
     @Inject
     public ObjectStorePageSourceProvider(
             @ForHive ConnectorPageSourceProvider hivePageSourceProvider,
             @ForIceberg ConnectorPageSourceProvider icebergPageSourceProvider,
             @ForDelta ConnectorPageSourceProvider deltaPageSourceProvider,
-            @ForHudi ConnectorPageSourceProvider hudiPageSourceProvider)
+            @ForHudi ConnectorPageSourceProvider hudiPageSourceProvider,
+            ObjectStoreSessionProperties sessionProperties)
     {
         this.hivePageSourceProvider = requireNonNull(hivePageSourceProvider, "hivePageSourceProvider is null");
         this.icebergPageSourceProvider = requireNonNull(icebergPageSourceProvider, "icebergPageSourceProvider is null");
         this.deltaPageSourceProvider = requireNonNull(deltaPageSourceProvider, "deltaPageSourceProvider is null");
         this.hudiPageSourceProvider = requireNonNull(hudiPageSourceProvider, "hudiPageSourceProvider is null");
+        this.sessionProperties = requireNonNull(sessionProperties, "sessionProperties is null");
     }
 
     @Override
@@ -59,17 +66,22 @@ public class ObjectStorePageSourceProvider
     {
         ObjectStoreTransactionHandle transaction = (ObjectStoreTransactionHandle) transactionHandle;
         if (table instanceof HiveTableHandle) {
-            return hivePageSourceProvider.createPageSource(transaction.getHiveHandle(), session, split, table, columns, dynamicFilter);
+            return hivePageSourceProvider.createPageSource(transaction.getHiveHandle(), unwrap(HIVE, session), split, table, columns, dynamicFilter);
         }
         if (table instanceof IcebergTableHandle) {
-            return icebergPageSourceProvider.createPageSource(transaction.getIcebergHandle(), session, split, table, columns, dynamicFilter);
+            return icebergPageSourceProvider.createPageSource(transaction.getIcebergHandle(), unwrap(ICEBERG, session), split, table, columns, dynamicFilter);
         }
         if (table instanceof DeltaLakeTableHandle) {
-            return deltaPageSourceProvider.createPageSource(transaction.getDeltaHandle(), session, split, table, columns, dynamicFilter);
+            return deltaPageSourceProvider.createPageSource(transaction.getDeltaHandle(), unwrap(DELTA, session), split, table, columns, dynamicFilter);
         }
         if (table instanceof HudiTableHandle) {
-            return hudiPageSourceProvider.createPageSource(transaction.getHudiHandle(), session, split, table, columns, dynamicFilter);
+            return hudiPageSourceProvider.createPageSource(transaction.getHudiHandle(), unwrap(HUDI, session), split, table, columns, dynamicFilter);
         }
         throw new VerifyException("Unhandled class: " + table.getClass().getName());
+    }
+
+    private ConnectorSession unwrap(TableType tableType, ConnectorSession session)
+    {
+        return sessionProperties.unwrap(tableType, session);
     }
 }

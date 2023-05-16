@@ -53,6 +53,7 @@ import static com.google.common.collect.Streams.forEachPair;
 import static io.trino.plugin.objectstore.FeatureExposure.UNDEFINED;
 import static io.trino.plugin.objectstore.FeatureExposures.procedureExposureDecisions;
 import static io.trino.plugin.objectstore.FeatureExposures.tableProcedureExposureDecisions;
+import static io.trino.plugin.objectstore.Procedures.unwrapSession;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.verifyPropertyMetadata;
 import static io.trino.spi.connector.ConnectorCapabilities.MATERIALIZED_VIEW_GRACE_PERIOD;
 import static io.trino.spi.connector.ConnectorCapabilities.NOT_NULL_COLUMN_CONSTRAINT;
@@ -79,7 +80,7 @@ public class ObjectStoreConnector
     private final ObjectStoreTableProperties tableProperties;
     private final List<PropertyMetadata<?>> columnProperties;
     private final ObjectStoreMaterializedViewProperties materializedViewProperties;
-    private final List<PropertyMetadata<?>> sessionProperties;
+    private final ObjectStoreSessionProperties sessionProperties;
     private final List<PropertyMetadata<?>> analyzeProperties;
     private final Set<Procedure> procedures;
     private final Set<TableProcedureMetadata> tableProcedures;
@@ -115,9 +116,9 @@ public class ObjectStoreConnector
         this.tableProperties = requireNonNull(tableProperties, "tableProperties is null");
         this.columnProperties = columnProperties(delegates);
         this.materializedViewProperties = requireNonNull(materializedViewProperties, "materializedViewProperties is null");
-        this.sessionProperties = sessionProperties.getSessionProperties();
+        this.sessionProperties = requireNonNull(sessionProperties, "sessionProperties is null");
         this.analyzeProperties = analyzeProperties(delegates);
-        this.procedures = procedures(delegates, objectStoreProcedures);
+        this.procedures = procedures(delegates, sessionProperties, objectStoreProcedures);
         this.tableProcedures = tableProcedures(delegates);
         this.flushMetadataCache = objectStoreProcedures.stream()
                 .filter(procedure -> procedure.getName().equals("flush_metadata_cache"))
@@ -163,7 +164,7 @@ public class ObjectStoreConnector
         return ImmutableList.copyOf(properties.values());
     }
 
-    private static Set<Procedure> procedures(DelegateConnectors delegates, Set<Procedure> objectStoreProcedures)
+    private static Set<Procedure> procedures(DelegateConnectors delegates, ObjectStoreSessionProperties sessionProperties, Set<Procedure> objectStoreProcedures)
     {
         Map<String, Procedure> procedures = new HashMap<>();
         objectStoreProcedures.forEach(procedure -> procedures.put(procedure.getName(), procedure));
@@ -175,7 +176,7 @@ public class ObjectStoreConnector
                     case HIDDEN -> { /* skipped */ }
                     case UNDEFINED -> throw new IllegalStateException("Unknown procedure provided by %s: %s".formatted(type, name));
                     case EXPOSED -> {
-                        Procedure existing = procedures.putIfAbsent(name, procedure);
+                        Procedure existing = procedures.putIfAbsent(name, unwrapSession(sessionProperties, type, procedure));
                         if (existing != null) {
                             throw new VerifyException("Duplicate procedure: " + name);
                         }
@@ -305,6 +306,7 @@ public class ObjectStoreConnector
                 hudiMetadata,
                 tableProperties,
                 materializedViewProperties,
+                sessionProperties,
                 flushMetadataCache,
                 migrateHiveToIcebergProcedure,
                 hiveRecursiveDirWalkerEnabled,
@@ -346,7 +348,7 @@ public class ObjectStoreConnector
     @Override
     public List<PropertyMetadata<?>> getSessionProperties()
     {
-        return sessionProperties;
+        return sessionProperties.getSessionProperties();
     }
 
     @Override

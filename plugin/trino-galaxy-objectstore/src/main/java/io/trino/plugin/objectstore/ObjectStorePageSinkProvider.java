@@ -37,6 +37,9 @@ import io.trino.spi.connector.ConnectorTransactionHandle;
 
 import javax.inject.Inject;
 
+import static io.trino.plugin.objectstore.TableType.DELTA;
+import static io.trino.plugin.objectstore.TableType.HIVE;
+import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static java.util.Objects.requireNonNull;
 
 public class ObjectStorePageSinkProvider
@@ -45,16 +48,19 @@ public class ObjectStorePageSinkProvider
     private final ConnectorPageSinkProvider hivePageSinkProvider;
     private final ConnectorPageSinkProvider icebergPageSinkProvider;
     private final ConnectorPageSinkProvider deltaPageSinkProvider;
+    private final ObjectStoreSessionProperties sessionProperties;
 
     @Inject
     public ObjectStorePageSinkProvider(
             @ForHive ConnectorPageSinkProvider hivePageSinkProvider,
             @ForIceberg ConnectorPageSinkProvider icebergPageSinkProvider,
-            @ForDelta ConnectorPageSinkProvider deltaPageSinkProvider)
+            @ForDelta ConnectorPageSinkProvider deltaPageSinkProvider,
+            ObjectStoreSessionProperties sessionProperties)
     {
         this.hivePageSinkProvider = requireNonNull(hivePageSinkProvider, "hivePageSinkProvider is null");
         this.icebergPageSinkProvider = requireNonNull(icebergPageSinkProvider, "icebergPageSinkProvider is null");
         this.deltaPageSinkProvider = requireNonNull(deltaPageSinkProvider, "deltaPageSinkProvider is null");
+        this.sessionProperties = requireNonNull(sessionProperties, "sessionProperties is null");
     }
 
     @Override
@@ -62,13 +68,13 @@ public class ObjectStorePageSinkProvider
     {
         ObjectStoreTransactionHandle transaction = (ObjectStoreTransactionHandle) transactionHandle;
         if (table instanceof HiveOutputTableHandle) {
-            return hivePageSinkProvider.createPageSink(transaction.getHiveHandle(), session, table, pageSinkId);
+            return hivePageSinkProvider.createPageSink(transaction.getHiveHandle(), unwrap(HIVE, session), table, pageSinkId);
         }
         if (table instanceof IcebergWritableTableHandle) {
-            return icebergPageSinkProvider.createPageSink(transaction.getIcebergHandle(), session, table, pageSinkId);
+            return icebergPageSinkProvider.createPageSink(transaction.getIcebergHandle(), unwrap(ICEBERG, session), table, pageSinkId);
         }
         if (table instanceof DeltaLakeOutputTableHandle) {
-            return deltaPageSinkProvider.createPageSink(transaction.getDeltaHandle(), session, table, pageSinkId);
+            return deltaPageSinkProvider.createPageSink(transaction.getDeltaHandle(), unwrap(DELTA, session), table, pageSinkId);
         }
         throw new VerifyException("Unhandled class: " + table.getClass().getName());
     }
@@ -78,13 +84,13 @@ public class ObjectStorePageSinkProvider
     {
         ObjectStoreTransactionHandle transaction = (ObjectStoreTransactionHandle) transactionHandle;
         if (table instanceof HiveInsertTableHandle) {
-            return hivePageSinkProvider.createPageSink(transaction.getHiveHandle(), session, table, pageSinkId);
+            return hivePageSinkProvider.createPageSink(transaction.getHiveHandle(), unwrap(HIVE, session), table, pageSinkId);
         }
         if (table instanceof IcebergWritableTableHandle) {
-            return icebergPageSinkProvider.createPageSink(transaction.getIcebergHandle(), session, table, pageSinkId);
+            return icebergPageSinkProvider.createPageSink(transaction.getIcebergHandle(), unwrap(ICEBERG, session), table, pageSinkId);
         }
         if (table instanceof DeltaLakeInsertTableHandle) {
-            return deltaPageSinkProvider.createPageSink(transaction.getDeltaHandle(), session, table, pageSinkId);
+            return deltaPageSinkProvider.createPageSink(transaction.getDeltaHandle(), unwrap(DELTA, session), table, pageSinkId);
         }
         throw new VerifyException("Unhandled class: " + table.getClass().getName());
     }
@@ -94,13 +100,13 @@ public class ObjectStorePageSinkProvider
     {
         ObjectStoreTransactionHandle transaction = (ObjectStoreTransactionHandle) transactionHandle;
         if (table instanceof HiveTableExecuteHandle) {
-            return hivePageSinkProvider.createPageSink(transaction.getHiveHandle(), session, table, pageSinkId);
+            return hivePageSinkProvider.createPageSink(transaction.getHiveHandle(), unwrap(HIVE, session), table, pageSinkId);
         }
         if (table instanceof IcebergTableExecuteHandle) {
-            return icebergPageSinkProvider.createPageSink(transaction.getIcebergHandle(), session, table, pageSinkId);
+            return icebergPageSinkProvider.createPageSink(transaction.getIcebergHandle(), unwrap(ICEBERG, session), table, pageSinkId);
         }
         if (table instanceof DeltaLakeTableExecuteHandle) {
-            return deltaPageSinkProvider.createPageSink(transaction.getDeltaHandle(), session, table, pageSinkId);
+            return deltaPageSinkProvider.createPageSink(transaction.getDeltaHandle(), unwrap(DELTA, session), table, pageSinkId);
         }
         throw new VerifyException("Unhandled class: " + table.getClass().getName());
     }
@@ -110,11 +116,16 @@ public class ObjectStorePageSinkProvider
     {
         ObjectStoreTransactionHandle transaction = (ObjectStoreTransactionHandle) transactionHandle;
         if (table instanceof IcebergMergeTableHandle) {
-            return icebergPageSinkProvider.createMergeSink(transaction.getIcebergHandle(), session, table, pageSinkId);
+            return icebergPageSinkProvider.createMergeSink(transaction.getIcebergHandle(), unwrap(ICEBERG, session), table, pageSinkId);
         }
         if (table instanceof DeltaLakeMergeTableHandle) {
-            return deltaPageSinkProvider.createMergeSink(transaction.getDeltaHandle(), session, table, pageSinkId);
+            return deltaPageSinkProvider.createMergeSink(transaction.getDeltaHandle(), unwrap(DELTA, session), table, pageSinkId);
         }
         throw new VerifyException("Unhandled class: " + table.getClass().getName());
+    }
+
+    private ConnectorSession unwrap(TableType tableType, ConnectorSession session)
+    {
+        return sessionProperties.unwrap(tableType, session);
     }
 }

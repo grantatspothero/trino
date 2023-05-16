@@ -19,6 +19,7 @@ import io.starburst.stargate.id.TableId;
 import io.trino.plugin.objectstore.ForDelta;
 import io.trino.plugin.objectstore.ForIceberg;
 import io.trino.plugin.objectstore.GalaxySecurityConfig;
+import io.trino.plugin.objectstore.ObjectStoreSessionProperties;
 import io.trino.plugin.objectstore.TrinoSecurityControl;
 import io.trino.spi.ErrorCodeSupplier;
 import io.trino.spi.TrinoException;
@@ -37,6 +38,8 @@ import java.util.stream.Stream;
 
 import static com.google.common.collect.MoreCollectors.onlyElement;
 import static io.trino.plugin.objectstore.GalaxyIdentity.toDispatchSession;
+import static io.trino.plugin.objectstore.TableType.DELTA;
+import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.StandardErrorCode.UNSUPPORTED_TABLE_TYPE;
@@ -68,13 +71,15 @@ public final class ObjectStoreUnregisterTableProcedure
     private final CatalogId catalogId;
     private final Procedure icebergUnregisterTable;
     private final Procedure deltaUnregisterTable;
+    private final ObjectStoreSessionProperties sessionProperties;
 
     @Inject
     public ObjectStoreUnregisterTableProcedure(
             TrinoSecurityControl securityControl,
             GalaxySecurityConfig securityConfig,
             @ForIceberg Connector icebergConnector,
-            @ForDelta Connector deltaConnector)
+            @ForDelta Connector deltaConnector,
+            ObjectStoreSessionProperties sessionProperties)
     {
         this.securityControl = requireNonNull(securityControl, "securityControl is null");
         this.catalogId = securityConfig.getCatalogId();
@@ -84,6 +89,7 @@ public final class ObjectStoreUnregisterTableProcedure
         deltaUnregisterTable = deltaConnector.getProcedures().stream()
                 .filter(procedure -> procedure.getName().equals("unregister_table"))
                 .collect(onlyElement());
+        this.sessionProperties = requireNonNull(sessionProperties, "sessionProperties is null");
     }
 
     @Override
@@ -107,7 +113,7 @@ public final class ObjectStoreUnregisterTableProcedure
     {
         try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(getClass().getClassLoader())) {
             try {
-                icebergUnregisterTable.getMethodHandle().invoke(accessControl, session, schemaName, tableName);
+                icebergUnregisterTable.getMethodHandle().invoke(accessControl, sessionProperties.unwrap(ICEBERG, session), schemaName, tableName);
                 // TODO https://github.com/starburstdata/team-lakehouse/issues/213 Move the following TrinoSecurityApi.entityDropped to Iceberg connector considering Tabular integration
                 securityControl.entityDropped(toDispatchSession(session.getIdentity()), new TableId(catalogId, schemaName, tableName));
                 return;
@@ -118,7 +124,7 @@ public final class ObjectStoreUnregisterTableProcedure
                 }
             }
             try {
-                deltaUnregisterTable.getMethodHandle().invoke(accessControl, session, schemaName, tableName);
+                deltaUnregisterTable.getMethodHandle().invoke(accessControl, sessionProperties.unwrap(DELTA, session), schemaName, tableName);
                 securityControl.entityDropped(toDispatchSession(session.getIdentity()), new TableId(catalogId, schemaName, tableName));
                 return;
             }

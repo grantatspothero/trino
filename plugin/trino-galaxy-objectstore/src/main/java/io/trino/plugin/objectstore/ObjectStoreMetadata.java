@@ -122,6 +122,7 @@ public class ObjectStoreMetadata
     private final ConnectorMetadata hudiMetadata;
     private final ObjectStoreTableProperties tableProperties;
     private final ObjectStoreMaterializedViewProperties materializedViewProperties;
+    private final ObjectStoreSessionProperties sessionProperties;
     private final PropertyMetadata<?> hiveFormatProperty;
     private final PropertyMetadata<?> hiveSortedByProperty;
     private final PropertyMetadata<?> icebergFormatProperty;
@@ -137,6 +138,7 @@ public class ObjectStoreMetadata
             ConnectorMetadata hudiMetadata,
             ObjectStoreTableProperties tableProperties,
             ObjectStoreMaterializedViewProperties materializedViewProperties,
+            ObjectStoreSessionProperties sessionProperties,
             Procedure flushMetadataCache,
             Procedure migrateHiveToIcebergProcedure,
             boolean hiveRecursiveDirWalkerEnabled,
@@ -148,6 +150,7 @@ public class ObjectStoreMetadata
         this.hudiMetadata = requireNonNull(hudiMetadata, "hudiMetadata is null");
         this.tableProperties = requireNonNull(tableProperties, "tableProperties is null");
         this.materializedViewProperties = requireNonNull(materializedViewProperties, "materializedViewProperties is null");
+        this.sessionProperties = requireNonNull(sessionProperties, "sessionProperties is null");
         this.hiveFormatProperty = tableProperties.getHiveFormatProperty();
         this.hiveSortedByProperty = tableProperties.getHiveSortedByProperty();
         this.icebergFormatProperty = tableProperties.getIcebergFormatProperty();
@@ -160,13 +163,13 @@ public class ObjectStoreMetadata
     @Override
     public boolean schemaExists(ConnectorSession session, String schemaName)
     {
-        return hiveMetadata.schemaExists(session, schemaName);
+        return hiveMetadata.schemaExists(unwrap(HIVE, session), schemaName);
     }
 
     @Override
     public List<String> listSchemaNames(ConnectorSession session)
     {
-        return hiveMetadata.listSchemaNames(session);
+        return hiveMetadata.listSchemaNames(unwrap(HIVE, session));
     }
 
     @Nullable
@@ -189,7 +192,7 @@ public class ObjectStoreMetadata
             switch (candidateType) {
                 case ICEBERG -> {
                     try {
-                        return icebergMetadata.getTableHandle(session, tableName, Optional.empty(), Optional.empty());
+                        return icebergMetadata.getTableHandle(unwrap(ICEBERG, session), tableName, Optional.empty(), Optional.empty());
                     }
                     catch (TrinoException e) {
                         if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
@@ -201,7 +204,7 @@ public class ObjectStoreMetadata
 
                 case DELTA -> {
                     try {
-                        return deltaMetadata.getTableHandle(session, tableName);
+                        return deltaMetadata.getTableHandle(unwrap(DELTA, session), tableName);
                     }
                     catch (TrinoException e) {
                         if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
@@ -213,7 +216,7 @@ public class ObjectStoreMetadata
 
                 case HUDI -> {
                     try {
-                        return hudiMetadata.getTableHandle(session, tableName);
+                        return hudiMetadata.getTableHandle(unwrap(HUDI, session), tableName);
                     }
                     catch (TrinoException e) {
                         if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
@@ -225,7 +228,7 @@ public class ObjectStoreMetadata
 
                 case HIVE -> {
                     try {
-                        return hiveMetadata.getTableHandle(session, tableName);
+                        return hiveMetadata.getTableHandle(unwrap(HIVE, session), tableName);
                     }
                     catch (TrinoException e) {
                         if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
@@ -255,7 +258,7 @@ public class ObjectStoreMetadata
         }
 
         try {
-            return icebergMetadata.getTableHandle(session, tableName, startVersion, endVersion);
+            return icebergMetadata.getTableHandle(unwrap(ICEBERG, session), tableName, startVersion, endVersion);
         }
         catch (TrinoException e) {
             if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
@@ -268,37 +271,43 @@ public class ObjectStoreMetadata
     @Override
     public ConnectorAnalyzeMetadata getStatisticsCollectionMetadata(ConnectorSession session, ConnectorTableHandle tableHandle, Map<String, Object> analyzeProperties)
     {
-        return delegate(tableHandle).getStatisticsCollectionMetadata(session, tableHandle, analyzeProperties);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).getStatisticsCollectionMetadata(unwrap(tableType, session), tableHandle, analyzeProperties);
     }
 
     @Override
     public Optional<ConnectorTableExecuteHandle> getTableHandleForExecute(ConnectorSession session, ConnectorTableHandle tableHandle, String procedureName, Map<String, Object> executeProperties, RetryMode retryMode)
     {
-        return delegate(tableHandle).getTableHandleForExecute(session, tableHandle, procedureName, executeProperties, retryMode);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).getTableHandleForExecute(unwrap(tableType, session), tableHandle, procedureName, executeProperties, retryMode);
     }
 
     @Override
     public Optional<ConnectorTableLayout> getLayoutForTableExecute(ConnectorSession session, ConnectorTableExecuteHandle tableExecuteHandle)
     {
-        return delegate(tableExecuteHandle).getLayoutForTableExecute(session, tableExecuteHandle);
+        TableType tableType = tableType(tableExecuteHandle);
+        return delegate(tableType).getLayoutForTableExecute(unwrap(tableType, session), tableExecuteHandle);
     }
 
     @Override
     public BeginTableExecuteResult<ConnectorTableExecuteHandle, ConnectorTableHandle> beginTableExecute(ConnectorSession session, ConnectorTableExecuteHandle tableExecuteHandle, ConnectorTableHandle updatedSourceTableHandle)
     {
-        return delegate(tableExecuteHandle).beginTableExecute(session, tableExecuteHandle, updatedSourceTableHandle);
+        TableType tableType = tableType(tableExecuteHandle);
+        return delegate(tableType).beginTableExecute(unwrap(tableType, session), tableExecuteHandle, updatedSourceTableHandle);
     }
 
     @Override
     public void finishTableExecute(ConnectorSession session, ConnectorTableExecuteHandle tableExecuteHandle, Collection<Slice> fragments, List<Object> tableExecuteState)
     {
-        delegate(tableExecuteHandle).finishTableExecute(session, tableExecuteHandle, fragments, tableExecuteState);
+        TableType tableType = tableType(tableExecuteHandle);
+        delegate(tableType).finishTableExecute(unwrap(tableType, session), tableExecuteHandle, fragments, tableExecuteState);
     }
 
     @Override
     public void executeTableExecute(ConnectorSession session, ConnectorTableExecuteHandle tableExecuteHandle)
     {
-        delegate(tableExecuteHandle).executeTableExecute(session, tableExecuteHandle);
+        TableType tableType = tableType(tableExecuteHandle);
+        delegate(tableType).executeTableExecute(unwrap(tableType, session), tableExecuteHandle);
     }
 
     @Override
@@ -312,7 +321,7 @@ public class ObjectStoreMetadata
     private Optional<SystemTable> getHiveSystemTable(ConnectorSession session, SchemaTableName tableName)
     {
         try {
-            return hiveMetadata.getSystemTable(session, tableName);
+            return hiveMetadata.getSystemTable(unwrap(HIVE, session), tableName);
         }
         catch (TrinoException e) {
             if (isError(e, HIVE_UNSUPPORTED_FORMAT)) {
@@ -325,7 +334,7 @@ public class ObjectStoreMetadata
     private Optional<SystemTable> getIcebergSystemTable(ConnectorSession session, SchemaTableName tableName)
     {
         try {
-            return icebergMetadata.getSystemTable(session, tableName);
+            return icebergMetadata.getSystemTable(unwrap(ICEBERG, session), tableName);
         }
         catch (TrinoException e) {
             if (isError(e, UNSUPPORTED_TABLE_TYPE, NOT_SUPPORTED)) {
@@ -347,27 +356,28 @@ public class ObjectStoreMetadata
         if (!tableHandle.getClass().equals(IcebergTableHandle.class)) {
             throw new TrinoException(NOT_SUPPORTED, "Refreshing materialized views with a target table that is not an Iceberg table is not supported");
         }
-        return icebergMetadata.beginRefreshMaterializedView(session, tableHandle, sourceTableHandles, retryMode);
+        return icebergMetadata.beginRefreshMaterializedView(unwrap(ICEBERG, session), tableHandle, sourceTableHandles, retryMode);
     }
 
     @Override
     public Optional<ConnectorOutputMetadata> finishRefreshMaterializedView(ConnectorSession session, ConnectorTableHandle tableHandle, ConnectorInsertTableHandle insertHandle, Collection<Slice> fragments, Collection<ComputedStatistics> computedStatistics, List<ConnectorTableHandle> sourceTableHandles)
     {
-        return icebergMetadata.finishRefreshMaterializedView(session, tableHandle, insertHandle, fragments, computedStatistics, sourceTableHandles);
+        return icebergMetadata.finishRefreshMaterializedView(unwrap(ICEBERG, session), tableHandle, insertHandle, fragments, computedStatistics, sourceTableHandles);
     }
 
     @Override
     public void createMaterializedView(ConnectorSession session, SchemaTableName viewName, ConnectorMaterializedViewDefinition definition, boolean replace, boolean ignoreExisting)
     {
-        icebergMetadata.createMaterializedView(session, viewName, withProperties(definition, materializedViewProperties.addIcebergPropertyOverrides(definition.getProperties())), replace, ignoreExisting);
+        icebergMetadata.createMaterializedView(unwrap(ICEBERG, session), viewName, withProperties(definition, materializedViewProperties.addIcebergPropertyOverrides(definition.getProperties())), replace, ignoreExisting);
         flushMetadataCache(session, viewName);
     }
 
     @Override
     public void dropMaterializedView(ConnectorSession session, SchemaTableName viewName)
     {
-        Optional<ConnectorMaterializedViewDefinition> materializedView = icebergMetadata.getMaterializedView(session, viewName);
-        icebergMetadata.dropMaterializedView(session, viewName);
+        ConnectorSession icebergSession = unwrap(ICEBERG, session);
+        Optional<ConnectorMaterializedViewDefinition> materializedView = icebergMetadata.getMaterializedView(icebergSession, viewName);
+        icebergMetadata.dropMaterializedView(icebergSession, viewName);
         flushMetadataCache(session, viewName);
         materializedView
                 .flatMap(ConnectorMaterializedViewDefinition::getStorageTable)
@@ -378,32 +388,32 @@ public class ObjectStoreMetadata
     @Override
     public List<SchemaTableName> listMaterializedViews(ConnectorSession session, Optional<String> schemaName)
     {
-        return icebergMetadata.listMaterializedViews(session, schemaName);
+        return icebergMetadata.listMaterializedViews(unwrap(ICEBERG, session), schemaName);
     }
 
     @Override
     public Map<SchemaTableName, ConnectorMaterializedViewDefinition> getMaterializedViews(ConnectorSession session, Optional<String> schemaName)
     {
-        return icebergMetadata.getMaterializedViews(session, schemaName);
+        return icebergMetadata.getMaterializedViews(unwrap(ICEBERG, session), schemaName);
     }
 
     @Override
     public Optional<ConnectorMaterializedViewDefinition> getMaterializedView(ConnectorSession session, SchemaTableName viewName)
     {
-        return icebergMetadata.getMaterializedView(session, viewName)
+        return icebergMetadata.getMaterializedView(unwrap(ICEBERG, session), viewName)
                 .map(definition -> withProperties(definition, materializedViewProperties.removeOverriddenOrRemovedIcebergProperties(definition.getProperties())));
     }
 
     @Override
     public MaterializedViewFreshness getMaterializedViewFreshness(ConnectorSession session, SchemaTableName name)
     {
-        return icebergMetadata.getMaterializedViewFreshness(session, name);
+        return icebergMetadata.getMaterializedViewFreshness(unwrap(ICEBERG, session), name);
     }
 
     @Override
     public void renameMaterializedView(ConnectorSession session, SchemaTableName source, SchemaTableName target)
     {
-        icebergMetadata.renameMaterializedView(session, source, target);
+        icebergMetadata.renameMaterializedView(unwrap(ICEBERG, session), source, target);
         flushMetadataCache(session, source);
         flushMetadataCache(session, target);
     }
@@ -411,14 +421,15 @@ public class ObjectStoreMetadata
     @Override
     public void setMaterializedViewProperties(ConnectorSession session, SchemaTableName viewName, Map<String, Optional<Object>> properties)
     {
-        icebergMetadata.setMaterializedViewProperties(session, viewName, properties);
+        icebergMetadata.setMaterializedViewProperties(unwrap(ICEBERG, session), viewName, properties);
         flushMetadataCache(session, viewName);
     }
 
     @Override
     public ConnectorTableHandle makeCompatiblePartitioning(ConnectorSession session, ConnectorTableHandle tableHandle, ConnectorPartitioningHandle partitioningHandle)
     {
-        return delegate(tableHandle).makeCompatiblePartitioning(session, tableHandle, partitioningHandle);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).makeCompatiblePartitioning(unwrap(tableType, session), tableHandle, partitioningHandle);
     }
 
     @Override
@@ -428,26 +439,28 @@ public class ObjectStoreMetadata
         if (leftType == tableType(right)) {
             return Optional.empty();
         }
-        return delegate(leftType).getCommonPartitioningHandle(session, left, right);
+        return delegate(leftType).getCommonPartitioningHandle(unwrap(leftType, session), left, right);
     }
 
     @Override
     public SchemaTableName getTableName(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
-        return delegate(tableHandle).getTableName(session, tableHandle);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).getTableName(unwrap(tableType, session), tableHandle);
     }
 
     @Override
     public ConnectorTableSchema getTableSchema(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
-        return delegate(tableHandle).getTableSchema(session, tableHandle);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).getTableSchema(unwrap(tableType, session), tableHandle);
     }
 
     @Override
     public ConnectorTableMetadata getTableMetadata(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
         TableType tableType = tableType(tableHandle);
-        ConnectorTableMetadata tableMetadata = delegate(tableType).getTableMetadata(session, tableHandle);
+        ConnectorTableMetadata tableMetadata = delegate(tableType).getTableMetadata(unwrap(tableType, session), tableHandle);
         return withProperties(tableMetadata, ImmutableMap.<String, Object>builder()
                 .putAll(wrap(tableType, tableMetadata.getProperties()))
                 .put("type", tableType)
@@ -457,25 +470,27 @@ public class ObjectStoreMetadata
     @Override
     public Optional<Object> getInfo(ConnectorTableHandle tableHandle)
     {
-        return delegate(tableHandle).getInfo(tableHandle);
+        return delegate(tableType(tableHandle)).getInfo(tableHandle);
     }
 
     @Override
     public List<SchemaTableName> listTables(ConnectorSession session, Optional<String> schemaName)
     {
-        return hiveMetadata.listTables(session, schemaName);
+        return hiveMetadata.listTables(unwrap(HIVE, session), schemaName);
     }
 
     @Override
     public Map<String, ColumnHandle> getColumnHandles(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
-        return delegate(tableHandle).getColumnHandles(session, tableHandle);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).getColumnHandles(unwrap(tableType, session), tableHandle);
     }
 
     @Override
     public ColumnMetadata getColumnMetadata(ConnectorSession session, ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
     {
-        return delegate(tableHandle).getColumnMetadata(session, tableHandle, columnHandle);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).getColumnMetadata(unwrap(tableType, session), tableHandle, columnHandle);
     }
 
     @Override
@@ -484,15 +499,15 @@ public class ObjectStoreMetadata
         Map<SchemaTableName, TableColumnsMetadata> tables = new HashMap<>();
 
         // Hive will include Iceberg tables with the wrong schema, so overwrite later
-        hiveMetadata.streamTableColumns(session, prefix)
+        hiveMetadata.streamTableColumns(unwrap(HIVE, session), prefix)
                 .forEachRemaining(metadata -> tables.put(metadata.getTable(), metadata));
 
         // Iceberg only lists Iceberg tables
-        icebergMetadata.streamTableColumns(session, prefix)
+        icebergMetadata.streamTableColumns(unwrap(ICEBERG, session), prefix)
                 .forEachRemaining(metadata -> tables.put(metadata.getTable(), metadata));
 
         // Delta Lake only lists Delta Lake tables
-        deltaMetadata.streamTableColumns(session, prefix)
+        deltaMetadata.streamTableColumns(unwrap(DELTA, session), prefix)
                 .forEachRemaining(metadata -> tables.put(metadata.getTable(), metadata));
 
         // Hudi lists all tables, so keep the Hive listing
@@ -503,27 +518,28 @@ public class ObjectStoreMetadata
     @Override
     public TableStatistics getTableStatistics(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
-        return delegate(tableHandle).getTableStatistics(session, tableHandle);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).getTableStatistics(unwrap(tableType, session), tableHandle);
     }
 
     @Override
     public void createSchema(ConnectorSession session, String schemaName, Map<String, Object> properties, TrinoPrincipal owner)
     {
-        hiveMetadata.createSchema(session, schemaName, properties, owner);
+        hiveMetadata.createSchema(unwrap(HIVE, session), schemaName, properties, owner);
         flushMetadataCache(session);
     }
 
     @Override
     public void dropSchema(ConnectorSession session, String schemaName)
     {
-        hiveMetadata.dropSchema(session, schemaName);
+        hiveMetadata.dropSchema(unwrap(HIVE, session), schemaName);
         flushMetadataCache(session);
     }
 
     @Override
     public void renameSchema(ConnectorSession session, String source, String target)
     {
-        hiveMetadata.renameSchema(session, source, target);
+        hiveMetadata.renameSchema(unwrap(HIVE, session), source, target);
         flushMetadataCache(session);
     }
 
@@ -538,7 +554,7 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "%s tables do not support NOT NULL columns".formatted(tableType.displayName()));
         }
         tableMetadata = unwrap(tableType, tableMetadata);
-        delegate(tableType).createTable(session, tableMetadata, ignoreExisting);
+        delegate(tableType).createTable(unwrap(tableType, session), tableMetadata, ignoreExisting);
         flushMetadataCache(session, tableMetadata.getTable());
     }
 
@@ -549,14 +565,15 @@ public class ObjectStoreMetadata
         if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Dropping Hudi tables is not supported");
         }
-        delegate(tableType).dropTable(session, tableHandle);
+        delegate(tableType).dropTable(unwrap(tableType, session), tableHandle);
         flushMetadataCache(session, tableName(tableHandle));
     }
 
     @Override
     public void truncateTable(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
-        delegate(tableHandle).truncateTable(session, tableHandle);
+        TableType tableType = tableType(tableHandle);
+        delegate(tableType).truncateTable(unwrap(tableType, session), tableHandle);
         flushMetadataCache(session, tableName(tableHandle));
     }
 
@@ -567,7 +584,7 @@ public class ObjectStoreMetadata
         if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Renaming Hudi tables is not supported");
         }
-        delegate(tableType).renameTable(session, tableHandle, newTableName);
+        delegate(tableType).renameTable(unwrap(tableType, session), tableHandle, newTableName);
         flushMetadataCache(session, tableName(tableHandle));
         flushMetadataCache(session, newTableName);
     }
@@ -592,7 +609,7 @@ public class ObjectStoreMetadata
         nullableProperties = unwrap(tableType, nullableProperties);
         properties = nullableProperties.entrySet().stream()
                 .collect(toImmutableMap(Map.Entry::getKey, entry -> Optional.ofNullable(entry.getValue())));
-        delegate(tableType).setTableProperties(session, tableHandle, properties);
+        delegate(tableType).setTableProperties(unwrap(tableType, session), tableHandle, properties);
         flushMetadataCache(session, tableName(tableHandle));
     }
 
@@ -603,7 +620,7 @@ public class ObjectStoreMetadata
             HiveTableHandle hiveTableHandle = (HiveTableHandle) tableHandle;
             try {
                 String recursiveDirectory = hiveRecursiveDirWalkerEnabled ? "TRUE" : "FALSE";
-                migrateHiveToIcebergProcedure.getMethodHandle().invoke(session, hiveTableHandle.getSchemaName(), hiveTableHandle.getTableName(), recursiveDirectory);
+                migrateHiveToIcebergProcedure.getMethodHandle().invoke(unwrap(ICEBERG, session), hiveTableHandle.getSchemaName(), hiveTableHandle.getTableName(), recursiveDirectory);
                 return;
             }
             catch (Throwable e) {
@@ -620,7 +637,7 @@ public class ObjectStoreMetadata
         if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Setting comments for Hudi tables is not supported");
         }
-        delegate(tableType).setTableComment(session, tableHandle, comment);
+        delegate(tableType).setTableComment(unwrap(tableType, session), tableHandle, comment);
         flushMetadataCache(session, tableName(tableHandle));
     }
 
@@ -631,7 +648,7 @@ public class ObjectStoreMetadata
         if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Setting column comments in Hudi tables is not supported");
         }
-        delegate(tableType).setColumnComment(session, tableHandle, column, comment);
+        delegate(tableType).setColumnComment(unwrap(tableType, session), tableHandle, column, comment);
         flushMetadataCache(session, tableName(tableHandle));
     }
 
@@ -645,7 +662,7 @@ public class ObjectStoreMetadata
         if ((tableType != ICEBERG) && !column.isNullable()) {
             throw new TrinoException(NOT_SUPPORTED, "%s tables do not support NOT NULL columns".formatted(tableType.displayName()));
         }
-        delegate(tableType).addColumn(session, tableHandle, column);
+        delegate(tableType).addColumn(unwrap(tableType, session), tableHandle, column);
         flushMetadataCache(session, tableName(tableHandle));
     }
 
@@ -654,7 +671,7 @@ public class ObjectStoreMetadata
     {
         TableType tableType = tableType(tableHandle);
         try {
-            delegate(tableType).setColumnType(session, tableHandle, column, type);
+            delegate(tableType).setColumnType(unwrap(tableType, session), tableHandle, column, type);
         }
         catch (TrinoException e) {
             if (isError(e, NOT_SUPPORTED) && "This connector does not support setting column types".equals(e.getMessage())) {
@@ -672,7 +689,7 @@ public class ObjectStoreMetadata
         if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Renaming columns in Hudi tables is not supported");
         }
-        delegate(tableType).renameColumn(session, tableHandle, source, target);
+        delegate(tableType).renameColumn(unwrap(tableType, session), tableHandle, source, target);
         flushMetadataCache(session, tableName(tableHandle));
     }
 
@@ -683,7 +700,7 @@ public class ObjectStoreMetadata
         if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Dropping columns from Hudi tables is not supported");
         }
-        delegate(tableType).dropColumn(session, tableHandle, column);
+        delegate(tableType).dropColumn(unwrap(tableType, session), tableHandle, column);
         flushMetadataCache(session, tableName(tableHandle));
     }
 
@@ -697,7 +714,7 @@ public class ObjectStoreMetadata
                 // handled below
             }
         }
-        delegate(tableType).dropField(session, tableHandle, column, fieldPath);
+        delegate(tableType).dropField(unwrap(tableType, session), tableHandle, column, fieldPath);
         flushMetadataCache(session, tableName(tableHandle));
     }
 
@@ -706,26 +723,29 @@ public class ObjectStoreMetadata
     {
         TableType tableType = tableType(tableMetadata);
         tableMetadata = unwrap(tableType, tableMetadata);
-        return delegate(tableType).getNewTableLayout(session, tableMetadata);
+        return delegate(tableType).getNewTableLayout(unwrap(tableType, session), tableMetadata);
     }
 
     @Override
     public Optional<ConnectorTableLayout> getInsertLayout(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
-        return delegate(tableHandle).getInsertLayout(session, tableHandle);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).getInsertLayout(unwrap(tableType, session), tableHandle);
     }
 
     @Override
     public boolean supportsReportingWrittenBytes(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
-        return delegate(tableHandle).supportsReportingWrittenBytes(session, tableHandle);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).supportsReportingWrittenBytes(unwrap(tableType, session), tableHandle);
     }
 
     @Override
     public boolean supportsReportingWrittenBytes(ConnectorSession session, SchemaTableName schemaTableName, Map<String, Object> tableProperties)
     {
         // This is called for a new table
-        return delegate(tableProperties).supportsReportingWrittenBytes(session, schemaTableName, tableProperties);
+        TableType tableType = tableType(tableProperties);
+        return delegate(tableType).supportsReportingWrittenBytes(unwrap(tableType, session), schemaTableName, tableProperties);
     }
 
     @Override
@@ -733,19 +753,21 @@ public class ObjectStoreMetadata
     {
         TableType tableType = tableType(tableMetadata);
         tableMetadata = unwrap(tableType, tableMetadata);
-        return delegate(tableType).getStatisticsCollectionMetadataForWrite(session, tableMetadata);
+        return delegate(tableType).getStatisticsCollectionMetadataForWrite(unwrap(tableType, session), tableMetadata);
     }
 
     @Override
     public ConnectorTableHandle beginStatisticsCollection(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
-        return delegate(tableHandle).beginStatisticsCollection(session, tableHandle);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).beginStatisticsCollection(unwrap(tableType, session), tableHandle);
     }
 
     @Override
     public void finishStatisticsCollection(ConnectorSession session, ConnectorTableHandle tableHandle, Collection<ComputedStatistics> computedStatistics)
     {
-        delegate(tableHandle).finishStatisticsCollection(session, tableHandle, computedStatistics);
+        TableType tableType = tableType(tableHandle);
+        delegate(tableType).finishStatisticsCollection(unwrap(tableType, session), tableHandle, computedStatistics);
     }
 
     @Override
@@ -756,13 +778,14 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "Table creation is not supported for Hudi");
         }
         tableMetadata = unwrap(tableType, tableMetadata);
-        return delegate(tableType).beginCreateTable(session, tableMetadata, layout, retryMode);
+        return delegate(tableType).beginCreateTable(unwrap(tableType, session), tableMetadata, layout, retryMode);
     }
 
     @Override
     public Optional<ConnectorOutputMetadata> finishCreateTable(ConnectorSession session, ConnectorOutputTableHandle outputHandle, Collection<Slice> fragments, Collection<ComputedStatistics> computedStatistics)
     {
-        Optional<ConnectorOutputMetadata> outputMetadata = delegate(outputHandle).finishCreateTable(session, outputHandle, fragments, computedStatistics);
+        TableType tableType = tableType(outputHandle);
+        Optional<ConnectorOutputMetadata> outputMetadata = delegate(tableType).finishCreateTable(unwrap(tableType, session), outputHandle, fragments, computedStatistics);
         flushMetadataCache(session, tableName(outputHandle));
         return outputMetadata;
     }
@@ -774,20 +797,22 @@ public class ObjectStoreMetadata
         if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Writes are not supported for Hudi tables");
         }
-        return delegate(tableType).beginInsert(session, tableHandle, columns, retryMode);
+        return delegate(tableType).beginInsert(unwrap(tableType, session), tableHandle, columns, retryMode);
     }
 
     @Override
     public Optional<ConnectorOutputMetadata> finishInsert(ConnectorSession session, ConnectorInsertTableHandle insertHandle, Collection<Slice> fragments, Collection<ComputedStatistics> computedStatistics)
     {
-        return delegate(insertHandle).finishInsert(session, insertHandle, fragments, computedStatistics);
+        TableType tableType = tableType(insertHandle);
+        return delegate(tableType).finishInsert(unwrap(tableType, session), insertHandle, fragments, computedStatistics);
     }
 
     @Override
     public RowChangeParadigm getRowChangeParadigm(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
+        TableType tableType = tableType(tableHandle);
         try {
-            return delegate(tableHandle).getRowChangeParadigm(session, tableHandle);
+            return delegate(tableType).getRowChangeParadigm(unwrap(tableType, session), tableHandle);
         }
         catch (TrinoException e) {
             if (isError(e, NOT_SUPPORTED) && MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE.equals(e.getMessage())) {
@@ -804,20 +829,22 @@ public class ObjectStoreMetadata
         if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Writes are not supported for Hudi tables");
         }
-        return delegate(tableType).getMergeRowIdColumnHandle(session, tableHandle);
+        return delegate(tableType).getMergeRowIdColumnHandle(unwrap(tableType, session), tableHandle);
     }
 
     @Override
     public Optional<ConnectorPartitioningHandle> getUpdateLayout(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
-        return delegate(tableHandle).getUpdateLayout(session, tableHandle);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).getUpdateLayout(unwrap(tableType, session), tableHandle);
     }
 
     @Override
     public ConnectorMergeTableHandle beginMerge(ConnectorSession session, ConnectorTableHandle tableHandle, RetryMode retryMode)
     {
+        TableType tableType = tableType(tableHandle);
         try {
-            return delegate(tableHandle).beginMerge(session, tableHandle, retryMode);
+            return delegate(tableType).beginMerge(unwrap(tableType, session), tableHandle, retryMode);
         }
         catch (TrinoException e) {
             if (isError(e, NOT_SUPPORTED) && MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE.equals(e.getMessage())) {
@@ -830,20 +857,21 @@ public class ObjectStoreMetadata
     @Override
     public void finishMerge(ConnectorSession session, ConnectorMergeTableHandle tableHandle, Collection<Slice> fragments, Collection<ComputedStatistics> computedStatistics)
     {
-        delegate(tableHandle).finishMerge(session, tableHandle, fragments, computedStatistics);
+        TableType tableType = tableType(tableHandle);
+        delegate(tableType).finishMerge(unwrap(tableType, session), tableHandle, fragments, computedStatistics);
     }
 
     @Override
     public void createView(ConnectorSession session, SchemaTableName viewName, ConnectorViewDefinition definition, boolean replace)
     {
-        hiveMetadata.createView(session, viewName, definition, replace);
+        hiveMetadata.createView(unwrap(HIVE, session), viewName, definition, replace);
         flushMetadataCache(session, viewName);
     }
 
     @Override
     public void renameView(ConnectorSession session, SchemaTableName source, SchemaTableName target)
     {
-        hiveMetadata.renameView(session, source, target);
+        hiveMetadata.renameView(unwrap(HIVE, session), source, target);
         flushMetadataCache(session, source);
         flushMetadataCache(session, target);
     }
@@ -851,7 +879,7 @@ public class ObjectStoreMetadata
     @Override
     public void dropView(ConnectorSession session, SchemaTableName viewName)
     {
-        hiveMetadata.dropView(session, viewName);
+        hiveMetadata.dropView(unwrap(HIVE, session), viewName);
         flushMetadataCache(session, viewName);
     }
 
@@ -860,7 +888,7 @@ public class ObjectStoreMetadata
     {
         // stop gap solution to deal with shared hive metastore between iceberg and hive
         // iceberg stores materialized view with type virtual view and hive lists them without filtering with properties
-        Set<SchemaTableName> materializedViews = icebergMetadata.listMaterializedViews(session, schemaName).stream().collect(toImmutableSet());
+        Set<SchemaTableName> materializedViews = icebergMetadata.listMaterializedViews(unwrap(ICEBERG, session), schemaName).stream().collect(toImmutableSet());
         return hiveMetadata.listViews(session, schemaName)
                 .stream()
                 .filter(view -> !materializedViews.contains(view))
@@ -870,93 +898,103 @@ public class ObjectStoreMetadata
     @Override
     public Map<SchemaTableName, ConnectorViewDefinition> getViews(ConnectorSession session, Optional<String> schemaName)
     {
-        return hiveMetadata.getViews(session, schemaName);
+        return hiveMetadata.getViews(unwrap(HIVE, session), schemaName);
     }
 
     @Override
     public Optional<ConnectorViewDefinition> getView(ConnectorSession session, SchemaTableName viewName)
     {
-        return hiveMetadata.getView(session, viewName);
+        return hiveMetadata.getView(unwrap(HIVE, session), viewName);
     }
 
     @Override
     public Map<String, Object> getSchemaProperties(ConnectorSession session, String schemaName)
     {
-        return hiveMetadata.getSchemaProperties(session, schemaName);
+        return hiveMetadata.getSchemaProperties(unwrap(HIVE, session), schemaName);
     }
 
     @Override
     public Optional<ConnectorTableHandle> applyDelete(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
-        return delegate(tableHandle).applyDelete(session, tableHandle);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).applyDelete(unwrap(tableType, session), tableHandle);
     }
 
     @Override
     public OptionalLong executeDelete(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
-        return delegate(tableHandle).executeDelete(session, tableHandle);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).executeDelete(unwrap(tableType, session), tableHandle);
     }
 
     @Override
     public ConnectorTableProperties getTableProperties(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
-        return delegate(tableHandle).getTableProperties(session, tableHandle);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).getTableProperties(unwrap(tableType, session), tableHandle);
     }
 
     @Override
     public Optional<LimitApplicationResult<ConnectorTableHandle>> applyLimit(ConnectorSession session, ConnectorTableHandle tableHandle, long limit)
     {
-        return delegate(tableHandle).applyLimit(session, tableHandle, limit);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).applyLimit(unwrap(tableType, session), tableHandle, limit);
     }
 
     @Override
     public Optional<ConstraintApplicationResult<ConnectorTableHandle>> applyFilter(ConnectorSession session, ConnectorTableHandle tableHandle, Constraint constraint)
     {
-        return delegate(tableHandle).applyFilter(session, tableHandle, constraint);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).applyFilter(unwrap(tableType, session), tableHandle, constraint);
     }
 
     @Override
     public Optional<ProjectionApplicationResult<ConnectorTableHandle>> applyProjection(ConnectorSession session, ConnectorTableHandle tableHandle, List<ConnectorExpression> projections, Map<String, ColumnHandle> assignments)
     {
-        return delegate(tableHandle).applyProjection(session, tableHandle, projections, assignments);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).applyProjection(unwrap(tableType, session), tableHandle, projections, assignments);
     }
 
     @Override
     public Optional<SampleApplicationResult<ConnectorTableHandle>> applySample(ConnectorSession session, ConnectorTableHandle tableHandle, SampleType sampleType, double sampleRatio)
     {
-        return delegate(tableHandle).applySample(session, tableHandle, sampleType, sampleRatio);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).applySample(unwrap(tableType, session), tableHandle, sampleType, sampleRatio);
     }
 
     @Override
     public Optional<AggregationApplicationResult<ConnectorTableHandle>> applyAggregation(ConnectorSession session, ConnectorTableHandle tableHandle, List<AggregateFunction> aggregates, Map<String, ColumnHandle> assignments, List<List<ColumnHandle>> groupingSets)
     {
-        return delegate(tableHandle).applyAggregation(session, tableHandle, aggregates, assignments, groupingSets);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).applyAggregation(unwrap(tableType, session), tableHandle, aggregates, assignments, groupingSets);
     }
 
     @Override
     public Optional<TableScanRedirectApplicationResult> applyTableScanRedirect(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
-        return delegate(tableHandle).applyTableScanRedirect(session, tableHandle);
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).applyTableScanRedirect(unwrap(tableType, session), tableHandle);
     }
 
     @Override
     public void validateScan(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
-        delegate(tableHandle).validateScan(session, tableHandle);
+        TableType tableType = tableType(tableHandle);
+        delegate(tableType).validateScan(unwrap(tableType, session), tableHandle);
     }
 
     @Override
     public void beginQuery(ConnectorSession session)
     {
         // only implemented by the Hive connector
-        hiveMetadata.beginQuery(session);
+        hiveMetadata.beginQuery(unwrap(HIVE, session));
     }
 
     @Override
     public void cleanupQuery(ConnectorSession session)
     {
         // only implemented by the Hive connector
-        hiveMetadata.cleanupQuery(session);
+        hiveMetadata.cleanupQuery(unwrap(HIVE, session));
     }
 
     private void flushMetadataCache(ConnectorSession session)
@@ -1035,35 +1073,30 @@ public class ObjectStoreMetadata
         throw new VerifyException("Unhandled class: " + handle.getClass().getName());
     }
 
-    private ConnectorMetadata delegate(ConnectorTableHandle handle)
-    {
-        return delegate(tableType(handle));
-    }
-
-    private ConnectorMetadata delegate(ConnectorInsertTableHandle handle)
+    private static TableType tableType(ConnectorInsertTableHandle handle)
     {
         if (handle instanceof HiveInsertTableHandle) {
-            return hiveMetadata;
+            return HIVE;
         }
         if (handle instanceof IcebergWritableTableHandle) {
-            return icebergMetadata;
+            return ICEBERG;
         }
         if (handle instanceof DeltaLakeInsertTableHandle) {
-            return deltaMetadata;
+            return DELTA;
         }
         throw new VerifyException("Unhandled class: " + handle.getClass().getName());
     }
 
-    private ConnectorMetadata delegate(ConnectorOutputTableHandle handle)
+    private static TableType tableType(ConnectorOutputTableHandle handle)
     {
         if (handle instanceof HiveOutputTableHandle) {
-            return hiveMetadata;
+            return HIVE;
         }
         if (handle instanceof IcebergWritableTableHandle) {
-            return icebergMetadata;
+            return ICEBERG;
         }
         if (handle instanceof DeltaLakeOutputTableHandle) {
-            return deltaMetadata;
+            return DELTA;
         }
         throw new VerifyException("Unhandled class: " + handle.getClass().getName());
     }
@@ -1082,27 +1115,27 @@ public class ObjectStoreMetadata
         throw new VerifyException("Unhandled class: " + handle.getClass().getName());
     }
 
-    private ConnectorMetadata delegate(ConnectorMergeTableHandle handle)
+    private static TableType tableType(ConnectorMergeTableHandle handle)
     {
         if (handle instanceof IcebergMergeTableHandle) {
-            return icebergMetadata;
+            return ICEBERG;
         }
         if (handle instanceof DeltaLakeMergeTableHandle) {
-            return deltaMetadata;
+            return DELTA;
         }
         throw new VerifyException("Unhandled class: " + handle.getClass().getName());
     }
 
-    private ConnectorMetadata delegate(ConnectorTableExecuteHandle handle)
+    private TableType tableType(ConnectorTableExecuteHandle handle)
     {
         if (handle instanceof HiveTableExecuteHandle) {
-            return hiveMetadata;
+            return HIVE;
         }
         if (handle instanceof IcebergTableExecuteHandle) {
-            return icebergMetadata;
+            return ICEBERG;
         }
         if (handle instanceof DeltaLakeTableExecuteHandle) {
-            return deltaMetadata;
+            return DELTA;
         }
         throw new VerifyException("Unhandled class: " + handle.getClass().getName());
     }
@@ -1126,9 +1159,9 @@ public class ObjectStoreMetadata
         return (TableType) tableMetadata.getProperties().get("type");
     }
 
-    private ConnectorMetadata delegate(Map<String, Object> properties)
+    private static TableType tableType(Map<String, Object> tableProperties)
     {
-        return delegate((TableType) properties.get("type"));
+        return (TableType) tableProperties.get("type");
     }
 
     private Map<String, Object> wrap(TableType tableType, Map<String, Object> tableProperties)
@@ -1153,6 +1186,11 @@ public class ObjectStoreMetadata
     private static Object encodeProperty(PropertyMetadata<?> property, Object value)
     {
         return ((PropertyMetadata) property).encode(value);
+    }
+
+    private ConnectorSession unwrap(TableType tableType, ConnectorSession session)
+    {
+        return sessionProperties.unwrap(tableType, session);
     }
 
     private ConnectorTableMetadata unwrap(TableType tableType, ConnectorTableMetadata metadata)
