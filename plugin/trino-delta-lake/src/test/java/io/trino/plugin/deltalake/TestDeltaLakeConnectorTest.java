@@ -1081,7 +1081,7 @@ public class TestDeltaLakeConnectorTest
         MaterializedResult expectedResult = computeActual("SELECT val + 2 FROM UNNEST(SEQUENCE(1, 10)) AS t(val)");
         String selectQuery = "SELECT root.leaf2 FROM " + tableName;
         Session sessionWithoutPushdown = Session.builder(getSession())
-                .setCatalogSessionProperty(getSession().getCatalog().orElseThrow(), "projection_pushdown_enabled", "false")
+                .setCatalogSessionProperty(getSession().getCatalog().orElseThrow(), "experimental_projection_pushdown_enabled", "false")
                 .build();
 
         assertQueryStats(
@@ -1186,7 +1186,7 @@ public class TestDeltaLakeConnectorTest
                 "root#f2 := root#f2:bigint:REGULAR");
 
         Session sessionWithoutPushdown = Session.builder(getSession())
-                .setCatalogSessionProperty(getSession().getCatalog().orElseThrow(), "projection_pushdown_enabled", "false")
+                .setCatalogSessionProperty(getSession().getCatalog().orElseThrow(), "experimental_projection_pushdown_enabled", "false")
                 .build();
         assertExplain(
                 sessionWithoutPushdown,

@@ -111,7 +111,7 @@ public class TestDeltaLakeProjectionPushdownPlans
         String testTable = "test_pushdown_disabled_" + randomNameSuffix();
 
         Session session = Session.builder(getQueryRunner().getDefaultSession())
-                .setCatalogSessionProperty(CATALOG, "projection_pushdown_enabled", "false")
+                .setCatalogSessionProperty(CATALOG, "experimental_projection_pushdown_enabled", "false")
                 .build();
 
         getQueryRunner().execute(format(

@@ -80,6 +80,7 @@ public final class InternalObjectStoreConnectorFactory
             // The procedure is disabled in OSS because of security issues.
             // In Galaxy, they are addressed by location-based security and the procedure can be enabled by default.
             deltaConfig.putIfAbsent("delta.register-table-procedure.enabled", "true");
+            deltaConfig.putIfAbsent("delta.projection-pushdown-enabled", "false"); // TODO (https://github.com/starburstdata/galaxy-trino/issues/625) enable by default after some time
             Connector deltaConnector = InternalDeltaLakeConnectorFactory.createConnector(
                     catalogName,
                     deltaConfig,
