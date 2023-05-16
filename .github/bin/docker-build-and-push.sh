@@ -47,6 +47,24 @@ SOURCE_DIR="../.."
 SCRIPT_DIR="${BASH_SOURCE%/*}"
 cd ${SCRIPT_DIR}/../../core/docker
 
+JDK_VERSION=$(cat "${SOURCE_DIR}/.java-version")
+
+function temurin_jdk_link() {
+  JDK_VERSION="${1}"
+  versionsUrl="https://api.adoptium.net/v3/info/release_names?heap_size=normal&image_type=jdk&lts=false&os=linux&page=0&page_size=20&project=jdk&release_type=ga&semver=false&sort_method=DEFAULT&sort_order=ASC&vendor=eclipse&version=%5B${JDK_VERSION}%2C%29"
+  if ! result=$(curl -fLs "$versionsUrl" -H 'accept: application/json'); then
+    echo >&2 "Failed to fetch release names for JDK version [${JDK_VERSION}, ) from Temurin API : $result"
+    exit 1
+  fi
+
+  if ! RELEASE_NAME=$(echo "$result" | jq -er '.releases[]' | grep "${JDK_VERSION}" | head -n 1); then
+    echo >&2 "Failed to determine release name: ${RELEASE_NAME}"
+    exit 1
+  fi
+  # __ARCH__ will be resolved in Dockerfile
+  echo "https://api.adoptium.net/v3/binary/version/${RELEASE_NAME}/linux/__ARCH__/jdk/hotspot/normal/eclipse?project=jdk"
+}
+
 # Move to the root directory to run maven for current version.
 pushd ${SOURCE_DIR}
 TRINO_VERSION=$(./mvnw --quiet help:evaluate -Dexpression=project.version -DforceStdout)
@@ -124,14 +142,16 @@ cp ${SOURCE_DIR}/client/trino-cli/target/trino-cli-${TRINO_VERSION}-executable.j
 
 platforms=("${ARCHITECTURES[@]/#/linux\/}")
 docker buildx build --pull ${PERFORM_PUSH} \
-   --progress=plain `# Use plain to show container output` \
-   --platform "$(IFS=,; echo "${platforms[*]}")" \
-   --tag "179619298502.dkr.ecr.us-east-1.amazonaws.com/${IMAGE_NAME}" \
-   --tag "us-east1-docker.pkg.dev/starburstdata-saas-prod/starburst-docker-repository/${IMAGE_NAME}" \
-   --tag "starburstgalaxy.azurecr.io/${IMAGE_NAME}" \
-   --build-arg "TRINO_VERSION=${TRINO_VERSION}" \
-   --build-arg "GALAXY_TRINO_DOCKER_VERSION=${IMAGE_TAG}" \
-   --file Dockerfile ${WORK_DIR}
+  --progress=plain `# Use plain to show container output` \
+  --platform "$(IFS=,; echo "${platforms[*]}")" \
+  --tag "179619298502.dkr.ecr.us-east-1.amazonaws.com/${IMAGE_NAME}" \
+  --tag "us-east1-docker.pkg.dev/starburstdata-saas-prod/starburst-docker-repository/${IMAGE_NAME}" \
+  --tag "starburstgalaxy.azurecr.io/${IMAGE_NAME}" \
+  --build-arg "TRINO_VERSION=${TRINO_VERSION}" \
+  --build-arg "GALAXY_TRINO_DOCKER_VERSION=${IMAGE_TAG}" \
+  --build-arg JDK_VERSION="${JDK_VERSION}" \
+  --build-arg JDK_DOWNLOAD_LINK="$(temurin_jdk_link "${JDK_VERSION}")" \
+  --file Dockerfile ${WORK_DIR}
 
 rm -r ${WORK_DIR}
 

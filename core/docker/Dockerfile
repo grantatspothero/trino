@@ -24,7 +24,7 @@ RUN \
     # Install JDK from the provided archive link \
     echo "Downloading JDK from ${JDK_DOWNLOAD_LINK}" && \
     mkdir -p "${JAVA_HOME}" && \
-    curl -#LfS "${JDK_DOWNLOAD_LINK}" | tar -zx --strip 1 -C "${JAVA_HOME}"
+    curl -#LfS "${JDK_DOWNLOAD_LINK/__ARCH__/$(arch)}" | tar -zx --strip 1 -C "${JAVA_HOME}"
 
 # Use ubi9 minimal as it's more secure
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
