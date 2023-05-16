@@ -22,6 +22,7 @@ import io.trino.tests.product.launcher.env.Environment;
 import io.trino.tests.product.launcher.env.EnvironmentProvider;
 import io.trino.tests.product.launcher.env.common.StandardMultinode;
 import io.trino.tests.product.launcher.env.common.TestsEnvironment;
+import io.trino.tests.product.launcher.env.jdk.JdkProvider;
 import io.trino.tests.product.launcher.testcontainers.PortBinder;
 import org.testcontainers.containers.startupcheck.IsRunningStartupCheckStrategy;
 
@@ -37,7 +38,6 @@ import static io.trino.tests.product.launcher.env.EnvironmentContainers.WORKER;
 import static io.trino.tests.product.launcher.env.EnvironmentContainers.configureTempto;
 import static io.trino.tests.product.launcher.env.common.Hadoop.CONTAINER_TRINO_ICEBERG_PROPERTIES;
 import static io.trino.tests.product.launcher.env.common.Standard.CONTAINER_TRINO_ETC;
-import static io.trino.tests.product.launcher.env.jdk.JdkProvider.ZULU_17;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.testcontainers.containers.wait.strategy.Wait.forHealthcheck;
@@ -50,13 +50,15 @@ public class EnvMultinodeTrino415
 {
     private final PortBinder portBinder;
     private final DockerFiles dockerFiles;
+    private final JdkProvider jdkProvider;
 
     @Inject
-    public EnvMultinodeTrino415(PortBinder portBinder, DockerFiles dockerFiles, StandardMultinode standardMultinode)
+    public EnvMultinodeTrino415(PortBinder portBinder, DockerFiles dockerFiles, StandardMultinode standardMultinode, JdkProvider jdkProvider)
     {
         super(ImmutableList.of(standardMultinode));
         this.portBinder = requireNonNull(portBinder, "portBinder is null");
         this.dockerFiles = requireNonNull(dockerFiles, "dockerFiles is null");
+        this.jdkProvider = requireNonNull(jdkProvider, "jdkProvider is null");
     }
 
     @Override
@@ -78,7 +80,7 @@ public class EnvMultinodeTrino415
 
         DockerContainer container = new DockerContainer("trinodb/trino:415", "trino-415")
                 // the server package is hundreds MB and file system bind is much more efficient
-                .withEnv("JAVA_HOME", ZULU_17.getJavaHome())
+                .withEnv("JAVA_HOME", jdkProvider.getJavaHome())
                 .withStartupCheckStrategy(new IsRunningStartupCheckStrategy())
                 .waitingForAll(forLogMessage(".*======== SERVER STARTED ========.*", 1), forHealthcheck())
                 .withStartupTimeout(Duration.ofMinutes(5))

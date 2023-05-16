@@ -1357,7 +1357,7 @@ jobs:
               --output PRINT_WRITE \
               --timeout 105m \
               --bind=off \
-              --trino-jdk-version zulu_${{ matrix.jdk }}
+              --trino-jdk-version builtin
       - name: Upload test results
         uses: actions/upload-artifact@v2
         if: failure() # TODO: Condition on job running.
