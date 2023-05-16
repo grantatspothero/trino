@@ -90,12 +90,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-mvn-
 
-      - name: Merge with main before building
-        if: github.event_name == 'pull_request'
-        run: |
-          git fetch origin
-          git merge origin/main --ff-only
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -214,12 +208,6 @@ jobs:
           key: ${{ runner.os }}-mvn-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-mvn-
-
-      - name: Merge with main before building
-        if: github.event_name == 'pull_request'
-        run: |
-          git fetch origin
-          git merge origin/main --ff-only
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
