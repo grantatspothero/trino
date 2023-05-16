@@ -75,6 +75,10 @@ public final class ObjectStoreTableProperties
             if (property.getName().equals("sorted_by")) {
                 continue;
             }
+            if (property.getName().equals("extra_properties")) {
+                // Arbitrary extra_properties currently not exposed in Galaxy
+                continue;
+            }
             addProperty(properties, property);
             tableTypesForProperty.put(property.getName(), HIVE);
         }
