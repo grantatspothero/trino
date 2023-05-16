@@ -151,7 +151,7 @@ public class TestGalaxyMetadataOnlyQueries
             }
             else {
                 assertThatThrownBy(() -> queryMetadata(createTable))
-                        .hasMessageContaining("Table creation is not supported for Hudi");
+                        .hasMessageMatching("\\QQueryError{message=Table creation is not supported for Hudi, sqlState=null, errorCode=13, errorName=NOT_SUPPORTED, errorType=USER_ERROR, errorLocation=null, failureInfo=io.trino.client.FailureInfo@\\E\\w+\\Q}");
             }
         }
     }
