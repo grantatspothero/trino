@@ -67,6 +67,7 @@ import java.util.function.Function;
 import static com.google.common.base.Strings.emptyToNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static io.trino.filesystem.Locations.appendPath;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_METASTORE_ERROR;
 import static io.trino.plugin.hive.HivePartitionManager.extractPartitionValues;
 import static io.trino.plugin.hive.metastore.MetastoreUtil.makePartitionName;
@@ -266,7 +267,7 @@ public class GalaxyHiveMetastore
     {
         if (database.getLocation().isEmpty()) {
             database = Database.builder(database)
-                    .setLocation(Optional.of(defaultDirectory + "/" + database.getDatabaseName()))
+                    .setLocation(Optional.of(appendPath(defaultDirectory, database.getDatabaseName())))
                     .build();
         }
         try {
