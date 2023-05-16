@@ -53,8 +53,6 @@ import static com.google.common.collect.Streams.forEachPair;
 import static io.trino.plugin.objectstore.FeatureExposure.UNDEFINED;
 import static io.trino.plugin.objectstore.FeatureExposures.procedureExposureDecisions;
 import static io.trino.plugin.objectstore.FeatureExposures.tableProcedureExposureDecisions;
-import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDescription.IGNORE_DESCRIPTION;
-import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDescription.VERIFY_DESCRIPTION;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.verifyPropertyMetadata;
 import static io.trino.spi.connector.ConnectorCapabilities.MATERIALIZED_VIEW_GRACE_PERIOD;
 import static io.trino.spi.connector.ConnectorCapabilities.NOT_NULL_COLUMN_CONSTRAINT;
@@ -101,6 +99,7 @@ public class ObjectStoreConnector
             ObjectStoreNodePartitioningProvider nodePartitioningProvider,
             ObjectStoreTableProperties tableProperties,
             ObjectStoreMaterializedViewProperties materializedViewProperties,
+            ObjectStoreSessionProperties sessionProperties,
             Set<Procedure> objectStoreProcedures)
     {
         this.hiveConnector = delegates.hiveConnector();
@@ -116,7 +115,7 @@ public class ObjectStoreConnector
         this.tableProperties = requireNonNull(tableProperties, "tableProperties is null");
         this.columnProperties = columnProperties(delegates);
         this.materializedViewProperties = requireNonNull(materializedViewProperties, "materializedViewProperties is null");
-        this.sessionProperties = sessionProperties(delegates);
+        this.sessionProperties = sessionProperties.getSessionProperties();
         this.analyzeProperties = analyzeProperties(delegates);
         this.procedures = procedures(delegates, objectStoreProcedures);
         this.tableProcedures = tableProcedures(delegates);
@@ -148,30 +147,6 @@ public class ObjectStoreConnector
         verify(delegates.deltaConnector().getColumnProperties().isEmpty(), "Unexpected Delta Lake column properties");
         verify(delegates.hudiConnector().getColumnProperties().isEmpty(), "Unexpected Hudi column properties");
         return ImmutableList.of();
-    }
-
-    private static List<PropertyMetadata<?>> sessionProperties(DelegateConnectors delegates)
-    {
-        Set<String> ignoredDescriptions = ImmutableSet.<String>builder()
-                .add("compression_codec")
-                .add("projection_pushdown_enabled")
-                .add("timestamp_precision")
-                .add("minimum_assigned_split_weight")
-                .build();
-
-        Map<String, PropertyMetadata<?>> sessionProperties = new HashMap<>();
-        for (Connector connector : delegates.asList()) {
-            for (PropertyMetadata<?> property : connector.getSessionProperties()) {
-                PropertyMetadata<?> existing = sessionProperties.putIfAbsent(property.getName(), property);
-                if (existing != null) {
-                    verifyPropertyMetadata(
-                            property,
-                            existing,
-                            ignoredDescriptions.contains(property.getName()) ? IGNORE_DESCRIPTION : VERIFY_DESCRIPTION);
-                }
-            }
-        }
-        return ImmutableList.copyOf(sessionProperties.values());
     }
 
     private static List<PropertyMetadata<?>> analyzeProperties(DelegateConnectors delegates)

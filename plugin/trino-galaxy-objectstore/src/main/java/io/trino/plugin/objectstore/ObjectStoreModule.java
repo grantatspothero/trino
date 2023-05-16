@@ -39,6 +39,7 @@ public class ObjectStoreModule
         binder.bind(ObjectStoreNodePartitioningProvider.class).in(Scopes.SINGLETON);
         binder.bind(ObjectStoreTableProperties.class).in(Scopes.SINGLETON);
         binder.bind(ObjectStoreMaterializedViewProperties.class).in(Scopes.SINGLETON);
+        binder.bind(ObjectStoreSessionProperties.class).in(Scopes.SINGLETON);
 
         Multibinder<Procedure> procedures = newSetBinder(binder, Procedure.class);
         procedures.addBinding().toProvider(ObjectStoreRegisterTableProcedure.class).in(Scopes.SINGLETON);
