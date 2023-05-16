@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.google.common.collect.MoreCollectors.onlyElement;
+import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDefaultValue.VERIFY_DEFAULT_VALUE;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDescription.IGNORE_DESCRIPTION;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDescription.VERIFY_DESCRIPTION;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.addProperty;
@@ -97,6 +98,7 @@ public final class ObjectStoreTableProperties
                 verifyPropertyMetadata(
                         property,
                         existing,
+                        VERIFY_DEFAULT_VALUE,
                         ignoredDescriptions.contains(property.getName()) ? IGNORE_DESCRIPTION : VERIFY_DESCRIPTION);
             }
             tableTypesForProperty.put(property.getName(), ICEBERG);
@@ -111,6 +113,7 @@ public final class ObjectStoreTableProperties
                 verifyPropertyMetadata(
                         property,
                         existing,
+                        VERIFY_DEFAULT_VALUE,
                         ignoredDescriptions.contains(property.getName()) ? IGNORE_DESCRIPTION : VERIFY_DESCRIPTION);
             }
             tableTypesForProperty.put(property.getName(), DELTA);
@@ -125,6 +128,7 @@ public final class ObjectStoreTableProperties
                 verifyPropertyMetadata(
                         property,
                         existing,
+                        VERIFY_DEFAULT_VALUE,
                         ignoredDescriptions.contains(property.getName()) ? IGNORE_DESCRIPTION : VERIFY_DESCRIPTION);
             }
             tableTypesForProperty.put(property.getName(), HUDI);

@@ -13,24 +13,31 @@
  */
 package io.trino.plugin.objectstore;
 
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import io.trino.spi.connector.Connector;
+import com.google.common.collect.ImmutableTable;
+import com.google.common.collect.Table;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.security.ConnectorIdentity;
 import io.trino.spi.session.PropertyMetadata;
 import io.trino.spi.type.TimeZoneKey;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDefaultValue.IGNORE_DEFAULT_VALUE;
+import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDefaultValue.VERIFY_DEFAULT_VALUE;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDescription.IGNORE_DESCRIPTION;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDescription.VERIFY_DESCRIPTION;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.verifyPropertyMetadata;
@@ -39,6 +46,7 @@ import static java.util.Objects.requireNonNull;
 public class ObjectStoreSessionProperties
 {
     private final List<PropertyMetadata<?>> sessionProperties;
+    private final Table<String, TableType, Optional<Object>> defaultPropertyValue;
 
     @Inject
     public ObjectStoreSessionProperties(DelegateConnectors delegates)
@@ -50,21 +58,56 @@ public class ObjectStoreSessionProperties
                 .add("minimum_assigned_split_weight")
                 .build();
 
-        Map<String, PropertyMetadata<?>> sessionProperties = new HashMap<>();
-        for (Connector connector : delegates.asList()) {
+        Table<String, TableType, PropertyMetadata<?>> delegateProperties = HashBasedTable.create();
+        delegates.byType().forEach((type, connector) -> {
             for (PropertyMetadata<?> property : connector.getSessionProperties()) {
-                PropertyMetadata<?> existing = sessionProperties.putIfAbsent(property.getName(), property);
-                if (existing != null) {
+                delegateProperties.put(property.getName(), type, property);
+            }
+        });
+
+        ImmutableList.Builder<PropertyMetadata<?>> sessionProperties = ImmutableList.builder();
+        ImmutableTable.Builder<String, TableType, Optional<Object>> defaultPropertyValue = ImmutableTable.builder();
+        for (Map.Entry<String, Map<TableType, PropertyMetadata<?>>> propertyCandidatesEntry : delegateProperties.rowMap().entrySet()) {
+            String name = propertyCandidatesEntry.getKey();
+            Map<TableType, PropertyMetadata<?>> propertiesOfName = propertyCandidatesEntry.getValue();
+            PropertyMetadataValidation.VerifyDescription verifyDescription = ignoredDescriptions.contains(name) ? IGNORE_DESCRIPTION : VERIFY_DESCRIPTION;
+            PropertyMetadata<?> first = Stream.of(TableType.values())
+                    .map(propertiesOfName::get)
+                    .filter(Objects::nonNull)
+                    .findFirst().orElseThrow();
+
+            boolean commonDefaultValue = propertiesOfName.values().stream()
+                    .map(PropertyMetadata::getDefaultValue)
+                    .distinct()
+                    .count() == 1;
+
+            if (commonDefaultValue) {
+                for (PropertyMetadata<?> existing : propertiesOfName.values()) {
                     verifyPropertyMetadata(
-                            property,
+                            first,
                             existing,
-                            ignoredDescriptions.contains(property.getName()) ? IGNORE_DESCRIPTION : VERIFY_DESCRIPTION);
+                            VERIFY_DEFAULT_VALUE, // technically redundant now
+                            verifyDescription);
                 }
+                sessionProperties.add(first);
+            }
+            else {
+                for (Map.Entry<TableType, PropertyMetadata<?>> entry : propertiesOfName.entrySet()) {
+                    verifyPropertyMetadata(
+                            first,
+                            entry.getValue(),
+                            IGNORE_DEFAULT_VALUE,
+                            verifyDescription);
+                    defaultPropertyValue.put(name, entry.getKey(), Optional.ofNullable(entry.getValue().getDefaultValue()));
+                }
+                sessionProperties.add(first.withDefault(null));
             }
         }
-        this.sessionProperties = sessionProperties.values().stream()
+
+        this.sessionProperties = sessionProperties.build().stream()
                 .map(ObjectStoreSessionProperties::toWrapped)
                 .collect(toImmutableList());
+        this.defaultPropertyValue = defaultPropertyValue.buildOrThrow();
     }
 
     public ConnectorSession unwrap(TableType forType, ConnectorSession session)
@@ -87,7 +130,7 @@ public class ObjectStoreSessionProperties
                 wrappedPropertyValue -> propertyMetadata.getJavaType().cast(wrappedPropertyValue.value()));
     }
 
-    private static class DelegateSession
+    private class DelegateSession
             implements ConnectorSession
     {
         private final TableType forType;
@@ -151,7 +194,16 @@ public class ObjectStoreSessionProperties
         public <T> T getProperty(String name, Class<T> type)
         {
             WrappedPropertyValue wrappedPropertyValue = baseSession.getProperty(name, WrappedPropertyValue.class);
-            return type.cast(wrappedPropertyValue.value());
+            Object connectorValue = wrappedPropertyValue.value();
+            if (connectorValue == null) {
+                @Nullable
+                Optional<Object> defaultValue = defaultPropertyValue.get(name, forType);
+                //noinspection OptionalAssignedToNull
+                if (defaultValue != null) {
+                    connectorValue = defaultValue.orElse(null);
+                }
+            }
+            return type.cast(connectorValue);
         }
     }
 }

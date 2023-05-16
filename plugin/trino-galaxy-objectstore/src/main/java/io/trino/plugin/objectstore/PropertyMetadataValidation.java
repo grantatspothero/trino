@@ -20,11 +20,18 @@ import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
+import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDefaultValue.VERIFY_DEFAULT_VALUE;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDescription.VERIFY_DESCRIPTION;
 
 public final class PropertyMetadataValidation
 {
     private PropertyMetadataValidation() {}
+
+    public enum VerifyDefaultValue
+    {
+        VERIFY_DEFAULT_VALUE,
+        IGNORE_DEFAULT_VALUE,
+    }
 
     public enum VerifyDescription
     {
@@ -34,10 +41,10 @@ public final class PropertyMetadataValidation
 
     public static void verifyPropertyMetadata(PropertyMetadata<?> property, PropertyMetadata<?> existing)
     {
-        verifyPropertyMetadata(property, existing, VERIFY_DESCRIPTION);
+        verifyPropertyMetadata(property, existing, VERIFY_DEFAULT_VALUE, VERIFY_DESCRIPTION);
     }
 
-    public static void verifyPropertyMetadata(PropertyMetadata<?> property, PropertyMetadata<?> existing, VerifyDescription verifyDescription)
+    public static void verifyPropertyMetadata(PropertyMetadata<?> property, PropertyMetadata<?> existing, VerifyDefaultValue verifyDefaultValue, VerifyDescription verifyDescription)
     {
         verify(property.getName().equals(existing.getName()),
                 "Mismatched name '%s' <> '%s' for property",
@@ -53,9 +60,12 @@ public final class PropertyMetadataValidation
                 "Mismatched SQL type '%s' <> '%s' for property: %s",
                 property.getSqlType(), existing.getSqlType(), property.getName());
 
-        verify(Objects.equals(property.getDefaultValue(), existing.getDefaultValue()),
-                "Mismatched default value '%s' <> '%s' for property: %s",
-                property.getDefaultValue(), existing.getDefaultValue(), property.getName());
+        switch (verifyDefaultValue) {
+            case VERIFY_DEFAULT_VALUE -> verify(Objects.equals(property.getDefaultValue(), existing.getDefaultValue()),
+                    "Mismatched default value '%s' <> '%s' for property: %s",
+                    property.getDefaultValue(), existing.getDefaultValue(), property.getName());
+            case IGNORE_DEFAULT_VALUE -> { /* ignored */ }
+        }
 
         switch (verifyDescription) {
             case VERIFY_DESCRIPTION -> verify(property.getDescription().equals(existing.getDescription()),
