@@ -216,6 +216,13 @@ public class TestGalaxyMetadataOnlyQueries
                         .build());
     }
 
+    @Test
+    public void testLateFailure()
+    {
+        assertThatThrownBy(() -> queryMetadata("SELECT fail(format('%s is too many', count(*))) FROM tpch.\"sf0.1\".orders"))
+                .hasMessageMatching("\\QQueryError{message=150000 is too many, sqlState=null, errorCode=0, errorName=GENERIC_USER_ERROR, errorType=USER_ERROR, errorLocation=null, failureInfo=io.trino.client.FailureInfo@\\E\\w+\\Q}");
+    }
+
     private AssertProvider<QueryAssert> queryMetadata(@Language("SQL") String statement)
     {
         Request request = buildRequest(statement);

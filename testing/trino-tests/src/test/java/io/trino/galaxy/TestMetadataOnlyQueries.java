@@ -70,6 +70,7 @@ import static io.trino.server.security.galaxy.TestingAccountFactory.createTestin
 import static io.trino.sql.query.QueryAssertions.QueryAssert.newQueryAssert;
 import static io.trino.testing.MaterializedResult.resultBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 
 /**
@@ -180,6 +181,13 @@ public class TestMetadataOnlyQueries
         assertThat(metastore.getAllDatabases()).isEmpty();
         queryMetadata("CREATE SCHEMA hive.test");
         assertThat(metastore.getAllDatabases()).containsExactly("test");
+    }
+
+    @Test
+    public void testLateFailure()
+    {
+        assertThatThrownBy(() -> queryMetadata("SELECT fail(format('%s is too many', count(*))) FROM tpch.\"sf0.1\".orders"))
+                .hasMessageMatching("\\QQueryError{message=150000 is too many, sqlState=null, errorCode=0, errorName=GENERIC_USER_ERROR, errorType=USER_ERROR, errorLocation=null, failureInfo=io.trino.client.FailureInfo@\\E\\w+\\Q}");
     }
 
     private AssertProvider<QueryAssert> queryMetadata(@Language("SQL") String statement)
