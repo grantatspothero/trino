@@ -30,8 +30,9 @@ import java.util.List;
 import java.util.Map;
 
 import static com.google.common.collect.MoreCollectors.onlyElement;
+import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDescription.IGNORE_DESCRIPTION;
+import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDescription.VERIFY_DESCRIPTION;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.addProperty;
-import static io.trino.plugin.objectstore.PropertyMetadataValidation.verifyPropertyDescription;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.verifyPropertyMetadata;
 import static io.trino.plugin.objectstore.TableType.DELTA;
 import static io.trino.plugin.objectstore.TableType.HIVE;
@@ -93,10 +94,10 @@ public final class ObjectStoreTableProperties
             }
             PropertyMetadata<?> existing = properties.putIfAbsent(property.getName(), property);
             if (existing != null) {
-                verifyPropertyMetadata(property, existing);
-                if (!ignoredDescriptions.contains(property.getName())) {
-                    verifyPropertyDescription(property, existing);
-                }
+                verifyPropertyMetadata(
+                        property,
+                        existing,
+                        ignoredDescriptions.contains(property.getName()) ? IGNORE_DESCRIPTION : VERIFY_DESCRIPTION);
             }
             tableTypesForProperty.put(property.getName(), ICEBERG);
         }
@@ -107,10 +108,10 @@ public final class ObjectStoreTableProperties
             }
             PropertyMetadata<?> existing = properties.putIfAbsent(property.getName(), property);
             if (existing != null) {
-                verifyPropertyMetadata(property, existing);
-                if (!ignoredDescriptions.contains(property.getName())) {
-                    verifyPropertyDescription(property, existing);
-                }
+                verifyPropertyMetadata(
+                        property,
+                        existing,
+                        ignoredDescriptions.contains(property.getName()) ? IGNORE_DESCRIPTION : VERIFY_DESCRIPTION);
             }
             tableTypesForProperty.put(property.getName(), DELTA);
         }
@@ -121,10 +122,10 @@ public final class ObjectStoreTableProperties
             }
             PropertyMetadata<?> existing = properties.putIfAbsent(property.getName(), property);
             if (existing != null) {
-                verifyPropertyMetadata(property, existing);
-                if (!ignoredDescriptions.contains(property.getName())) {
-                    verifyPropertyDescription(property, existing);
-                }
+                verifyPropertyMetadata(
+                        property,
+                        existing,
+                        ignoredDescriptions.contains(property.getName()) ? IGNORE_DESCRIPTION : VERIFY_DESCRIPTION);
             }
             tableTypesForProperty.put(property.getName(), HUDI);
         }

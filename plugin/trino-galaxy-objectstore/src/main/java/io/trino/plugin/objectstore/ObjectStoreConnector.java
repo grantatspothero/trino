@@ -53,7 +53,8 @@ import static com.google.common.collect.Streams.forEachPair;
 import static io.trino.plugin.objectstore.FeatureExposure.UNDEFINED;
 import static io.trino.plugin.objectstore.FeatureExposures.procedureExposureDecisions;
 import static io.trino.plugin.objectstore.FeatureExposures.tableProcedureExposureDecisions;
-import static io.trino.plugin.objectstore.PropertyMetadataValidation.verifyPropertyDescription;
+import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDescription.IGNORE_DESCRIPTION;
+import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDescription.VERIFY_DESCRIPTION;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.verifyPropertyMetadata;
 import static io.trino.spi.connector.ConnectorCapabilities.MATERIALIZED_VIEW_GRACE_PERIOD;
 import static io.trino.spi.connector.ConnectorCapabilities.NOT_NULL_COLUMN_CONSTRAINT;
@@ -163,10 +164,10 @@ public class ObjectStoreConnector
             for (PropertyMetadata<?> property : connector.getSessionProperties()) {
                 PropertyMetadata<?> existing = sessionProperties.putIfAbsent(property.getName(), property);
                 if (existing != null) {
-                    verifyPropertyMetadata(property, existing);
-                    if (!ignoredDescriptions.contains(property.getName())) {
-                        verifyPropertyDescription(property, existing);
-                    }
+                    verifyPropertyMetadata(
+                            property,
+                            existing,
+                            ignoredDescriptions.contains(property.getName()) ? IGNORE_DESCRIPTION : VERIFY_DESCRIPTION);
                 }
             }
         }
@@ -181,7 +182,6 @@ public class ObjectStoreConnector
                 PropertyMetadata<?> existing = properties.putIfAbsent(property.getName(), property);
                 if (existing != null) {
                     verifyPropertyMetadata(property, existing);
-                    verifyPropertyDescription(property, existing);
                 }
             }
         }
@@ -253,10 +253,7 @@ public class ObjectStoreConnector
                         forEachPair(
                                 procedure.getProperties().stream().sorted(comparing(PropertyMetadata::getName)),
                                 existing.getProperties().stream().sorted(comparing(PropertyMetadata::getName)),
-                                (property, other) -> {
-                                    verifyPropertyMetadata(property, other);
-                                    verifyPropertyDescription(property, other);
-                                });
+                                PropertyMetadataValidation::verifyPropertyMetadata);
                     }
                 }
             }

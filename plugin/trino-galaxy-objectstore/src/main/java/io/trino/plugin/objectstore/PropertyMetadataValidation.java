@@ -20,16 +20,30 @@ import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
+import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDescription.VERIFY_DESCRIPTION;
 
 public final class PropertyMetadataValidation
 {
     private PropertyMetadataValidation() {}
 
+    public enum VerifyDescription
+    {
+        VERIFY_DESCRIPTION,
+        IGNORE_DESCRIPTION,
+    }
+
     public static void verifyPropertyMetadata(PropertyMetadata<?> property, PropertyMetadata<?> existing)
+    {
+        verifyPropertyMetadata(property, existing, VERIFY_DESCRIPTION);
+    }
+
+    public static void verifyPropertyMetadata(PropertyMetadata<?> property, PropertyMetadata<?> existing, VerifyDescription verifyDescription)
     {
         verify(property.getName().equals(existing.getName()),
                 "Mismatched name '%s' <> '%s' for property",
                 property.getName(), existing.getName());
+
+        // TODO verify hidden
 
         verify(property.getJavaType().equals(existing.getJavaType()),
                 "Mismatched Java type '%s' <> '%s' for property: %s",
@@ -42,13 +56,13 @@ public final class PropertyMetadataValidation
         verify(Objects.equals(property.getDefaultValue(), existing.getDefaultValue()),
                 "Mismatched default value '%s' <> '%s' for property: %s",
                 property.getDefaultValue(), existing.getDefaultValue(), property.getName());
-    }
 
-    public static void verifyPropertyDescription(PropertyMetadata<?> property, PropertyMetadata<?> existing)
-    {
-        verify(property.getDescription().equals(existing.getDescription()),
-                "Mismatched description '%s' <> '%s' for property: %s",
-                property.getDescription(), existing.getDescription(), property.getName());
+        switch (verifyDescription) {
+            case VERIFY_DESCRIPTION -> verify(property.getDescription().equals(existing.getDescription()),
+                    "Mismatched description '%s' <> '%s' for property: %s",
+                    property.getDescription(), existing.getDescription(), property.getName());
+            case IGNORE_DESCRIPTION -> { /* ignored */ }
+        }
     }
 
     public static void addProperty(Map<String, PropertyMetadata<?>> properties, PropertyMetadata<?> property)
