@@ -269,9 +269,7 @@ public class MetadataOnlyStatementResource
         AtomicReference<List<Type>> columnTypes = new AtomicReference<>();
         List<Page> pages = new ArrayList<>();
 
-        QueryInfo queryInfo = dispatchQuery.getFullQueryInfo();
-
-        boolean isDdl = (queryInfo.getUpdateType() != null);
+        boolean isDdl = (dispatchQuery.getFullQueryInfo().getUpdateType() != null);
         if (!isDdl) {
             PageDeserializer pageDeserializer = new PagesSerdeFactory(blockEncodingSerde, false).createDeserializer(Optional.empty());
             try (DirectExchangeClient exchangeClient = directExchangeClientSupplier.get(
@@ -315,6 +313,8 @@ public class MetadataOnlyStatementResource
         for (QueryState queryState = queryManager.getQueryState(queryId); !queryState.isDone(); queryState = queryManager.getQueryState(queryId)) {
             getQueryFuture(queryManager.getStateChange(queryId, queryState));
         }
+
+        QueryInfo queryInfo = dispatchQuery.getFullQueryInfo();
 
         List<Column> columns = null;
         QueryResultRows resultRows = null;
