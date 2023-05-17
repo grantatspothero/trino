@@ -17,6 +17,7 @@ import com.google.common.base.VerifyException;
 import com.google.inject.Inject;
 import io.trino.plugin.deltalake.DeltaLakeSplit;
 import io.trino.plugin.deltalake.DeltaLakeTableHandle;
+import io.trino.plugin.deltalake.functions.tablechanges.TableChangesTableFunctionHandle;
 import io.trino.plugin.hive.HiveSplit;
 import io.trino.plugin.hive.HiveTableHandle;
 import io.trino.plugin.hudi.HudiSplit;
@@ -32,6 +33,7 @@ import io.trino.spi.connector.ConnectorTableHandle;
 import io.trino.spi.connector.ConnectorTransactionHandle;
 import io.trino.spi.connector.Constraint;
 import io.trino.spi.connector.DynamicFilter;
+import io.trino.spi.function.table.ConnectorTableFunctionHandle;
 
 import java.util.Optional;
 
@@ -111,5 +113,17 @@ public class ObjectStoreSplitManager
     private ConnectorSession unwrap(TableType tableType, ConnectorSession session)
     {
         return sessionProperties.unwrap(tableType, session);
+    }
+
+    @Override
+    public ConnectorSplitSource getSplits(
+            ConnectorTransactionHandle transaction,
+            ConnectorSession session,
+            ConnectorTableFunctionHandle function)
+    {
+        if (function instanceof TableChangesTableFunctionHandle) {
+            return deltaSplitManager.getSplits(transaction, sessionProperties.unwrap(DELTA, session), function);
+        }
+        throw new VerifyException("Unhandled class: " + function.getClass().getName());
     }
 }

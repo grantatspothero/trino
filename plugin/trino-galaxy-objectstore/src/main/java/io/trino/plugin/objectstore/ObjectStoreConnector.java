@@ -34,6 +34,8 @@ import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.ConnectorSplitManager;
 import io.trino.spi.connector.ConnectorTransactionHandle;
 import io.trino.spi.connector.TableProcedureMetadata;
+import io.trino.spi.function.FunctionProvider;
+import io.trino.spi.function.table.ConnectorTableFunction;
 import io.trino.spi.procedure.Procedure;
 import io.trino.spi.session.PropertyMetadata;
 import io.trino.spi.transaction.IsolationLevel;
@@ -42,6 +44,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
@@ -90,6 +93,8 @@ public class ObjectStoreConnector
     private final Procedure flushMetadataCache;
     private final Procedure migrateHiveToIcebergProcedure;
     private final boolean hiveRecursiveDirWalkerEnabled;
+    private final Set<ConnectorTableFunction> tableFunctions;
+    private final FunctionProvider functionProvider;
 
     private final TableTypeCache tableTypeCache = new TableTypeCache();
     private final ExecutorService parallelInformationSchemaQueryingExecutor;
@@ -105,7 +110,9 @@ public class ObjectStoreConnector
             ObjectStoreTableProperties tableProperties,
             ObjectStoreMaterializedViewProperties materializedViewProperties,
             ObjectStoreSessionProperties sessionProperties,
-            Set<Procedure> objectStoreProcedures)
+            Set<Procedure> objectStoreProcedures,
+            Set<ConnectorTableFunction> tableFunctions,
+            FunctionProvider functionProvider)
     {
         this.hiveConnector = delegates.hiveConnector();
         this.icebergConnector = delegates.icebergConnector();
@@ -133,6 +140,8 @@ public class ObjectStoreConnector
                 .collect(onlyElement());
         this.hiveRecursiveDirWalkerEnabled = ((HiveConnector) hiveConnector).isRecursiveDirWalkerEnabled();
         this.parallelInformationSchemaQueryingExecutor = newCachedThreadPool(daemonThreadsNamed("osc-information-schema"));
+        this.tableFunctions = ImmutableSet.copyOf(requireNonNull(tableFunctions, "tableFunctions is null"));
+        this.functionProvider = requireNonNull(functionProvider, "functionProvider is null");
     }
 
     @VisibleForTesting
@@ -418,5 +427,17 @@ public class ObjectStoreConnector
     public Set<TableProcedureMetadata> getTableProcedures()
     {
         return tableProcedures;
+    }
+
+    @Override
+    public Set<ConnectorTableFunction> getTableFunctions()
+    {
+        return tableFunctions;
+    }
+
+    @Override
+    public Optional<FunctionProvider> getFunctionProvider()
+    {
+        return Optional.of(functionProvider);
     }
 }

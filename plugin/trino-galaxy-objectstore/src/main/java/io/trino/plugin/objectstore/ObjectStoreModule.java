@@ -17,9 +17,12 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
+import io.trino.plugin.objectstore.functions.tablechanges.TableChangesFunctionProvider;
 import io.trino.plugin.objectstore.procedure.ObjectStoreFlushMetadataCache;
 import io.trino.plugin.objectstore.procedure.ObjectStoreRegisterTableProcedure;
 import io.trino.plugin.objectstore.procedure.ObjectStoreUnregisterTableProcedure;
+import io.trino.spi.function.FunctionProvider;
+import io.trino.spi.function.table.ConnectorTableFunction;
 import io.trino.spi.procedure.Procedure;
 
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
@@ -45,6 +48,9 @@ public class ObjectStoreModule
         procedures.addBinding().toProvider(ObjectStoreRegisterTableProcedure.class).in(Scopes.SINGLETON);
         procedures.addBinding().toProvider(ObjectStoreUnregisterTableProcedure.class).in(Scopes.SINGLETON);
         procedures.addBinding().toProvider(ObjectStoreFlushMetadataCache.class).in(Scopes.SINGLETON);
+
+        newSetBinder(binder, ConnectorTableFunction.class).addBinding().toProvider(TableChangesFunctionProvider.class).in(Scopes.SINGLETON);
+        binder.bind(FunctionProvider.class).to(ObjectStoreFunctionProvider.class).in(Scopes.SINGLETON);
 
         configBinder(binder).bindConfig(ObjectStoreConfig.class);
     }
