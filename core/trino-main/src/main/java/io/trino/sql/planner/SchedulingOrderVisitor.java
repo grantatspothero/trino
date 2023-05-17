@@ -15,6 +15,7 @@
 package io.trino.sql.planner;
 
 import com.google.common.collect.ImmutableList;
+import io.trino.sql.planner.plan.ChooseAlternativeNode;
 import io.trino.sql.planner.plan.IndexJoinNode;
 import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.planner.plan.PlanNode;
@@ -79,6 +80,13 @@ public final class SchedulingOrderVisitor
         {
             node.getIndexSource().accept(this, context);
             node.getProbeSource().accept(this, context);
+            return null;
+        }
+
+        @Override
+        public Void visitChooseAlternativeNode(ChooseAlternativeNode node, Void context)
+        {
+            schedulingOrder.accept(node.getId());
             return null;
         }
 

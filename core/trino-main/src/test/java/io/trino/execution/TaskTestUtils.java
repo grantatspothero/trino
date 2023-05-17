@@ -37,6 +37,7 @@ import io.trino.operator.TrinoOperatorFactories;
 import io.trino.operator.index.IndexJoinLookupStats;
 import io.trino.spi.connector.CatalogHandle;
 import io.trino.spiller.GenericSpillerFactory;
+import io.trino.split.AlternativeChooser;
 import io.trino.split.PageSinkManager;
 import io.trino.split.PageSourceManager;
 import io.trino.sql.gen.ExpressionCompiler;
@@ -132,6 +133,7 @@ public final class TaskTestUtils
     public static LocalExecutionPlanner createTestingPlanner()
     {
         PageSourceManager pageSourceManager = new PageSourceManager(CatalogServiceProvider.singleton(CATALOG_HANDLE, new TestingPageSourceProvider()));
+        AlternativeChooser alternativeChooser = new AlternativeChooser(CatalogServiceProvider.fail());
 
         // we don't start the finalizer so nothing will be collected, which is ok for a test
         FinalizerService finalizerService = new FinalizerService();
@@ -152,6 +154,7 @@ public final class TaskTestUtils
                 createTestingTypeAnalyzer(PLANNER_CONTEXT),
                 Optional.empty(),
                 pageSourceManager,
+                alternativeChooser,
                 new IndexManager(CatalogServiceProvider.fail()),
                 nodePartitioningManager,
                 new PageSinkManager(CatalogServiceProvider.fail()),

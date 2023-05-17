@@ -27,6 +27,7 @@ import io.trino.spi.classloader.ThreadContextClassLoader;
 import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorAccessControl;
+import io.trino.spi.connector.ConnectorAlternativeChooser;
 import io.trino.spi.connector.ConnectorCapabilities;
 import io.trino.spi.connector.ConnectorIndexProvider;
 import io.trino.spi.connector.ConnectorNodePartitioningProvider;
@@ -44,6 +45,7 @@ import io.trino.spi.ptf.ConnectorTableFunction;
 import io.trino.spi.ptf.ReturnTypeSpecification.DescribedTable;
 import io.trino.spi.ptf.TableArgumentSpecification;
 import io.trino.spi.session.PropertyMetadata;
+import io.trino.split.AlternativeChooserPageSourceProvider;
 import io.trino.split.RecordPageSourceProvider;
 
 import java.util.HashSet;
@@ -75,6 +77,7 @@ public class ConnectorServices
     private final CatalogTableFunctions tableFunctions;
     private final Optional<ConnectorSplitManager> splitManager;
     private final Optional<ConnectorPageSourceProvider> pageSourceProvider;
+    private final Optional<ConnectorAlternativeChooser> alternativeChooser;
     private final Optional<ConnectorPageSinkProvider> pageSinkProvider;
     private final Optional<ConnectorIndexProvider> indexProvider;
     private final Optional<ConnectorNodePartitioningProvider> partitioningProvider;
@@ -143,6 +146,17 @@ public class ConnectorServices
         }
         catch (UnsupportedOperationException ignored) {
         }
+
+        ConnectorAlternativeChooser connectorAlternativeChooser = null;
+        try {
+            connectorAlternativeChooser = connector.getAlternativeChooser();
+            requireNonNull(connectorAlternativeChooser, format("Connector '%s' returned a null alternative chooser", catalogHandle));
+            verify(connectorPageSourceProvider == null, "Connector '%s' returned both page source or record set provider and alternative chooser", catalogHandle);
+            connectorPageSourceProvider = new AlternativeChooserPageSourceProvider(connectorAlternativeChooser);
+        }
+        catch (UnsupportedOperationException ignored) {
+        }
+        this.alternativeChooser = Optional.ofNullable(connectorAlternativeChooser);
         this.pageSourceProvider = Optional.ofNullable(connectorPageSourceProvider);
 
         ConnectorPageSinkProvider connectorPageSinkProvider = null;
@@ -262,6 +276,11 @@ public class ConnectorServices
     public Optional<ConnectorPageSourceProvider> getPageSourceProvider()
     {
         return pageSourceProvider;
+    }
+
+    public Optional<ConnectorAlternativeChooser> getAlternativeChooser()
+    {
+        return alternativeChooser;
     }
 
     public Optional<ConnectorPageSinkProvider> getPageSinkProvider()

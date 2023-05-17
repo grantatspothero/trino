@@ -157,6 +157,7 @@ import io.trino.spiller.NodeSpillConfig;
 import io.trino.spiller.PartitioningSpillerFactory;
 import io.trino.spiller.SpillerFactory;
 import io.trino.spiller.SpillerStats;
+import io.trino.split.AlternativeChooser;
 import io.trino.split.PageSinkManager;
 import io.trino.split.PageSourceManager;
 import io.trino.split.SplitManager;
@@ -237,6 +238,7 @@ import static io.airlift.concurrent.MoreFutures.getFutureValue;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.airlift.tracing.Tracing.noopTracer;
 import static io.trino.connector.CatalogServiceProviderModule.createAccessControlProvider;
+import static io.trino.connector.CatalogServiceProviderModule.createAlternativeChooser;
 import static io.trino.connector.CatalogServiceProviderModule.createAnalyzePropertyManager;
 import static io.trino.connector.CatalogServiceProviderModule.createColumnPropertyManager;
 import static io.trino.connector.CatalogServiceProviderModule.createFunctionProvider;
@@ -292,6 +294,7 @@ public class LocalQueryRunner
     private final TestingAccessControlManager accessControl;
     private final SplitManager splitManager;
     private final PageSourceManager pageSourceManager;
+    private final AlternativeChooser alternativeChooser;
     private final IndexManager indexManager;
     private final NodePartitioningManager nodePartitioningManager;
     private final PageSinkManager pageSinkManager;
@@ -422,6 +425,7 @@ public class LocalQueryRunner
                 new CatalogManagerConfig()));
         this.splitManager = new SplitManager(createSplitManagerProvider(catalogManager), tracer, new QueryManagerConfig());
         this.pageSourceManager = new PageSourceManager(createPageSourceProvider(catalogManager));
+        this.alternativeChooser = new AlternativeChooser(createAlternativeChooser(catalogManager));
         this.pageSinkManager = new PageSinkManager(createPageSinkProvider(catalogManager));
         this.indexManager = new IndexManager(createIndexProvider(catalogManager));
         NodeScheduler nodeScheduler = new NodeScheduler(new UniformNodeSelectorFactory(nodeManager, nodeSchedulerConfig, new NodeTaskMap(finalizerService)));
@@ -994,6 +998,7 @@ public class LocalQueryRunner
                 new TypeAnalyzer(plannerContext, statementAnalyzerFactory),
                 Optional.empty(),
                 pageSourceManager,
+                alternativeChooser,
                 indexManager,
                 nodePartitioningManager,
                 pageSinkManager,

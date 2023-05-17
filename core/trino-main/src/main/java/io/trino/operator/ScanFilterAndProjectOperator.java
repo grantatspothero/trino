@@ -44,6 +44,7 @@ import io.trino.spi.metrics.Metrics;
 import io.trino.spi.type.Type;
 import io.trino.split.EmptySplit;
 import io.trino.split.PageSourceProvider;
+import io.trino.split.TableAwarePageSourceProvider;
 import io.trino.sql.planner.plan.PlanNodeId;
 
 import javax.annotation.Nullable;
@@ -70,6 +71,7 @@ public class ScanFilterAndProjectOperator
 {
     private final WorkProcessor<Page> pages;
     private final PageProcessorMetrics pageProcessorMetrics = new PageProcessorMetrics();
+    private final TableAwarePageSourceProvider pageSourceProvider;
 
     @Nullable
     private RecordCursor cursor;
@@ -89,10 +91,9 @@ public class ScanFilterAndProjectOperator
             MemoryTrackingContext memoryTrackingContext,
             DriverYieldSignal yieldSignal,
             WorkProcessor<Split> splits,
-            PageSourceProvider pageSourceProvider,
+            TableAwarePageSourceProvider pageSourceProvider,
             CursorProcessor cursorProcessor,
             PageProcessor pageProcessor,
-            TableHandle table,
             Iterable<ColumnHandle> columns,
             DynamicFilter dynamicFilter,
             Iterable<Type> types,
@@ -107,7 +108,6 @@ public class ScanFilterAndProjectOperator
                         pageSourceProvider,
                         cursorProcessor,
                         pageProcessor,
-                        table,
                         columns,
                         dynamicFilter,
                         types,
@@ -115,6 +115,7 @@ public class ScanFilterAndProjectOperator
                         minOutputPageSize,
                         minOutputPageRowCount,
                         avoidPageMaterialization));
+        this.pageSourceProvider = requireNonNull(pageSourceProvider, "pageSourceFactory is null");
     }
 
     @Override
@@ -177,17 +178,22 @@ public class ScanFilterAndProjectOperator
     @Override
     public void close()
     {
-        if (pageSource != null) {
-            try {
-                pageSource.close();
-                metrics = pageSource.getMetrics();
+        try {
+            if (pageSource != null) {
+                try {
+                    pageSource.close();
+                    metrics = pageSource.getMetrics();
+                }
+                catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
             }
-            catch (IOException e) {
-                throw new UncheckedIOException(e);
+            else if (cursor != null) {
+                cursor.close();
             }
         }
-        else if (cursor != null) {
-            cursor.close();
+        finally {
+            pageSourceProvider.close();
         }
     }
 
@@ -196,10 +202,9 @@ public class ScanFilterAndProjectOperator
     {
         final Session session;
         final DriverYieldSignal yieldSignal;
-        final PageSourceProvider pageSourceProvider;
+        final TableAwarePageSourceProvider pageSourceProvider;
         final CursorProcessor cursorProcessor;
         final PageProcessor pageProcessor;
-        final TableHandle table;
         final List<ColumnHandle> columns;
         final DynamicFilter dynamicFilter;
         final List<Type> types;
@@ -214,10 +219,9 @@ public class ScanFilterAndProjectOperator
         SplitToPages(
                 Session session,
                 DriverYieldSignal yieldSignal,
-                PageSourceProvider pageSourceProvider,
+                TableAwarePageSourceProvider pageSourceProvider,
                 CursorProcessor cursorProcessor,
                 PageProcessor pageProcessor,
-                TableHandle table,
                 Iterable<ColumnHandle> columns,
                 DynamicFilter dynamicFilter,
                 Iterable<Type> types,
@@ -228,10 +232,9 @@ public class ScanFilterAndProjectOperator
         {
             this.session = requireNonNull(session, "session is null");
             this.yieldSignal = requireNonNull(yieldSignal, "yieldSignal is null");
-            this.pageSourceProvider = requireNonNull(pageSourceProvider, "pageSourceProvider is null");
+            this.pageSourceProvider = requireNonNull(pageSourceProvider, "pageSourceSupplier is null");
             this.cursorProcessor = requireNonNull(cursorProcessor, "cursorProcessor is null");
             this.pageProcessor = requireNonNull(pageProcessor, "pageProcessor is null");
-            this.table = requireNonNull(table, "table is null");
             this.columns = ImmutableList.copyOf(requireNonNull(columns, "columns is null"));
             this.dynamicFilter = requireNonNull(dynamicFilter, "dynamicFilter is null");
             this.types = ImmutableList.copyOf(requireNonNull(types, "types is null"));
@@ -263,7 +266,7 @@ public class ScanFilterAndProjectOperator
                 source = new EmptyPageSource();
             }
             else {
-                source = pageSourceProvider.createPageSource(session, split, table, columns, dynamicFilter);
+                source = pageSourceProvider.createPageSource(session, split, columns, dynamicFilter);
             }
 
             if (source instanceof RecordPageSource) {
@@ -521,10 +524,9 @@ public class ScanFilterAndProjectOperator
                     memoryTrackingContext,
                     yieldSignal,
                     splits,
-                    pageSourceProvider,
+                    TableAwarePageSourceProvider.create(operatorContext, table, pageSourceProvider),
                     cursorProcessor.get(),
                     pageProcessor.get(),
-                    table,
                     columns,
                     dynamicFilter,
                     types,

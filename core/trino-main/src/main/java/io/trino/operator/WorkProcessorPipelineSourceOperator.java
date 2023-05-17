@@ -153,6 +153,7 @@ public class WorkProcessorPipelineSourceOperator
         workProcessorOperatorContexts.add(new WorkProcessorOperatorContext(
                 sourceOperator,
                 sourceOperatorFactory.getOperatorId(),
+                driverContext.getAlternativeId().orElse(0),
                 sourceOperatorFactory.getPlanNodeId(),
                 sourceOperatorFactory.getOperatorType(),
                 sourceOperatorMemoryTrackingContext));
@@ -174,6 +175,7 @@ public class WorkProcessorPipelineSourceOperator
             workProcessorOperatorContexts.add(new WorkProcessorOperatorContext(
                     operator,
                     operatorFactory.getOperatorId(),
+                    driverContext.getAlternativeId().orElse(0),
                     operatorFactory.getPlanNodeId(),
                     operatorFactory.getOperatorType(),
                     operatorMemoryTrackingContext));
@@ -310,6 +312,7 @@ public class WorkProcessorPipelineSourceOperator
                 .map(context -> new OperatorStats(
                         stageId,
                         pipelineId,
+                        context.alternativeId,
                         context.operatorId,
                         context.planNodeId,
                         context.operatorType,
@@ -666,6 +669,7 @@ public class WorkProcessorPipelineSourceOperator
     private static class WorkProcessorOperatorContext
     {
         final int operatorId;
+        final int alternativeId;
         final PlanNodeId planNodeId;
         final String operatorType;
         final MemoryTrackingContext memoryTrackingContext;
@@ -703,12 +707,14 @@ public class WorkProcessorPipelineSourceOperator
         private WorkProcessorOperatorContext(
                 WorkProcessorOperator operator,
                 int operatorId,
+                int alternativeId,
                 PlanNodeId planNodeId,
                 String operatorType,
                 MemoryTrackingContext memoryTrackingContext)
         {
             this.operator = operator;
             this.operatorId = operatorId;
+            this.alternativeId = alternativeId;
             this.planNodeId = planNodeId;
             this.operatorType = operatorType;
             this.memoryTrackingContext = memoryTrackingContext;

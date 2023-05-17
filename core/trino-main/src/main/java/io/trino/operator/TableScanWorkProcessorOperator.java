@@ -23,7 +23,6 @@ import io.trino.memory.context.AggregatedMemoryContext;
 import io.trino.memory.context.LocalMemoryContext;
 import io.trino.memory.context.MemoryTrackingContext;
 import io.trino.metadata.Split;
-import io.trino.metadata.TableHandle;
 import io.trino.operator.WorkProcessor.ProcessState;
 import io.trino.operator.WorkProcessor.TransformationState;
 import io.trino.spi.Page;
@@ -33,7 +32,7 @@ import io.trino.spi.connector.DynamicFilter;
 import io.trino.spi.connector.EmptyPageSource;
 import io.trino.spi.metrics.Metrics;
 import io.trino.split.EmptySplit;
-import io.trino.split.PageSourceProvider;
+import io.trino.split.TableAwarePageSourceProvider;
 
 import javax.annotation.Nullable;
 
@@ -58,15 +57,13 @@ public class TableScanWorkProcessorOperator
             Session session,
             MemoryTrackingContext memoryTrackingContext,
             WorkProcessor<Split> splits,
-            PageSourceProvider pageSourceProvider,
-            TableHandle table,
+            TableAwarePageSourceProvider pageSourceProvider,
             Iterable<ColumnHandle> columns,
             DynamicFilter dynamicFilter)
     {
         this.splitToPages = new SplitToPages(
                 session,
                 pageSourceProvider,
-                table,
                 columns,
                 dynamicFilter,
                 memoryTrackingContext.aggregateUserMemoryContext());
@@ -131,8 +128,7 @@ public class TableScanWorkProcessorOperator
             implements WorkProcessor.Transformation<Split, WorkProcessor<Page>>
     {
         final Session session;
-        final PageSourceProvider pageSourceProvider;
-        final TableHandle table;
+        final TableAwarePageSourceProvider pageSourceProvider;
         final List<ColumnHandle> columns;
         final DynamicFilter dynamicFilter;
         final LocalMemoryContext memoryContext;
@@ -146,15 +142,13 @@ public class TableScanWorkProcessorOperator
 
         SplitToPages(
                 Session session,
-                PageSourceProvider pageSourceProvider,
-                TableHandle table,
+                TableAwarePageSourceProvider pageSourceProvider,
                 Iterable<ColumnHandle> columns,
                 DynamicFilter dynamicFilter,
                 AggregatedMemoryContext aggregatedMemoryContext)
         {
             this.session = requireNonNull(session, "session is null");
-            this.pageSourceProvider = requireNonNull(pageSourceProvider, "pageSourceProvider is null");
-            this.table = requireNonNull(table, "table is null");
+            this.pageSourceProvider = requireNonNull(pageSourceProvider, "pageSourceFactory is null");
             this.columns = ImmutableList.copyOf(requireNonNull(columns, "columns is null"));
             this.dynamicFilter = requireNonNull(dynamicFilter, "dynamicFilter is null");
             this.memoryContext = aggregatedMemoryContext.newLocalMemoryContext(TableScanWorkProcessorOperator.class.getSimpleName());
@@ -176,7 +170,7 @@ public class TableScanWorkProcessorOperator
                 source = new EmptyPageSource();
             }
             else {
-                source = pageSourceProvider.createPageSource(session, split, table, columns, dynamicFilter);
+                source = pageSourceProvider.createPageSource(session, split, columns, dynamicFilter);
             }
 
             return TransformationState.ofResult(
@@ -232,13 +226,18 @@ public class TableScanWorkProcessorOperator
 
         void close()
         {
-            if (source != null) {
-                try {
-                    source.close();
+            try {
+                if (source != null) {
+                    try {
+                        source.close();
+                    }
+                    catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
                 }
-                catch (IOException e) {
-                    throw new UncheckedIOException(e);
-                }
+            }
+            finally {
+                pageSourceProvider.close();
             }
         }
     }
