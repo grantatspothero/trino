@@ -103,7 +103,7 @@ public class TestObjectStoreProperties
                           -- ObjectStore property that have, had or may have special handling
                           , ('objectstore.compression_codec', 'DEFAULT', 'DEFAULT', 'varchar')
                           , ('objectstore.parquet_optimized_writer_enabled', 'false', 'false', 'boolean')
-                          , ('objectstore.projection_pushdown_enabled', 'true', 'true', 'boolean')
+                          , ('objectstore.projection_pushdown_enabled', 'null', 'null', 'boolean')
                         """);
     }
 }
