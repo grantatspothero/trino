@@ -627,6 +627,11 @@ public class Analysis
                 .collect(toImmutableList());
     }
 
+    public Collection<QualifiedObjectName> getTableNames()
+    {
+        return tables.values().stream().map(TableEntry::getName).collect(toImmutableList());
+    }
+
     public void registerTable(
             Table table,
             Optional<TableHandle> handle,

@@ -33,5 +33,6 @@ public class ResultsCacheModule
         configBinder(binder).bindConfig(ResultsCacheConfig.class);
         httpClientBinder(binder).bindHttpClient("client", ForResultsCache.class);
         binder.bind(ResultsCacheManager.class).in(SINGLETON);
+        binder.bind(ResultsCacheAnalyzerFactory.class).in(SINGLETON);
     }
 }

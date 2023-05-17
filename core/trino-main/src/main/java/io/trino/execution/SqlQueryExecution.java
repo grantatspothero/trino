@@ -47,6 +47,7 @@ import io.trino.operator.RetryPolicy;
 import io.trino.server.BasicQueryInfo;
 import io.trino.server.DynamicFilterService;
 import io.trino.server.protocol.Slug;
+import io.trino.server.resultscache.ResultsCacheAnalyzerFactory;
 import io.trino.server.resultscache.ResultsCacheParameters;
 import io.trino.server.resultscache.ResultsCacheSessionProperties;
 import io.trino.spi.QueryId;
@@ -177,6 +178,7 @@ public class SqlQueryExecution
             SqlTaskManager coordinatorTaskManager,
             ExchangeManagerRegistry exchangeManagerRegistry,
             EventDrivenTaskSourceFactory eventDrivenTaskSourceFactory,
+            ResultsCacheAnalyzerFactory resultsCacheAnalyzerFactory,
             TaskDescriptorStorage taskDescriptorStorage)
     {
         try (SetThreadName ignored = new SetThreadName("Query-%s", stateMachine.getQueryId())) {
@@ -227,7 +229,8 @@ public class SqlQueryExecution
             this.eventDrivenTaskSourceFactory = requireNonNull(eventDrivenTaskSourceFactory, "taskSourceFactory is null");
             this.taskDescriptorStorage = requireNonNull(taskDescriptorStorage, "taskDescriptorStorage is null");
             this.planOptimizersStatsCollector = requireNonNull(planOptimizersStatsCollector, "planOptimizersStatsCollector is null");
-            this.resultsCacheParameters = createResultsCacheParameters(stateMachine.getSession()).filter(ignore -> isResultSetCacheable(preparedQuery.getStatement(), analysis));
+            this.resultsCacheParameters = createResultsCacheParameters(stateMachine.getSession()).filter(ignore ->
+                    resultsCacheAnalyzerFactory.createResultsCacheAnalyzer(stateMachine.getSession().toSecurityContext()).isStatementCacheable(preparedQuery.getStatement(), analysis));
         }
     }
 
@@ -737,26 +740,6 @@ public class SqlQueryExecution
                                 ResultsCacheSessionProperties.getResultsCacheEntryMaxSizeBytes(session))));
     }
 
-    private static boolean isResultSetCacheable(Statement originalStatement, Analysis analysis)
-    {
-        if (originalStatement instanceof Query) {
-            // TODO filter queries where tables have per-record permissions/record filters https://github.com/starburstdata/stargate/issues/8499
-
-            for (TableHandle tableHandle : analysis.getTables()) {
-                switch (tableHandle.getCatalogHandle().getType()) {
-                    case INFORMATION_SCHEMA:
-                    case SYSTEM:
-                        return false;
-                    case NORMAL:
-                        continue;
-                }
-            }
-
-            return true;
-        }
-        return false;
-    }
-
     private static class PlanRoot
     {
         private final SubPlan root;
@@ -809,6 +792,7 @@ public class SqlQueryExecution
         private final SqlTaskManager coordinatorTaskManager;
         private final ExchangeManagerRegistry exchangeManagerRegistry;
         private final EventDrivenTaskSourceFactory eventDrivenTaskSourceFactory;
+        private final ResultsCacheAnalyzerFactory resultsCacheAnalyzerFactory;
         private final TaskDescriptorStorage taskDescriptorStorage;
 
         @Inject
@@ -840,6 +824,7 @@ public class SqlQueryExecution
                 SqlTaskManager coordinatorTaskManager,
                 ExchangeManagerRegistry exchangeManagerRegistry,
                 EventDrivenTaskSourceFactory eventDrivenTaskSourceFactory,
+                ResultsCacheAnalyzerFactory resultsCacheAnalyzerFactory,
                 TaskDescriptorStorage taskDescriptorStorage)
         {
             this.tracer = requireNonNull(tracer, "tracer is null");
@@ -869,6 +854,7 @@ public class SqlQueryExecution
             this.coordinatorTaskManager = requireNonNull(coordinatorTaskManager, "coordinatorTaskManager is null");
             this.exchangeManagerRegistry = requireNonNull(exchangeManagerRegistry, "exchangeManagerRegistry is null");
             this.eventDrivenTaskSourceFactory = requireNonNull(eventDrivenTaskSourceFactory, "eventDrivenTaskSourceFactory is null");
+            this.resultsCacheAnalyzerFactory = requireNonNull(resultsCacheAnalyzerFactory, "resultsCacheAnalyzerFactory is null");
             this.taskDescriptorStorage = requireNonNull(taskDescriptorStorage, "taskDescriptorStorage is null");
         }
 
@@ -917,6 +903,7 @@ public class SqlQueryExecution
                     coordinatorTaskManager,
                     exchangeManagerRegistry,
                     eventDrivenTaskSourceFactory,
+                    resultsCacheAnalyzerFactory,
                     taskDescriptorStorage);
         }
     }
