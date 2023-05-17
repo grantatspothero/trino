@@ -68,6 +68,8 @@ public class GalaxyCorsFilter
             .add("X-Trino-Set-Session")
             .add("X-Trino-Clear-Session")
             .add("X-Trino-Set-Role")
+            .add("X-Trino-Added-Prepare")
+            .add("X-Trino-Deallocated-Prepare")
             .build();
     private static final String ALLOWED_RESPONSE_HEADERS = String.join(", ", TRINO_RESPONSE_HEADERS);
 
