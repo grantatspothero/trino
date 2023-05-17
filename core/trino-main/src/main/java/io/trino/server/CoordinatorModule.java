@@ -93,6 +93,7 @@ import io.trino.server.protocol.ExecutingStatementResource;
 import io.trino.server.protocol.QueryInfoUrlFactory;
 import io.trino.server.protocol.StatementResponseFilter;
 import io.trino.server.remotetask.RemoteTaskStats;
+import io.trino.server.resultscache.ResultsCacheModule;
 import io.trino.server.ui.WebUiModule;
 import io.trino.server.ui.WorkerResource;
 import io.trino.spi.memory.ClusterMemoryPoolManager;
@@ -323,6 +324,7 @@ public class CoordinatorModule
         executionPolicyBinder.addBinding("all-at-once").to(AllAtOnceExecutionPolicy.class);
         executionPolicyBinder.addBinding("phased").to(PhasedExecutionPolicy.class);
 
+        install(new ResultsCacheModule());
         install(new QueryExecutionFactoryModule());
 
         // cleanup
