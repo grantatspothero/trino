@@ -29,6 +29,7 @@ public class OrcReaderOptions
     private static final boolean DEFAULT_LAZY_READ_SMALL_RANGES = true;
     private static final boolean DEFAULT_NESTED_LAZY = true;
     private static final boolean DEFAULT_NATIVE_ZSTD_DECOMPRESSOR_ENABLED = true;
+    private static final boolean DEFAULT_READ_LEGACY_SHORT_ZONE_ID = false;
 
     private final boolean bloomFiltersEnabled;
 
@@ -40,6 +41,7 @@ public class OrcReaderOptions
     private final boolean lazyReadSmallRanges;
     private final boolean nestedLazy;
     private final boolean nativeZstdDecompressorEnabled;
+    private final boolean readLegacyShortZoneId;
 
     public OrcReaderOptions()
     {
@@ -52,7 +54,8 @@ public class OrcReaderOptions
                 DEFAULT_MAX_BLOCK_SIZE,
                 DEFAULT_LAZY_READ_SMALL_RANGES,
                 DEFAULT_NESTED_LAZY,
-                DEFAULT_NATIVE_ZSTD_DECOMPRESSOR_ENABLED);
+                DEFAULT_NATIVE_ZSTD_DECOMPRESSOR_ENABLED,
+                DEFAULT_READ_LEGACY_SHORT_ZONE_ID);
     }
 
     private OrcReaderOptions(
@@ -64,7 +67,8 @@ public class OrcReaderOptions
             DataSize maxBlockSize,
             boolean lazyReadSmallRanges,
             boolean nestedLazy,
-            boolean nativeZstdDecompressorEnabled)
+            boolean nativeZstdDecompressorEnabled,
+            boolean readLegacyShortZoneId)
     {
         this.maxMergeDistance = requireNonNull(maxMergeDistance, "maxMergeDistance is null");
         this.maxBufferSize = requireNonNull(maxBufferSize, "maxBufferSize is null");
@@ -75,6 +79,7 @@ public class OrcReaderOptions
         this.bloomFiltersEnabled = bloomFiltersEnabled;
         this.nestedLazy = nestedLazy;
         this.nativeZstdDecompressorEnabled = nativeZstdDecompressorEnabled;
+        this.readLegacyShortZoneId = readLegacyShortZoneId;
     }
 
     public boolean isBloomFiltersEnabled()
@@ -120,6 +125,11 @@ public class OrcReaderOptions
     public boolean isNativeZstdDecompressorEnabled()
     {
         return nativeZstdDecompressorEnabled;
+    }
+
+    public boolean isReadLegacyShortZoneId()
+    {
+        return readLegacyShortZoneId;
     }
 
     public OrcReaderOptions withBloomFiltersEnabled(boolean bloomFiltersEnabled)
@@ -189,6 +199,14 @@ public class OrcReaderOptions
                 .build();
     }
 
+    @Deprecated
+    public OrcReaderOptions withReadLegacyShortZoneId(boolean readLegacyShortZoneId)
+    {
+        return new Builder(this)
+                .withReadLegacyShortZoneId(readLegacyShortZoneId)
+                .build();
+    }
+
     private static class Builder
     {
         private boolean bloomFiltersEnabled;
@@ -200,6 +218,7 @@ public class OrcReaderOptions
         private boolean lazyReadSmallRanges;
         private boolean nestedLazy;
         private boolean nativeZstdDecompressorEnabled;
+        private boolean readLegacyShortZoneId;
 
         private Builder(OrcReaderOptions orcReaderOptions)
         {
@@ -213,6 +232,7 @@ public class OrcReaderOptions
             this.lazyReadSmallRanges = orcReaderOptions.lazyReadSmallRanges;
             this.nestedLazy = orcReaderOptions.nestedLazy;
             this.nativeZstdDecompressorEnabled = orcReaderOptions.nativeZstdDecompressorEnabled;
+            this.readLegacyShortZoneId = orcReaderOptions.readLegacyShortZoneId;
         }
 
         public Builder withBloomFiltersEnabled(boolean bloomFiltersEnabled)
@@ -269,6 +289,12 @@ public class OrcReaderOptions
             return this;
         }
 
+        public Builder withReadLegacyShortZoneId(boolean shortZoneIdEnabled)
+        {
+            this.readLegacyShortZoneId = shortZoneIdEnabled;
+            return this;
+        }
+
         private OrcReaderOptions build()
         {
             return new OrcReaderOptions(
@@ -280,7 +306,8 @@ public class OrcReaderOptions
                     maxBlockSize,
                     lazyReadSmallRanges,
                     nestedLazy,
-                    nativeZstdDecompressorEnabled);
+                    nativeZstdDecompressorEnabled,
+                    readLegacyShortZoneId);
         }
     }
 }
