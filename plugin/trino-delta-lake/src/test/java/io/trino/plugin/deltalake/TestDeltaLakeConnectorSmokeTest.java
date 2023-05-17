@@ -19,7 +19,6 @@ import com.google.common.collect.ImmutableSet;
 import io.airlift.json.ObjectMapperProvider;
 import io.airlift.units.Duration;
 import io.trino.plugin.deltalake.transactionlog.writer.S3NativeTransactionLogSynchronizer;
-import io.trino.plugin.hive.ParquetOptimizedWriterEnabled;
 import io.trino.plugin.hive.parquet.ParquetWriterConfig;
 import io.trino.testing.QueryRunner;
 import org.testng.annotations.DataProvider;
@@ -50,7 +49,7 @@ public class TestDeltaLakeConnectorSmokeTest
     protected QueryRunner createDeltaLakeQueryRunner(Map<String, String> connectorProperties)
             throws Exception
     {
-        verify(!new ParquetWriterConfig().getParquetOptimizedWriterEnabled().equals(ParquetOptimizedWriterEnabled.TRUE), "This test assumes the optimized Parquet writer is disabled by default");
+        verify(!new ParquetWriterConfig().isParquetOptimizedWriterEnabled(), "This test assumes the optimized Parquet writer is disabled by default");
         return DeltaLakeQueryRunner.createS3DeltaLakeQueryRunner(
                 DELTA_CATALOG,
                 SCHEMA,

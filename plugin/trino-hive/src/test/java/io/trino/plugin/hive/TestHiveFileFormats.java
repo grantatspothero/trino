@@ -528,7 +528,7 @@ public class TestHiveFileFormats
         ConnectorSession session = getHiveSession(
                 new HiveConfig(),
                 new ParquetWriterConfig()
-                        .setParquetOptimizedWriterEnabled(ParquetOptimizedWriterEnabled.TRUE)
+                        .setParquetOptimizedWriterEnabled(true)
                         .setValidationPercentage(100.0));
         assertTrue(HiveSessionProperties.isParquetOptimizedWriterEnabled(session));
 

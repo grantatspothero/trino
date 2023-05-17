@@ -563,11 +563,10 @@ public final class HiveSessionProperties
                         HiveTimestampPrecision.class,
                         hiveConfig.getTimestampPrecision(),
                         false),
-                enumProperty(
+                booleanProperty(
                         PARQUET_OPTIMIZED_WRITER_ENABLED,
                         "Enable optimized writer",
-                        ParquetOptimizedWriterEnabled.class,
-                        parquetWriterConfig.getParquetOptimizedWriterEnabled(),
+                        parquetWriterConfig.isParquetOptimizedWriterEnabled(),
                         false),
                 durationProperty(
                         DYNAMIC_FILTERING_WAIT_TIMEOUT,
@@ -996,10 +995,7 @@ public final class HiveSessionProperties
 
     public static boolean isParquetOptimizedWriterEnabled(ConnectorSession session)
     {
-        return switch (session.getProperty(PARQUET_OPTIMIZED_WRITER_ENABLED, ParquetOptimizedWriterEnabled.class)) {
-            case TRUE -> true;
-            case FALSE, DEFAULT -> false;
-        };
+        return session.getProperty(PARQUET_OPTIMIZED_WRITER_ENABLED, Boolean.class);
     }
 
     public static Duration getDynamicFilteringWaitTimeout(ConnectorSession session)
