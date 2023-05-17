@@ -20,6 +20,8 @@ import io.starburst.stargate.id.TrinoPlaneId;
 
 import javax.validation.constraints.NotNull;
 
+import java.util.Optional;
+
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -29,6 +31,7 @@ public class MetadataOnlyConfig
     private boolean useKmsCrypto;
     private Duration connectorCacheDuration = new Duration(5, MINUTES);
     private Duration shutdownExitCheckDelay = new Duration(10, SECONDS);
+    private Optional<String> shutdownAuthenticationKey = Optional.empty();
 
     @NotNull
     public TrinoPlaneId getTrinoPlaneId()
@@ -78,6 +81,19 @@ public class MetadataOnlyConfig
     public MetadataOnlyConfig setShutdownExitCheckDelay(Duration shutdownExitCheckDelay)
     {
         this.shutdownExitCheckDelay = shutdownExitCheckDelay;
+        return this;
+    }
+
+    @NotNull
+    public Optional<String> getShutdownAuthenticationKey()
+    {
+        return shutdownAuthenticationKey;
+    }
+
+    @Config("metadata.shutdown.authentication-key")
+    public MetadataOnlyConfig setShutdownAuthenticationKey(String shutdownAuthenticationKey)
+    {
+        this.shutdownAuthenticationKey = Optional.of(shutdownAuthenticationKey);
         return this;
     }
 }

@@ -17,7 +17,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
 import io.airlift.http.client.HttpClient;
+import io.airlift.http.client.HttpStatus;
 import io.airlift.http.client.Request;
+import io.airlift.http.client.StatusResponseHandler.StatusResponse;
 import io.airlift.http.client.jetty.JettyHttpClient;
 import io.airlift.json.JsonCodec;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
@@ -50,6 +52,7 @@ import org.intellij.lang.annotations.Language;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Test;
 
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 
 import java.io.File;
@@ -58,12 +61,15 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static com.google.common.io.MoreFiles.deleteRecursively;
 import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
 import static io.airlift.http.client.JsonBodyGenerator.jsonBodyGenerator;
 import static io.airlift.http.client.JsonResponseHandler.createJsonResponseHandler;
 import static io.airlift.http.client.Request.Builder.preparePost;
+import static io.airlift.http.client.Request.Builder.preparePut;
+import static io.airlift.http.client.StatusResponseHandler.createStatusResponseHandler;
 import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
@@ -85,6 +91,8 @@ public class TestMetadataOnlyQueries
     private static final JsonCodec<QueryResults> QUERY_RESULTS_CODEC = jsonCodec(QueryResults.class);
     private static final CatalogId TPCH_CATALOG_ID = IdType.CATALOG_ID.randomId(CatalogId::new);
     private static final CatalogId HIVE_CATALOG_ID = IdType.CATALOG_ID.randomId(CatalogId::new);
+
+    private final UUID shutdownKey = UUID.randomUUID();
 
     private HttpClient httpClient;
     private File baseDir;
@@ -129,6 +137,8 @@ public class TestMetadataOnlyQueries
                 .addExtraProperty("web-ui.authentication.type", "none")
                 .setHttpAuthenticationType("galaxy-metadata")
                 .addExtraProperty("experimental.concurrent-startup", "true")
+                .addExtraProperty("metadata.shutdown.authentication-key", shutdownKey.toString())
+                .addExtraProperty("metadata.shutdown.exit-delay", "999m")
                 .addPlugin(new TpchPlugin())
                 .addPlugin(new TestingHivePlugin(metastore))
                 .setNodeCount(1)
@@ -188,6 +198,34 @@ public class TestMetadataOnlyQueries
     {
         assertThatThrownBy(() -> queryMetadata("SELECT fail(format('%s is too many', count(*))) FROM tpch.\"sf0.1\".orders"))
                 .hasMessageMatching("\\QQueryError{message=150000 is too many, sqlState=null, errorCode=0, errorName=GENERIC_USER_ERROR, errorType=USER_ERROR, errorLocation=null, failureInfo=io.trino.client.FailureInfo@\\E\\w+\\Q}");
+    }
+
+    // must run last as it will shutdown the server
+    @Test(priority = 99999)
+    public void testShutdown()
+    {
+        DistributedQueryRunner distributedQueryRunner = getDistributedQueryRunner();
+        URI baseUrl = distributedQueryRunner.getCoordinator().getBaseUrl();
+
+        // test with no key provided
+        Request request = preparePut().setUri(baseUrl.resolve("/galaxy/metadata/v1/system/shutdown")).build();
+        StatusResponse response = httpClient.execute(request, createStatusResponseHandler());
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED.code());
+
+        // test with invalid key provided
+        request = preparePut().setHeader(HttpHeaders.AUTHORIZATION, "Bearer thisAintRight").setUri(baseUrl.resolve("/galaxy/metadata/v1/system/shutdown")).build();
+        response = httpClient.execute(request, createStatusResponseHandler());
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED.code());
+
+        // test with invalid key format provided
+        request = preparePut().setHeader(HttpHeaders.AUTHORIZATION, "garbage everywhere should fail").setUri(baseUrl.resolve("/galaxy/metadata/v1/system/shutdown")).build();
+        response = httpClient.execute(request, createStatusResponseHandler());
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED.code());
+
+        // test with correct key provided
+        request = preparePut().setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + shutdownKey).setUri(baseUrl.resolve("/galaxy/metadata/v1/system/shutdown")).build();
+        response = httpClient.execute(request, createStatusResponseHandler());
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT.code());
     }
 
     private AssertProvider<QueryAssert> queryMetadata(@Language("SQL") String statement)
