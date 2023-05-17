@@ -85,6 +85,7 @@ import static io.trino.plugin.iceberg.IcebergUtil.primitiveFieldTypes;
 import static io.trino.plugin.iceberg.TypeConverter.toIcebergType;
 import static io.trino.spi.type.DateTimeEncoding.packDateTimeWithZone;
 import static io.trino.spi.type.TimeZoneKey.UTC_KEY;
+import static java.lang.Math.max;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -154,9 +155,10 @@ public class IcebergSplitSource
     @Override
     public CompletableFuture<ConnectorSplitBatch> getNextBatch(int maxSize)
     {
-        long timeLeft = dynamicFilteringWaitTimeoutMillis - dynamicFilterWaitStopwatch.elapsed(MILLISECONDS);
+        CompletableFuture<?> blocked = dynamicFilter.isBlocked();
+        long timeLeft = max(dynamicFilteringWaitTimeoutMillis, dynamicFilter.getPreferredDynamicFilterTimeout()) - dynamicFilterWaitStopwatch.elapsed(MILLISECONDS);
         if (dynamicFilter.isAwaitable() && timeLeft > 0) {
-            return dynamicFilter.isBlocked()
+            return blocked
                     .thenApply(ignored -> EMPTY_BATCH)
                     .completeOnTimeout(EMPTY_BATCH, timeLeft, MILLISECONDS);
         }
@@ -440,7 +442,7 @@ public class IcebergSplitSource
                 task.deletes().stream()
                         .map(DeleteFile::fromIceberg)
                         .collect(toImmutableList()),
-                SplitWeight.fromProportion(Math.min(Math.max((double) task.length() / tableScan.targetSplitSize(), minimumAssignedSplitWeight), 1.0)));
+                SplitWeight.fromProportion(Math.min(max((double) task.length() / tableScan.targetSplitSize(), minimumAssignedSplitWeight), 1.0)));
     }
 
     private static Domain getPathDomain(TupleDomain<IcebergColumnHandle> effectivePredicate)

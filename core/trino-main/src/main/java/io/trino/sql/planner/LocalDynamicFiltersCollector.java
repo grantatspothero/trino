@@ -209,5 +209,11 @@ public class LocalDynamicFiltersCollector
         {
             return currentPredicate;
         }
+
+        @Override
+        public long getPreferredDynamicFilterTimeout()
+        {
+            return 0;
+        }
     }
 }

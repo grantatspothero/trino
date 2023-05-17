@@ -137,6 +137,12 @@ public class TestKuduIntegrationDynamicFilter
         {
             return TupleDomain.all();
         }
+
+        @Override
+        public long getPreferredDynamicFilterTimeout()
+        {
+            return 0;
+        }
     }
 
     @Test

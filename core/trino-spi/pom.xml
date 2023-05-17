@@ -274,6 +274,11 @@
                                     <code>java.method.finalMethodAddedToNonFinalClass</code>
                                     <new>method int io.trino.spi.type.AbstractIntType::getInt(io.trino.spi.block.Block, int)</new>
                                 </item>
+                                <item>
+                                    <ignore>true</ignore>
+                                    <code>java.method.addedToInterface</code>
+                                    <new>method long io.trino.spi.connector.DynamicFilter::getPreferredDynamicFilterTimeout()</new>
+                                </item>
                             </differences>
                         </revapi.differences>
                     </analysisConfiguration>

@@ -425,6 +425,12 @@ public class TestBackgroundHiveSplitLoader
                     {
                         return TupleDomain.all();
                     }
+
+                    @Override
+                    public long getPreferredDynamicFilterTimeout()
+                    {
+                        return 0;
+                    }
                 },
                 new Duration(1, SECONDS));
         HiveSplitSource hiveSplitSource = hiveSplitSource(backgroundHiveSplitLoader);

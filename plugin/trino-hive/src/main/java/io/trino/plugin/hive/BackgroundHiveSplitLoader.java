@@ -84,6 +84,7 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -297,9 +298,10 @@ public class BackgroundHiveSplitLoader
                 // Block until one of below conditions is met:
                 // 1. Completion of DynamicFilter
                 // 2. Timeout after waiting for the configured time
-                long timeLeft = dynamicFilteringWaitTimeoutMillis - stopwatch.elapsed(MILLISECONDS);
+                CompletableFuture<?> blocked = dynamicFilter.isBlocked();
+                long timeLeft = Math.max(dynamicFilteringWaitTimeoutMillis, dynamicFilter.getPreferredDynamicFilterTimeout()) - stopwatch.elapsed(MILLISECONDS);
                 if (timeLeft > 0 && dynamicFilter.isAwaitable()) {
-                    future = asVoid(toListenableFuture(dynamicFilter.isBlocked()
+                    future = asVoid(toListenableFuture(blocked
                             // As isBlocked() returns unmodifiableFuture, we need to create new future for correct propagation of the timeout
                             .thenApply(Function.identity())
                             .orTimeout(timeLeft, MILLISECONDS)));

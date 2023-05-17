@@ -18,13 +18,16 @@ import io.airlift.configuration.ConfigDescription;
 import io.airlift.configuration.DefunctConfig;
 import io.airlift.configuration.LegacyConfig;
 import io.airlift.units.DataSize;
+import io.airlift.units.Duration;
 import io.airlift.units.MaxDataSize;
+import io.airlift.units.MinDuration;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
 import static io.airlift.units.DataSize.Unit.KILOBYTE;
 import static io.airlift.units.DataSize.Unit.MEGABYTE;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 @DefunctConfig({
         "dynamic-filtering-max-per-driver-row-count",
@@ -41,6 +44,8 @@ public class DynamicFilterConfig
     private boolean enableCoordinatorDynamicFiltersDistribution = true;
     private boolean enableLargeDynamicFilters;
 
+    private Duration smallDynamicFilterWaitTimeout = new Duration(20, SECONDS);
+    private long smallDynamicFilterMaxRowCount = 100_000;
     private int smallBroadcastMaxDistinctValuesPerDriver = 1_000;
     private DataSize smallBroadcastMaxSizePerDriver = DataSize.of(100, KILOBYTE);
     private int smallBroadcastRangeRowLimitPerDriver = 2_000;
@@ -96,6 +101,34 @@ public class DynamicFilterConfig
     public DynamicFilterConfig setEnableLargeDynamicFilters(boolean enableLargeDynamicFilters)
     {
         this.enableLargeDynamicFilters = enableLargeDynamicFilters;
+        return this;
+    }
+
+    @MinDuration("0ms")
+    public Duration getSmallDynamicFilterWaitTimeout()
+    {
+        return smallDynamicFilterWaitTimeout;
+    }
+
+    @Config("small-dynamic-filter.wait-timeout")
+    @ConfigDescription("Maximum time to wait for small dynamic filter before table scan is started")
+    public DynamicFilterConfig setSmallDynamicFilterWaitTimeout(Duration dynamicFilteringWaitTimeout)
+    {
+        this.smallDynamicFilterWaitTimeout = dynamicFilteringWaitTimeout;
+        return this;
+    }
+
+    @Min(0)
+    public long getSmallDynamicFilterMaxRowCount()
+    {
+        return smallDynamicFilterMaxRowCount;
+    }
+
+    @Config("small-dynamic-filter.max-row-count")
+    @ConfigDescription("Maximum number of rows for dynamic filter to be considered small")
+    public DynamicFilterConfig setSmallDynamicFilterMaxRowCount(long smallDynamicFilterMaxRowCount)
+    {
+        this.smallDynamicFilterMaxRowCount = smallDynamicFilterMaxRowCount;
         return this;
     }
 

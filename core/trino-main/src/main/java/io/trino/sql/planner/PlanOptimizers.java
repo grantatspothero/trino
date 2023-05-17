@@ -241,6 +241,7 @@ import io.trino.sql.planner.optimizations.AddLocalExchanges;
 import io.trino.sql.planner.optimizations.BeginTableWrite;
 import io.trino.sql.planner.optimizations.CheckSubqueryNodesAreRewritten;
 import io.trino.sql.planner.optimizations.DeterminePartitionCount;
+import io.trino.sql.planner.optimizations.DeterminePreferredDynamicFilterTimeout;
 import io.trino.sql.planner.optimizations.HashGenerationOptimizer;
 import io.trino.sql.planner.optimizations.IndexJoinOptimizer;
 import io.trino.sql.planner.optimizations.LimitPushDown;
@@ -899,6 +900,7 @@ public class PlanOptimizers
         // to leverage predicate pushdown on projected columns and to pushdown dynamic filters.
         builder.add(new StatsRecordingPlanOptimizer(optimizerStats, new PredicatePushDown(plannerContext, typeAnalyzer, true, true)));
         builder.add(new RemoveUnsupportedDynamicFilters(plannerContext)); // Remove unsupported dynamic filters introduced by PredicatePushdown
+        builder.add(new StatsRecordingPlanOptimizer(optimizerStats, new DeterminePreferredDynamicFilterTimeout(plannerContext, statsCalculator))); // Run after PredicatePushDown
         builder.add(new IterativeOptimizer(
                 plannerContext,
                 ruleStats,
