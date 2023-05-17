@@ -36,6 +36,11 @@
 
         <dependency>
             <groupId>io.airlift</groupId>
+            <artifactId>bootstrap</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.airlift</groupId>
             <artifactId>configuration</artifactId>
         </dependency>
 
@@ -261,5 +266,26 @@
                 </plugins>
             </build>
         </profile>
+        <profile>
+            <id>parallel-integration-tests</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <includes>
+                                <include>**/TestParallelSnowflakeConnectorTest.java</include>
+                                <include>**/TestParallelSnowflakeTypeMapping.java</include>
+                            </includes>
+                            <dependenciesToScan>
+                                <dependency>com.starburstdata.trino.plugins:starburst-snowflake:test-jar</dependency>
+                            </dependenciesToScan>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
     </profiles>
 </project>

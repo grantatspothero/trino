@@ -46,14 +46,12 @@ import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
 import static io.trino.plugin.base.galaxy.RegionVerifier.addCrossRegionAllowed;
 import static io.trino.plugin.base.galaxy.RegionVerifier.addRegionLocalIpAddresses;
 
-public class GalaxySnowflakeModule
+public class GalaxySnowflakeJdbcModule
         extends AbstractConfigurationAwareModule
 {
     @Override
     protected void setup(Binder binder)
     {
-        install(new SnowflakeJdbcClientModule(false));
-
         newOptionalBinder(binder, Key.get(ConnectionFactory.class, ForBaseJdbc.class))
                 .setBinding()
                 .to(Key.get(ConnectionFactory.class, ForSnowflake.class))

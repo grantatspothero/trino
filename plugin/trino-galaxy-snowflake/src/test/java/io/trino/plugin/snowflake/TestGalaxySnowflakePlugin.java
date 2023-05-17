@@ -17,22 +17,15 @@ import io.trino.spi.connector.ConnectorFactory;
 import io.trino.testing.TestingConnectorContext;
 import org.testng.annotations.Test;
 
-import java.util.Iterator;
 import java.util.Map;
-
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertTrue;
+import java.util.stream.StreamSupport;
 
 public class TestGalaxySnowflakePlugin
 {
     @Test
-    public void testCreateConnector()
+    public void testCreateJdbcConnector()
     {
-        Iterator<ConnectorFactory> factories =
-                new GalaxySnowflakePlugin().getConnectorFactories().iterator();
-
-        assertTrue(factories.hasNext(), "Snowflake plugin has a connector factory");
-        factories.next()
+        findFactoryOrFail("snowflake_jdbc")
                 .create(
                         "test",
                         Map.of(
@@ -42,6 +35,29 @@ public class TestGalaxySnowflakePlugin
                                 "snowflake.warehouse", "test"),
                         new TestingConnectorContext())
                 .shutdown();
-        assertFalse(factories.hasNext(), "Snowflake plugin has no more than one connector factory");
+    }
+
+    @Test
+    public void testCreateParallelConnector()
+    {
+        findFactoryOrFail("snowflake_parallel")
+                .create(
+                        "test",
+                        Map.of(
+                                "connection-url", "jdbc:snowflake:test",
+                                "snowflake.role", "test",
+                                "snowflake.database", "test",
+                                "snowflake.warehouse", "test"),
+                        new TestingConnectorContext())
+                .shutdown();
+    }
+
+    private static ConnectorFactory findFactoryOrFail(String name)
+    {
+        Iterable<ConnectorFactory> connectorFactories = new GalaxySnowflakePlugin().getConnectorFactories();
+        return StreamSupport.stream(connectorFactories.spliterator(), false)
+                .filter(f -> name.equals(f.getName()))
+                .findAny()
+                .orElseThrow(() -> new AssertionError("Factory with name '%s' not found".formatted(name)));
     }
 }
