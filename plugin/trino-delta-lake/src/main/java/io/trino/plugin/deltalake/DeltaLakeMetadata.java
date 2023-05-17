@@ -711,7 +711,7 @@ public class DeltaLakeMetadata
         Optional<String> location = DeltaLakeSchemaProperties.getLocation(properties).map(locationUri -> {
             locationAccessControl.checkCanUseLocation(session.getIdentity(), locationUri);
             try {
-                fileSystemFactory.create(session).newInputFile(Location.of(locationUri)).exists();
+                fileSystemFactory.create(session).directoryExists(Location.of(locationUri));
             }
             catch (IOException | IllegalArgumentException e) {
                 throw new TrinoException(INVALID_SCHEMA_PROPERTY, "Invalid location URI: " + locationUri, e);
@@ -2835,10 +2835,6 @@ public class DeltaLakeMetadata
         try {
             LOG.debug("Deleting failed attempt files from %s for query %s", location, queryId);
             TrinoFileSystem fileSystem = fileSystemFactory.create(session);
-            if (!fileSystem.newInputFile(location).exists()) {
-                // directory may not exist if no files were actually written
-                return;
-            }
 
             // files within given partition are written flat into location; we need to list recursively
             FileIterator iterator = fileSystem.listFiles(location);
