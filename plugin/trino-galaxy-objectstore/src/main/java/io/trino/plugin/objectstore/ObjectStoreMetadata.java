@@ -424,11 +424,11 @@ public class ObjectStoreMetadata
     @Override
     public Optional<ConnectorPartitioningHandle> getCommonPartitioningHandle(ConnectorSession session, ConnectorPartitioningHandle left, ConnectorPartitioningHandle right)
     {
-        ConnectorMetadata metadata = delegate(left);
-        if (!isSameConnector(metadata, delegate(right))) {
+        TableType leftType = tableType(left);
+        if (leftType == tableType(right)) {
             return Optional.empty();
         }
-        return metadata.getCommonPartitioningHandle(session, left, right);
+        return delegate(leftType).getCommonPartitioningHandle(session, left, right);
     }
 
     @Override
@@ -446,11 +446,11 @@ public class ObjectStoreMetadata
     @Override
     public ConnectorTableMetadata getTableMetadata(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
-        ConnectorMetadata metadata = delegate(tableHandle);
-        ConnectorTableMetadata tableMetadata = metadata.getTableMetadata(session, tableHandle);
+        TableType tableType = tableType(tableHandle);
+        ConnectorTableMetadata tableMetadata = delegate(tableType).getTableMetadata(session, tableHandle);
         return withProperties(tableMetadata, ImmutableMap.<String, Object>builder()
-                .putAll(wrap(tableType(metadata), tableMetadata.getProperties()))
-                .put("type", tableType(metadata))
+                .putAll(wrap(tableType, tableMetadata.getProperties()))
+                .put("type", tableType)
                 .buildOrThrow());
     }
 
@@ -530,8 +530,7 @@ public class ObjectStoreMetadata
     @Override
     public void createTable(ConnectorSession session, ConnectorTableMetadata tableMetadata, boolean ignoreExisting)
     {
-        ConnectorMetadata metadata = delegate(tableMetadata);
-        TableType tableType = tableType(metadata);
+        TableType tableType = tableType(tableMetadata);
         if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Table creation is not supported for Hudi");
         }
@@ -539,18 +538,18 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "%s tables do not support NOT NULL columns".formatted(tableType.displayName()));
         }
         tableMetadata = unwrap(tableType, tableMetadata);
-        metadata.createTable(session, tableMetadata, ignoreExisting);
+        delegate(tableType).createTable(session, tableMetadata, ignoreExisting);
         flushMetadataCache(session, tableMetadata.getTable());
     }
 
     @Override
     public void dropTable(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
-        ConnectorMetadata metadata = delegate(tableHandle);
-        if (tableType(metadata) == HUDI) {
+        TableType tableType = tableType(tableHandle);
+        if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Dropping Hudi tables is not supported");
         }
-        metadata.dropTable(session, tableHandle);
+        delegate(tableType).dropTable(session, tableHandle);
         flushMetadataCache(session, tableName(tableHandle));
     }
 
@@ -564,11 +563,11 @@ public class ObjectStoreMetadata
     @Override
     public void renameTable(ConnectorSession session, ConnectorTableHandle tableHandle, SchemaTableName newTableName)
     {
-        ConnectorMetadata metadata = delegate(tableHandle);
-        if (tableType(metadata) == HUDI) {
+        TableType tableType = tableType(tableHandle);
+        if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Renaming Hudi tables is not supported");
         }
-        metadata.renameTable(session, tableHandle, newTableName);
+        delegate(tableType).renameTable(session, tableHandle, newTableName);
         flushMetadataCache(session, tableName(tableHandle));
         flushMetadataCache(session, newTableName);
     }
@@ -599,8 +598,7 @@ public class ObjectStoreMetadata
 
     private void migrateTable(ConnectorSession session, ConnectorTableHandle tableHandle, TableType newTableType)
     {
-        ConnectorMetadata metadata = delegate(tableHandle);
-        TableType sourceTableType = tableType(metadata);
+        TableType sourceTableType = tableType(tableHandle);
         if (sourceTableType == HIVE && newTableType == ICEBERG) {
             HiveTableHandle hiveTableHandle = (HiveTableHandle) tableHandle;
             try {
@@ -618,47 +616,45 @@ public class ObjectStoreMetadata
     @Override
     public void setTableComment(ConnectorSession session, ConnectorTableHandle tableHandle, Optional<String> comment)
     {
-        ConnectorMetadata metadata = delegate(tableHandle);
-        if (tableType(metadata) == HUDI) {
+        TableType tableType = tableType(tableHandle);
+        if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Setting comments for Hudi tables is not supported");
         }
-        metadata.setTableComment(session, tableHandle, comment);
+        delegate(tableType).setTableComment(session, tableHandle, comment);
         flushMetadataCache(session, tableName(tableHandle));
     }
 
     @Override
     public void setColumnComment(ConnectorSession session, ConnectorTableHandle tableHandle, ColumnHandle column, Optional<String> comment)
     {
-        ConnectorMetadata metadata = delegate(tableHandle);
-        if (tableType(metadata) == HUDI) {
+        TableType tableType = tableType(tableHandle);
+        if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Setting column comments in Hudi tables is not supported");
         }
-        metadata.setColumnComment(session, tableHandle, column, comment);
+        delegate(tableType).setColumnComment(session, tableHandle, column, comment);
         flushMetadataCache(session, tableName(tableHandle));
     }
 
     @Override
     public void addColumn(ConnectorSession session, ConnectorTableHandle tableHandle, ColumnMetadata column)
     {
-        ConnectorMetadata delegate = delegate(tableHandle);
-        TableType tableType = tableType(delegate);
+        TableType tableType = tableType(tableHandle);
         if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Adding columns to Hudi tables is not supported");
         }
         if ((tableType != ICEBERG) && !column.isNullable()) {
             throw new TrinoException(NOT_SUPPORTED, "%s tables do not support NOT NULL columns".formatted(tableType.displayName()));
         }
-        delegate.addColumn(session, tableHandle, column);
+        delegate(tableType).addColumn(session, tableHandle, column);
         flushMetadataCache(session, tableName(tableHandle));
     }
 
     @Override
     public void setColumnType(ConnectorSession session, ConnectorTableHandle tableHandle, ColumnHandle column, Type type)
     {
-        ConnectorMetadata delegate = delegate(tableHandle);
-        TableType tableType = tableType(delegate);
+        TableType tableType = tableType(tableHandle);
         try {
-            delegate.setColumnType(session, tableHandle, column, type);
+            delegate(tableType).setColumnType(session, tableHandle, column, type);
         }
         catch (TrinoException e) {
             if (isError(e, NOT_SUPPORTED) && "This connector does not support setting column types".equals(e.getMessage())) {
@@ -672,46 +668,45 @@ public class ObjectStoreMetadata
     @Override
     public void renameColumn(ConnectorSession session, ConnectorTableHandle tableHandle, ColumnHandle source, String target)
     {
-        ConnectorMetadata metadata = delegate(tableHandle);
-        if (tableType(metadata) == HUDI) {
+        TableType tableType = tableType(tableHandle);
+        if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Renaming columns in Hudi tables is not supported");
         }
-        metadata.renameColumn(session, tableHandle, source, target);
+        delegate(tableType).renameColumn(session, tableHandle, source, target);
         flushMetadataCache(session, tableName(tableHandle));
     }
 
     @Override
     public void dropColumn(ConnectorSession session, ConnectorTableHandle tableHandle, ColumnHandle column)
     {
-        ConnectorMetadata metadata = delegate(tableHandle);
-        if (tableType(metadata) == HUDI) {
+        TableType tableType = tableType(tableHandle);
+        if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Dropping columns from Hudi tables is not supported");
         }
-        metadata.dropColumn(session, tableHandle, column);
+        delegate(tableType).dropColumn(session, tableHandle, column);
         flushMetadataCache(session, tableName(tableHandle));
     }
 
     @Override
     public void dropField(ConnectorSession session, ConnectorTableHandle tableHandle, ColumnHandle column, List<String> fieldPath)
     {
-        ConnectorMetadata metadata = delegate(tableHandle);
-        TableType tableType = tableType(metadata);
+        TableType tableType = tableType(tableHandle);
         switch (tableType) {
             case HIVE, DELTA, HUDI -> throw new TrinoException(NOT_SUPPORTED, "Dropping fields from %s tables is not supported".formatted(tableType.displayName()));
             default -> {
                 // handled below
             }
         }
-        metadata.dropField(session, tableHandle, column, fieldPath);
+        delegate(tableType).dropField(session, tableHandle, column, fieldPath);
         flushMetadataCache(session, tableName(tableHandle));
     }
 
     @Override
     public Optional<ConnectorTableLayout> getNewTableLayout(ConnectorSession session, ConnectorTableMetadata tableMetadata)
     {
-        ConnectorMetadata metadata = delegate(tableMetadata);
-        tableMetadata = unwrap(tableType(metadata), tableMetadata);
-        return metadata.getNewTableLayout(session, tableMetadata);
+        TableType tableType = tableType(tableMetadata);
+        tableMetadata = unwrap(tableType, tableMetadata);
+        return delegate(tableType).getNewTableLayout(session, tableMetadata);
     }
 
     @Override
@@ -736,9 +731,9 @@ public class ObjectStoreMetadata
     @Override
     public TableStatisticsMetadata getStatisticsCollectionMetadataForWrite(ConnectorSession session, ConnectorTableMetadata tableMetadata)
     {
-        ConnectorMetadata metadata = delegate(tableMetadata);
-        tableMetadata = unwrap(tableType(metadata), tableMetadata);
-        return metadata.getStatisticsCollectionMetadataForWrite(session, tableMetadata);
+        TableType tableType = tableType(tableMetadata);
+        tableMetadata = unwrap(tableType, tableMetadata);
+        return delegate(tableType).getStatisticsCollectionMetadataForWrite(session, tableMetadata);
     }
 
     @Override
@@ -756,13 +751,12 @@ public class ObjectStoreMetadata
     @Override
     public ConnectorOutputTableHandle beginCreateTable(ConnectorSession session, ConnectorTableMetadata tableMetadata, Optional<ConnectorTableLayout> layout, RetryMode retryMode)
     {
-        ConnectorMetadata metadata = delegate(tableMetadata);
-        TableType tableType = tableType(metadata);
+        TableType tableType = tableType(tableMetadata);
         if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Table creation is not supported for Hudi");
         }
         tableMetadata = unwrap(tableType, tableMetadata);
-        return metadata.beginCreateTable(session, tableMetadata, layout, retryMode);
+        return delegate(tableType).beginCreateTable(session, tableMetadata, layout, retryMode);
     }
 
     @Override
@@ -776,11 +770,11 @@ public class ObjectStoreMetadata
     @Override
     public ConnectorInsertTableHandle beginInsert(ConnectorSession session, ConnectorTableHandle tableHandle, List<ColumnHandle> columns, RetryMode retryMode)
     {
-        ConnectorMetadata metadata = delegate(tableHandle);
-        if (tableType(metadata) == HUDI) {
+        TableType tableType = tableType(tableHandle);
+        if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Writes are not supported for Hudi tables");
         }
-        return metadata.beginInsert(session, tableHandle, columns, retryMode);
+        return delegate(tableType).beginInsert(session, tableHandle, columns, retryMode);
     }
 
     @Override
@@ -806,12 +800,11 @@ public class ObjectStoreMetadata
     @Override
     public ColumnHandle getMergeRowIdColumnHandle(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
-        ConnectorMetadata metadata = delegate(tableHandle);
-        return switch (tableType(metadata)) {
-            case HIVE -> metadata.getMergeRowIdColumnHandle(session, tableHandle);
-            case HUDI -> throw new TrinoException(NOT_SUPPORTED, "Writes are not supported for Hudi tables");
-            default -> metadata.getMergeRowIdColumnHandle(session, tableHandle);
-        };
+        TableType tableType = tableType(tableHandle);
+        if (tableType == HUDI) {
+            throw new TrinoException(NOT_SUPPORTED, "Writes are not supported for Hudi tables");
+        }
+        return delegate(tableType).getMergeRowIdColumnHandle(session, tableHandle);
     }
 
     @Override
@@ -992,24 +985,6 @@ public class ObjectStoreMetadata
         }
     }
 
-    @SuppressWarnings("ObjectEquality")
-    private TableType tableType(ConnectorMetadata metadata)
-    {
-        if (metadata == hiveMetadata) {
-            return HIVE;
-        }
-        if (metadata == icebergMetadata) {
-            return ICEBERG;
-        }
-        if (metadata == deltaMetadata) {
-            return DELTA;
-        }
-        if (metadata == hudiMetadata) {
-            return HUDI;
-        }
-        throw new VerifyException("Unknown instance: " + metadata);
-    }
-
     private ConnectorMetadata delegate(TableType tableType)
     {
         return switch (tableType) {
@@ -1020,7 +995,7 @@ public class ObjectStoreMetadata
         };
     }
 
-    private TableType tableType(ConnectorTableHandle handle)
+    private static TableType tableType(ConnectorTableHandle handle)
     {
         if (handle instanceof HiveTableHandle) {
             return HIVE;
@@ -1037,7 +1012,7 @@ public class ObjectStoreMetadata
         throw new VerifyException("Unhandled class: " + handle.getClass().getName());
     }
 
-    private SchemaTableName tableName(ConnectorTableHandle handle)
+    private static SchemaTableName tableName(ConnectorTableHandle handle)
     {
         if (handle instanceof HiveTableHandle hiveTableHandle) {
             return hiveTableHandle.getSchemaTableName();
@@ -1132,23 +1107,23 @@ public class ObjectStoreMetadata
         throw new VerifyException("Unhandled class: " + handle.getClass().getName());
     }
 
-    private ConnectorMetadata delegate(ConnectorPartitioningHandle handle)
+    private static TableType tableType(ConnectorPartitioningHandle handle)
     {
         if (handle instanceof HivePartitioningHandle) {
-            return hiveMetadata;
+            return HIVE;
         }
         if (handle instanceof IcebergPartitioningHandle) {
-            return icebergMetadata;
+            return ICEBERG;
         }
         if (handle instanceof DeltaLakePartitioningHandle) {
-            return deltaMetadata;
+            return DELTA;
         }
         throw new VerifyException("Unhandled class: " + handle.getClass().getName());
     }
 
-    private ConnectorMetadata delegate(ConnectorTableMetadata tableMetadata)
+    private static TableType tableType(ConnectorTableMetadata tableMetadata)
     {
-        return delegate(tableMetadata.getProperties());
+        return (TableType) tableMetadata.getProperties().get("type");
     }
 
     private ConnectorMetadata delegate(Map<String, Object> properties)
@@ -1213,11 +1188,6 @@ public class ObjectStoreMetadata
         catch (IllegalArgumentException e) {
             throw new TrinoException(INVALID_SESSION_PROPERTY, "%s is invalid: %s".formatted(property.getName(), value), e);
         }
-    }
-
-    private static boolean isSameConnector(ConnectorMetadata left, ConnectorMetadata right)
-    {
-        return left.getClass() == right.getClass();
     }
 
     private static boolean isError(TrinoException e, ErrorCodeSupplier... errorCodes)
