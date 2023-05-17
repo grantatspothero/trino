@@ -18,7 +18,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.airlift.concurrent.SetThreadName;
-import io.airlift.log.Logger;
 import io.airlift.slice.Slice;
 import io.airlift.units.Duration;
 import io.opentelemetry.api.trace.Span;
@@ -120,8 +119,6 @@ import static javax.ws.rs.core.Response.Status.FORBIDDEN;
 @Path("/galaxy/metadata/v1/statement")
 public class MetadataOnlyStatementResource
 {
-    private static final Logger log = Logger.get(MetadataOnlyStatementResource.class);
-
     private static final URI INFO_URI = URI.create("info:/");
     private final Duration maxWaitTime;
 
@@ -206,10 +203,7 @@ public class MetadataOnlyStatementResource
             return executeQuery(request.accountId(), transactionId, statement, sessionContext, decryptedCatalogs, request.serviceProperties());
         }
         finally {
-            if ((systemState.decrementAndGetActiveRequests() <= 0) && systemState.isShuttingDown()) {
-                log.info("Shutdown requested and all active requests have completed. Exiting.");
-                System.exit(0);
-            }
+            systemState.decrementAndGetActiveRequests();
         }
     }
 
