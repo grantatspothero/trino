@@ -178,6 +178,14 @@ public abstract class AbstractDistributedEngineOnlyQueries
     }
 
     @Test
+    public void testExplainDynamicFilterInfo()
+    {
+        assertExplain(
+                "EXPLAIN SELECT * FROM nation a, nation b WHERE a.nationkey = b.nationkey",
+                "ScanFilterProject\\[.*, dynamicFilters = \\{\"nationkey\" = #df_\\d+ await}]");
+    }
+
+    @Test
     public void testExplainDistributed()
     {
         assertExplain(
@@ -221,7 +229,8 @@ public abstract class AbstractDistributedEngineOnlyQueries
                         .setSystemProperty(ENABLE_LARGE_DYNAMIC_FILTERS, "true")
                         .build(),
                 "EXPLAIN ANALYZE SELECT * FROM nation a, nation b WHERE a.nationkey = b.nationkey",
-                "Dynamic filters: \n.*ranges=25, \\{\\[0], ..., \\[24]}.* collection time=\\d+.*"));
+                "Dynamic filters: \n.*ranges=25, \\{\\[0], ..., \\[24]}.* collection time=\\d+.*",
+                "ScanFilterProject\\[.*, dynamicFilters = \\{\"nationkey\" = #df_\\d+ await}]"));
     }
 
     @Test

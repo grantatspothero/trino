@@ -11,7 +11,7 @@ remote exchange (GATHER, SINGLE, [])
                                         join (INNER, PARTITIONED):
                                             remote exchange (REPARTITION, HASH, ["ss_addr_sk_11"])
                                                 join (INNER, REPLICATED):
-                                                    dynamic filter (["ss_addr_sk_11", "ss_sold_date_sk_28"])
+                                                    dynamic filter (["ss_addr_sk_11"], await ["ss_sold_date_sk_28"])
                                                         scan store_sales
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])
@@ -27,7 +27,7 @@ remote exchange (GATHER, SINGLE, [])
                                         join (INNER, PARTITIONED):
                                             remote exchange (REPARTITION, HASH, ["ss_addr_sk_89"])
                                                 join (INNER, REPLICATED):
-                                                    dynamic filter (["ss_addr_sk_89", "ss_sold_date_sk_106"])
+                                                    dynamic filter (["ss_addr_sk_89"], await ["ss_sold_date_sk_106"])
                                                         scan store_sales
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])
@@ -48,7 +48,7 @@ remote exchange (GATHER, SINGLE, [])
                                             local exchange (GATHER, SINGLE, [])
                                                 remote exchange (REPARTITION, HASH, ["ws_bill_addr_sk_223"])
                                                     join (INNER, REPLICATED):
-                                                        dynamic filter (["ws_sold_date_sk_250"])
+                                                        dynamic filter (await ["ws_sold_date_sk_250"])
                                                             scan web_sales
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPLICATE, BROADCAST, [])
@@ -64,7 +64,7 @@ remote exchange (GATHER, SINGLE, [])
                                             local exchange (GATHER, SINGLE, [])
                                                 remote exchange (REPARTITION, HASH, ["ws_bill_addr_sk_312"])
                                                     join (INNER, REPLICATED):
-                                                        dynamic filter (["ws_sold_date_sk_339"])
+                                                        dynamic filter (await ["ws_sold_date_sk_339"])
                                                             scan web_sales
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPLICATE, BROADCAST, [])
@@ -77,7 +77,7 @@ remote exchange (GATHER, SINGLE, [])
                                     join (INNER, PARTITIONED):
                                         remote exchange (REPARTITION, HASH, ["ss_addr_sk"])
                                             join (INNER, REPLICATED):
-                                                dynamic filter (["ss_addr_sk", "ss_sold_date_sk"])
+                                                dynamic filter (["ss_addr_sk"], await ["ss_sold_date_sk"])
                                                     scan store_sales
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
@@ -97,7 +97,7 @@ remote exchange (GATHER, SINGLE, [])
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPARTITION, HASH, ["ws_bill_addr_sk"])
                                                 join (INNER, REPLICATED):
-                                                    dynamic filter (["ws_sold_date_sk"])
+                                                    dynamic filter (await ["ws_sold_date_sk"])
                                                         scan web_sales
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])

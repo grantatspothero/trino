@@ -42,6 +42,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -321,12 +322,25 @@ public abstract class BaseCostBasedPlanTest
         {
             DynamicFilters.ExtractResult filters = extractDynamicFilters(node.getPredicate());
             String inputs = filters.getDynamicConjuncts().stream()
+                    .filter(descriptor -> descriptor.getPreferredTimeout().isEmpty())
+                    .map(descriptor -> descriptor.getInput().toString())
+                    .sorted()
+                    .collect(joining(", "));
+            String awaitInputs = filters.getDynamicConjuncts().stream()
+                    .filter(descriptor -> descriptor.getPreferredTimeout().isPresent())
                     .map(descriptor -> descriptor.getInput().toString())
                     .sorted()
                     .collect(joining(", "));
 
-            if (!inputs.isEmpty()) {
-                output(indent, "dynamic filter ([%s])", inputs);
+            if (!inputs.isEmpty() || !awaitInputs.isEmpty()) {
+                List<String> msg = new ArrayList<>();
+                if (!inputs.isEmpty()) {
+                    msg.add("[%s]".formatted(inputs));
+                }
+                if (!awaitInputs.isEmpty()) {
+                    msg.add("await [%s]".formatted(awaitInputs));
+                }
+                output(indent, "dynamic filter (%s)", String.join(", ", msg));
                 indent = indent + 1;
             }
             return visitPlan(node, indent);
