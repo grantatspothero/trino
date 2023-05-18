@@ -31,6 +31,7 @@ import static io.trino.SystemSessionProperties.FILTERING_SEMI_JOIN_TO_INNER;
 import static io.trino.SystemSessionProperties.JOIN_REORDERING_STRATEGY;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.anyTree;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.assignUniqueId;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.exchange;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.expression;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.filter;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.join;
@@ -563,6 +564,119 @@ public abstract class AbstractPredicatePushdownTest
                 WHERE t1.a = 'aa'
                 """,
                 output(values("field", "field_0")));
+    }
+
+    @Test
+    public void testBetweenPredicatePushdown()
+    {
+        Session disableJoinReordering = Session.builder(getQueryRunner().getDefaultSession())
+                .setSystemProperty(JOIN_REORDERING_STRATEGY, "NONE")
+                .build();
+        // join build side, min between value pushed down
+        assertPlan(
+                "SELECT p.name, l.comment FROM lineitem l JOIN part p ON l.partkey = p.partkey WHERE p.name BETWEEN 'f' AND l.comment",
+                disableJoinReordering,
+                output(
+                        join(INNER, builder -> builder
+                                .equiCriteria("l_partkey", "p_partkey")
+                                .filter("name <= CAST(comment AS varchar(55))")
+                                .left(anyTree(tableScan(
+                                        "lineitem",
+                                        ImmutableMap.of("l_partkey", "partkey", "comment", "comment"))))
+                                .right(anyTree(
+                                        filter(
+                                                "name >= CAST('f' AS varchar(55))",
+                                                tableScan(
+                                                        "part",
+                                                        ImmutableMap.of("p_partkey", "partkey", "name", "name"))))))));
+
+        // min between value could be pushed down, but it's not because between value is expensive
+        assertPlan(
+                "SELECT p.name, l.comment FROM lineitem l JOIN part p ON l.partkey = p.partkey WHERE p.name || 'X' BETWEEN 'f' AND l.comment",
+                disableJoinReordering,
+                output(
+                        join(INNER, builder -> builder
+                                .equiCriteria("l_partkey", "p_partkey")
+                                .filter("concat(CAST(name AS varchar), VARCHAR 'X') BETWEEN VARCHAR 'f' AND CAST(comment AS varchar)")
+                                .left(anyTree(
+                                        tableScan(
+                                                "lineitem",
+                                                ImmutableMap.of("l_partkey", "partkey", "comment", "comment"))))
+                                .right(exchange(project(
+                                        tableScan(
+                                                "part",
+                                                ImmutableMap.of("p_partkey", "partkey", "name", "name"))))))));
+
+        // join build side, max between value pushed down
+        assertPlan(
+                "SELECT p.name, l.comment FROM lineitem l JOIN part p ON l.partkey = p.partkey WHERE p.name BETWEEN l.comment AND 'f'",
+                disableJoinReordering,
+                output(
+                        join(INNER, builder -> builder
+                                .equiCriteria("l_partkey", "p_partkey")
+                                .filter("name >= CAST(comment AS varchar(55))")
+                                .left(anyTree(tableScan(
+                                        "lineitem",
+                                        ImmutableMap.of("l_partkey", "partkey", "comment", "comment"))))
+                                .right(anyTree(
+                                        filter(
+                                                "name <= CAST('f' AS varchar(55))",
+                                                tableScan(
+                                                        "part",
+                                                        ImmutableMap.of("p_partkey", "partkey", "name", "name"))))))));
+
+        // join probe side, min between value pushed down
+        assertPlan(
+                "SELECT p.name, l.comment FROM lineitem l JOIN part p ON l.partkey = p.partkey WHERE l.comment BETWEEN 'f' AND p.name",
+                disableJoinReordering,
+                output(
+                        join(INNER, builder -> builder
+                                .equiCriteria("l_partkey", "p_partkey")
+                                .filter("CAST(comment AS varchar(55)) <= name")
+                                .left(anyTree(
+                                        filter(
+                                                "comment >= CAST('f' AS varchar(44))",
+                                                tableScan(
+                                                        "lineitem",
+                                                        ImmutableMap.of("l_partkey", "partkey", "comment", "comment")))))
+                                .right(anyTree(
+                                        tableScan(
+                                                "part",
+                                                ImmutableMap.of("p_partkey", "partkey", "name", "name")))))));
+
+        // join probe side, max between value pushed down
+        assertPlan(
+                "SELECT p.name, l.comment FROM lineitem l JOIN part p ON l.partkey = p.partkey WHERE l.comment BETWEEN p.name AND 'f'",
+                disableJoinReordering,
+                output(
+                        join(INNER, builder -> builder
+                                .equiCriteria("l_partkey", "p_partkey")
+                                .filter("CAST(comment AS varchar(55)) >= name")
+                                .left(anyTree(
+                                        filter(
+                                                "comment <= CAST('f' AS varchar(44))",
+                                                tableScan(
+                                                        "lineitem",
+                                                        ImmutableMap.of("l_partkey", "partkey", "comment", "comment")))))
+                                .right(anyTree(
+                                        tableScan(
+                                                "part",
+                                                ImmutableMap.of("p_partkey", "partkey", "name", "name")))))));
+        // neither side is pushed down
+        assertPlan(
+                "SELECT p.name, l.comment FROM lineitem l JOIN part p ON l.partkey = p.partkey WHERE p.name BETWEEN l.linestatus  AND l.comment",
+                disableJoinReordering,
+                output(
+                        join(INNER, builder -> builder
+                                .equiCriteria("l_partkey", "p_partkey")
+                                .filter("name BETWEEN CAST(linestatus AS varchar(55)) AND CAST(comment AS varchar(55))")
+                                .left(anyTree(tableScan(
+                                        "lineitem",
+                                        ImmutableMap.of("l_partkey", "partkey", "comment", "comment", "linestatus", "linestatus"))))
+                                .right(exchange(project(
+                                        tableScan(
+                                                "part",
+                                                ImmutableMap.of("p_partkey", "partkey", "name", "name"))))))));
     }
 
     private Session noSemiJoinRewrite()

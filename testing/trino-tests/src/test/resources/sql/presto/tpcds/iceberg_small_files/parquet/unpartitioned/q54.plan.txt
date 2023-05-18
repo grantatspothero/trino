@@ -50,7 +50,7 @@ local exchange (GATHER, SINGLE, [])
                                                                 scan store
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])
-                                                            dynamic filter (await ["d_month_seq_17"])
+                                                            dynamic filter (await ["d_month_seq_17", "d_month_seq_17"])
                                                                 scan date_dim
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
