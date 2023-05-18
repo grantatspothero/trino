@@ -139,6 +139,13 @@ public class TestDeltaLakeGcsConnectorSmokeTest
     {
         return ImmutableMap.<String, String>builder()
                 .put("hive.gcs.json-key", gcpCredentials)
+                .buildOrThrow();
+    }
+
+    @Override
+    protected Map<String, String> deltaStorageConfiguration()
+    {
+        return ImmutableMap.<String, String>builder()
                 // TODO why not unique table locations? (This is here since 52bf6680c1b25516f6e8e64f82ada089abc0c9d3.)
                 .put("delta.unique-table-location", "false")
                 .buildOrThrow();
