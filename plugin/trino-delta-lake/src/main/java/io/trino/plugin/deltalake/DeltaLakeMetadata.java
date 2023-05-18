@@ -2782,6 +2782,10 @@ public class DeltaLakeMetadata
             FileIterator iterator = fileSystem.listFiles(location);
             while (iterator.hasNext()) {
                 Location file = iterator.next().location();
+                if (!file.parentDirectory().equals(location)) {
+                    // we do not want recursive listing
+                    continue;
+                }
                 if (isFileCreatedByQuery(file, queryId) && !filesToKeep.contains(file)) {
                     filesToDelete.add(file);
                 }
