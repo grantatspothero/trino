@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.plugin.hive;
+package io.trino.plugin.hive.schemadiscovery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.starburst.schema.discovery.SchemaDiscoveryController;
@@ -27,6 +27,10 @@ import io.trino.hdfs.HdfsContext;
 import io.trino.hdfs.HdfsEnvironment;
 import io.trino.parquet.ParquetReaderOptions;
 import io.trino.plugin.base.classloader.ClassLoaderSafeSystemTable;
+import io.trino.plugin.hive.FileFormatDataSourceStats;
+import io.trino.plugin.hive.HiveMetadata;
+import io.trino.plugin.hive.LocationAccessControl;
+import io.trino.plugin.hive.SystemTableProvider;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.SchemaTableName;
@@ -53,7 +57,7 @@ public class SchemaDiscoverySystemTableProvider
     private final DiscoveryLocationAccessControlAdapter discoveryLocationAccessControlAdapter;
 
     @Inject
-    public SchemaDiscoverySystemTableProvider(HdfsEnvironment hdfsEnvironment, ExecutorService executor, ObjectMapper objectMapper, LocationAccessControl locationAccessControl)
+    public SchemaDiscoverySystemTableProvider(HdfsEnvironment hdfsEnvironment, @ForSchemaDiscovery ExecutorService executor, ObjectMapper objectMapper, LocationAccessControl locationAccessControl)
     {
         this.hdfsEnvironment = requireNonNull(hdfsEnvironment, "hdfsEnvironment is null");
         this.executor = requireNonNull(executor, "executor is null");

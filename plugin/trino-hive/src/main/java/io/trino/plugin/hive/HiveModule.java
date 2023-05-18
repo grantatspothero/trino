@@ -21,6 +21,8 @@ import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
 import com.starburstdata.trino.plugins.dynamicfiltering.DynamicRowFilteringModule;
 import com.starburstdata.trino.plugins.dynamicfiltering.ForDynamicRowFiltering;
+import io.airlift.concurrent.BoundedExecutor;
+import io.airlift.concurrent.ExecutorServiceAdapter;
 import io.airlift.event.client.EventClient;
 import io.trino.hdfs.HdfsNamenodeStats;
 import io.trino.hdfs.TrinoFileSystemCache;
@@ -52,6 +54,9 @@ import io.trino.plugin.hive.parquet.ParquetWriterConfig;
 import io.trino.plugin.hive.rcfile.RcFilePageSourceFactory;
 import io.trino.plugin.hive.s3select.S3SelectRecordCursorProvider;
 import io.trino.plugin.hive.s3select.TrinoS3ClientFactory;
+import io.trino.plugin.hive.schemadiscovery.ForSchemaDiscovery;
+import io.trino.plugin.hive.schemadiscovery.SchemaDiscoveryConfig;
+import io.trino.plugin.hive.schemadiscovery.SchemaDiscoverySystemTableProvider;
 import io.trino.spi.connector.ConnectorNodePartitioningProvider;
 import io.trino.spi.connector.ConnectorPageSinkProvider;
 import io.trino.spi.connector.ConnectorPageSourceProvider;
@@ -82,6 +87,7 @@ public class HiveModule
         configBinder(binder).bindConfig(HiveConfig.class);
         configBinder(binder).bindConfig(HiveMetastoreConfig.class);
         configBinder(binder).bindConfig(SortingFileWriterConfig.class, "hive");
+        configBinder(binder).bindConfig(SchemaDiscoveryConfig.class);
 
         binder.bind(HiveSessionProperties.class).in(Scopes.SINGLETON);
         binder.bind(HiveTableProperties.class).in(Scopes.SINGLETON);
@@ -182,6 +188,14 @@ public class HiveModule
     public ExecutorService createHiveClientExecutor(CatalogName catalogName)
     {
         return newCachedThreadPool(daemonThreadsNamed("hive-" + catalogName + "-%s"));
+    }
+
+    @ForSchemaDiscovery
+    @Singleton
+    @Provides
+    public ExecutorService createSchemaDiscoveryExecutor(ExecutorService executor, SchemaDiscoveryConfig config)
+    {
+        return ExecutorServiceAdapter.from(new BoundedExecutor(executor, config.getExecutorThreadCount()));
     }
 
     @ForHiveTransactionHeartbeats
