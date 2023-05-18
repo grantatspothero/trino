@@ -141,7 +141,7 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     @Override
     protected boolean isFileSorted(String path, String sortColumnName)
     {
-        return checkOrcFileSorting(fileSystemFactory, Location.of(path), sortColumnName);
+        return checkOrcFileSorting(fileSystem, Location.of(path), sortColumnName);
     }
 
     @BeforeMethod(alwaysRun = true)

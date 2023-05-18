@@ -19,7 +19,6 @@ import com.google.common.io.Resources;
 import io.airlift.log.Logger;
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystem;
-import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.filesystem.hdfs.HdfsFileSystemFactory;
 import io.trino.hdfs.ConfigurationInitializer;
 import io.trino.hdfs.DynamicHdfsConfiguration;
@@ -70,7 +69,7 @@ public class TestIcebergGcsConnectorSmokeTest
     private final String schema;
 
     private HiveHadoop hiveHadoop;
-    private TrinoFileSystemFactory fileSystemFactory;
+    private TrinoFileSystem fileSystem;
 
     @Parameters({"testing.gcp-storage-bucket", "testing.gcp-credentials-key"})
     public TestIcebergGcsConnectorSmokeTest(String gcpStorageBucket, String gcpCredentialKey)
@@ -110,7 +109,8 @@ public class TestIcebergGcsConnectorSmokeTest
         ConfigurationInitializer configurationInitializer = new GoogleGcsConfigurationInitializer(gcsConfig);
         HdfsConfigurationInitializer initializer = new HdfsConfigurationInitializer(new HdfsConfig(), ImmutableSet.of(configurationInitializer));
         HdfsConfiguration hdfsConfiguration = new DynamicHdfsConfiguration(initializer, ImmutableSet.of());
-        this.fileSystemFactory = new HdfsFileSystemFactory(new HdfsEnvironment(hdfsConfiguration, new HdfsConfig(), new NoHdfsAuthentication()), new TrinoHdfsFileSystemStats());
+        HdfsEnvironment hdfsEnvironment = new HdfsEnvironment(hdfsConfiguration, new HdfsConfig(), new NoHdfsAuthentication());
+        this.fileSystem = new HdfsFileSystemFactory(hdfsEnvironment, new TrinoHdfsFileSystemStats()).create(SESSION);
 
         return IcebergQueryRunner.builder()
                 .setIcebergProperties(ImmutableMap.<String, String>builder()
@@ -134,7 +134,6 @@ public class TestIcebergGcsConnectorSmokeTest
     public void removeTestData()
     {
         try {
-            TrinoFileSystem fileSystem = fileSystemFactory.create(SESSION);
             fileSystem.deleteDirectory(Location.of(schemaPath()));
         }
         catch (IOException e) {
@@ -172,7 +171,6 @@ public class TestIcebergGcsConnectorSmokeTest
     protected boolean locationExists(String location)
     {
         try {
-            TrinoFileSystem fileSystem = fileSystemFactory.create(SESSION);
             return fileSystem.newInputFile(Location.of(location)).exists();
         }
         catch (IOException e) {
@@ -217,7 +215,6 @@ public class TestIcebergGcsConnectorSmokeTest
     protected void deleteDirectory(String location)
     {
         try {
-            TrinoFileSystem fileSystem = fileSystemFactory.create(SESSION);
             fileSystem.deleteDirectory(Location.of(location));
         }
         catch (IOException e) {
@@ -228,6 +225,6 @@ public class TestIcebergGcsConnectorSmokeTest
     @Override
     protected boolean isFileSorted(Location path, String sortColumnName)
     {
-        return checkOrcFileSorting(fileSystemFactory, path, sortColumnName);
+        return checkOrcFileSorting(fileSystem, path, sortColumnName);
     }
 }

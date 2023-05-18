@@ -15,7 +15,7 @@ package io.trino.plugin.objectstore;
 
 import io.trino.Session;
 import io.trino.filesystem.Location;
-import io.trino.filesystem.TrinoFileSystemFactory;
+import io.trino.filesystem.TrinoFileSystem;
 import io.trino.testing.MaterializedResult;
 import io.trino.testing.TestingConnectorBehavior;
 import io.trino.testing.sql.TestTable;
@@ -378,9 +378,9 @@ public class TestObjectStoreIcebergConnectorTest
                     "(2, 'name2')";
             assertUpdate(withSmallRowGroups, "INSERT INTO " + table.getName() + values, 10);
             assertQuery("SELECT * FROM " + table.getName(), values.trim());
-            TrinoFileSystemFactory fileSystemFactory = getTrinoFileSystemFactory();
+            TrinoFileSystem fileSystem = getTrinoFileSystem();
             for (Object filePath : computeActual("SELECT file_path from \"" + table.getName() + "$files\"").getOnlyColumnAsSet()) {
-                assertTrue(checkOrcFileSorting(fileSystemFactory, Location.of((String) filePath), "name"));
+                assertTrue(checkOrcFileSorting(fileSystem, Location.of((String) filePath), "name"));
             }
         }
     }
