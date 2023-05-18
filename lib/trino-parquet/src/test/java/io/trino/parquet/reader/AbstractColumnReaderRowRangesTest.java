@@ -18,6 +18,7 @@ import io.airlift.slice.Slices;
 import io.trino.parquet.DataPage;
 import io.trino.parquet.DataPageV2;
 import io.trino.parquet.Page;
+import io.trino.parquet.ParquetReaderOptions;
 import io.trino.parquet.PrimitiveField;
 import io.trino.spi.block.Block;
 import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
@@ -73,6 +74,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public abstract class AbstractColumnReaderRowRangesTest
 {
     private static final Random RANDOM = new Random(104729L);
+    private static final Decompressor DECOMPRESSOR = new Decompressor(new ParquetReaderOptions());
 
     @Test(dataProvider = "testRowRangesProvider")
     public void testReadFilteredPage(
@@ -554,7 +556,7 @@ public abstract class AbstractColumnReaderRowRangesTest
                 inputPages.iterator(),
                 dictionaryEncoding == DictionaryEncoding.ALL || (dictionaryEncoding == DictionaryEncoding.MIXED && testingPages.size() == 1),
                 false,
-                true);
+                DECOMPRESSOR);
     }
 
     private static List<Page> createDataPages(List<TestingPage> testingPages, ValuesWriter encoder, int maxDef, boolean required)

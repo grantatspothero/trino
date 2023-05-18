@@ -102,12 +102,13 @@ public abstract class AbstractColumnReaderBenchmark<VALUES>
     public int read()
             throws IOException
     {
+        ParquetReaderOptions readerOptions = new ParquetReaderOptions().withBatchColumnReaders(true);
         ColumnReader columnReader = ColumnReaderFactory.create(
                 field,
                 UTC,
                 newSimpleAggregatedMemoryContext(),
-                new ParquetReaderOptions().withBatchColumnReaders(true));
-        columnReader.setPageReader(new PageReader(UNCOMPRESSED, dataPages.iterator(), false, false, true), Optional.empty());
+                readerOptions);
+        columnReader.setPageReader(new PageReader(UNCOMPRESSED, dataPages.iterator(), false, false, new Decompressor(readerOptions)), Optional.empty());
         int rowsRead = 0;
         while (rowsRead < dataPositions) {
             int remaining = dataPositions - rowsRead;

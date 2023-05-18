@@ -107,9 +107,10 @@ public class TestInt96Timestamp
                 null,
                 false);
         // Read and assert
-        ColumnReader reader = ColumnReaderFactory.create(field, DateTimeZone.UTC, newSimpleAggregatedMemoryContext(), new ParquetReaderOptions().withBatchColumnReaders(true));
+        ParquetReaderOptions options = new ParquetReaderOptions().withBatchColumnReaders(true);
+        ColumnReader reader = ColumnReaderFactory.create(field, DateTimeZone.UTC, newSimpleAggregatedMemoryContext(), options);
         reader.setPageReader(
-                new PageReader(UNCOMPRESSED, List.of(dataPage).iterator(), false, false, true),
+                new PageReader(UNCOMPRESSED, List.of(dataPage).iterator(), false, false, new Decompressor(options)),
                 Optional.empty());
         reader.prepareNextRead(valueCount);
         Block block = reader.readPrimitive().getBlock();

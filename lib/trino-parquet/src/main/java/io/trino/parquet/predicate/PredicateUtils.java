@@ -22,6 +22,7 @@ import io.trino.parquet.BloomFilterStore;
 import io.trino.parquet.DictionaryPage;
 import io.trino.parquet.ParquetDataSource;
 import io.trino.parquet.ParquetEncoding;
+import io.trino.parquet.reader.Decompressor;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.type.DecimalType;
 import io.trino.spi.type.Type;
@@ -49,7 +50,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import static io.trino.parquet.ParquetCompressionUtils.decompress;
 import static io.trino.parquet.ParquetReaderUtils.isOnlyDictionaryEncodingPages;
 import static io.trino.parquet.ParquetTypeUtils.getParquetEncoding;
 import static io.trino.spi.type.BigintType.BIGINT;
@@ -134,7 +134,7 @@ public final class PredicateUtils
             Optional<BloomFilterStore> bloomFilterStore,
             DateTimeZone timeZone,
             int domainCompactionThreshold,
-            boolean isNativeZstdDecompressorEnabled)
+            Decompressor decompressor)
             throws IOException
     {
         if (block.getRowCount() == 0) {
@@ -170,7 +170,7 @@ public final class PredicateUtils
                 descriptorsByPath,
                 ImmutableSet.copyOf(candidateColumns.get()),
                 columnIndexStore,
-                isNativeZstdDecompressorEnabled);
+                decompressor);
     }
 
     private static Map<ColumnDescriptor, Statistics<?>> getStatistics(BlockMetaData blockMetadata, Map<List<String>, ColumnDescriptor> descriptorsByPath)
@@ -207,7 +207,7 @@ public final class PredicateUtils
             Map<List<String>, ColumnDescriptor> descriptorsByPath,
             Set<ColumnDescriptor> candidateColumns,
             Optional<ColumnIndexStore> columnIndexStore,
-            boolean isNativeZstdDecompressorEnabled)
+            Decompressor decompressor)
             throws IOException
     {
         for (ColumnChunkMetaData columnMetaData : blockMetadata.getColumns()) {
@@ -222,7 +222,7 @@ public final class PredicateUtils
                 if (!parquetPredicate.matches(new DictionaryDescriptor(
                         descriptor,
                         nullAllowed,
-                        readDictionaryPage(dataSource, columnMetaData, columnIndexStore, isNativeZstdDecompressorEnabled)))) {
+                        readDictionaryPage(dataSource, columnMetaData, columnIndexStore, decompressor)))) {
                     return false;
                 }
             }
@@ -234,7 +234,7 @@ public final class PredicateUtils
             ParquetDataSource dataSource,
             ColumnChunkMetaData columnMetaData,
             Optional<ColumnIndexStore> columnIndexStore,
-            boolean isNativeZstdDecompressorEnabled)
+            Decompressor decompressor)
             throws IOException
     {
         int dictionaryPageSize;
@@ -258,7 +258,7 @@ public final class PredicateUtils
         }
         // Get the dictionary page header and the dictionary in single read
         Slice buffer = dataSource.readFully(columnMetaData.getStartingPos(), dictionaryPageSize);
-        return readPageHeaderWithData(buffer.getInput()).map(data -> decodeDictionaryPage(data, columnMetaData, isNativeZstdDecompressorEnabled));
+        return readPageHeaderWithData(buffer.getInput()).map(data -> decodeDictionaryPage(data, columnMetaData, decompressor));
     }
 
     private static Optional<Integer> getDictionaryPageSize(ColumnIndexStore columnIndexStore, ColumnChunkMetaData columnMetaData)
@@ -297,7 +297,7 @@ public final class PredicateUtils
                 inputStream.readSlice(pageHeader.getCompressed_page_size())));
     }
 
-    private static DictionaryPage decodeDictionaryPage(PageHeaderWithData pageHeaderWithData, ColumnChunkMetaData chunkMetaData, boolean isNativeZstdDecompressorEnabled)
+    private static DictionaryPage decodeDictionaryPage(PageHeaderWithData pageHeaderWithData, ColumnChunkMetaData chunkMetaData, Decompressor decompressor)
     {
         PageHeader pageHeader = pageHeaderWithData.pageHeader();
         DictionaryPageHeader dicHeader = pageHeader.getDictionary_page_header();
@@ -307,7 +307,7 @@ public final class PredicateUtils
         Slice compressedData = pageHeaderWithData.compressedData();
         try {
             return new DictionaryPage(
-                    decompress(chunkMetaData.getCodec().getParquetCompressionCodec(), compressedData, pageHeader.getUncompressed_page_size(), isNativeZstdDecompressorEnabled),
+                    decompressor.decompress(chunkMetaData.getCodec().getParquetCompressionCodec(), compressedData, pageHeader.getUncompressed_page_size()),
                     dictionarySize,
                     encoding);
         }

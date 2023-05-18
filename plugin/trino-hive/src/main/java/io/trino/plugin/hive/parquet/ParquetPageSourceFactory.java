@@ -28,6 +28,7 @@ import io.trino.parquet.ParquetDataSourceId;
 import io.trino.parquet.ParquetReaderOptions;
 import io.trino.parquet.ParquetWriteValidation;
 import io.trino.parquet.predicate.TupleDomainParquetPredicate;
+import io.trino.parquet.reader.Decompressor;
 import io.trino.parquet.reader.MetadataReader;
 import io.trino.parquet.reader.ParquetReader;
 import io.trino.parquet.reader.TrinoColumnIndexStore;
@@ -92,6 +93,7 @@ import static io.trino.plugin.hive.HivePageSourceProvider.projectSufficientColum
 import static io.trino.plugin.hive.HiveSessionProperties.getParquetMaxReadBlockRowCount;
 import static io.trino.plugin.hive.HiveSessionProperties.getParquetMaxReadBlockSize;
 import static io.trino.plugin.hive.HiveSessionProperties.isParquetIgnoreStatistics;
+import static io.trino.plugin.hive.HiveSessionProperties.isParquetNativeSnappyDecompressorEnabled;
 import static io.trino.plugin.hive.HiveSessionProperties.isParquetNativeZstdDecompressorEnabled;
 import static io.trino.plugin.hive.HiveSessionProperties.isParquetOptimizedNestedReaderEnabled;
 import static io.trino.plugin.hive.HiveSessionProperties.isParquetOptimizedReaderEnabled;
@@ -201,7 +203,8 @@ public class ParquetPageSourceFactory
                         .withBloomFilter(useParquetBloomFilter(session))
                         .withBatchColumnReaders(isParquetOptimizedReaderEnabled(session))
                         .withBatchNestedColumnReaders(isParquetOptimizedNestedReaderEnabled(session))
-                        .withNativeZstdDecompressorEnabled(isParquetNativeZstdDecompressorEnabled(session)),
+                        .withNativeZstdDecompressorEnabled(isParquetNativeZstdDecompressorEnabled(session))
+                        .withNativeSnappyDecompressorEnabled(isParquetNativeSnappyDecompressorEnabled(session)),
                 Optional.empty(),
                 domainCompactionThreshold));
     }
@@ -249,6 +252,7 @@ public class ParquetPageSourceFactory
             ImmutableList.Builder<BlockMetaData> blocks = ImmutableList.builder();
             ImmutableList.Builder<Long> blockStarts = ImmutableList.builder();
             ImmutableList.Builder<Optional<ColumnIndexStore>> columnIndexes = ImmutableList.builder();
+            Decompressor decompressor = new Decompressor(options);
             for (BlockMetaData block : parquetMetadata.getBlocks()) {
                 long firstDataPage = block.getColumns().get(0).getFirstDataPageOffset();
                 Optional<ColumnIndexStore> columnIndex = getColumnIndexStore(dataSource, block, descriptorsByPath, parquetTupleDomain, options);
@@ -265,7 +269,7 @@ public class ParquetPageSourceFactory
                         bloomFilterStore,
                         timeZone,
                         domainCompactionThreshold,
-                        options.isNativeZstdDecompressorEnabled())) {
+                        decompressor)) {
                     blocks.add(block);
                     blockStarts.add(nextStart);
                     columnIndexes.add(columnIndex);

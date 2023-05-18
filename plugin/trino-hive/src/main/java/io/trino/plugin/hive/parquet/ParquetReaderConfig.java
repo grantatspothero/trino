@@ -169,6 +169,19 @@ public class ParquetReaderConfig
         return options.isNativeZstdDecompressorEnabled();
     }
 
+    @Config("parquet.native-snappy-decompressor.enabled")
+    @ConfigDescription("Enable using native snappy library for faster decompression of parquet files")
+    public ParquetReaderConfig setNativeSnappyDecompressorEnabled(boolean nativeSnappyDecompressorEnabled)
+    {
+        options = options.withNativeSnappyDecompressorEnabled(nativeSnappyDecompressorEnabled);
+        return this;
+    }
+
+    public boolean isNativeSnappyDecompressorEnabled()
+    {
+        return options.isNativeSnappyDecompressorEnabled();
+    }
+
     public ParquetReaderOptions toParquetReaderOptions()
     {
         return options;

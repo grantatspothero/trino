@@ -23,6 +23,7 @@ import io.trino.parquet.ParquetDataSource;
 import io.trino.parquet.ParquetDataSourceId;
 import io.trino.parquet.ParquetReaderOptions;
 import io.trino.parquet.predicate.TupleDomainParquetPredicate;
+import io.trino.parquet.reader.Decompressor;
 import io.trino.parquet.reader.MetadataReader;
 import io.trino.parquet.reader.ParquetReader;
 import io.trino.plugin.hive.FileFormatDataSourceStats;
@@ -87,6 +88,7 @@ import static io.trino.plugin.hudi.HudiErrorCode.HUDI_CANNOT_OPEN_SPLIT;
 import static io.trino.plugin.hudi.HudiErrorCode.HUDI_CURSOR_ERROR;
 import static io.trino.plugin.hudi.HudiErrorCode.HUDI_INVALID_PARTITION_VALUE;
 import static io.trino.plugin.hudi.HudiErrorCode.HUDI_UNSUPPORTED_FILE_FORMAT;
+import static io.trino.plugin.hudi.HudiSessionProperties.isParquetNativeSnappyDecompressorEnabled;
 import static io.trino.plugin.hudi.HudiSessionProperties.isParquetNativeZstdDecompressorEnabled;
 import static io.trino.plugin.hudi.HudiSessionProperties.isParquetOptimizedNestedReaderEnabled;
 import static io.trino.plugin.hudi.HudiSessionProperties.isParquetOptimizedReaderEnabled;
@@ -163,7 +165,17 @@ public class HudiPageSourceProvider
                 .collect(Collectors.toList());
         TrinoFileSystem fileSystem = fileSystemFactory.create(session);
         TrinoInputFile inputFile = fileSystem.newInputFile(Location.of(path), split.getFileSize());
-        ConnectorPageSource dataPageSource = createPageSource(session, regularColumns, split, inputFile, dataSourceStats, options, timeZone);
+        ConnectorPageSource dataPageSource = createPageSource(
+                session,
+                regularColumns,
+                split,
+                inputFile,
+                dataSourceStats,
+                options.withBatchColumnReaders(isParquetOptimizedReaderEnabled(session))
+                        .withBatchNestedColumnReaders(isParquetOptimizedNestedReaderEnabled(session))
+                        .withNativeZstdDecompressorEnabled(isParquetNativeZstdDecompressorEnabled(session))
+                        .withNativeSnappyDecompressorEnabled(isParquetNativeSnappyDecompressorEnabled(session)),
+                timeZone);
 
         return new HudiPageSource(
                 toPartitionName(split.getPartitionKeys()),
@@ -211,6 +223,7 @@ public class HudiPageSourceProvider
             ImmutableList.Builder<BlockMetaData> blocks = ImmutableList.builder();
             ImmutableList.Builder<Long> blockStarts = ImmutableList.builder();
             ImmutableList.Builder<Optional<ColumnIndexStore>> columnIndexes = ImmutableList.builder();
+            Decompressor decompressor = new Decompressor(options);
             for (BlockMetaData block : parquetMetadata.getBlocks()) {
                 long firstDataPage = block.getColumns().get(0).getFirstDataPageOffset();
                 Optional<ColumnIndexStore> columnIndex = getColumnIndexStore(dataSource, block, descriptorsByPath, parquetTupleDomain, options);
@@ -225,7 +238,7 @@ public class HudiPageSourceProvider
                                 Optional.empty(),
                                 timeZone,
                                 DOMAIN_COMPACTION_THRESHOLD,
-                                options.isNativeZstdDecompressorEnabled())) {
+                                decompressor)) {
                     blocks.add(block);
                     blockStarts.add(nextStart);
                     columnIndexes.add(columnIndex);
@@ -249,9 +262,7 @@ public class HudiPageSourceProvider
                     finalDataSource,
                     timeZone,
                     newSimpleAggregatedMemoryContext(),
-                    options.withBatchColumnReaders(isParquetOptimizedReaderEnabled(session))
-                            .withBatchNestedColumnReaders(isParquetOptimizedNestedReaderEnabled(session))
-                            .withNativeZstdDecompressorEnabled(isParquetNativeZstdDecompressorEnabled(session)),
+                    options,
                     exception -> handleException(dataSourceId, exception),
                     Optional.of(parquetPredicate),
                     columnIndexes.build(),

@@ -68,6 +68,8 @@ import static org.joda.time.DateTimeZone.UTC;
 
 public abstract class AbstractColumnReaderTest
 {
+    protected static final Decompressor DECOMPRESSOR = new Decompressor(new ParquetReaderOptions());
+
     protected abstract ColumnReader createColumnReader(PrimitiveField field);
 
     @Test(dataProvider = "dictionaryReadersWithPageVersions", dataProviderClass = TestingColumnReader.class)
@@ -698,7 +700,7 @@ public abstract class AbstractColumnReaderTest
                         })
                         .allMatch(encoding -> encoding == PLAIN_DICTIONARY || encoding == RLE_DICTIONARY),
                 hasNoNulls,
-                true);
+                DECOMPRESSOR);
     }
 
     private DataPage createDataPage(DataPageVersion version, ParquetEncoding encoding, ValuesWriter writer, int valueCount)
