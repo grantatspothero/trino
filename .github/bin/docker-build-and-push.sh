@@ -70,6 +70,7 @@ mv ${UNPACK_DIR}/${PREFIX}/{bin,lib} ${WORK_DIR}/${PREFIX}
 PLUGINS="
 bigquery
 blackhole
+druid
 elasticsearch
 exchange-buffer
 exchange-fallbacking-buffer

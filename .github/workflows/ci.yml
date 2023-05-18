@@ -630,6 +630,7 @@ jobs:
             - { modules: plugin/trino-delta-lake }
             - { modules: plugin/trino-delta-lake, profile: cloud-tests }
             - { modules: plugin/trino-delta-lake, profile: fte-tests }
+            - { modules: plugin/trino-druid }
             - { modules: plugin/trino-elasticsearch }
             - { modules: plugin/trino-galaxy-objectstore }
             - { modules: plugin/trino-galaxy-objectstore, profile: iceberg-delta }

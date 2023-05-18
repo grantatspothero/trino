@@ -18,6 +18,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
+import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
 import io.trino.plugin.jdbc.DriverConnectionFactory;
@@ -25,12 +26,21 @@ import io.trino.plugin.jdbc.ForBaseJdbc;
 import io.trino.plugin.jdbc.JdbcClient;
 import io.trino.plugin.jdbc.credential.CredentialProvider;
 import io.trino.plugin.jdbc.ptf.Query;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.ptf.ConnectorTableFunction;
+import io.trino.sshtunnel.SshTunnelConfig;
+import io.trino.sshtunnel.SshTunnelProperties;
 import org.apache.calcite.avatica.remote.Driver;
 
 import java.util.Properties;
 
+import static com.google.common.base.Verify.verify;
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
+import static io.trino.plugin.base.galaxy.RegionVerifier.addCrossRegionAllowed;
+import static io.trino.plugin.base.galaxy.RegionVerifier.addRegionLocalIpAddresses;
+import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
 
 public class DruidJdbcClientModule
         implements Module
@@ -45,13 +55,29 @@ public class DruidJdbcClientModule
     @Provides
     @Singleton
     @ForBaseJdbc
-    public static ConnectionFactory createConnectionFactory(BaseJdbcConfig config, CredentialProvider credentialProvider)
+    public ConnectionFactory createConnectionFactory(
+            CatalogHandle catalogHandle,
+            BaseJdbcConfig config,
+            CredentialProvider credentialProvider,
+            RegionEnforcementConfig regionEnforcementConfig,
+            SshTunnelConfig sshTunnelConfig)
     {
-        Properties connectionProperties = new Properties();
+        Properties galaxyProperties = new Properties();
+
+        addCatalogName(galaxyProperties, catalogHandle.getCatalogName());
+        addCatalogId(galaxyProperties, catalogHandle.getVersion().toString());
+        addRegionLocalIpAddresses(galaxyProperties, regionEnforcementConfig.getAllowedIpAddresses());
+        verify(!regionEnforcementConfig.getAllowCrossRegionAccess(), "Cross-region access not supported");
+        addCrossRegionAllowed(galaxyProperties, regionEnforcementConfig.getAllowCrossRegionAccess());
+
+        // TODO: implement tunneling
+        SshTunnelProperties.generateFrom(sshTunnelConfig)
+                .ifPresent(sshTunnelProperties -> addSshTunnelProperties(galaxyProperties::setProperty, sshTunnelProperties));
+
         return new DriverConnectionFactory(
                 new Driver(),
                 config.getConnectionUrl(),
-                connectionProperties,
+                galaxyProperties,
                 credentialProvider);
     }
 }
