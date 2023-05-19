@@ -53,7 +53,7 @@ import static com.google.common.collect.Streams.forEachPair;
 import static io.trino.plugin.objectstore.FeatureExposure.UNDEFINED;
 import static io.trino.plugin.objectstore.FeatureExposures.procedureExposureDecisions;
 import static io.trino.plugin.objectstore.FeatureExposures.tableProcedureExposureDecisions;
-import static io.trino.plugin.objectstore.Procedures.unwrapSession;
+import static io.trino.plugin.objectstore.MethodHandles.translateArguments;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.verifyPropertyMetadata;
 import static io.trino.spi.connector.ConnectorCapabilities.MATERIALIZED_VIEW_GRACE_PERIOD;
 import static io.trino.spi.connector.ConnectorCapabilities.NOT_NULL_COLUMN_CONSTRAINT;
@@ -176,7 +176,15 @@ public class ObjectStoreConnector
                     case HIDDEN -> { /* skipped */ }
                     case UNDEFINED -> throw new IllegalStateException("Unknown procedure provided by %s: %s".formatted(type, name));
                     case EXPOSED -> {
-                        Procedure existing = procedures.putIfAbsent(name, unwrapSession(sessionProperties, type, procedure));
+                        Procedure boundProcedure = translateArguments(procedure.getMethodHandle(), ConnectorSession.class, session -> sessionProperties.unwrap(type, session))
+                                .map(methodHandle -> new Procedure(
+                                        procedure.getSchema(),
+                                        procedure.getName(),
+                                        procedure.getArguments(),
+                                        methodHandle,
+                                        procedure.requiresNamedArguments()))
+                                .orElse(procedure);
+                        Procedure existing = procedures.putIfAbsent(name, boundProcedure);
                         if (existing != null) {
                             throw new VerifyException("Duplicate procedure: " + name);
                         }
