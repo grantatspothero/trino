@@ -43,8 +43,8 @@ import java.util.Properties;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionAllowed;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addRegionLocalIpAddresses;
+import static io.trino.plugin.base.galaxy.RegionVerifier.addCrossRegionAllowed;
+import static io.trino.plugin.base.galaxy.RegionVerifier.addRegionLocalIpAddresses;
 
 public class GalaxySnowflakeModule
         extends AbstractConfigurationAwareModule

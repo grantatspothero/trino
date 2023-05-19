@@ -34,8 +34,8 @@ import java.util.Properties;
 
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionAllowed;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addRegionLocalIpAddresses;
+import static io.trino.plugin.base.galaxy.RegionVerifier.addCrossRegionAllowed;
+import static io.trino.plugin.base.galaxy.RegionVerifier.addRegionLocalIpAddresses;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
 import static org.postgresql.PGProperty.REWRITE_BATCHED_INSERTS;
 

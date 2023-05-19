@@ -13,11 +13,6 @@
  */
 package io.trino.plugin.base.galaxy;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import com.google.common.net.HostAndPort;
 import io.trino.sshtunnel.SshTunnelManager;
 import io.trino.sshtunnel.SshTunnelManager.Tunnel;
@@ -36,17 +31,12 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.security.NoSuchAlgorithmException;
-import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.net.InetAddresses.toAddrString;
-import static io.trino.collect.cache.SafeCaches.buildNonEvictableCache;
 import static io.trino.plugin.base.galaxy.InetAddresses.asInetSocketAddress;
 import static io.trino.plugin.base.galaxy.InetAddresses.toInetAddresses;
 import static io.trino.spi.galaxy.CatalogNetworkMonitor.getCatalogNetworkMonitor;
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 public class GalaxySqlSocketFactory
@@ -54,35 +44,27 @@ public class GalaxySqlSocketFactory
 {
     private static final String CATALOG_NAME_PROPERTY_NAME = "catalogName";
     private static final String CATALOG_ID_PROPERTY_NAME = "catalogId";
-    private static final String CROSS_REGION_ALLOWED_PROPERTY_NAME = "crossRegionAllowed";
-    private static final String REGION_LOCAL_IP_ADDRESSES_PROPERTY_NAME = "regionLocalIpAddresses";
     // tlsEnabled is only needed for the mongo socket factory currently
     // JDBC drivers wrap the socket in an SSLSocket if necessary
     private static final String TLS_ENABLED_PROPERTY_NAME = "tlsEnabled";
 
-    // Use static caches to retain state because socket factories are unfortunately recreated for each socket
-    private static final LoadingCache<List<String>, IpRangeMatcher> IP_RANGE_MATCHER_CACHE =
-            buildNonEvictableCache(CacheBuilder.newBuilder(), CacheLoader.from(IpRangeMatcher::create));
-
     private final String catalogName;
     private final String catalogId;
-    private final boolean crossRegionAllowed;
-    private final IpRangeMatcher ipRangeMatcher;
     private final Optional<SshTunnelManager> sshTunnelManager;
     private final boolean tlsEnabled;
+    private final RegionVerifier regionVerifier;
 
     public GalaxySqlSocketFactory(Properties properties)
     {
         requireNonNull(properties, "properties is null");
         catalogName = getCatalogName(properties);
         catalogId = getCatalogId(properties);
-        crossRegionAllowed = isCrossRegionAllowed(properties);
-        ipRangeMatcher = IP_RANGE_MATCHER_CACHE.getUnchecked(getRegionLocalIpAddresses(properties));
         sshTunnelManager = getSshTunnelProperties(properties)
                 .map(SshTunnelManager::getCached);
         tlsEnabled = getOptionalProperty(properties, TLS_ENABLED_PROPERTY_NAME)
                 .map(Boolean::parseBoolean)
                 .orElse(false);
+        regionVerifier = new RegionVerifier(properties);
     }
 
     private SSLSocket createSSLSocket()
@@ -97,10 +79,9 @@ public class GalaxySqlSocketFactory
 
     class SocketWrapperAndVerifier
     {
-        private boolean crossRegionAddress;
+        private boolean isCrossRegion;
 
         public SocketAddress redirectAddress(SocketAddress socketAddress)
-                throws IOException
         {
             InetSocketAddress inetSocketAddress = asInetSocketAddress(socketAddress);
 
@@ -108,43 +89,24 @@ public class GalaxySqlSocketFactory
                 SshTunnelManager tunnelManager = sshTunnelManager.get();
                 Tunnel tunnel = tunnelManager.getOrCreateTunnel(HostAndPort.fromParts(inetSocketAddress.getHostString(), inetSocketAddress.getPort()));
                 // Verify that the SSH server will be within the region-local IP ranges (because it will be our first network hop)
-                verifyRegionLocalIps("SSH tunnel server", toInetAddresses(tunnelManager.getSshServer().getHost()));
+                isCrossRegion = regionVerifier.isCrossRegionAccess("SSH tunnel server", toInetAddresses(tunnelManager.getSshServer().getHost()));
                 return new InetSocketAddress("127.0.0.1", tunnel.getLocalTunnelPort());
             }
 
-            verifyRegionLocalIp("Database server", extractInetAddress(inetSocketAddress));
+            isCrossRegion = regionVerifier.isCrossRegionAccess("Database server", inetSocketAddress);
             return inetSocketAddress;
         }
 
         public InputStream getInputStream(InputStream inputStream)
                 throws IOException
         {
-            return getCatalogNetworkMonitor(catalogName, catalogId).monitorInputStream(crossRegionAddress, inputStream);
+            return getCatalogNetworkMonitor(catalogName, catalogId).monitorInputStream(isCrossRegion, inputStream);
         }
 
         public OutputStream getOutputStream(OutputStream outputStream)
                 throws IOException
         {
-            return getCatalogNetworkMonitor(catalogName, catalogId).monitorOutputStream(crossRegionAddress, outputStream);
-        }
-
-        private void verifyRegionLocalIps(String serverType, List<InetAddress> addresses)
-                throws IOException
-        {
-            for (InetAddress inetAddress : addresses) {
-                verifyRegionLocalIp(serverType, inetAddress);
-            }
-        }
-
-        private void verifyRegionLocalIp(String serverType, InetAddress inetAddress)
-                throws IOException
-        {
-            if (!ipRangeMatcher.matches(inetAddress)) {
-                if (!crossRegionAllowed) {
-                    throw new IOException(format("%s %s is not in an allowed region", serverType, toAddrString(inetAddress)));
-                }
-                crossRegionAddress = true;
-            }
+            return getCatalogNetworkMonitor(catalogName, catalogId).monitorOutputStream(isCrossRegion, outputStream);
         }
     }
 
@@ -204,26 +166,6 @@ public class GalaxySqlSocketFactory
         return getRequiredProperty(properties, CATALOG_ID_PROPERTY_NAME);
     }
 
-    public static void addCrossRegionAllowed(Properties properties, boolean crossRegionAllowed)
-    {
-        properties.setProperty(CROSS_REGION_ALLOWED_PROPERTY_NAME, Boolean.toString(crossRegionAllowed));
-    }
-
-    private static boolean isCrossRegionAllowed(Properties properties)
-    {
-        return Boolean.parseBoolean(getRequiredProperty(properties, CROSS_REGION_ALLOWED_PROPERTY_NAME));
-    }
-
-    public static void addRegionLocalIpAddresses(Properties properties, List<String> regionLocalIpAddresses)
-    {
-        properties.setProperty(REGION_LOCAL_IP_ADDRESSES_PROPERTY_NAME, Joiner.on(",").join(regionLocalIpAddresses));
-    }
-
-    private static List<String> getRegionLocalIpAddresses(Properties properties)
-    {
-        return Splitter.on(',').splitToList(getRequiredProperty(properties, REGION_LOCAL_IP_ADDRESSES_PROPERTY_NAME));
-    }
-
     public static void addTlsEnabled(Properties properties)
     {
         properties.setProperty(TLS_ENABLED_PROPERTY_NAME, "true");
@@ -243,11 +185,5 @@ public class GalaxySqlSocketFactory
     private static Optional<String> getOptionalProperty(Properties properties, String propertyName)
     {
         return Optional.ofNullable(properties.getProperty(propertyName));
-    }
-
-    private static InetAddress extractInetAddress(InetSocketAddress socketAddress)
-    {
-        checkArgument(!socketAddress.isUnresolved(), "IP address should already be resolved");
-        return socketAddress.getAddress();
     }
 }

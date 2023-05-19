@@ -500,7 +500,6 @@ public class RedirectingSSLSocket
     }
 
     private SocketAddress redirectSocketAddress(SocketAddress socketAddress)
-            throws IOException
     {
         return socketWrapper.redirectAddress(socketAddress);
     }
