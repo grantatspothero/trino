@@ -87,6 +87,7 @@ hive
 iceberg
 mariadb
 memory
+memory-cache
 mongodb
 ml
 mysql
