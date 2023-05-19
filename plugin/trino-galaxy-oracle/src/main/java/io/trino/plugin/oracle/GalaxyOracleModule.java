@@ -19,17 +19,17 @@ import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.starburstdata.presto.license.LicenseManager;
-import com.starburstdata.trino.plugins.oracle.OraclePoolingConnectionFactory;
 import com.starburstdata.trino.plugins.oracle.StarburstOracleClientModule;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
-import io.trino.plugin.jdbc.DriverConnectionFactory;
 import io.trino.plugin.jdbc.ForBaseJdbc;
 import io.trino.plugin.jdbc.credential.CredentialProvider;
-import io.trino.spi.connector.CatalogHandle;
+import io.trino.sshtunnel.SshTunnelConfig;
+import io.trino.sshtunnel.SshTunnelProperties;
+import io.trino.sshtunnel.SshTunnelPropertiesMapper;
 import oracle.jdbc.driver.OracleDriver;
 
 import javax.inject.Qualifier;
@@ -42,10 +42,11 @@ import java.lang.annotation.Target;
 import java.util.Optional;
 import java.util.Properties;
 
+import static com.google.common.base.Verify.verify;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static com.starburstdata.trino.plugins.oracle.StarburstOracleClientModule.getConnectionProperties;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
+import static io.trino.plugin.base.galaxy.RegionVerifier.addCrossRegionAllowed;
+import static io.trino.plugin.base.galaxy.RegionVerifier.addRegionLocalIpAddresses;
 
 public class GalaxyOracleModule
         extends AbstractConfigurationAwareModule
@@ -75,20 +76,25 @@ public class GalaxyOracleModule
     @Singleton
     @ForOracle
     public static ConnectionFactory createConnectionFactory(
-            CatalogHandle catalogHandle,
             CatalogName catalogName,
             BaseJdbcConfig config,
             CredentialProvider credentialProvider,
             OracleConfig oracleConfig,
-            RegionEnforcementConfig regionEnforcementConfig)
+            RegionEnforcementConfig regionEnforcementConfig,
+            SshTunnelConfig sshTunnelConfig)
     {
         Properties properties = getConnectionProperties(oracleConfig);
-        // TODO: add region enforcement and SSH tunneling support
-        addCatalogName(properties, catalogHandle.getCatalogName());
-        addCatalogId(properties, catalogHandle.getVersion().toString());
+
+        // TODO: implement the catalog network monitor for cross-region support
+        verify(!regionEnforcementConfig.getAllowCrossRegionAccess(), "Cross-region access not supported");
+        addCrossRegionAllowed(properties, regionEnforcementConfig.getAllowCrossRegionAccess());
+
+        addRegionLocalIpAddresses(properties, regionEnforcementConfig.getAllowedIpAddresses());
+        SshTunnelProperties.generateFrom(sshTunnelConfig)
+                .ifPresent(sshTunnelProperties -> SshTunnelPropertiesMapper.addSshTunnelProperties(properties::setProperty, sshTunnelProperties));
 
         if (oracleConfig.isConnectionPoolEnabled()) {
-            return new OraclePoolingConnectionFactory(
+            return new GalaxyOraclePoolingConnectionFactory(
                     catalogName,
                     config,
                     properties,
@@ -96,7 +102,7 @@ public class GalaxyOracleModule
                     oracleConfig);
         }
 
-        return new DriverConnectionFactory(
+        return new GalaxyOracleDriverConnectionFactory(
                 new OracleDriver(),
                 config.getConnectionUrl(),
                 properties,
