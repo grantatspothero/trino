@@ -15,13 +15,9 @@ package io.trino.plugin.objectstore;
 
 import com.google.common.base.Stopwatch;
 import io.trino.Session;
-import io.trino.testing.DataProviders;
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
-import java.util.Arrays;
-import java.util.Iterator;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -148,17 +144,7 @@ public class TestObjectStoreDeltaS3
         assertUpdate("DROP TABLE " + tableName);
     }
 
-    @DataProvider
-    public Iterator<Object[]> locationPatternsDataProviderForVacuum()
-    {
-        //Vacuum with trailing slash is known bug in trino: https://github.com/trinodb/trino/issues/17634
-        // remove this filter when fixed
-        return Arrays.stream(locationPatternsDataProvider())
-                .filter(locationPattern -> !locationPattern[1].equals("s3://%s/galaxy/trailing_slash/%s/"))
-                .iterator();
-    }
-
-    @Test(dataProvider = "locationPatternsDataProviderForVacuum")
+    @Test(dataProvider = "locationPatternsDataProvider")
     public void testVacuum(boolean partitioned, String locationPattern)
             throws Exception
     {
@@ -199,25 +185,6 @@ public class TestObjectStoreDeltaS3
             assertThat(getActiveFiles(tableName)).isEqualTo(updatedFiles);
             // old files should be cleaned up
             assertThat(getAllDataFilesFromTableDirectory(tableLocation)).isEqualTo(updatedFiles);
-        }
-        finally {
-            assertUpdate("DROP TABLE " + tableName);
-        }
-    }
-
-    @Test(dataProviderClass = DataProviders.class, dataProvider = "trueFalse")
-    public void testVacuumFailingWhenLocationWithTrailingSlash(boolean partitioned)
-    {
-        String tableName = "test_vacuum_" + randomNameSuffix();
-        String tableLocation = "s3://%s/galaxy/trailing_slash/%s/".formatted(bucketName, tableName);
-        String partitionQueryPart = (partitioned ? ",partitioned_by = ARRAY['regionkey']" : "");
-
-        assertUpdate("CREATE TABLE " + tableName +
-                " WITH (location = '" + tableLocation + "'" + partitionQueryPart + ")" +
-                " AS SELECT * FROM tpch.tiny.nation", 25);
-        try {
-            assertThatThrownBy(() -> assertUpdate("CALL system.vacuum(schema_name => CURRENT_SCHEMA, table_name => '" + tableName + "', retention => '10d')"))
-                    .hasMessageMatching("Failure when vacuuming.*Unexpected path.*");
         }
         finally {
             assertUpdate("DROP TABLE " + tableName);
