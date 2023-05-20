@@ -14,6 +14,7 @@
 package io.trino.plugin.hive.schemadiscovery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import io.starburst.schema.discovery.SchemaDiscoveryController;
 import io.starburst.schema.discovery.formats.orc.CopiedHdfsOrcDataSource;
 import io.starburst.schema.discovery.formats.orc.OrcDataSourceFactory;
@@ -96,7 +97,9 @@ public class SchemaDiscoverySystemTableProvider
                 return new DiscoveryFileSystem(hdfsEnvironment.getFileSystem(hdfsContext, new Path(uri)));
             }
             catch (IOException e) {
-                throw new TrinoException(INVALID_ARGUMENTS, "Invalid uri: " + uri, e);
+                String rootErrorMessage = Throwables.getRootCause(e).getMessage();
+                String finalMessage = e.getMessage().equals(rootErrorMessage) ? rootErrorMessage : "%s, reason: %s".formatted(e.getMessage(), rootErrorMessage);
+                throw new TrinoException(INVALID_ARGUMENTS, "Failure for URI: %s, caused by: %s".formatted(uri, finalMessage), e);
             }
         };
         OrcDataSourceFactory orcDataSourceFactory = (id, size, options, inputStream) -> new CopiedHdfsOrcDataSource(id, size, options, inputStream, new FileFormatDataSourceStats());
