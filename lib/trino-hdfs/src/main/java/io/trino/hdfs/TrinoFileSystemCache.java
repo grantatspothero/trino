@@ -390,7 +390,7 @@ public class TrinoFileSystemCache
         public RemoteIterator<LocatedFileStatus> listFiles(Path path, boolean recursive)
                 throws IOException
         {
-            return fs.listFiles(path, recursive);
+            return new RemoteIteratorWrapper(fs.listFiles(path, recursive), this);
         }
     }
 
@@ -429,6 +429,34 @@ public class TrinoFileSystemCache
         public InputStream getWrappedStream()
         {
             return ((FSDataInputStream) super.getWrappedStream()).getWrappedStream();
+        }
+    }
+
+    private static class RemoteIteratorWrapper
+            implements RemoteIterator<LocatedFileStatus>
+    {
+        private final RemoteIterator<LocatedFileStatus> delegate;
+        @SuppressWarnings({"FieldCanBeLocal", "unused"})
+        private final FileSystem fileSystem;
+
+        public RemoteIteratorWrapper(RemoteIterator<LocatedFileStatus> delegate, FileSystem fileSystem)
+        {
+            this.delegate = delegate;
+            this.fileSystem = fileSystem;
+        }
+
+        @Override
+        public boolean hasNext()
+                throws IOException
+        {
+            return delegate.hasNext();
+        }
+
+        @Override
+        public LocatedFileStatus next()
+                throws IOException
+        {
+            return delegate.next();
         }
     }
 
