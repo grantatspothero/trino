@@ -22,7 +22,6 @@ import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.collect.ImmutableMap;
 import io.trino.testing.containers.Minio;
-import org.testcontainers.containers.Network;
 
 import java.io.Closeable;
 import java.util.List;
@@ -30,7 +29,6 @@ import java.util.Map;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
-import static org.testcontainers.containers.Network.newNetwork;
 
 public class MinioStorage
         implements Closeable
@@ -39,16 +37,13 @@ public class MinioStorage
     public static final String SECRET_KEY = "secretkey";
 
     private final String bucketName;
-    private final Network network;
     private final Minio minio;
     private AmazonS3 s3;
 
     public MinioStorage(String bucketName)
     {
         this.bucketName = requireNonNull(bucketName, "bucketName is null");
-        this.network = newNetwork();
         this.minio = Minio.builder()
-                .withNetwork(network)
                 .withEnvVars(ImmutableMap.<String, String>builder()
                         .put("MINIO_ACCESS_KEY", ACCESS_KEY)
                         .put("MINIO_SECRET_KEY", SECRET_KEY)
@@ -73,7 +68,7 @@ public class MinioStorage
     @Override
     public void close()
     {
-        try (network; minio) {
+        try (minio) {
         }
     }
 
