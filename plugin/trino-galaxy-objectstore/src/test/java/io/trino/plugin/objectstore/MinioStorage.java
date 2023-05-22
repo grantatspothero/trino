@@ -64,11 +64,11 @@ public class MinioStorage
         s3.createBucket(bucketName);
     }
 
-    @SuppressWarnings({"EmptyTryBlock", "checkstyle:EmptyBlock"})
     @Override
     public void close()
     {
         try (minio) {
+            s3.shutdown();
         }
     }
 
