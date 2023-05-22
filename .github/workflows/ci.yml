@@ -631,6 +631,7 @@ jobs:
             - { modules: plugin/trino-elasticsearch }
             - { modules: plugin/trino-galaxy-objectstore }
             - { modules: plugin/trino-galaxy-objectstore, profile: iceberg-delta }
+            - { modules: plugin/trino-galaxy-objectstore, profile: s3-tests }
             - { modules: plugin/trino-galaxy-oracle }
             - { modules: plugin/trino-galaxy-warp-speed }
             - { modules: plugin/trino-galaxy-warp-speed, profile: iceberg-delta }
@@ -715,8 +716,21 @@ jobs:
           && ! (contains(matrix.modules, 'trino-redshift') && contains(matrix.profile, 'default'))
           && ! (contains(matrix.modules, 'trino-redshift') && contains(matrix.profile, 'cloud-tests'))
           && ! (contains(matrix.modules, 'trino-redshift') && contains(matrix.profile, 'fte-tests'))
+          && ! (contains(matrix.modules, 'trino-galaxy-objectstore') && contains(matrix.profile, 's3-tests'))
         run: $MAVEN test ${MAVEN_TEST} -pl ${{ matrix.modules }} ${{ matrix.profile != '' && format('-P {0}', matrix.profile) || '' }}
       # Additional tests for selected modules
+      - name: S3 Object Store Tests
+        # Cloud tests are separate because they are time intensive, requiring cross-cloud network communication
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.GALAXY_TRINO_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.GALAXY_TRINO_AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-2
+        # Run tests if any of the secrets is present. Do not skip tests when one secret renamed, or secret name has a typo.
+        if: >-
+          contains(matrix.modules, 'trino-galaxy-objectstore') && contains(matrix.profile, 's3-tests') &&
+          (env.AWS_ACCESS_KEY_ID != '' || env.AWS_SECRET_ACCESS_KEY != '')
+        run: |
+          $MAVEN test ${MAVEN_TEST} ${{ format('-P {0}', matrix.profile) }} -pl :trino-galaxy-objectstore
       - name: Cloud Delta Lake Tests
       # Cloud tests are separate because they are time intensive, requiring cross-cloud network communication
         env:
