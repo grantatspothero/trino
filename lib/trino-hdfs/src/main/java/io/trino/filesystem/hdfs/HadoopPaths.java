@@ -13,12 +13,13 @@
  */
 package io.trino.filesystem.hdfs;
 
-import com.google.common.base.VerifyException;
 import io.trino.filesystem.Location;
 import org.apache.hadoop.fs.Path;
 
 import java.net.URI;
-import java.net.URISyntaxException;
+import java.net.URLEncoder;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public final class HadoopPaths
 {
@@ -30,22 +31,12 @@ public final class HadoopPaths
         String path = location.toString();
         Path hadoopPath = new Path(path);
         if ("s3".equals(hadoopPath.toUri().getScheme()) && !path.equals(hadoopPath.toString())) {
-            return new Path(toPathEncodedUri(location));
+            if (hadoopPath.toUri().getFragment() != null) {
+                throw new IllegalArgumentException("Unexpected URI fragment in path: " + path);
+            }
+            URI uri = URI.create(path);
+            return new Path(uri + "#" + URLEncoder.encode(uri.getPath(), UTF_8));
         }
         return hadoopPath;
-    }
-
-    private static URI toPathEncodedUri(Location location)
-    {
-        try {
-            return new URI(
-                    location.scheme().orElse(null),
-                    location.host().orElse(null),
-                    "/" + location.path(),
-                    location.path());
-        }
-        catch (URISyntaxException e) {
-            throw new VerifyException("Failed to convert location to URI: " + location, e);
-        }
     }
 }
