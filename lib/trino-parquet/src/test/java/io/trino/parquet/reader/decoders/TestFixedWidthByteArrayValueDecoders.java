@@ -78,9 +78,10 @@ public final class TestFixedWidthByteArrayValueDecoders
     protected Object[][] tests()
     {
         return concat(
-                generateShortDecimalTests(PLAIN),
-                generateShortDecimalTests(DELTA_BYTE_ARRAY),
-                generateShortDecimalTests(RLE_DICTIONARY),
+                generateShortDecimalTests(PLAIN, false),
+                generateShortDecimalTests(DELTA_BYTE_ARRAY, false),
+                generateShortDecimalTests(RLE_DICTIONARY, false),
+                generateShortDecimalTests(PLAIN, true),
                 generateLongDecimalTests(PLAIN),
                 generateLongDecimalTests(DELTA_BYTE_ARRAY),
                 generateLongDecimalTests(RLE_DICTIONARY),
@@ -89,13 +90,13 @@ public final class TestFixedWidthByteArrayValueDecoders
                 generateVarcharTests());
     }
 
-    private static Object[][] generateShortDecimalTests(ParquetEncoding encoding)
+    private static Object[][] generateShortDecimalTests(ParquetEncoding encoding, boolean vectorizedDecodingEnabled)
     {
         return IntStream.range(1, 17)
                 .mapToObj(typeLength -> {
                     int precision = maxPrecision(min(typeLength, 8));
                     return new Object[] {
-                            createShortDecimalTestType(typeLength, precision),
+                            createShortDecimalTestType(typeLength, precision, vectorizedDecodingEnabled),
                             encoding,
                             createShortDecimalInputDataProvider(typeLength, precision)};
                 })
@@ -144,11 +145,11 @@ public final class TestFixedWidthByteArrayValueDecoders
                 .toArray(Object[][]::new);
     }
 
-    private static TestType<long[]> createShortDecimalTestType(int typeLength, int precision)
+    private static TestType<long[]> createShortDecimalTestType(int typeLength, int precision, boolean vectorizedDecodingEnabled)
     {
         DecimalType decimalType = DecimalType.createDecimalType(precision, 2);
         PrimitiveField primitiveField = createField(FIXED_LEN_BYTE_ARRAY, OptionalInt.of(typeLength), decimalType);
-        ValueDecoders valueDecoders = new ValueDecoders(primitiveField, false);
+        ValueDecoders valueDecoders = new ValueDecoders(primitiveField, vectorizedDecodingEnabled);
         return new TestType<>(
                 primitiveField,
                 valueDecoders::getFixedWidthShortDecimalDecoder,

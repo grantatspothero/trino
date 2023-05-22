@@ -14,6 +14,10 @@
 package io.trino.parquet.reader.decoders;
 
 import io.trino.parquet.reader.SimpleSliceInputStream;
+import jdk.incubator.vector.ByteVector;
+import jdk.incubator.vector.LongVector;
+import jdk.incubator.vector.VectorOperators;
+import jdk.incubator.vector.VectorShuffle;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.trino.parquet.ParquetReaderUtils.propagateSignBit;
@@ -34,17 +38,21 @@ public class ShortDecimalFixedWidthByteArrayBatchDecoder
     public interface ShortDecimalDecoder
     {
         void decode(SimpleSliceInputStream input, long[] values, int offset, int length);
+
+        void vectorDecode(SimpleSliceInputStream input, long[] values, int offset, int length);
     }
 
     private final ShortDecimalDecoder decoder;
+    private final boolean vectorizedDecodingEnabled;
 
-    public ShortDecimalFixedWidthByteArrayBatchDecoder(int length)
+    public ShortDecimalFixedWidthByteArrayBatchDecoder(int length, boolean vectorizedDecodingEnabled)
     {
         checkArgument(
                 length > 0 && length <= 8,
                 "Short decimal length %s must be in range 1-8",
                 length);
         decoder = VALUE_DECODERS[length - 1];
+        this.vectorizedDecodingEnabled = vectorizedDecodingEnabled;
         // Unscaled number is encoded as two's complement using big-endian byte order
         // (the most significant byte is the zeroth element)
     }
@@ -56,12 +64,25 @@ public class ShortDecimalFixedWidthByteArrayBatchDecoder
      */
     public void getShortDecimalValues(SimpleSliceInputStream input, long[] values, int offset, int length)
     {
-        decoder.decode(input, values, offset, length);
+        if (vectorizedDecodingEnabled) {
+            decoder.vectorDecode(input, values, offset, length);
+        }
+        else {
+            decoder.decode(input, values, offset, length);
+        }
     }
 
     private static final class BigEndianReader8
             implements ShortDecimalDecoder
     {
+        private static final VectorShuffle<Byte> SHUFFLE = VectorShuffle.fromArray(
+                ByteVector.SPECIES_128,
+                new int[] {
+                        7, 6, 5, 4, 3, 2, 1, 0,
+                        15, 14, 13, 12, 11, 10, 9, 8
+                },
+                0);
+
         @Override
         public void decode(SimpleSliceInputStream input, long[] values, int offset, int length)
         {
@@ -70,11 +91,45 @@ public class ShortDecimalFixedWidthByteArrayBatchDecoder
                 values[i] = Long.reverseBytes(input.readLongUnsafe());
             }
         }
+
+        @Override
+        public void vectorDecode(SimpleSliceInputStream input, long[] values, int offset, int length)
+        {
+            byte[] inputArr = input.getByteArray();
+            int inputOffset = input.getByteArrayOffset();
+            int inputBytesRead = 0;
+            int outputOffset = offset;
+            while (length > 1) {
+                ByteVector.fromArray(ByteVector.SPECIES_128, inputArr, inputOffset + inputBytesRead)
+                        .rearrange(SHUFFLE)
+                        .reinterpretAsLongs()
+                        .intoArray(values, outputOffset);
+                inputBytesRead += 16;
+                length -= 2;
+                outputOffset += 2;
+            }
+            input.skip(inputBytesRead);
+
+            // Decode the last value "normally" as it would read data out of bounds
+            if (length > 0) {
+                values[outputOffset] = Long.reverseBytes(input.readLongUnsafe());
+            }
+        }
     }
 
     private static final class BigEndianReader7
             implements ShortDecimalDecoder
     {
+        private static final VectorShuffle<Byte> SHUFFLE = VectorShuffle.fromArray(
+                ByteVector.SPECIES_256,
+                new int[] {
+                        7, 6, 5, 4, 3, 2, 1, 0,
+                        14, 13, 12, 11, 10, 9, 8, 7,
+                        21, 20, 19, 18, 17, 16, 15, 14,
+                        28, 27, 26, 25, 24, 23, 22, 21
+                },
+                0);
+
         @Override
         public void decode(SimpleSliceInputStream input, long[] values, int offset, int length)
         {
@@ -90,6 +145,33 @@ public class ShortDecimalFixedWidthByteArrayBatchDecoder
             input.skip(bytesOffSet + 7);
         }
 
+        @Override
+        public void vectorDecode(SimpleSliceInputStream input, long[] values, int offset, int length)
+        {
+            byte[] inputArr = input.getByteArray();
+            int inputOffset = input.getByteArrayOffset();
+            int inputBytesRead = 0;
+            int outputOffset = offset;
+            while (length > 4) {
+                // We read redundant bytes and then ignore them. Sign bit is propagated by `>>` operator
+                ByteVector.fromArray(ByteVector.SPECIES_256, inputArr, inputOffset + inputBytesRead)
+                        .rearrange(SHUFFLE)
+                        .reinterpretAsLongs()
+                        .lanewise(VectorOperators.ASHR, 8)
+                        .intoArray(values, outputOffset);
+                inputBytesRead += 28;
+                length -= 4;
+                outputOffset += 4;
+            }
+            // Decode the last 5 values "normally" as it would read data out of bounds
+            while (length > 0) {
+                values[outputOffset++] = decode(input, inputBytesRead);
+                inputBytesRead += 7;
+                length--;
+            }
+            input.skip(inputBytesRead);
+        }
+
         private long decode(SimpleSliceInputStream input, int index)
         {
             long value = (input.getByteUnsafe(index + 6) & 0xFFL)
@@ -103,6 +185,16 @@ public class ShortDecimalFixedWidthByteArrayBatchDecoder
     private static final class BigEndianReader6
             implements ShortDecimalDecoder
     {
+        private static final VectorShuffle<Byte> SHUFFLE = VectorShuffle.fromArray(
+                ByteVector.SPECIES_256,
+                new int[] {
+                        7, 6, 5, 4, 3, 2, 1, 0,
+                        13, 12, 11, 10, 9, 8, 7, 6,
+                        19, 18, 17, 16, 15, 14, 13, 12,
+                        25, 24, 23, 22, 21, 20, 19, 18
+                },
+                0);
+
         @Override
         public void decode(SimpleSliceInputStream input, long[] values, int offset, int length)
         {
@@ -118,6 +210,33 @@ public class ShortDecimalFixedWidthByteArrayBatchDecoder
             input.skip(bytesOffSet + 6);
         }
 
+        @Override
+        public void vectorDecode(SimpleSliceInputStream input, long[] values, int offset, int length)
+        {
+            byte[] inputArr = input.getByteArray();
+            int inputOffset = input.getByteArrayOffset();
+            int inputBytesRead = 0;
+            int outputOffset = offset;
+            while (length > 5) {
+                // We read redundant bytes and then ignore them. Sign bit is propagated by `>>` operator
+                ByteVector.fromArray(ByteVector.SPECIES_256, inputArr, inputOffset + inputBytesRead)
+                        .rearrange(SHUFFLE)
+                        .reinterpretAsLongs()
+                        .lanewise(VectorOperators.ASHR, 16)
+                        .intoArray(values, outputOffset);
+                inputBytesRead += 24;
+                length -= 4;
+                outputOffset += 4;
+            }
+            // Decode the last 5 values "normally" as it would read data out of bounds
+            while (length > 0) {
+                values[outputOffset++] = decode(input, inputBytesRead);
+                inputBytesRead += 6;
+                length--;
+            }
+            input.skip(inputBytesRead);
+        }
+
         private long decode(SimpleSliceInputStream input, int index)
         {
             long value = (input.getByteUnsafe(index + 5) & 0xFFL)
@@ -130,6 +249,16 @@ public class ShortDecimalFixedWidthByteArrayBatchDecoder
     private static final class BigEndianReader5
             implements ShortDecimalDecoder
     {
+        private static final VectorShuffle<Byte> SHUFFLE = VectorShuffle.fromArray(
+                ByteVector.SPECIES_256,
+                new int[] {
+                        7, 6, 5, 4, 3, 2, 1, 0,
+                        12, 11, 10, 9, 8, 7, 6, 5,
+                        17, 16, 15, 14, 13, 12, 11, 10,
+                        22, 21, 20, 19, 18, 17, 16, 15
+                },
+                0);
+
         @Override
         public void decode(SimpleSliceInputStream input, long[] values, int offset, int length)
         {
@@ -145,6 +274,33 @@ public class ShortDecimalFixedWidthByteArrayBatchDecoder
             input.skip(bytesOffSet + 5);
         }
 
+        @Override
+        public void vectorDecode(SimpleSliceInputStream input, long[] values, int offset, int length)
+        {
+            byte[] inputArr = input.getByteArray();
+            int inputOffset = input.getByteArrayOffset();
+            int inputBytesRead = 0;
+            int outputOffset = offset;
+            while (length > 6) {
+                // We read redundant bytes and then ignore them. Sign bit is propagated by `>>` operator
+                ByteVector.fromArray(ByteVector.SPECIES_256, inputArr, inputOffset + inputBytesRead)
+                        .rearrange(SHUFFLE)
+                        .reinterpretAsLongs()
+                        .lanewise(VectorOperators.ASHR, 24)
+                        .intoArray(values, outputOffset);
+                inputBytesRead += 20;
+                length -= 4;
+                outputOffset += 4;
+            }
+            // Decode the last 7 values "normally" as it would read data out of bounds
+            while (length > 0) {
+                values[outputOffset++] = decode(input, inputBytesRead);
+                inputBytesRead += 5;
+                length--;
+            }
+            input.skip(inputBytesRead);
+        }
+
         private long decode(SimpleSliceInputStream input, int index)
         {
             long value = (input.getByteUnsafe(index + 4) & 0xFFL)
@@ -156,6 +312,14 @@ public class ShortDecimalFixedWidthByteArrayBatchDecoder
     private static final class BigEndianReader4
             implements ShortDecimalDecoder
     {
+        private static final VectorShuffle<Byte> SHUFFLE = VectorShuffle.fromArray(
+                ByteVector.SPECIES_128,
+                new int[] {
+                        3, 2, 1, 0, 7, 6, 5, 4,
+                        11, 10, 9, 8, 15, 14, 13, 12
+                },
+                0);
+
         @Override
         public void decode(SimpleSliceInputStream input, long[] values, int offset, int length)
         {
@@ -175,11 +339,45 @@ public class ShortDecimalFixedWidthByteArrayBatchDecoder
                 values[offset] = Integer.reverseBytes(value);
             }
         }
+
+        @Override
+        public void vectorDecode(SimpleSliceInputStream input, long[] values, int offset, int length)
+        {
+            byte[] inputArr = input.getByteArray();
+            int inputOffset = input.getByteArrayOffset();
+            int inputBytesRead = 0;
+            int outputOffset = offset;
+            while (length > 3) {
+                ByteVector.fromArray(ByteVector.SPECIES_128, inputArr, inputOffset + inputBytesRead)
+                        .rearrange(SHUFFLE)
+                        .reinterpretAsInts()
+                        .castShape(LongVector.SPECIES_256, 0)
+                        .reinterpretAsLongs()
+                        .intoArray(values, outputOffset);
+                inputBytesRead += 16;
+                outputOffset += 4;
+                length -= 4;
+            }
+            input.skip(inputBytesRead);
+
+            while (length > 0) {
+                values[outputOffset++] = Integer.reverseBytes(input.readIntUnsafe());
+                length--;
+            }
+        }
     }
 
     private static final class BigEndianReader3
             implements ShortDecimalDecoder
     {
+        private static final VectorShuffle<Byte> SHUFFLE = VectorShuffle.fromArray(
+                ByteVector.SPECIES_128,
+                new int[] {
+                        3, 2, 1, 0, 6, 5, 4, 3,
+                        9, 8, 7, 6, 12, 11, 10, 9
+                },
+                0);
+
         @Override
         public void decode(SimpleSliceInputStream input, long[] values, int offset, int length)
         {
@@ -201,6 +399,34 @@ public class ShortDecimalFixedWidthByteArrayBatchDecoder
             input.skip(bytesOffSet);
         }
 
+        @Override
+        public void vectorDecode(SimpleSliceInputStream input, long[] values, int offset, int length)
+        {
+            byte[] inputArr = input.getByteArray();
+            int inputOffset = input.getByteArrayOffset();
+            int inputBytesRead = 0;
+            int outputOffset = offset;
+            while (length > 5) {
+                ByteVector.fromArray(ByteVector.SPECIES_128, inputArr, inputOffset + inputBytesRead)
+                        .rearrange(SHUFFLE)
+                        .reinterpretAsInts()
+                        .lanewise(VectorOperators.ASHR, 8)
+                        .castShape(LongVector.SPECIES_256, 0)
+                        .reinterpretAsLongs()
+                        .intoArray(values, outputOffset);
+                inputBytesRead += 12;
+                outputOffset += 4;
+                length -= 4;
+            }
+
+            while (length > 0) {
+                values[outputOffset++] = decode(input, inputBytesRead);
+                inputBytesRead += 3;
+                length--;
+            }
+            input.skip(inputBytesRead);
+        }
+
         private long decode(SimpleSliceInputStream input, int index)
         {
             long value = (input.getByteUnsafe(index + 2) & 0xFFL)
@@ -213,6 +439,11 @@ public class ShortDecimalFixedWidthByteArrayBatchDecoder
     private static final class BigEndianReader2
             implements ShortDecimalDecoder
     {
+        private static final VectorShuffle<Byte> SHUFFLE = VectorShuffle.fromArray(
+                ByteVector.SPECIES_64,
+                new int[] {1, 0, 3, 2, 5, 4, 7, 6},
+                0);
+
         @Override
         public void decode(SimpleSliceInputStream input, long[] values, int offset, int length)
         {
@@ -238,6 +469,33 @@ public class ShortDecimalFixedWidthByteArrayBatchDecoder
                 length--;
             }
         }
+
+        @Override
+        public void vectorDecode(SimpleSliceInputStream input, long[] values, int offset, int length)
+        {
+            byte[] inputArr = input.getByteArray();
+            int inputOffset = input.getByteArrayOffset();
+            int inputBytesRead = 0;
+            int outputOffset = offset;
+            while (length > 3) {
+                ByteVector.fromArray(ByteVector.SPECIES_64, inputArr, inputOffset + inputBytesRead)
+                        .rearrange(SHUFFLE)
+                        .reinterpretAsShorts()
+                        .castShape(LongVector.SPECIES_256, 0)
+                        .reinterpretAsLongs()
+                        .intoArray(values, outputOffset);
+                inputBytesRead += 8;
+                outputOffset += 4;
+                length -= 4;
+            }
+            input.skip(inputBytesRead);
+
+            while (length > 0) {
+                // Implicit cast will propagate the sign bit correctly, as it is performed after the byte reversal.
+                values[outputOffset++] = Short.reverseBytes(input.readShort());
+                length--;
+            }
+        }
     }
 
     private static final class BigEndianReader1
@@ -257,6 +515,12 @@ public class ShortDecimalFixedWidthByteArrayBatchDecoder
                 length--;
             }
             input.skip(inputBytesRead);
+        }
+
+        @Override
+        public void vectorDecode(SimpleSliceInputStream input, long[] values, int offset, int length)
+        {
+            decode(input, values, offset, length);
         }
     }
 }

@@ -223,7 +223,7 @@ public final class ValueDecoders
     public ValueDecoder<long[]> getFixedWidthShortDecimalDecoder(ParquetEncoding encoding)
     {
         return switch (encoding) {
-            case PLAIN -> new ShortDecimalFixedLengthByteArrayDecoder(field.getDescriptor());
+            case PLAIN -> new ShortDecimalFixedLengthByteArrayDecoder(field.getDescriptor(), vectorizedDecodingEnabled);
             case DELTA_BYTE_ARRAY -> getDeltaFixedWidthShortDecimalDecoder(encoding);
             default -> throw wrongEncoding(encoding);
         };

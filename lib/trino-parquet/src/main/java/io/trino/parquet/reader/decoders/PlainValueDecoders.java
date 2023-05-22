@@ -247,7 +247,7 @@ public final class PlainValueDecoders
 
         private SimpleSliceInputStream input;
 
-        public ShortDecimalFixedLengthByteArrayDecoder(ColumnDescriptor descriptor)
+        public ShortDecimalFixedLengthByteArrayDecoder(ColumnDescriptor descriptor, boolean vectorizedDecodingEnabled)
         {
             DecimalLogicalTypeAnnotation decimalAnnotation = (DecimalLogicalTypeAnnotation) descriptor.getPrimitiveType().getLogicalTypeAnnotation();
             checkArgument(
@@ -257,7 +257,7 @@ public final class PlainValueDecoders
             this.typeLength = descriptor.getPrimitiveType().getTypeLength();
             checkArgument(typeLength > 0 && typeLength <= 16, "Expected column %s to have type length in range (1-16)", descriptor);
             this.descriptor = descriptor;
-            this.decimalValueDecoder = new ShortDecimalFixedWidthByteArrayBatchDecoder(Math.min(typeLength, Long.BYTES));
+            this.decimalValueDecoder = new ShortDecimalFixedWidthByteArrayBatchDecoder(Math.min(typeLength, Long.BYTES), vectorizedDecodingEnabled);
         }
 
         @Override
