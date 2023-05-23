@@ -37,6 +37,8 @@ import java.util.Properties;
 import static io.trino.plugin.base.galaxy.InetAddresses.asInetSocketAddress;
 import static io.trino.plugin.base.galaxy.InetAddresses.toInetAddresses;
 import static io.trino.spi.galaxy.CatalogNetworkMonitor.getCatalogNetworkMonitor;
+import static io.trino.sshtunnel.SshTunnelPropertiesMapper.getOptionalProperty;
+import static io.trino.sshtunnel.SshTunnelPropertiesMapper.getRequiredProperty;
 import static java.util.Objects.requireNonNull;
 
 public class GalaxySqlSocketFactory
@@ -174,16 +176,5 @@ public class GalaxySqlSocketFactory
     private static Optional<SshTunnelProperties> getSshTunnelProperties(Properties properties)
     {
         return SshTunnelPropertiesMapper.getSshTunnelProperties(name -> getOptionalProperty(properties, name));
-    }
-
-    private static String getRequiredProperty(Properties properties, String propertyName)
-    {
-        return getOptionalProperty(properties, propertyName)
-                .orElseThrow(() -> new IllegalArgumentException("Missing required property: " + propertyName));
-    }
-
-    private static Optional<String> getOptionalProperty(Properties properties, String propertyName)
-    {
-        return Optional.ofNullable(properties.getProperty(propertyName));
     }
 }

@@ -17,6 +17,7 @@ import com.google.common.net.HostAndPort;
 import io.airlift.units.Duration;
 
 import java.util.Optional;
+import java.util.Properties;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -49,7 +50,18 @@ public final class SshTunnelPropertiesMapper
                 });
     }
 
-    private static String getRequiredProperty(Function<String, Optional<String>> propertyProvider, String propertyName)
+    public static String getRequiredProperty(Properties properties, String propertyName)
+    {
+        return getOptionalProperty(properties, propertyName)
+                .orElseThrow(() -> new IllegalArgumentException("Missing required property: " + propertyName));
+    }
+
+    public static Optional<String> getOptionalProperty(Properties properties, String propertyName)
+    {
+        return Optional.ofNullable(properties.getProperty(propertyName));
+    }
+
+    public static String getRequiredProperty(Function<String, Optional<String>> propertyProvider, String propertyName)
     {
         return propertyProvider.apply(propertyName)
                 .orElseThrow(() -> new IllegalArgumentException("Missing required property: " + propertyName));
