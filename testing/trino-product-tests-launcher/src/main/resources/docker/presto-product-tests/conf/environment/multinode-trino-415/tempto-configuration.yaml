@@ -1,0 +1,8 @@
+databases:
+    trino-415:
+        host: trino-415
+        port: 8080
+        server_address: http://${databases.trino-415.host}:${databases.trino-415.port}
+        jdbc_driver_class: io.trino.jdbc.TrinoDriver
+        jdbc_url: jdbc:trino://${databases.trino-415.host}:${databases.trino-415.port}/delta/default
+        jdbc_user: hive

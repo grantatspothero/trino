@@ -1,0 +1,328 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.trino.tests.product.s3;
+
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
+import io.trino.tempto.AfterTestWithContext;
+import io.trino.tempto.BeforeTestWithContext;
+import io.trino.tempto.ProductTest;
+import io.trino.tempto.query.QueryExecutor;
+import org.assertj.core.api.Assertions;
+import org.assertj.core.api.InstanceOfAssertFactories;
+import org.testng.annotations.DataProvider;
+import org.testng.annotations.Test;
+
+import static io.trino.tempto.assertions.QueryAssert.Row.row;
+import static io.trino.tempto.assertions.QueryAssert.assertQueryFailure;
+import static io.trino.tempto.assertions.QueryAssert.assertThat;
+import static io.trino.testing.TestingNames.randomNameSuffix;
+import static io.trino.tests.product.TestGroups.PROFILE_SPECIFIC_TESTS;
+import static io.trino.tests.product.TestGroups.S3_BACKWARDS_COMPATIBILITY;
+import static io.trino.tests.product.utils.QueryExecutors.connectToTrino;
+import static io.trino.tests.product.utils.QueryExecutors.onTrino;
+
+public class TestS3BackwardsCompatibilityDoubleSlashes
+        extends ProductTest
+{
+    private AmazonS3 s3;
+    private String schemaName;
+
+    @BeforeTestWithContext
+    public void setup()
+    {
+        s3 = AmazonS3Client.builder().build();
+        schemaName = "test_s3_backwards_compatibility_" + randomNameSuffix();
+        // Create schema with double slashes in the location. This will get inherited by the table locations.
+        // This is the case that used to be erroneously handled by previous Trino versions, leading to table corruption.
+        // This test verifies we can still read from and operate on such tables.
+        onTrino().executeQuery("CREATE SCHEMA delta." + schemaName + " WITH (location = 's3://galaxy-trino-ci/temp_files//" + schemaName + "')");
+    }
+
+    @AfterTestWithContext
+    public void tearDown()
+    {
+        onTrino().executeQuery("DROP SCHEMA IF EXISTS " + schemaName);
+
+        if (s3 != null) {
+            s3.shutdown();
+            s3 = null;
+        }
+    }
+
+    @Test(groups = {PROFILE_SPECIFIC_TESTS, S3_BACKWARDS_COMPATIBILITY})
+    public void testContainerVersions()
+    {
+        assertThat(onTrino415().executeQuery("SELECT version()"))
+                .containsOnly(row("415"));
+    }
+
+    @Test(groups = {PROFILE_SPECIFIC_TESTS, S3_BACKWARDS_COMPATIBILITY}, dataProvider = "tableFormats")
+    public void testReadsOnCorruptedTable(String tableFormat)
+    {
+        String tableName = tableFormat + "_reads_on_corrupted_table_" + randomNameSuffix();
+        String qualifiedTableName = "%s.%s.%s".formatted(tableFormat, schemaName, tableName);
+        onTrino415().executeQuery("CREATE TABLE " + qualifiedTableName + "(a INT, b INT)");
+        try {
+            onTrino415().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (0, 1)");
+            assertThat(onTrino415().executeQuery("TABLE " + qualifiedTableName))
+                    .containsOnly(row(0, 1));
+            assertThat(onTrino().executeQuery("TABLE " + qualifiedTableName))
+                    .containsOnly(row(0, 1));
+        }
+        finally {
+            onTrino().executeQuery("DROP TABLE IF EXISTS " + qualifiedTableName);
+        }
+    }
+
+    @Test(groups = {PROFILE_SPECIFIC_TESTS, S3_BACKWARDS_COMPATIBILITY}, dataProvider = "tableFormats")
+    public void testInsertsOnCorruptedTable(String tableFormat)
+    {
+        String tableName = tableFormat + "_writes_on_corrupted_table_" + randomNameSuffix();
+        String qualifiedTableName = "%s.%s.%s".formatted(tableFormat, schemaName, tableName);
+        onTrino415().executeQuery("CREATE TABLE " + qualifiedTableName + "(a, b) AS VALUES (1, 2)");
+        try {
+            onTrino415().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (3, 4)");
+            onTrino().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (5, 6)");
+            assertThat(onTrino().executeQuery("TABLE " + qualifiedTableName))
+                    .containsOnly(row(1, 2), row(3, 4), row(5, 6));
+        }
+        finally {
+            onTrino().executeQuery("DROP TABLE IF EXISTS " + qualifiedTableName);
+        }
+    }
+
+    @Test(groups = {PROFILE_SPECIFIC_TESTS, S3_BACKWARDS_COMPATIBILITY})
+    public void testDeletesOnCorruptedIcebergTable()
+    {
+        String tableName = "iceberg_deletes_on_corrupted_table_" + randomNameSuffix();
+        String qualifiedTableName = "iceberg.%s.%s".formatted(schemaName, tableName);
+        onTrino415().executeQuery("CREATE TABLE " + qualifiedTableName + "(a INT, b INT)");
+        try {
+            onTrino415().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (0, 1), (2, 3)");
+            onTrino415().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (4, 5)");
+            onTrino415().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (10, 11), (12, 13)");
+            onTrino415().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (14, 15)");
+
+            onTrino415().executeQuery("DELETE FROM " + qualifiedTableName + " WHERE a = 2");
+            onTrino415().executeQuery("DELETE FROM " + qualifiedTableName + " WHERE a = 4");
+            assertThat(onTrino415().executeQuery("TABLE " + qualifiedTableName))
+                    .containsOnly(row(0, 1), row(10, 11), row(12, 13), row(14, 15));
+
+            onTrino().executeQuery("DELETE FROM " + qualifiedTableName + " WHERE a = 12");
+            onTrino().executeQuery("DELETE FROM " + qualifiedTableName + " WHERE a = 14");
+            assertThat(onTrino().executeQuery("TABLE " + qualifiedTableName))
+                    .containsOnly(row(0, 1), row(10, 11));
+        }
+        finally {
+            onTrino().executeQuery("DROP TABLE IF EXISTS " + qualifiedTableName);
+        }
+    }
+
+    @Test(groups = {PROFILE_SPECIFIC_TESTS, S3_BACKWARDS_COMPATIBILITY}, dataProvider = "tableFormats")
+    public void testDropTableRemovesCorruptedFiles(String tableFormat)
+    {
+        String tableName = tableFormat + "_drop_corrupted_table_" + randomNameSuffix();
+        String qualifiedTableName = "%s.%s.%s".formatted(tableFormat, schemaName, tableName);
+        onTrino415().executeQuery("CREATE TABLE " + qualifiedTableName + "(a, b) AS VALUES (1, 2), (3, 4)");
+        onTrino().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (5, 6)");
+
+        // The actual table location is randomized, this is just a prefix. It's unique for this table since table name is randomized as well.
+        String tableLocationPrefixWithDoubleSlash = "temp_files//" + schemaName + "/" + tableName;
+        String tableLocationPrefixWithoutDoubleSlash = "temp_files/" + schemaName + "/" + tableName;
+        ListObjectsV2Request listObjectsRequestWithDoubleSlash = new ListObjectsV2Request()
+                .withBucketName("galaxy-trino-ci")
+                .withPrefix(tableLocationPrefixWithDoubleSlash);
+        ListObjectsV2Request listObjectsRequestWithoutDoubleSlash = new ListObjectsV2Request()
+                .withBucketName("galaxy-trino-ci")
+                .withPrefix(tableLocationPrefixWithoutDoubleSlash);
+
+        Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithDoubleSlash).getObjectSummaries()).isNotEmpty();
+        Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries()).isNotEmpty();
+        onTrino().executeQuery("DROP TABLE " + qualifiedTableName);
+        Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithDoubleSlash).getObjectSummaries()).isEmpty();
+        if (!tableFormat.equals("iceberg")) {
+            Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries()).isEmpty();
+        }
+        else {
+            // TODO Iceberg with Glue catalog leaves stats file behind on DROP TABLE.
+            // As seen in testVerifyLegacyDropTableBehavior, this is as least is not a regression.
+            Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries())
+                    .hasSize(1)
+                    .singleElement().extracting(S3ObjectSummary::getKey, InstanceOfAssertFactories.STRING)
+                    .matches("(temp_files)/(" + schemaName + ")/(" + tableName + "-[a-z0-9]+)/(metadata)/([-a-z0-9_]+\\.stats)" +
+                            "#%2F\\1%2F%2F\\2%2F\\3%2F\\4%2F\\5");
+        }
+    }
+
+    /**
+     * Like {@link #testDropTableRemovesCorruptedFiles} but doesn't write with new version & drops with {@link #onTrino415()}.
+     * This serves for documentation purposes.
+     */
+    @Test(groups = {PROFILE_SPECIFIC_TESTS, S3_BACKWARDS_COMPATIBILITY}, dataProvider = "tableFormats")
+    public void testVerifyLegacyDropTableBehavior(String tableFormat)
+    {
+        String tableName = tableFormat + "_legacy_drop_corrupted_table_" + randomNameSuffix();
+        String qualifiedTableName = "%s.%s.%s".formatted(tableFormat, schemaName, tableName);
+        onTrino415().executeQuery("CREATE TABLE " + qualifiedTableName + "(a, b) AS VALUES (1, 2), (3, 4)");
+
+        // The actual table location is randomized, this is just a prefix. It's unique for this table since table name is randomized as well.
+        String tableLocationPrefixWithDoubleSlash = "temp_files//" + schemaName + "/" + tableName;
+        String tableLocationPrefixWithoutDoubleSlash = "temp_files/" + schemaName + "/" + tableName;
+        ListObjectsV2Request listObjectsRequestWithDoubleSlash = new ListObjectsV2Request()
+                .withBucketName("galaxy-trino-ci")
+                .withPrefix(tableLocationPrefixWithDoubleSlash);
+        ListObjectsV2Request listObjectsRequestWithoutDoubleSlash = new ListObjectsV2Request()
+                .withBucketName("galaxy-trino-ci")
+                .withPrefix(tableLocationPrefixWithoutDoubleSlash);
+
+        Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithDoubleSlash).getObjectSummaries()).isEmpty(); // old version didn't write anything here
+        Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries()).isNotEmpty();
+        onTrino415().executeQuery("DROP TABLE " + qualifiedTableName);
+        Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithDoubleSlash).getObjectSummaries()).isEmpty();
+        if (!tableFormat.equals("iceberg")) {
+            Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries()).isEmpty();
+        }
+        else {
+            // Trino 415's Iceberg with Glue catalog would leave stats file behind on DROP TABLE
+            Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries())
+                    .hasSize(1)
+                    .singleElement().extracting(S3ObjectSummary::getKey, InstanceOfAssertFactories.STRING)
+                    .matches("(temp_files)/(" + schemaName + ")/(" + tableName + "-[a-z0-9]+)/(metadata)/([-a-z0-9_]+\\.stats)" +
+                            "#%2F\\1%2F%2F\\2%2F\\3%2F\\4%2F\\5");
+        }
+    }
+
+    @Test(groups = {PROFILE_SPECIFIC_TESTS, S3_BACKWARDS_COMPATIBILITY})
+    public void testRowLevelDeletesOnCorruptedDeltaTable()
+    {
+        String tableName = "delta_row_level_deletes_" + randomNameSuffix();
+        String qualifiedTableName = "delta.%s.%s".formatted(schemaName, tableName);
+        onTrino415().executeQuery("CREATE TABLE " + qualifiedTableName + "(a INT, b INT)");
+        try {
+            onTrino415().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (0, 1), (2, 3), (4, 5)");
+
+            // 415 could not perform row level deletes on files created by 415
+            assertQueryFailure(() -> onTrino415().executeQuery("DELETE FROM " + qualifiedTableName + " WHERE a = 4"))
+                    .hasMessageContaining("Unable to rewrite Parquet file");
+            assertThat(onTrino().executeQuery("DELETE FROM " + qualifiedTableName + " WHERE a = 4")).containsOnly(row(1));
+
+            // Should be able to delete from uncorrupted files on new versions
+            onTrino().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (10, 11), (12, 13), (14, 15)");
+            assertThat(onTrino().executeQuery("DELETE FROM " + qualifiedTableName + " WHERE a = 14")).containsOnly(row(1));
+            assertThat(onTrino().executeQuery("TABLE " + qualifiedTableName))
+                    .containsOnly(row(0, 1), row(2, 3), row(10, 11), row(12, 13));
+        }
+        finally {
+            onTrino().executeQuery("DROP TABLE IF EXISTS " + qualifiedTableName);
+        }
+    }
+
+    @Test(groups = {PROFILE_SPECIFIC_TESTS, S3_BACKWARDS_COMPATIBILITY})
+    public void testRowLevelDeletesOnCorruptedIcebergTable()
+    {
+        String tableName = "iceberg_row_level_deletes_" + randomNameSuffix();
+        String qualifiedTableName = "iceberg.%s.%s".formatted(schemaName, tableName);
+        onTrino415().executeQuery("CREATE TABLE " + qualifiedTableName + "(a INT, b INT)");
+        try {
+            onTrino415().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (0, 1), (2, 3), (4, 5)");
+
+            // Both versions can delete from files created by 415
+            onTrino415().executeQuery("DELETE FROM " + qualifiedTableName + " WHERE a = 4");
+            assertThat(onTrino415().executeQuery("TABLE " + qualifiedTableName)).containsOnly(row(0, 1), row(2, 3));
+            assertThat(onTrino().executeQuery("TABLE " + qualifiedTableName)).containsOnly(row(0, 1), row(2, 3));
+            onTrino().executeQuery("DELETE FROM " + qualifiedTableName + " WHERE a = 2");
+            assertThat(onTrino().executeQuery("TABLE " + qualifiedTableName)).containsOnly(row(0, 1));
+
+            // Uncorrupted files can be modified by new versions
+            onTrino().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (10, 11), (12, 13), (14, 15)");
+            onTrino().executeQuery("DELETE FROM " + qualifiedTableName + " WHERE a = 14");
+
+            assertThat(onTrino().executeQuery("TABLE " + qualifiedTableName))
+                    .containsOnly(row(0, 1), row(10, 11), row(12, 13));
+        }
+        finally {
+            onTrino().executeQuery("DROP TABLE IF EXISTS " + qualifiedTableName);
+        }
+    }
+
+    @Test(groups = {PROFILE_SPECIFIC_TESTS, S3_BACKWARDS_COMPATIBILITY})
+    public void testUpdatesOnCorruptedDeltaTable()
+    {
+        String tableName = "delta_update_" + randomNameSuffix();
+        String qualifiedTableName = "delta.%s.%s".formatted(schemaName, tableName);
+        onTrino415().executeQuery("CREATE TABLE " + qualifiedTableName + "(a INT, b INT)");
+        try {
+            onTrino415().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (0, 1), (2, 3), (4, 5)");
+            // 415 could not update files created by 415
+            assertQueryFailure(() -> onTrino415().executeQuery("UPDATE " + qualifiedTableName + " SET b = 42 WHERE a = 4"))
+                    .hasMessageContaining("Unable to rewrite Parquet file");
+            assertThat(onTrino().executeQuery("UPDATE " + qualifiedTableName + " SET b = 42 WHERE a = 4"))
+                    .containsOnly(row(1));
+
+            // Uncorrupted files should be updatable by new versions
+            onTrino().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (10, 11), (12, 13), (14, 15)");
+            onTrino().executeQuery("UPDATE " + qualifiedTableName + " SET b = 42 WHERE a = 14");
+
+            assertThat(onTrino().executeQuery("TABLE " + qualifiedTableName))
+                    .containsOnly(row(0, 1), row(2, 3), row(4, 42), row(10, 11), row(12, 13), row(14, 42));
+        }
+        finally {
+            onTrino().executeQuery("DROP TABLE IF EXISTS " + qualifiedTableName);
+        }
+    }
+
+    @Test(groups = {PROFILE_SPECIFIC_TESTS, S3_BACKWARDS_COMPATIBILITY})
+    public void testUpdatesOnCorruptedIcebergTable()
+    {
+        String tableName = "iceberg_update_" + randomNameSuffix();
+        String qualifiedTableName = "iceberg.%s.%s".formatted(schemaName, tableName);
+        onTrino415().executeQuery("CREATE TABLE " + qualifiedTableName + "(a INT, b INT)");
+        try {
+            onTrino415().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (0, 1), (2, 3), (4, 5)");
+
+            // Both versions can delete from files created by 415
+            onTrino415().executeQuery("UPDATE " + qualifiedTableName + " SET b = 25 WHERE a = 4");
+            assertThat(onTrino415().executeQuery("TABLE " + qualifiedTableName)).containsOnly(row(0, 1), row(2, 3), row(4, 25));
+            onTrino().executeQuery("UPDATE " + qualifiedTableName + " SET b = 23 WHERE a = 2");
+            assertThat(onTrino().executeQuery("TABLE " + qualifiedTableName)).containsOnly(row(0, 1), row(2, 23), row(4, 25));
+
+            // Uncorrupted files can be modified by new versions
+            onTrino().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (10, 11), (12, 13), (14, 15)");
+            onTrino().executeQuery("UPDATE " + qualifiedTableName + " SET b = 33 WHERE a = 12");
+
+            assertThat(onTrino().executeQuery("TABLE " + qualifiedTableName))
+                    .containsOnly(row(0, 1), row(2, 23), row(4, 25), row(10, 11), row(12, 33), row(14, 15));
+        }
+        finally {
+            onTrino().executeQuery("DROP TABLE IF EXISTS " + qualifiedTableName);
+        }
+    }
+
+    @DataProvider
+    public static Object[][] tableFormats()
+    {
+        return new Object[][] {
+                {"iceberg"},
+                {"delta"}
+        };
+    }
+
+    private static QueryExecutor onTrino415()
+    {
+        return connectToTrino("trino-415");
+    }
+}
