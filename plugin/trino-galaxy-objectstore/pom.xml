@@ -609,6 +609,8 @@
                             </includes>
                             <excludes>
                                 <exclude>**/TestObjectStoreIcebergGlueCatalogMaterializedView.java</exclude>
+                                <exclude>**/TestObjectStoreDeltaS3.java</exclude>
+                                <exclude>**/TestObjectStoreIcebergS3.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -627,6 +629,8 @@
                             <includes>
                                 <include>**/TestReadCorruptedTables.java</include>
                                 <include>**/TestObjectStoreIcebergGlueCatalogMaterializedView.java</include>
+                                <include>**/TestObjectStoreDeltaS3.java</include>
+                                <include>**/TestObjectStoreIcebergS3.java</include>
                             </includes>
                         </configuration>
                     </plugin>

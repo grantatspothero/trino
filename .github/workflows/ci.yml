@@ -731,9 +731,10 @@ jobs:
         # Run tests if any of the secrets is present. Do not skip tests when one secret renamed, or secret name has a typo.
         if: >-
           contains(matrix.modules, 'trino-galaxy-objectstore') && contains(matrix.profile, 'cloud-tests') &&
-          (env.AWS_ACCESS_KEY_ID != '' || env.AWS_SECRET_ACCESS_KEY != '')
+          (env.CI_SKIP_SECRETS_PRESENCE_CHECKS != '' || env.AWS_ACCESS_KEY_ID != '' || env.AWS_SECRET_ACCESS_KEY != '' || env.S3_BUCKET != '')
         run: |
-          $MAVEN test ${MAVEN_TEST} ${{ format('-P {0}', matrix.profile) }} -pl :trino-galaxy-objectstore
+          $MAVEN test ${MAVEN_TEST} ${{ format('-P {0}', matrix.profile) }} -pl :trino-galaxy-objectstore \
+          -Ds3.bucket="galaxy-trino-ci"
       - name: Cloud Delta Lake Tests
       # Cloud tests are separate because they are time intensive, requiring cross-cloud network communication
         env:
