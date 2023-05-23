@@ -59,24 +59,53 @@ public final class GalaxyIdentity
      */
     private static final Pattern GALAXY_USER_STRING_IDENTITY_MATCHER = Pattern.compile("<galaxy(:[^:]+){4}>");
     private static final Splitter PRINCIPAL_SPLITTER = Splitter.on(':').limit(5);
+    public static final String PORTAL_IDENTITY_TYPE = "galaxy_portal";
+    public static final String INDEXER_IDENTITY_TYPE = "galaxy_indexer";
+    public static final String DISPATCH_IDENTITY_TYPE = "galaxy_dispatch";
 
     private GalaxyIdentity() {}
 
     public enum GalaxyIdentityType
     {
-        DEFAULT,
-        INDEXING,
+        PORTAL(PORTAL_IDENTITY_TYPE),
+        INDEXER(INDEXER_IDENTITY_TYPE),
+        DISPATCH(DISPATCH_IDENTITY_TYPE);
+
+        private final String type;
+
+        public String type()
+        {
+            return type;
+        }
+
+        GalaxyIdentityType(String type)
+        {
+            this.type = requireNonNull(type, "type is null");
+        }
     }
 
     public static GalaxyIdentityType toGalaxyIdentityType(String value)
     {
-        return "galaxy_indexer".equals(value) ? GalaxyIdentityType.INDEXING : GalaxyIdentityType.DEFAULT;
+        if (value == null) {
+            return GalaxyIdentityType.PORTAL;
+        }
+        return switch (value) {
+            case INDEXER_IDENTITY_TYPE -> GalaxyIdentityType.INDEXER;
+            case DISPATCH_IDENTITY_TYPE -> GalaxyIdentityType.DISPATCH;
+            default -> GalaxyIdentityType.PORTAL;
+        };
     }
 
     public static GalaxyIdentityType getGalaxyIdentityType(Identity identity)
     {
         String identityType = identity.getExtraCredentials().get("identityType");
-        return GalaxyIdentityType.INDEXING.name().equals(identityType) ? GalaxyIdentityType.INDEXING : GalaxyIdentityType.DEFAULT;
+        try {
+            return GalaxyIdentityType.valueOf(identityType);
+        }
+        catch (IllegalArgumentException e) {
+            // ignore
+        }
+        return GalaxyIdentityType.PORTAL;
     }
 
     public static Identity createIdentity(String username, AccountId accountId, UserId userId, RoleId roleId, String token, GalaxyIdentityType identityType)

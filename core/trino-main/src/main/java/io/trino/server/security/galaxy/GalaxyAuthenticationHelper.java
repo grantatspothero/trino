@@ -35,6 +35,7 @@ import java.security.PublicKey;
 import java.util.Optional;
 
 import static com.google.common.hash.Hashing.sha256;
+import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType;
 import static io.trino.server.security.jwt.JwtUtil.newJwtParserBuilder;
 import static java.util.Objects.requireNonNull;
 
@@ -69,16 +70,16 @@ public final class GalaxyAuthenticationHelper
         }
     }
 
-    public static String extractToken(ContainerRequestContext request)
+    public static Optional<String> extractToken(ContainerRequestContext request)
             throws AuthenticationException
     {
         String token = request.getHeaderString(GALAXY_AUTHENTICATION_HEADER);
         if (token != null) {
             request.getHeaders().remove(GALAXY_AUTHENTICATION_HEADER);
-            return token;
+            return Optional.of(token);
         }
         log.error("No Galaxy token present");
-        throw new AuthenticationException("Galaxy token is required", "Galaxy");
+        return Optional.empty();
     }
 
     static String hashBody(ContainerRequestContext request)
@@ -100,7 +101,7 @@ public final class GalaxyAuthenticationHelper
         }
     }
 
-    record IdentityParams(String username, AccountId accountId, UserId userId, RoleId roleId, GalaxyIdentity.GalaxyIdentityType identityType, Claims claims) {}
+    record IdentityParams(String username, AccountId accountId, UserId userId, RoleId roleId, GalaxyIdentityType identityType, Claims claims) {}
 
     record RequestBodyHashing(String hash, String claimName)
     {

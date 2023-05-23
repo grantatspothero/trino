@@ -65,7 +65,7 @@ public class GalaxyTrinoAuthenticator
         else {
             requestBodyHashing = Optional.empty();
         }
-        return authenticate(extractToken(request), requestBodyHashing);
+        return authenticate(extractToken(request).orElseThrow(() -> new AuthenticationException("Galaxy token is required", "Galaxy")), requestBodyHashing);
     }
 
     @VisibleForTesting

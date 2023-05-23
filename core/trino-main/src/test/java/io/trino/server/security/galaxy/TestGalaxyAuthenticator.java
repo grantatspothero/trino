@@ -13,6 +13,7 @@
  */
 package io.trino.server.security.galaxy;
 
+import io.jsonwebtoken.JwtBuilder;
 import io.starburst.stargate.id.AccountId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.UserId;
@@ -31,7 +32,9 @@ import java.util.Optional;
 import static io.trino.server.security.galaxy.AbstractGalaxyAuthenticatorController.REQUEST_EXPIRATION_CLAIM;
 import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.RequestBodyHashing;
 import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.parseClaimsWithoutValidation;
+import static io.trino.server.security.galaxy.GalaxyIdentity.PORTAL_IDENTITY_TYPE;
 import static io.trino.server.security.galaxy.GalaxyIdentity.createPrincipalString;
+import static io.trino.server.security.galaxy.GalaxyIdentity.toGalaxyIdentityType;
 import static io.trino.server.security.jwt.JwtUtil.newJwtBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -64,9 +67,21 @@ public abstract class TestGalaxyAuthenticator
     protected void test(String subject, KeyPair keyPair, TestAuthenticator authenticator)
             throws Exception
     {
+        test(subject, keyPair, authenticator, TOKEN_ISSUER, PORTAL_IDENTITY_TYPE);
+    }
+
+    protected void test(String subject, KeyPair keyPair, TestAuthenticator authenticator, String issuer, String identityType)
+            throws Exception
+    {
         assertThat(authenticator.authenticate(generateJwt("username", ACCOUNT_ID, subject, keyPair.getPrivate()), Optional.empty()))
                 .satisfies(identity -> assertThat(identity.getUser()).isEqualTo("username"))
                 .satisfies(identity -> assertThat(identity.getPrincipal().orElseThrow().toString()).isEqualTo(GALAXY_IDENTITY));
+
+        // Test explicit issuer assignment
+        assertThat(authenticator.authenticate(generateJwt("username", ACCOUNT_ID, subject, keyPair.getPrivate(), notExpired(), requestNotExpired(), Optional.of("good"), issuer, Optional.of(identityType)), Optional.empty()))
+                .satisfies(identity -> assertThat(identity.getUser()).isEqualTo("username"))
+                .satisfies(identity -> assertThat(identity.getPrincipal().orElseThrow().toString()).isEqualTo(GALAXY_IDENTITY))
+                .satisfies(identity -> assertThat(identity.getExtraCredentials().get("identityType")).isEqualTo(toGalaxyIdentityType(identityType).name()));
 
         RequestBodyHashing requestBodyHashing = new RequestBodyHashing("good", "statement_hash");
         assertThat(authenticator.authenticate(generateJwt("username", ACCOUNT_ID, subject, keyPair.getPrivate(), notExpired(), requestNotExpired(), Optional.of("good")), Optional.of(requestBodyHashing)))
@@ -82,6 +97,10 @@ public abstract class TestGalaxyAuthenticator
                 .satisfies(exception -> assertThat(((AuthenticationException) exception).getAuthenticateHeader()).isEqualTo(Optional.of("Galaxy")));
 
         assertThatThrownBy(() -> authenticator.authenticate(generateJwt("username", ACCOUNT_ID, "unknown", generateKeyPair().getPrivate()), Optional.empty()))
+                .isInstanceOf(AuthenticationException.class)
+                .satisfies(exception -> assertThat(((AuthenticationException) exception).getAuthenticateHeader()).isEqualTo(Optional.of("Galaxy")));
+
+        assertThatThrownBy(() -> authenticator.authenticate(generateJwt("username", ACCOUNT_ID, subject, keyPair.getPrivate(), notExpired(), requestNotExpired(), Optional.of("good"), "badIssuer", Optional.of(PORTAL_IDENTITY_TYPE)), Optional.of(requestBodyHashing)))
                 .isInstanceOf(AuthenticationException.class)
                 .satisfies(exception -> assertThat(((AuthenticationException) exception).getAuthenticateHeader()).isEqualTo(Optional.of("Galaxy")));
 
@@ -120,16 +139,21 @@ public abstract class TestGalaxyAuthenticator
         return generator.generateKeyPair();
     }
 
-    private static String generateJwt(String username, String accountId, String subject, PrivateKey privateKey)
+    protected static String generateJwt(String username, String accountId, String subject, PrivateKey privateKey)
     {
         return generateJwt(username, accountId, subject, privateKey, notExpired(), requestNotExpired(), Optional.empty());
     }
 
-    private static String generateJwt(String username, String accountId, String deploymentId, PrivateKey privateKey, Date expiration, Date requestExpiration, Optional<String> statementHash)
+    protected static String generateJwt(String username, String accountId, String deploymentId, PrivateKey privateKey, Date expiration, Date requestExpiration, Optional<String> statementHash)
     {
-        return newJwtBuilder()
+        return generateJwt(username, accountId, deploymentId, privateKey, expiration, requestExpiration, statementHash, TOKEN_ISSUER, Optional.of(PORTAL_IDENTITY_TYPE));
+    }
+
+    protected static String generateJwt(String username, String accountId, String deploymentId, PrivateKey privateKey, Date expiration, Date requestExpiration, Optional<String> statementHash, String issuer, Optional<String> identityType)
+    {
+        JwtBuilder builder = newJwtBuilder()
                 .signWith(privateKey)
-                .setIssuer(TOKEN_ISSUER)
+                .setIssuer(issuer)
                 .setAudience(accountId)
                 .setSubject(deploymentId)
                 .setExpiration(expiration)
@@ -138,7 +162,10 @@ public abstract class TestGalaxyAuthenticator
                 .claim("role_id", ROLE_ID)
                 .claim("role_name", "roletest")
                 .claim(REQUEST_EXPIRATION_CLAIM, requestExpiration)
-                .claim("statement_hash", statementHash.orElse(null))
-                .compact();
+                .claim("statement_hash", statementHash.orElse(null));
+        if (identityType.isPresent()) {
+            builder.claim("identity_type", identityType.get());
+        }
+        return builder.compact();
     }
 }

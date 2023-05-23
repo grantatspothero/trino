@@ -30,7 +30,6 @@ import io.trino.Session;
 import io.trino.plugin.memory.MemoryPlugin;
 import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
-import io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.server.testing.TestingTrinoServer;
 import io.trino.spi.connector.SchemaTableName;
@@ -53,6 +52,7 @@ import java.util.UUID;
 
 import static com.google.common.base.Verify.verifyNotNull;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.PORTAL;
 import static io.trino.server.security.galaxy.GalaxyIdentity.createIdentity;
 import static io.trino.server.security.galaxy.GalaxyIdentity.toDispatchSession;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
@@ -1046,7 +1046,7 @@ public class TestGalaxyQueries
                 accountClient.getAdminUserId(),
                 publicRoleId,
                 accountClient.getAdminTrinoAccessToken(),
-                GalaxyIdentityType.DEFAULT);
+                PORTAL);
 
         return Session.builder(getSession())
                 .setIdentity(identity)
@@ -1079,7 +1079,7 @@ public class TestGalaxyQueries
                 user.getUserId(),
                 roleId,
                 accountClient.getAdminTrinoAccessToken(),
-                GalaxyIdentityType.DEFAULT);
+                PORTAL);
 
         return Session.builder(getSession())
                 .setIdentity(identity)

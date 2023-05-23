@@ -125,6 +125,7 @@ public class TestGalaxyMetadataOnlyQueries
                 .setInstallSecurityModule(false) // MetadataOnlyCatalogManagerModule will install it
                 .addExtraProperty("catalog.management", "metadata_only")
                 .addExtraProperty("web-ui.authentication.type", "none")
+                .addExtraProperty("galaxy.authentication.dispatch-token-issuer", "https://issuer.dispatcher.example.com")
                 .setHttpAuthenticationType("galaxy-metadata")
                 .addExtraProperty("experimental.concurrent-startup", "true")
                 .addExtraProperty("trino.plane-id", "aws-us-east1-1")

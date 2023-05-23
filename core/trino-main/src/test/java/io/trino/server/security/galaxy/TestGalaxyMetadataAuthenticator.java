@@ -19,11 +19,17 @@ import io.trino.server.metadataonly.MetadataOnlyConfig;
 import org.testng.annotations.Test;
 
 import java.security.KeyPair;
+import java.util.Optional;
+
+import static io.trino.server.security.galaxy.GalaxyIdentity.DISPATCH_IDENTITY_TYPE;
+import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.DISPATCH;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestGalaxyMetadataAuthenticator
         extends TestGalaxyAuthenticator
 {
     private static final String TRINO_PLANE_ID = "aws-us-fake1-1";
+    private static final String DISPATCH_TOKEN_ISSUER = "https://issuer.dispatcher.example.com";
 
     @Test
     public void test()
@@ -32,10 +38,31 @@ public class TestGalaxyMetadataAuthenticator
         KeyPair keyPair = generateKeyPair();
         GalaxyMetadataAuthenticatorConfig authenticatorConfig = new GalaxyMetadataAuthenticatorConfig()
                 .setPublicKey(PemWriter.writePublicKey(keyPair.getPublic()))
+                .setDispatchTokenIssuer(DISPATCH_TOKEN_ISSUER)
                 .setTokenIssuer(TOKEN_ISSUER);
         MetadataOnlyConfig metadataOnlyConfig = new MetadataOnlyConfig()
                 .setTrinoPlaneId(new TrinoPlaneId(TRINO_PLANE_ID));
         GalaxyMetadataAuthenticator authenticator = new GalaxyMetadataAuthenticator(authenticatorConfig, metadataOnlyConfig);
         test(TRINO_PLANE_ID, keyPair, authenticator::authenticate);
+    }
+
+    @Test
+    public void testMultipleIssuers()
+            throws Exception
+    {
+        KeyPair keyPair = generateKeyPair();
+        GalaxyMetadataAuthenticatorConfig authenticatorConfig = new GalaxyMetadataAuthenticatorConfig()
+                .setPublicKey(PemWriter.writePublicKey(keyPair.getPublic()))
+                .setTokenIssuer(TOKEN_ISSUER)
+                .setDispatchTokenIssuer(DISPATCH_TOKEN_ISSUER);
+        MetadataOnlyConfig metadataOnlyConfig = new MetadataOnlyConfig()
+                .setTrinoPlaneId(new TrinoPlaneId(TRINO_PLANE_ID));
+        GalaxyMetadataAuthenticator authenticator = new GalaxyMetadataAuthenticator(authenticatorConfig, metadataOnlyConfig);
+        test(TRINO_PLANE_ID, keyPair, authenticator::authenticate, DISPATCH_TOKEN_ISSUER, DISPATCH_IDENTITY_TYPE);
+
+        assertThat(authenticator.authenticate(generateJwt("username", ACCOUNT_ID, TRINO_PLANE_ID, keyPair.getPrivate(), notExpired(), requestNotExpired(), Optional.of("good"), DISPATCH_TOKEN_ISSUER, Optional.of(DISPATCH_IDENTITY_TYPE)), Optional.empty()))
+                .satisfies(identity -> assertThat(identity.getUser()).isEqualTo("username"))
+                .satisfies(identity -> assertThat(identity.getPrincipal().orElseThrow().toString()).isEqualTo(GALAXY_IDENTITY))
+                .satisfies(identity -> assertThat(identity.getExtraCredentials().get("identityType")).isEqualTo(DISPATCH.name()));
     }
 }

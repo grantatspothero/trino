@@ -16,7 +16,6 @@ package io.trino.server.security.galaxy;
 
 import io.airlift.log.Logger;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.JwtParserBuilder;
 import io.starburst.stargate.id.AccountId;
@@ -80,25 +79,25 @@ public abstract class AbstractGalaxyAuthenticatorController
         if (claims.getIssuer() == null) {
             String msg = String.format(MISSING_EXPECTED_CLAIM_MESSAGE_TEMPLATE,
                     ISSUER, issuerAudienceMapping.keySet());
-            throw new JwtException(msg);
+            throw new AuthenticationException(msg);
         }
         Set<String> audiences = issuerAudienceMapping.get(claims.getIssuer());
         if (audiences == null) {
             String msg = String.format(INCORRECT_EXPECTED_CLAIM_MESSAGE_TEMPLATE,
                     ISSUER, issuerAudienceMapping.keySet(), claims.getIssuer());
-            throw new JwtException(msg);
+            throw new AuthenticationException(msg, "Galaxy");
         }
         else {
             if (!audiences.isEmpty()) {
                 if (claims.getAudience() == null) {
                     String msg = String.format(MISSING_EXPECTED_CLAIM_MESSAGE_TEMPLATE,
                             AUDIENCE, audiences);
-                    throw new JwtException(msg);
+                    throw new AuthenticationException(msg, "Galaxy");
                 }
                 if (!audiences.contains(claims.getAudience())) {
                     String msg = String.format(INCORRECT_EXPECTED_CLAIM_MESSAGE_TEMPLATE,
                             AUDIENCE, audiences, claims.getAudience());
-                    throw new JwtException(msg);
+                    throw new AuthenticationException(msg, "Galaxy");
                 }
             }
         }

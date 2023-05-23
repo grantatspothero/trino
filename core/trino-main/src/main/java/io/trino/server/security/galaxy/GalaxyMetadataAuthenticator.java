@@ -25,36 +25,39 @@ import javax.ws.rs.container.ContainerRequestContext;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.PublicKey;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.RequestBodyHashing;
 import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.extractToken;
 import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.loadPublicKey;
+import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType;
 import static javax.ws.rs.HttpMethod.POST;
 
 public class GalaxyMetadataAuthenticator
         implements Authenticator
 {
-    private final GalaxyAuthenticatorController controller;
+    private final GalaxyMetadataAuthenticatorController controller;
 
     @Inject
     public GalaxyMetadataAuthenticator(GalaxyMetadataAuthenticatorConfig authenticatorConfig, MetadataOnlyConfig metadataConfig)
             throws GeneralSecurityException, IOException
     {
-        this(authenticatorConfig.getTokenIssuer(), metadataConfig.getTrinoPlaneId().toString(), loadPublicKey(Optional.ofNullable(authenticatorConfig.getPublicKey()), Optional.ofNullable(authenticatorConfig.getPublicKeyFile())));
+        this(authenticatorConfig.getTokenIssuers(), authenticatorConfig.getTokenIdenityTypes(), metadataConfig.getTrinoPlaneId().toString(), loadPublicKey(Optional.ofNullable(authenticatorConfig.getPublicKey()), Optional.ofNullable(authenticatorConfig.getPublicKeyFile())));
     }
 
     @VisibleForTesting
-    public GalaxyMetadataAuthenticator(String issuer, String trinoPlaneId, PublicKey publicKey)
+    public GalaxyMetadataAuthenticator(Map<String, Set<String>> issuerAudienceMapping, Set<GalaxyIdentityType> validIdenityTypes, String trinoPlaneId, PublicKey publicKey)
     {
-        this.controller = new GalaxyAuthenticatorController(issuer, Optional.empty(), trinoPlaneId, publicKey);
+        this.controller = new GalaxyMetadataAuthenticatorController(issuerAudienceMapping, validIdenityTypes, trinoPlaneId, publicKey);
     }
 
     @Override
     public Identity authenticate(ContainerRequestContext request)
             throws AuthenticationException
     {
-        String token = extractToken(request);
+        Optional<String> token = extractToken(request);
         Optional<RequestBodyHashing> requestBodyHashing;
         if (request.getMethod().equals(POST) && request.getUriInfo().getRequestUri().getPath().startsWith("/galaxy/metadata/v1/statement")) {
             requestBodyHashing = Optional.of(new RequestBodyHashing(request, "request_hash"));
@@ -62,7 +65,7 @@ public class GalaxyMetadataAuthenticator
         else {
             requestBodyHashing = Optional.empty();
         }
-        return authenticate(token, requestBodyHashing);
+        return authenticate(token.orElseThrow(() -> new AuthenticationException("Galaxy token is required", "Galaxy")), requestBodyHashing);
     }
 
     @VisibleForTesting

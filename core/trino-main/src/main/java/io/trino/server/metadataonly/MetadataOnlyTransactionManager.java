@@ -84,7 +84,7 @@ import static com.google.common.util.concurrent.Futures.nonCancellationPropagati
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static io.airlift.concurrent.MoreFutures.addExceptionCallback;
 import static io.airlift.concurrent.MoreFutures.asVoid;
-import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.INDEXING;
+import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.INDEXER;
 import static io.trino.server.security.galaxy.GalaxyIdentity.getGalaxyIdentityType;
 import static io.trino.spi.StandardErrorCode.CATALOG_NOT_AVAILABLE;
 import static io.trino.spi.StandardErrorCode.MULTI_CATALOG_WRITE_CONFLICT;
@@ -412,7 +412,7 @@ public class MetadataOnlyTransactionManager
             }
             URI uri = URI.create(requiredServiceProperty(serviceProperties, "galaxy.account-url"));
 
-            TrinoSecurityApi securityClient = (getGalaxyIdentityType(identity) == INDEXING) ? INDEXER_CONTROLLER : new HttpTrinoSecurityClient(uri, accessControlClient);
+            TrinoSecurityApi securityClient = (getGalaxyIdentityType(identity) == INDEXER) ? INDEXER_CONTROLLER : new HttpTrinoSecurityClient(uri, accessControlClient);
 
             GalaxyAccessControlConfig galaxyAccessControlConfig = new GalaxyAccessControlConfig()
                     .setCatalogNames(requiredServiceProperty(serviceProperties, "galaxy.catalog-names"))

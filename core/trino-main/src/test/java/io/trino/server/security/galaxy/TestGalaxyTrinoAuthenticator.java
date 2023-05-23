@@ -16,6 +16,10 @@ package io.trino.server.security.galaxy;
 import org.testng.annotations.Test;
 
 import java.security.KeyPair;
+import java.util.Optional;
+
+import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.PORTAL;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestGalaxyTrinoAuthenticator
         extends TestGalaxyAuthenticator
@@ -29,5 +33,11 @@ public class TestGalaxyTrinoAuthenticator
         KeyPair keyPair = generateKeyPair();
         GalaxyTrinoAuthenticator authenticator = new GalaxyTrinoAuthenticator(TOKEN_ISSUER, ACCOUNT_ID, DEPLOYMENT_ID, keyPair.getPublic());
         test(DEPLOYMENT_ID, keyPair, authenticator::authenticate);
+
+        // Test missing identity_type assignment still works (is assigned the portal identity_type)
+        assertThat(authenticator.authenticate(generateJwt("username", ACCOUNT_ID, DEPLOYMENT_ID, keyPair.getPrivate(), notExpired(), requestNotExpired(), Optional.of("good"), TOKEN_ISSUER, Optional.empty()), Optional.empty()))
+                .satisfies(identity -> assertThat(identity.getUser()).isEqualTo("username"))
+                .satisfies(identity -> assertThat(identity.getPrincipal().orElseThrow().toString()).isEqualTo(GALAXY_IDENTITY))
+                .satisfies(identity -> assertThat(identity.getExtraCredentials().get("identityType")).isEqualTo(PORTAL.name()));
     }
 }

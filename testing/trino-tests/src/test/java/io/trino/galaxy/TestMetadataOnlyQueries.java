@@ -136,6 +136,7 @@ public class TestMetadataOnlyQueries
                 .addExtraProperty("kms-crypto.enabled", "false")
                 .addExtraProperty("web-ui.authentication.type", "none")
                 .setHttpAuthenticationType("galaxy-metadata")
+                .addExtraProperty("galaxy.authentication.dispatch-token-issuer", "https://issuer.dispatcher.example.com")
                 .addExtraProperty("experimental.concurrent-startup", "true")
                 .addExtraProperty("metadata.shutdown.authentication-key", shutdownKey.toString())
                 .addExtraProperty("metadata.shutdown.exit-delay", "999m")

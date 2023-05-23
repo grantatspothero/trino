@@ -28,7 +28,6 @@ import io.starburst.stargate.id.UserId;
 import io.starburst.stargate.identity.DispatchSession;
 import io.trino.server.galaxy.GalaxySecurityModule;
 import io.trino.server.security.InternalPrincipal;
-import io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType;
 import io.trino.server.security.galaxy.GalaxyTrinoSystemAccessFactory;
 import io.trino.spi.Plugin;
 import io.trino.spi.security.Identity;
@@ -55,6 +54,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.airlift.testing.Closeables.closeAllSuppress;
 import static io.trino.server.HttpRequestSessionContextFactory.AUTHENTICATED_IDENTITY;
 import static io.trino.server.ServletSecurityUtils.setAuthenticatedIdentity;
+import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.PORTAL;
 import static io.trino.server.security.galaxy.GalaxyIdentity.createIdentity;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 import static java.util.Objects.requireNonNull;
@@ -173,7 +173,7 @@ public final class GalaxyQueryRunner
                     accountClient.getAdminUserId(),
                     accountClient.getAdminRoleId(),
                     accountClient.getAdminTrinoAccessToken(),
-                    GalaxyIdentityType.DEFAULT)));
+                    PORTAL)));
 
             if (installSecurityModule) {
                 addExtraProperty("galaxy.account-id", accountId.toString());
@@ -269,7 +269,7 @@ public final class GalaxyQueryRunner
                     dispatchSession.getUserId(),
                     dispatchSession.getRoleId(),
                     dispatchSession.getAccessToken(),
-                    GalaxyIdentityType.DEFAULT);
+                    PORTAL);
 
             setAuthenticatedIdentity(request, identity);
         }

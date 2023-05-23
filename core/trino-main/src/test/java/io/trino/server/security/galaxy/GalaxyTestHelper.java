@@ -262,7 +262,7 @@ public class GalaxyTestHelper
                 dispatchSession.getRoleId(),
                 enabledRoles,
                 dispatchSession.getAccessToken(),
-                GalaxyIdentityType.DEFAULT);
+                GalaxyIdentityType.PORTAL);
     }
 
     public Session session(UserId userId, RoleId roleId)
