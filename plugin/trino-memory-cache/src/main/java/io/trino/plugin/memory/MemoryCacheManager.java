@@ -48,6 +48,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
@@ -122,31 +123,7 @@ public class MemoryCacheManager
     public synchronized void revokeMemory(long targetBytes)
     {
         checkArgument(targetBytes >= 0);
-        for (Iterator<Map.Entry<SplitKey, List<Page>>> iterator = splitCache.entrySet().iterator(); iterator.hasNext(); ) {
-            if (allocatedRevocableBytes - targetBytes <= 0) {
-                break;
-            }
-
-            Map.Entry<SplitKey, List<Page>> entry = iterator.next();
-            SplitKey key = entry.getKey();
-
-            // account for splitCache entry memory
-            long splitRetainedSizeInBytes = MAP_ENTRY_SIZE + key.getRetainedSizeInBytes();
-            for (Page block : entry.getValue()) {
-                splitRetainedSizeInBytes += block.getRetainedSizeInBytes();
-            }
-            // account for splitLoaded entry memory
-            splitRetainedSizeInBytes += MAP_ENTRY_SIZE + key.getRetainedSizeInBytes() + SETTABLE_FUTURE_INSTANCE_SIZE;
-
-            iterator.remove();
-            splitLoaded.remove(key);
-            releaseSignatureId(key.signatureId());
-
-            allocatedRevocableBytes -= splitRetainedSizeInBytes;
-        }
-
-        checkState(allocatedRevocableBytes >= 0);
-        checkState(revocableMemoryAllocator.trySetBytes(allocatedRevocableBytes));
+        removeEldestSplits(() -> allocatedRevocableBytes - targetBytes <= 0);
     }
 
     private synchronized Optional<ConnectorPageSource> loadPages(long signatureId, SplitId splitId)
@@ -233,6 +210,35 @@ public class MemoryCacheManager
             idToSignature.remove(signatureId);
             idUsageCount.remove(signatureId);
         }
+    }
+
+    private synchronized void removeEldestSplits(BooleanSupplier stopCondition)
+    {
+        for (Iterator<Map.Entry<SplitKey, List<Page>>> iterator = splitCache.entrySet().iterator(); iterator.hasNext(); ) {
+            if (stopCondition.getAsBoolean()) {
+                break;
+            }
+
+            Map.Entry<SplitKey, List<Page>> entry = iterator.next();
+            SplitKey key = entry.getKey();
+
+            // account for splitCache entry memory
+            long splitRetainedSizeInBytes = MAP_ENTRY_SIZE + key.getRetainedSizeInBytes();
+            for (Page block : entry.getValue()) {
+                splitRetainedSizeInBytes += block.getRetainedSizeInBytes();
+            }
+            // account for splitLoaded entry memory
+            splitRetainedSizeInBytes += MAP_ENTRY_SIZE + key.getRetainedSizeInBytes() + SETTABLE_FUTURE_INSTANCE_SIZE;
+
+            iterator.remove();
+            splitLoaded.remove(key);
+            releaseSignatureId(key.signatureId());
+
+            allocatedRevocableBytes -= splitRetainedSizeInBytes;
+        }
+
+        checkState(allocatedRevocableBytes >= 0);
+        checkState(revocableMemoryAllocator.trySetBytes(allocatedRevocableBytes));
     }
 
     private class MemorySplitCache
