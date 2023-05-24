@@ -74,6 +74,7 @@ public final class ObjectStoreQueryRunner
         private TableType tableType;
         private String s3Url;
         private Map<String, String> hiveS3Config;
+        private String metastoreType;
         private TestingGalaxyMetastore metastore;
         private TestingLocationSecurityServer locationSecurityServer;
         private Plugin objectStorePlugin = new ObjectStorePlugin();
@@ -120,8 +121,16 @@ public final class ObjectStoreQueryRunner
         }
 
         @CanIgnoreReturnValue
+        public Builder withMetastoreType(String metastoreType)
+        {
+            this.metastoreType = metastoreType;
+            return this;
+        }
+
+        @CanIgnoreReturnValue
         public Builder withMetastore(TestingGalaxyMetastore metastore)
         {
+            this.metastoreType = "galaxy";
             this.metastore = metastore;
             return this;
         }
@@ -178,6 +187,7 @@ public final class ObjectStoreQueryRunner
                                 .putAll(locationSecurityServer.getClientConfig())
                                 .put("galaxy.catalog-id", accountClient.createCatalog("objectstore").getCatalogId().toString())
                                 .buildOrThrow(),
+                        requireNonNull(metastoreType, "metastoreType not set"),
                         metastore != null
                                 ? metastore.getMetastoreConfig(s3Url)
                                 : Map.of(),

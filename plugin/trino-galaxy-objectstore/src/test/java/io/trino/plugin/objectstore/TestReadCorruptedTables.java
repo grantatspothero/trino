@@ -96,6 +96,7 @@ public class TestReadCorruptedTables
                             "galaxy.location-security.enabled", "false",
                             "galaxy.catalog-id", "c-1234567890",
                             "galaxy.account-url", "https://localhost:1234"),
+                    "galaxy",
                     galaxyMetastore.getMetastoreConfig(DEFAULT_DATA_DIRECTORY),
                     Map.of(),
                     Map.of()));

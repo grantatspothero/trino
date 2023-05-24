@@ -73,6 +73,7 @@ public class TestObjectStoreIcebergConnectorMaterializedView
                         .putAll(locationSecurityServer.getClientConfig())
                         .put("galaxy.catalog-id", "c-1234567890")
                         .buildOrThrow(),
+                "galaxy",
                 metastore.getMetastoreConfig(minio.getS3Url()),
                 minio.getHiveS3Config(),
                 Map.of());

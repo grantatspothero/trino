@@ -69,15 +69,10 @@ public class TestObjectStoreIcebergGlueCatalogMaterializedView
                         .putAll(locationSecurityServer.getClientConfig())
                         .put("galaxy.catalog-id", "c-1234567890")
                         .buildOrThrow(),
+                "glue",
+                ImmutableMap.of("hive.metastore.glue.default-warehouse-dir", getSchemaDirectory()),
                 ImmutableMap.of(),
-                ImmutableMap.of(),
-                ImmutableMap.<String, String>builder()
-                        .put("HIVE__hive.metastore", "glue")
-                        .put("ICEBERG__iceberg.catalog.type", "glue")
-                        .put("ICEBERG__hive.metastore.glue.default-warehouse-dir", getSchemaDirectory())
-                        .put("DELTA__hive.metastore", "glue")
-                        .put("HUDI__hive.metastore", "glue")
-                        .buildOrThrow());
+                ImmutableMap.of());
         DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder(TEST_CATALOG, schemaName)
                 .setAccountClient(galaxyTestHelper.getAccountClient())
                 .addPlugin(new IcebergPlugin())

@@ -27,6 +27,7 @@ public final class TestingObjectStoreUtils
     public static Map<String, String> createObjectStoreProperties(
             TableType tableType,
             Map<String, String> locationSecurityClientConfig,
+            String metastoreType,
             Map<String, String> metastoreConfig,
             Map<String, String> hiveS3Config,
             Map<String, String> extraObjectStoreProperties)
@@ -48,12 +49,15 @@ public final class TestingObjectStoreUtils
         }
         properties.putAll(extraObjectStoreProperties);
 
-        if (!extraObjectStoreProperties.containsKey("HIVE__hive.metastore")) {
-            properties.put("HIVE__hive.metastore", "galaxy");
-            properties.put("ICEBERG__iceberg.catalog.type", "GALAXY_METASTORE");
-            properties.put("DELTA__hive.metastore", "galaxy");
-            properties.put("HUDI__hive.metastore", "galaxy");
-        }
+        properties.put("HIVE__hive.metastore", metastoreType);
+        properties.put("ICEBERG__iceberg.catalog.type", switch (metastoreType) {
+            case "galaxy" -> "GALAXY_METASTORE";
+            case "thrift" -> "HIVE_METASTORE";
+            case "glue" -> "GLUE";
+            default -> throw new IllegalArgumentException("Unsupported metastoreType: " + metastoreType);
+        });
+        properties.put("DELTA__hive.metastore", metastoreType);
+        properties.put("HUDI__hive.metastore", metastoreType);
 
         return properties.buildOrThrow();
     }

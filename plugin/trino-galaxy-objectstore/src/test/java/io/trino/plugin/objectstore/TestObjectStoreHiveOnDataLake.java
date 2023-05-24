@@ -73,15 +73,12 @@ public class TestObjectStoreHiveOnDataLake
                         .put("hive.s3.path-style-access", "true")
                         .buildOrThrow())
                 .withLocationSecurityServer(locationSecurityServer)
+                .withMetastoreType("thrift")
                 .withExtraObjectStoreProperties(ImmutableMap.<String, String>builder()
                         // Metastore
-                        .put("HIVE__hive.metastore", "thrift")
                         .put("HIVE__hive.metastore.uri", "thrift://" + hiveMinioDataLake.getHiveHadoop().getHiveMetastoreEndpoint())
-                        .put("ICEBERG__iceberg.catalog.type", "HIVE_METASTORE")
                         .put("ICEBERG__hive.metastore.uri", "thrift://" + hiveMinioDataLake.getHiveHadoop().getHiveMetastoreEndpoint())
-                        .put("DELTA__hive.metastore", "thrift")
                         .put("DELTA__hive.metastore.uri", "thrift://" + hiveMinioDataLake.getHiveHadoop().getHiveMetastoreEndpoint())
-                        .put("HUDI__hive.metastore", "thrift")
                         .put("HUDI__hive.metastore.uri", "thrift://" + hiveMinioDataLake.getHiveHadoop().getHiveMetastoreEndpoint())
                         // Required for tests
                         .put("HIVE__hive.insert-existing-partitions-behavior", "OVERWRITE")
