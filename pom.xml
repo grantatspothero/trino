@@ -105,6 +105,8 @@
             <!-- bump from default of 2 -->
             -XX:GCLockerRetryAllocationCount=10
             -XX:-G1UsePreventiveGC
+            <!-- Enable THP in tests for consistency with galaxy clusters-->
+            -XX:+UseTransparentHugePages
         </air.test.jvm.additional-arguments>
 
         <air.javadoc.lint>-missing</air.javadoc.lint>
