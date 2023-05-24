@@ -44,11 +44,11 @@ import static java.util.Objects.requireNonNull;
 public class GalaxySqlSocketFactory
         extends SocketFactory
 {
-    private static final String CATALOG_NAME_PROPERTY_NAME = "catalogName";
-    private static final String CATALOG_ID_PROPERTY_NAME = "catalogId";
+    public static final String CATALOG_NAME_PROPERTY_NAME = "catalogName";
+    public static final String CATALOG_ID_PROPERTY_NAME = "catalogId";
     // tlsEnabled is only needed for the mongo socket factory currently
     // JDBC drivers wrap the socket in an SSLSocket if necessary
-    private static final String TLS_ENABLED_PROPERTY_NAME = "tlsEnabled";
+    public static final String TLS_ENABLED_PROPERTY_NAME = "tlsEnabled";
 
     private final String catalogName;
     private final String catalogId;

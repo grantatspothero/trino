@@ -40,8 +40,8 @@ public class RegionVerifier
     private static final LoadingCache<List<String>, IpRangeMatcher> IP_RANGE_MATCHER_CACHE =
             buildNonEvictableCache(CacheBuilder.newBuilder(), CacheLoader.from(IpRangeMatcher::create));
 
-    private static final String CROSS_REGION_ALLOWED_PROPERTY_NAME = "crossRegionAllowed";
-    private static final String REGION_LOCAL_IP_ADDRESSES_PROPERTY_NAME = "regionLocalIpAddresses";
+    public static final String CROSS_REGION_ALLOWED_PROPERTY_NAME = "crossRegionAllowed";
+    public static final String REGION_LOCAL_IP_ADDRESSES_PROPERTY_NAME = "regionLocalIpAddresses";
     private final IpRangeMatcher localIpRangeMatcher;
     private final boolean crossRegionAllowed;
 

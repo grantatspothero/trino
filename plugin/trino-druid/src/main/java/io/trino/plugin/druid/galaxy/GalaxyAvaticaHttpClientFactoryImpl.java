@@ -14,174 +14,37 @@
 package io.trino.plugin.druid.galaxy;
 
 import org.apache.calcite.avatica.ConnectionConfig;
-import org.apache.calcite.avatica.remote.AuthenticationType;
 import org.apache.calcite.avatica.remote.AvaticaCommonsHttpClientImpl;
 import org.apache.calcite.avatica.remote.AvaticaHttpClient;
-import org.apache.calcite.avatica.remote.AvaticaHttpClientFactory;
-import org.apache.calcite.avatica.remote.DoAsAvaticaHttpClient;
-import org.apache.calcite.avatica.remote.GSSAuthenticateable;
-import org.apache.calcite.avatica.remote.HostnameVerificationConfigurable;
-import org.apache.calcite.avatica.remote.HttpClientPoolConfigurable;
+import org.apache.calcite.avatica.remote.AvaticaHttpClientFactoryImpl;
 import org.apache.calcite.avatica.remote.KerberosConnection;
-import org.apache.calcite.avatica.remote.KeyStoreConfigurable;
-import org.apache.calcite.avatica.remote.TrustStoreConfigurable;
-import org.apache.calcite.avatica.remote.UsernamePasswordAuthenticateable;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.lang.reflect.Constructor;
 import java.net.URL;
 
-import static java.util.Objects.requireNonNull;
+import static io.trino.plugin.druid.galaxy.GalaxyCommonsHttpClientPoolCache.getPool;
 
 /**
- * Default implementation of {@link AvaticaHttpClientFactory} which chooses an implementation
- * from a property.
+ * Extend default implementation so that we can override the socket in Galaxy.
+ * Changes include:
+ * Remove config controlled basic and krb authentication code since its not valid for Galaxy
+ * Always use default AvaticaCommonsHttpClientImpl as the client
  */
 public class GalaxyAvaticaHttpClientFactoryImpl
-        implements AvaticaHttpClientFactory
+        extends AvaticaHttpClientFactoryImpl
 {
-    private static final Logger LOG = LoggerFactory.getLogger(GalaxyAvaticaHttpClientFactoryImpl.class);
-
-    public static final String HTTP_CLIENT_IMPL_DEFAULT =
-            AvaticaCommonsHttpClientImpl.class.getName();
-
     // Public for Type.PLUGIN
     public static final GalaxyAvaticaHttpClientFactoryImpl INSTANCE = new GalaxyAvaticaHttpClientFactoryImpl();
 
     // Public for Type.PLUGIN
     public GalaxyAvaticaHttpClientFactoryImpl() {}
 
-    /**
-     * Returns a singleton instance of {@link GalaxyAvaticaHttpClientFactoryImpl}.
-     *
-     * @return A singleton instance.
-     */
-    public static GalaxyAvaticaHttpClientFactoryImpl getInstance()
-    {
-        return INSTANCE;
-    }
-
     @Override
-    public AvaticaHttpClient getClient(URL url, ConnectionConfig config,
-            KerberosConnection kerberosUtil)
+    public AvaticaHttpClient getClient(URL url, ConnectionConfig config, KerberosConnection ignoredConnection)
     {
-        String className = config.httpClientClass();
-        if (null == className) {
-            className = HTTP_CLIENT_IMPL_DEFAULT;
-        }
-
-        AvaticaHttpClient client = instantiateClient(className, url);
-
-        if (client instanceof HttpClientPoolConfigurable) {
-            PoolingHttpClientConnectionManager pool = GalaxyCommonsHttpClientPoolCache.getPool(config);
-            ((HttpClientPoolConfigurable) client).setHttpClientPool(pool);
-        }
-        else {
-            // Kept for backwards compatibility, the current AvaticaCommonsHttpClientImpl
-            // does not implement these interfaces
-            if (client instanceof TrustStoreConfigurable) {
-                File truststore = config.truststore();
-                String truststorePassword = config.truststorePassword();
-                if (null != truststore && null != truststorePassword) {
-                    ((TrustStoreConfigurable) client).setTrustStore(truststore, truststorePassword);
-                }
-            }
-            else {
-                LOG.debug("{} is not capable of SSL/TLS communication", client.getClass().getName());
-            }
-
-            if (client instanceof KeyStoreConfigurable) {
-                File keystore = config.keystore();
-                String keystorePassword = config.keystorePassword();
-                String keyPassword = config.keyPassword();
-                if (null != keystore && null != keystorePassword && null != keyPassword) {
-                    ((KeyStoreConfigurable) client).setKeyStore(keystore, keystorePassword, keyPassword);
-                }
-            }
-            else {
-                LOG.debug("{} is not capable of Mutual authentication", client.getClass().getName());
-            }
-
-            // Set the SSL hostname verification if the client supports it
-            if (client instanceof HostnameVerificationConfigurable) {
-                ((HostnameVerificationConfigurable) client)
-                        .setHostnameVerification(config.hostnameVerification());
-            }
-            else {
-                LOG.debug("{} is not capable of configurable SSL/TLS hostname verification",
-                        client.getClass().getName());
-            }
-        }
-
-        final String authString = config.authentication();
-        final AuthenticationType authType = authString == null ? null
-                : AuthenticationType.valueOf(authString);
-
-        if (client instanceof UsernamePasswordAuthenticateable) {
-            if (isUserPasswordAuth(authType)) {
-                final String username = config.avaticaUser();
-                final String password = config.avaticaPassword();
-
-                // Can't authenticate with NONE or w/o username and password
-                if (null != username && null != password) {
-                    ((UsernamePasswordAuthenticateable) client)
-                            .setUsernamePassword(authType, username, password);
-                }
-                else {
-                    LOG.debug("Username or password was null");
-                }
-            }
-        }
-        else {
-            LOG.debug("{} is not capable of username/password authentication.", authType);
-        }
-
-        if (client instanceof GSSAuthenticateable) {
-            if (AuthenticationType.SPNEGO == authType) {
-                // The actual principal is set in DoAsAvaticaHttpClient below
-                ((GSSAuthenticateable) client).setGSSCredential(null);
-            }
-        }
-        else {
-            LOG.debug("{} is not capable of kerberos authentication.", authType);
-        }
-
-        if (null != kerberosUtil) {
-            client = new DoAsAvaticaHttpClient(client, kerberosUtil);
-        }
-
+        AvaticaCommonsHttpClientImpl client = new AvaticaCommonsHttpClientImpl(url);
+        PoolingHttpClientConnectionManager poolingConnectionManager = getPool(config);
+        client.setHttpClientPool(poolingConnectionManager);
         return client;
-    }
-
-    private AvaticaHttpClient instantiateClient(String className, URL url)
-    {
-        AvaticaHttpClient client = null;
-        Exception clientCreationException = null;
-        try {
-            // Ensure that the given class is actually a subclass of AvaticaHttpClient
-            Class<? extends AvaticaHttpClient> clz =
-                    Class.forName(className).asSubclass(AvaticaHttpClient.class);
-            Constructor<? extends AvaticaHttpClient> constructor = clz.getConstructor(URL.class);
-            client = constructor.newInstance(requireNonNull(url));
-        }
-        catch (Exception e) {
-            clientCreationException = e;
-        }
-
-        if (client == null) {
-            throw new RuntimeException("Failed to construct AvaticaHttpClient implementation "
-                    + className, clientCreationException);
-        }
-        else {
-            return client;
-        }
-    }
-
-    private boolean isUserPasswordAuth(AuthenticationType authType)
-    {
-        return AuthenticationType.BASIC == authType || AuthenticationType.DIGEST == authType;
     }
 }

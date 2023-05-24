@@ -23,10 +23,10 @@ import java.util.function.Function;
 
 public final class SshTunnelPropertiesMapper
 {
-    private static final String SSH_TUNNEL_SERVER_PROPERTY_NAME = "sshTunnelServer";
-    private static final String SSH_TUNNEL_USER_PROPERTY_NAME = "sshTunnelUser";
-    private static final String SSH_TUNNEL_PRIVATE_KEY_PROPERTY_NAME = "sshTunnelPrivateKey";
-    private static final String SSH_TUNNEL_RECONNECT_CHECK_INTERVAL_PROPERTY_NAME = "sshTunnelReconnectCheckInterval";
+    public static final String SSH_TUNNEL_SERVER_PROPERTY_NAME = "sshTunnelServer";
+    public static final String SSH_TUNNEL_USER_PROPERTY_NAME = "sshTunnelUser";
+    public static final String SSH_TUNNEL_PRIVATE_KEY_PROPERTY_NAME = "sshTunnelPrivateKey";
+    public static final String SSH_TUNNEL_RECONNECT_CHECK_INTERVAL_PROPERTY_NAME = "sshTunnelReconnectCheckInterval";
 
     private SshTunnelPropertiesMapper() {}
 

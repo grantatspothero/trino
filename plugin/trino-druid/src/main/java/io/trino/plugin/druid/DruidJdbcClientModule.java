@@ -19,6 +19,7 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.druid.galaxy.GalaxyAvaticaHttpClientFactoryImpl;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
 import io.trino.plugin.jdbc.DriverConnectionFactory;
@@ -34,13 +35,16 @@ import org.apache.calcite.avatica.remote.Driver;
 
 import java.util.Properties;
 
-import static com.google.common.base.Verify.verify;
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addTlsEnabled;
 import static io.trino.plugin.base.galaxy.RegionVerifier.addCrossRegionAllowed;
 import static io.trino.plugin.base.galaxy.RegionVerifier.addRegionLocalIpAddresses;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
+import static java.util.Locale.ENGLISH;
+import static org.apache.calcite.avatica.BuiltInConnectionProperty.HTTP_CLIENT_FACTORY;
+import static org.apache.calcite.avatica.remote.Driver.CONNECT_STRING_PREFIX;
 
 public class DruidJdbcClientModule
         implements Module
@@ -67,10 +71,13 @@ public class DruidJdbcClientModule
         addCatalogName(galaxyProperties, catalogHandle.getCatalogName());
         addCatalogId(galaxyProperties, catalogHandle.getVersion().toString());
         addRegionLocalIpAddresses(galaxyProperties, regionEnforcementConfig.getAllowedIpAddresses());
-        verify(!regionEnforcementConfig.getAllowCrossRegionAccess(), "Cross-region access not supported");
         addCrossRegionAllowed(galaxyProperties, regionEnforcementConfig.getAllowCrossRegionAccess());
 
-        // TODO: implement tunneling
+        galaxyProperties.setProperty(HTTP_CLIENT_FACTORY.camelName(), GalaxyAvaticaHttpClientFactoryImpl.class.getName());
+
+        if (config.getConnectionUrl().toLowerCase(ENGLISH).startsWith(CONNECT_STRING_PREFIX + "url=https")) {
+            addTlsEnabled(galaxyProperties);
+        }
         SshTunnelProperties.generateFrom(sshTunnelConfig)
                 .ifPresent(sshTunnelProperties -> addSshTunnelProperties(galaxyProperties::setProperty, sshTunnelProperties));
 
