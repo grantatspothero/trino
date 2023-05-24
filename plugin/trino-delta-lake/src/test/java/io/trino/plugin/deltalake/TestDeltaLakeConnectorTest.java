@@ -1290,7 +1290,7 @@ public class TestDeltaLakeConnectorTest
 
         assertUpdate("UPDATE " + tableName + " SET domain = 'domain4' WHERE views = 2", 2);
         assertQuery("SELECT * FROM " + tableName, "" +
-                        """
+                """
                             VALUES
                                 ('url1', 'domain1', 1),
                                 ('url2', 'domain4', 2),
@@ -1317,7 +1317,7 @@ public class TestDeltaLakeConnectorTest
 
         assertUpdate("DELETE FROM " + tableName + " WHERE domain = 'domain4'", 2);
         assertQuery("SELECT * FROM " + tableName,
-                        """
+                """
                             VALUES
                                 ('url1', 'domain1', 1),
                                 ('url3', 'domain1', 3),
@@ -1354,7 +1354,7 @@ public class TestDeltaLakeConnectorTest
                 "THEN INSERT (page_url, domain, views) VALUES (source.page_url, source.domain, source.views)", 4);
 
         assertQuery("SELECT * FROM " + tableName1,
-                        """
+                """
                             VALUES
                                 ('url2', 'domain2', 22),
                                 ('url3', 'domain3', 3),
@@ -1399,7 +1399,7 @@ public class TestDeltaLakeConnectorTest
                 "THEN INSERT (page_url, domain, views) VALUES (source.page_url, source.domain, source.views)", 4);
 
         assertQuery("SELECT * FROM " + targetTable,
-                        """
+                """
                         VALUES
                             ('url3', 'domain3', 3),
                             ('url4', 'domain1', 44),
@@ -1435,12 +1435,12 @@ public class TestDeltaLakeConnectorTest
                 "THEN INSERT (page_url, domain, views) VALUES (source.page_url, source.domain, source.views)", 4);
 
         assertQuery("SELECT * FROM " + targetTable,
-                 """
-                 VALUES
-                    ('url4', 'domain2', 444),
-                    ('url5', 'domain3', 505),
-                    ('url6', 'domain1', 600)
-                 """);
+                """
+                        VALUES
+                           ('url4', 'domain2', 444),
+                           ('url5', 'domain3', 505),
+                           ('url6', 'domain1', 600)
+                        """);
 
         assertTableChangesQuery("SELECT * FROM TABLE(system.table_changes('test_schema', '" + targetTable + "', 2))",
                 """
@@ -1482,10 +1482,10 @@ public class TestDeltaLakeConnectorTest
 
         assertQuery("SELECT * FROM " + tableName,
                 """
-                 VALUES
-                    ('url22', 'domain2', 2),
-                    ('url33', 'domain3', 3)
-                 """);
+                        VALUES
+                           ('url22', 'domain2', 2),
+                           ('url33', 'domain3', 3)
+                        """);
 
         assertQueryFails("SELECT * FROM TABLE(system.table_changes('test_schema', '" + tableName + "', 1000))",
                 "since_version: 1000 is higher then current table version: 6");
@@ -1598,10 +1598,10 @@ public class TestDeltaLakeConnectorTest
 
         assertQuery("SELECT * FROM " + tableName,
                 """
-                 VALUES
-                    ('url22', 'domain2', 2),
-                    ('url33', 'domain3', 3)
-                 """);
+                        VALUES
+                           ('url22', 'domain2', 2),
+                           ('url33', 'domain3', 3)
+                        """);
 
         assertQueryFails("SELECT * FROM TABLE(system.table_changes('test_schema', '" + tableName + "', 3))",
                 "Change Data Feed is not enabled at version 4. Version contains 'remove' entries without 'cdc' entries");
@@ -1621,8 +1621,8 @@ public class TestDeltaLakeConnectorTest
     {
         String tableName = "test_basic_operations_on_table_with_cdf_enabled_" + randomNameSuffix();
         assertUpdate("CREATE TABLE " + tableName + " WITH (change_data_feed_enabled = true) AS SELECT * FROM (VALUES" +
-                "('url1', 'domain1', 1), " +
-                "('url2', 'domain2', 2)) t(page_url, domain, views)",
+                        "('url1', 'domain1', 1), " +
+                        "('url2', 'domain2', 2)) t(page_url, domain, views)",
                 2);
 
         assertTableChangesQuery("SELECT * FROM TABLE(system.table_changes('test_schema', '" + tableName + "'))",
