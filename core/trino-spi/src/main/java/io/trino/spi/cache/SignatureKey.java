@@ -16,10 +16,14 @@ package io.trino.spi.cache;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
+import static io.airlift.slice.SizeOf.estimatedSizeOf;
+import static io.airlift.slice.SizeOf.instanceSize;
 import static java.util.Objects.requireNonNull;
 
 public class SignatureKey
 {
+    private static final int INSTANCE_SIZE = instanceSize(SignatureKey.class);
+
     private final String key;
 
     @JsonCreator
@@ -52,5 +56,10 @@ public class SignatureKey
     public int hashCode()
     {
         return key.hashCode();
+    }
+
+    public long getRetainedSizeInBytes()
+    {
+        return INSTANCE_SIZE + estimatedSizeOf(key);
     }
 }

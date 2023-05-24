@@ -16,6 +16,7 @@ package io.trino.plugin.memory;
 import com.google.common.collect.ImmutableList;
 import io.trino.client.NodeVersion;
 import io.trino.metadata.InternalNode;
+import io.trino.plugin.memory.MemoryCacheManager.SplitKey;
 import io.trino.spi.Page;
 import io.trino.spi.block.BlockBuilder;
 import io.trino.spi.cache.CacheManager.PreferredAddressProvider;
@@ -37,6 +38,8 @@ import java.net.URISyntaxException;
 import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static io.trino.plugin.memory.MemoryCacheManager.MAP_ENTRY_SIZE;
+import static io.trino.plugin.memory.MemoryCacheManager.SETTABLE_FUTURE_INSTANCE_SIZE;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -68,7 +71,7 @@ public class TestMemoryCacheManager
             throws IOException
     {
         PlanSignature signature = createPlanSignature("sig");
-        SplitId splitId = new SplitId("split");
+        SplitId splitId = new SplitId("split1");
 
         // split data should not be cached yet
         SplitCache cache = cacheManager.getSplitCache(signature);
@@ -91,7 +94,8 @@ public class TestMemoryCacheManager
 
         // make sure memory is transferred to cacheManager after sink is finished
         sink.finish();
-        assertThat(allocatedRevocableMemory).isEqualTo(page.getRetainedSizeInBytes());
+        long cacheEntrySize = 2L * (MAP_ENTRY_SIZE + SplitKey.INSTANCE_SIZE + splitId.getRetainedSizeInBytes()) + SETTABLE_FUTURE_INSTANCE_SIZE;
+        assertThat(allocatedRevocableMemory).isEqualTo(page.getRetainedSizeInBytes() + cacheEntrySize);
 
         // split data should be available now
         Optional<ConnectorPageSource> sourceOptional = cache.loadPages(splitId);
@@ -114,7 +118,7 @@ public class TestMemoryCacheManager
         sink = cache.storePages(splitId2).get();
         sink.appendPage(page);
         sink.finish();
-        assertThat(allocatedRevocableMemory).isEqualTo(2 * page.getRetainedSizeInBytes());
+        assertThat(allocatedRevocableMemory).isEqualTo(2 * (page.getRetainedSizeInBytes() + cacheEntrySize));
 
         // data for both splits should be cached
         assertThat(cache.loadPages(splitId)).isPresent();
@@ -122,7 +126,7 @@ public class TestMemoryCacheManager
 
         // revoke memory and make sure only the least recently used split is left
         cacheManager.revokeMemory(1_500_000);
-        assertThat(allocatedRevocableMemory).isEqualTo(page.getRetainedSizeInBytes());
+        assertThat(allocatedRevocableMemory).isEqualTo(page.getRetainedSizeInBytes() + cacheEntrySize);
         assertThat(cache.loadPages(splitId)).isEmpty();
 
         // make sure no new split data is cached when memory limit is lowered
@@ -130,7 +134,7 @@ public class TestMemoryCacheManager
         sink = cache.storePages(splitId).get();
         sink.appendPage(page);
         sink.finish();
-        assertThat(allocatedRevocableMemory).isEqualTo(page.getRetainedSizeInBytes());
+        assertThat(allocatedRevocableMemory).isEqualTo(page.getRetainedSizeInBytes() + cacheEntrySize);
         assertThat(cache.loadPages(splitId)).isEmpty();
 
         cache.close();

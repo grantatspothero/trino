@@ -20,6 +20,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.StringJoiner;
 
+import static io.airlift.slice.SizeOf.estimatedSizeOf;
+import static io.airlift.slice.SizeOf.instanceSize;
+import static io.airlift.slice.SizeOf.sizeOf;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -29,6 +32,8 @@ import static java.util.Objects.requireNonNull;
  */
 public class PlanSignature
 {
+    private static final int INSTANCE_SIZE = instanceSize(PlanSignature.class);
+
     /**
      * Key of a plan signature. Plans that can be potentially adapted
      * to produce the same results (e.g. using column pruning, filtering or aggregation)
@@ -111,5 +116,14 @@ public class PlanSignature
                 .add("columns=" + columns)
                 .add("predicate=" + predicate)
                 .toString();
+    }
+
+    public long getRetainedSizeInBytes()
+    {
+        return INSTANCE_SIZE
+                + key.getRetainedSizeInBytes()
+                + sizeOf(groupByColumns, cols -> estimatedSizeOf(cols, ColumnId::getRetainedSizeInBytes))
+                + estimatedSizeOf(columns, ColumnId::getRetainedSizeInBytes)
+                + predicate.getRetainedSizeInBytes(ColumnId::getRetainedSizeInBytes);
     }
 }

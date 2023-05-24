@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.memory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -34,6 +35,7 @@ import io.trino.spi.connector.FixedPageSource;
 
 import javax.annotation.concurrent.GuardedBy;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -53,10 +55,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.hash.Hashing.consistentHash;
-import static java.lang.Math.max;
+import static io.airlift.slice.SizeOf.instanceSize;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static sun.misc.Unsafe.ARRAY_OBJECT_INDEX_SCALE;
 
 /**
  * {@link CacheManager} implementation that caches split pages in revocable memory and does not have
@@ -65,6 +68,10 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public class MemoryCacheManager
         implements CacheManager
 {
+    // based on SizeOf.estimatedSizeOf(java.util.Map<K,V>, java.util.function.ToLongFunction<K>, java.util.function.ToLongFunction<V>)
+    static final int MAP_ENTRY_SIZE = ARRAY_OBJECT_INDEX_SCALE + instanceSize(AbstractMap.SimpleEntry.class);
+    static final int SETTABLE_FUTURE_INSTANCE_SIZE = instanceSize(SettableFuture.class);
+
     private static final long WORKER_NODES_CACHE_TIMEOUT_SECS = 10;
 
     private final MemoryAllocator revocableMemoryAllocator;
@@ -115,25 +122,26 @@ public class MemoryCacheManager
     public synchronized void revokeMemory(long targetBytes)
     {
         checkArgument(targetBytes >= 0);
-        long bytesToFree = max(allocatedRevocableBytes - targetBytes, 0);
         for (Iterator<Map.Entry<SplitKey, List<Page>>> iterator = splitCache.entrySet().iterator(); iterator.hasNext(); ) {
-            if (bytesToFree <= 0) {
+            if (allocatedRevocableBytes - targetBytes <= 0) {
                 break;
             }
 
             Map.Entry<SplitKey, List<Page>> entry = iterator.next();
             SplitKey key = entry.getKey();
 
-            long splitRetainedSizeInBytes = 0;
+            // account for splitCache entry memory
+            long splitRetainedSizeInBytes = MAP_ENTRY_SIZE + key.getRetainedSizeInBytes();
             for (Page block : entry.getValue()) {
                 splitRetainedSizeInBytes += block.getRetainedSizeInBytes();
             }
+            // account for splitLoaded entry memory
+            splitRetainedSizeInBytes += MAP_ENTRY_SIZE + key.getRetainedSizeInBytes() + SETTABLE_FUTURE_INSTANCE_SIZE;
 
             iterator.remove();
             splitLoaded.remove(key);
             releaseSignatureId(key.signatureId());
 
-            bytesToFree -= splitRetainedSizeInBytes;
             allocatedRevocableBytes -= splitRetainedSizeInBytes;
         }
 
@@ -167,19 +175,24 @@ public class MemoryCacheManager
         }
 
         acquireSignatureId(signatureId);
+        // memory for splitLoaded entry will be accounted in finishStorePages
         splitLoaded.put(key, SettableFuture.create());
         return Optional.of(new MemoryCachePageSink(key));
     }
 
     private synchronized void finishStorePages(SplitKey key, long memoryUsageBytes, List<Page> pages)
     {
-        if (!revocableMemoryAllocator.trySetBytes(allocatedRevocableBytes + memoryUsageBytes)) {
+        // account for splitCache entry memory
+        long entrySize = MAP_ENTRY_SIZE + key.getRetainedSizeInBytes() + memoryUsageBytes;
+        // account for splitLoaded entry
+        entrySize += MAP_ENTRY_SIZE + key.getRetainedSizeInBytes() + SETTABLE_FUTURE_INSTANCE_SIZE;
+        if (!revocableMemoryAllocator.trySetBytes(allocatedRevocableBytes + entrySize)) {
             // not sufficient memory to store split pages
             abortStorePages(key);
             return;
         }
 
-        allocatedRevocableBytes += memoryUsageBytes;
+        allocatedRevocableBytes += entrySize;
         splitCache.put(key, pages);
         splitLoaded.get(key).set(null);
         checkState(idUsageCount.get(key.signatureId()) > 0, "Signature id must not be released while split is cached");
@@ -318,8 +331,11 @@ public class MemoryCacheManager
         }
     }
 
-    private record SplitKey(long signatureId, SplitId splitId)
+    @VisibleForTesting
+    record SplitKey(long signatureId, SplitId splitId)
     {
+        static final int INSTANCE_SIZE = instanceSize(SplitKey.class);
+
         public SplitKey(long signatureId, SplitId splitId)
         {
             this.signatureId = signatureId;
@@ -352,6 +368,11 @@ public class MemoryCacheManager
                     .add("signatureId", signatureId)
                     .add("splitId", splitId)
                     .toString();
+        }
+
+        public long getRetainedSizeInBytes()
+        {
+            return INSTANCE_SIZE + splitId.getRetainedSizeInBytes();
         }
     }
 }
