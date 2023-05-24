@@ -160,6 +160,11 @@ public class TestDeltaLakeConnectorTest
         }
     }
 
+    protected boolean isObjectStore()
+    {
+        return false;
+    }
+
     @Override
     protected String errorMessageForInsertIntoNotNullColumn(String columnName)
     {
@@ -272,7 +277,8 @@ public class TestDeltaLakeConnectorTest
                         "   comment varchar\n" +
                         ")\n" +
                         "WITH (\n" +
-                        "   location = \\E'.*/test_schema/orders.*'\n\\Q" +
+                        "   location = \\E'.*/test_schema/orders.*'\\Q" +
+                        (isObjectStore() ? ",\n   type = 'DELTA'\n" : "\n") +
                         ")");
     }
 

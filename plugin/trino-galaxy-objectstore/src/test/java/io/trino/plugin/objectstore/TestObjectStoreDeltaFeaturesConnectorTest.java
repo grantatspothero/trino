@@ -13,18 +13,17 @@
  */
 package io.trino.plugin.objectstore;
 
-import com.google.common.collect.ImmutableMap;
-import io.trino.filesystem.Location;
-import io.trino.plugin.iceberg.BaseIcebergConnectorTest;
-import io.trino.plugin.iceberg.IcebergConfig;
-import io.trino.plugin.iceberg.IcebergFileFormat;
+import io.trino.plugin.deltalake.DeltaLakeQueryRunner;
+import io.trino.plugin.deltalake.TestDeltaLakeConnectorTest;
+import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.plugin.tpch.TpchPlugin;
+import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.sql.planner.OptimizerConfig;
 import io.trino.testing.BaseConnectorTest;
 import io.trino.testing.DistributedQueryRunner;
-import io.trino.testing.QueryFailedException;
 import io.trino.testing.QueryRunner;
+import io.trino.testing.minio.MinioClient;
 import org.testng.SkipException;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -37,36 +36,37 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
 import static io.trino.plugin.base.util.Closables.closeAllSuppress;
-import static io.trino.plugin.iceberg.IcebergTestUtils.checkOrcFileSorting;
 import static io.trino.plugin.objectstore.ObjectStoreQueryRunner.initializeTpchTables;
+import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 import static java.util.stream.Collectors.joining;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.testng.Assert.fail;
 
 /**
- * Tests ObjectStore connector with Iceberg backend, exercising all
- * iceberg-specific tests inherited from {@link BaseIcebergConnectorTest}.
+ * Tests ObjectStore connector with Delta backend, exercising all
+ * Delta-specific tests inherited from {@link TestDeltaLakeConnectorTest}.
  *
- * @see TestObjectStoreIcebergConnectorTest
- * @see TestObjectStoreDeltaFeaturesConnectorTest
+ * @see TestDeltaLakeConnectorTest
+ * @see TestObjectStoreIcebergFeaturesConnectorTest
  */
-public class TestObjectStoreIcebergFeaturesConnectorTest
-        extends BaseIcebergConnectorTest
+public class TestObjectStoreDeltaFeaturesConnectorTest
+        extends TestDeltaLakeConnectorTest
 {
-    protected TestObjectStoreIcebergFeaturesConnectorTest()
-    {
-        super(new IcebergConfig().getFileFormat());
-    }
-
     @Override
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        String catalog = "iceberg";
-        String schema = "tpch";
+        MinioStorage minio = closeAfterClass(new MinioStorage(bucketName));
+        minio.start();
+        minioClient = closeAfterClass(new MinioClient(minio.getEndpoint(), MinioStorage.ACCESS_KEY, MinioStorage.SECRET_KEY));
+
+        GalaxyCockroachContainer cockroach = closeAfterClass(new GalaxyCockroachContainer());
+        TestingGalaxyMetastore galaxyMetastore = closeAfterClass(new TestingGalaxyMetastore(cockroach));
+
+        String catalog = DeltaLakeQueryRunner.DELTA_CATALOG;
+        String schema = "test_schema"; // must match TestDeltaLakeConnectorTest.SCHEMA
         DistributedQueryRunner queryRunner = DistributedQueryRunner.builder(
                         testSessionBuilder()
                                 .setCatalog(catalog)
@@ -79,38 +79,19 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
 
             queryRunner.installPlugin(new IcebergPlugin());
             queryRunner.installPlugin(new ObjectStorePlugin());
-            String metastoreDirectory = queryRunner.getCoordinator().getBaseDataDir().resolve("iceberg_data").toString();
-            queryRunner.createCatalog(catalog, "galaxy_objectstore", ImmutableMap.<String, String>builder()
-                    // Hive
-                    .put("HIVE__hive.metastore", "file")
-                    .put("HIVE__hive.metastore.catalog.dir", metastoreDirectory)
-                    .put("HIVE__galaxy.location-security.enabled", "false")
-                    .put("HIVE__galaxy.account-url", "https://localhost:1234")
-                    .put("HIVE__galaxy.catalog-id", "c-1234567890")
-                    // Iceberg
-                    .put("ICEBERG__iceberg.catalog.type", "TESTING_FILE_METASTORE")
-                    .put("ICEBERG__hive.metastore.catalog.dir", metastoreDirectory)
-                    .put("ICEBERG__galaxy.location-security.enabled", "false")
-                    .put("ICEBERG__galaxy.account-url", "https://localhost:1234")
-                    .put("ICEBERG__galaxy.catalog-id", "c-1234567890")
-                    // Delta
-                    .put("DELTA__hive.metastore", "file")
-                    .put("DELTA__hive.metastore.catalog.dir", metastoreDirectory)
-                    .put("DELTA__galaxy.location-security.enabled", "false")
-                    .put("DELTA__galaxy.account-url", "https://localhost:1234")
-                    .put("DELTA__galaxy.catalog-id", "c-1234567890")
-                    // Hudi
-                    .put("HUDI__hive.metastore", "file")
-                    .put("HUDI__hive.metastore.catalog.dir", metastoreDirectory)
-                    .put("HUDI__galaxy.location-security.enabled", "false")
-                    .put("HUDI__galaxy.account-url", "https://localhost:1234")
-                    .put("HUDI__galaxy.catalog-id", "c-1234567890")
-                    // ObjectStore
-                    .put("OBJECTSTORE__object-store.table-type", TableType.ICEBERG.name())
-                    .put("OBJECTSTORE__galaxy.location-security.enabled", "false")
-                    .put("OBJECTSTORE__galaxy.account-url", "https://localhost:1234")
-                    .put("OBJECTSTORE__galaxy.catalog-id", "c-1234567890")
-                    .buildOrThrow());
+
+            queryRunner.createCatalog(catalog, "galaxy_objectstore", createObjectStoreProperties(
+                    TableType.DELTA,
+                    Map.of(
+                            "galaxy.location-security.enabled", "false",
+                            "galaxy.catalog-id", "c-1234567890",
+                            "galaxy.account-url", "https://localhost:1234"),
+                    "galaxy",
+                    galaxyMetastore.getMetastoreConfig(minio.getS3Url()),
+                    minio.getHiveS3Config(),
+                    Map.of(
+                            // delta.projection-pushdown-enabled is disabled by default in InternalObjectStoreConnectorFactory
+                            "DELTA__delta.projection-pushdown-enabled", "true")));
 
             queryRunner.execute("CREATE SCHEMA %s.%s".formatted(catalog, schema));
             initializeTpchTables(queryRunner, REQUIRED_TPCH_TABLES);
@@ -129,27 +110,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
         return true;
     }
 
-    @Override
-    protected boolean supportsIcebergFileStatistics(String typeName)
-    {
-        checkState(format == IcebergFileFormat.ORC, "The logic here is appropriate for ORC, got %s", format);
-        return !typeName.equalsIgnoreCase("varbinary") &&
-                !typeName.equalsIgnoreCase("uuid");
-    }
-
-    @Override
-    protected boolean supportsRowGroupStatistics(String typeName)
-    {
-        checkState(format == IcebergFileFormat.ORC, "The logic here is appropriate for ORC, got %s", format);
-        return !typeName.equalsIgnoreCase("varbinary");
-    }
-
-    @Override
-    protected boolean isFileSorted(String path, String sortColumnName)
-    {
-        return checkOrcFileSorting(fileSystemFactory, Location.of(path), sortColumnName);
-    }
-
     @BeforeMethod(alwaysRun = true)
     public void preventDuplicatedTestCoverage(Method testMethod)
     {
@@ -157,7 +117,7 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
         if (declaringClass.isAssignableFrom(BaseConnectorTest.class) && !isOverridden(testMethod, getClass())) {
             fail("The %s test is covered by %s, no need to run it again in %s. You can use main() to generate overrides".formatted(
                     testMethod.getName(),
-                    TestObjectStoreIcebergConnectorTest.class.getSimpleName(),
+                    TestDeltaLakeConnectorTest.class.getSimpleName(),
                     getClass().getSimpleName()));
         }
     }
@@ -177,20 +137,17 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testSerializableReadIsolation()
+    public void testTableWithNonNullableColumns()
     {
-        // HiveConnector has READ_UNCOMMITTED. When opening transaction in ObjectStore we don't know yet we which tables we will read from.
-        assertThatThrownBy(super::testSerializableReadIsolation)
-                .cause()
-                .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Connector supported isolation level READ UNCOMMITTED does not meet requested isolation level READ COMMITTED");
+        assertThatThrownBy(super::testTableWithNonNullableColumns)
+                .hasMessage("Delta Lake tables do not support NOT NULL columns");
     }
 
     private void skipDuplicateTestCoverage(String methodName, Class<?>... args)
     {
         try {
             Method ignored = getClass().getDeclaredMethod(methodName, args); // validate we have the override
-            if (isTestSpecializedForIceberg(methodName, args)) {
+            if (isTestSpecializedForDelta(methodName, args)) {
                 fail("Method %s(%s) became overridden and should no longer be skipped in %s".formatted(methodName, Arrays.toString(args), getClass()));
             }
         }
@@ -198,10 +155,10 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
             throw new RuntimeException(e);
         }
 
-        throw new SkipException("This method is probably run in %s".formatted(TestObjectStoreIcebergConnectorTest.class.getSimpleName()));
+        throw new SkipException("This method is probably run in %s".formatted(TestDeltaLakeConnectorTest.class.getSimpleName()));
     }
 
-    private boolean isTestSpecializedForIceberg(String methodName, Class<?>... args)
+    private boolean isTestSpecializedForDelta(String methodName, Class<?>... args)
     {
         try {
             Method overridden = getClass().getSuperclass().getMethod(methodName, args);
@@ -217,7 +174,7 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
         // Generate overrides
 
         Stream.of(BaseConnectorTest.class.getMethods())
-                .filter(method -> method.isAnnotationPresent(Test.class) && !isOverridden(method, TestObjectStoreIcebergFeaturesConnectorTest.class))
+                .filter(method -> method.isAnnotationPresent(Test.class) && !isOverridden(method, TestObjectStoreDeltaFeaturesConnectorTest.class))
                 .sorted(Comparator.comparing(Method::getName))
                 .forEachOrdered(method -> {
                     System.out.printf(
@@ -272,6 +229,12 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     /////// ----------------------------------------- please put generated code below this line ----------------------------------------- ///////
     /////// ----------------------------------------- please put generated code also below this line ------------------------------------ ///////
     /////// ----------------------------------------- please put generated code below this line as well --------------------------------- ///////
+
+    @Override
+    public void testAddAndDropColumnName(String arg0)
+    {
+        skipDuplicateTestCoverage("testAddAndDropColumnName", String.class);
+    }
 
     @Override
     public void testAddColumn()
@@ -658,12 +621,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testDropNonEmptySchemaWithTable()
-    {
-        skipDuplicateTestCoverage("testDropNonEmptySchemaWithTable");
-    }
-
-    @Override
     public void testDropNonEmptySchemaWithView()
     {
         skipDuplicateTestCoverage("testDropNonEmptySchemaWithView");
@@ -679,6 +636,12 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     public void testDropRowFieldCaseSensitivity()
     {
         skipDuplicateTestCoverage("testDropRowFieldCaseSensitivity");
+    }
+
+    @Override
+    public void testDropRowFieldWhenDuplicates()
+    {
+        skipDuplicateTestCoverage("testDropRowFieldWhenDuplicates");
     }
 
     @Override
