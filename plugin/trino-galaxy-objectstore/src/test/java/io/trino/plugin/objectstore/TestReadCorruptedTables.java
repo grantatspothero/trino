@@ -34,8 +34,6 @@ import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import org.apache.hadoop.fs.Path;
 import org.apache.iceberg.BaseMetastoreTableOperations;
-import org.assertj.core.api.AssertProvider;
-import org.assertj.core.util.CanIgnoreReturnValue;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -44,14 +42,12 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Verify.verify;
 import static io.trino.plugin.base.util.Closables.closeAllSuppress;
 import static io.trino.plugin.hive.HiveType.HIVE_INT;
 import static io.trino.plugin.hive.TableType.EXTERNAL_TABLE;
+import static io.trino.plugin.objectstore.S3Assert.s3Path;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -244,68 +240,10 @@ public class TestReadCorruptedTables
 
     private void verifyCorrupted(String path)
     {
-        assertThat(s3Path(path))
+        assertThat(s3Path(s3, path))
                 .doesNotExist()
                 .withKey(corruptedKey(path))
                 .exists();
-    }
-
-    private AssertProvider<S3Assert> s3Path(String path)
-    {
-        return () -> new S3Assert(s3, path);
-    }
-
-    private static class S3Assert
-    {
-        private final AmazonS3 s3;
-        private final String path;
-        private final String bucket;
-        private final String key;
-
-        public S3Assert(AmazonS3 s3, String path)
-        {
-            this(
-                    s3,
-                    path,
-                    regexpExtract(path, "s3://([^/]+)/(.+)", 1),
-                    regexpExtract(path, "s3://([^/]+)/(.+)", 2));
-        }
-
-        public S3Assert(AmazonS3 s3, String path, String bucket, String key)
-        {
-            this.s3 = requireNonNull(s3, "s3 is null");
-            this.path = requireNonNull(path, "path is null");
-            this.bucket = requireNonNull(bucket, "bucket is null");
-            this.key = requireNonNull(key, "key is null");
-        }
-
-        private static String regexpExtract(String input, String regex, int group)
-        {
-            Matcher matcher = Pattern.compile(regex).matcher(input);
-            verify(matcher.matches(), "Does not match [%s]: [%s]", matcher.pattern(), input);
-            return matcher.group(group);
-        }
-
-        @CanIgnoreReturnValue
-        public S3Assert exists()
-        {
-            assertThat(s3.doesObjectExist(bucket, key)).as("Existence of %s", path)
-                    .isTrue();
-            return this;
-        }
-
-        @CanIgnoreReturnValue
-        public S3Assert doesNotExist()
-        {
-            assertThat(s3.doesObjectExist(bucket, key)).as("Existence of %s", path)
-                    .isFalse();
-            return this;
-        }
-
-        public S3Assert withKey(String key)
-        {
-            return new S3Assert(s3, "s3://%s/%s".formatted(bucket, key), bucket, key);
-        }
     }
 
     private record IcebergTable(String location, String metadataLocation)
