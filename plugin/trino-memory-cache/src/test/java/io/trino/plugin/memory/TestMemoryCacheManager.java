@@ -115,7 +115,7 @@ public class TestMemoryCacheManager
 
         // store data for another split
         SplitId splitId2 = new SplitId("split2");
-        sink = cache.storePages(splitId2).get();
+        sink = cache.storePages(splitId2).orElseThrow();
         sink.appendPage(page);
         sink.finish();
         assertThat(allocatedRevocableMemory).isEqualTo(2 * (page.getRetainedSizeInBytes() + cacheEntrySize));
@@ -131,7 +131,7 @@ public class TestMemoryCacheManager
 
         // make sure no new split data is cached when memory limit is lowered
         memoryLimit = 1_500_000;
-        sink = cache.storePages(splitId).get();
+        sink = cache.storePages(splitId).orElseThrow();
         sink.appendPage(page);
         sink.finish();
         assertThat(allocatedRevocableMemory).isEqualTo(page.getRetainedSizeInBytes() + cacheEntrySize);
