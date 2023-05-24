@@ -254,6 +254,7 @@ public class MemoryCacheManager
             implements SplitCache
     {
         private final long signatureId;
+        private volatile boolean closed;
 
         private MemorySplitCache(PlanSignature signature)
         {
@@ -263,18 +264,22 @@ public class MemoryCacheManager
         @Override
         public Optional<ConnectorPageSource> loadPages(SplitId splitId)
         {
+            checkState(!closed, "MemorySplitCache already closed");
             return MemoryCacheManager.this.loadPages(signatureId, splitId);
         }
 
         @Override
         public Optional<ConnectorPageSink> storePages(SplitId splitId)
         {
+            checkState(!closed, "MemorySplitCache already closed");
             return MemoryCacheManager.this.storePages(signatureId, splitId);
         }
 
         @Override
         public void close()
         {
+            checkState(!closed, "MemorySplitCache already closed");
+            closed = true;
             releaseSignatureId(signatureId);
             // remove oldest cached splits in order to free plan signature slots
             removeEldestSplits(() -> signatureToId.size() <= maxPlanSignatures);
