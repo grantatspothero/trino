@@ -28,20 +28,6 @@ public final class TestingObjectStoreUtils
             TableType tableType,
             Map<String, String> locationSecurityClientConfig,
             Map<String, String> metastoreConfig,
-            Map<String, String> hiveS3Config)
-    {
-        return createObjectStoreProperties(
-                tableType,
-                locationSecurityClientConfig,
-                metastoreConfig,
-                hiveS3Config,
-                Map.of());
-    }
-
-    public static Map<String, String> createObjectStoreProperties(
-            TableType tableType,
-            Map<String, String> locationSecurityClientConfig,
-            Map<String, String> metastoreConfig,
             Map<String, String> hiveS3Config,
             Map<String, String> extraObjectStoreProperties)
     {

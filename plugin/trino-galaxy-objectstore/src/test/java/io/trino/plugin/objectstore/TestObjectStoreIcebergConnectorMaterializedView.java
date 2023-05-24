@@ -74,7 +74,8 @@ public class TestObjectStoreIcebergConnectorMaterializedView
                         .put("galaxy.catalog-id", "c-1234567890")
                         .buildOrThrow(),
                 metastore.getMetastoreConfig(minio.getS3Url()),
-                minio.getHiveS3Config());
+                minio.getHiveS3Config(),
+                Map.of());
         DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder(TEST_CATALOG, "default")
                 .setAccountClient(galaxyTestHelper.getAccountClient())
                 .addPlugin(new IcebergPlugin())
