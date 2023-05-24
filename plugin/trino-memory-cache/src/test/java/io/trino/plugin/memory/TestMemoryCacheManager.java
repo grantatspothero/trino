@@ -165,6 +165,46 @@ public class TestMemoryCacheManager
     }
 
     @Test
+    public void testPlanSignatureLimit()
+            throws IOException
+    {
+        MemoryCacheManager cacheManager = new MemoryCacheManager(() -> bytes -> true, 1);
+
+        // cache some data for first signature
+        PlanSignature signature = createPlanSignature("sig");
+        SplitId splitId = new SplitId("split");
+        SplitCache cache = cacheManager.getSplitCache(signature);
+        ConnectorPageSink sink = cache.storePages(splitId).orElseThrow();
+        Page page = createOneMegaBytePage();
+        sink.appendPage(page);
+        sink.finish();
+        cache.close();
+
+        // make sure page is present with new SplitCache instance
+        SplitCache anotherCache = cacheManager.getSplitCache(signature);
+        assertThat(anotherCache.loadPages(splitId)).isPresent();
+
+        // cache data for another signature
+        PlanSignature anotherSignature = createPlanSignature("sig2");
+        SplitCache cacheForAnotherSignature = cacheManager.getSplitCache(anotherSignature);
+        sink = cacheForAnotherSignature.storePages(splitId).orElseThrow();
+        sink.appendPage(page);
+        sink.finish();
+
+        // both splits should be still cached while anotherCache and cacheForAnotherSignature are open
+        assertThat(anotherCache.loadPages(splitId)).isPresent();
+        assertThat(cacheForAnotherSignature.loadPages(splitId)).isPresent();
+
+        // only one split (for one signature) should be cached after anotherCache and cacheForAnotherSignature are reopened
+        anotherCache.close();
+        cacheForAnotherSignature.close();
+        anotherCache = cacheManager.getSplitCache(signature);
+        cacheForAnotherSignature = cacheManager.getSplitCache(anotherSignature);
+        assertThat(anotherCache.loadPages(splitId)).isEmpty();
+        assertThat(cacheForAnotherSignature.loadPages(splitId)).isPresent();
+    }
+
+    @Test
     public void testAddressProvider()
             throws URISyntaxException
     {

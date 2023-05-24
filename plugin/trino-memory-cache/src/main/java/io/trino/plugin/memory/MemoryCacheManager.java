@@ -73,8 +73,10 @@ public class MemoryCacheManager
     static final int MAP_ENTRY_SIZE = ARRAY_OBJECT_INDEX_SCALE + instanceSize(AbstractMap.SimpleEntry.class);
     static final int SETTABLE_FUTURE_INSTANCE_SIZE = instanceSize(SettableFuture.class);
 
+    private static final int DEFAULT_MAX_PLAN_SIGNATURES = 200;
     private static final long WORKER_NODES_CACHE_TIMEOUT_SECS = 10;
 
+    private final int maxPlanSignatures;
     private final MemoryAllocator revocableMemoryAllocator;
 
     @GuardedBy("this")
@@ -103,8 +105,15 @@ public class MemoryCacheManager
     @Inject
     public MemoryCacheManager(CacheManagerContext context)
     {
+        this(context, DEFAULT_MAX_PLAN_SIGNATURES);
+    }
+
+    @VisibleForTesting
+    MemoryCacheManager(CacheManagerContext context, int maxPlanSignatures)
+    {
         requireNonNull(context, "context is null");
-        revocableMemoryAllocator = context.revocableMemoryAllocator();
+        this.maxPlanSignatures = maxPlanSignatures;
+        this.revocableMemoryAllocator = context.revocableMemoryAllocator();
     }
 
     @Override
@@ -267,6 +276,8 @@ public class MemoryCacheManager
         public void close()
         {
             releaseSignatureId(signatureId);
+            // remove oldest cached splits in order to free plan signature slots
+            removeEldestSplits(() -> signatureToId.size() <= maxPlanSignatures);
         }
     }
 
