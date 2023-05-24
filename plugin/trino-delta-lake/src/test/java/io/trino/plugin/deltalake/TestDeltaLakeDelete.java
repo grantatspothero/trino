@@ -34,8 +34,8 @@ public class TestDeltaLakeDelete
         extends AbstractTestQueryFramework
 {
     private static final String SCHEMA = "default";
-    private final String bucketName = "test-delta-lake-connector-test-" + randomNameSuffix();
 
+    private final String bucketName = "test-delta-lake-connector-test-" + randomNameSuffix();
     private HiveMinioDataLake hiveMinioDataLake;
 
     @Override
