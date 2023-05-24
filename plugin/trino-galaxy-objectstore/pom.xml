@@ -191,6 +191,12 @@
 
         <dependency>
             <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-glue</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-s3</artifactId>
             <scope>runtime</scope>
         </dependency>
@@ -601,6 +607,9 @@
                                 <include>**/Test*Iceberg*.java</include>
                                 <include>**/Test*Delta*.java</include>
                             </includes>
+                            <excludes>
+                                <exclude>**/TestObjectStoreIcebergGlueCatalogMaterializedView.java</exclude>
+                            </excludes>
                         </configuration>
                     </plugin>
                 </plugins>
@@ -608,7 +617,7 @@
         </profile>
 
         <profile>
-            <id>s3-tests</id>
+            <id>cloud-tests</id>
             <build>
                 <plugins>
                     <plugin>
@@ -617,6 +626,7 @@
                         <configuration>
                             <includes>
                                 <include>**/TestReadCorruptedTables.java</include>
+                                <include>**/TestObjectStoreIcebergGlueCatalogMaterializedView.java</include>
                             </includes>
                         </configuration>
                     </plugin>
