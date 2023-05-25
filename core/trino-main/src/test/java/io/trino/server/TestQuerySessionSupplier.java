@@ -22,8 +22,12 @@ import com.google.common.collect.ListMultimap;
 import io.airlift.jaxrs.testing.GuavaMultivaluedMap;
 import io.opentelemetry.api.trace.Span;
 import io.trino.Session;
+import io.trino.eventlistener.EventListenerConfig;
+import io.trino.eventlistener.EventListenerManager;
 import io.trino.metadata.Metadata;
 import io.trino.metadata.SessionPropertyManager;
+import io.trino.security.AccessControlConfig;
+import io.trino.security.AccessControlManager;
 import io.trino.security.AllowAllAccessControl;
 import io.trino.server.protocol.PreparedStatementEncoder;
 import io.trino.spi.QueryId;
@@ -250,6 +254,7 @@ public class TestQuerySessionSupplier
         return new QuerySessionSupplier(
                 metadata,
                 new AllowAllAccessControl(),
+                new AccessControlManager(transactionManager, new EventListenerManager(new EventListenerConfig()), new AccessControlConfig(), "default"),
                 new SessionPropertyManager(),
                 config);
     }

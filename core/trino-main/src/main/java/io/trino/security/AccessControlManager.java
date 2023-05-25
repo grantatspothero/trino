@@ -1377,7 +1377,7 @@ public class AccessControlManager
         }
     }
 
-    private List<SystemAccessControl> getSystemAccessControls()
+    public List<SystemAccessControl> getSystemAccessControls()
     {
         List<SystemAccessControl> accessControls = systemAccessControls.get();
         if (accessControls != null) {

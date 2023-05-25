@@ -18,9 +18,11 @@ import io.trino.Session;
 import io.trino.metadata.Metadata;
 import io.trino.metadata.SessionPropertyManager;
 import io.trino.security.AccessControl;
+import io.trino.security.AccessControlManager;
 import io.trino.server.security.galaxy.GalaxyAccessControl;
 import io.trino.spi.QueryId;
 import io.trino.spi.security.Identity;
+import io.trino.spi.security.SystemAccessControl;
 import io.trino.spi.type.TimeZoneKey;
 import io.trino.sql.SqlEnvironmentConfig;
 import io.trino.sql.SqlPath;
@@ -28,6 +30,7 @@ import io.trino.sql.SqlPath;
 import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -47,6 +50,7 @@ public class QuerySessionSupplier
 {
     private final Metadata metadata;
     private final AccessControl accessControl;
+    private final AccessControlManager accessControlManager;
     private final SessionPropertyManager sessionPropertyManager;
     private final Optional<String> defaultPath;
     private final Optional<TimeZoneKey> forcedSessionTimeZone;
@@ -57,11 +61,13 @@ public class QuerySessionSupplier
     public QuerySessionSupplier(
             Metadata metadata,
             AccessControl accessControl,
+            AccessControlManager accessControlManager,
             SessionPropertyManager sessionPropertyManager,
             SqlEnvironmentConfig config)
     {
         this.metadata = requireNonNull(metadata, "metadata is null");
         this.accessControl = requireNonNull(accessControl, "accessControl is null");
+        this.accessControlManager = requireNonNull(accessControlManager, "accessControlManager is null");
         this.sessionPropertyManager = requireNonNull(sessionPropertyManager, "sessionPropertyManager is null");
         this.defaultPath = requireNonNull(config.getPath(), "path is null");
         this.forcedSessionTimeZone = requireNonNull(config.getForcedSessionTimeZone(), "forcedSessionTimeZone is null");
@@ -90,11 +96,11 @@ public class QuerySessionSupplier
 
         /*
          * In Galaxy, don't add the enabled roles for DML operations, because listEnabledRoles causes
-         * a round-trip to the control-plane, and Galaxy only uses the enabled roles to determine if
-         * an entity is (transitively) owned by a role in the active role set.  getEntityPrivileges, which
-         * is always called for a query, now returns the required ownerInActiveRoleSet boolean.
+         * a round-trip to the control-plane, and Galaxy doesn't use enabled roles for DML operations.
          */
-        boolean canSkipListEnabledRoles = query.isPresent() && accessControl instanceof GalaxyAccessControl && canSkipListEnabledRoles(query.get());
+        List<SystemAccessControl> accessControls = accessControlManager.getSystemAccessControls();
+        boolean isGalaxyAccessControl = accessControls.size() == 1 && accessControls.get(0) instanceof GalaxyAccessControl;
+        boolean canSkipListEnabledRoles = query.isPresent() && isGalaxyAccessControl && canSkipListEnabledRoles(query.get());
         if (!canSkipListEnabledRoles) {
             identity = addEnabledRoles(identity, context.getSelectedRole(), metadata);
         }
