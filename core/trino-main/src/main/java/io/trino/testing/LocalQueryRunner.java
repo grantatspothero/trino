@@ -27,6 +27,8 @@ import io.trino.FeaturesConfig;
 import io.trino.Session;
 import io.trino.SystemSessionProperties;
 import io.trino.SystemSessionPropertiesProvider;
+import io.trino.cache.CacheConfig;
+import io.trino.cache.CacheManagerRegistry;
 import io.trino.client.NodeVersion;
 import io.trino.connector.CatalogFactory;
 import io.trino.connector.CatalogManagerConfig;
@@ -79,6 +81,7 @@ import io.trino.execution.scheduler.NodeSchedulerConfig;
 import io.trino.execution.scheduler.UniformNodeSelectorFactory;
 import io.trino.execution.warnings.WarningCollector;
 import io.trino.index.IndexManager;
+import io.trino.memory.LocalMemoryManager;
 import io.trino.memory.MemoryManagerConfig;
 import io.trino.memory.NodeMemoryConfig;
 import io.trino.metadata.AnalyzePropertyManager;
@@ -311,6 +314,7 @@ public class LocalQueryRunner
     private final CoordinatorDynamicCatalogManager catalogManager;
     private final PluginManager pluginManager;
     private final ExchangeManagerRegistry exchangeManagerRegistry;
+    private final CacheManagerRegistry cacheManagerRegistry;
 
     private final TaskManagerConfig taskManagerConfig;
     private final boolean alwaysRevokeMemory;
@@ -482,6 +486,7 @@ public class LocalQueryRunner
                 ImmutableSet.of(new ExcludeColumnsFunction()));
 
         exchangeManagerRegistry = new ExchangeManagerRegistry();
+        cacheManagerRegistry = new CacheManagerRegistry(new CacheConfig(), new LocalMemoryManager(new NodeMemoryConfig()));
         this.pluginManager = new PluginManager(
                 (loader, createClassLoader) -> {},
                 catalogFactory,
@@ -497,7 +502,8 @@ public class LocalQueryRunner
                 typeRegistry,
                 blockEncodingManager,
                 handleResolver,
-                exchangeManagerRegistry);
+                exchangeManagerRegistry,
+                cacheManagerRegistry);
 
         catalogManager.registerGlobalSystemConnector(globalSystemConnector);
 
