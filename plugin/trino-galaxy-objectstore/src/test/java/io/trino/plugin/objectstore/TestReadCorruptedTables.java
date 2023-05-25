@@ -67,7 +67,7 @@ public class TestReadCorruptedTables
         extends AbstractTestQueryFramework
 {
     private static final String PATH_SEPARATOR = "/";
-    private static final String DEFAULT_DATA_DIRECTORY = "s3://galaxy-trino-ci/static_test_resources/"; // not relevant, since we're dealing with existing data sets
+    private static final String DEFAULT_DATA_DIRECTORY = "s3://galaxy-trino-ci-static/test_resources/"; // not relevant, since we're dealing with existing data sets
 
     private TestingGalaxyMetastore galaxyMetastore;
     private AmazonS3 s3;
@@ -134,11 +134,11 @@ public class TestReadCorruptedTables
         // Register Iceberg tables: register_table-equivalent, but without any validation
         for (Map.Entry<String, IcebergTable> entry : Map.of(
                         "iceberg_double_slashes", new IcebergTable(
-                                "s3://galaxy-trino-ci/static_test_resources//test_double_slashes/iceberg-8b45d540546c4f53ab9c69bc70e28a67",
-                                "s3://galaxy-trino-ci/static_test_resources//test_double_slashes//iceberg-8b45d540546c4f53ab9c69bc70e28a67/metadata/00002-92da77ae-6042-473e-8721-196a5c5d44bc.metadata.json"),
+                                "s3://galaxy-trino-ci-static/test_resources//test_double_slashes/iceberg-b754219094244b30a6f3cd2904aeff4e",
+                                "s3://galaxy-trino-ci-static/test_resources//test_double_slashes//iceberg-b754219094244b30a6f3cd2904aeff4e/metadata/00002-df018b61-9e0e-4263-b95d-476af06d1374.metadata.json"),
                         "iceberg_double_slashes_ctas", new IcebergTable(
-                                "s3://galaxy-trino-ci/static_test_resources//test_double_slashes/iceberg_ctas-52d01276e6fa4d35bac2db7062613e47",
-                                "s3://galaxy-trino-ci/static_test_resources//test_double_slashes//iceberg_ctas-52d01276e6fa4d35bac2db7062613e47/metadata/00001-66d3c340-058b-4a00-af6f-c1b8e094d21b.metadata.json"))
+                                "s3://galaxy-trino-ci-static/test_resources//test_double_slashes/iceberg_ctas-2e7f97526b6544de8d41cba5b5dfcb23",
+                                "s3://galaxy-trino-ci-static/test_resources//test_double_slashes//iceberg_ctas-2e7f97526b6544de8d41cba5b5dfcb23/metadata/00001-16f7868e-eab4-4634-887b-2ebf1969d27c.metadata.json"))
                 .entrySet()) {
             String tableName = entry.getKey();
             IcebergTable tableInfo = entry.getValue();
@@ -161,8 +161,8 @@ public class TestReadCorruptedTables
 
         // Register Delta tables: register_table-equivalent, but without any validation
         for (Map.Entry<String, String> entry : Map.of(
-                        "delta_double_slashes", "s3://galaxy-trino-ci/static_test_resources//test_double_slashes/delta-8806fd5b1a8043eb964f3410a85464a2",
-                        "delta_double_slashes_ctas", "s3://galaxy-trino-ci/static_test_resources//test_double_slashes/delta_ctas-cdbaf20228c1465cb89b78a895bee13d")
+                        "delta_double_slashes", "s3://galaxy-trino-ci-static/test_resources//test_double_slashes/delta-b62aa2d3f88d464c8ef5d3ce6ee52ab1",
+                        "delta_double_slashes_ctas", "s3://galaxy-trino-ci-static/test_resources//test_double_slashes/delta_ctas-8dbcfaea11a3431281a71704a2dbc8d8")
                 .entrySet()) {
             String tableName = entry.getKey();
             String tableLocation = entry.getValue();
@@ -202,7 +202,7 @@ public class TestReadCorruptedTables
 
         String path = (String) computeScalar("SELECT DISTINCT \"$path\" FROM delta_double_slashes");
         assertThat(path)
-                .isEqualTo("s3://galaxy-trino-ci/static_test_resources//test_double_slashes/delta-8806fd5b1a8043eb964f3410a85464a2/20230522_214224_15948_8ghhn-e6a7c482-238e-4d4f-a12d-42d7465f3e04");
+                .isEqualTo("s3://galaxy-trino-ci-static/test_resources//test_double_slashes/delta-b62aa2d3f88d464c8ef5d3ce6ee52ab1/20230525_100346_39428_r9swe-7a2abbf5-1afe-446c-8c3c-0cdb7b1675f6");
         verifyCorrupted(path);
     }
 
@@ -214,7 +214,7 @@ public class TestReadCorruptedTables
 
         String path = (String) computeScalar("SELECT DISTINCT \"$path\" FROM delta_double_slashes_ctas");
         assertThat(path)
-                .isEqualTo("s3://galaxy-trino-ci/static_test_resources//test_double_slashes/delta_ctas-cdbaf20228c1465cb89b78a895bee13d/20230522_214226_15968_8ghhn-5913ad9a-3de3-4ddb-aa54-6e7f9905c393");
+                .isEqualTo("s3://galaxy-trino-ci-static/test_resources//test_double_slashes/delta_ctas-8dbcfaea11a3431281a71704a2dbc8d8/20230525_100330_39108_r9swe-86ae080a-de6f-41bd-a882-e354c031a9cd");
         verifyCorrupted(path);
     }
 
@@ -226,7 +226,7 @@ public class TestReadCorruptedTables
 
         String path = (String) computeScalar("SELECT DISTINCT \"$path\" FROM iceberg_double_slashes");
         assertThat(path)
-                .isEqualTo("s3://galaxy-trino-ci/static_test_resources//test_double_slashes//iceberg-8b45d540546c4f53ab9c69bc70e28a67/data/20230522_214240_16182_8ghhn-559aacfe-57c7-44f0-829f-db0d24fb20f1.orc");
+                .isEqualTo("s3://galaxy-trino-ci-static/test_resources//test_double_slashes//iceberg-b754219094244b30a6f3cd2904aeff4e/data/20230525_100341_39373_r9swe-cb2d9e5b-ed8d-4f02-8129-d1382392aaaf.orc");
         verifyCorrupted(path);
     }
 
@@ -238,7 +238,7 @@ public class TestReadCorruptedTables
 
         String path = (String) computeScalar("SELECT DISTINCT \"$path\" FROM iceberg_double_slashes_ctas");
         assertThat(path)
-                .isEqualTo("s3://galaxy-trino-ci/static_test_resources//test_double_slashes//iceberg_ctas-52d01276e6fa4d35bac2db7062613e47/data/20230522_214242_16195_8ghhn-53d00bd6-d4cd-4925-ade1-f062e92d7fae.orc");
+                .isEqualTo("s3://galaxy-trino-ci-static/test_resources//test_double_slashes//iceberg_ctas-2e7f97526b6544de8d41cba5b5dfcb23/data/20230525_100325_38972_r9swe-1fcfe23f-350c-4330-8d17-f6eea610a4d6.orc");
         verifyCorrupted(path);
     }
 
