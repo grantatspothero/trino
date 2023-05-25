@@ -129,10 +129,11 @@ public class MemoryCacheManager
     }
 
     @Override
-    public synchronized void revokeMemory(long targetBytes)
+    public synchronized void revokeMemory(long bytesToRevoke)
     {
-        checkArgument(targetBytes >= 0);
-        removeEldestSplits(() -> allocatedRevocableBytes - targetBytes <= 0);
+        checkArgument(bytesToRevoke >= 0);
+        long initialAllocatedBytes = allocatedRevocableBytes;
+        removeEldestSplits(() -> initialAllocatedBytes - allocatedRevocableBytes >= bytesToRevoke);
     }
 
     private synchronized Optional<ConnectorPageSource> loadPages(long signatureId, SplitId splitId)
@@ -223,6 +224,11 @@ public class MemoryCacheManager
 
     private synchronized void removeEldestSplits(BooleanSupplier stopCondition)
     {
+        if (splitCache.isEmpty()) {
+            // no splits to remove
+            return;
+        }
+
         for (Iterator<Map.Entry<SplitKey, List<Page>>> iterator = splitCache.entrySet().iterator(); iterator.hasNext(); ) {
             if (stopCondition.getAsBoolean()) {
                 break;

@@ -38,11 +38,11 @@ public interface CacheManager
     PreferredAddressProvider getPreferredAddressProvider(PlanSignature signature, NodeManager nodeManager);
 
     /**
-     * Triggers a memory revoke. {@link CacheManager} should retain
-     * at most {@code targetBytes} revocable bytes before allocating
-     * new memory.
+     * Triggers a memory revoke. {@link CacheManager} should revoke
+     * at least {@code bytesToRevoke} bytes (if it has allocated
+     * that much revocable memory) before allocating new memory.
      */
-    void revokeMemory(long targetBytes);
+    void revokeMemory(long bytesToRevoke);
 
     interface SplitCache
             extends Closeable

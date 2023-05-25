@@ -125,7 +125,7 @@ public class TestMemoryCacheManager
         assertThat(cache.loadPages(splitId2)).isPresent();
 
         // revoke memory and make sure only the least recently used split is left
-        cacheManager.revokeMemory(1_500_000);
+        cacheManager.revokeMemory(500_000);
         assertThat(allocatedRevocableMemory).isEqualTo(page.getRetainedSizeInBytes() + cacheEntrySize);
         assertThat(cache.loadPages(splitId)).isEmpty();
 
