@@ -13,6 +13,7 @@
  */
 package org.apache.calcite.avatica.remote;
 
+import io.trino.plugin.druid.galaxy.GalaxyAvaticaHttpClientFactoryImpl;
 import org.apache.calcite.avatica.AvaticaConnection;
 import org.apache.calcite.avatica.BuiltInConnectionProperty;
 import org.apache.calcite.avatica.ConnectionConfig;
@@ -20,8 +21,6 @@ import org.apache.calcite.avatica.ConnectionProperty;
 import org.apache.calcite.avatica.DriverVersion;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.UnregisteredDriver;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -31,37 +30,25 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.Properties;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /**
- * Avatica Remote JDBC driver.
+ * Inlined Driver for Galaxy. This is added to support Imply which does not allow any custom property in the connection parameters.
  */
 public class GalaxyDruidDriver
         extends UnregisteredDriver
 {
-    private static final Logger LOG = LoggerFactory.getLogger(GalaxyDruidDriver.class);
+    private final Properties galaxyProperties;
 
     public static final String CONNECT_STRING_PREFIX = "jdbc:avatica:remote:";
 
-    static {
-        new GalaxyDruidDriver().register();
-    }
-
-    public GalaxyDruidDriver()
+    public GalaxyDruidDriver(Properties galaxyProperties)
     {
         super();
-    }
-
-    /**
-     * Defines the method of message serialization used by the Driver
-     */
-    public enum Serialization
-    {
-        JSON,
-        PROTOBUF;
+        this.galaxyProperties = requireNonNull(galaxyProperties, "galaxyProperties is null");
     }
 
     @Override
@@ -70,21 +57,22 @@ public class GalaxyDruidDriver
         return CONNECT_STRING_PREFIX;
     }
 
+    @Override
     protected DriverVersion createDriverVersion()
     {
         return DriverVersion.load(
                 GalaxyDruidDriver.class,
                 "org-apache-calcite-jdbc.properties",
                 "Avatica Remote JDBC Driver",
-                "unknown version",
+                "1.22.0-galaxy", // modified for Galaxy verifier to return a meaningful version
                 "Avatica",
-                "unknown version");
+                "1.22.0");
     }
 
     @Override
     protected Collection<ConnectionProperty> getConnectionProperties()
     {
-        final List<ConnectionProperty> list = new ArrayList<ConnectionProperty>();
+        List<ConnectionProperty> list = new ArrayList<>();
         Collections.addAll(list, BuiltInConnectionProperty.values());
         Collections.addAll(list, AvaticaRemoteConnectionProperty.values());
         return list;
@@ -93,127 +81,60 @@ public class GalaxyDruidDriver
     @Override
     public Meta createMeta(AvaticaConnection connection)
     {
-        final ConnectionConfig config = connection.config();
-
-        // Perform the login and launch the renewal thread if necessary
-        final KerberosConnection kerberosUtil = createKerberosUtility(config);
-        if (null != kerberosUtil) {
-            kerberosUtil.login();
-            connection.setKerberosConnection(kerberosUtil);
-        }
-
+        ConnectionConfig config = connection.config();
         // Create a single Service and set it on the Connection instance
-        final Service service = createService(connection, config);
+        Service service = createService(config);
         connection.setService(service);
         return new RemoteMeta(connection, service);
     }
 
-    KerberosConnection createKerberosUtility(ConnectionConfig config)
+    /**
+     * Modifies the default implementation to return RemoteService always.
+     * We do not need to override factory or serialization in Trino
+     */
+    private Service createService(ConnectionConfig config)
     {
-        final String principal = config.kerberosPrincipal();
-        if (null != principal) {
-            return new KerberosConnection(principal, config.kerberosKeytab());
-        }
-        return null;
+        checkState(config.url() != null, "connection url cannot be null");
+        AvaticaHttpClient httpClient = getHttpClient(config.url());
+        return new RemoteService(httpClient);
     }
 
     /**
-     * Creates a {@link Service} with the given {@link AvaticaConnection} and configuration.
-     *
-     * @param connection The {@link AvaticaConnection} to use.
-     * @param config Configuration properties
-     * @return A Service implementation.
+     * Always use GalaxyAvaticaHttpClientFactoryImpl to get the AvaticaHttpClient
      */
-    Service createService(AvaticaConnection connection, ConnectionConfig config)
-    {
-        final Service.Factory metaFactory = config.factory();
-        final Service service;
-        if (metaFactory != null) {
-            service = metaFactory.create(connection);
-        }
-        else if (config.url() != null) {
-            final AvaticaHttpClient httpClient = getHttpClient(connection, config);
-            final Serialization serializationType = getSerialization(config);
-
-            LOG.debug("Instantiating {} service", serializationType);
-            switch (serializationType) {
-                case JSON:
-                    service = new RemoteService(httpClient);
-                    break;
-                case PROTOBUF:
-                    service = new RemoteProtobufService(httpClient, new ProtobufTranslationImpl());
-                    break;
-                default:
-                    throw new IllegalArgumentException("Unhandled serialization type: " + serializationType);
-            }
-        }
-        else {
-            service = new MockJsonService(Collections.<String, String>emptyMap());
-        }
-        return service;
-    }
-
-    /**
-     * Creates the HTTP client that communicates with the Avatica server.
-     *
-     * @param connection The {@link AvaticaConnection}.
-     * @param config The configuration.
-     * @return An {@link AvaticaHttpClient} implementation.
-     */
-    AvaticaHttpClient getHttpClient(AvaticaConnection connection, ConnectionConfig config)
+    private AvaticaHttpClient getHttpClient(String connectionUrl)
     {
         URL url;
         try {
-            url = new URL(config.url());
+            url = new URL(connectionUrl);
         }
         catch (MalformedURLException e) {
             throw new RuntimeException(e);
         }
 
-        AvaticaHttpClientFactory httpClientFactory = config.httpClientFactory();
-
-        return httpClientFactory.getClient(url, config, connection.getKerberosConnection());
+        GalaxyAvaticaHttpClientFactoryImpl httpClientFactory = new GalaxyAvaticaHttpClientFactoryImpl(galaxyProperties);
+        return httpClientFactory.getClient(url, null, null);
     }
 
     @Override
     public Connection connect(String url, Properties info)
             throws SQLException
     {
-        AvaticaConnection conn = (AvaticaConnection) super.connect(url, info);
-        if (conn == null) {
+        AvaticaConnection connection = (AvaticaConnection) super.connect(url, info);
+
+        if (connection == null) {
             // It's not an url for our driver
             return null;
         }
 
-        Service service = conn.getService();
-
+        Service service = connection.getService();
         // super.connect(...) should be creating a service and setting it in the AvaticaConnection
         checkState(service != null, "service cannot be null");
 
         service.apply(
-                new Service.OpenConnectionRequest(conn.id,
-                        Service.OpenConnectionRequest.serializeProperties(info)));
+                new Service.OpenConnectionRequest(connection.id,
+                        Service.OpenConnectionRequest.serializeProperties(info))); // Don't pass galaxy specific properties because Imply does not like having external connection properties
 
-        return conn;
-    }
-
-    Serialization getSerialization(ConnectionConfig config)
-    {
-        final String serializationStr = config.serialization();
-        Serialization serializationType = Serialization.JSON;
-        if (null != serializationStr) {
-            try {
-                serializationType =
-                        Serialization.valueOf(serializationStr.toUpperCase(Locale.ROOT));
-            }
-            catch (Exception e) {
-                // Log a warning instead of failing harshly? Intentionally no loggers available?
-                throw new RuntimeException(e);
-            }
-        }
-
-        return serializationType;
+        return connection;
     }
 }
-
-// End Driver.java

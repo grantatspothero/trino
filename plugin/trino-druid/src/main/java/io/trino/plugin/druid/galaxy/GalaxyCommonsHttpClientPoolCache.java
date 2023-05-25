@@ -14,8 +14,6 @@
 package io.trino.plugin.druid.galaxy;
 
 import io.airlift.log.Logger;
-import org.apache.calcite.avatica.ConnectionConfig;
-import org.apache.calcite.avatica.ConnectionConfigImpl;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
 import org.apache.hc.client5.http.socket.ConnectionSocketFactory;
 import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
@@ -24,19 +22,11 @@ import org.apache.hc.core5.http.config.RegistryBuilder;
 
 import javax.net.ssl.HostnameVerifier;
 
-import java.lang.reflect.Field;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.CATALOG_ID_PROPERTY_NAME;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.CATALOG_NAME_PROPERTY_NAME;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.TLS_ENABLED_PROPERTY_NAME;
-import static io.trino.plugin.base.galaxy.RegionVerifier.CROSS_REGION_ALLOWED_PROPERTY_NAME;
-import static io.trino.plugin.base.galaxy.RegionVerifier.REGION_LOCAL_IP_ADDRESSES_PROPERTY_NAME;
-import static io.trino.sshtunnel.SshTunnelPropertiesMapper.SSH_TUNNEL_PRIVATE_KEY_PROPERTY_NAME;
-import static io.trino.sshtunnel.SshTunnelPropertiesMapper.SSH_TUNNEL_RECONNECT_CHECK_INTERVAL_PROPERTY_NAME;
-import static io.trino.sshtunnel.SshTunnelPropertiesMapper.SSH_TUNNEL_SERVER_PROPERTY_NAME;
-import static io.trino.sshtunnel.SshTunnelPropertiesMapper.SSH_TUNNEL_USER_PROPERTY_NAME;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -58,44 +48,11 @@ public class GalaxyCommonsHttpClientPoolCache
         //do not instantiate
     }
 
-    public static PoolingHttpClientConnectionManager getPool(ConnectionConfig config)
+    public static PoolingHttpClientConnectionManager getPool(Properties galaxyProperties)
     {
-        Properties galaxyProperties = getGalaxySpecificProperties(config);
-        return CACHED_POOLS.computeIfAbsent(requireNonNull(galaxyProperties.getProperty(CATALOG_ID_PROPERTY_NAME)), k -> setupPool(galaxyProperties));
-    }
-
-    private static Properties getGalaxySpecificProperties(ConnectionConfig configuration)
-    {
-        try {
-            Field propertiesField = ConnectionConfigImpl.class.getDeclaredField("properties");
-            propertiesField.setAccessible(true);
-            Properties properties = (Properties) propertiesField.get(configuration);
-            Properties galaxyProperties = new Properties();
-            galaxyProperties.setProperty(CATALOG_NAME_PROPERTY_NAME, properties.getProperty(CATALOG_NAME_PROPERTY_NAME));
-            galaxyProperties.setProperty(CATALOG_ID_PROPERTY_NAME, properties.getProperty(CATALOG_ID_PROPERTY_NAME));
-            galaxyProperties.setProperty(REGION_LOCAL_IP_ADDRESSES_PROPERTY_NAME, properties.getProperty(REGION_LOCAL_IP_ADDRESSES_PROPERTY_NAME));
-            galaxyProperties.setProperty(CROSS_REGION_ALLOWED_PROPERTY_NAME, properties.getProperty(CROSS_REGION_ALLOWED_PROPERTY_NAME));
-
-            if (properties.containsKey(SSH_TUNNEL_SERVER_PROPERTY_NAME)) {
-                galaxyProperties.setProperty(SSH_TUNNEL_SERVER_PROPERTY_NAME, properties.getProperty(SSH_TUNNEL_SERVER_PROPERTY_NAME));
-            }
-            if (properties.containsKey(SSH_TUNNEL_USER_PROPERTY_NAME)) {
-                galaxyProperties.setProperty(SSH_TUNNEL_USER_PROPERTY_NAME, properties.getProperty(SSH_TUNNEL_USER_PROPERTY_NAME));
-            }
-            if (properties.containsKey(SSH_TUNNEL_PRIVATE_KEY_PROPERTY_NAME)) {
-                galaxyProperties.setProperty(SSH_TUNNEL_PRIVATE_KEY_PROPERTY_NAME, properties.getProperty(SSH_TUNNEL_PRIVATE_KEY_PROPERTY_NAME));
-            }
-            if (properties.containsKey(SSH_TUNNEL_RECONNECT_CHECK_INTERVAL_PROPERTY_NAME)) {
-                galaxyProperties.setProperty(SSH_TUNNEL_RECONNECT_CHECK_INTERVAL_PROPERTY_NAME, properties.getProperty(SSH_TUNNEL_RECONNECT_CHECK_INTERVAL_PROPERTY_NAME));
-            }
-            if (properties.containsKey(TLS_ENABLED_PROPERTY_NAME)) {
-                galaxyProperties.setProperty(TLS_ENABLED_PROPERTY_NAME, properties.getProperty(TLS_ENABLED_PROPERTY_NAME));
-            }
-            return galaxyProperties;
-        }
-        catch (IllegalAccessException | NoSuchFieldException e) {
-            throw new RuntimeException("Failed to get connection properties", e);
-        }
+        return CACHED_POOLS.computeIfAbsent(
+                requireNonNull(galaxyProperties.getProperty(CATALOG_ID_PROPERTY_NAME)),
+                k -> setupPool(galaxyProperties));
     }
 
     private static PoolingHttpClientConnectionManager setupPool(Properties galaxyProperties)

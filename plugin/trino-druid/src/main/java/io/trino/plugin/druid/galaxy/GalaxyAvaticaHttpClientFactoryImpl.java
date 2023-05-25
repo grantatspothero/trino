@@ -21,8 +21,10 @@ import org.apache.calcite.avatica.remote.KerberosConnection;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
 
 import java.net.URL;
+import java.util.Properties;
 
 import static io.trino.plugin.druid.galaxy.GalaxyCommonsHttpClientPoolCache.getPool;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Extend default implementation so that we can override the socket in Galaxy.
@@ -33,17 +35,18 @@ import static io.trino.plugin.druid.galaxy.GalaxyCommonsHttpClientPoolCache.getP
 public class GalaxyAvaticaHttpClientFactoryImpl
         extends AvaticaHttpClientFactoryImpl
 {
-    // Public for Type.PLUGIN
-    public static final GalaxyAvaticaHttpClientFactoryImpl INSTANCE = new GalaxyAvaticaHttpClientFactoryImpl();
+    private final Properties galaxyProperties;
 
-    // Public for Type.PLUGIN
-    public GalaxyAvaticaHttpClientFactoryImpl() {}
+    public GalaxyAvaticaHttpClientFactoryImpl(Properties galaxyProperties)
+    {
+        this.galaxyProperties = requireNonNull(galaxyProperties, "galaxyProperties is null");
+    }
 
     @Override
-    public AvaticaHttpClient getClient(URL url, ConnectionConfig config, KerberosConnection ignoredConnection)
+    public AvaticaHttpClient getClient(URL url, ConnectionConfig ignoredConfig, KerberosConnection ignoredConnection)
     {
         AvaticaCommonsHttpClientImpl client = new AvaticaCommonsHttpClientImpl(url);
-        PoolingHttpClientConnectionManager poolingConnectionManager = getPool(config);
+        PoolingHttpClientConnectionManager poolingConnectionManager = getPool(galaxyProperties);
         client.setHttpClientPool(poolingConnectionManager);
         return client;
     }
