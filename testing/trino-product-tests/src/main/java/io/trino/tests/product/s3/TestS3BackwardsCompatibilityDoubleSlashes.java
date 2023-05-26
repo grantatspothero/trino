@@ -17,11 +17,13 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.Closer;
 import io.airlift.log.Logger;
 import io.trino.tempto.AfterTestWithContext;
 import io.trino.tempto.BeforeTestWithContext;
 import io.trino.tempto.ProductTest;
+import io.trino.tempto.assertions.QueryAssert;
 import io.trino.tempto.query.QueryExecutionException;
 import io.trino.tempto.query.QueryExecutor;
 import org.assertj.core.api.Assertions;
@@ -31,6 +33,7 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.tempto.assertions.QueryAssert.Row.row;
 import static io.trino.tempto.assertions.QueryAssert.assertQueryFailure;
 import static io.trino.tempto.assertions.QueryAssert.assertThat;
@@ -355,6 +358,83 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
         finally {
             onTrino().executeQuery("DROP TABLE " + qualifiedTableName);
         }
+    }
+
+    @Test(groups = {PROFILE_SPECIFIC_TESTS, S3_BACKWARDS_COMPATIBILITY})
+    public void testProceduresOnDelta()
+    {
+        String tableName = "delta_table_procedures_" + randomNameSuffix();
+        String qualifiedTableName = "delta.%s.%s".formatted(schemaName, tableName);
+        onTrino415().executeQuery("CREATE TABLE " + qualifiedTableName + "(a INT, b INT)");
+        try {
+            onTrino415().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (0, 1)");
+            onTrino415().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (2, 3)");
+            onTrino415().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (4, 5)");
+
+            List<QueryAssert.Row> expected = ImmutableList.of(row(0, 1), row(2, 3), row(4, 5));
+            onTrino().executeQuery("ALTER TABLE " + qualifiedTableName + " EXECUTE optimize");
+            assertThat(onTrino().executeQuery("TABLE " + qualifiedTableName)).containsOnly(expected);
+
+            onTrino().executeQuery("SET SESSION delta.vacuum_min_retention = '0s'");
+            onTrino().executeQuery("CALL delta.system.vacuum('%s', '%s', '0s')".formatted(schemaName, tableName));
+
+            String tableLocationPrefixWithDoubleSlash = "temp_files//" + schemaName + "/" + tableName;
+            String tableLocationPrefixWithoutDoubleSlash = "temp_files/" + schemaName + "/" + tableName;
+
+            List<S3ObjectSummary> dataFilesWithDoubleSlash = listPrefix(tableLocationPrefixWithDoubleSlash).stream()
+                    .filter(summary -> !summary.getKey().contains("_delta_log"))
+                    .collect(toImmutableList());
+            List<S3ObjectSummary> dataFilesWithoutDoubleSlash = listPrefix(tableLocationPrefixWithoutDoubleSlash).stream()
+                    .filter(summary -> !summary.getKey().contains("_delta_log"))
+                    .collect(toImmutableList());
+
+            // TODO: Vacuum does not clean up corrupted files
+            Assertions.assertThat(dataFilesWithDoubleSlash).hasSize(1);
+            Assertions.assertThat(dataFilesWithoutDoubleSlash).hasSize(3);
+        }
+        finally {
+            onTrino().executeQuery("DROP TABLE " + qualifiedTableName);
+        }
+    }
+
+    @Test(groups = {PROFILE_SPECIFIC_TESTS, S3_BACKWARDS_COMPATIBILITY})
+    public void testProceduresOnIceberg()
+    {
+        String tableName = "iceberg_table_procedures_" + randomNameSuffix();
+        String qualifiedTableName = "iceberg.%s.%s".formatted(schemaName, tableName);
+        onTrino415().executeQuery("CREATE TABLE " + qualifiedTableName + "(a INT, b INT)");
+        try {
+            onTrino415().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (0, 1)");
+            onTrino415().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (2, 3)");
+            onTrino415().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (4, 5)");
+
+            List<QueryAssert.Row> expected = ImmutableList.of(row(0, 1), row(2, 3), row(4, 5));
+            onTrino().executeQuery("ALTER TABLE " + qualifiedTableName + " EXECUTE optimize");
+            assertThat(onTrino().executeQuery("TABLE " + qualifiedTableName)).containsOnly(expected);
+
+            onTrino().executeQuery("SET SESSION iceberg.expire_snapshots_min_retention = '0s'");
+            onTrino().executeQuery("SET SESSION iceberg.remove_orphan_files_min_retention = '0s'");
+            onTrino().executeQuery("ALTER TABLE %s EXECUTE expire_snapshots(retention_threshold => '0s')".formatted(qualifiedTableName));
+            onTrino().executeQuery("ALTER TABLE %s EXECUTE remove_orphan_files(retention_threshold => '0s')".formatted(qualifiedTableName));
+
+            String tableLocationPrefixWithDoubleSlash = "temp_files//%s/%s/data/".formatted(schemaName, tableName);
+            String tableLocationPrefixWithoutDoubleSlash = "temp_files/%s/%s/data/".formatted(schemaName, tableName);
+
+            // TODO: remove_orphan_files and expire_snapshots do not clean up corrupted files
+            Assertions.assertThat(listPrefix(tableLocationPrefixWithDoubleSlash)).hasSize(1);
+            Assertions.assertThat(listPrefix(tableLocationPrefixWithoutDoubleSlash)).hasSize(3);
+        }
+        finally {
+            onTrino().executeQuery("DROP TABLE " + qualifiedTableName);
+        }
+    }
+
+    private List<S3ObjectSummary> listPrefix(String prefix)
+    {
+        ListObjectsV2Request listObjectsRequest = new ListObjectsV2Request()
+                .withBucketName("galaxy-trino-ci")
+                .withPrefix(prefix);
+        return s3.listObjectsV2(listObjectsRequest).getObjectSummaries();
     }
 
     @DataProvider
