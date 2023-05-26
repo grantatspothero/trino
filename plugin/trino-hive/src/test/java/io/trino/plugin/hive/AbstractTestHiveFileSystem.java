@@ -22,7 +22,6 @@ import io.airlift.concurrent.BoundedExecutor;
 import io.airlift.json.JsonCodec;
 import io.airlift.slice.Slice;
 import io.airlift.stats.CounterStat;
-import io.trino.filesystem.Location;
 import io.trino.filesystem.hdfs.HdfsFileSystemFactory;
 import io.trino.hdfs.HdfsConfig;
 import io.trino.hdfs.HdfsConfiguration;
@@ -576,8 +575,10 @@ public abstract class AbstractTestHiveFileSystem
             // table, which fails without explicit configuration for file system.
             // We work around that by using a dummy location when creating the
             // table and update it here to the correct location.
-            Location location = locationService.getTableWriteInfo(((HiveOutputTableHandle) outputHandle).getLocationHandle(), false).targetPath();
-            metastoreClient.updateTableLocation(database, tableName.getTableName(), location.toString());
+            metastoreClient.updateTableLocation(
+                    database,
+                    tableName.getTableName(),
+                    locationService.getTableWriteInfo(((HiveOutputTableHandle) outputHandle).getLocationHandle(), false).getTargetPath().toString());
         }
 
         try (Transaction transaction = newTransaction()) {
