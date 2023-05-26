@@ -30,7 +30,7 @@ public class TestObjectStoreIcebergS3
     @Parameters("s3.bucket")
     public TestObjectStoreIcebergS3(String bucketName)
     {
-        super(ICEBERG, "partitioning", bucketName);
+        super(ICEBERG, "partitioning", "location", bucketName);
     }
 
     @Override

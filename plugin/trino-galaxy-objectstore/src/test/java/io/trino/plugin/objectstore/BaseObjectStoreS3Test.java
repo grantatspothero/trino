@@ -17,6 +17,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import io.trino.Session;
 import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
@@ -52,14 +53,19 @@ public abstract class BaseObjectStoreS3Test
     private final TableType tableType;
 
     private final String partitionByKeyword;
+
+    private final String locationKeyword;
     protected final String bucketName;
+
+    protected TestingGalaxyMetastore metastore;
 
     private AmazonS3 s3;
 
-    protected BaseObjectStoreS3Test(TableType tableType, String partitionByKeyword, String bucketName)
+    protected BaseObjectStoreS3Test(TableType tableType, String partitionByKeyword, String locationKeyword, String bucketName)
     {
         this.tableType = requireNonNull(tableType, "tableType is null");
         this.partitionByKeyword = requireNonNull(partitionByKeyword, "partitionByKeyword is null");
+        this.locationKeyword = requireNonNull(locationKeyword, "locationKeyword is null");
         this.bucketName = requireNonNull(bucketName, "partitionByKeyword is null");
     }
 
@@ -71,7 +77,7 @@ public abstract class BaseObjectStoreS3Test
 
         GalaxyCockroachContainer galaxyCockroachContainer = closeAfterClass(new GalaxyCockroachContainer());
 
-        TestingGalaxyMetastore metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyCockroachContainer));
+        metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyCockroachContainer));
 
         TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> !location.contains("denied")));
         TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> galaxyCockroachContainer));
@@ -102,6 +108,7 @@ public abstract class BaseObjectStoreS3Test
             s3.shutdown();
             s3 = null;
         }
+        metastore = null; // closed by closeAfterClass
     }
 
     @DataProvider
@@ -224,9 +231,10 @@ public abstract class BaseObjectStoreS3Test
         String tableName = "test_optimize_" + randomNameSuffix();
         String location = locationPattern.formatted(bucketName, tableName);
         String partitionQueryPart = (partitioned ? "," + partitionByKeyword + " = ARRAY['value']" : "");
+        String locationQueryPart = locationKeyword + "= '" + location + "'";
 
         assertUpdate("CREATE TABLE " + tableName + " (key integer, value varchar) " +
-                "WITH (location = '" + location + "'" + partitionQueryPart + ")");
+                "WITH (" + locationQueryPart + partitionQueryPart + ")");
         try {
             // create multiple data files, INSERT with multiple values would create only one file (if not partitioned)
             assertUpdate("INSERT INTO " + tableName + " VALUES (1, 'one')", 1);
@@ -238,18 +246,26 @@ public abstract class BaseObjectStoreS3Test
             Set<String> initialFiles = getActiveFiles(tableName);
             assertThat(initialFiles).hasSize(5);
 
-            computeActual("ALTER TABLE " + tableName + " EXECUTE OPTIMIZE");
+            Session session = Session.builder(getSession())
+                    .setCatalogSessionProperty("objectstore", "non_transactional_optimize_enabled", "true")
+                    .build();
+            computeActual(session, "ALTER TABLE " + tableName + " EXECUTE OPTIMIZE");
 
             assertThat(query("SELECT sum(key), listagg(value, ' ') WITHIN GROUP (ORDER BY value) FROM " + tableName))
                     .matches("VALUES (BIGINT '21', VARCHAR 'a%percent a//double_slash a//double_slash one one')");
 
             Set<String> updatedFiles = getActiveFiles(tableName);
-            assertThat(updatedFiles).hasSizeLessThan(initialFiles.size());
-            assertThat(getAllDataFilesFromTableDirectory(location)).isEqualTo(union(initialFiles, updatedFiles));
+            validateFilesAfterOptimize(getTableLocation(tableName), initialFiles, updatedFiles);
         }
         finally {
             assertUpdate("DROP TABLE " + tableName);
         }
+    }
+
+    protected void validateFilesAfterOptimize(String location, Set<String> initialFiles, Set<String> updatedFiles)
+    {
+        assertThat(updatedFiles).hasSizeLessThan(initialFiles.size());
+        assertThat(getAllDataFilesFromTableDirectory(location)).isEqualTo(union(initialFiles, updatedFiles));
     }
 
     protected abstract void validateDataFiles(String partitionColumn, String tableName, String location);

@@ -41,7 +41,7 @@ public class TestObjectStoreDeltaS3
     @Parameters("s3.bucket")
     public TestObjectStoreDeltaS3(String bucketName)
     {
-        super(DELTA, "partitioned_by", bucketName);
+        super(DELTA, "partitioned_by", "location", bucketName);
     }
 
     @Override
