@@ -334,7 +334,7 @@ public class TrinoGalaxyCatalog
         String databaseLocation = database.getLocation().orElseThrow(() ->
                 new TrinoException(HIVE_DATABASE_LOCATION_ERROR, format("Database '%s' location is not set", schemaTableName.getSchemaName())));
 
-        String tableLocation = databaseLocation + "/" + schemaTableName.getTableName();
+        String tableLocation = Location.of(databaseLocation).appendPath(schemaTableName.getTableName()).toString();
 
         if (useUniqueTableLocation) {
             tableLocation += "-" + randomUUID().toString().replace("-", "");

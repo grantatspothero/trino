@@ -149,6 +149,43 @@ public abstract class BaseObjectStoreS3ConnectorTest
     }
 
     @Test(dataProvider = "locationPatternsDataProvider")
+    public void testBasicOperationsWithProvidedSchemaLocation(boolean partitioned, String locationPattern)
+    {
+        String schemaName = "test_basic_operations_schema_" + randomNameSuffix();
+        String schemaLocation = locationPattern.formatted(bucketName, schemaName);
+        String tableName = "test_basic_operations_table_" + randomNameSuffix();
+        String qualifiedTableName = schemaName + "." + tableName;
+        String partitonQueryPart = (partitioned ? "WITH (" + partitionByKeyword + " = ARRAY['col_str'])" : "");
+
+        assertUpdate("CREATE SCHEMA " + schemaName + " WITH (location = '" + schemaLocation + "')");
+        assertThat(getSchemaLocation(schemaName)).isEqualTo(schemaLocation);
+
+        assertUpdate("CREATE TABLE " + qualifiedTableName + "(col_str varchar, col_int int)" + partitonQueryPart);
+        // in case of regular CREATE TABLE, location has generated suffix
+        String expectedTableLocationPattern = (schemaLocation.endsWith("/") ? schemaLocation : schemaLocation + "/") + tableName + "-[a-z0-9]+";
+        String actualTableLocation = getTableLocation(qualifiedTableName);
+        assertThat(actualTableLocation).matches(expectedTableLocationPattern);
+
+        assertUpdate("INSERT INTO " + qualifiedTableName + "  VALUES ('str1', 1), ('str2', 2), ('str3', 3)", 3);
+        assertQuery("SELECT * FROM " + qualifiedTableName, "VALUES ('str1', 1), ('str2', 2), ('str3', 3)");
+
+        assertUpdate("UPDATE " + qualifiedTableName + " SET col_str = 'other' WHERE col_int = 2", 1);
+        assertQuery("SELECT * FROM " + qualifiedTableName, "VALUES ('str1', 1), ('other', 2), ('str3', 3)");
+
+        assertUpdate("DELETE FROM " + qualifiedTableName + " WHERE col_int = 3", 1);
+        assertQuery("SELECT * FROM " + qualifiedTableName, "VALUES ('str1', 1), ('other', 2)");
+
+        assertThat(getTableFiles(actualTableLocation)).isNotEmpty();
+        validateDataFiles(partitioned ? "col_str" : "", qualifiedTableName, actualTableLocation);
+        validateMetadataFiles(actualTableLocation);
+
+        assertUpdate("DROP TABLE " + qualifiedTableName);
+        assertThat(getTableFiles(actualTableLocation)).isEmpty();
+
+        assertUpdate("DROP SCHEMA " + schemaName);
+    }
+
+    @Test(dataProvider = "locationPatternsDataProvider")
     public void testMergeWithProvidedTableLocation(boolean partitioned, String locationPattern)
     {
         String tableName = "test_merge_" + randomNameSuffix();
@@ -239,14 +276,24 @@ public abstract class BaseObjectStoreS3ConnectorTest
 
     protected String getTableLocation(String tableName)
     {
+        return findLocationInQuery("SHOW CREATE TABLE " + tableName);
+    }
+
+    protected String getSchemaLocation(String schemaName)
+    {
+        return findLocationInQuery("SHOW CREATE SCHEMA " + schemaName);
+    }
+
+    private String findLocationInQuery(String query)
+    {
         Pattern locationPattern = Pattern.compile(".*location = '(.*?)'.*", Pattern.DOTALL);
-        Matcher m = locationPattern.matcher((String) computeActual("SHOW CREATE TABLE " + tableName).getOnlyValue());
+        Matcher m = locationPattern.matcher((String) computeActual(query).getOnlyValue());
         if (m.find()) {
             String location = m.group(1);
             verify(!m.find(), "Unexpected second match");
             return location;
         }
-        throw new IllegalStateException("Location not found in SHOW CREATE TABLE result");
+        throw new IllegalStateException("Location not found in" + query + " result");
     }
 
     protected List<String> getTableFiles(String location)
