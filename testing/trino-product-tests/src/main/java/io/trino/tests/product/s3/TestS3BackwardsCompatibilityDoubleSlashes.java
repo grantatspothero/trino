@@ -55,7 +55,7 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
     @AfterTestWithContext
     public void tearDown()
     {
-        onTrino().executeQuery("DROP SCHEMA IF EXISTS " + schemaName);
+        onTrino().executeQuery("DROP SCHEMA delta." + schemaName);
 
         if (s3 != null) {
             s3.shutdown();
