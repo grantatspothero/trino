@@ -17,14 +17,19 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.google.common.io.Closer;
+import io.airlift.log.Logger;
 import io.trino.tempto.AfterTestWithContext;
 import io.trino.tempto.BeforeTestWithContext;
 import io.trino.tempto.ProductTest;
+import io.trino.tempto.query.QueryExecutionException;
 import io.trino.tempto.query.QueryExecutor;
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+
+import java.util.List;
 
 import static io.trino.tempto.assertions.QueryAssert.Row.row;
 import static io.trino.tempto.assertions.QueryAssert.assertQueryFailure;
@@ -38,29 +43,60 @@ import static io.trino.tests.product.utils.QueryExecutors.onTrino;
 public class TestS3BackwardsCompatibilityDoubleSlashes
         extends ProductTest
 {
+    private static final Logger log = Logger.get(TestS3BackwardsCompatibilityDoubleSlashes.class);
+
+    private Closer closer;
     private AmazonS3 s3;
     private String schemaName;
 
     @BeforeTestWithContext
     public void setup()
     {
+        closer = Closer.create();
         s3 = AmazonS3Client.builder().build();
+        closer.register(s3::shutdown);
+
         schemaName = "test_s3_backwards_compatibility_" + randomNameSuffix();
         // Create schema with double slashes in the location. This will get inherited by the table locations.
         // This is the case that used to be erroneously handled by previous Trino versions, leading to table corruption.
         // This test verifies we can still read from and operate on such tables.
         onTrino().executeQuery("CREATE SCHEMA delta." + schemaName + " WITH (location = 's3://galaxy-trino-ci/temp_files//" + schemaName + "')");
+        closer.register(() -> onTrino().executeQuery("DROP SCHEMA delta." + schemaName));
+        closer.register(() -> {
+            onTrino().executeQuery("SHOW TABLES FROM delta." + schemaName).column(1).stream()
+                    .map(String.class::cast)
+                    .forEach(tableName -> {
+                        log.warn("Table '%s' left behind after test method execution, trying to remove it", tableName);
+                        for (String catalogName : List.of("iceberg", "delta")) {
+                            try {
+                                onTrino().executeQuery("DROP TABLE %s.%s.%s".formatted(catalogName, schemaName, tableName));
+                                return;
+                            }
+                            catch (QueryExecutionException ignored) {
+                            }
+                        }
+                        for (String catalogName : List.of("iceberg", "delta")) {
+                            try {
+                                onTrino().executeQuery("CALL %s.system.unregister_table(schema_name => '%s', table_name => '%s')".formatted(catalogName, schemaName, tableName));
+                                return;
+                            }
+                            catch (QueryExecutionException ignored) {
+                            }
+                        }
+                        log.error("Failed to remove table '%s' left behind after test method execution", tableName);
+                    });
+        });
     }
 
     @AfterTestWithContext
     public void tearDown()
+            throws Exception
     {
-        onTrino().executeQuery("DROP SCHEMA delta." + schemaName);
-
-        if (s3 != null) {
-            s3.shutdown();
-            s3 = null;
+        if (closer != null) {
+            closer.close();
+            closer = null;
         }
+        s3 = null;
     }
 
     @Test(groups = {PROFILE_SPECIFIC_TESTS, S3_BACKWARDS_COMPATIBILITY})
