@@ -361,8 +361,9 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
     public static Object[][] tableFormats()
     {
         return new Object[][] {
+                // Hive not covered, since Trino 415 used normalized paths for Hive table location (no double slashes)
                 {"iceberg"},
-                {"delta"}
+                {"delta"},
         };
     }
 
