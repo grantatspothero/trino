@@ -65,7 +65,7 @@ jobs:
           fi
 
   build:
-    runs-on: [ self-hosted, sep-cicd, gha-fleet-nano ]
+    runs-on: [ self-hosted, sep-cicd, gha-fleet-medium ]
     timeout-minutes: 30
     needs:
       - determine-version
