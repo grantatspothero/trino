@@ -120,7 +120,7 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
                     .containsOnly(row(0, 1));
         }
         finally {
-            onTrino().executeQuery("DROP TABLE IF EXISTS " + qualifiedTableName);
+            onTrino().executeQuery("DROP TABLE " + qualifiedTableName);
         }
     }
 
@@ -137,7 +137,7 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
                     .containsOnly(row(1, 2), row(3, 4), row(5, 6));
         }
         finally {
-            onTrino().executeQuery("DROP TABLE IF EXISTS " + qualifiedTableName);
+            onTrino().executeQuery("DROP TABLE " + qualifiedTableName);
         }
     }
 
@@ -164,7 +164,7 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
                     .containsOnly(row(0, 1), row(10, 11));
         }
         finally {
-            onTrino().executeQuery("DROP TABLE IF EXISTS " + qualifiedTableName);
+            onTrino().executeQuery("DROP TABLE " + qualifiedTableName);
         }
     }
 
@@ -174,33 +174,38 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
         String tableName = tableFormat + "_drop_corrupted_table_" + randomNameSuffix();
         String qualifiedTableName = "%s.%s.%s".formatted(tableFormat, schemaName, tableName);
         onTrino415().executeQuery("CREATE TABLE " + qualifiedTableName + "(a, b) AS VALUES (1, 2), (3, 4)");
-        onTrino().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (5, 6)");
+        try {
+            onTrino().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (5, 6)");
 
-        // The actual table location is randomized, this is just a prefix. It's unique for this table since table name is randomized as well.
-        String tableLocationPrefixWithDoubleSlash = "temp_files//" + schemaName + "/" + tableName;
-        String tableLocationPrefixWithoutDoubleSlash = "temp_files/" + schemaName + "/" + tableName;
-        ListObjectsV2Request listObjectsRequestWithDoubleSlash = new ListObjectsV2Request()
-                .withBucketName("galaxy-trino-ci")
-                .withPrefix(tableLocationPrefixWithDoubleSlash);
-        ListObjectsV2Request listObjectsRequestWithoutDoubleSlash = new ListObjectsV2Request()
-                .withBucketName("galaxy-trino-ci")
-                .withPrefix(tableLocationPrefixWithoutDoubleSlash);
+            // The actual table location is randomized, this is just a prefix. It's unique for this table since table name is randomized as well.
+            String tableLocationPrefixWithDoubleSlash = "temp_files//" + schemaName + "/" + tableName;
+            String tableLocationPrefixWithoutDoubleSlash = "temp_files/" + schemaName + "/" + tableName;
+            ListObjectsV2Request listObjectsRequestWithDoubleSlash = new ListObjectsV2Request()
+                    .withBucketName("galaxy-trino-ci")
+                    .withPrefix(tableLocationPrefixWithDoubleSlash);
+            ListObjectsV2Request listObjectsRequestWithoutDoubleSlash = new ListObjectsV2Request()
+                    .withBucketName("galaxy-trino-ci")
+                    .withPrefix(tableLocationPrefixWithoutDoubleSlash);
 
-        Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithDoubleSlash).getObjectSummaries()).isNotEmpty();
-        Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries()).isNotEmpty();
-        onTrino().executeQuery("DROP TABLE " + qualifiedTableName);
-        Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithDoubleSlash).getObjectSummaries()).isEmpty();
-        if (!tableFormat.equals("iceberg")) {
-            Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries()).isEmpty();
+            Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithDoubleSlash).getObjectSummaries()).isNotEmpty();
+            Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries()).isNotEmpty();
+            onTrino().executeQuery("DROP TABLE " + qualifiedTableName);
+            Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithDoubleSlash).getObjectSummaries()).isEmpty();
+            if (!tableFormat.equals("iceberg")) {
+                Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries()).isEmpty();
+            }
+            else {
+                // TODO Iceberg with Glue catalog leaves stats file behind on DROP TABLE.
+                // As seen in testVerifyLegacyDropTableBehavior, this is as least is not a regression.
+                Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries())
+                        .hasSize(1)
+                        .singleElement().extracting(S3ObjectSummary::getKey, InstanceOfAssertFactories.STRING)
+                        .matches("(temp_files)/(" + schemaName + ")/(" + tableName + "-[a-z0-9]+)/(metadata)/([-a-z0-9_]+\\.stats)" +
+                                "#%2F\\1%2F%2F\\2%2F\\3%2F\\4%2F\\5");
+            }
         }
-        else {
-            // TODO Iceberg with Glue catalog leaves stats file behind on DROP TABLE.
-            // As seen in testVerifyLegacyDropTableBehavior, this is as least is not a regression.
-            Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries())
-                    .hasSize(1)
-                    .singleElement().extracting(S3ObjectSummary::getKey, InstanceOfAssertFactories.STRING)
-                    .matches("(temp_files)/(" + schemaName + ")/(" + tableName + "-[a-z0-9]+)/(metadata)/([-a-z0-9_]+\\.stats)" +
-                            "#%2F\\1%2F%2F\\2%2F\\3%2F\\4%2F\\5");
+        finally {
+            onTrino().executeQuery("DROP TABLE IF EXISTS " + qualifiedTableName);
         }
     }
 
@@ -214,31 +219,35 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
         String tableName = tableFormat + "_legacy_drop_corrupted_table_" + randomNameSuffix();
         String qualifiedTableName = "%s.%s.%s".formatted(tableFormat, schemaName, tableName);
         onTrino415().executeQuery("CREATE TABLE " + qualifiedTableName + "(a, b) AS VALUES (1, 2), (3, 4)");
+        try {
+            // The actual table location is randomized, this is just a prefix. It's unique for this table since table name is randomized as well.
+            String tableLocationPrefixWithDoubleSlash = "temp_files//" + schemaName + "/" + tableName;
+            String tableLocationPrefixWithoutDoubleSlash = "temp_files/" + schemaName + "/" + tableName;
+            ListObjectsV2Request listObjectsRequestWithDoubleSlash = new ListObjectsV2Request()
+                    .withBucketName("galaxy-trino-ci")
+                    .withPrefix(tableLocationPrefixWithDoubleSlash);
+            ListObjectsV2Request listObjectsRequestWithoutDoubleSlash = new ListObjectsV2Request()
+                    .withBucketName("galaxy-trino-ci")
+                    .withPrefix(tableLocationPrefixWithoutDoubleSlash);
 
-        // The actual table location is randomized, this is just a prefix. It's unique for this table since table name is randomized as well.
-        String tableLocationPrefixWithDoubleSlash = "temp_files//" + schemaName + "/" + tableName;
-        String tableLocationPrefixWithoutDoubleSlash = "temp_files/" + schemaName + "/" + tableName;
-        ListObjectsV2Request listObjectsRequestWithDoubleSlash = new ListObjectsV2Request()
-                .withBucketName("galaxy-trino-ci")
-                .withPrefix(tableLocationPrefixWithDoubleSlash);
-        ListObjectsV2Request listObjectsRequestWithoutDoubleSlash = new ListObjectsV2Request()
-                .withBucketName("galaxy-trino-ci")
-                .withPrefix(tableLocationPrefixWithoutDoubleSlash);
-
-        Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithDoubleSlash).getObjectSummaries()).isEmpty(); // old version didn't write anything here
-        Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries()).isNotEmpty();
-        onTrino415().executeQuery("DROP TABLE " + qualifiedTableName);
-        Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithDoubleSlash).getObjectSummaries()).isEmpty();
-        if (!tableFormat.equals("iceberg")) {
-            Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries()).isEmpty();
+            Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithDoubleSlash).getObjectSummaries()).isEmpty(); // old version didn't write anything here
+            Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries()).isNotEmpty();
+            onTrino415().executeQuery("DROP TABLE " + qualifiedTableName);
+            Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithDoubleSlash).getObjectSummaries()).isEmpty();
+            if (!tableFormat.equals("iceberg")) {
+                Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries()).isEmpty();
+            }
+            else {
+                // Trino 415's Iceberg with Glue catalog would leave stats file behind on DROP TABLE
+                Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries())
+                        .hasSize(1)
+                        .singleElement().extracting(S3ObjectSummary::getKey, InstanceOfAssertFactories.STRING)
+                        .matches("(temp_files)/(" + schemaName + ")/(" + tableName + "-[a-z0-9]+)/(metadata)/([-a-z0-9_]+\\.stats)" +
+                                "#%2F\\1%2F%2F\\2%2F\\3%2F\\4%2F\\5");
+            }
         }
-        else {
-            // Trino 415's Iceberg with Glue catalog would leave stats file behind on DROP TABLE
-            Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries())
-                    .hasSize(1)
-                    .singleElement().extracting(S3ObjectSummary::getKey, InstanceOfAssertFactories.STRING)
-                    .matches("(temp_files)/(" + schemaName + ")/(" + tableName + "-[a-z0-9]+)/(metadata)/([-a-z0-9_]+\\.stats)" +
-                            "#%2F\\1%2F%2F\\2%2F\\3%2F\\4%2F\\5");
+        finally {
+            onTrino415().executeQuery("DROP TABLE IF EXISTS " + qualifiedTableName);
         }
     }
 
@@ -263,7 +272,7 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
                     .containsOnly(row(0, 1), row(2, 3), row(10, 11), row(12, 13));
         }
         finally {
-            onTrino().executeQuery("DROP TABLE IF EXISTS " + qualifiedTableName);
+            onTrino().executeQuery("DROP TABLE " + qualifiedTableName);
         }
     }
 
@@ -291,7 +300,7 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
                     .containsOnly(row(0, 1), row(10, 11), row(12, 13));
         }
         finally {
-            onTrino().executeQuery("DROP TABLE IF EXISTS " + qualifiedTableName);
+            onTrino().executeQuery("DROP TABLE " + qualifiedTableName);
         }
     }
 
@@ -317,7 +326,7 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
                     .containsOnly(row(0, 1), row(2, 3), row(4, 42), row(10, 11), row(12, 13), row(14, 42));
         }
         finally {
-            onTrino().executeQuery("DROP TABLE IF EXISTS " + qualifiedTableName);
+            onTrino().executeQuery("DROP TABLE " + qualifiedTableName);
         }
     }
 
@@ -344,7 +353,7 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
                     .containsOnly(row(0, 1), row(2, 23), row(4, 25), row(10, 11), row(12, 33), row(14, 15));
         }
         finally {
-            onTrino().executeQuery("DROP TABLE IF EXISTS " + qualifiedTableName);
+            onTrino().executeQuery("DROP TABLE " + qualifiedTableName);
         }
     }
 
