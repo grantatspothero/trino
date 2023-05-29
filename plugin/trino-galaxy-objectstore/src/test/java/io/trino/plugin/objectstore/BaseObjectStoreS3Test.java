@@ -46,7 +46,7 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public abstract class BaseObjectStoreS3ConnectorTest
+public abstract class BaseObjectStoreS3Test
         extends AbstractTestQueryFramework
 {
     private final TableType tableType;
@@ -56,7 +56,7 @@ public abstract class BaseObjectStoreS3ConnectorTest
 
     private AmazonS3 s3;
 
-    protected BaseObjectStoreS3ConnectorTest(TableType tableType, String partitionByKeyword, String bucketName)
+    protected BaseObjectStoreS3Test(TableType tableType, String partitionByKeyword, String bucketName)
     {
         this.tableType = requireNonNull(tableType, "tableType is null");
         this.partitionByKeyword = requireNonNull(partitionByKeyword, "partitionByKeyword is null");

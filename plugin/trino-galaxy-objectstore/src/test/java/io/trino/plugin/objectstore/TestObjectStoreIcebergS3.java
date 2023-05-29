@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestObjectStoreIcebergS3
-        extends BaseObjectStoreS3ConnectorTest
+        extends BaseObjectStoreS3Test
 {
     @Parameters("s3.bucket")
     public TestObjectStoreIcebergS3(String bucketName)
