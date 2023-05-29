@@ -23,6 +23,7 @@ import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.airlift.units.DataSize;
 import io.airlift.units.Duration;
+import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
 import io.trino.plugin.base.jmx.RebindSafeMBeanServer;
 import io.trino.plugin.pinot.client.IdentityPinotHostMapper;
 import io.trino.plugin.pinot.client.PinotClient;
@@ -33,8 +34,10 @@ import io.trino.plugin.pinot.client.PinotGrpcServerQueryClientTlsConfig;
 import io.trino.plugin.pinot.client.PinotHostMapper;
 import io.trino.plugin.pinot.client.PinotLegacyDataFetcher;
 import io.trino.plugin.pinot.client.PinotLegacyServerQueryClientConfig;
+import io.trino.plugin.pinot.galaxy.GalaxyFilter;
 import io.trino.spi.NodeManager;
 import io.trino.spi.connector.ConnectorNodePartitioningProvider;
+import io.trino.sshtunnel.SshTunnelConfig;
 import org.apache.pinot.common.utils.DataSchema;
 
 import javax.management.MBeanServer;
@@ -72,6 +75,8 @@ public class PinotModule
     public void setup(Binder binder)
     {
         configBinder(binder).bindConfig(PinotConfig.class);
+        configBinder(binder).bindConfig(SshTunnelConfig.class);
+        configBinder(binder).bindConfig(RegionEnforcementConfig.class);
         binder.bind(PinotConnector.class).in(Scopes.SINGLETON);
         binder.bind(PinotMetadata.class).in(Scopes.SINGLETON);
         binder.bind(PinotSplitManager.class).in(Scopes.SINGLETON);
@@ -84,6 +89,7 @@ public class PinotModule
         binder.bind(PinotSessionProperties.class).in(Scopes.SINGLETON);
         binder.bind(PinotNodePartitioningProvider.class).in(Scopes.SINGLETON);
         httpClientBinder(binder).bindHttpClient("pinot", ForPinot.class)
+                .withFilter(GalaxyFilter.class)
                 .withConfigDefaults(cfg -> {
                     cfg.setIdleTimeout(new Duration(300, SECONDS));
                     cfg.setConnectTimeout(new Duration(300, SECONDS));

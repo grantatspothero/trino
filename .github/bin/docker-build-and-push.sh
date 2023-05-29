@@ -91,6 +91,7 @@ memory-cache
 mongodb
 ml
 mysql
+pinot
 postgresql
 redshift
 resource-group-managers
