@@ -20,8 +20,8 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Closer;
 import io.airlift.log.Logger;
-import io.trino.tempto.AfterTestWithContext;
-import io.trino.tempto.BeforeTestWithContext;
+import io.trino.tempto.AfterMethodWithContext;
+import io.trino.tempto.BeforeMethodWithContext;
 import io.trino.tempto.ProductTest;
 import io.trino.tempto.assertions.QueryAssert;
 import io.trino.tempto.query.QueryExecutionException;
@@ -52,7 +52,7 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
     private AmazonS3 s3;
     private String schemaName;
 
-    @BeforeTestWithContext
+    @BeforeMethodWithContext
     public void setup()
     {
         closer = Closer.create();
@@ -91,7 +91,7 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
         });
     }
 
-    @AfterTestWithContext
+    @AfterMethodWithContext
     public void tearDown()
             throws Exception
     {

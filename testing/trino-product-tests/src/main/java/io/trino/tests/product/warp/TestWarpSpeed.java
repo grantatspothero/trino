@@ -15,8 +15,8 @@ package io.trino.tests.product.warp;
 
 import io.airlift.log.Logger;
 import io.airlift.units.Duration;
-import io.trino.tempto.AfterTestWithContext;
-import io.trino.tempto.BeforeTestWithContext;
+import io.trino.tempto.AfterMethodWithContext;
+import io.trino.tempto.BeforeMethodWithContext;
 import io.trino.tempto.ProductTest;
 import io.trino.tempto.assertions.QueryAssert;
 import io.trino.tempto.query.QueryResult;
@@ -63,7 +63,7 @@ public class TestWarpSpeed
     private MinioClient client;
     private String bucketName;
 
-    @BeforeTestWithContext
+    @BeforeMethodWithContext
     public void setUp()
             throws Exception
     {
@@ -72,7 +72,7 @@ public class TestWarpSpeed
         bucketName = System.getenv().getOrDefault("S3_BUCKET", "trino-ci-test");
     }
 
-    @AfterTestWithContext
+    @AfterMethodWithContext
     public void tearDown()
     {
         client.close();
