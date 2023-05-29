@@ -233,4 +233,37 @@ public class TestObjectStoreDeltaS3
         assertThatThrownBy(() -> assertUpdate("CREATE TABLE " + tableName + " (key integer, value varchar) WITH (location = '" + location + "')"))
                 .hasMessageContaining("location contains a fragment");
     }
+
+    @Test
+    public void testCTASWithIncorrectLocation()
+    {
+        String tableName = "test_create_table_with_incorrect_location_" + randomNameSuffix();
+        String location = "s3://%s/galaxy/a#hash/%s".formatted(bucketName, tableName);
+
+        assertThatThrownBy(() -> assertUpdate("CREATE TABLE " + tableName +
+                " WITH (location = '" + location + "')" +
+                " AS SELECT * FROM tpch.tiny.nation"))
+                .hasMessageContaining("Error reading statistics from cache")
+                .cause().cause().hasMessageContaining("Fragment is not allowed in a file system location");
+    }
+
+    @Test
+    public void testCreateSchemaWithIncorrectLocation()
+    {
+        String schemaName = "test_create_schema_with_incorrect_location_" + randomNameSuffix();
+        String schemaLocation = "s3://%s/galaxy/a#hash/%s".formatted(bucketName, schemaName);
+        String tableName = "test_basic_operations_table_" + randomNameSuffix();
+        String qualifiedTableName = schemaName + "." + tableName;
+
+        assertUpdate("CREATE SCHEMA " + schemaName + " WITH (location = '" + schemaLocation + "')");
+        assertThat(getSchemaLocation(schemaName)).isEqualTo(schemaLocation);
+
+        assertThatThrownBy(() -> assertUpdate("CREATE TABLE " + qualifiedTableName + "(col_str varchar, col_int int)"))
+                .hasMessageContaining("location contains a fragment");
+
+        assertThatThrownBy(() -> assertUpdate("CREATE TABLE " + qualifiedTableName + " AS SELECT * FROM tpch.tiny.nation"))
+                .hasMessageContaining("location contains a fragment");
+
+        assertUpdate("DROP SCHEMA " + schemaName);
+    }
 }
