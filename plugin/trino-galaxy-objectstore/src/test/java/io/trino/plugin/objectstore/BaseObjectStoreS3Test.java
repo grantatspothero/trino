@@ -183,6 +183,7 @@ public abstract class BaseObjectStoreS3Test
         assertThat(getTableFiles(actualTableLocation)).isEmpty();
 
         assertUpdate("DROP SCHEMA " + schemaName);
+        assertThat(getTableFiles(actualTableLocation)).isEmpty();
     }
 
     @Test(dataProvider = "locationPatternsDataProvider")
