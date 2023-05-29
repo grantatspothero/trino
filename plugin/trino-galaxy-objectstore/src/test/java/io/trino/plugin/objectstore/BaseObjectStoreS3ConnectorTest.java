@@ -123,10 +123,10 @@ public abstract class BaseObjectStoreS3ConnectorTest
     {
         String tableName = "test_basic_operations_" + randomNameSuffix();
         String location = locationPattern.formatted(bucketName, tableName);
-        String partitonQueryPart = (partitioned ? "," + partitionByKeyword + " = ARRAY['col_str']" : "");
+        String partitionQueryPart = (partitioned ? "," + partitionByKeyword + " = ARRAY['col_str']" : "");
 
         assertUpdate("CREATE TABLE " + tableName + "(col_str, col_int)" +
-                "WITH (location = '" + location + "'" + partitonQueryPart + ") " +
+                "WITH (location = '" + location + "'" + partitionQueryPart + ") " +
                 "AS VALUES ('str1', 1), ('str2', 2), ('str3', 3)", 3);
         assertQuery("SELECT * FROM " + tableName, "VALUES ('str1', 1), ('str2', 2), ('str3', 3)");
         validateTableLocation(tableName, location);
@@ -155,12 +155,12 @@ public abstract class BaseObjectStoreS3ConnectorTest
         String schemaLocation = locationPattern.formatted(bucketName, schemaName);
         String tableName = "test_basic_operations_table_" + randomNameSuffix();
         String qualifiedTableName = schemaName + "." + tableName;
-        String partitonQueryPart = (partitioned ? "WITH (" + partitionByKeyword + " = ARRAY['col_str'])" : "");
+        String partitionQueryPart = (partitioned ? "WITH (" + partitionByKeyword + " = ARRAY['col_str'])" : "");
 
         assertUpdate("CREATE SCHEMA " + schemaName + " WITH (location = '" + schemaLocation + "')");
         assertThat(getSchemaLocation(schemaName)).isEqualTo(schemaLocation);
 
-        assertUpdate("CREATE TABLE " + qualifiedTableName + "(col_str varchar, col_int int)" + partitonQueryPart);
+        assertUpdate("CREATE TABLE " + qualifiedTableName + "(col_str varchar, col_int int)" + partitionQueryPart);
         // in case of regular CREATE TABLE, location has generated suffix
         String expectedTableLocationPattern = (schemaLocation.endsWith("/") ? schemaLocation : schemaLocation + "/") + tableName + "-[a-z0-9]+";
         String actualTableLocation = getTableLocation(qualifiedTableName);
@@ -190,10 +190,10 @@ public abstract class BaseObjectStoreS3ConnectorTest
     {
         String tableName = "test_merge_" + randomNameSuffix();
         String location = locationPattern.formatted(bucketName, tableName);
-        String partitonQueryPart = (partitioned ? "," + partitionByKeyword + " = ARRAY['col_str']" : "");
+        String partitionQueryPart = (partitioned ? "," + partitionByKeyword + " = ARRAY['col_str']" : "");
 
         assertUpdate("CREATE TABLE " + tableName + "(col_str, col_int)" +
-                "WITH (location = '" + location + "'" + partitonQueryPart + ") " +
+                "WITH (location = '" + location + "'" + partitionQueryPart + ") " +
                 "AS VALUES ('str1', 1), ('str2', 2), ('str3', 3)", 3);
         assertQuery("SELECT * FROM " + tableName, "VALUES ('str1', 1), ('str2', 2), ('str3', 3)");
 
@@ -222,10 +222,10 @@ public abstract class BaseObjectStoreS3ConnectorTest
     {
         String tableName = "test_optimize_" + randomNameSuffix();
         String location = locationPattern.formatted(bucketName, tableName);
-        String partitonQueryPart = (partitioned ? "," + partitionByKeyword + " = ARRAY['value']" : "");
+        String partitionQueryPart = (partitioned ? "," + partitionByKeyword + " = ARRAY['value']" : "");
 
         assertUpdate("CREATE TABLE " + tableName + " (key integer, value varchar) " +
-                "WITH (location = '" + location + "'" + partitonQueryPart + ")");
+                "WITH (location = '" + location + "'" + partitionQueryPart + ")");
         try {
             // create multiple data files, INSERT with multiple values would create only one file (if not partitioned)
             assertUpdate("INSERT INTO " + tableName + " VALUES (1, 'one')", 1);

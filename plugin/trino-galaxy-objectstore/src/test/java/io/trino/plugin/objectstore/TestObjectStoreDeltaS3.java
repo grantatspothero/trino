@@ -103,10 +103,10 @@ public class TestObjectStoreDeltaS3
     {
         String tableName = "test_analyze_" + randomNameSuffix();
         String location = locationPattern.formatted(bucketName, tableName);
-        String partitonQueryPart = (partitioned ? ",partitioned_by = ARRAY['col_str']" : "");
+        String partitionQueryPart = (partitioned ? ",partitioned_by = ARRAY['col_str']" : "");
 
         assertUpdate("CREATE TABLE " + tableName + "(col_str, col_int)" +
-                "WITH (location = '" + location + "'" + partitonQueryPart + ") " +
+                "WITH (location = '" + location + "'" + partitionQueryPart + ") " +
                 "AS VALUES ('str1', 1), ('str2', 2), ('str3', 3)", 3);
 
         assertUpdate("INSERT INTO " + tableName + " VALUES ('str4', 4)", 1);
@@ -164,14 +164,14 @@ public class TestObjectStoreDeltaS3
     {
         String tableName = "test_vacuum_" + randomNameSuffix();
         String tableLocation = locationPattern.formatted(bucketName, tableName);
-        String partitonQueryPart = (partitioned ? ",partitioned_by = ARRAY['regionkey']" : "");
+        String partitionQueryPart = (partitioned ? ",partitioned_by = ARRAY['regionkey']" : "");
 
         String catalog = getSession().getCatalog().orElseThrow();
         Session sessionWithShortRetentionUnlocked = Session.builder(getSession())
                 .setCatalogSessionProperty(catalog, "vacuum_min_retention", "0s")
                 .build();
         assertUpdate("CREATE TABLE " + tableName +
-                " WITH (location = '" + tableLocation + "'" + partitonQueryPart + ")" +
+                " WITH (location = '" + tableLocation + "'" + partitionQueryPart + ")" +
                 " AS SELECT * FROM tpch.tiny.nation", 25);
         try {
             Set<String> initialFiles = getActiveFiles(tableName);
@@ -210,10 +210,10 @@ public class TestObjectStoreDeltaS3
     {
         String tableName = "test_vacuum_" + randomNameSuffix();
         String tableLocation = "s3://%s/galaxy/trailing_slash/%s/".formatted(bucketName, tableName);
-        String partitonQueryPart = (partitioned ? ",partitioned_by = ARRAY['regionkey']" : "");
+        String partitionQueryPart = (partitioned ? ",partitioned_by = ARRAY['regionkey']" : "");
 
         assertUpdate("CREATE TABLE " + tableName +
-                " WITH (location = '" + tableLocation + "'" + partitonQueryPart + ")" +
+                " WITH (location = '" + tableLocation + "'" + partitionQueryPart + ")" +
                 " AS SELECT * FROM tpch.tiny.nation", 25);
         try {
             assertThatThrownBy(() -> assertUpdate("CALL system.vacuum(schema_name => CURRENT_SCHEMA, table_name => '" + tableName + "', retention => '10d')"))

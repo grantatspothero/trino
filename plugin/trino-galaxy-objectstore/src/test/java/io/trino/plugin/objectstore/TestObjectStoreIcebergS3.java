@@ -88,10 +88,10 @@ public class TestObjectStoreIcebergS3
     {
         String tableName = "test_analyze_" + randomNameSuffix();
         String location = locationPattern.formatted(bucketName, tableName);
-        String partitonQueryPart = (partitioned ? ",partitioning = ARRAY['col_str']" : "");
+        String partitionQueryPart = (partitioned ? ",partitioning = ARRAY['col_str']" : "");
 
         assertUpdate("CREATE TABLE " + tableName + "(col_str, col_int)" +
-                "WITH (location = '" + location + "'" + partitonQueryPart + ") " +
+                "WITH (location = '" + location + "'" + partitionQueryPart + ") " +
                 "AS VALUES ('str1', 1), ('str2', 2), ('str3', 3)", 3);
 
         assertUpdate("INSERT INTO " + tableName + " VALUES ('str4', 4)", 1);
