@@ -47,8 +47,13 @@ public class RegionVerifier
 
     public RegionVerifier(Properties properties)
     {
-        localIpRangeMatcher = IP_RANGE_MATCHER_CACHE.getUnchecked(getRegionLocalIpAddresses(requireNonNull(properties, "properties is null")));
-        crossRegionAllowed = isCrossRegionAllowed(properties);
+        this(isCrossRegionAllowed(properties), getRegionLocalIpAddresses(requireNonNull(properties, "properties is null")));
+    }
+
+    public RegionVerifier(boolean crossRegionAllowed, List<String> allowedIpAddresses)
+    {
+        this.localIpRangeMatcher = IP_RANGE_MATCHER_CACHE.getUnchecked(requireNonNull(allowedIpAddresses, "allowedIpAddresses is null"));
+        this.crossRegionAllowed = crossRegionAllowed;
     }
 
     public void verifyLocalRegion(String serverType, String host)
