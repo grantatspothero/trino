@@ -177,7 +177,7 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
         try {
             onTrino().executeQuery("INSERT INTO " + qualifiedTableName + " VALUES (5, 6)");
 
-            // The actual table location is randomized, this is just a prefix. It's unique for this table since table name is randomized as well.
+            // The actual table location may be randomized, and then this would be just a prefix. In any case, it is unique for this table since table name is randomized as well.
             String tableLocationPrefixWithDoubleSlash = "temp_files//" + schemaName + "/" + tableName;
             String tableLocationPrefixWithoutDoubleSlash = "temp_files/" + schemaName + "/" + tableName;
             ListObjectsV2Request listObjectsRequestWithDoubleSlash = new ListObjectsV2Request()
@@ -200,7 +200,7 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
                 Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries())
                         .hasSize(1)
                         .singleElement().extracting(S3ObjectSummary::getKey, InstanceOfAssertFactories.STRING)
-                        .matches("(temp_files)/(" + schemaName + ")/(" + tableName + "-[a-z0-9]+)/(metadata)/([-a-z0-9_]+\\.stats)" +
+                        .matches("(temp_files)/(" + schemaName + ")/(" + tableName + "(?:-[a-z0-9]+)?)/(metadata)/([-a-z0-9_]+\\.stats)" +
                                 "#%2F\\1%2F%2F\\2%2F\\3%2F\\4%2F\\5");
             }
         }
@@ -220,7 +220,7 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
         String qualifiedTableName = "%s.%s.%s".formatted(tableFormat, schemaName, tableName);
         onTrino415().executeQuery("CREATE TABLE " + qualifiedTableName + "(a, b) AS VALUES (1, 2), (3, 4)");
         try {
-            // The actual table location is randomized, this is just a prefix. It's unique for this table since table name is randomized as well.
+            // The actual table location may be randomized, and then this would be just a prefix. In any case, it is unique for this table since table name is randomized as well.
             String tableLocationPrefixWithDoubleSlash = "temp_files//" + schemaName + "/" + tableName;
             String tableLocationPrefixWithoutDoubleSlash = "temp_files/" + schemaName + "/" + tableName;
             ListObjectsV2Request listObjectsRequestWithDoubleSlash = new ListObjectsV2Request()
@@ -242,7 +242,7 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
                 Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries())
                         .hasSize(1)
                         .singleElement().extracting(S3ObjectSummary::getKey, InstanceOfAssertFactories.STRING)
-                        .matches("(temp_files)/(" + schemaName + ")/(" + tableName + "-[a-z0-9]+)/(metadata)/([-a-z0-9_]+\\.stats)" +
+                        .matches("(temp_files)/(" + schemaName + ")/(" + tableName + "(?:-[a-z0-9]+)?)/(metadata)/([-a-z0-9_]+\\.stats)" +
                                 "#%2F\\1%2F%2F\\2%2F\\3%2F\\4%2F\\5");
             }
         }
