@@ -209,7 +209,7 @@ public class MemoryPool
 
     public boolean tryReserveRevocable(long bytes)
     {
-        checkArgument(bytes >= 0, "'bytes' is negative");
+        checkArgument(bytes >= 0, "'%s' is negative", bytes);
         synchronized (this) {
             if (getFreeBytes() - bytes < 0) {
                 return false;
@@ -307,7 +307,7 @@ public class MemoryPool
 
     public synchronized void freeRevocable(long bytes)
     {
-        checkArgument(bytes >= 0, "'bytes' is negative");
+        checkArgument(bytes >= 0, "'%s' is negative", bytes);
         checkArgument(reservedRevocableBytes >= bytes, "tried to free more revocable memory than is reserved");
         if (bytes == 0) {
             // Freeing zero bytes is a no-op
