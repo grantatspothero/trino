@@ -255,12 +255,6 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     /////// ----------------------------------------- please put generated code below this line as well --------------------------------- ///////
 
     @Override
-    public void testAddAndDropColumnName(String arg0)
-    {
-        skipDuplicateTestCoverage("testAddAndDropColumnName", String.class);
-    }
-
-    @Override
     public void testAddColumn()
     {
         skipDuplicateTestCoverage("testAddColumn");
@@ -624,18 +618,6 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     public void testDropAmbiguousRowFieldCaseSensitivity()
     {
         skipDuplicateTestCoverage("testDropAmbiguousRowFieldCaseSensitivity");
-    }
-
-    @Override
-    public void testDropAndAddColumnWithSameName()
-    {
-        skipDuplicateTestCoverage("testDropAndAddColumnWithSameName");
-    }
-
-    @Override
-    public void testDropColumn()
-    {
-        skipDuplicateTestCoverage("testDropColumn");
     }
 
     @Override

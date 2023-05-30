@@ -410,6 +410,33 @@ public class TestObjectStoreDeltaConnectorTest
                         "(null, null, null, null, 75.0, null, null)");
     }
 
+    @Override
+    public void testDropColumn()
+    {
+        // Override because the connector doesn't support dropping columns with 'none' column mapping
+        // There are some tests in in io.trino.tests.product.deltalake.TestDeltaLakeColumnMappingMode
+        assertThatThrownBy(super::testDropColumn)
+                .hasMessageContaining("Cannot drop column from table using column mapping mode NONE");
+    }
+
+    @Override
+    public void testAddAndDropColumnName(String columnName)
+    {
+        // Override because the connector doesn't support dropping columns with 'none' column mapping
+        // There are some tests in in io.trino.tests.product.deltalake.TestDeltaLakeColumnMappingMode
+        assertThatThrownBy(() -> super.testAddAndDropColumnName(columnName))
+                .hasMessageContaining("Cannot drop column from table using column mapping mode NONE");
+    }
+
+    @Override
+    public void testDropAndAddColumnWithSameName()
+    {
+        // Override because the connector doesn't support dropping columns with 'none' column mapping
+        // There are some tests in in io.trino.tests.product.deltalake.TestDeltaLakeColumnMappingMode
+        assertThatThrownBy(super::testDropAndAddColumnWithSameName)
+                .hasMessageContaining("Cannot drop column from table using column mapping mode NONE");
+    }
+
     private void runAnalyzeVerifySplitCount(String tableName, long expectedSplitCount)
     {
         MaterializedResultWithQueryId analyzeResult = getDistributedQueryRunner().executeWithQueryId(getSession(), "ANALYZE " + tableName);
