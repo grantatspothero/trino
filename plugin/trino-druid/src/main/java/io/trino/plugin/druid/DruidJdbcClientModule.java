@@ -31,7 +31,7 @@ import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.ptf.ConnectorTableFunction;
 import io.trino.sshtunnel.SshTunnelConfig;
 import io.trino.sshtunnel.SshTunnelProperties;
-import org.apache.calcite.avatica.remote.Driver;
+import org.apache.calcite.avatica.remote.GalaxyDruidDriver;
 
 import java.util.Properties;
 
@@ -82,7 +82,7 @@ public class DruidJdbcClientModule
                 .ifPresent(sshTunnelProperties -> addSshTunnelProperties(galaxyProperties::setProperty, sshTunnelProperties));
 
         return new DriverConnectionFactory(
-                new Driver(),
+                new GalaxyDruidDriver(),
                 config.getConnectionUrl(),
                 galaxyProperties,
                 credentialProvider);
