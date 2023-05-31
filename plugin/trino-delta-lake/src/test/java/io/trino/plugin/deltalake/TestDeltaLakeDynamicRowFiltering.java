@@ -23,13 +23,12 @@ import io.trino.testing.QueryRunner;
 
 import static com.google.common.base.Verify.verify;
 import static io.trino.plugin.deltalake.DeltaLakeQueryRunner.DELTA_CATALOG;
+import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.lang.String.format;
 
 public class TestDeltaLakeDynamicRowFiltering
         extends AbstractTestDynamicRowFiltering
 {
-    private static final String BUCKET_NAME = "delta-test-dynamic-row-filtering";
-
     private HiveMinioDataLake hiveMinioDataLake;
 
     @Override
@@ -37,7 +36,9 @@ public class TestDeltaLakeDynamicRowFiltering
             throws Exception
     {
         verify(new DynamicFilterConfig().isEnableDynamicFiltering(), "this class assumes dynamic filtering is enabled by default");
-        hiveMinioDataLake = closeAfterClass(new HiveMinioDataLake(BUCKET_NAME));
+
+        String bucketName = "delta-test-dynamic-row-filtering-" + randomNameSuffix();
+        hiveMinioDataLake = closeAfterClass(new HiveMinioDataLake(bucketName));
         hiveMinioDataLake.start();
 
         QueryRunner queryRunner = DeltaLakeQueryRunner.createS3DeltaLakeQueryRunner(
@@ -56,7 +57,7 @@ public class TestDeltaLakeDynamicRowFiltering
                     DELTA_CATALOG,
                     "tpch",
                     tableName,
-                    BUCKET_NAME));
+                    bucketName));
         });
         return queryRunner;
     }
