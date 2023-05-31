@@ -64,6 +64,7 @@ import static io.trino.plugin.hive.ViewReaderUtil.ICEBERG_MATERIALIZED_VIEW_COMM
 import static io.trino.plugin.hive.ViewReaderUtil.isTrinoMaterializedView;
 import static io.trino.plugin.hive.metastore.PrincipalPrivileges.NO_PRIVILEGES;
 import static io.trino.plugin.hive.metastore.StorageFormat.VIEW_STORAGE_FORMAT;
+import static io.trino.plugin.hive.util.HiveUtil.escapeTableName;
 import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_FILESYSTEM_ERROR;
 import static io.trino.plugin.iceberg.IcebergMaterializedViewAdditionalProperties.STORAGE_SCHEMA;
 import static io.trino.plugin.iceberg.IcebergMaterializedViewDefinition.encodeMaterializedViewData;
@@ -334,7 +335,7 @@ public class TrinoGalaxyCatalog
         String databaseLocation = database.getLocation().orElseThrow(() ->
                 new TrinoException(HIVE_DATABASE_LOCATION_ERROR, format("Database '%s' location is not set", schemaTableName.getSchemaName())));
 
-        String tableLocation = Location.of(databaseLocation).appendPath(schemaTableName.getTableName()).toString();
+        String tableLocation = Location.of(databaseLocation).appendPath(escapeTableName(schemaTableName.getTableName())).toString();
 
         if (useUniqueTableLocation) {
             tableLocation += "-" + randomUUID().toString().replace("-", "");

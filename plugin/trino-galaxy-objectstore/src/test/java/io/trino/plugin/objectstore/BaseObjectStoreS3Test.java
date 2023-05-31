@@ -18,6 +18,7 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import io.trino.Session;
+import io.trino.filesystem.Location;
 import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
@@ -46,6 +47,7 @@ import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public abstract class BaseObjectStoreS3Test
         extends AbstractTestQueryFramework
@@ -328,5 +330,39 @@ public abstract class BaseObjectStoreS3Test
     protected void verifyPathExist(String path)
     {
         assertThat(s3Path(s3, path)).exists();
+    }
+
+    @Test
+    public void testTableNameEscape()
+    {
+        String tableNameSuffix = randomNameSuffix();
+        String sourceTableName = "../test_create_table_name_escape_" + tableNameSuffix;
+        String destinationTableName = "../test_ctas_table_name_escape_" + tableNameSuffix;
+
+        assertUpdate("CREATE TABLE \"" + sourceTableName + "\" (c integer)");
+        try {
+            assertUpdate("INSERT INTO \"" + sourceTableName + "\" VALUES 1", 1);
+            assertQuery("SELECT * FROM \"" + sourceTableName + "\"", "VALUES 1");
+
+            assertUpdate("CREATE TABLE \"" + destinationTableName + "\" AS SELECT * FROM \"" + sourceTableName + "\"", 1);
+            assertQuery("SELECT * FROM \"" + destinationTableName + "\"", "VALUES 1");
+
+            Location schemaLocation = Location.of(getSchemaLocation("tpch"));
+            String sourceTableLocation = (String) computeScalar("SELECT DISTINCT regexp_replace(\"$path\", '/[^/]*$', '') FROM \"" + sourceTableName + "\"");
+            assertThat(sourceTableLocation).startsWith(schemaLocation.appendPath("..%2Ftest_create_table_name_escape_" + tableNameSuffix).toString());
+            String destinationTableLocation = (String) computeScalar("SELECT DISTINCT regexp_replace(\"$path\", '/[^/]*$', '') FROM \"" + destinationTableName + "\"");
+            assertThat(destinationTableLocation).startsWith(schemaLocation.appendPath("..%2Ftest_ctas_table_name_escape_" + tableNameSuffix).toString());
+        }
+        finally {
+            assertUpdate("DROP TABLE \"" + sourceTableName + "\"");
+            assertUpdate("DROP TABLE IF EXISTS \"" + destinationTableName + "\"");
+        }
+    }
+
+    @Test
+    public void testDotsTableNameEscape()
+    {
+        assertThatThrownBy(() -> assertUpdate("CREATE TABLE \"..\" (c integer)"))
+                .hasMessage("Invalid table name");
     }
 }
