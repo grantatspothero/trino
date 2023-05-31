@@ -300,7 +300,7 @@ public abstract class BaseObjectStoreS3Test
 
     protected String getSchemaLocation(String schemaName)
     {
-        return findLocationInQuery("SHOW CREATE SCHEMA " + schemaName);
+        return findLocationInQuery("SHOW CREATE SCHEMA \"" + schemaName + "\"");
     }
 
     private String findLocationInQuery(String query)

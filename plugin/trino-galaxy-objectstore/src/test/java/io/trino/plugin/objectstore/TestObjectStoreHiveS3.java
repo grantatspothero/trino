@@ -237,4 +237,33 @@ public class TestObjectStoreHiveS3
 
         assertUpdate("DROP SCHEMA " + schemaName);
     }
+
+    @Test
+    public void testSchemaNameEscape()
+    {
+        String schemaNameSuffix = randomNameSuffix();
+        String schemaName = "../test_create_schema_escaped_" + schemaNameSuffix;
+        String tableName = "test_table_schema_escaped_" + randomNameSuffix();
+
+        assertUpdate("CREATE SCHEMA \"" + schemaName + "\"");
+        // On S3, when creating the schema, there is no directory corresponding to the schema name created
+        assertUpdate("CREATE TABLE \"" + schemaName + "\"." + tableName + " (col) AS VALUES 1", 1);
+
+        assertQuery("SELECT * FROM \"" + schemaName + "\"." + tableName, "VALUES 1");
+        String tableLocation = (String) computeScalar("SELECT DISTINCT regexp_replace(\"$path\", '/[^/]*$', '') FROM \"" + schemaName + "\"." + tableName);
+        String schemaLocation = getSchemaLocation(schemaName);
+
+        assertThat(schemaLocation).isEqualTo("s3://" + bucketName + "/galaxy/..%2Ftest_create_schema_escaped_" + schemaNameSuffix);
+        assertThat(tableLocation).isEqualTo("s3://" + bucketName + "/galaxy/..%2Ftest_create_schema_escaped_" + schemaNameSuffix + "/" + tableName);
+
+        assertUpdate("DROP TABLE \"" + schemaName + "\"." + tableName);
+        assertUpdate("DROP SCHEMA \"" + schemaName + "\"");
+    }
+
+    @Test
+    public void testDotsSchemaNameEscape()
+    {
+        assertThatThrownBy(() -> assertUpdate("CREATE SCHEMA \"..\""))
+                .hasMessage("Invalid schema name");
+    }
 }

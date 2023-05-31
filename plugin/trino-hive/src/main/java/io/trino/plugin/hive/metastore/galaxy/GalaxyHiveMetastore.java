@@ -79,6 +79,7 @@ import static io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreUtils.toGalax
 import static io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreUtils.toGalaxyStatistics;
 import static io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreUtils.toGalaxyTable;
 import static io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreUtils.toPartitionNames;
+import static io.trino.plugin.hive.util.HiveUtil.escapeSchemaName;
 import static io.trino.spi.StandardErrorCode.ALREADY_EXISTS;
 import static io.trino.spi.StandardErrorCode.NOT_FOUND;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
@@ -267,7 +268,7 @@ public class GalaxyHiveMetastore
     {
         if (database.getLocation().isEmpty()) {
             database = Database.builder(database)
-                    .setLocation(Optional.of(appendPath(defaultDirectory, database.getDatabaseName())))
+                    .setLocation(Optional.of(appendPath(defaultDirectory, escapeSchemaName(database.getDatabaseName()))))
                     .build();
         }
         try {
