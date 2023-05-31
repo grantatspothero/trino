@@ -156,7 +156,7 @@ public final class GalaxyQueryRunner
             URI deploymentUri = URI.create("https://test-sample.trino.local.gate0.net:8888");
 
             Set<String> catalogNames = catalogs.build().stream().map(CatalogInit::catalogName).collect(toImmutableSet());
-            Map<String, CatalogId> catalogIds = catalogNames.stream().collect(toImmutableMap(Function.identity(), accountClient::createCatalog));
+            Map<String, CatalogId> catalogIds = catalogNames.stream().collect(toImmutableMap(Function.identity(), accountClient::getOrCreateCatalog));
             String catalogIdStrings = catalogIds.entrySet().stream()
                     .map(entry -> entry.getKey() + "->" + entry.getValue())
                     .collect(joining(","));

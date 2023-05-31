@@ -97,7 +97,7 @@ public class GalaxyTestHelper
 
         Map<String, CatalogId> catalogs = IntStream.range(1, 5 + 1)
                 .mapToObj(index -> "catalog" + index)
-                .collect(toImmutableMap(Function.identity(), accountClient::createCatalog));
+                .collect(toImmutableMap(Function.identity(), accountClient::getOrCreateCatalog));
 
         catalogIds = new CatalogIds(ImmutableBiMap.copyOf(catalogs), ImmutableSet.of());
         client = accountClient.getTrinoSecurityApi();

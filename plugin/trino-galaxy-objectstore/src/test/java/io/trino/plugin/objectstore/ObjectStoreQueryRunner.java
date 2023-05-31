@@ -185,7 +185,7 @@ public final class ObjectStoreQueryRunner
                         tableType,
                         ImmutableMap.<String, String>builder()
                                 .putAll(locationSecurityServer.getClientConfig())
-                                .put("galaxy.catalog-id", accountClient.createCatalog("objectstore").getCatalogId().toString())
+                                .put("galaxy.catalog-id", accountClient.getOrCreateCatalog("objectstore").getCatalogId().toString())
                                 .buildOrThrow(),
                         requireNonNull(metastoreType, "metastoreType not set"),
                         metastore != null
