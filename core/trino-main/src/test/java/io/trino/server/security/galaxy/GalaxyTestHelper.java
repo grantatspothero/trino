@@ -33,7 +33,6 @@ import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.galaxy.GalaxyPermissionsCache;
 import io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType;
 import io.trino.spi.QueryId;
-import io.trino.spi.TrinoException;
 import io.trino.spi.security.AccessDeniedException;
 import io.trino.spi.security.BasicPrincipal;
 import io.trino.spi.security.Identity;
@@ -214,20 +213,6 @@ public class GalaxyTestHelper
             try {
                 assertThatThrownBy(() -> consumer.accept(context))
                         .isInstanceOf(AccessDeniedException.class)
-                        .hasMessageMatching(message);
-            }
-            catch (Throwable e) {
-                handleUnexpectedResult("Succeeded unexpectedly", message, context, e);
-            }
-        });
-    }
-
-    public void accessCausesTrinoException(String message, List<SystemSecurityContext> contexts, Consumer<SystemSecurityContext> consumer)
-    {
-        contexts.forEach(context -> {
-            try {
-                assertThatThrownBy(() -> consumer.accept(context))
-                        .isInstanceOf(TrinoException.class)
                         .hasMessageMatching(message);
             }
             catch (Throwable e) {
