@@ -15,11 +15,13 @@ package io.trino.plugin.objectstore;
 
 import io.trino.Session;
 import io.trino.operator.OperatorStats;
+import io.trino.plugin.deltalake.TestDeltaLakeConnectorTest;
 import io.trino.spi.QueryId;
 import io.trino.testing.MaterializedResult;
 import io.trino.testing.MaterializedResultWithQueryId;
 import io.trino.testing.TestingConnectorBehavior;
 import io.trino.testing.sql.TestTable;
+import org.intellij.lang.annotations.Language;
 import org.testng.SkipException;
 import org.testng.annotations.Test;
 
@@ -77,37 +79,36 @@ public class TestObjectStoreDeltaConnectorTest
     }
 
     @Override
-    protected void verifyConcurrentAddColumnFailurePermissible(Exception e)
-    {
-        assertThat(e)
-                .hasMessageMatching("Unable to add '.*' column for: .*")
-                .cause()
-                .hasMessageMatching(
-                        "Transaction log locked.*" +
-                                "|.*/_delta_log/\\d+.json already exists" +
-                                "|Conflicting concurrent writes found..*" +
-                                "|Multiple live locks found for:.*" +
-                                "|Target file .* was created during locking");
-    }
-
-    @Override
-    protected void verifyConcurrentInsertFailurePermissible(Exception e)
-    {
-        verifyConcurrentUpdateFailurePermissible(e);
-    }
-
-    @Override
     protected void verifyConcurrentUpdateFailurePermissible(Exception e)
     {
         assertThat(e)
                 .hasMessage("Failed to write Delta Lake transaction log entry")
                 .cause()
-                .hasMessageMatching(
-                        "Transaction log locked.*" +
-                                "|.*/_delta_log/\\d+.json already exists" +
-                                "|Conflicting concurrent writes found..*" +
-                                "|Multiple live locks found for:.*" +
-                                "|Target file .* was created during locking");
+                .hasMessageMatching(transactionConflictErrors());
+    }
+
+    @Override
+    protected void verifyConcurrentInsertFailurePermissible(Exception e)
+    {
+        assertThat(e)
+                .hasMessage("Failed to write Delta Lake transaction log entry")
+                .cause()
+                .hasMessageMatching(transactionConflictErrors());
+    }
+
+    @Override
+    protected void verifyConcurrentAddColumnFailurePermissible(Exception e)
+    {
+        assertThat(e)
+                .hasMessageMatching("Unable to add '.*' column for: .*")
+                .cause()
+                .hasMessageMatching(transactionConflictErrors());
+    }
+
+    @Language("RegExp")
+    private static String transactionConflictErrors()
+    {
+        return TestDeltaLakeConnectorTest.transactionConflictErrors();
     }
 
     @Override
