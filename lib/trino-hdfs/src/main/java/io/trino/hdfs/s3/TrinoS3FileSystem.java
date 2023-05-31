@@ -214,6 +214,7 @@ public class TrinoS3FileSystem
     public static final String S3_MAX_ERROR_RETRIES = "trino.s3.max-error-retries";
     public static final String S3_SSL_ENABLED = "trino.s3.ssl.enabled";
     public static final String S3_PATH_STYLE_ACCESS = "trino.s3.path-style-access";
+    public static final String S3_SUPPORT_LEGACY_CORRUPTED_PATHS = "trino.s3.support-legacy-corrupted-paths";
     public static final String S3_SIGNER_TYPE = "trino.s3.signer-type";
     public static final String S3_SIGNER_CLASS = "trino.s3.signer-class";
     public static final String S3_ENDPOINT = "trino.s3.endpoint";
@@ -274,6 +275,7 @@ public class TrinoS3FileSystem
     private TrinoS3SseType sseType;
     private String sseKmsKeyId;
     private boolean isPathStyleAccess;
+    private boolean supportLegacyCorruptedPaths;
     private long multiPartUploadMinFileSize;
     private long multiPartUploadMinPartSize;
     private TrinoS3AclType s3AclType;
@@ -317,6 +319,7 @@ public class TrinoS3FileSystem
         this.multiPartUploadMinFileSize = conf.getLong(S3_MULTIPART_MIN_FILE_SIZE, defaults.getS3MultipartMinFileSize().toBytes());
         this.multiPartUploadMinPartSize = conf.getLong(S3_MULTIPART_MIN_PART_SIZE, defaults.getS3MultipartMinPartSize().toBytes());
         this.isPathStyleAccess = conf.getBoolean(S3_PATH_STYLE_ACCESS, defaults.isS3PathStyleAccess());
+        this.supportLegacyCorruptedPaths = conf.getBoolean(S3_SUPPORT_LEGACY_CORRUPTED_PATHS, defaults.isSupportLegacyCorruptedPaths());
         this.iamRole = conf.get(S3_IAM_ROLE, defaults.getS3IamRole());
         this.externalId = conf.get(S3_EXTERNAL_ID, defaults.getS3ExternalId());
         this.pinS3ClientToCurrentRegion = conf.getBoolean(S3_PIN_CLIENT_TO_CURRENT_REGION, defaults.isPinS3ClientToCurrentRegion());
@@ -556,7 +559,7 @@ public class TrinoS3FileSystem
     {
         return new FSDataInputStream(
                 new BufferedFSInputStream(
-                        new TrinoS3InputStream(s3, getBucketName(uri), path, requesterPaysEnabled, maxAttempts, maxBackoffTime, maxRetryTime),
+                        new TrinoS3InputStream(s3, getBucketName(uri), path, supportLegacyCorruptedPaths, requesterPaysEnabled, maxAttempts, maxBackoffTime, maxRetryTime),
                         bufferSize));
     }
 
@@ -786,7 +789,7 @@ public class TrinoS3FileSystem
     private void deletePaths(List<Path> paths)
     {
         List<KeyVersion> keys = paths.stream()
-                .map(TrinoS3FileSystem::keysFromPath)
+                .map(this::keysFromPath)
                 .flatMap(PathKeys::stream)
                 .map(KeyVersion::new)
                 .collect(toImmutableList());
@@ -1058,16 +1061,25 @@ public class TrinoS3FileSystem
         return value;
     }
 
+    private PathKeys keysFromPath(Path path)
+    {
+        return keysFromPath(path, supportLegacyCorruptedPaths);
+    }
+
     @VisibleForTesting
-    static PathKeys keysFromPath(Path path)
+    static PathKeys keysFromPath(Path path, boolean supportLegacyCorruptedPaths)
     {
         String correctKey = keyFromPath(path);
-        Optional<String> legacyCorrupted = legacyCorruptedKeyFromPath(path, correctKey);
+        Optional<String> legacyCorrupted = legacyCorruptedKeyFromPath(path, correctKey, supportLegacyCorruptedPaths);
         return new PathKeys(correctKey, legacyCorrupted);
     }
 
-    private static Optional<String> legacyCorruptedKeyFromPath(Path mangledPath, String correctKey)
+    private static Optional<String> legacyCorruptedKeyFromPath(Path mangledPath, String correctKey, boolean supportLegacyCorruptedPaths)
     {
+        if (!supportLegacyCorruptedPaths) {
+            return Optional.empty();
+        }
+
         String schemeAndBucket = mangledPath.toString().replaceAll("(s3.?://[^/]+)/.*", "$1");
 
         // Follows from https://github.com/trinodb/trino/blob/46e215294bb01917ddd2bd7ce085a2f2d2cad8a4/lib/trino-hdfs/src/main/java/io/trino/filesystem/hdfs/HadoopPaths.java#L28-L41
@@ -1389,6 +1401,7 @@ public class TrinoS3FileSystem
         private final AmazonS3 s3;
         private final String bucket;
         private final Path path;
+        private final boolean supportLegacyCorruptedPaths;
         private final boolean requesterPaysEnabled;
         private final int maxAttempts;
         private final Duration maxBackoffTime;
@@ -1400,11 +1413,12 @@ public class TrinoS3FileSystem
         private long streamPosition;
         private long nextReadPosition;
 
-        public TrinoS3InputStream(AmazonS3 s3, String bucket, Path path, boolean requesterPaysEnabled, int maxAttempts, Duration maxBackoffTime, Duration maxRetryTime)
+        public TrinoS3InputStream(AmazonS3 s3, String bucket, Path path, boolean supportLegacyCorruptedPaths, boolean requesterPaysEnabled, int maxAttempts, Duration maxBackoffTime, Duration maxRetryTime)
         {
             this.s3 = requireNonNull(s3, "s3 is null");
             this.bucket = requireNonNull(bucket, "bucket is null");
             this.path = requireNonNull(path, "path is null");
+            this.supportLegacyCorruptedPaths = supportLegacyCorruptedPaths;
             this.requesterPaysEnabled = requesterPaysEnabled;
 
             checkArgument(maxAttempts >= 0, "maxAttempts cannot be negative");
@@ -1424,7 +1438,7 @@ public class TrinoS3FileSystem
         public int read(long position, byte[] buffer, int offset, int length)
                 throws IOException
         {
-            return processKeys(keysFromPath(path), key -> read(key, position, buffer, offset, length));
+            return processKeys(keysFromPath(path, supportLegacyCorruptedPaths), key -> read(key, position, buffer, offset, length));
         }
 
         private int read(String key, long position, byte[] buffer, int offset, int length)
@@ -1615,7 +1629,7 @@ public class TrinoS3FileSystem
         private InputStream openStream(Path path, long start)
                 throws IOException
         {
-            return processKeys(keysFromPath(path), key -> openStream(key, start));
+            return processKeys(keysFromPath(path, supportLegacyCorruptedPaths), key -> openStream(key, start));
         }
 
         private InputStream openStream(String key, long start)

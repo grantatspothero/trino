@@ -48,6 +48,7 @@ public class HiveS3Config
     private TrinoS3SignerType s3SignerType;
     private String s3SignerClass;
     private boolean s3PathStyleAccess;
+    private boolean supportLegacyCorruptedPaths = true; // TODO switch to false by default once this becomes feature-flag configurable in Galaxy
     private String s3IamRole;
     private String s3ExternalId;
     private boolean s3SslEnabled = true;
@@ -181,6 +182,19 @@ public class HiveS3Config
     public HiveS3Config setS3PathStyleAccess(boolean s3PathStyleAccess)
     {
         this.s3PathStyleAccess = s3PathStyleAccess;
+        return this;
+    }
+
+    public boolean isSupportLegacyCorruptedPaths()
+    {
+        return supportLegacyCorruptedPaths;
+    }
+
+    @Config("hive.s3.support-legacy-corrupted-paths")
+    @ConfigDescription("Enable backward compatibility layer for reading paths affected by Galaxy https://starburstdata.atlassian.net/browse/IN-916")
+    public HiveS3Config setSupportLegacyCorruptedPaths(boolean supportLegacyCorruptedPaths)
+    {
+        this.supportLegacyCorruptedPaths = supportLegacyCorruptedPaths;
         return this;
     }
 

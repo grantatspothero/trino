@@ -66,6 +66,7 @@ import static io.trino.hdfs.s3.TrinoS3FileSystem.S3_STREAMING_UPLOAD_ENABLED;
 import static io.trino.hdfs.s3.TrinoS3FileSystem.S3_STREAMING_UPLOAD_PART_SIZE;
 import static io.trino.hdfs.s3.TrinoS3FileSystem.S3_STS_ENDPOINT;
 import static io.trino.hdfs.s3.TrinoS3FileSystem.S3_STS_REGION;
+import static io.trino.hdfs.s3.TrinoS3FileSystem.S3_SUPPORT_LEGACY_CORRUPTED_PATHS;
 import static io.trino.hdfs.s3.TrinoS3FileSystem.S3_USER_AGENT_PREFIX;
 import static java.util.stream.Collectors.joining;
 
@@ -79,6 +80,7 @@ public class TrinoS3ConfigurationInitializer
     private final TrinoS3StorageClass s3StorageClass;
     private final TrinoS3SignerType signerType;
     private final boolean pathStyleAccess;
+    private final boolean supportLegacyCorruptedPaths;
     private final String iamRole;
     private final String externalId;
     private final boolean sslEnabled;
@@ -127,6 +129,7 @@ public class TrinoS3ConfigurationInitializer
         this.signerType = config.getS3SignerType();
         this.signerClass = config.getS3SignerClass();
         this.pathStyleAccess = config.isS3PathStyleAccess();
+        this.supportLegacyCorruptedPaths = config.isSupportLegacyCorruptedPaths();
         this.iamRole = config.getS3IamRole();
         this.externalId = config.getS3ExternalId();
         this.sslEnabled = config.isS3SslEnabled();
@@ -192,6 +195,7 @@ public class TrinoS3ConfigurationInitializer
             config.set(S3_SIGNER_CLASS, signerClass);
         }
         config.setBoolean(S3_PATH_STYLE_ACCESS, pathStyleAccess);
+        config.setBoolean(S3_SUPPORT_LEGACY_CORRUPTED_PATHS, supportLegacyCorruptedPaths);
         if (iamRole != null) {
             config.set(S3_IAM_ROLE, iamRole);
         }

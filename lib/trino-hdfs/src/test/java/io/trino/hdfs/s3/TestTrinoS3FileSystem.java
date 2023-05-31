@@ -1001,19 +1001,25 @@ public class TestTrinoS3FileSystem
     {
         // s3a:// and s3n:// did not go through path corruption, since the original code checked for s3://
         // https://github.com/trinodb/trino/blob/46e215294bb01917ddd2bd7ce085a2f2d2cad8a4/lib/trino-hdfs/src/main/java/io/trino/filesystem/hdfs/HadoopPaths.java#L28-L41
-        assertThat(keysFromPath(hadoopPath(Location.of("s3a://my-bucket/some//path"))))
+        assertThat(keysFromPath(hadoopPath(Location.of("s3a://my-bucket/some//path")), true))
                 .isEqualTo(new PathKeys(
                         "some/path",
                         Optional.empty()));
 
         // Double slash
-        assertThat(keysFromPath(hadoopPath(Location.of("s3://my-bucket/some//path"))))
+        assertThat(keysFromPath(hadoopPath(Location.of("s3://my-bucket/some//path")), true))
                 .isEqualTo(new PathKeys(
                         "some//path",
                         Optional.of("some/path#%2Fsome%2F%2Fpath")));
 
+        // Double slash with supportLegacyCorruptedPaths=false
+        assertThat(keysFromPath(hadoopPath(Location.of("s3://my-bucket/some//path")), false))
+                .isEqualTo(new PathKeys(
+                        "some//path",
+                        Optional.empty()));
+
         // Percent
-        assertThat(keysFromPath(hadoopPath(Location.of("s3://my-bucket/some%path"))))
+        assertThat(keysFromPath(hadoopPath(Location.of("s3://my-bucket/some%path")), true))
                 .isEqualTo(new PathKeys(
                         "some%path",
                         Optional.empty()));
