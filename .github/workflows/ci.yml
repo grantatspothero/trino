@@ -649,6 +649,7 @@ jobs:
             - { modules: plugin/trino-mariadb }
             - { modules: plugin/trino-mongodb }
             - { modules: plugin/trino-mysql }
+            - { modules: plugin/trino-pinot }
             - { modules: plugin/trino-postgresql }
             - { modules: plugin/trino-redshift, profile: default, runners: [ sep-cicd, gha-fleet-small ] }
             - { modules: plugin/trino-redshift, profile: cloud-tests, runners: [ sep-cicd, gha-fleet-small ] }
