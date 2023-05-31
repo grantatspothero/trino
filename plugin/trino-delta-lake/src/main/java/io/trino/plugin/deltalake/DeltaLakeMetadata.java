@@ -776,13 +776,7 @@ public class DeltaLakeMetadata
         boolean external = true;
         String location = getLocation(tableMetadata.getProperties());
         if (location == null) {
-            String schemaLocation = getSchemaLocation(schema)
-                    .orElseThrow(() -> new TrinoException(NOT_SUPPORTED, "The 'location' property must be specified either for the table or the schema"));
-            String tableNameForLocation = tableName;
-            if (useUniqueTableLocation) {
-                tableNameForLocation += "-" + randomUUID().toString().replace("-", "");
-            }
-            location = appendPath(schemaLocation, tableNameForLocation);
+            location = getTableLocation(schema, tableName);
             checkPathContainsNoFiles(session, Location.of(location));
             external = false;
         }
@@ -911,13 +905,7 @@ public class DeltaLakeMetadata
         boolean external = true;
         String location = getLocation(tableMetadata.getProperties());
         if (location == null) {
-            String schemaLocation = getSchemaLocation(schema)
-                    .orElseThrow(() -> new TrinoException(NOT_SUPPORTED, "The 'location' property must be specified either for the table or the schema"));
-            String tableNameForLocation = tableName;
-            if (useUniqueTableLocation) {
-                tableNameForLocation += "-" + randomUUID().toString().replace("-", "");
-            }
-            location = appendPath(schemaLocation, tableNameForLocation);
+            location = getTableLocation(schema, tableName);
             external = false;
         }
         else {
@@ -948,6 +936,17 @@ public class DeltaLakeMetadata
         }
 
         return schemaLocation;
+    }
+
+    private String getTableLocation(Database schema, String tableName)
+    {
+        String schemaLocation = getSchemaLocation(schema)
+                .orElseThrow(() -> new TrinoException(NOT_SUPPORTED, "The 'location' property must be specified either for the table or the schema"));
+        String tableNameForLocation = tableName;
+        if (useUniqueTableLocation) {
+            tableNameForLocation += "-" + randomUUID().toString().replace("-", "");
+        }
+        return appendPath(schemaLocation, tableNameForLocation);
     }
 
     private void checkPathContainsNoFiles(ConnectorSession session, Location targetPath)
