@@ -24,7 +24,6 @@ import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.airlift.units.DataSize;
 import io.airlift.units.Duration;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
-import io.trino.plugin.base.jmx.RebindSafeMBeanServer;
 import io.trino.plugin.pinot.client.IdentityPinotHostMapper;
 import io.trino.plugin.pinot.client.PinotClient;
 import io.trino.plugin.pinot.client.PinotDataFetcher;
@@ -40,8 +39,6 @@ import io.trino.spi.connector.ConnectorNodePartitioningProvider;
 import io.trino.sshtunnel.SshTunnelConfig;
 import org.apache.pinot.common.utils.DataSchema;
 
-import javax.management.MBeanServer;
-
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
@@ -53,7 +50,6 @@ import static io.airlift.http.client.HttpClientBinder.httpClientBinder;
 import static io.airlift.json.JsonBinder.jsonBinder;
 import static io.airlift.json.JsonCodecBinder.jsonCodecBinder;
 import static io.airlift.units.DataSize.Unit.MEGABYTE;
-import static java.lang.management.ManagementFactory.getPlatformMBeanServer;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.Executors.newCachedThreadPool;
@@ -103,7 +99,6 @@ public class PinotModule
 
         jsonBinder(binder).addDeserializerBinding(DataSchema.class).to(DataSchemaDeserializer.class);
         PinotClient.addJsonBinders(jsonCodecBinder(binder));
-        binder.bind(MBeanServer.class).toInstance(new RebindSafeMBeanServer(getPlatformMBeanServer()));
         binder.bind(NodeManager.class).toInstance(nodeManager);
         binder.bind(ConnectorNodePartitioningProvider.class).to(PinotNodePartitioningProvider.class).in(Scopes.SINGLETON);
         newOptionalBinder(binder, PinotHostMapper.class).setDefault().to(IdentityPinotHostMapper.class).in(Scopes.SINGLETON);
