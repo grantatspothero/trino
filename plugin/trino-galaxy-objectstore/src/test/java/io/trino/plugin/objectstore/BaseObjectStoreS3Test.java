@@ -68,7 +68,7 @@ public abstract class BaseObjectStoreS3Test
         this.tableType = requireNonNull(tableType, "tableType is null");
         this.partitionByKeyword = requireNonNull(partitionByKeyword, "partitionByKeyword is null");
         this.locationKeyword = requireNonNull(locationKeyword, "locationKeyword is null");
-        this.bucketName = requireNonNull(bucketName, "partitionByKeyword is null");
+        this.bucketName = requireNonNull(bucketName, "bucketName is null");
     }
 
     @Override
