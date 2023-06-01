@@ -587,7 +587,6 @@ jobs:
             !:trino-postgresql,
             !:trino-raptor-legacy,
             !:trino-redis,
-            !:trino-redshift,
             !:trino-singlestore,
             !:trino-sqlserver,
             !:trino-test-jdbc-compatibility-old-server,
@@ -688,7 +687,6 @@ jobs:
             - { modules: plugin/trino-mysql }
             - { modules: plugin/trino-pinot }
             - { modules: plugin/trino-postgresql }
-            - { modules: plugin/trino-redshift, profile: default }
             - { modules: plugin/trino-redshift, profile: cloud-tests, runners: [ sep-cicd, gha-fleet-small ] }
             - { modules: plugin/trino-redshift, profile: fte-tests, runners: [ sep-cicd, gha-fleet-small ] }
             - { modules: plugin/trino-sqlserver }
