@@ -596,6 +596,7 @@
                                 <exclude>**/Test*Delta*.java</exclude>
                                 <exclude>**/TestReadCorruptedTables.java</exclude>
                                 <exclude>**/TestObjectStoreHiveS3.java</exclude>
+                                <exclude>**/TestObjectStoreHiveS3Glue.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -620,6 +621,9 @@
                                 <exclude>**/TestObjectStoreDeltaS3.java</exclude>
                                 <exclude>**/TestObjectStoreIcebergS3.java</exclude>
                                 <exclude>**/TestObjectStoreHiveS3.java</exclude>
+                                <exclude>**/TestObjectStoreDeltaS3Glue.java</exclude>
+                                <exclude>**/TestObjectStoreIcebergS3Glue.java</exclude>
+                                <exclude>**/TestObjectStoreHiveS3Glue.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -641,6 +645,9 @@
                                 <include>**/TestObjectStoreDeltaS3.java</include>
                                 <include>**/TestObjectStoreIcebergS3.java</include>
                                 <include>**/TestObjectStoreHiveS3.java</include>
+                                <include>**/TestObjectStoreDeltaS3Glue.java</include>
+                                <include>**/TestObjectStoreIcebergS3Glue.java</include>
+                                <include>**/TestObjectStoreHiveS3Glue.java</include>
                             </includes>
                         </configuration>
                     </plugin>
