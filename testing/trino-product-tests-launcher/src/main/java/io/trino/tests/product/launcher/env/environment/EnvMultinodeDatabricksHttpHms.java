@@ -23,10 +23,9 @@ import io.trino.tests.product.launcher.env.common.TestsEnvironment;
 
 import java.io.File;
 
-import static io.trino.tests.product.launcher.env.EnvironmentContainers.COORDINATOR;
 import static io.trino.tests.product.launcher.env.EnvironmentContainers.TESTS;
-import static io.trino.tests.product.launcher.env.EnvironmentContainers.WORKER;
 import static io.trino.tests.product.launcher.env.EnvironmentContainers.configureTempto;
+import static io.trino.tests.product.launcher.env.EnvironmentContainers.isTrinoContainer;
 import static io.trino.tests.product.launcher.env.common.Standard.CONTAINER_TRINO_ETC;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -51,26 +50,22 @@ public class EnvMultinodeDatabricksHttpHms
     @Override
     public void extendEnvironment(Environment.Builder builder)
     {
-        String databricksTestJdbcUrl = requireNonNull(System.getenv("DATABRICKS_UNITY_JDBC_URL"), "Environment DATABRICKS_UNITY_JDBC_URL was not set");
-        String databricksTestLogin = requireNonNull(System.getenv("DATABRICKS_LOGIN"), "Environment DATABRICKS_LOGIN was not set");
-        String databricksTestToken = requireNonNull(System.getenv("DATABRICKS_TOKEN"), "Environment DATABRICKS_TOKEN was not set");
-        String awsRegion = requireNonNull(System.getenv("AWS_REGION"), "Environment AWS_REGION was not set");
+        String databricksTestJdbcUrl = requireNonNull(getEnvVariable("DATABRICKS_UNITY_JDBC_URL"), "Environment DATABRICKS_UNITY_JDBC_URL was not set");
+        String databricksTestLogin = requireNonNull(getEnvVariable("DATABRICKS_LOGIN"), "Environment DATABRICKS_LOGIN was not set");
+        String databricksTestToken = requireNonNull(getEnvVariable("DATABRICKS_TOKEN"), "Environment DATABRICKS_TOKEN was not set");
+        String awsRegion = requireNonNull(getEnvVariable("AWS_REGION"), "Environment AWS_REGION was not set");
 
-        builder.configureContainer(COORDINATOR, dockerContainer -> exportAWSCredentials(dockerContainer)
-                .withEnv("AWS_REGION", awsRegion)
-                .withEnv("DATABRICKS_LOGIN", databricksTestLogin)
-                .withEnv("DATABRICKS_TOKEN", databricksTestToken)
-                .withEnv("DATABRICKS_HOST", getEnvVariable("DATABRICKS_HOST"))
-                .withEnv("DATABRICKS_UNITY_CATALOG_NAME", getEnvVariable("DATABRICKS_UNITY_CATALOG_NAME")));
+        builder.configureContainers(container -> {
+            if (isTrinoContainer(container.getLogicalName())) {
+                exportAwsCredentials(container)
+                        .withEnv("AWS_REGION", awsRegion)
+                        .withEnv("DATABRICKS_TOKEN", databricksTestToken)
+                        .withEnv("DATABRICKS_HOST", getEnvVariable("DATABRICKS_HOST"))
+                        .withEnv("DATABRICKS_UNITY_CATALOG_NAME", getEnvVariable("DATABRICKS_UNITY_CATALOG_NAME"));
+            }
+        });
 
-        builder.configureContainer(WORKER, dockerContainer -> exportAWSCredentials(dockerContainer)
-                .withEnv("AWS_REGION", awsRegion)
-                .withEnv("DATABRICKS_LOGIN", databricksTestLogin)
-                .withEnv("DATABRICKS_TOKEN", databricksTestToken)
-                .withEnv("DATABRICKS_HOST", getEnvVariable("DATABRICKS_HOST"))
-                .withEnv("DATABRICKS_UNITY_CATALOG_NAME", getEnvVariable("DATABRICKS_UNITY_CATALOG_NAME")));
-
-        builder.configureContainer(TESTS, container -> exportAWSCredentials(container)
+        builder.configureContainer(TESTS, container -> exportAwsCredentials(container)
                 .withEnv("DATABRICKS_JDBC_URL", databricksTestJdbcUrl)
                 .withEnv("DATABRICKS_LOGIN", databricksTestLogin)
                 .withEnv("DATABRICKS_TOKEN", databricksTestToken)
@@ -88,14 +83,7 @@ public class EnvMultinodeDatabricksHttpHms
         configureTempto(builder, configDir);
     }
 
-    private DockerContainer exportAWSCredentials(DockerContainer container)
-    {
-        container = exportAWSCredential(container, "TRINO_AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID", true);
-        container = exportAWSCredential(container, "TRINO_AWS_SECRET_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY", true);
-        return exportAWSCredential(container, "TRINO_AWS_SESSION_TOKEN", "AWS_SESSION_TOKEN", false);
-    }
-
-    private String getEnvVariable(String name)
+    private static String getEnvVariable(String name)
     {
         String credentialValue = System.getenv(name);
         if (credentialValue == null) {
@@ -104,7 +92,14 @@ public class EnvMultinodeDatabricksHttpHms
         return credentialValue;
     }
 
-    private DockerContainer exportAWSCredential(DockerContainer container, String credentialEnvVariable, String containerEnvVariable, boolean required)
+    private DockerContainer exportAwsCredentials(DockerContainer container)
+    {
+        container = exportAwsCredential(container, "TRINO_AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID", true);
+        container = exportAwsCredential(container, "TRINO_AWS_SECRET_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY", true);
+        return exportAwsCredential(container, "TRINO_AWS_SESSION_TOKEN", "AWS_SESSION_TOKEN", false);
+    }
+
+    private static DockerContainer exportAwsCredential(DockerContainer container, String credentialEnvVariable, String containerEnvVariable, boolean required)
     {
         String credentialValue = System.getenv(credentialEnvVariable);
         if (credentialValue == null) {

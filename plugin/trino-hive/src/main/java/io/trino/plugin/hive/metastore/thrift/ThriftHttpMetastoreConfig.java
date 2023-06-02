@@ -13,18 +13,17 @@
  */
 package io.trino.plugin.hive.metastore.thrift;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;
 import io.airlift.configuration.ConfigSecuritySensitive;
+import io.airlift.units.Duration;
 import jakarta.validation.constraints.NotNull;
 
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import java.util.concurrent.TimeUnit;
 
 public class ThriftHttpMetastoreConfig
 {
@@ -33,9 +32,24 @@ public class ThriftHttpMetastoreConfig
         BEARER
     }
 
+    private Duration readTimeout = new Duration(60, TimeUnit.SECONDS);
     private AuthenticationMode authenticationMode;
-    private String httpBearerToken;
+    private Optional<String> httpBearerToken = Optional.empty();
     private Map<String, String> additionalHeaders = ImmutableMap.of();
+
+    @NotNull
+    public Duration getReadTimeout()
+    {
+        return readTimeout;
+    }
+
+    @Config("hive.metastore.http.client.read-timeout")
+    @ConfigDescription("Socket read timeout for metastore client")
+    public ThriftHttpMetastoreConfig setReadTimeout(Duration readTimeout)
+    {
+        this.readTimeout = readTimeout;
+        return this;
+    }
 
     @NotNull
     public Optional<AuthenticationMode> getAuthenticationMode()
@@ -45,13 +59,14 @@ public class ThriftHttpMetastoreConfig
 
     @Config("hive.metastore.http.client.authentication.type")
     @ConfigDescription("Authentication mode for thrift http based metastore client")
-    public ThriftHttpMetastoreConfig setAuthenticationMode(AuthenticationMode mode)
+    public ThriftHttpMetastoreConfig setAuthenticationMode(AuthenticationMode authenticationMode)
     {
-        this.authenticationMode = mode;
+        this.authenticationMode = authenticationMode;
         return this;
     }
 
-    public String getHttpBearerToken()
+    @NotNull
+    public Optional<String> getHttpBearerToken()
     {
         return httpBearerToken;
     }
@@ -61,7 +76,7 @@ public class ThriftHttpMetastoreConfig
     @ConfigDescription("Bearer token to authenticate with a HTTP transport based metastore service")
     public ThriftHttpMetastoreConfig setHttpBearerToken(String httpBearerToken)
     {
-        this.httpBearerToken = httpBearerToken;
+        this.httpBearerToken = Optional.ofNullable(httpBearerToken);
         return this;
     }
 
@@ -72,17 +87,27 @@ public class ThriftHttpMetastoreConfig
 
     @Config("hive.metastore.http.client.additional-headers")
     @ConfigDescription("Comma separated key:value pairs to be send to metastore as additional headers")
-    public ThriftHttpMetastoreConfig setAdditionalHeaders(List<String> httpHeaders)
+    public ThriftHttpMetastoreConfig setAdditionalHeaders(String httpHeaders)
     {
         try {
+            // we allow escaping the delimiters like , and : using back-slash.
+            // To support that we create a negative lookbehind of , and : which
+            // are not preceded by a back-slash.
+            String headersDelim = "(?<!\\\\),";
+            String kvDelim = "(?<!\\\\):";
+            Map<String, String> temp = new HashMap<>();
             if (httpHeaders != null) {
-                this.additionalHeaders = httpHeaders.stream()
-                        .collect(toImmutableMap(kvs -> kvs.split(":", 2)[0], kvs -> kvs.split(":", 2)[1]));
+                for (String kv : httpHeaders.split(headersDelim)) {
+                    String key = kv.split(kvDelim, 2)[0].trim();
+                    String val = kv.split(kvDelim, 2)[1].trim();
+                    temp.put(key, val);
+                }
+                this.additionalHeaders = ImmutableMap.copyOf(temp);
             }
         }
         catch (IndexOutOfBoundsException e) {
             throw new IllegalArgumentException(String.format("Invalid format for 'hive.metastore.http.client.additional-headers'. " +
-                    "Value provided is %s", Joiner.on(",").join(httpHeaders)), e);
+                    "Value provided is %s", httpHeaders), e);
         }
         return this;
     }

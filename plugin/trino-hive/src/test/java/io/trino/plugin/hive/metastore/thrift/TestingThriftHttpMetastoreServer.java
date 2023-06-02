@@ -22,27 +22,20 @@ import io.airlift.http.server.HttpServerInfo;
 import io.airlift.http.server.TheServlet;
 import io.airlift.http.server.testing.TestingHttpServerModule;
 import io.airlift.node.testing.TestingNodeModule;
+import io.trino.hive.thrift.metastore.Database;
 import io.trino.hive.thrift.metastore.NoSuchObjectException;
 import io.trino.hive.thrift.metastore.ThriftHiveMetastore;
-import io.trino.plugin.hive.metastore.Database;
-import io.trino.plugin.hive.metastore.file.FileHiveMetastore;
 import jakarta.servlet.Servlet;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.apache.thrift.TException;
 import org.apache.thrift.TProcessor;
 import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
-import org.apache.thrift.transport.TIOStreamTransport;
-import org.apache.thrift.transport.TTransport;
+import org.apache.thrift.server.TServlet;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
@@ -57,7 +50,7 @@ public class TestingThriftHttpMetastoreServer
     private final LifeCycleManager lifeCycleManager;
     private final URI baseUri;
 
-    public TestingThriftHttpMetastoreServer(FileHiveMetastore delegate, Consumer<HttpServletRequest> requestInterceptor)
+    public TestingThriftHttpMetastoreServer(ThriftMetastore delegate, Consumer<HttpServletRequest> requestInterceptor)
     {
         ThriftHiveMetastore.Iface mockThriftHandler = proxyHandler(delegate, ThriftHiveMetastore.Iface.class);
         TProcessor processor = new ThriftHiveMetastore.Processor<>(mockThriftHandler);
@@ -79,16 +72,15 @@ public class TestingThriftHttpMetastoreServer
         baseUri = httpServerInfo.getHttpUri();
     }
 
-    public static <T> T proxyHandler(FileHiveMetastore delegate, Class<T> iface)
+    private static <T> T proxyHandler(ThriftMetastore delegate, Class<T> iface)
     {
-        return newProxy(iface, (proxy, method, args) -> {
-            switch (method.getName()) {
-                case "getAllDatabases": return delegate.getAllDatabases();
-                case "getDatabase":
-                    Optional<Database> optionalDatabase = delegate.getDatabase(args[0].toString());
-                    return optionalDatabase.orElseThrow(() -> new NoSuchObjectException(""));
-                default: throw new UnsupportedOperationException();
+        return newProxy(iface, (proxy, method, args) -> switch (method.getName()) {
+            case "getAllDatabases" -> delegate.getAllDatabases();
+            case "getDatabase" -> {
+                Optional<Database> optionalDatabase = delegate.getDatabase(args[0].toString());
+                yield optionalDatabase.orElseThrow(() -> new NoSuchObjectException(""));
             }
+            default -> throw new UnsupportedOperationException();
         });
     }
 
@@ -125,57 +117,6 @@ public class TestingThriftHttpMetastoreServer
         {
             requestInterceptor.accept(request);
             super.doPost(request, response);
-        }
-    }
-
-    private static class TServlet
-            extends HttpServlet
-    {
-        private final TProcessor processor;
-        private final TProtocolFactory inProtocolFactory;
-        private final TProtocolFactory outProtocolFactory;
-
-        public TServlet(
-                TProcessor processor,
-                TProtocolFactory inProtocolFactory,
-                TProtocolFactory outProtocolFactory)
-        {
-            super();
-            this.processor = processor;
-            this.inProtocolFactory = inProtocolFactory;
-            this.outProtocolFactory = outProtocolFactory;
-        }
-
-        public TServlet(TProcessor processor, TProtocolFactory protocolFactory)
-        {
-            this(processor, protocolFactory, protocolFactory);
-        }
-
-        @Override
-        protected void doPost(HttpServletRequest request, HttpServletResponse response)
-                throws ServletException, IOException
-        {
-            TTransport inTransport = null;
-            TTransport outTransport = null;
-
-            try {
-                response.setContentType("application/x-thrift");
-                InputStream in = request.getInputStream();
-                OutputStream out = response.getOutputStream();
-
-                TTransport transport = new TIOStreamTransport(in, out);
-                inTransport = transport;
-                outTransport = transport;
-
-                TProtocol inProtocol = inProtocolFactory.getProtocol(inTransport);
-                TProtocol outProtocol = outProtocolFactory.getProtocol(outTransport);
-
-                processor.process(inProtocol, outProtocol);
-                out.flush();
-            }
-            catch (TException te) {
-                throw new ServletException(te);
-            }
         }
     }
 }

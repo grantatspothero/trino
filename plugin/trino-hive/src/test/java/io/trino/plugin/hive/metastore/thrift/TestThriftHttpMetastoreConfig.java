@@ -14,23 +14,25 @@
 package io.trino.plugin.hive.metastore.thrift;
 
 import com.google.common.collect.ImmutableMap;
+import io.airlift.units.Duration;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 
 import static io.airlift.configuration.testing.ConfigAssertions.assertFullMapping;
 import static io.airlift.configuration.testing.ConfigAssertions.assertRecordedDefaults;
 import static io.airlift.configuration.testing.ConfigAssertions.recordDefaults;
 import static io.trino.plugin.hive.metastore.thrift.ThriftHttpMetastoreConfig.AuthenticationMode.BEARER;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
-public class TestHttpThriftMetastoreConfig
+public class TestThriftHttpMetastoreConfig
 {
     @Test
     public void testDefaults()
     {
         assertRecordedDefaults(recordDefaults(ThriftHttpMetastoreConfig.class)
+                .setReadTimeout(new Duration(60, SECONDS))
                 .setHttpBearerToken(null)
                 .setAdditionalHeaders(null)
                 .setAuthenticationMode(null));
@@ -40,18 +42,17 @@ public class TestHttpThriftMetastoreConfig
     public void testExplicitPropertyMappings()
             throws IOException
     {
-        String testToken = "test-token";
-        String additionalHeaders = "key1:value1, key2:value2";
-
         Map<String, String> properties = ImmutableMap.<String, String>builder()
-                .put("hive.metastore.http.client.bearer-token", testToken)
-                .put("hive.metastore.http.client.additional-headers", additionalHeaders)
+                .put("hive.metastore.http.client.bearer-token", "test-token")
+                .put("hive.metastore.http.client.additional-headers", "key\\:1:value\\,1, key\\,2:value\\:2")
                 .put("hive.metastore.http.client.authentication.type", "BEARER")
+                .put("hive.metastore.http.client.read-timeout", "1s")
                 .buildOrThrow();
 
         ThriftHttpMetastoreConfig expected = new ThriftHttpMetastoreConfig()
-                .setHttpBearerToken(testToken)
-                .setAdditionalHeaders(List.of("key1:value1", "key2:value2"))
+                .setHttpBearerToken("test-token")
+                .setAdditionalHeaders("key\\:1:value\\,1, key\\,2:value\\:2")
+                .setReadTimeout(new Duration(1, SECONDS))
                 .setAuthenticationMode(BEARER);
 
         assertFullMapping(properties, expected);

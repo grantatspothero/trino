@@ -54,8 +54,7 @@ public final class TestingThriftHiveMetastoreBuilder
     {
         requireNonNull(metastoreUri, "metastoreUri is null");
         checkState(tokenAwareMetastoreClientFactory == null, "Metastore client already set");
-        tokenAwareMetastoreClientFactory = new TestingTokenAwareMetastoreClientFactory(
-                HiveTestUtils.SOCKS_PROXY, metastoreUri);
+        tokenAwareMetastoreClientFactory = new TestingTokenAwareMetastoreClientFactory(HiveTestUtils.SOCKS_PROXY, metastoreUri);
         return this;
     }
 

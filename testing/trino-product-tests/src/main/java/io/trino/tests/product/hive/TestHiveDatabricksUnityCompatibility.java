@@ -44,38 +44,34 @@ public class TestHiveDatabricksUnityCompatibility
         unityCatalogName = requireNonNull(System.getenv("DATABRICKS_UNITY_CATALOG_NAME"), "Environment variable not set: DATABRICKS_UNITY_CATALOG_NAME");
         externalLocationPath = requireNonNull(System.getenv("DATABRICKS_UNITY_EXTERNAL_LOCATION"), "Environment variable not set: DATABRICKS_UNITY_EXTERNAL_LOCATION");
         String schemaLocation = format("%s/%s", externalLocationPath, schemaName);
-        onDelta().executeQuery(format(
-                "CREATE SCHEMA %s.%s MANAGED LOCATION '%s'",
-                unityCatalogName, schemaName, schemaLocation));
+        onDelta().executeQuery("CREATE SCHEMA " + unityCatalogName + "." + schemaName + " MANAGED LOCATION '" + schemaLocation + "'");
     }
 
     @AfterMethodWithContext
     public void cleanUp()
     {
-        onDelta().executeQuery(format("DROP SCHEMA IF EXISTS %s.%s CASCADE", unityCatalogName, schemaName));
+        onDelta().executeQuery("DROP SCHEMA IF EXISTS " + unityCatalogName + "." + schemaName + " CASCADE");
     }
 
     @Test(groups = {DATABRICKS_UNITY_HTTP_HMS, PROFILE_SPECIFIC_TESTS})
     @Flaky(issue = DATABRICKS_COMMUNICATION_FAILURE_ISSUE, match = DATABRICKS_COMMUNICATION_FAILURE_MATCH)
     public void testBasicHiveOperations()
     {
-        String tableName = "testTable";
+        String tableName = "test_table_" + randomNameSuffix();
+        String hiveTableName = "hive.%s.%s".formatted(schemaName, tableName);
+        String unityTableName = "%s.%s.%s".formatted(unityCatalogName, schemaName, tableName);
         String tableLocation = format("%s/%s/%s", externalLocationPath, schemaName, tableName);
-        onDelta().executeQuery(format(
-                "CREATE TABLE %s.%s.%s (c1 int, c2 string) " +
-                        "USING PARQUET " +
-                        "LOCATION '%s'", unityCatalogName, schemaName, tableName, tableLocation));
 
-        onDelta().executeQuery(
-                format("INSERT INTO %s.%s.%s VALUES (1, 'one')", unityCatalogName, schemaName, tableName));
+        onDelta().executeQuery("CREATE TABLE " + unityTableName + "(c1 int, c2 string) USING PARQUET LOCATION '" + tableLocation + "'");
+        onDelta().executeQuery("INSERT INTO " + unityTableName + " VALUES (1, 'one')");
 
         assertThat(onTrino().executeQuery("SHOW SCHEMAS FROM hive"))
                 .contains(row(schemaName));
 
         assertThat(onTrino().executeQuery("SHOW TABLES IN hive." + schemaName))
-                .containsOnly(row("testtable"));
+                .containsOnly(row(tableName));
 
-        assertThat(onTrino().executeQuery(format("SELECT * FROM hive.%s.%s", schemaName, tableName)))
+        assertThat(onTrino().executeQuery("SELECT * FROM " + hiveTableName))
                 .containsOnly(row(1, "one"));
     }
 }

@@ -13,135 +13,94 @@
  */
 package io.trino.plugin.hive.metastore.thrift;
 
-import com.google.common.collect.Lists;
-import io.airlift.testing.Closeables;
-import io.airlift.units.Duration;
-import io.opentelemetry.api.OpenTelemetry;
-import io.trino.filesystem.local.LocalFileSystemFactory;
+import com.google.common.collect.ImmutableList;
+import io.trino.hive.thrift.metastore.Database;
 import io.trino.hive.thrift.metastore.NoSuchObjectException;
-import io.trino.plugin.hive.NodeVersion;
-import io.trino.plugin.hive.metastore.Database;
-import io.trino.plugin.hive.metastore.file.FileHiveMetastore;
-import io.trino.plugin.hive.metastore.file.FileHiveMetastoreConfig;
 import io.trino.sshtunnel.SshTunnelConfig;
+import io.trino.testing.TestingNodeManager;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.http.HttpHeaders;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.net.URI;
 import java.nio.file.Files;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static io.trino.plugin.hive.TestingThriftHiveMetastoreBuilder.testingThriftHiveMetastoreBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestThriftHttpMetastoreClient
 {
-    private static TestingThriftHttpMetastoreServer metastoreServer;
-    private static TestRequestHeaderInterceptor requestHeaderInterceptor;
-    private static final String httpToken = "test-token";
-    private final HiveMetastoreAuthentication noAuthentication = new NoHiveMetastoreAuthentication();
-    private final Duration timeout = new Duration(20, SECONDS);
-    private static FileHiveMetastore delegate;
+    private static ThriftMetastore delegate;
 
-    private static final String testDbName = "testdb";
-
-    @BeforeClass(alwaysRun = true)
+    @BeforeAll
     public static void setup()
             throws Exception
     {
-        requestHeaderInterceptor = new TestRequestHeaderInterceptor();
         File tempDir = Files.createTempDirectory(null).toFile();
         tempDir.deleteOnExit();
-
-        LocalFileSystemFactory fileSystemFactory = new LocalFileSystemFactory(tempDir.toPath());
-
-        delegate = new FileHiveMetastore(
-                new NodeVersion("testversion"),
-                fileSystemFactory,
-                false,
-                new FileHiveMetastoreConfig()
-                        .setCatalogDirectory("local:///")
-                        .setMetastoreUser("test")
-                        .setDisableLocationChecks(true));
-
-        metastoreServer = new TestingThriftHttpMetastoreServer(delegate, requestHeaderInterceptor);
+        delegate = testingThriftHiveMetastoreBuilder().metastoreClient(createFakeMetastoreClient()).build();
     }
 
-    @AfterClass(alwaysRun = true)
-    public static void tearDown()
-            throws Exception
+    private static ThriftMetastoreClient createFakeMetastoreClient()
     {
-        Closeables.closeAll(metastoreServer);
-        metastoreServer = null;
+        return new MockThriftMetastoreClient()
+        {
+            @Override
+            public Database getDatabase(String databaseName)
+                    throws NoSuchObjectException
+            {
+                if (databaseName.equals("testDbName")) {
+                    return new Database(databaseName, "testOwner", "testLocation", Map.of("key", "value"));
+                }
+                throw new NoSuchObjectException("Database does not exist");
+            }
+
+            @Override
+            public List<String> getAllDatabases()
+            {
+                return ImmutableList.of("testDbName");
+            }
+        };
     }
 
     @Test
     public void testHttpThriftConnection()
             throws Exception
     {
-        Database.Builder database = Database.builder()
-                .setDatabaseName(testDbName)
-                .setOwnerName(Optional.empty())
-                .setOwnerType(Optional.empty());
-        Database db = database.build();
-        delegate.createDatabase(db);
-
-        ThriftMetastoreClientFactory factory = new DefaultThriftMetastoreClientFactory(
-                new SshTunnelConfig(),
-                Optional.empty(),
-                Optional.empty(),
-                timeout,
-                timeout,
-                noAuthentication,
-                "localhost",
-                DefaultThriftMetastoreClientFactory.buildThriftHttpContext(getHttpMetastoreConfig()),
-                OpenTelemetry.noop());
-        URI metastoreUri = URI.create("http://localhost:" + metastoreServer.getPort());
-        ThriftMetastoreClient client = factory.create(
-                metastoreUri, Optional.empty());
-        assertThat(client.getAllDatabases()).isEqualTo(Lists.newArrayList(testDbName));
-        assertThat(requestHeaderInterceptor.getInterceptedHeader("key1")).isEqualTo("value1");
-        assertThat(requestHeaderInterceptor.getInterceptedHeader("key2")).isEqualTo("value2");
-        assertThat(requestHeaderInterceptor.getInterceptedHeader(HttpHeaders.AUTHORIZATION)).isEqualTo("Bearer " + httpToken);
-        // negative case
-        assertThatThrownBy(() -> client.getDatabase("does-not-exist"))
-                .isInstanceOf(NoSuchObjectException.class);
-    }
-
-    private static ThriftHttpMetastoreConfig getHttpMetastoreConfig()
-    {
         ThriftHttpMetastoreConfig config = new ThriftHttpMetastoreConfig();
-        config.setHttpBearerToken(httpToken);
-        config.setAdditionalHeaders(List.of("key1:value1", "key2:value2"));
-        return config;
+        config.setAuthenticationMode(ThriftHttpMetastoreConfig.AuthenticationMode.BEARER);
+        config.setAdditionalHeaders("key1:value1, key2:value2");
+
+        try (TestingThriftHttpMetastoreServer metastoreServer = new TestingThriftHttpMetastoreServer(delegate, new TestRequestHeaderInterceptor())) {
+            ThriftMetastoreClientFactory factory = new HttpThriftMetastoreClientFactory(new SshTunnelConfig(), config, new TestingNodeManager());
+            URI metastoreUri = URI.create("http://localhost:" + metastoreServer.getPort());
+            ThriftMetastoreClient client = factory.create(
+                    metastoreUri, Optional.empty());
+            assertThat(client.getAllDatabases()).containsExactly("testDbName");
+            assertThat(client.getDatabase("testDbName")).isEqualTo(new Database("testDbName", "testOwner", "testLocation", Map.of("key", "value")));
+            // negative case
+            assertThatThrownBy(() -> client.getDatabase("does-not-exist")).isInstanceOf(NoSuchObjectException.class);
+        }
     }
 
     private static class TestRequestHeaderInterceptor
             implements Consumer<HttpServletRequest>
     {
-        private final Map<String, String> requestHeaders = new HashMap<>();
-
-        public String getInterceptedHeader(String headerName)
-        {
-            return requestHeaders.get(headerName);
-        }
-
         @Override
         public void accept(HttpServletRequest httpServletRequest)
         {
-            requestHeaders.clear();
-            requestHeaders.put("key1", httpServletRequest.getHeader("key1"));
-            requestHeaders.put("key2", httpServletRequest.getHeader("key2"));
-            requestHeaders.put(HttpHeaders.AUTHORIZATION, httpServletRequest.getHeader(HttpHeaders.AUTHORIZATION));
+            assertThat(Collections.list(httpServletRequest.getHeaderNames())).contains("key1", "key2");
+            assertThat(httpServletRequest.getHeader("key1")).isEqualTo("value1");
+            assertThat(httpServletRequest.getHeader("key2")).isEqualTo("value2");
+            assertThat(httpServletRequest.getHeader(HttpHeaders.AUTHORIZATION)).isNull();
         }
     }
 }

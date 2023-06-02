@@ -15,7 +15,6 @@ package io.trino.plugin.hive.metastore.thrift;
 
 import com.google.common.net.HostAndPort;
 import io.airlift.units.Duration;
-import io.opentelemetry.api.OpenTelemetry;
 import io.trino.sshtunnel.SshTunnelConfig;
 import org.apache.thrift.TException;
 
@@ -41,7 +40,7 @@ public class TestingTokenAwareMetastoreClientFactory
 
     public TestingTokenAwareMetastoreClientFactory(Optional<HostAndPort> socksProxy, URI address, Duration timeout)
     {
-        this.factory = new DefaultThriftMetastoreClientFactory(new SshTunnelConfig(), Optional.empty(), socksProxy, timeout, timeout, AUTHENTICATION, "localhost", Optional.empty(), OpenTelemetry.noop());
+        this.factory = new DefaultThriftMetastoreClientFactory(new SshTunnelConfig(), Optional.empty(), socksProxy, timeout, timeout, AUTHENTICATION, "localhost");
         this.address = requireNonNull(address, "address is null");
     }
 

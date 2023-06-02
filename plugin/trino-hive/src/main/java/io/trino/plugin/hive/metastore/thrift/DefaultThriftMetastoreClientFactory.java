@@ -13,28 +13,14 @@
  */
 package io.trino.plugin.hive.metastore.thrift;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import io.airlift.units.Duration;
-import io.opentelemetry.api.OpenTelemetry;
 import io.trino.plugin.hive.metastore.thrift.ThriftHiveMetastoreClient.TransportSupplier;
 import io.trino.spi.NodeManager;
 import io.trino.sshtunnel.SshTunnelConfig;
 import io.trino.sshtunnel.SshTunnelManager;
 import io.trino.sshtunnel.SshTunnelProperties;
-import org.apache.hc.client5.http.config.ConnectionConfig;
-import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
-import org.apache.hc.client5.http.impl.io.BasicHttpClientConnectionManager;
-import org.apache.hc.client5.http.socket.ConnectionSocketFactory;
-import org.apache.hc.client5.http.ssl.DefaultHostnameVerifier;
-import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactory;
-import org.apache.hc.core5.http.HttpHeaders;
-import org.apache.hc.core5.http.config.Registry;
-import org.apache.hc.core5.http.config.RegistryBuilder;
-import org.apache.hc.core5.util.Timeout;
-import org.apache.thrift.transport.THttpClient;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
@@ -43,9 +29,7 @@ import javax.net.ssl.SSLContext;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -74,8 +58,6 @@ public class DefaultThriftMetastoreClientFactory
     private final AtomicInteger chosenAlterPartitionsAlternative = new AtomicInteger(Integer.MAX_VALUE);
     private final AtomicInteger chosenGetAllTablesAlternative = new AtomicInteger(Integer.MAX_VALUE);
     private final AtomicInteger chosenGetAllViewsAlternative = new AtomicInteger(Integer.MAX_VALUE);
-    private final Optional<ThriftHttpContext> thriftHttpContext;
-    private final OpenTelemetry openTelemetry;
 
     public DefaultThriftMetastoreClientFactory(
             SshTunnelConfig sshTunnelConfig,
@@ -84,9 +66,7 @@ public class DefaultThriftMetastoreClientFactory
             Duration connectTimeout,
             Duration readTimeout,
             HiveMetastoreAuthentication metastoreAuthentication,
-            String hostname,
-            Optional<ThriftHttpContext> thriftHttpContext,
-            OpenTelemetry openTelemetry)
+            String hostname)
     {
         this.sshTunnelProperties = SshTunnelProperties.generateFrom(sshTunnelConfig);
         this.sslContext = requireNonNull(sslContext, "sslContext is null");
@@ -95,18 +75,14 @@ public class DefaultThriftMetastoreClientFactory
         this.readTimeoutMillis = toIntExact(readTimeout.toMillis());
         this.metastoreAuthentication = requireNonNull(metastoreAuthentication, "metastoreAuthentication is null");
         this.hostname = requireNonNull(hostname, "hostname is null");
-        this.thriftHttpContext = requireNonNull(thriftHttpContext, "thriftHttpContext is null");
-        this.openTelemetry = requireNonNull(openTelemetry, "openTelemetry is null");
     }
 
     @Inject
     public DefaultThriftMetastoreClientFactory(
             SshTunnelConfig sshTunnelConfig,
             ThriftMetastoreConfig config,
-            ThriftHttpMetastoreConfig httpMetastoreConfig,
             HiveMetastoreAuthentication metastoreAuthentication,
-            NodeManager nodeManager,
-            OpenTelemetry openTelemetry)
+            NodeManager nodeManager)
     {
         this(
                 sshTunnelConfig,
@@ -120,9 +96,7 @@ public class DefaultThriftMetastoreClientFactory
                 config.getConnectTimeout(),
                 config.getReadTimeout(),
                 metastoreAuthentication,
-                nodeManager.getCurrentNode().getHost(),
-                buildThriftHttpContext(httpMetastoreConfig),
-                openTelemetry);
+                nodeManager.getCurrentNode().getHost());
     }
 
     @Override
@@ -135,55 +109,13 @@ public class DefaultThriftMetastoreClientFactory
     private TTransport getTransportSupplier(URI uri, Optional<String> delegationToken)
             throws TTransportException
     {
+        checkArgument(uri.getScheme().toLowerCase(ENGLISH).equals("thrift"), "Invalid metastore uri scheme %s", uri.getScheme());
         HostAndPort address = HostAndPort.fromParts(uri.getHost(), uri.getPort());
         HostAndPort useAddress = sshTunnelProperties.map(SshTunnelManager::getCached)
                 .map(sshTunnelManager -> sshTunnelManager.getOrCreateTunnel(address))
                 .map(tunnel -> HostAndPort.fromParts("localhost", tunnel.getLocalTunnelPort()))
                 .orElse(address);
-        switch (uri.getScheme().toLowerCase(ENGLISH)) {
-            case "thrift" -> {
-                return createTransport(useAddress, delegationToken);
-            }
-            case "http", "https" -> {
-                try {
-                    return createHttpTransport(
-                            new URI(uri.getScheme(), uri.getUserInfo(), useAddress.getHost(), useAddress.getPort(), uri.getPath(), uri.getQuery(), uri.getFragment()),
-                            thriftHttpContext.orElseThrow(() -> new IllegalArgumentException("Thrift http context is not set")));
-                }
-                catch (URISyntaxException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            default -> throw new IllegalArgumentException("Invalid metastore uri scheme " + uri.getScheme());
-        }
-    }
-
-    private TTransport createHttpTransport(URI uri, ThriftHttpContext httpThriftContext)
-            throws TTransportException
-    {
-        HttpClientBuilder clientBuilder = createHttpClientBuilder(httpThriftContext);
-        ConnectionConfig.custom().setConnectTimeout(Timeout.ofMilliseconds(connectTimeoutMillis)).build();
-        THttpClient httpClient = new THttpClient(uri.toString(), clientBuilder.build());
-        httpClient.setConnectTimeout(connectTimeoutMillis);
-        return httpClient;
-    }
-
-    private HttpClientBuilder createHttpClientBuilder(ThriftHttpContext httpThriftContext)
-    {
-        // TODO: Hook this http client into the opentelemetry field
-        HttpClientBuilder clientBuilder = HttpClientBuilder.create();
-        if (sslContext.isPresent()) {
-            SSLConnectionSocketFactory socketFactory = new SSLConnectionSocketFactory(sslContext.get(), new DefaultHostnameVerifier(null));
-            Registry<ConnectionSocketFactory> registry = RegistryBuilder.<ConnectionSocketFactory>create()
-                    .register("https", socketFactory)
-                    .build();
-            clientBuilder.setConnectionManager(new BasicHttpClientConnectionManager(registry));
-        }
-        clientBuilder.addRequestInterceptorFirst((httpRequest, entityDetails, httpContext) -> {
-            httpRequest.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + httpThriftContext.token());
-            httpThriftContext.additionalHeaders().forEach(httpRequest::addHeader);
-        });
-        return clientBuilder;
+        return createTransport(useAddress, delegationToken);
     }
 
     protected ThriftMetastoreClient create(TransportSupplier transportSupplier, String hostname)
@@ -225,26 +157,5 @@ public class DefaultThriftMetastoreClientFactory
         catch (GeneralSecurityException | IOException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    record ThriftHttpContext(String token, Map<String, String> additionalHeaders)
-    {
-        ThriftHttpContext {
-            requireNonNull(token, "token is null");
-            requireNonNull(additionalHeaders, "additionalHeaders is null");
-            additionalHeaders = ImmutableMap.copyOf(additionalHeaders);
-        }
-    }
-
-    @VisibleForTesting
-    public static Optional<ThriftHttpContext> buildThriftHttpContext(ThriftHttpMetastoreConfig config)
-    {
-        if (config.getHttpBearerToken() == null) {
-            checkArgument(config.getAdditionalHeaders().isEmpty(), "Additional headers must be empty");
-            return Optional.empty();
-        }
-        return Optional.of(new ThriftHttpContext(
-                config.getHttpBearerToken(),
-                config.getAdditionalHeaders()));
     }
 }

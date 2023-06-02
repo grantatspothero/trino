@@ -92,14 +92,9 @@ public class HiveHadoop
         return executeInContainerFailOnError("mysql", "-D", "metastore", "-uroot", "-proot", "--batch", "--column-names=false", "-e", query).replaceAll("\n$", "");
     }
 
-    public HostAndPort getHiveMetastoreHostAndPort()
-    {
-        return getMappedHostAndPortForExposedPort(HIVE_METASTORE_PORT);
-    }
-
     public URI getHiveMetastoreEndpoint()
     {
-        HostAndPort address = getHiveMetastoreHostAndPort();
+        HostAndPort address = getMappedHostAndPortForExposedPort(HIVE_METASTORE_PORT);
         return URI.create("thrift://" + address.getHost() + ":" + address.getPort());
     }
 
