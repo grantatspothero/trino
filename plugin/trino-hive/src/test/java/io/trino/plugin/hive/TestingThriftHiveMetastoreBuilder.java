@@ -69,11 +69,11 @@ public final class TestingThriftHiveMetastoreBuilder
         return this;
     }
 
-    public TestingThriftHiveMetastoreBuilder metastoreClient(URI address, MetastoreClientAdapterProvider metastoreClientAdapterProvider)
+    public TestingThriftHiveMetastoreBuilder metastoreClient(URI uri, MetastoreClientAdapterProvider metastoreClientAdapterProvider)
     {
-        requireNonNull(address, "address is null");
+        requireNonNull(uri, "uri is null");
         checkState(tokenAwareMetastoreClientFactory == null, "Metastore client already set");
-        tokenAwareMetastoreClientFactory = new TestingTokenAwareMetastoreClientFactory(HiveTestUtils.SOCKS_PROXY, address, TIMEOUT, metastoreClientAdapterProvider);
+        tokenAwareMetastoreClientFactory = new TestingTokenAwareMetastoreClientFactory(HiveTestUtils.SOCKS_PROXY, uri, TIMEOUT, metastoreClientAdapterProvider);
         return this;
     }
 

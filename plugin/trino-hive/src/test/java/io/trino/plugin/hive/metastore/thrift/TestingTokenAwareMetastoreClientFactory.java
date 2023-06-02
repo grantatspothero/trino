@@ -35,9 +35,9 @@ public class TestingTokenAwareMetastoreClientFactory
 
     private final MetastoreClientAdapterProvider metastoreClientAdapterProvider;
 
-    public TestingTokenAwareMetastoreClientFactory(Optional<HostAndPort> socksProxy, URI address)
+    public TestingTokenAwareMetastoreClientFactory(Optional<HostAndPort> socksProxy, URI uri)
     {
-        this(socksProxy, address, TIMEOUT, delegate -> delegate);
+        this(socksProxy, uri, TIMEOUT, delegate -> delegate);
     }
 
     public TestingTokenAwareMetastoreClientFactory(Optional<HostAndPort> socksProxy, URI address, Duration timeout)
@@ -45,10 +45,10 @@ public class TestingTokenAwareMetastoreClientFactory
         this(socksProxy, address, timeout, delegate -> delegate);
     }
 
-    public TestingTokenAwareMetastoreClientFactory(Optional<HostAndPort> socksProxy, URI address, Duration timeout, MetastoreClientAdapterProvider metastoreClientAdapterProvider)
+    public TestingTokenAwareMetastoreClientFactory(Optional<HostAndPort> socksProxy, URI uri, Duration timeout, MetastoreClientAdapterProvider metastoreClientAdapterProvider)
     {
         this.factory = new DefaultThriftMetastoreClientFactory(new SshTunnelConfig(), Optional.empty(), socksProxy, timeout, timeout, AUTHENTICATION, "localhost");
-        this.address = requireNonNull(address, "address is null");
+        this.address = requireNonNull(uri, "address is null");
         this.metastoreClientAdapterProvider = requireNonNull(metastoreClientAdapterProvider, "metastoreClientAdapterProvider is null");
     }
 
