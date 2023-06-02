@@ -15,6 +15,7 @@ package io.trino.plugin.hive.util;
 
 import com.google.common.base.CharMatcher;
 import com.google.common.collect.ImmutableList;
+import io.trino.filesystem.Location;
 import io.trino.hdfs.HdfsContext;
 import io.trino.hdfs.HdfsEnvironment;
 import io.trino.hdfs.rubix.CachingTrinoS3FileSystem;
@@ -429,7 +430,7 @@ public final class HiveWriteUtils
         }
     }
 
-    public static Path getTableDefaultLocation(HdfsContext context, SemiTransactionalHiveMetastore metastore, HdfsEnvironment hdfsEnvironment, String schemaName, String tableName)
+    public static Location getTableDefaultLocation(HdfsContext context, SemiTransactionalHiveMetastore metastore, HdfsEnvironment hdfsEnvironment, String schemaName, String tableName)
     {
         Database database = metastore.getDatabase(schemaName)
                 .orElseThrow(() -> new SchemaNotFoundException(schemaName));
@@ -437,7 +438,7 @@ public final class HiveWriteUtils
         return getTableDefaultLocation(database, context, hdfsEnvironment, schemaName, tableName);
     }
 
-    public static Path getTableDefaultLocation(Database database, HdfsContext context, HdfsEnvironment hdfsEnvironment, String schemaName, String tableName)
+    public static Location getTableDefaultLocation(Database database, HdfsContext context, HdfsEnvironment hdfsEnvironment, String schemaName, String tableName)
     {
         String location = database.getLocation()
                 .orElseThrow(() -> new TrinoException(HIVE_DATABASE_LOCATION_ERROR, format("Database '%s' location is not set", schemaName)));
@@ -452,7 +453,7 @@ public final class HiveWriteUtils
             }
         }
 
-        return new Path(databasePath, escapeTableName(tableName));
+        return Location.of(location).appendPath(escapeTableName(tableName));
     }
 
     public static boolean pathExists(HdfsContext context, HdfsEnvironment hdfsEnvironment, Path path)
@@ -515,7 +516,7 @@ public final class HiveWriteUtils
         return fileName.startsWith(queryId) || fileName.endsWith(queryId);
     }
 
-    public static Path createTemporaryPath(HdfsContext context, HdfsEnvironment hdfsEnvironment, Path targetPath, String temporaryStagingDirectoryPath)
+    public static Location createTemporaryPath(HdfsContext context, HdfsEnvironment hdfsEnvironment, Path targetPath, String temporaryStagingDirectoryPath)
     {
         // use a per-user temporary directory to avoid permission problems
         String temporaryPrefix = temporaryStagingDirectoryPath.replace("${USER}", context.getIdentity().getUser());
@@ -535,7 +536,7 @@ public final class HiveWriteUtils
             setDirectoryOwner(context, hdfsEnvironment, temporaryPath, targetPath);
         }
 
-        return temporaryPath;
+        return Location.of(temporaryPath.toString());
     }
 
     private static void setDirectoryOwner(HdfsContext context, HdfsEnvironment hdfsEnvironment, Path path, Path targetPath)
