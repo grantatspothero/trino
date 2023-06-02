@@ -193,7 +193,7 @@ public abstract class BaseDeltaLakeConnectorSmokeTest
                     "hive",
                     "hive",
                     ImmutableMap.<String, String>builder()
-                            .put("hive.metastore.uri", "thrift://" + hiveMinioDataLake.getHiveHadoop().getHiveMetastoreEndpoint())
+                            .put("hive.metastore.uri", hiveMinioDataLake.getHiveHadoop().getHiveMetastoreEndpoint().toString())
                             .put("hive.allow-drop-table", "true")
                             .putAll(hiveStorageConfiguration())
                             .buildOrThrow());

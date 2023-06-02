@@ -93,6 +93,7 @@ public final class TestGroups
     public static final String DELTA_LAKE_MINIO = "delta-lake-minio";
     public static final String DELTA_LAKE_GCS = "delta-lake-gcs";
     public static final String DELTA_LAKE_DATABRICKS = "delta-lake-databricks";
+    public static final String DATABRICKS_UNITY_HTTP_HMS = "databricks-unity-http-hms";
     public static final String DELTA_LAKE_EXCLUDE_91 = "delta-lake-exclude-91";
     public static final String DELTA_LAKE_EXCLUDE_104 = "delta-lake-exclude-104";
     public static final String DELTA_LAKE_EXCLUDE_113 = "delta-lake-exclude-113";

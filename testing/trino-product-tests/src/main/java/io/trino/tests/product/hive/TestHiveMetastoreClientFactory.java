@@ -13,10 +13,10 @@
  */
 package io.trino.tests.product.hive;
 
-import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import io.airlift.units.Duration;
+import io.opentelemetry.api.OpenTelemetry;
 import io.trino.plugin.hive.metastore.thrift.DefaultThriftMetastoreClientFactory;
 import io.trino.plugin.hive.metastore.thrift.NoHiveMetastoreAuthentication;
 import io.trino.plugin.hive.metastore.thrift.ThriftMetastoreClient;
@@ -37,7 +37,9 @@ public final class TestHiveMetastoreClientFactory
             Optional.empty(),
             new Duration(10, SECONDS),
             new NoHiveMetastoreAuthentication(),
-            "localhost");
+            "localhost",
+            Optional.empty(),
+            OpenTelemetry.noop());
 
     @Inject
     @Named("databases.hive.metastore.host")
@@ -51,8 +53,7 @@ public final class TestHiveMetastoreClientFactory
             throws TException
     {
         URI metastore = URI.create("thrift://" + metastoreHost + ":" + metastorePort);
-        return thriftMetastoreClientFactory.create(
-                HostAndPort.fromParts(metastore.getHost(), metastore.getPort()),
+        return thriftMetastoreClientFactory.create(metastore,
                 Optional.empty());
     }
 }

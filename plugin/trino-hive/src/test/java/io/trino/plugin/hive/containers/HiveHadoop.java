@@ -22,6 +22,7 @@ import io.trino.testing.containers.BaseTestContainer;
 import io.trino.testing.containers.PrintingLogConsumer;
 import org.testcontainers.containers.Network;
 
+import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -94,9 +95,15 @@ public class HiveHadoop
         return executeInContainerFailOnError("mysql", "-D", "metastore", "-uroot", "-proot", "--batch", "--column-names=false", "-e", query).replaceAll("\n$", "");
     }
 
-    public HostAndPort getHiveMetastoreEndpoint()
+    public HostAndPort getHiveMetastoreHostAndPort()
     {
         return getMappedHostAndPortForExposedPort(HIVE_METASTORE_PORT);
+    }
+
+    public URI getHiveMetastoreEndpoint()
+    {
+        HostAndPort address = getHiveMetastoreHostAndPort();
+        return URI.create("thrift://" + address.getHost() + ":" + address.getPort());
     }
 
     public static class Builder

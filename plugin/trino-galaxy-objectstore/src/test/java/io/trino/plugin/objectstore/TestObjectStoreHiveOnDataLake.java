@@ -78,10 +78,10 @@ public class TestObjectStoreHiveOnDataLake
                 .withMetastoreType("thrift")
                 .withExtraObjectStoreProperties(ImmutableMap.<String, String>builder()
                         // Metastore
-                        .put("HIVE__hive.metastore.uri", "thrift://" + hiveMinioDataLake.getHiveHadoop().getHiveMetastoreEndpoint())
-                        .put("ICEBERG__hive.metastore.uri", "thrift://" + hiveMinioDataLake.getHiveHadoop().getHiveMetastoreEndpoint())
-                        .put("DELTA__hive.metastore.uri", "thrift://" + hiveMinioDataLake.getHiveHadoop().getHiveMetastoreEndpoint())
-                        .put("HUDI__hive.metastore.uri", "thrift://" + hiveMinioDataLake.getHiveHadoop().getHiveMetastoreEndpoint())
+                        .put("HIVE__hive.metastore.uri", hiveMinioDataLake.getHiveHadoop().getHiveMetastoreEndpoint().toString())
+                        .put("ICEBERG__hive.metastore.uri", hiveMinioDataLake.getHiveHadoop().getHiveMetastoreEndpoint().toString())
+                        .put("DELTA__hive.metastore.uri", hiveMinioDataLake.getHiveHadoop().getHiveMetastoreEndpoint().toString())
+                        .put("HUDI__hive.metastore.uri", hiveMinioDataLake.getHiveHadoop().getHiveMetastoreEndpoint().toString())
                         // Required for tests
                         .put("HIVE__hive.insert-existing-partitions-behavior", "OVERWRITE")
                         // .put("HIVE__hive.non-managed-table-writes-enabled", "true") // always enabled for ObjectStoreQueryRunner
