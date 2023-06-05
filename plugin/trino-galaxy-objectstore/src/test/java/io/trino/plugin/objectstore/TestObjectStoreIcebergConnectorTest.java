@@ -60,17 +60,12 @@ public class TestObjectStoreIcebergConnectorTest
     }
 
     @Override
+    @SuppressWarnings("SwitchStatementWithTooFewBranches")
     protected boolean hasBehavior(TestingConnectorBehavior connectorBehavior)
     {
         boolean connectorHasBehavior = new GetIcebergConnectorTestBehavior().hasBehavior(connectorBehavior);
 
         switch (connectorBehavior) {
-            case SUPPORTS_COMMENT_ON_VIEW: // TODO ObjectStore lacks COMMENT ON VIEW support
-            case SUPPORTS_COMMENT_ON_VIEW_COLUMN: // TODO ObjectStore lacks COMMENT ON VIEW column support
-                // when this fails remove the `case` for given flag
-                verify(connectorHasBehavior, "Expected support for: %s", connectorBehavior);
-                return false;
-
             case SUPPORTS_RENAME_MATERIALIZED_VIEW_ACROSS_SCHEMAS:
                 // TODO when this changes, remove this flag from other BaseObjectStoreConnectorTest subclasses
                 verify(!connectorHasBehavior, "Unexpected support for: %s", connectorBehavior);

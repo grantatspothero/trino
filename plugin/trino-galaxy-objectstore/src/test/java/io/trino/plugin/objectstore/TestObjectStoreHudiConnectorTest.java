@@ -75,6 +75,8 @@ public class TestObjectStoreHudiConnectorTest
 
             // ObjectStore adds support for views using Hive
             case SUPPORTS_CREATE_VIEW:
+            case SUPPORTS_COMMENT_ON_VIEW:
+            case SUPPORTS_COMMENT_ON_VIEW_COLUMN:
                 // when this fails remove the `case` for given flag
                 verify(!connectorHasBehavior, "Unexpected support for: %s", connectorBehavior);
                 return true;

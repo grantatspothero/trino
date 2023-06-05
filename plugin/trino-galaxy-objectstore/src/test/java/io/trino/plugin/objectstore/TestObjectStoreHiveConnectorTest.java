@@ -52,8 +52,6 @@ public class TestObjectStoreHiveConnectorTest
         boolean connectorHasBehavior = new GetHiveConnectorTestBehavior().hasBehavior(connectorBehavior);
 
         switch (connectorBehavior) {
-            case SUPPORTS_COMMENT_ON_VIEW: // TODO ObjectStore lacks COMMENT ON VIEW support
-            case SUPPORTS_COMMENT_ON_VIEW_COLUMN: // TODO ObjectStore lacks COMMENT ON VIEW column support
             case SUPPORTS_MULTI_STATEMENT_WRITES: // multi-statement transaction support is disabled in ObjectStore
                 // when this fails remove the `case` for given flag
                 verify(connectorHasBehavior, "Expected support for: %s", connectorBehavior);

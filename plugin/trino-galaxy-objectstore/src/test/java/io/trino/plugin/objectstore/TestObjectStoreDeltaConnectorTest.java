@@ -55,12 +55,11 @@ public class TestObjectStoreDeltaConnectorTest
 
         switch (connectorBehavior) {
             case SUPPORTS_RENAME_SCHEMA: // ObjectStore supports this via Hive connector
+            case SUPPORTS_COMMENT_ON_VIEW_COLUMN: // ObjectStore supports this via Hive connector
                 // when this fails remove the `case` for given flag
                 verify(!connectorHasBehavior, "Unexpected support for: %s", connectorBehavior);
                 return true;
 
-            case SUPPORTS_COMMENT_ON_VIEW: // TODO ObjectStore lacks COMMENT ON VIEW support
-//            case SUPPORTS_COMMENT_ON_VIEW_COLUMN: currently not supported in Delta either
             case SUPPORTS_NOT_NULL_CONSTRAINT: // TODO ObjectStore blocks Delta columns with NOT NULL
             case SUPPORTS_ADD_COLUMN_NOT_NULL_CONSTRAINT: // TODO ObjectStore blocks ADD COLUMN NOT NULL
                 // when this fails remove the `case` for given flag

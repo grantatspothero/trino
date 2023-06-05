@@ -884,6 +884,20 @@ public class ObjectStoreMetadata
     }
 
     @Override
+    public void setViewComment(ConnectorSession session, SchemaTableName viewName, Optional<String> comment)
+    {
+        hiveMetadata.setViewComment(unwrap(HIVE, session), viewName, comment);
+        flushMetadataCache(session, viewName);
+    }
+
+    @Override
+    public void setViewColumnComment(ConnectorSession session, SchemaTableName viewName, String columnName, Optional<String> comment)
+    {
+        hiveMetadata.setViewColumnComment(unwrap(HIVE, session), viewName, columnName, comment);
+        flushMetadataCache(session, viewName);
+    }
+
+    @Override
     public List<SchemaTableName> listViews(ConnectorSession session, Optional<String> schemaName)
     {
         // stop gap solution to deal with shared hive metastore between iceberg and hive
