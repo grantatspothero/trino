@@ -50,7 +50,7 @@ public class ParquetReaderOptions
         useBatchNestedColumnReaders = true;
         useBloomFilter = true;
         nativeZstdDecompressorEnabled = true;
-        nativeSnappyDecompressorEnabled = false;
+        nativeSnappyDecompressorEnabled = true;
     }
 
     private ParquetReaderOptions(
