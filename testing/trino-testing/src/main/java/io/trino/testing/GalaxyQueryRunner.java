@@ -165,7 +165,6 @@ public final class GalaxyQueryRunner
             addExtraProperty("galaxy.authentication.token-issuer", deploymentUri.toString());
             addExtraProperty("galaxy.authentication.public-key", accountClient.getSampleDeploymentPublicKey());
             addExtraProperty("query.info-url-template", deploymentUri + "/ui/query.html?${QUERY_ID}");
-            addExtraProperty("legacy.allow-set-view-authorization", "TRUE");
 
             amendSession(sessionBuilder -> sessionBuilder.setIdentity(createIdentity(
                     accountClient.getAdminEmail(),

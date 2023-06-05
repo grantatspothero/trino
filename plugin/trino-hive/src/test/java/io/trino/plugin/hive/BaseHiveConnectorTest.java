@@ -221,7 +221,6 @@ public abstract class BaseHiveConnectorTest
                         // Make weighted split scheduling more conservative to avoid OOMs in test
                         "hive.minimum-assigned-split-weight", "0.5",
                         "hive.partition-projection-enabled", "true"))
-                .addExtraProperty("legacy.allow-set-view-authorization", "true")
                 .setInitialTables(REQUIRED_TPCH_TABLES)
                 .setTpchBucketedCatalogEnabled(true)
                 .build();
