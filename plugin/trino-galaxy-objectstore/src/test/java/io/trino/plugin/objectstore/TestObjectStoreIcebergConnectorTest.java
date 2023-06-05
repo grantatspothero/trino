@@ -17,6 +17,7 @@ import io.trino.Session;
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.testing.MaterializedResult;
+import io.trino.testing.TestingConnectorBehavior;
 import io.trino.testing.sql.TestTable;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -27,6 +28,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import static com.google.common.base.Verify.verify;
 import static io.trino.plugin.iceberg.IcebergTestUtils.checkOrcFileSorting;
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
@@ -55,6 +57,29 @@ public class TestObjectStoreIcebergConnectorTest
     public TestObjectStoreIcebergConnectorTest()
     {
         super(ICEBERG);
+    }
+
+    @Override
+    protected boolean hasBehavior(TestingConnectorBehavior connectorBehavior)
+    {
+        boolean connectorHasBehavior = new GetIcebergConnectorTestBehavior().hasBehavior(connectorBehavior);
+
+        switch (connectorBehavior) {
+            case SUPPORTS_COMMENT_ON_VIEW: // TODO ObjectStore lacks COMMENT ON VIEW support
+            case SUPPORTS_COMMENT_ON_VIEW_COLUMN: // TODO ObjectStore lacks COMMENT ON VIEW column support
+                // when this fails remove the `case` for given flag
+                verify(connectorHasBehavior, "Expected support for: %s", connectorBehavior);
+                return false;
+
+            case SUPPORTS_RENAME_MATERIALIZED_VIEW_ACROSS_SCHEMAS:
+                // TODO when this changes, remove this flag from other BaseObjectStoreConnectorTest subclasses
+                verify(!connectorHasBehavior, "Unexpected support for: %s", connectorBehavior);
+                return false;
+
+            default:
+                // By default, declare all behaviors/features supported by Iceberg connector
+                return connectorHasBehavior;
+        }
     }
 
     @BeforeClass

@@ -157,28 +157,7 @@ public abstract class BaseObjectStoreConnectorTest
     }
 
     @Override
-    @SuppressWarnings("DuplicateBranchesInSwitch")
-    protected boolean hasBehavior(TestingConnectorBehavior connectorBehavior)
-    {
-        switch (connectorBehavior) {
-            case SUPPORTS_TOPN_PUSHDOWN:
-                return false;
-
-            case SUPPORTS_TRUNCATE:
-                return false;
-
-            case SUPPORTS_COMMENT_ON_VIEW:
-                return false;
-
-            case SUPPORTS_RENAME_MATERIALIZED_VIEW_ACROSS_SCHEMAS:
-                return false;
-            case SUPPORTS_ADD_COLUMN_NOT_NULL_CONSTRAINT:
-                return false;
-
-            default:
-                return super.hasBehavior(connectorBehavior);
-        }
-    }
+    protected abstract boolean hasBehavior(TestingConnectorBehavior connectorBehavior);
 
     // TODO why we need this? Object Store allows only auto-commit, so the test should pass
     @Override

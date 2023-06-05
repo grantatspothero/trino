@@ -24,6 +24,7 @@ import org.testng.annotations.Test;
 
 import java.util.Optional;
 
+import static com.google.common.base.Verify.verify;
 import static io.trino.plugin.hive.HiveQueryRunner.TPCH_SCHEMA;
 import static io.trino.plugin.iceberg.IcebergTestUtils.checkOrcFileSorting;
 import static io.trino.plugin.objectstore.TableType.HIVE;
@@ -48,14 +49,33 @@ public class TestObjectStoreHiveConnectorTest
     @Override
     protected boolean hasBehavior(TestingConnectorBehavior connectorBehavior)
     {
+        boolean connectorHasBehavior = new GetHiveConnectorTestBehavior().hasBehavior(connectorBehavior);
+
         switch (connectorBehavior) {
-            case SUPPORTS_DROP_FIELD:
-            case SUPPORTS_SET_COLUMN_TYPE:
-            case SUPPORTS_NOT_NULL_CONSTRAINT:
-            case SUPPORTS_MATERIALIZED_VIEW_FRESHNESS_FROM_BASE_TABLES:
+            case SUPPORTS_COMMENT_ON_VIEW: // TODO ObjectStore lacks COMMENT ON VIEW support
+            case SUPPORTS_COMMENT_ON_VIEW_COLUMN: // TODO ObjectStore lacks COMMENT ON VIEW column support
+            case SUPPORTS_MULTI_STATEMENT_WRITES: // multi-statement transaction support is disabled in ObjectStore
+                // when this fails remove the `case` for given flag
+                verify(connectorHasBehavior, "Expected support for: %s", connectorBehavior);
                 return false;
+
+            // Declared to be had since MERGE-related test cases are overridden
+            case SUPPORTS_MERGE:
+                return true;
+
+            // ObjectStore adds support for materialized views using Iceberg
+            case SUPPORTS_CREATE_MATERIALIZED_VIEW:
+            case SUPPORTS_CREATE_MATERIALIZED_VIEW_GRACE_PERIOD:
+            case SUPPORTS_CREATE_FEDERATED_MATERIALIZED_VIEW:
+            case SUPPORTS_RENAME_MATERIALIZED_VIEW:
+//            case SUPPORTS_RENAME_MATERIALIZED_VIEW_ACROSS_SCHEMAS: -- not supported by Iceberg:
+                // when this fails remove the `case` for given flag
+                verify(!connectorHasBehavior, "Unexpected support for: %s", connectorBehavior);
+                return true;
+
             default:
-                return super.hasBehavior(connectorBehavior);
+                // By default, declare all behaviors/features supported by Hive connector
+                return connectorHasBehavior;
         }
     }
 

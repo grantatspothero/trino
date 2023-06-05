@@ -25,6 +25,7 @@ import org.testng.annotations.Test;
 
 import java.util.Optional;
 
+import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.MoreCollectors.onlyElement;
 import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.EXTENDED_STATISTICS_COLLECT_ON_WRITE;
 import static io.trino.plugin.objectstore.TableType.DELTA;
@@ -47,18 +48,39 @@ public class TestObjectStoreDeltaConnectorTest
     }
 
     @Override
+    @SuppressWarnings("DuplicateBranchesInSwitch")
     protected boolean hasBehavior(TestingConnectorBehavior connectorBehavior)
     {
+        boolean connectorHasBehavior = new GetDeltaLakeConnectorTestBehavior().hasBehavior(connectorBehavior);
+
         switch (connectorBehavior) {
-            case SUPPORTS_DROP_COLUMN:
-            case SUPPORTS_RENAME_COLUMN:
-            case SUPPORTS_DROP_FIELD:
-            case SUPPORTS_SET_COLUMN_TYPE:
-            case SUPPORTS_NOT_NULL_CONSTRAINT:
-            case SUPPORTS_MATERIALIZED_VIEW_FRESHNESS_FROM_BASE_TABLES:
+            case SUPPORTS_RENAME_SCHEMA: // ObjectStore supports this via Hive connector
+                // when this fails remove the `case` for given flag
+                verify(!connectorHasBehavior, "Unexpected support for: %s", connectorBehavior);
+                return true;
+
+            case SUPPORTS_COMMENT_ON_VIEW: // TODO ObjectStore lacks COMMENT ON VIEW support
+//            case SUPPORTS_COMMENT_ON_VIEW_COLUMN: currently not supported in Delta either
+            case SUPPORTS_NOT_NULL_CONSTRAINT: // TODO ObjectStore blocks Delta columns with NOT NULL
+            case SUPPORTS_ADD_COLUMN_NOT_NULL_CONSTRAINT: // TODO ObjectStore blocks ADD COLUMN NOT NULL
+                // when this fails remove the `case` for given flag
+                verify(connectorHasBehavior, "Expected support for: %s", connectorBehavior);
                 return false;
+
+            // ObjectStore adds support for materialized views using Iceberg
+            case SUPPORTS_CREATE_MATERIALIZED_VIEW:
+            case SUPPORTS_CREATE_MATERIALIZED_VIEW_GRACE_PERIOD:
+            case SUPPORTS_CREATE_FEDERATED_MATERIALIZED_VIEW:
+//            case SUPPORTS_MATERIALIZED_VIEW_FRESHNESS_FROM_BASE_TABLES: TODO currently not supported for Iceberg materialized views based on Delta tables
+            case SUPPORTS_RENAME_MATERIALIZED_VIEW:
+//            case SUPPORTS_RENAME_MATERIALIZED_VIEW_ACROSS_SCHEMAS: -- not supported by Iceberg
+                // when this fails remove the `case` for given flag
+                verify(!connectorHasBehavior, "Unexpected support for: %s", connectorBehavior);
+                return true;
+
             default:
-                return super.hasBehavior(connectorBehavior);
+                // By default, declare all behaviors/features supported by Delta connector
+                return connectorHasBehavior;
         }
     }
 

@@ -20,6 +20,7 @@ import io.trino.testing.TestingConnectorBehavior;
 import org.intellij.lang.annotations.Language;
 import org.testng.SkipException;
 
+import static com.google.common.base.Verify.verify;
 import static io.trino.plugin.objectstore.TableType.HUDI;
 import static io.trino.spi.type.VarcharType.VARCHAR;
 import static io.trino.testing.MaterializedResult.resultBuilder;
@@ -48,25 +49,39 @@ public class TestObjectStoreHudiConnectorTest
     }
 
     @Override
+    @SuppressWarnings("DuplicateBranchesInSwitch")
     protected boolean hasBehavior(TestingConnectorBehavior connectorBehavior)
     {
+        boolean connectorHasBehavior = new GetHudiConnectorTestBehavior().hasBehavior(connectorBehavior);
+
         switch (connectorBehavior) {
-            case SUPPORTS_CREATE_TABLE:
-            case SUPPORTS_RENAME_TABLE:
-            case SUPPORTS_COMMENT_ON_TABLE:
-            case SUPPORTS_INSERT:
-            case SUPPORTS_DELETE:
-            case SUPPORTS_UPDATE:
-            case SUPPORTS_MERGE:
-            case SUPPORTS_ADD_COLUMN:
-            case SUPPORTS_DROP_COLUMN:
-            case SUPPORTS_RENAME_COLUMN:
-            case SUPPORTS_SET_COLUMN_TYPE:
-            case SUPPORTS_COMMENT_ON_COLUMN:
+            // ObjectStore adds support for schemas using Hive
+            case SUPPORTS_CREATE_SCHEMA:
+            case SUPPORTS_RENAME_SCHEMA:
+                // when this fails remove the `case` for given flag
+                verify(!connectorHasBehavior, "Unexpected support for: %s", connectorBehavior);
+                return true;
+
+            // ObjectStore adds support for materialized views using Iceberg
+            case SUPPORTS_CREATE_MATERIALIZED_VIEW:
+            case SUPPORTS_CREATE_MATERIALIZED_VIEW_GRACE_PERIOD:
+            case SUPPORTS_CREATE_FEDERATED_MATERIALIZED_VIEW:
             case SUPPORTS_MATERIALIZED_VIEW_FRESHNESS_FROM_BASE_TABLES:
-                return false;
+            case SUPPORTS_RENAME_MATERIALIZED_VIEW:
+//            case SUPPORTS_RENAME_MATERIALIZED_VIEW_ACROSS_SCHEMAS: -- not supported by Iceberg
+                // when this fails remove the `case` for given flag
+                verify(!connectorHasBehavior, "Unexpected support for: %s", connectorBehavior);
+                return true;
+
+            // ObjectStore adds support for views using Hive
+            case SUPPORTS_CREATE_VIEW:
+                // when this fails remove the `case` for given flag
+                verify(!connectorHasBehavior, "Unexpected support for: %s", connectorBehavior);
+                return true;
+
             default:
-                return super.hasBehavior(connectorBehavior);
+                // By default, declare all behaviors/features supported by Hudi connector
+                return connectorHasBehavior;
         }
     }
 
