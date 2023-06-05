@@ -48,7 +48,7 @@ import static org.testng.Assert.fail;
  * Tests ObjectStore connector with Delta backend, exercising all
  * Delta-specific tests inherited from {@link TestDeltaLakeConnectorTest}.
  *
- * @see TestDeltaLakeConnectorTest
+ * @see TestObjectStoreDeltaConnectorTest
  * @see TestObjectStoreIcebergFeaturesConnectorTest
  */
 public class TestObjectStoreDeltaFeaturesConnectorTest
