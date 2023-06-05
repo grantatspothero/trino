@@ -39,7 +39,7 @@ public class TestParquetReaderConfig
                 .setUseColumnIndex(true)
                 .setOptimizedReaderEnabled(true)
                 .setOptimizedNestedReaderEnabled(true)
-                .setNativeZstdDecompressorEnabled(false)
+                .setNativeZstdDecompressorEnabled(true)
                 .setNativeSnappyDecompressorEnabled(false)
                 .setUseBloomFilter(true));
     }
@@ -57,7 +57,7 @@ public class TestParquetReaderConfig
                 .put("parquet.optimized-reader.enabled", "false")
                 .put("parquet.optimized-nested-reader.enabled", "false")
                 .put("parquet.use-bloom-filter", "false")
-                .put("parquet.native-zstd-decompressor.enabled", "true")
+                .put("parquet.native-zstd-decompressor.enabled", "false")
                 .put("parquet.native-snappy-decompressor.enabled", "true")
                 .buildOrThrow();
 
@@ -71,7 +71,7 @@ public class TestParquetReaderConfig
                 .setOptimizedReaderEnabled(false)
                 .setOptimizedNestedReaderEnabled(false)
                 .setUseBloomFilter(false)
-                .setNativeZstdDecompressorEnabled(true)
+                .setNativeZstdDecompressorEnabled(false)
                 .setNativeSnappyDecompressorEnabled(true);
 
         assertFullMapping(properties, expected);
