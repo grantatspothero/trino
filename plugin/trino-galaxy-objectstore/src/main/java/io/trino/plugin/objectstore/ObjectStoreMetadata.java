@@ -550,7 +550,7 @@ public class ObjectStoreMetadata
         if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Table creation is not supported for Hudi");
         }
-        if ((tableType != ICEBERG) && tableMetadata.getColumns().stream().anyMatch(column -> !column.isNullable())) {
+        if ((tableType != ICEBERG && tableType != DELTA) && tableMetadata.getColumns().stream().anyMatch(column -> !column.isNullable())) {
             throw new TrinoException(NOT_SUPPORTED, "%s tables do not support NOT NULL columns".formatted(tableType.displayName()));
         }
         tableMetadata = unwrap(tableType, tableMetadata);
@@ -659,7 +659,7 @@ public class ObjectStoreMetadata
         if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Adding columns to Hudi tables is not supported");
         }
-        if ((tableType != ICEBERG) && !column.isNullable()) {
+        if ((tableType != ICEBERG && tableType != DELTA) && !column.isNullable()) {
             throw new TrinoException(NOT_SUPPORTED, "%s tables do not support NOT NULL columns".formatted(tableType.displayName()));
         }
         delegate(tableType).addColumn(unwrap(tableType, session), tableHandle, column);

@@ -32,7 +32,6 @@ import static io.trino.plugin.objectstore.TableType.DELTA;
 import static io.trino.spi.type.VarcharType.VARCHAR;
 import static io.trino.testing.MaterializedResult.resultBuilder;
 import static io.trino.testing.TestingNames.randomNameSuffix;
-import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -59,12 +58,6 @@ public class TestObjectStoreDeltaConnectorTest
                 // when this fails remove the `case` for given flag
                 verify(!connectorHasBehavior, "Unexpected support for: %s", connectorBehavior);
                 return true;
-
-            case SUPPORTS_NOT_NULL_CONSTRAINT: // TODO ObjectStore blocks Delta columns with NOT NULL
-            case SUPPORTS_ADD_COLUMN_NOT_NULL_CONSTRAINT: // TODO ObjectStore blocks ADD COLUMN NOT NULL
-                // when this fails remove the `case` for given flag
-                verify(connectorHasBehavior, "Expected support for: %s", connectorBehavior);
-                return false;
 
             // ObjectStore adds support for materialized views using Iceberg
             case SUPPORTS_CREATE_MATERIALIZED_VIEW:
@@ -118,6 +111,18 @@ public class TestObjectStoreDeltaConnectorTest
     }
 
     @Override
+    protected String errorMessageForInsertIntoNotNullColumn(String columnName)
+    {
+        return "NULL value not allowed for NOT NULL column: " + columnName;
+    }
+
+    @Override
+    protected void verifyAddNotNullColumnToNonEmptyTableFailurePermissible(Throwable e)
+    {
+        assertThat(e).hasMessageMatching("Unable to add NOT NULL column '.*' for non-empty table: .*");
+    }
+
+    @Override
     protected Optional<DataMappingTestSetup> filterCaseSensitiveDataMappingTestData(DataMappingTestSetup dataMappingTestSetup)
     {
         String typeName = dataMappingTestSetup.getTrinoTypeName();
@@ -146,14 +151,6 @@ public class TestObjectStoreDeltaConnectorTest
     protected TestTable createTableWithDefaultColumns()
     {
         throw new SkipException("Delta Lake does not support columns with a default value");
-    }
-
-    @Override
-    public void testInsertIntoNotNullColumn()
-    {
-        assertQueryFails(
-                "CREATE TABLE not_null_constraint (not_null_col INTEGER NOT NULL)",
-                "Delta Lake tables do not support NOT NULL columns");
     }
 
     @Override
@@ -203,15 +200,6 @@ public class TestObjectStoreDeltaConnectorTest
     }
 
     @Override
-    @Test
-    public void testUpdateNotNullColumn()
-    {
-        assertQueryFails(
-                "CREATE TABLE not_null_constraint (not_null_col INTEGER NOT NULL)",
-                format("Delta Lake tables do not support NOT NULL columns"));
-    }
-
-    @Override
     public void testHiveSpecificTableProperty()
     {
         assertThatThrownBy(super::testHiveSpecificTableProperty)
@@ -244,17 +232,6 @@ public class TestObjectStoreDeltaConnectorTest
 
         long newFileCount = (long) computeActual("SELECT count(DISTINCT \"$path\") FROM test_optimize").getOnlyValue();
         assertThat(newFileCount).isLessThan(fileCount);
-    }
-
-    @Override
-    public void testAddNotNullColumnToEmptyTable()
-    {
-        // Override because the connector throws a slightly different error message
-        try (TestTable table = new TestTable(getQueryRunner()::execute, "test_add_notnull_col", "(a_varchar varchar)")) {
-            assertQueryFails(
-                    "ALTER TABLE " + table.getName() + " ADD COLUMN b_varchar varchar NOT NULL",
-                    "Delta Lake tables do not support NOT NULL columns");
-        }
     }
 
     @Test

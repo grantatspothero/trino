@@ -41,7 +41,6 @@ import static io.trino.plugin.objectstore.ObjectStoreQueryRunner.initializeTpchT
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 import static java.util.stream.Collectors.joining;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.testng.Assert.fail;
 
 /**
@@ -134,13 +133,6 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     {
         // duplicate test, but still desired to run
         super.ensureTestNamingConvention();
-    }
-
-    @Override
-    public void testTableWithNonNullableColumns()
-    {
-        assertThatThrownBy(super::testTableWithNonNullableColumns)
-                .hasMessage("Delta Lake tables do not support NOT NULL columns");
     }
 
     private void skipDuplicateTestCoverage(String methodName, Class<?>... args)
