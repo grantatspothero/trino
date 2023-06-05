@@ -39,7 +39,7 @@ public class TestGalaxyMetadataAuthenticator
         GalaxyMetadataAuthenticatorConfig authenticatorConfig = new GalaxyMetadataAuthenticatorConfig()
                 .setPublicKey(PemWriter.writePublicKey(keyPair.getPublic()))
                 .setDispatchTokenIssuer(DISPATCH_TOKEN_ISSUER)
-                .setTokenIssuer(TOKEN_ISSUER);
+                .setPortalTokenIssuer(TOKEN_ISSUER);
         MetadataOnlyConfig metadataOnlyConfig = new MetadataOnlyConfig()
                 .setTrinoPlaneId(new TrinoPlaneId(TRINO_PLANE_ID));
         GalaxyMetadataAuthenticator authenticator = new GalaxyMetadataAuthenticator(authenticatorConfig, metadataOnlyConfig);
@@ -53,7 +53,7 @@ public class TestGalaxyMetadataAuthenticator
         KeyPair keyPair = generateKeyPair();
         GalaxyMetadataAuthenticatorConfig authenticatorConfig = new GalaxyMetadataAuthenticatorConfig()
                 .setPublicKey(PemWriter.writePublicKey(keyPair.getPublic()))
-                .setTokenIssuer(TOKEN_ISSUER)
+                .setPortalTokenIssuer(TOKEN_ISSUER)
                 .setDispatchTokenIssuer(DISPATCH_TOKEN_ISSUER);
         MetadataOnlyConfig metadataOnlyConfig = new MetadataOnlyConfig()
                 .setTrinoPlaneId(new TrinoPlaneId(TRINO_PLANE_ID));

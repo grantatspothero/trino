@@ -13,55 +13,33 @@
  */
 package io.trino.server.security.galaxy;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import io.airlift.configuration.Config;
 import io.airlift.configuration.validation.FileExists;
 
 import javax.validation.constraints.NotEmpty;
 
 import java.io.File;
-import java.util.Map;
-import java.util.Set;
 
-import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType;
-import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.DISPATCH;
-import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.PORTAL;
+import static java.util.Objects.requireNonNull;
 
 public class GalaxyMetadataAuthenticatorConfig
 {
     private String portalTokenIssuer;
     private String dispatchTokenIssuer;
-    Map<String, Set<String>> issuersAndAudiences = ImmutableMap.of();
-    Set<GalaxyIdentityType> identityTypes = ImmutableSet.of();
 
     private String publicKey;
     private File publicKeyFile;
 
-    @VisibleForTesting
-    public Map<String, Set<String>> getTokenIssuers()
-    {
-        return issuersAndAudiences;
-    }
-
-    @VisibleForTesting
-    public Set<GalaxyIdentityType> getTokenIdenityTypes()
-    {
-        return identityTypes;
-    }
-
     @NotEmpty
-    public String getTokenIssuer()
+    public String getPortalTokenIssuer()
     {
         return portalTokenIssuer;
     }
 
     @Config("galaxy.authentication.token-issuer")
-    public GalaxyMetadataAuthenticatorConfig setTokenIssuer(String tokenIssuer)
+    public GalaxyMetadataAuthenticatorConfig setPortalTokenIssuer(String portalTokenIssuer)
     {
-        this.portalTokenIssuer = tokenIssuer;
-        updateImmutables();
+        this.portalTokenIssuer = requireNonNull(portalTokenIssuer, "portalTokenIssuer is null");
         return this;
     }
 
@@ -72,27 +50,10 @@ public class GalaxyMetadataAuthenticatorConfig
     }
 
     @Config("galaxy.authentication.dispatch-token-issuer")
-    public GalaxyMetadataAuthenticatorConfig setDispatchTokenIssuer(String tokenIssuer)
+    public GalaxyMetadataAuthenticatorConfig setDispatchTokenIssuer(String dispatchTokenIssuer)
     {
-        this.dispatchTokenIssuer = tokenIssuer;
-        updateImmutables();
+        this.dispatchTokenIssuer = requireNonNull(dispatchTokenIssuer, "dispatchTokenIssuer is null");
         return this;
-    }
-
-    private void updateImmutables()
-    {
-        ImmutableMap.Builder<String, Set<String>> issuerBuilder = ImmutableMap.builder();
-        ImmutableSet.Builder<GalaxyIdentityType> identityTypeBuilder = ImmutableSet.builder();
-        if (portalTokenIssuer != null) {
-            issuerBuilder.put(portalTokenIssuer, ImmutableSet.of());
-            identityTypeBuilder.add(PORTAL);
-        }
-        if (dispatchTokenIssuer != null) {
-            issuerBuilder.put(dispatchTokenIssuer, ImmutableSet.of());
-            identityTypeBuilder.add(DISPATCH);
-        }
-        issuersAndAudiences = issuerBuilder.buildOrThrow();
-        identityTypes = identityTypeBuilder.build();
     }
 
     public String getPublicKey()

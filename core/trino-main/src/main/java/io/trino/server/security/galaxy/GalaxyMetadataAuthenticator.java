@@ -14,6 +14,8 @@
 package io.trino.server.security.galaxy;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.trino.server.metadataonly.MetadataOnlyConfig;
 import io.trino.server.security.AuthenticationException;
 import io.trino.server.security.Authenticator;
@@ -33,6 +35,9 @@ import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.Request
 import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.extractToken;
 import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.loadPublicKey;
 import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType;
+import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.DISPATCH;
+import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.INDEXER;
+import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.PORTAL;
 import static javax.ws.rs.HttpMethod.POST;
 
 public class GalaxyMetadataAuthenticator
@@ -44,7 +49,16 @@ public class GalaxyMetadataAuthenticator
     public GalaxyMetadataAuthenticator(GalaxyMetadataAuthenticatorConfig authenticatorConfig, MetadataOnlyConfig metadataConfig)
             throws GeneralSecurityException, IOException
     {
-        this(authenticatorConfig.getTokenIssuers(), authenticatorConfig.getTokenIdenityTypes(), metadataConfig.getTrinoPlaneId().toString(), loadPublicKey(Optional.ofNullable(authenticatorConfig.getPublicKey()), Optional.ofNullable(authenticatorConfig.getPublicKeyFile())));
+        this(ImmutableMap.<String, Set<String>>builder()
+                        .put(authenticatorConfig.getPortalTokenIssuer(), ImmutableSet.of())
+                        .put(authenticatorConfig.getDispatchTokenIssuer(), ImmutableSet.of())
+                        .buildOrThrow(),
+                ImmutableSet.<GalaxyIdentityType>builder()
+                        .add(PORTAL)
+                        .add(INDEXER)
+                        .add(DISPATCH)
+                        .build(),
+                metadataConfig.getTrinoPlaneId().toString(), loadPublicKey(Optional.ofNullable(authenticatorConfig.getPublicKey()), Optional.ofNullable(authenticatorConfig.getPublicKeyFile())));
     }
 
     @VisibleForTesting
