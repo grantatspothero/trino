@@ -88,7 +88,7 @@ public class BenchmarkGroupByHash
         addInputPagesToHash(groupByHash, data.getPages());
 
         ImmutableList.Builder<Page> pages = ImmutableList.builder();
-        PageBuilder pageBuilder = new PageBuilder(groupByHash.getTypes());
+        PageBuilder pageBuilder = new PageBuilder(data.getTypes());
         for (int groupId = 0; groupId < groupByHash.getGroupCount(); groupId++) {
             pageBuilder.declarePosition();
             groupByHash.appendValuesTo(groupId, pageBuilder);
@@ -125,7 +125,7 @@ public class BenchmarkGroupByHash
         addInputPagesToHash(groupByHash, data.getPages());
 
         ImmutableList.Builder<Page> pages = ImmutableList.builder();
-        PageBuilder pageBuilder = new PageBuilder(groupByHash.getTypes());
+        PageBuilder pageBuilder = new PageBuilder(data.getTypes());
         for (int groupId = 0; groupId < groupByHash.getGroupCount(); groupId++) {
             pageBuilder.declarePosition();
             groupByHash.appendValuesTo(groupId, pageBuilder);
@@ -146,7 +146,8 @@ public class BenchmarkGroupByHash
         addInputPagesToHash(groupByHash, data.pages);
 
         ImmutableList.Builder<Page> pages = ImmutableList.builder();
-        PageBuilder pageBuilder = new PageBuilder(groupByHash.getTypes());
+
+        PageBuilder pageBuilder = new PageBuilder(ImmutableList.of(data.getHashType()));
         for (int groupId = 0; groupId < groupByHash.getGroupCount(); groupId++) {
             pageBuilder.declarePosition();
             groupByHash.appendValuesTo(groupId, pageBuilder);

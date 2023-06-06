@@ -14,7 +14,6 @@
 package io.trino.operator;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.trino.spi.Page;
 import io.trino.spi.PageBuilder;
@@ -28,7 +27,6 @@ import io.trino.spi.type.BigintType;
 import io.trino.spi.type.Type;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -59,8 +57,6 @@ public class BigintGroupByHash
     private static final Set<Type> SUPPORTED_TYPES = ImmutableSet.of(BIGINT, INTEGER, SMALLINT, TINYINT, DATE);
 
     private final Type hashType;
-    private final List<Type> hashTypesWithRawHash;
-    private final List<Type> hashTypes;
     private final boolean outputRawHash;
 
     private int hashCapacity;
@@ -92,8 +88,6 @@ public class BigintGroupByHash
 
         this.outputRawHash = outputRawHash;
         this.hashType = hashType;
-        this.hashTypes = ImmutableList.of(hashType);
-        hashTypesWithRawHash = ImmutableList.of(hashType, BIGINT);
 
         hashCapacity = arraySize(expectedSize, FILL_RATIO);
 
@@ -118,12 +112,6 @@ public class BigintGroupByHash
                 values.getSize() +
                 valuesByGroupId.getSize() +
                 preallocatedMemoryInBytes;
-    }
-
-    @Override
-    public List<Type> getTypes()
-    {
-        return outputRawHash ? hashTypesWithRawHash : hashTypes;
     }
 
     @Override
