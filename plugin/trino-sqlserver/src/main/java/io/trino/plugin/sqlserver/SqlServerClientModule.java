@@ -34,7 +34,7 @@ import io.trino.plugin.jdbc.ptf.Procedure;
 import io.trino.plugin.jdbc.ptf.Query;
 import io.trino.plugin.sqlserver.galaxy.GalaxySqlServerSocketFactory;
 import io.trino.spi.connector.CatalogHandle;
-import io.trino.spi.ptf.ConnectorTableFunction;
+import io.trino.spi.function.table.ConnectorTableFunction;
 import io.trino.sshtunnel.SshTunnelConfig;
 import io.trino.sshtunnel.SshTunnelProperties;
 

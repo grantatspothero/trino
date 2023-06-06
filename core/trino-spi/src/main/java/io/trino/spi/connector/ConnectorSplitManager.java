@@ -18,7 +18,7 @@ import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheManager;
 import io.trino.spi.cache.CacheSplitId;
 import io.trino.spi.cache.CacheTableId;
-import io.trino.spi.ptf.ConnectorTableFunctionHandle;
+import io.trino.spi.function.table.ConnectorTableFunctionHandle;
 
 import java.util.Optional;
 
