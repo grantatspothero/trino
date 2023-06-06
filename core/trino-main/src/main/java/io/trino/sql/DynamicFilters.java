@@ -262,7 +262,7 @@ public final class DynamicFilters
             timeout = Optional.empty();
         }
         else if (timeoutExpression instanceof LongLiteral longTimeoutLiteral) {
-            timeout = Optional.of(longTimeoutLiteral.getValue());
+            timeout = Optional.of(longTimeoutLiteral.getParsedValue());
         }
         else {
             throw new IllegalArgumentException(format("timeout is expected to be an instance of LongLiteral or NullLiteral: %s", timeoutExpression.getClass().getSimpleName()));
