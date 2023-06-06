@@ -78,7 +78,8 @@ public class GcsSpooledChunkReader
     }
 
     @Override
-    public void close() throws Exception
+    public void close()
+            throws Exception
     {
         try (Closer closer = Closer.create()) {
             closer.register(executor::shutdown);

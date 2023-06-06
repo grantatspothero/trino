@@ -80,7 +80,8 @@ public class GcsSpoolingStorage
     }
 
     @Override
-    protected int getFileSize(String fileName) throws SpooledChunkNotFoundException
+    protected int getFileSize(String fileName)
+            throws SpooledChunkNotFoundException
     {
         Blob blob = gcsClient.get(BlobId.of(bucketName, fileName));
         if (blob == null) {
@@ -151,7 +152,8 @@ public class GcsSpoolingStorage
     }
 
     @Override
-    public void close() throws Exception
+    public void close()
+            throws Exception
     {
         try (Closer closer = Closer.create()) {
             closer.register(executor::shutdown);

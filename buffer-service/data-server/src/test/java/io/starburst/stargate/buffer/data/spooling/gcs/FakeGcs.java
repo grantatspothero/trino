@@ -58,13 +58,13 @@ public class FakeGcs
                     .build();
             httpClient.execute(request, new ResponseHandler<Response, Exception>() {
                 @Override
-                public Response handleException(Request request, Exception exception) throws Exception
+                public Response handleException(Request request, Exception exception)
                 {
                     throw ResponseHandlerUtils.propagate(request, exception);
                 }
 
                 @Override
-                public Response handle(Request request, Response response) throws Exception
+                public Response handle(Request request, Response response)
                 {
                     if (response.getStatusCode() != 200) {
                         throw new RuntimeException("failed to update fake-gcs-server with external url: " + response);
