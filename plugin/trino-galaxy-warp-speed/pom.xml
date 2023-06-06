@@ -189,7 +189,6 @@
             <groupId>io.trino</groupId>
             <artifactId>trino-galaxy-objectstore</artifactId>
             <type>test-jar</type>
-            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
 
