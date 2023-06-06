@@ -21,8 +21,7 @@ import io.trino.server.metadataonly.MetadataOnlyConfig;
 import io.trino.server.security.AuthenticationException;
 import io.trino.server.security.Authenticator;
 import io.trino.spi.security.Identity;
-
-import javax.ws.rs.container.ContainerRequestContext;
+import jakarta.ws.rs.container.ContainerRequestContext;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -38,7 +37,7 @@ import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType;
 import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.DISPATCH;
 import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.INDEXER;
 import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.PORTAL;
-import static javax.ws.rs.HttpMethod.POST;
+import static jakarta.ws.rs.HttpMethod.POST;
 
 public class GalaxyMetadataAuthenticator
         implements Authenticator

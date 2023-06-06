@@ -26,8 +26,7 @@ import io.trino.plugin.hive.ForHiveMetastore;
 import io.trino.plugin.hive.metastore.HiveMetastoreFactory;
 import io.trino.plugin.hive.metastore.RawHiveMetastoreFactory;
 import io.trino.sshtunnel.SshTunnelConfig;
-
-import javax.annotation.PreDestroy;
+import jakarta.annotation.PreDestroy;
 
 import java.util.concurrent.ExecutorService;
 

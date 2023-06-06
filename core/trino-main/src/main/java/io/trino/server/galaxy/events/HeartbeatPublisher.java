@@ -29,11 +29,10 @@ import io.trino.galaxy.kafka.KafkaPublisherConfig;
 import io.trino.server.galaxy.GalaxyConfig;
 import io.trino.server.galaxy.GalaxyHeartbeatConfig;
 import io.trino.spi.galaxy.CatalogNetworkMonitor;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.weakref.jmx.Managed;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 
 import java.net.URI;
 import java.time.OffsetDateTime;

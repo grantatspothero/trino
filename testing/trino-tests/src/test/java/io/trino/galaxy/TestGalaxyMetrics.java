@@ -22,9 +22,8 @@ import io.trino.Session;
 import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
+import jakarta.ws.rs.core.HttpHeaders;
 import org.testng.annotations.Test;
-
-import javax.ws.rs.core.HttpHeaders;
 
 import java.net.URI;
 

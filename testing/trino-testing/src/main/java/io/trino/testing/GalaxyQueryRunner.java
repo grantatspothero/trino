@@ -32,14 +32,13 @@ import io.trino.server.security.InternalPrincipal;
 import io.trino.server.security.galaxy.GalaxyTrinoSystemAccessFactory;
 import io.trino.spi.Plugin;
 import io.trino.spi.security.Identity;
-
-import javax.annotation.Priority;
-import javax.ws.rs.BadRequestException;
-import javax.ws.rs.ForbiddenException;
-import javax.ws.rs.Priorities;
-import javax.ws.rs.container.ContainerRequestContext;
-import javax.ws.rs.container.ContainerRequestFilter;
-import javax.ws.rs.core.Response;
+import jakarta.annotation.Priority;
+import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.ForbiddenException;
+import jakarta.ws.rs.Priorities;
+import jakarta.ws.rs.container.ContainerRequestContext;
+import jakarta.ws.rs.container.ContainerRequestFilter;
+import jakarta.ws.rs.core.Response;
 
 import java.io.IOException;
 import java.net.URI;
@@ -57,9 +56,9 @@ import static io.trino.server.ServletSecurityUtils.setAuthenticatedIdentity;
 import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.PORTAL;
 import static io.trino.server.security.galaxy.GalaxyIdentity.createIdentity;
 import static io.trino.testing.TestingSession.testSessionBuilder;
+import static jakarta.ws.rs.core.Response.Status.FORBIDDEN;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
-import static javax.ws.rs.core.Response.Status.FORBIDDEN;
 
 /**
  * Query runner to run plugins as they would execute in a Galaxy context (galaxy permissions set up and enabled)

@@ -18,8 +18,7 @@ import com.google.inject.Inject;
 import io.trino.server.security.AuthenticationException;
 import io.trino.server.security.Authenticator;
 import io.trino.spi.security.Identity;
-
-import javax.ws.rs.container.ContainerRequestContext;
+import jakarta.ws.rs.container.ContainerRequestContext;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -29,8 +28,8 @@ import java.util.Optional;
 import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.RequestBodyHashing;
 import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.extractToken;
 import static io.trino.server.security.galaxy.GalaxyAuthenticationHelper.loadPublicKey;
-import static javax.ws.rs.HttpMethod.POST;
-import static javax.ws.rs.HttpMethod.PUT;
+import static jakarta.ws.rs.HttpMethod.POST;
+import static jakarta.ws.rs.HttpMethod.PUT;
 
 public class GalaxyTrinoAuthenticator
         implements Authenticator

@@ -25,11 +25,10 @@ import io.airlift.node.NodeInfo;
 import io.trino.client.GalaxyWorkerHealthStatus;
 import io.trino.server.security.ResourceSecurity;
 import io.trino.server.security.ResourceSecurity.AccessType;
-
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.Response;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.Response;
 
 import java.net.URI;
 import java.util.function.Supplier;
@@ -38,9 +37,9 @@ import static com.google.common.base.Verify.verify;
 import static io.airlift.http.client.HttpUriBuilder.uriBuilderFrom;
 import static io.airlift.http.client.JsonResponseHandler.createJsonResponseHandler;
 import static io.airlift.http.client.Request.Builder.prepareGet;
+import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
+import static jakarta.ws.rs.core.Response.Status.SERVICE_UNAVAILABLE;
 import static java.util.Objects.requireNonNull;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static javax.ws.rs.core.Response.Status.SERVICE_UNAVAILABLE;
 
 @Path("/v1/galaxy/health")
 public class GalaxyWorkerHealthResource

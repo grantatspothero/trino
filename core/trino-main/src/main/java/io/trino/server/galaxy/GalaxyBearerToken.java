@@ -14,8 +14,7 @@
 package io.trino.server.galaxy;
 
 import io.airlift.log.Logger;
-
-import javax.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.HttpHeaders;
 
 import java.util.Optional;
 import java.util.function.UnaryOperator;

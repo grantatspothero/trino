@@ -68,19 +68,17 @@ import io.trino.spi.type.Type;
 import io.trino.tracing.TrinoAttributes;
 import io.trino.transaction.TransactionId;
 import io.trino.util.Failures;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
-import javax.ws.rs.core.UriInfo;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.MultivaluedMap;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -109,12 +107,12 @@ import static io.trino.server.security.galaxy.MetadataAccessControllerSupplier.T
 import static io.trino.spi.StandardErrorCode.EXCEEDED_TIME_LIMIT;
 import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.trino.spi.StandardErrorCode.SERIALIZATION_ERROR;
+import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
+import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN_TYPE;
+import static jakarta.ws.rs.core.Response.Status.BAD_REQUEST;
+import static jakarta.ws.rs.core.Response.Status.FORBIDDEN;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static javax.ws.rs.core.MediaType.TEXT_PLAIN_TYPE;
-import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
-import static javax.ws.rs.core.Response.Status.FORBIDDEN;
 
 @Path("/galaxy/metadata/v1/statement")
 public class MetadataOnlyStatementResource
@@ -175,7 +173,7 @@ public class MetadataOnlyStatementResource
             @Context UriInfo uriInfo)
     {
         if (systemState.isShuttingDown()) {
-            throw new WebApplicationException(Status.SERVICE_UNAVAILABLE);
+            throw new WebApplicationException(Response.Status.SERVICE_UNAVAILABLE);
         }
 
         String statement = request.statement();
@@ -403,7 +401,7 @@ public class MetadataOnlyStatementResource
                 null);
     }
 
-    private static WebApplicationException badRequest(Status status, String message)
+    private static WebApplicationException badRequest(Response.Status status, String message)
     {
         throw new WebApplicationException(
                 Response.status(status)

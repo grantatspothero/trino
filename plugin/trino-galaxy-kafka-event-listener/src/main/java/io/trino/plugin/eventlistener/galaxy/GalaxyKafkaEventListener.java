@@ -28,11 +28,10 @@ import io.trino.galaxy.kafka.KafkaRecord;
 import io.trino.plugin.eventlistener.galaxy.event.GalaxyQueryCompletedEvent;
 import io.trino.spi.eventlistener.EventListener;
 import io.trino.spi.eventlistener.QueryCompletedEvent;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import org.weakref.jmx.Managed;
 import org.weakref.jmx.Nested;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 
 import java.net.URI;
 import java.time.OffsetDateTime;
