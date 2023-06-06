@@ -28,7 +28,6 @@ import io.trino.sql.gen.JoinCompiler;
 
 import java.lang.reflect.Constructor;
 import java.util.List;
-import java.util.Optional;
 
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.trino.SystemSessionProperties.isDictionaryAggregationEnabled;
@@ -63,34 +62,33 @@ public interface GroupByHash
 
     static GroupByHash createGroupByHash(
             Session session,
-            List<? extends Type> hashTypes,
-            int[] hashChannels,
-            Optional<Integer> inputHashChannel,
+            List<Type> types,
+            boolean hasPrecomputedHash,
             int expectedSize,
             JoinCompiler joinCompiler,
             TypeOperators typeOperators,
             UpdateMemory updateMemory)
     {
-        return createGroupByHash(hashTypes, hashChannels, inputHashChannel, expectedSize, isDictionaryAggregationEnabled(session), joinCompiler, typeOperators, updateMemory);
+        boolean dictionaryAggregationEnabled = isDictionaryAggregationEnabled(session);
+        return createGroupByHash(types, hasPrecomputedHash, expectedSize, dictionaryAggregationEnabled, joinCompiler, typeOperators, updateMemory);
     }
 
     static GroupByHash createGroupByHash(
-            List<? extends Type> hashTypes,
-            int[] hashChannels,
-            Optional<Integer> inputHashChannel,
+            List<Type> types,
+            boolean hasPrecomputedHash,
             int expectedSize,
-            boolean processDictionary,
+            boolean dictionaryAggregationEnabled,
             JoinCompiler joinCompiler,
             TypeOperators typeOperators,
             UpdateMemory updateMemory)
     {
         try {
-            if (hashTypes.size() == 1 && BigintGroupByHash.isSupportedType(hashTypes.get(0)) && hashChannels.length == 1) {
-                Type hashType = getOnlyElement(hashTypes);
-                Constructor<? extends GroupByHash> constructor = specializedGroupByHashClasses.getUnchecked(hashType).getConstructor(int.class, boolean.class, int.class, UpdateMemory.class, Type.class);
-                return constructor.newInstance(hashChannels[0], inputHashChannel.isPresent(), expectedSize, updateMemory, hashType);
+            if (types.size() == 1 && BigintGroupByHash.isSupportedType(types.get(0))) {
+                Type hashType = getOnlyElement(types);
+                Constructor<? extends GroupByHash> constructor = specializedGroupByHashClasses.getUnchecked(hashType).getConstructor(boolean.class, int.class, UpdateMemory.class, Type.class);
+                return constructor.newInstance(hasPrecomputedHash, expectedSize, updateMemory, hashType);
             }
-            return new MultiChannelGroupByHash(hashTypes, hashChannels, inputHashChannel, expectedSize, processDictionary, joinCompiler, typeOperators, updateMemory);
+            return new MultiChannelGroupByHash(types, hasPrecomputedHash, expectedSize, dictionaryAggregationEnabled, joinCompiler, typeOperators, updateMemory);
         }
         catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);

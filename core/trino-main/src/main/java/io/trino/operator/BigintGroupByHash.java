@@ -58,7 +58,6 @@ public class BigintGroupByHash
     private static final float FILL_RATIO = 0.75f;
     private static final Set<Type> SUPPORTED_TYPES = ImmutableSet.of(BIGINT, INTEGER, SMALLINT, TINYINT, DATE);
 
-    private final int hashChannel;
     private final Type hashType;
     private final List<Type> hashTypesWithRawHash;
     private final List<Type> hashTypes;
@@ -86,13 +85,11 @@ public class BigintGroupByHash
     private long preallocatedMemoryInBytes;
     private long currentPageSizeInBytes;
 
-    public BigintGroupByHash(int hashChannel, boolean outputRawHash, int expectedSize, UpdateMemory updateMemory, Type hashType)
+    public BigintGroupByHash(boolean outputRawHash, int expectedSize, UpdateMemory updateMemory, Type hashType)
     {
-        checkArgument(hashChannel >= 0, "hashChannel must be at least zero");
         checkArgument(expectedSize > 0, "expectedSize must be greater than zero");
         checkArgument(isSupportedType(hashType), "%s does not support for column of type %s", this.getClass().getSimpleName(), hashType);
 
-        this.hashChannel = hashChannel;
         this.outputRawHash = outputRawHash;
         this.hashType = hashType;
         this.hashTypes = ImmutableList.of(hashType);
@@ -162,7 +159,7 @@ public class BigintGroupByHash
     public Work<?> addPage(Page page)
     {
         currentPageSizeInBytes = page.getRetainedSizeInBytes();
-        Block block = page.getBlock(hashChannel);
+        Block block = page.getBlock(0);
         if (block instanceof RunLengthEncodedBlock rleBlock) {
             return new AddRunLengthEncodedPageWork(rleBlock);
         }
@@ -177,7 +174,7 @@ public class BigintGroupByHash
     public Work<int[]> getGroupIds(Page page)
     {
         currentPageSizeInBytes = page.getRetainedSizeInBytes();
-        Block block = page.getBlock(hashChannel);
+        Block block = page.getBlock(0);
         if (block instanceof RunLengthEncodedBlock rleBlock) {
             return new GetRunLengthEncodedGroupIdsWork(rleBlock);
         }
@@ -191,7 +188,7 @@ public class BigintGroupByHash
     @Override
     public boolean contains(int position, Page page)
     {
-        Block block = page.getBlock(hashChannel);
+        Block block = page.getBlock(0);
         if (block.isNull(position)) {
             return nullGroupId >= 0;
         }
