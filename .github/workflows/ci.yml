@@ -46,6 +46,7 @@ env:
   HEAP_DUMP_RETENTION_DAYS: 14
   # used by actions/cache to retry the download after this time: https://github.com/actions/cache/blob/main/workarounds.md#cache-segment-restore-timeout
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
+  PTL_TMP_DOWNLOAD_PATH: /tmp/pt_java_downloads
 
 # Cancel previous PR builds.
 concurrency:
@@ -1357,7 +1358,7 @@ jobs:
               --output PRINT_WRITE \
               --timeout 105m \
               --bind=off \
-              --trino-jdk-version builtin
+              --trino-jdk-version temurin19
       - name: Upload test results
         uses: actions/upload-artifact@v2
         if: failure() # TODO: Condition on job running.

@@ -17,9 +17,13 @@ import com.google.inject.Inject;
 import io.trino.testing.containers.TestContainers;
 import io.trino.tests.product.launcher.env.EnvironmentOptions;
 
+import static io.trino.tests.product.launcher.Configurations.nameForJdkProvider;
+
 public class Temurin19JdkProvider
         extends TarDownloadingJdkProvider
 {
+    public static final String TEMURIN_19 = nameForJdkProvider(Temurin19JdkProvider.class);
+
     private static final String VERSION = "19.0.2-7";
 
     @Inject
