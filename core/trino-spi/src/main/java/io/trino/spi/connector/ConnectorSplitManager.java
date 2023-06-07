@@ -14,6 +14,8 @@
 package io.trino.spi.connector;
 
 import io.trino.spi.Experimental;
+import io.trino.spi.cache.CacheColumnId;
+import io.trino.spi.cache.CacheManager;
 import io.trino.spi.cache.CacheSplitId;
 import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.ptf.ConnectorTableFunctionHandle;
@@ -42,11 +44,9 @@ public interface ConnectorSplitManager
     }
 
     /**
-     * Returns a unique split identifier. {@link CacheSplitId} should represent raw data
-     * (e.g. tuple of filename and file region). {@link CacheSplitId} together with
-     * {@link CacheTableId} uniquely represents transformations (e.g. filters, aggregations, projections)
-     * that are performed in the context of a split. Same {@link CacheSplitId} can be
-     * used with different {@link CacheTableId}.
+     * Returns a split identifier for the purpose of caching with {@link CacheManager}.
+     * {@link CacheSplitId} together with {@link CacheTableId} and {@link CacheColumnId}s
+     * represents rows produced by {@link ConnectorPageSource} for a given split.
      */
     default Optional<CacheSplitId> getCacheSplitId(ConnectorSplit split)
     {

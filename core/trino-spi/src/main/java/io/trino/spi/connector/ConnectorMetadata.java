@@ -17,6 +17,8 @@ import io.airlift.slice.Slice;
 import io.trino.spi.Experimental;
 import io.trino.spi.TrinoException;
 import io.trino.spi.cache.CacheColumnId;
+import io.trino.spi.cache.CacheManager;
+import io.trino.spi.cache.CacheSplitId;
 import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.expression.Call;
 import io.trino.spi.expression.ConnectorExpression;
@@ -1484,12 +1486,13 @@ public interface ConnectorMetadata
     }
 
     /**
-     * Returns a unique table identifier. {@link CacheTableId} should represent
-     * transformations (e.g. filters, aggregations, projections) that are performed
-     * in the context of a split. For example, predicate (e.g. on partition column)
-     * should not be part of {@link CacheTableId} if it groups splits into fully-read
-     * and fully-skipped buckets. Table version/transaction id should not be part
-     * of {@link CacheTableId}.
+     * Returns a table identifier for the purpose of caching with {@link CacheManager}.
+     * {@link CacheTableId} together with {@link CacheSplitId} and {@link CacheColumnId}s represents
+     * rows produced by {@link ConnectorPageSource} for a given split. Local table properties
+     * (e.g. rows order) must be part of {@link CacheTableId} if they are present. List of selected
+     * columns should not be part of {@link CacheTableId}. {@link CacheTableId} should not contain
+     * elements that can be derived from {@link CacheSplitId} such as predicate on partition column
+     * which can filter splits entirely.
      */
     default Optional<CacheTableId> getCacheTableId(ConnectorTableHandle tableHandle)
     {
@@ -1497,10 +1500,10 @@ public interface ConnectorMetadata
     }
 
     /**
-     * Returns a unique column identifier. {@link CacheColumnId} is unique
-     * only in the context of related {@link CacheTableId}. {@link CacheColumnId}
-     * can represent simple column reference or more complex reference
-     * (e.g. map or array dereference expressions).
+     * Returns a column identifier for the purpose of caching with {@link CacheManager}.
+     * {@link CacheTableId} together with {@link CacheSplitId} and {@link CacheColumnId}s represents
+     * rows produced by {@link ConnectorPageSource} for a given split. {@link CacheColumnId} can represent
+     * simple, base column or more complex reference (e.g. map or array dereference expressions).
      */
     default Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
     {
