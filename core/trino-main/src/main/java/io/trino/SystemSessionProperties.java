@@ -216,6 +216,7 @@ public final class SystemSessionProperties
     public static final String CACHE_PROJECTIONS_ENABLED = "cache_projections_enabled";
     public static final String CACHE_MAX_SPLIT_SIZE = "cache_max_split_size";
     public static final String PAGE_PARTITIONING_BUFFER_POOL_SIZE = "page_partitioning_buffer_pool_size";
+    public static final String COLUMNAR_FILTER_EVALUATION_ENABLED = "columnar_filter_evaluation_enabled";
 
     private final List<PropertyMetadata<?>> sessionProperties;
 
@@ -1111,6 +1112,11 @@ public final class SystemSessionProperties
                         "Max size of cached split",
                         cacheConfig.getMaxSplitSize(),
                         true),
+                booleanProperty(
+                        COLUMNAR_FILTER_EVALUATION_ENABLED,
+                        "Enables columnar evaluation of filters",
+                        featuresConfig.isColumnarFilterEvaluationEnabled(),
+                        false),
                 integerProperty(PAGE_PARTITIONING_BUFFER_POOL_SIZE,
                         "Maximum number of free buffers in the per task partitioned page buffer pool. Setting this to zero effectively disables the pool",
                         taskManagerConfig.getPagePartitioningBufferPoolSize(),
@@ -1991,5 +1997,10 @@ public final class SystemSessionProperties
     public static int getPagePartitioningBufferPoolSize(Session session)
     {
         return session.getSystemProperty(PAGE_PARTITIONING_BUFFER_POOL_SIZE, Integer.class);
+    }
+
+    public static boolean isColumnarFilterEvaluationEnabled(Session session)
+    {
+        return session.getSystemProperty(COLUMNAR_FILTER_EVALUATION_ENABLED, Boolean.class);
     }
 }

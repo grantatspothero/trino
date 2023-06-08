@@ -25,6 +25,7 @@ import io.trino.spi.type.SqlDecimal;
 import io.trino.spi.type.Type;
 import io.trino.sql.gen.ExpressionCompiler;
 import io.trino.sql.gen.PageFunctionCompiler;
+import io.trino.sql.gen.columnar.ColumnarFilterCompiler;
 import io.trino.sql.planner.Symbol;
 import io.trino.sql.planner.TypeAnalyzer;
 import io.trino.sql.planner.TypeProvider;
@@ -603,7 +604,11 @@ public class BenchmarkDecimalOperators
 
         protected void generateProcessor(String expression)
         {
-            processor = new ExpressionCompiler(PLANNER_CONTEXT.getFunctionManager(), new PageFunctionCompiler(PLANNER_CONTEXT.getFunctionManager(), 0)).compilePageProcessor(Optional.empty(), ImmutableList.of(rowExpression(expression))).get();
+            processor = new ExpressionCompiler(
+                    PLANNER_CONTEXT.getFunctionManager(),
+                    new PageFunctionCompiler(PLANNER_CONTEXT.getFunctionManager(), 0),
+                    new ColumnarFilterCompiler(PLANNER_CONTEXT.getFunctionManager(), 0))
+                    .compilePageProcessor(Optional.empty(), ImmutableList.of(rowExpression(expression))).get();
         }
 
         protected void setDoubleMaxValue(double doubleMaxValue)
