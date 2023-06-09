@@ -56,7 +56,6 @@ public class TestObjectStoreDeltaConnectorTest
 
         switch (connectorBehavior) {
             case SUPPORTS_RENAME_SCHEMA: // ObjectStore supports this via Hive connector
-            case SUPPORTS_COMMENT_ON_VIEW_COLUMN: // ObjectStore supports this via Hive connector
                 // when this fails remove the `case` for given flag
                 verify(!connectorHasBehavior, "Unexpected support for: %s", connectorBehavior);
                 return true;
