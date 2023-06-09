@@ -20,6 +20,7 @@ import io.starburst.schema.discovery.formats.orc.CopiedHdfsOrcDataSource;
 import io.starburst.schema.discovery.formats.orc.OrcDataSourceFactory;
 import io.starburst.schema.discovery.formats.parquet.CopiedHdfsParquetDataSource;
 import io.starburst.schema.discovery.formats.parquet.ParquetDataSourceFactory;
+import io.starburst.schema.discovery.generation.Dialect;
 import io.starburst.schema.discovery.io.DiscoveryFileSystem;
 import io.starburst.schema.discovery.trino.system.table.DiscoveryLocationAccessControlAdapter;
 import io.starburst.schema.discovery.trino.system.table.SchemaDiscoverySystemTable;
@@ -104,6 +105,6 @@ public class SchemaDiscoverySystemTableProvider
         };
         OrcDataSourceFactory orcDataSourceFactory = (id, size, options, inputStream) -> new CopiedHdfsOrcDataSource(id, size, options, inputStream, new FileFormatDataSourceStats());
         ParquetDataSourceFactory parquetDataSourceFactory = (id, estimatedSize, inputStream) -> new CopiedHdfsParquetDataSource(id, estimatedSize, inputStream, new FileFormatDataSourceStats(), new ParquetReaderOptions());
-        return new SchemaDiscoveryController(fileSystemProvider, parquetDataSourceFactory, orcDataSourceFactory, executor);
+        return new SchemaDiscoveryController(fileSystemProvider, parquetDataSourceFactory, orcDataSourceFactory, Dialect.GALAXY, executor);
     }
 }
