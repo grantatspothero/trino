@@ -37,6 +37,8 @@ import io.trino.plugin.iceberg.IcebergWritableTableHandle;
 import io.trino.plugin.iceberg.procedure.IcebergTableExecuteHandle;
 import io.trino.spi.ErrorCodeSupplier;
 import io.trino.spi.TrinoException;
+import io.trino.spi.cache.CacheColumnId;
+import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.AggregateFunction;
 import io.trino.spi.connector.AggregationApplicationResult;
 import io.trino.spi.connector.BeginTableExecuteResult;
@@ -1009,6 +1011,18 @@ public class ObjectStoreMetadata
     {
         // only implemented by the Hive connector
         hiveMetadata.cleanupQuery(unwrap(HIVE, session));
+    }
+
+    @Override
+    public Optional<CacheTableId> getCacheTableId(ConnectorTableHandle tableHandle)
+    {
+        return delegate(tableType(tableHandle)).getCacheTableId(tableHandle);
+    }
+
+    @Override
+    public Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
+    {
+        return delegate(tableType(tableHandle)).getCacheColumnId(tableHandle, columnHandle);
     }
 
     private void flushMetadataCache(ConnectorSession session)

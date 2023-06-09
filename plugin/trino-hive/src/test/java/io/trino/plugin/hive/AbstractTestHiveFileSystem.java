@@ -39,6 +39,7 @@ import io.trino.plugin.hive.fs.TrinoFileStatus;
 import io.trino.plugin.hive.metastore.Column;
 import io.trino.plugin.hive.metastore.Database;
 import io.trino.plugin.hive.metastore.ForwardingHiveMetastore;
+import io.trino.plugin.hive.metastore.HiveCacheTableId;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hive.metastore.HiveMetastoreConfig;
 import io.trino.plugin.hive.metastore.HiveMetastoreFactory;
@@ -96,6 +97,7 @@ import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static io.airlift.concurrent.MoreFutures.getFutureValue;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
+import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.trino.hdfs.FileSystemUtils.getRawFileSystem;
 import static io.trino.plugin.hive.AbstractTestHive.createTableProperties;
 import static io.trino.plugin.hive.AbstractTestHive.filterNonHiddenColumnHandles;
@@ -200,7 +202,7 @@ public abstract class AbstractTestHiveFileSystem
                 getBasePath(),
                 hdfsEnvironment);
         locationService = new HiveLocationService(hdfsEnvironment, config);
-        JsonCodec<PartitionUpdate> partitionUpdateCodec = JsonCodec.jsonCodec(PartitionUpdate.class);
+        JsonCodec<PartitionUpdate> partitionUpdateCodec = jsonCodec(PartitionUpdate.class);
         metadataFactory = new HiveMetadataFactory(
                 LocationAccessControl.ALLOW_ALL,
                 new CatalogName("hive"),
@@ -225,6 +227,8 @@ public abstract class AbstractTestHiveFileSystem
                 SqlStandardAccessControlMetadata::new,
                 new FileSystemDirectoryLister(),
                 new PartitionProjectionService(config, ImmutableMap.of(), new TestingTypeManager()),
+                jsonCodec(HiveCacheTableId.class),
+                jsonCodec(HiveColumnHandle.class),
                 true);
         transactionManager = new HiveTransactionManager(metadataFactory);
         splitManager = new HiveSplitManager(
@@ -244,6 +248,7 @@ public abstract class AbstractTestHiveFileSystem
                 config.getMaxSplitsPerSecond(),
                 config.getRecursiveDirWalkerEnabled(),
                 TESTING_TYPE_MANAGER,
+                jsonCodec(HiveCacheSplitId.class),
                 config.getMaxPartitionsPerScan());
         TypeOperators typeOperators = new TypeOperators();
         BlockTypeOperators blockTypeOperators = new BlockTypeOperators(typeOperators);

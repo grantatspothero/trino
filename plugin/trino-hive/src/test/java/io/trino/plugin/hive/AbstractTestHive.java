@@ -40,6 +40,7 @@ import io.trino.plugin.hive.fs.TrinoFileStatus;
 import io.trino.plugin.hive.fs.TrinoFileStatusRemoteIterator;
 import io.trino.plugin.hive.line.LinePageSource;
 import io.trino.plugin.hive.metastore.Column;
+import io.trino.plugin.hive.metastore.HiveCacheTableId;
 import io.trino.plugin.hive.metastore.HiveColumnStatistics;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hive.metastore.HiveMetastoreFactory;
@@ -193,6 +194,7 @@ import static com.google.common.io.MoreFiles.deleteRecursively;
 import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
 import static io.airlift.concurrent.MoreFutures.getFutureValue;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
+import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.airlift.slice.Slices.utf8Slice;
 import static io.airlift.testing.Assertions.assertGreaterThan;
 import static io.airlift.testing.Assertions.assertGreaterThanOrEqual;
@@ -823,7 +825,7 @@ public abstract class AbstractTestHive
         hdfsEnvironment = hdfsConfiguration;
         HivePartitionManager partitionManager = new HivePartitionManager(hiveConfig);
         locationService = new HiveLocationService(hdfsEnvironment, hiveConfig);
-        JsonCodec<PartitionUpdate> partitionUpdateCodec = JsonCodec.jsonCodec(PartitionUpdate.class);
+        JsonCodec<PartitionUpdate> partitionUpdateCodec = jsonCodec(PartitionUpdate.class);
         countingDirectoryLister = new CountingDirectoryLister();
         metadataFactory = new HiveMetadataFactory(
                 LocationAccessControl.ALLOW_ALL,
@@ -889,6 +891,8 @@ public abstract class AbstractTestHive
                 DataSize.of(1, MEGABYTE),
                 new PartitionProjectionService(hiveConfig, ImmutableMap.of(), new TestingTypeManager()),
                 true,
+                jsonCodec(HiveCacheTableId.class),
+                jsonCodec(HiveColumnHandle.class),
                 HiveTimestampPrecision.DEFAULT_PRECISION);
         transactionManager = new HiveTransactionManager(metadataFactory);
         splitManager = new HiveSplitManager(
@@ -908,6 +912,7 @@ public abstract class AbstractTestHive
                 hiveConfig.getMaxSplitsPerSecond(),
                 false,
                 TESTING_TYPE_MANAGER,
+                jsonCodec(HiveCacheSplitId.class),
                 hiveConfig.getMaxPartitionsPerScan());
         pageSinkProvider = new HivePageSinkProvider(
                 getDefaultHiveFileWriterFactories(hiveConfig, hdfsEnvironment),
@@ -6053,7 +6058,7 @@ public abstract class AbstractTestHive
                 assertEquals(tag, COMMIT);
 
                 if (conflictTrigger.isPresent()) {
-                    JsonCodec<PartitionUpdate> partitionUpdateCodec = JsonCodec.jsonCodec(PartitionUpdate.class);
+                    JsonCodec<PartitionUpdate> partitionUpdateCodec = jsonCodec(PartitionUpdate.class);
                     List<PartitionUpdate> partitionUpdates = fragments.stream()
                             .map(Slice::getBytes)
                             .map(partitionUpdateCodec::fromJson)

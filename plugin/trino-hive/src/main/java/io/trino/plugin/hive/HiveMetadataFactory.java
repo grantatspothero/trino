@@ -23,6 +23,7 @@ import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.hive.aws.athena.PartitionProjectionService;
 import io.trino.plugin.hive.fs.DirectoryLister;
 import io.trino.plugin.hive.fs.TransactionScopeCachingDirectoryLister;
+import io.trino.plugin.hive.metastore.HiveCacheTableId;
 import io.trino.plugin.hive.metastore.HiveMetastoreConfig;
 import io.trino.plugin.hive.metastore.HiveMetastoreFactory;
 import io.trino.plugin.hive.metastore.SemiTransactionalHiveMetastore;
@@ -81,6 +82,8 @@ public class HiveMetadataFactory
     private final DataSize perTransactionFileStatusCacheMaximumDataSize;
     private final PartitionProjectionService partitionProjectionService;
     private final boolean allowTableRename;
+    private final JsonCodec<HiveCacheTableId> tableIdCodec;
+    private final JsonCodec<HiveColumnHandle> columnHandleCodec;
     private final HiveTimestampPrecision hiveViewsTimestampPrecision;
 
     @Inject
@@ -106,6 +109,8 @@ public class HiveMetadataFactory
             AccessControlMetadataFactory accessControlMetadataFactory,
             DirectoryLister directoryLister,
             PartitionProjectionService partitionProjectionService,
+            JsonCodec<HiveCacheTableId> tableIdCodec,
+            JsonCodec<HiveColumnHandle> columnHandleCodec,
             @AllowHiveTableRename boolean allowTableRename)
     {
         this(
@@ -144,6 +149,8 @@ public class HiveMetadataFactory
                 hiveConfig.getPerTransactionFileStatusCacheMaxRetainedSize(),
                 partitionProjectionService,
                 allowTableRename,
+                tableIdCodec,
+                columnHandleCodec,
                 hiveConfig.getTimestampPrecision());
     }
 
@@ -183,6 +190,8 @@ public class HiveMetadataFactory
             DataSize perTransactionFileStatusCacheMaximumDataSize,
             PartitionProjectionService partitionProjectionService,
             boolean allowTableRename,
+            JsonCodec<HiveCacheTableId> tableIdCodec,
+            JsonCodec<HiveColumnHandle> columnHandleCodec,
             HiveTimestampPrecision hiveViewsTimestampPrecision)
     {
         this.locationAccessControl = requireNonNull(locationAccessControl, "locationAccessControl is null");
@@ -227,6 +236,8 @@ public class HiveMetadataFactory
         this.perTransactionFileStatusCacheMaximumDataSize = requireNonNull(perTransactionFileStatusCacheMaximumDataSize, "perTransactionFileStatusCacheMaximumDataSize is null");
         this.partitionProjectionService = requireNonNull(partitionProjectionService, "partitionProjectionService is null");
         this.allowTableRename = allowTableRename;
+        this.tableIdCodec = requireNonNull(tableIdCodec, "tableIdCodec is null");
+        this.columnHandleCodec = requireNonNull(columnHandleCodec, "columnHandleCodec is null");
         this.hiveViewsTimestampPrecision = requireNonNull(hiveViewsTimestampPrecision, "hiveViewsTimestampPrecision is null");
     }
 
@@ -284,6 +295,8 @@ public class HiveMetadataFactory
                 partitionProjectionService,
                 allowTableRename,
                 maxPartitionDropsPerQuery,
+                tableIdCodec,
+                columnHandleCodec,
                 hiveViewsTimestampPrecision);
     }
 }

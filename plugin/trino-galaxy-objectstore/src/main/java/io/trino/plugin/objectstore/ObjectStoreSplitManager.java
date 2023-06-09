@@ -14,11 +14,17 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.base.VerifyException;
+import io.trino.plugin.deltalake.DeltaLakeSplit;
 import io.trino.plugin.deltalake.DeltaLakeTableHandle;
+import io.trino.plugin.hive.HiveSplit;
 import io.trino.plugin.hive.HiveTableHandle;
+import io.trino.plugin.hudi.HudiSplit;
 import io.trino.plugin.hudi.HudiTableHandle;
+import io.trino.plugin.iceberg.IcebergSplit;
 import io.trino.plugin.iceberg.IcebergTableHandle;
+import io.trino.spi.cache.CacheSplitId;
 import io.trino.spi.connector.ConnectorSession;
+import io.trino.spi.connector.ConnectorSplit;
 import io.trino.spi.connector.ConnectorSplitManager;
 import io.trino.spi.connector.ConnectorSplitSource;
 import io.trino.spi.connector.ConnectorTableHandle;
@@ -27,6 +33,8 @@ import io.trino.spi.connector.Constraint;
 import io.trino.spi.connector.DynamicFilter;
 
 import javax.inject.Inject;
+
+import java.util.Optional;
 
 import static io.trino.plugin.objectstore.TableType.DELTA;
 import static io.trino.plugin.objectstore.TableType.HIVE;
@@ -75,6 +83,24 @@ public class ObjectStoreSplitManager
             return hudiSplitManager.getSplits(transaction.getHudiHandle(), unwrap(HUDI, session), table, dynamicFilter, constraint);
         }
         throw new VerifyException("Unhandled class: " + table.getClass().getName());
+    }
+
+    @Override
+    public Optional<CacheSplitId> getCacheSplitId(ConnectorSplit split)
+    {
+        if (split instanceof HiveSplit) {
+            return hiveSplitManager.getCacheSplitId(split);
+        }
+        if (split instanceof IcebergSplit) {
+            return icebergSplitManager.getCacheSplitId(split);
+        }
+        if (split instanceof DeltaLakeSplit) {
+            return deltaSplitManager.getCacheSplitId(split);
+        }
+        if (split instanceof HudiSplit) {
+            return hudiSplitManager.getCacheSplitId(split);
+        }
+        throw new VerifyException("Unhandled class: " + split.getClass().getName());
     }
 
     private ConnectorSession unwrap(TableType tableType, ConnectorSession session)

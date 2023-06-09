@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
 import io.airlift.concurrent.BoundedExecutor;
+import io.airlift.json.JsonCodec;
 import io.airlift.stats.CounterStat;
 import io.airlift.units.DataSize;
 import io.trino.filesystem.TrinoFileSystemFactory;
@@ -31,9 +32,12 @@ import io.trino.plugin.hive.metastore.SortingColumn;
 import io.trino.plugin.hive.metastore.Table;
 import io.trino.plugin.hive.util.HiveBucketing.HiveBucketFilter;
 import io.trino.plugin.hive.util.HiveUtil;
+import io.trino.spi.SplitWeight;
 import io.trino.spi.TrinoException;
 import io.trino.spi.VersionEmbedder;
+import io.trino.spi.cache.CacheSplitId;
 import io.trino.spi.connector.ConnectorSession;
+import io.trino.spi.connector.ConnectorSplit;
 import io.trino.spi.connector.ConnectorSplitManager;
 import io.trino.spi.connector.ConnectorSplitSource;
 import io.trino.spi.connector.ConnectorTableHandle;
@@ -63,6 +67,7 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Iterators.peekingIterator;
 import static com.google.common.collect.Iterators.singletonIterator;
 import static com.google.common.collect.Iterators.transform;
@@ -92,6 +97,7 @@ import static io.trino.spi.connector.FixedSplitSource.emptySplitSource;
 import static java.lang.Math.min;
 import static java.lang.String.format;
 import static java.util.Collections.emptyIterator;
+import static java.util.Comparator.comparing;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 
@@ -117,6 +123,7 @@ public class HiveSplitManager
     private final boolean recursiveDfsWalkerEnabled;
     private final CounterStat highMemorySplitSourceCounter;
     private final TypeManager typeManager;
+    private final JsonCodec<HiveCacheSplitId> splitIdCodec;
     private final int maxPartitionsPerScan;
 
     @Inject
@@ -129,7 +136,8 @@ public class HiveSplitManager
             HdfsEnvironment hdfsEnvironment,
             ExecutorService executorService,
             VersionEmbedder versionEmbedder,
-            TypeManager typeManager)
+            TypeManager typeManager,
+            JsonCodec<HiveCacheSplitId> splitIdCodec)
     {
         this(
                 transactionManager,
@@ -148,6 +156,7 @@ public class HiveSplitManager
                 hiveConfig.getMaxSplitsPerSecond(),
                 hiveConfig.getRecursiveDirWalkerEnabled(),
                 typeManager,
+                splitIdCodec,
                 hiveConfig.getMaxPartitionsPerScan());
     }
 
@@ -168,6 +177,7 @@ public class HiveSplitManager
             @Nullable Integer maxSplitsPerSecond,
             boolean recursiveDfsWalkerEnabled,
             TypeManager typeManager,
+            JsonCodec<HiveCacheSplitId> splitIdCodec,
             int maxPartitionsPerScan)
     {
         this.transactionManager = requireNonNull(transactionManager, "transactionManager is null");
@@ -187,6 +197,7 @@ public class HiveSplitManager
         this.maxSplitsPerSecond = firstNonNull(maxSplitsPerSecond, Integer.MAX_VALUE);
         this.recursiveDfsWalkerEnabled = recursiveDfsWalkerEnabled;
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
+        this.splitIdCodec = requireNonNull(splitIdCodec, "splitIdCodec is null");
         this.maxPartitionsPerScan = maxPartitionsPerScan;
     }
 
@@ -289,6 +300,67 @@ public class HiveSplitManager
         hiveSplitLoader.start(splitSource);
 
         return splitSource;
+    }
+
+    @Override
+    public Optional<CacheSplitId> getCacheSplitId(ConnectorSplit split)
+    {
+        HiveSplit hiveSplit = (HiveSplit) split;
+
+        if (hiveSplit.getAcidInfo().isPresent()) {
+            // skip caching of transactional tables as transactions affect how split rows are read
+            return Optional.empty();
+        }
+
+        // ensure cache id generation is revisited whenever handle classes change
+        hiveSplit = new HiveSplit(
+                // database and table names are already part of table id
+                hiveSplit.getDatabase(),
+                hiveSplit.getTable(),
+                hiveSplit.getPartitionName(),
+                hiveSplit.getPath(),
+                hiveSplit.getStart(),
+                hiveSplit.getLength(),
+                hiveSplit.getEstimatedFileSize(),
+                hiveSplit.getFileModifiedTime(),
+                hiveSplit.getSchema(),
+                hiveSplit.getPartitionKeys(),
+                // addresses can be ignored
+                ImmutableList.of(),
+                hiveSplit.getReadBucketNumber(),
+                hiveSplit.getTableBucketNumber(),
+                // statement id is currently unused
+                0,
+                // force local scheduling can be skipped
+                false,
+                hiveSplit.getTableToPartitionMapping(),
+                hiveSplit.getBucketConversion(),
+                hiveSplit.getBucketValidation(),
+                hiveSplit.isS3SelectPushdownEnabled(),
+                Optional.empty(),
+                // split number is currently unused
+                0,
+                // weight does not impact split rows
+                SplitWeight.standard());
+
+        return Optional.of(new CacheSplitId(splitIdCodec.toJson(new HiveCacheSplitId(
+                hiveSplit.getPath(),
+                hiveSplit.getStart(),
+                hiveSplit.getLength(),
+                hiveSplit.getEstimatedFileSize(),
+                hiveSplit.getFileModifiedTime(),
+                hiveSplit.getPartitionKeys(),
+                hiveSplit.getPartitionName(),
+                hiveSplit.getReadBucketNumber(),
+                hiveSplit.getTableBucketNumber(),
+                hiveSplit.getTableToPartitionMapping(),
+                hiveSplit.getBucketConversion(),
+                hiveSplit.getBucketValidation(),
+                hiveSplit.isS3SelectPushdownEnabled(),
+                // order schema keys to canonicalize schema map
+                hiveSplit.getSchema().entrySet().stream()
+                        .sorted(comparing(entry -> (entry.getKey().toString())))
+                        .collect(toImmutableMap(entry -> entry.getKey().toString(), entry -> entry.getValue().toString()))))));
     }
 
     @Managed

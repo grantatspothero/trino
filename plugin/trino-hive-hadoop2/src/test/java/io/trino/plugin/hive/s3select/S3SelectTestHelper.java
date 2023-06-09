@@ -34,6 +34,8 @@ import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.hive.AbstractTestHiveFileSystem.TestingHiveMetastore;
 import io.trino.plugin.hive.DefaultHiveMaterializedViewMetadataFactory;
 import io.trino.plugin.hive.GenericHiveRecordCursorProvider;
+import io.trino.plugin.hive.HiveCacheSplitId;
+import io.trino.plugin.hive.HiveColumnHandle;
 import io.trino.plugin.hive.HiveConfig;
 import io.trino.plugin.hive.HiveLocationService;
 import io.trino.plugin.hive.HiveMetadataFactory;
@@ -49,6 +51,7 @@ import io.trino.plugin.hive.PartitionsSystemTableProvider;
 import io.trino.plugin.hive.PropertiesSystemTableProvider;
 import io.trino.plugin.hive.aws.athena.PartitionProjectionService;
 import io.trino.plugin.hive.fs.FileSystemDirectoryLister;
+import io.trino.plugin.hive.metastore.HiveCacheTableId;
 import io.trino.plugin.hive.metastore.HiveMetastoreConfig;
 import io.trino.plugin.hive.metastore.HiveMetastoreFactory;
 import io.trino.plugin.hive.metastore.thrift.BridgingHiveMetastore;
@@ -165,6 +168,8 @@ public class S3SelectTestHelper
                 SqlStandardAccessControlMetadata::new,
                 new FileSystemDirectoryLister(),
                 new PartitionProjectionService(this.hiveConfig, ImmutableMap.of(), new TestingTypeManager()),
+                JsonCodec.jsonCodec(HiveCacheTableId.class),
+                JsonCodec.jsonCodec(HiveColumnHandle.class),
                 true);
         transactionManager = new HiveTransactionManager(metadataFactory);
 
@@ -185,6 +190,7 @@ public class S3SelectTestHelper
                 this.hiveConfig.getMaxSplitsPerSecond(),
                 this.hiveConfig.getRecursiveDirWalkerEnabled(),
                 TESTING_TYPE_MANAGER,
+                JsonCodec.jsonCodec(HiveCacheSplitId.class),
                 this.hiveConfig.getMaxPartitionsPerScan());
 
         pageSourceProvider = new HivePageSourceProvider(

@@ -41,6 +41,7 @@ import io.trino.plugin.hive.line.SimpleSequenceFilePageSourceFactory;
 import io.trino.plugin.hive.line.SimpleSequenceFileWriterFactory;
 import io.trino.plugin.hive.line.SimpleTextFilePageSourceFactory;
 import io.trino.plugin.hive.line.SimpleTextFileWriterFactory;
+import io.trino.plugin.hive.metastore.HiveCacheTableId;
 import io.trino.plugin.hive.metastore.HiveMetastoreConfig;
 import io.trino.plugin.hive.metastore.thrift.TranslateHiveViews;
 import io.trino.plugin.hive.orc.OrcFileWriterFactory;
@@ -154,6 +155,11 @@ public class HiveModule
         recordCursorProviderBinder.addBinding().to(S3SelectRecordCursorProvider.class).in(Scopes.SINGLETON);
 
         binder.bind(GenericHiveRecordCursorProvider.class).in(Scopes.SINGLETON);
+
+        // for table handle, column handle and split ids
+        jsonCodecBinder(binder).bindJsonCodec(HiveCacheTableId.class);
+        jsonCodecBinder(binder).bindJsonCodec(HiveCacheSplitId.class);
+        jsonCodecBinder(binder).bindJsonCodec(HiveColumnHandle.class);
 
         Multibinder<HiveFileWriterFactory> fileWriterFactoryBinder = newSetBinder(binder, HiveFileWriterFactory.class);
         binder.bind(OrcFileWriterFactory.class).in(Scopes.SINGLETON);
