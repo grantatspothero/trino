@@ -2602,9 +2602,6 @@
                         <exclude>**/*jmhTest*.java</exclude>
                         <exclude>**/*jmhType*.java</exclude>
                     </excludes>
-                    <systemPropertyVariables>
-                        <stargate.version>${dep.stargate.version}</stargate.version>
-                    </systemPropertyVariables>
                 </configuration>
             </plugin>
         </plugins>

@@ -13,10 +13,27 @@
  */
 package io.trino.server.galaxy;
 
+import com.google.common.io.Resources;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 public final class GalaxyImageConstants
 {
-    public static final String STARGATE_IMAGE_TAG = System.getProperty("stargate.version");
+    public static final String STARGATE_IMAGE_TAG = loadStargateVersion();
     public static final String STARGATE_DOCKER_REPO = "179619298502.dkr.ecr.us-east-1.amazonaws.com/galaxy/";
 
     private GalaxyImageConstants() {}
+
+    private static String loadStargateVersion()
+    {
+        try {
+            return Resources.toString(Resources.getResource("testing-stargate-version.txt"), UTF_8).trim();
+        }
+        catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
 }

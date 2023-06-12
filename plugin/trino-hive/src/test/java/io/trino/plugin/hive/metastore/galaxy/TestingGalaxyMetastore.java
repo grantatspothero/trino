@@ -34,6 +34,7 @@ import java.util.Map;
 
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.trino.server.galaxy.GalaxyImageConstants.STARGATE_IMAGE_TAG;
 import static io.trino.testing.containers.galaxy.PemUtils.getCertFile;
 import static io.trino.testing.containers.galaxy.PemUtils.getHostNameFromPem;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -43,9 +44,8 @@ import static org.testcontainers.containers.wait.strategy.Wait.forLogMessage;
 public class TestingGalaxyMetastore
         implements Closeable
 {
-    private static final String IMAGE_TAG = System.getProperty("stargate.version");
     private static final String DOCKER_REPO = "179619298502.dkr.ecr.us-east-1.amazonaws.com/galaxy/";
-    private static final String METASTORE_IMAGE = DOCKER_REPO + "metastore-server:" + IMAGE_TAG;
+    private static final String METASTORE_IMAGE = DOCKER_REPO + "metastore-server:" + STARGATE_IMAGE_TAG;
 
     private final Closer closer = Closer.create();
     private final URI metastoreUri;

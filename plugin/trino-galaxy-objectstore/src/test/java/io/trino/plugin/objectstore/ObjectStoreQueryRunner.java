@@ -14,7 +14,6 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Resources;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.airlift.log.Logger;
 import io.airlift.log.Logging;
@@ -36,12 +35,8 @@ import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.GalaxyQueryRunner;
 import io.trino.tpch.TpchTable;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.airlift.testing.Closeables.closeAllSuppress;
@@ -58,7 +53,6 @@ public final class ObjectStoreQueryRunner
 {
     private static final String CATALOG = "objectstore";
     private static final String TPCH_SCHEMA = "tpch";
-    private static final String STARGATE_VERSION_PROPERTY_KEY = "stargate.version";
 
     private ObjectStoreQueryRunner() {}
 
@@ -258,21 +252,6 @@ public final class ObjectStoreQueryRunner
                 .build();
     }
 
-    private static void loadNecessaryProperties()
-    {
-        Properties properties = new Properties();
-        try {
-            try (InputStream stream = Resources.getResource("objectstore.properties").openStream()) {
-                properties.load(stream);
-            }
-        }
-        catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-        // stargate.version is required by io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore
-        System.setProperty(STARGATE_VERSION_PROPERTY_KEY, properties.getProperty(STARGATE_VERSION_PROPERTY_KEY));
-    }
-
     public static final class ObjectStoreIcebergQueryRunner
     {
         private ObjectStoreIcebergQueryRunner() {}
@@ -281,7 +260,6 @@ public final class ObjectStoreQueryRunner
                 throws Exception
         {
             Logging.initialize();
-            loadNecessaryProperties();
 
             MinioStorage minio = new MinioStorage("test-bucket");
             GalaxyCockroachContainer cockroach = new GalaxyCockroachContainer();
@@ -315,7 +293,6 @@ public final class ObjectStoreQueryRunner
                 throws Exception
         {
             Logging.initialize();
-            loadNecessaryProperties();
 
             MinioStorage minio = new MinioStorage("test-bucket");
             GalaxyCockroachContainer cockroach = new GalaxyCockroachContainer();
@@ -349,7 +326,6 @@ public final class ObjectStoreQueryRunner
                 throws Exception
         {
             Logging.initialize();
-            loadNecessaryProperties();
 
             MinioStorage minio = new MinioStorage("test-bucket");
             GalaxyCockroachContainer cockroach = new GalaxyCockroachContainer();
@@ -383,7 +359,6 @@ public final class ObjectStoreQueryRunner
                 throws Exception
         {
             Logging.initialize();
-            loadNecessaryProperties();
 
             MinioStorage minio = new MinioStorage("test-bucket");
             GalaxyCockroachContainer cockroach = new GalaxyCockroachContainer();
