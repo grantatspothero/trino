@@ -34,10 +34,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Parameters;
 
-import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -75,6 +73,7 @@ public class TestDeltaLakeGcsConnectorSmokeTest
     private final String gcpCredentialKey;
 
     private Path gcpCredentialsFile;
+    private String gcpCredentials;
     private TrinoFileSystem fileSystem;
 
     @Parameters({"testing.gcp-storage-bucket", "testing.gcp-credentials-key"})
@@ -87,13 +86,13 @@ public class TestDeltaLakeGcsConnectorSmokeTest
     @Override
     protected void environmentSetup()
     {
-        InputStream jsonKey = new ByteArrayInputStream(Base64.getDecoder().decode(gcpCredentialKey));
+        byte[] jsonKeyBytes = Base64.getDecoder().decode(gcpCredentialKey);
+        gcpCredentials = new String(jsonKeyBytes, UTF_8);
         try {
             this.gcpCredentialsFile = Files.createTempFile("gcp-credentials", ".json", READ_ONLY_PERMISSIONS);
             gcpCredentialsFile.toFile().deleteOnExit();
-            Files.write(gcpCredentialsFile, jsonKey.readAllBytes());
-
-            HiveGcsConfig gcsConfig = new HiveGcsConfig().setJsonKeyFilePath(gcpCredentialsFile.toAbsolutePath().toString());
+            Files.write(gcpCredentialsFile, jsonKeyBytes);
+            HiveGcsConfig gcsConfig = new HiveGcsConfig().setJsonKey(gcpCredentials);
             Configuration configuration = ConfigurationInstantiator.newEmptyConfiguration();
             new GoogleGcsConfigurationInitializer(gcsConfig).initializeConfiguration(configuration);
         }
@@ -149,7 +148,7 @@ public class TestDeltaLakeGcsConnectorSmokeTest
                 ImmutableMap.of(),
                 ImmutableMap.<String, String>builder()
                         .putAll(connectorProperties)
-                        .put("hive.gcs.json-key-file-path", gcpCredentialsFile.toAbsolutePath().toString())
+                        .put("hive.gcs.json-key", gcpCredentials)
                         .put("delta.unique-table-location", "false")
                         .buildOrThrow(),
                 hiveMinioDataLake.getHiveHadoop(),

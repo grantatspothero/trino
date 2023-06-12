@@ -40,9 +40,7 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -87,11 +85,11 @@ public class TestIcebergGcsConnectorSmokeTest
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        InputStream jsonKey = new ByteArrayInputStream(Base64.getDecoder().decode(gcpCredentialKey));
-        Path gcpCredentialsFile;
-        gcpCredentialsFile = Files.createTempFile("gcp-credentials", ".json", READ_ONLY_PERMISSIONS);
+        byte[] jsonKeyBytes = Base64.getDecoder().decode(gcpCredentialKey);
+        Path gcpCredentialsFile = Files.createTempFile("gcp-credentials", ".json", READ_ONLY_PERMISSIONS);
         gcpCredentialsFile.toFile().deleteOnExit();
-        Files.write(gcpCredentialsFile, jsonKey.readAllBytes());
+        Files.write(gcpCredentialsFile, jsonKeyBytes);
+        String gcpCredentials = new String(jsonKeyBytes, UTF_8);
 
         String gcpSpecificCoreSiteXmlContent = Resources.toString(Resources.getResource("hdp3.1-core-site.xml.gcs-template"), UTF_8)
                 .replace("%GCP_CREDENTIALS_FILE_PATH%", "/etc/hadoop/conf/gcp-credentials.json");
@@ -108,7 +106,7 @@ public class TestIcebergGcsConnectorSmokeTest
                 .build());
         this.hiveHadoop.start();
 
-        HiveGcsConfig gcsConfig = new HiveGcsConfig().setJsonKeyFilePath(gcpCredentialsFile.toAbsolutePath().toString());
+        HiveGcsConfig gcsConfig = new HiveGcsConfig().setJsonKey(gcpCredentials);
         ConfigurationInitializer configurationInitializer = new GoogleGcsConfigurationInitializer(gcsConfig);
         HdfsConfigurationInitializer initializer = new HdfsConfigurationInitializer(new HdfsConfig(), ImmutableSet.of(configurationInitializer));
         HdfsConfiguration hdfsConfiguration = new DynamicHdfsConfiguration(initializer, ImmutableSet.of());
@@ -117,7 +115,7 @@ public class TestIcebergGcsConnectorSmokeTest
         return IcebergQueryRunner.builder()
                 .setIcebergProperties(ImmutableMap.<String, String>builder()
                         .put("iceberg.catalog.type", "hive_metastore")
-                        .put("hive.gcs.json-key-file-path", gcpCredentialsFile.toAbsolutePath().toString())
+                        .put("hive.gcs.json-key", gcpCredentials)
                         .put("hive.metastore.uri", "thrift://" + hiveHadoop.getHiveMetastoreEndpoint())
                         .put("iceberg.file-format", format.name())
                         .put("iceberg.register-table-procedure.enabled", "true")
