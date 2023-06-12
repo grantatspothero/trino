@@ -73,7 +73,7 @@
         <dep.docker.images.version>79</dep.docker.images.version>
 
         <!-- released from https://github.com/starburstdata/varada -->
-        <dep.warp-speed.version>417.2.0</dep.warp-speed.version>
+        <dep.warp-speed.version>417.2.1</dep.warp-speed.version>
         <!-- released from https://github.com/starburstdata/trino-buffer-service -->
         <dep.trino-buffer-service.version>417-trino-buffer-service-545-gd85303a</dep.trino-buffer-service.version>
         <!-- released form https://github.com/starburstdata/schema-discovery -->
