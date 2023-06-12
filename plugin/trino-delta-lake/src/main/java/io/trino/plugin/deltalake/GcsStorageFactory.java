@@ -35,6 +35,7 @@ import javax.inject.Inject;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -60,8 +61,14 @@ public class GcsStorageFactory
         this.hdfsEnvironment = requireNonNull(hdfsEnvironment, "hdfsEnvironment is null");
         this.useGcsAccessToken = hiveGcsConfig.isUseGcsAccessToken();
         String jsonKeyFilePath = hiveGcsConfig.getJsonKeyFilePath();
+        String jsonKey = hiveGcsConfig.getJsonKey();
         if (jsonKeyFilePath != null) {
             try (FileInputStream inputStream = new FileInputStream(jsonKeyFilePath)) {
+                jsonGoogleCredential = Optional.of(GoogleCredential.fromStream(inputStream).createScoped(CredentialFactory.DEFAULT_SCOPES));
+            }
+        }
+        else if (jsonKey != null) {
+            try (InputStream inputStream = new ByteArrayInputStream(jsonKey.getBytes(UTF_8))) {
                 jsonGoogleCredential = Optional.of(GoogleCredential.fromStream(inputStream).createScoped(CredentialFactory.DEFAULT_SCOPES));
             }
         }
