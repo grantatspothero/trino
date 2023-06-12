@@ -744,8 +744,8 @@ jobs:
           ABFS_CONTAINER: ${{ secrets.AZURE_ABFS_CONTAINER }}
           ABFS_ACCOUNT: ${{ secrets.AZURE_ABFS_ACCOUNT }}
           ABFS_ACCESSKEY: ${{ secrets.AZURE_ABFS_ACCESSKEY }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESSKEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRETKEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.GALAXY_TRINO_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.GALAXY_TRINO_AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: us-east-2
           GCP_CREDENTIALS_KEY: ${{ secrets.GCP_CREDENTIALS_KEY }}
         # Run tests if any of the secrets is present. Do not skip tests when one secret renamed, or secret name has a typo.
@@ -835,10 +835,10 @@ jobs:
           $MAVEN test ${MAVEN_TEST} -pl :trino-bigquery -Pcloud-tests-case-insensitive-mapping -Dbigquery.credentials-key="${BIGQUERY_CASE_INSENSITIVE_CREDENTIALS_KEY}"
       - name: Iceberg Cloud Tests
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.TRINO_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.TRINO_AWS_SECRET_ACCESS_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.GALAXY_TRINO_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.GALAXY_TRINO_AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: us-east-2
-          S3_BUCKET: trino-ci-test
+          S3_BUCKET: galaxy-trino-ci
           GCP_CREDENTIALS_KEY: ${{ secrets.GCP_CREDENTIALS_KEY }}
           ABFS_CONTAINER: ${{ secrets.AZURE_ABFS_CONTAINER }}
           ABFS_ACCOUNT: ${{ secrets.AZURE_ABFS_ACCOUNT }}
@@ -849,7 +849,7 @@ jobs:
         run: |
           $MAVEN test ${MAVEN_TEST} -pl :trino-iceberg ${{ format('-P {0}', matrix.profile) }} \
             -Ds3.bucket=${S3_BUCKET} \
-            -Dtesting.gcp-storage-bucket="trino-ci-test-us-east" \
+            -Dtesting.gcp-storage-bucket="trino-ci-test" \
             -Dtesting.gcp-credentials-key="${GCP_CREDENTIALS_KEY}" \
             -Dhive.hadoop2.azure-abfs-container="${ABFS_CONTAINER}" \
             -Dhive.hadoop2.azure-abfs-account="${ABFS_ACCOUNT}" \
@@ -1250,7 +1250,7 @@ jobs:
           DATABRICKS_LOGIN: token
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
           GCP_CREDENTIALS_KEY: ${{ secrets.GCP_CREDENTIALS_KEY }}
-          GCP_STORAGE_BUCKET: trino-ci-test-us-east
+          GCP_STORAGE_BUCKET: trino-ci-test
           SYNAPSE_ENDPOINT: ${{ secrets.SYNAPSE_ENDPOINT }}
           SYNAPSE_USER: ${{ secrets.SYNAPSE_USER }}
           SYNAPSE_PASSWORD: ${{ secrets.SYNAPSE_PASSWORD }}
