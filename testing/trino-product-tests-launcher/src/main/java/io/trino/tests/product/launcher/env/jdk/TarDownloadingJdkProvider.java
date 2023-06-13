@@ -38,6 +38,7 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.base.Verify.verify;
 import static io.trino.testing.containers.TestContainers.getDockerArchitectureInfo;
@@ -56,7 +57,12 @@ public abstract class TarDownloadingJdkProvider
 
     public TarDownloadingJdkProvider(EnvironmentOptions environmentOptions)
     {
-        this.downloadPath = requireNonNull(environmentOptions.jdkDownloadPath, "environmentOptions.jdkDownloadPath is null");
+        try {
+            this.downloadPath = firstNonNull(environmentOptions.jdkDownloadPath, Files.createTempDirectory("ptl-temp-path"));
+        }
+        catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     protected abstract String getDownloadUri(DockerArchitecture architecture);
