@@ -200,6 +200,12 @@ public class TestMongoFederatedDatabaseConnectorTest
         assertQueryFails("ALTER TABLE nation DROP COLUMN nationkey", "Dropping columns is not supported on Atlas data federation");
     }
 
+    @Override
+    public void testRenameColumn()
+    {
+        assertQueryFails("ALTER TABLE nation RENAME COLUMN nationkey TO test_rename_column", "Renaming columns is not supported on Atlas data federation");
+    }
+
     // Overridden as the failure message is different
     @Override
     public void testInsert()

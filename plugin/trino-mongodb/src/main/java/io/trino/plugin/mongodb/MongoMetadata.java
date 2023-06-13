@@ -284,6 +284,15 @@ public class MongoMetadata
     }
 
     @Override
+    public void renameColumn(ConnectorSession session, ConnectorTableHandle tableHandle, ColumnHandle source, String target)
+    {
+        if (mongoSession.isFederatedDatabase()) {
+            throw new TrinoException(NOT_SUPPORTED, "Renaming columns is not supported on Atlas data federation");
+        }
+        mongoSession.renameColumn(((MongoTableHandle) tableHandle), ((MongoColumnHandle) source).getName(), target);
+    }
+
+    @Override
     public void dropColumn(ConnectorSession session, ConnectorTableHandle tableHandle, ColumnHandle column)
     {
         if (mongoSession.isFederatedDatabase()) {
