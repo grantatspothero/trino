@@ -323,6 +323,7 @@ public class IcebergSplitSource
         close();
         this.fileScanIterable = CloseableIterable.empty();
         this.fileScanIterator = CloseableIterator.empty();
+        this.fileTasksIterator = emptyIterator();
     }
 
     @Override
