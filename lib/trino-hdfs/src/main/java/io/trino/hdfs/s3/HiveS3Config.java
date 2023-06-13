@@ -48,7 +48,7 @@ public class HiveS3Config
     private TrinoS3SignerType s3SignerType;
     private String s3SignerClass;
     private boolean s3PathStyleAccess;
-    private boolean supportLegacyCorruptedPaths = true; // TODO switch to false by default once this becomes feature-flag configurable in Galaxy
+    private boolean supportLegacyCorruptedPaths;
     private String s3IamRole;
     private String s3ExternalId;
     private boolean s3SslEnabled = true;

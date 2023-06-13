@@ -98,7 +98,7 @@ public class TestReadCorruptedTables
                             "galaxy.account-url", "https://localhost:1234"),
                     "galaxy",
                     galaxyMetastore.getMetastoreConfig(DEFAULT_DATA_DIRECTORY),
-                    Map.of(),
+                    Map.of("hive.s3.support-legacy-corrupted-paths", "true"),
                     Map.of()));
 
             queryRunner.execute("CREATE SCHEMA %s.%s".formatted(catalog, schema));
