@@ -234,7 +234,13 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <excludes>
+                                <exclude>**/TestRedshiftConnectorTest.java</exclude>
                                 <exclude>**/TestRedshiftConnectorSmokeTest.java</exclude>
+                                <exclude>**/TestRedshiftAwsAuthentication.java</exclude>
+                                <exclude>**/TestRedshiftAwsAuthenticationMissingUser.java</exclude>
+                                <exclude>**/TestRedshiftAutomaticJoinPushdown.java</exclude>
+                                <exclude>**/TestRedshiftTableStatisticsReader.java</exclude>
+                                <exclude>**/TestRedshiftTypeMapping.java</exclude>
                                 <exclude>**/Test*FailureRecoveryTest.java</exclude>
                             </excludes>
                         </configuration>
@@ -255,10 +261,13 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <includes>
-                                <!-- Run only the smoke tests of the connector on the CI environment due to unpredictable -->
-                                <!-- locations of GitHub runners which can lead to increased client latency on the -->
-                                <!-- JDBC operations performed on the ephemeral AWS Redshift cluster.  -->
+                                <include>**/TestRedshiftConnectorTest.java</include>
                                 <include>**/TestRedshiftConnectorSmokeTest.java</include>
+                                <include>**/TestRedshiftAwsAuthentication.java</include>
+                                <include>**/TestRedshiftAwsAuthenticationMissingUser.java</include>
+                                <include>**/TestRedshiftAutomaticJoinPushdown.java</include>
+                                <include>**/TestRedshiftTableStatisticsReader.java</include>
+                                <include>**/TestRedshiftTypeMapping.java</include>
                             </includes>
                         </configuration>
                     </plugin>
