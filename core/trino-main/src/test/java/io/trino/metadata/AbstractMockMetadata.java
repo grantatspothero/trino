@@ -243,7 +243,7 @@ public abstract class AbstractMockMetadata
     }
 
     @Override
-    public void dropSchema(Session session, CatalogSchemaName schema)
+    public void dropSchema(Session session, CatalogSchemaName schema, boolean cascade)
     {
         throw new UnsupportedOperationException();
     }

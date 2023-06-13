@@ -597,9 +597,9 @@ public class ObjectStoreMetadata
     }
 
     @Override
-    public void dropSchema(ConnectorSession session, String schemaName)
+    public void dropSchema(ConnectorSession session, String schemaName, boolean cascade)
     {
-        hiveMetadata.dropSchema(unwrap(HIVE, session), schemaName);
+        hiveMetadata.dropSchema(unwrap(HIVE, session), schemaName, cascade);
         flushMetadataCache();
     }
 

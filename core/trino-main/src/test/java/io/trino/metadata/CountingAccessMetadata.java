@@ -247,9 +247,9 @@ public class CountingAccessMetadata
     }
 
     @Override
-    public void dropSchema(Session session, CatalogSchemaName schema)
+    public void dropSchema(Session session, CatalogSchemaName schema, boolean cascade)
     {
-        delegate.dropSchema(session, schema);
+        delegate.dropSchema(session, schema, cascade);
     }
 
     @Override

@@ -617,6 +617,12 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
+    public void testDropSchemaCascade()
+    {
+        skipDuplicateTestCoverage("testDropSchemaCascade");
+    }
+
+    @Override
     public void testDropTable()
     {
         skipDuplicateTestCoverage("testDropTable");
