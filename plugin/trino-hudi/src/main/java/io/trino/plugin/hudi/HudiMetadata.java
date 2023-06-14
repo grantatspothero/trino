@@ -40,8 +40,6 @@ import io.trino.spi.connector.TableNotFoundException;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.type.TypeManager;
 
-import javax.annotation.Nullable;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -55,10 +53,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.trino.plugin.hive.HiveMetadata.TABLE_COMMENT;
 import static io.trino.plugin.hive.HiveTimestampPrecision.NANOSECONDS;
-import static io.trino.plugin.hive.util.HiveUtil.HUDI_INPUT_FORMAT;
-import static io.trino.plugin.hive.util.HiveUtil.HUDI_PARQUET_INPUT_FORMAT;
-import static io.trino.plugin.hive.util.HiveUtil.HUDI_PARQUET_REALTIME_INPUT_FORMAT;
-import static io.trino.plugin.hive.util.HiveUtil.HUDI_REALTIME_INPUT_FORMAT;
+import static io.trino.plugin.hive.TableType.EXTERNAL_TABLE;
+import static io.trino.plugin.hive.TableType.MANAGED_TABLE;
 import static io.trino.plugin.hive.util.HiveUtil.columnMetadataGetter;
 import static io.trino.plugin.hive.util.HiveUtil.hiveColumnHandles;
 import static io.trino.plugin.hive.util.HiveUtil.isHiveSystemSchema;
@@ -119,15 +115,14 @@ public class HudiMetadata
                 TupleDomain.all());
     }
 
-    // TODO: io.trino.plugin.hive.util.HiveUtil.isHudiTable and this in OSS
     private boolean isHudiTable(ConnectorSession session, Table table)
     {
-        @Nullable
-        String inputFormatClassName = table.getStorage().getStorageFormat().getInputFormatNullable();
-        if (!HUDI_PARQUET_INPUT_FORMAT.equals(inputFormatClassName) &&
-                !HUDI_PARQUET_REALTIME_INPUT_FORMAT.equals(inputFormatClassName) &&
-                !HUDI_INPUT_FORMAT.equals(inputFormatClassName) &&
-                !HUDI_REALTIME_INPUT_FORMAT.equals(inputFormatClassName)) {
+        if (!MANAGED_TABLE.name().equals(table.getTableType()) && !EXTERNAL_TABLE.name().equals(table.getTableType())) {
+            // Views are not Hudi tables
+            return false;
+        }
+        if (table.getStorage().getOptionalLocation().isEmpty() || table.getStorage().getOptionalLocation().get().isEmpty()) {
+            // No location or empty location cannot be a valid Hudi table
             return false;
         }
         return HudiUtil.isHudiTable(fileSystemFactory.create(session), Location.of(table.getStorage().getLocation()));
