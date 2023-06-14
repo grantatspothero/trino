@@ -125,9 +125,15 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
         HELPER.skipDuplicateTestCoverage(methodName, args);
     }
 
-    public static void main(String[] args)
+    // Nested class because IntelliJ poorly handles case where one class is run sometimes as a test and sometimes as an application
+    public static final class UpdateOverrides
     {
-        HELPER.generateOverrides();
+        private UpdateOverrides() {}
+
+        public static void main(String[] args)
+        {
+            HELPER.generateOverrides();
+        }
     }
 
     /////// ----------------------------------------- please put generated code below this line ----------------------------------------- ///////
