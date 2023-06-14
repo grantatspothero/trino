@@ -58,15 +58,15 @@ public class GcsStorageFactory
         this.hdfsEnvironment = requireNonNull(hdfsEnvironment, "hdfsEnvironment is null");
         hiveGcsConfig.validate();
         this.useGcsAccessToken = hiveGcsConfig.isUseGcsAccessToken();
-        String jsonKeyFilePath = hiveGcsConfig.getJsonKeyFilePath();
         String jsonKey = hiveGcsConfig.getJsonKey();
-        if (jsonKeyFilePath != null) {
-            try (FileInputStream inputStream = new FileInputStream(jsonKeyFilePath)) {
+        String jsonKeyFilePath = hiveGcsConfig.getJsonKeyFilePath();
+        if (jsonKey != null) {
+            try (InputStream inputStream = new ByteArrayInputStream(jsonKey.getBytes(UTF_8))) {
                 jsonGoogleCredential = Optional.of(GoogleCredential.fromStream(inputStream).createScoped(CredentialFactory.DEFAULT_SCOPES));
             }
         }
-        else if (jsonKey != null) {
-            try (InputStream inputStream = new ByteArrayInputStream(jsonKey.getBytes(UTF_8))) {
+        else if (jsonKeyFilePath != null) {
+            try (FileInputStream inputStream = new FileInputStream(jsonKeyFilePath)) {
                 jsonGoogleCredential = Optional.of(GoogleCredential.fromStream(inputStream).createScoped(CredentialFactory.DEFAULT_SCOPES));
             }
         }

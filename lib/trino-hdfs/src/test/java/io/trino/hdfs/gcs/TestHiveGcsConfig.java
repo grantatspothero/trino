@@ -50,9 +50,9 @@ public class TestHiveGcsConfig
                 .buildOrThrow();
 
         HiveGcsConfig expected = new HiveGcsConfig()
+                .setUseGcsAccessToken(true)
                 .setJsonKey("{}")
-                .setJsonKeyFilePath(jsonKeyFile.toString())
-                .setUseGcsAccessToken(true);
+                .setJsonKeyFilePath(jsonKeyFile.toString());
 
         assertFullMapping(properties, expected);
     }
@@ -63,22 +63,22 @@ public class TestHiveGcsConfig
         assertThatThrownBy(
                 new HiveGcsConfig()
                         .setUseGcsAccessToken(true)
+                        .setJsonKey("{}}")::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Cannot specify 'hive.gcs.json-key' when 'hive.gcs.use-access-token' is set");
+
+        assertThatThrownBy(
+                new HiveGcsConfig()
+                        .setUseGcsAccessToken(true)
                         .setJsonKeyFilePath("/dev/null")::validate)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("Cannot specify 'hive.gcs.json-key-file-path' when 'hive.gcs.use-access-token' is set");
 
         assertThatThrownBy(
                 new HiveGcsConfig()
-                        .setUseGcsAccessToken(true)
-                        .setJsonKey("blah")::validate)
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Cannot specify 'hive.gcs.json-key' when 'hive.gcs.use-access-token' is set");
-
-        assertThatThrownBy(
-                new HiveGcsConfig()
-                        .setJsonKey("blah")
+                        .setJsonKey("{}")
                         .setJsonKeyFilePath("/dev/null")::validate)
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Only one of 'hive.gcs.json-key-file-path' and 'hive.gcs.json-key' can be set");
+                .hasMessage("'hive.gcs.json-key' and 'hive.gcs.json-key-file-path' cannot be both set");
     }
 }

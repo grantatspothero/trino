@@ -73,13 +73,12 @@ public class EnvMultinodeGcs
         String gcpBase64EncodedCredentials = requireEnv("GCP_CREDENTIALS_KEY");
         String gcpStorageBucket = requireEnv("GCP_STORAGE_BUCKET");
 
+        byte[] gcpCredentialsBytes = Base64.getDecoder().decode(gcpBase64EncodedCredentials);
+        String gcpCredentials = new String(gcpCredentialsBytes, UTF_8);
         File gcpCredentialsFile;
-        String gcpCredentials;
         try {
             gcpCredentialsFile = Files.createTempFile("gcp-credentials", ".xml", PosixFilePermissions.asFileAttribute(fromString("rw-r--r--"))).toFile();
             gcpCredentialsFile.deleteOnExit();
-            byte[] gcpCredentialsBytes = Base64.getDecoder().decode(gcpBase64EncodedCredentials);
-            gcpCredentials = new String(gcpCredentialsBytes, UTF_8);
             Files.write(gcpCredentialsFile.toPath(), gcpCredentialsBytes);
         }
         catch (IOException e) {

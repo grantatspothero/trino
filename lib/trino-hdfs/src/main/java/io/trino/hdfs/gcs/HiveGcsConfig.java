@@ -15,6 +15,7 @@ package io.trino.hdfs.gcs;
 
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;
+import io.airlift.configuration.ConfigSecuritySensitive;
 import io.airlift.configuration.validation.FileExists;
 
 import javax.annotation.Nullable;
@@ -47,6 +48,7 @@ public class HiveGcsConfig
     }
 
     @Config("hive.gcs.json-key")
+    @ConfigSecuritySensitive
     public HiveGcsConfig setJsonKey(String jsonKey)
     {
         this.jsonKey = jsonKey;
@@ -73,12 +75,9 @@ public class HiveGcsConfig
         // This cannot be normal validation, as it would make it impossible to write TestHiveGcsConfig.testExplicitPropertyMappings
 
         if (useGcsAccessToken) {
-            checkState(jsonKeyFilePath == null, "Cannot specify 'hive.gcs.json-key-file-path' when 'hive.gcs.use-access-token' is set");
             checkState(jsonKey == null, "Cannot specify 'hive.gcs.json-key' when 'hive.gcs.use-access-token' is set");
+            checkState(jsonKeyFilePath == null, "Cannot specify 'hive.gcs.json-key-file-path' when 'hive.gcs.use-access-token' is set");
         }
-
-        if ((jsonKey == null && jsonKeyFilePath != null) || (jsonKey != null && jsonKeyFilePath == null)) {
-            checkState(jsonKeyFilePath == null, "Only one of 'hive.gcs.json-key-file-path' and 'hive.gcs.json-key' can be set");
-        }
+        checkState(jsonKey == null || jsonKeyFilePath == null, "'hive.gcs.json-key' and 'hive.gcs.json-key-file-path' cannot be both set");
     }
 }
