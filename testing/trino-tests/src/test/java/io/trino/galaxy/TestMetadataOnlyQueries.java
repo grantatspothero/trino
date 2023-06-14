@@ -27,7 +27,6 @@ import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient.G
 import io.starburst.stargate.accesscontrol.privilege.GrantKind;
 import io.starburst.stargate.accesscontrol.privilege.Privilege;
 import io.starburst.stargate.id.CatalogId;
-import io.starburst.stargate.id.IdType;
 import io.starburst.stargate.metadata.QueryCatalog;
 import io.starburst.stargate.metadata.StatementRequest;
 import io.trino.client.QueryResults;
@@ -89,8 +88,6 @@ public class TestMetadataOnlyQueries
 {
     private static final JsonCodec<StatementRequest> STATEMENT_REQUEST_CODEC = jsonCodec(StatementRequest.class);
     private static final JsonCodec<QueryResults> QUERY_RESULTS_CODEC = jsonCodec(QueryResults.class);
-    private static final CatalogId TPCH_CATALOG_ID = IdType.CATALOG_ID.randomId(CatalogId::new);
-    private static final CatalogId HIVE_CATALOG_ID = IdType.CATALOG_ID.randomId(CatalogId::new);
 
     private final UUID shutdownKey = UUID.randomUUID();
 
@@ -98,6 +95,8 @@ public class TestMetadataOnlyQueries
     private File baseDir;
     private HiveMetastore metastore;
     private TestingAccountClient testingAccountClient;
+    private CatalogId tpchCatalogId;
+    private CatalogId hiveCatalogId;
 
     @Override
     protected QueryRunner createQueryRunner()
@@ -128,6 +127,9 @@ public class TestMetadataOnlyQueries
             metastore = null;
             testingAccountClient = null;
         });
+
+        tpchCatalogId = testingAccountClient.getOrCreateCatalog("tpch");
+        hiveCatalogId = testingAccountClient.getOrCreateCatalog("hive");
 
         return GalaxyQueryRunner.builder()
                 .setAccountClient(testingAccountClient)
@@ -186,8 +188,8 @@ public class TestMetadataOnlyQueries
     @Test
     public void testDdl()
     {
-        testingAccountClient.setEntityOwnership(testingAccountClient.getAdminRoleId(), testingAccountClient.getAdminRoleId(), HIVE_CATALOG_ID);
-        testingAccountClient.grantFunctionPrivilege(new GrantDetails(Privilege.CREATE_SCHEMA, testingAccountClient.getAdminRoleId(), GrantKind.ALLOW, true, HIVE_CATALOG_ID));
+        testingAccountClient.setEntityOwnership(testingAccountClient.getAdminRoleId(), testingAccountClient.getAdminRoleId(), hiveCatalogId);
+        testingAccountClient.grantFunctionPrivilege(new GrantDetails(Privilege.CREATE_SCHEMA, testingAccountClient.getAdminRoleId(), GrantKind.ALLOW, true, hiveCatalogId));
 
         assertThat(metastore.getAllDatabases()).isEmpty();
         queryMetadata("CREATE SCHEMA hive.test");
@@ -248,7 +250,7 @@ public class TestMetadataOnlyQueries
         StatementRequest statementRequest = new StatementRequest(testingAccountClient.getAccountId(), statement, catalogs, ImmutableMap.of(
                 "access-control.name", "galaxy",
                 "galaxy.account-url", testingAccountClient.getBaseUri().toString(),
-                "galaxy.catalog-names", "tpch->" + TPCH_CATALOG_ID.toString() + ",hive->" + HIVE_CATALOG_ID,
+                "galaxy.catalog-names", "tpch->" + tpchCatalogId.toString() + ",hive->" + hiveCatalogId,
                 "galaxy.read-only-catalogs", ""));
 
         return preparePost().setUri(baseUrl.resolve("/galaxy/metadata/v1/statement"))

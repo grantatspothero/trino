@@ -24,7 +24,6 @@ import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient.G
 import io.starburst.stargate.accesscontrol.privilege.GrantKind;
 import io.starburst.stargate.accesscontrol.privilege.Privilege;
 import io.starburst.stargate.id.CatalogId;
-import io.starburst.stargate.id.IdType;
 import io.starburst.stargate.metadata.QueryCatalog;
 import io.starburst.stargate.metadata.StatementRequest;
 import io.trino.client.QueryResults;
@@ -85,12 +84,12 @@ public class TestGalaxyMetadataOnlyQueries
 {
     private static final JsonCodec<StatementRequest> STATEMENT_REQUEST_CODEC = jsonCodec(StatementRequest.class);
     private static final JsonCodec<QueryResults> QUERY_RESULTS_CODEC = jsonCodec(QueryResults.class);
-    private static final CatalogId TPCH_CATALOG_ID = IdType.CATALOG_ID.randomId(CatalogId::new);
-    private static final CatalogId OBJECT_STORE_CATALOG_ID = IdType.CATALOG_ID.randomId(CatalogId::new);
 
     private TestingAccountClient testingAccountClient;
     private Map<String, String> objectStoreProperties;
     private HttpClient httpClient;
+    private CatalogId tpchCatalogId;
+    private CatalogId objectStoreCatalogId;
 
     @Override
     protected QueryRunner createQueryRunner()
@@ -119,6 +118,9 @@ public class TestGalaxyMetadataOnlyQueries
                 minio.getHiveS3Config(),
                 Map.of());
 
+        tpchCatalogId = testingAccountClient.getOrCreateCatalog("tpch");
+        objectStoreCatalogId = testingAccountClient.getOrCreateCatalog("objectstore");
+
         return GalaxyQueryRunner.builder()
                 .setNodeCount(1)
                 .setAccountClient(testingAccountClient)
@@ -141,8 +143,8 @@ public class TestGalaxyMetadataOnlyQueries
     {
         httpClient = closeAfterClass(new JettyHttpClient());
 
-        testingAccountClient.setEntityOwnership(testingAccountClient.getAdminRoleId(), testingAccountClient.getAdminRoleId(), OBJECT_STORE_CATALOG_ID);
-        testingAccountClient.grantFunctionPrivilege(new GrantDetails(Privilege.CREATE_SCHEMA, testingAccountClient.getAdminRoleId(), GrantKind.ALLOW, true, OBJECT_STORE_CATALOG_ID));
+        testingAccountClient.setEntityOwnership(testingAccountClient.getAdminRoleId(), testingAccountClient.getAdminRoleId(), objectStoreCatalogId);
+        testingAccountClient.grantFunctionPrivilege(new GrantDetails(Privilege.CREATE_SCHEMA, testingAccountClient.getAdminRoleId(), GrantKind.ALLOW, true, objectStoreCatalogId));
 
         queryMetadata("CREATE SCHEMA objectstore.default");
         for (TableType tableType : TableType.values()) {
@@ -245,7 +247,7 @@ public class TestGalaxyMetadataOnlyQueries
         StatementRequest statementRequest = new StatementRequest(testingAccountClient.getAccountId(), statement, catalogs, Map.of(
                 "access-control.name", "galaxy",
                 "galaxy.account-url", testingAccountClient.getBaseUri().toString(),
-                "galaxy.catalog-names", "tpch->" + TPCH_CATALOG_ID.toString() + ",objectstore->" + OBJECT_STORE_CATALOG_ID,
+                "galaxy.catalog-names", "tpch->" + tpchCatalogId.toString() + ",objectstore->" + objectStoreCatalogId,
                 "galaxy.read-only-catalogs", ""));
 
         return preparePost().setUri(baseUrl.resolve("/galaxy/metadata/v1/statement"))
