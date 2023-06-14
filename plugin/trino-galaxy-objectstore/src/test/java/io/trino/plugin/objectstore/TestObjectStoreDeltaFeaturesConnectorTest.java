@@ -246,7 +246,7 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
                         Expecting message:
                           "line 1:21: Table function system.table_changes not registered"
                         to match regex:
-                          "Error opening Hive split .*"
+                          "Error opening Hive split.*/_change_data/.*The specified key does not exist.*"
                         but did not.""");
     }
 
