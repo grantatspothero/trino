@@ -24,24 +24,15 @@ import io.trino.testing.BaseConnectorTest;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import io.trino.testing.minio.MinioClient;
-import org.testng.SkipException;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
 
 import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Map;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static io.trino.plugin.base.util.Closables.closeAllSuppress;
 import static io.trino.plugin.objectstore.ObjectStoreQueryRunner.initializeTpchTables;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.testing.TestingSession.testSessionBuilder;
-import static java.util.stream.Collectors.joining;
-import static org.testng.Assert.fail;
 
 /**
  * Tests ObjectStore connector with Delta backend, exercising all
@@ -53,6 +44,8 @@ import static org.testng.Assert.fail;
 public class TestObjectStoreDeltaFeaturesConnectorTest
         extends TestDeltaLakeConnectorTest
 {
+    private static final ConnectorFeaturesTestHelper HELPER = new ConnectorFeaturesTestHelper(TestObjectStoreDeltaFeaturesConnectorTest.class, TestObjectStoreDeltaConnectorTest.class);
+
     @Override
     protected QueryRunner createQueryRunner()
             throws Exception
@@ -110,13 +103,7 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     @BeforeMethod(alwaysRun = true)
     public void preventDuplicatedTestCoverage(Method testMethod)
     {
-        Class<?> declaringClass = testMethod.getDeclaringClass();
-        if (declaringClass.isAssignableFrom(BaseConnectorTest.class) && !isOverridden(testMethod, getClass())) {
-            fail("The %s test is covered by %s, no need to run it again in %s. You can use main() to generate overrides".formatted(
-                    testMethod.getName(),
-                    TestDeltaLakeConnectorTest.class.getSimpleName(),
-                    getClass().getSimpleName()));
-        }
+        HELPER.preventDuplicatedTestCoverage(testMethod);
     }
 
     @Override
@@ -135,85 +122,12 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
 
     private void skipDuplicateTestCoverage(String methodName, Class<?>... args)
     {
-        try {
-            Method ignored = getClass().getDeclaredMethod(methodName, args); // validate we have the override
-            if (isTestSpecializedForDelta(methodName, args)) {
-                fail("Method %s(%s) became overridden and should no longer be skipped in %s".formatted(methodName, Arrays.toString(args), getClass()));
-            }
-        }
-        catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
-        }
-
-        throw new SkipException("This method is probably run in %s".formatted(TestDeltaLakeConnectorTest.class.getSimpleName()));
-    }
-
-    private boolean isTestSpecializedForDelta(String methodName, Class<?>... args)
-    {
-        try {
-            Method overridden = getClass().getSuperclass().getMethod(methodName, args);
-            return !overridden.getDeclaringClass().isAssignableFrom(BaseConnectorTest.class);
-        }
-        catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
-        }
+        HELPER.skipDuplicateTestCoverage(methodName, args);
     }
 
     public static void main(String[] args)
     {
-        // Generate overrides
-
-        Stream.of(BaseConnectorTest.class.getMethods())
-                .filter(method -> method.isAnnotationPresent(Test.class) && !isOverridden(method, TestObjectStoreDeltaFeaturesConnectorTest.class))
-                .sorted(Comparator.comparing(Method::getName))
-                .forEachOrdered(method -> {
-                    System.out.printf(
-                            """
-                                    @Override
-                                    public void %s(%s)
-                                    {
-                                        skipDuplicateTestCoverage("%1$s"%s);
-                                    }
-                                    \n""", method.getName(),
-                            IntStream.range(0, method.getParameterTypes().length)
-                                    .mapToObj(i -> "%s arg%s".formatted(formatClassName(method.getParameterTypes()[i]), i))
-                                    .collect(joining(", ")),
-                            Stream.of(method.getParameterTypes())
-                                    .map(clazz -> ", %s.class".formatted(formatClassName(clazz)))
-                                    .collect(joining()));
-                });
-    }
-
-    private static boolean isOverridden(Method method, Class<?> byClazz)
-    {
-        checkArgument(
-                method.getDeclaringClass() != byClazz && method.getDeclaringClass().isAssignableFrom(byClazz),
-                "%s is not a subclass of %s which declares %s",
-                byClazz,
-                method.getDeclaringClass(),
-                method);
-
-        for (Class<?> clazz = byClazz; clazz != method.getDeclaringClass(); clazz = clazz.getSuperclass()) {
-            try {
-                Method ignored = clazz.getDeclaredMethod(method.getName(), method.getParameterTypes());
-                return true;
-            }
-            catch (NoSuchMethodException ignore) {
-                // continue
-            }
-        }
-        return false;
-    }
-
-    private static String formatClassName(Class<?> clazz)
-    {
-        String className = clazz.getSimpleName();
-        // IntelliJ does not auto-import nested names, so use the top-level class name
-        for (Class<?> enclosingClass = clazz.getEnclosingClass(); enclosingClass != null; enclosingClass = enclosingClass.getEnclosingClass()) {
-            //noinspection StringConcatenationInLoop
-            className = enclosingClass.getSimpleName() + "." + className;
-        }
-        return className;
+        HELPER.generateOverrides();
     }
 
     /////// ----------------------------------------- please put generated code below this line ----------------------------------------- ///////
