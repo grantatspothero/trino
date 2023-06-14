@@ -41,6 +41,7 @@ public class GoogleGcsConfigurationInitializer
     @Inject
     public GoogleGcsConfigurationInitializer(HiveGcsConfig config)
     {
+        config.validate();
         this.useGcsAccessToken = config.isUseGcsAccessToken();
         this.jsonKeyFilePath = getJsonKeyFilePath(Optional.ofNullable(config.getJsonKey()));
     }
