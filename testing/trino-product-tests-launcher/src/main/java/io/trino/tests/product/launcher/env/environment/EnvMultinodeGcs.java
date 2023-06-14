@@ -108,8 +108,6 @@ public class EnvMultinodeGcs
                 .withEnv("GCP_CREDENTIALS", gcpCredentials));
 
         builder.configureContainer(TESTS, container -> container
-                .withCopyFileToContainer(forHostPath(gcpCredentialsFile.toPath()), containerGcpCredentialsFile)
-                .withEnv("GCP_CREDENTIALS_FILE_PATH", containerGcpCredentialsFile)
                 .withEnv("GCP_STORAGE_BUCKET", gcpStorageBucket)
                 .withEnv("GCP_TEST_DIRECTORY", gcsTestDirectory));
 
