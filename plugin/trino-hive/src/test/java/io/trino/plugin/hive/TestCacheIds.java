@@ -293,7 +293,6 @@ public class TestCacheIds
                 ImmutableList.of(),
                 readBucketNumber,
                 OptionalInt.empty(),
-                -1,
                 false,
                 new TableToPartitionMapping(Optional.empty(), ImmutableMap.of()),
                 Optional.empty(),

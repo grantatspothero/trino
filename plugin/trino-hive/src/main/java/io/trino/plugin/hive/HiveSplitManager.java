@@ -327,8 +327,6 @@ public class HiveSplitManager
                 ImmutableList.of(),
                 hiveSplit.getReadBucketNumber(),
                 hiveSplit.getTableBucketNumber(),
-                // statement id is currently unused
-                0,
                 // force local scheduling can be skipped
                 false,
                 hiveSplit.getTableToPartitionMapping(),
