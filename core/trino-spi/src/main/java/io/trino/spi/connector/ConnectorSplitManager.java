@@ -14,8 +14,8 @@
 package io.trino.spi.connector;
 
 import io.trino.spi.Experimental;
-import io.trino.spi.cache.SplitId;
-import io.trino.spi.cache.TableId;
+import io.trino.spi.cache.CacheSplitId;
+import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.ptf.ConnectorTableFunctionHandle;
 
 import java.util.Optional;
@@ -42,13 +42,13 @@ public interface ConnectorSplitManager
     }
 
     /**
-     * Returns a unique split identifier. {@link SplitId} should represent raw data
-     * (e.g. tuple of filename and file region). {@link SplitId} together with
-     * {@link TableId} uniquely represents transformations (e.g. filters, aggregations, projections)
-     * that are performed in the context of a split. Same {@link SplitId} can be
-     * used with different {@link TableId}.
+     * Returns a unique split identifier. {@link CacheSplitId} should represent raw data
+     * (e.g. tuple of filename and file region). {@link CacheSplitId} together with
+     * {@link CacheTableId} uniquely represents transformations (e.g. filters, aggregations, projections)
+     * that are performed in the context of a split. Same {@link CacheSplitId} can be
+     * used with different {@link CacheTableId}.
      */
-    default Optional<SplitId> getSplitId(ConnectorSplit split)
+    default Optional<CacheSplitId> getCacheSplitId(ConnectorSplit split)
     {
         return Optional.empty();
     }

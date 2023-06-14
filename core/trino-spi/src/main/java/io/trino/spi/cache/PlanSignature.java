@@ -43,21 +43,21 @@ public class PlanSignature
     /**
      * List of group by columns if plan signature represents aggregation.
      */
-    private final Optional<List<ColumnId>> groupByColumns;
+    private final Optional<List<CacheColumnId>> groupByColumns;
     /**
      * List of output columns.
      */
-    private final List<ColumnId> columns;
+    private final List<CacheColumnId> columns;
     /**
      * Predicate that is satisfied by result set represented by {@link PlanSignature}.
      */
-    private final TupleDomain<ColumnId> predicate;
+    private final TupleDomain<CacheColumnId> predicate;
 
     public PlanSignature(
             SignatureKey key,
-            Optional<List<ColumnId>> groupByColumns,
-            List<ColumnId> columns,
-            TupleDomain<ColumnId> predicate)
+            Optional<List<CacheColumnId>> groupByColumns,
+            List<CacheColumnId> columns,
+            TupleDomain<CacheColumnId> predicate)
     {
         this.key = requireNonNull(key, "key is null");
         this.groupByColumns = requireNonNull(groupByColumns, "groupByColumns is null");
@@ -70,17 +70,17 @@ public class PlanSignature
         return key;
     }
 
-    public Optional<List<ColumnId>> getGroupByColumns()
+    public Optional<List<CacheColumnId>> getGroupByColumns()
     {
         return groupByColumns;
     }
 
-    public List<ColumnId> getColumns()
+    public List<CacheColumnId> getColumns()
     {
         return columns;
     }
 
-    public TupleDomain<ColumnId> getPredicate()
+    public TupleDomain<CacheColumnId> getPredicate()
     {
         return predicate;
     }
@@ -122,8 +122,8 @@ public class PlanSignature
     {
         return INSTANCE_SIZE
                 + key.getRetainedSizeInBytes()
-                + sizeOf(groupByColumns, cols -> estimatedSizeOf(cols, ColumnId::getRetainedSizeInBytes))
-                + estimatedSizeOf(columns, ColumnId::getRetainedSizeInBytes)
-                + predicate.getRetainedSizeInBytes(ColumnId::getRetainedSizeInBytes);
+                + sizeOf(groupByColumns, cols -> estimatedSizeOf(cols, CacheColumnId::getRetainedSizeInBytes))
+                + estimatedSizeOf(columns, CacheColumnId::getRetainedSizeInBytes)
+                + predicate.getRetainedSizeInBytes(CacheColumnId::getRetainedSizeInBytes);
     }
 }

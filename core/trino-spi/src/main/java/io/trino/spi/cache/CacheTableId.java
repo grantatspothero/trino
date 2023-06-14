@@ -18,12 +18,12 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 import static java.util.Objects.requireNonNull;
 
-public class TableId
+public class CacheTableId
 {
     private final String id;
 
     @JsonCreator
-    public TableId(String id)
+    public CacheTableId(String id)
     {
         this.id = requireNonNull(id, "id is null");
     }
@@ -44,7 +44,7 @@ public class TableId
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        TableId that = (TableId) o;
+        CacheTableId that = (CacheTableId) o;
         return id.equals(that.id);
     }
 

@@ -22,9 +22,9 @@ import io.trino.spi.block.BlockBuilder;
 import io.trino.spi.cache.CacheManager.PreferredAddressProvider;
 import io.trino.spi.cache.CacheManager.SplitCache;
 import io.trino.spi.cache.CacheManagerContext;
+import io.trino.spi.cache.CacheSplitId;
 import io.trino.spi.cache.PlanSignature;
 import io.trino.spi.cache.SignatureKey;
-import io.trino.spi.cache.SplitId;
 import io.trino.spi.connector.ConnectorPageSink;
 import io.trino.spi.connector.ConnectorPageSource;
 import io.trino.spi.predicate.TupleDomain;
@@ -71,7 +71,7 @@ public class TestMemoryCacheManager
             throws IOException
     {
         PlanSignature signature = createPlanSignature("sig");
-        SplitId splitId = new SplitId("split1");
+        CacheSplitId splitId = new CacheSplitId("split1");
 
         // split data should not be cached yet
         SplitCache cache = cacheManager.getSplitCache(signature);
@@ -114,7 +114,7 @@ public class TestMemoryCacheManager
         cache2.close();
 
         // store data for another split
-        SplitId splitId2 = new SplitId("split2");
+        CacheSplitId splitId2 = new CacheSplitId("split2");
         sink = cache.storePages(splitId2).orElseThrow();
         sink.appendPage(page);
         sink.finish();
@@ -145,7 +145,7 @@ public class TestMemoryCacheManager
             throws IOException
     {
         PlanSignature signature = createPlanSignature("sig");
-        SplitId splitId = new SplitId("split");
+        CacheSplitId splitId = new CacheSplitId("split");
 
         // start caching of split data
         SplitCache cache = cacheManager.getSplitCache(signature);
@@ -172,7 +172,7 @@ public class TestMemoryCacheManager
 
         // cache some data for first signature
         PlanSignature signature = createPlanSignature("sig");
-        SplitId splitId = new SplitId("split");
+        CacheSplitId splitId = new CacheSplitId("split");
         SplitCache cache = cacheManager.getSplitCache(signature);
         ConnectorPageSink sink = cache.storePages(splitId).orElseThrow();
         Page page = createOneMegaBytePage();
@@ -216,8 +216,8 @@ public class TestMemoryCacheManager
 
         PlanSignature signature1 = createPlanSignature("sig1");
         PlanSignature signature2 = createPlanSignature("sig2");
-        SplitId splitId1 = new SplitId("split1");
-        SplitId splitId2 = new SplitId("split2");
+        CacheSplitId splitId1 = new CacheSplitId("split1");
+        CacheSplitId splitId2 = new CacheSplitId("split2");
         PreferredAddressProvider addressProvider1 = cacheManager.getPreferredAddressProvider(signature1, nodeManager);
         PreferredAddressProvider addressProvider2 = cacheManager.getPreferredAddressProvider(signature2, nodeManager);
 

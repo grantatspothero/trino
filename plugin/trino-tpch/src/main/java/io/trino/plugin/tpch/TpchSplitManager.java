@@ -16,7 +16,7 @@ package io.trino.plugin.tpch;
 import com.google.common.collect.ImmutableList;
 import io.trino.spi.Node;
 import io.trino.spi.NodeManager;
-import io.trino.spi.cache.SplitId;
+import io.trino.spi.cache.CacheSplitId;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.ConnectorSplit;
 import io.trino.spi.connector.ConnectorSplitManager;
@@ -78,10 +78,10 @@ public class TpchSplitManager
     }
 
     @Override
-    public Optional<SplitId> getSplitId(ConnectorSplit split)
+    public Optional<CacheSplitId> getCacheSplitId(ConnectorSplit split)
     {
         TpchSplit tpchSplit = (TpchSplit) split;
         // ignore host addresses as it's irrelevant for ID
-        return Optional.of(new SplitId(tpchSplit.getTotalParts() + ":" + tpchSplit.getPartNumber()));
+        return Optional.of(new CacheSplitId(tpchSplit.getTotalParts() + ":" + tpchSplit.getPartNumber()));
     }
 }

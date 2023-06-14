@@ -50,18 +50,18 @@ public interface CacheManager
         /**
          * @return cached pages for a given split.
          */
-        Optional<ConnectorPageSource> loadPages(SplitId splitId);
+        Optional<ConnectorPageSource> loadPages(CacheSplitId splitId);
 
         /**
          * @return {@link ConnectorPageSink} for caching pages for a given split.
          * Might be empty if there isn't sufficient memory or split data is
          * already cached.
          */
-        Optional<ConnectorPageSink> storePages(SplitId splitId);
+        Optional<ConnectorPageSink> storePages(CacheSplitId splitId);
     }
 
     interface PreferredAddressProvider
     {
-        HostAddress getPreferredAddress(SplitId splitId);
+        HostAddress getPreferredAddress(CacheSplitId splitId);
     }
 }

@@ -26,8 +26,8 @@ import io.trino.plugin.tpch.statistics.ColumnStatisticsData;
 import io.trino.plugin.tpch.statistics.StatisticsEstimator;
 import io.trino.plugin.tpch.statistics.TableStatisticsData;
 import io.trino.plugin.tpch.statistics.TableStatisticsDataRepository;
-import io.trino.spi.cache.ColumnId;
-import io.trino.spi.cache.TableId;
+import io.trino.spi.cache.CacheColumnId;
+import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.CatalogSchemaTableName;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.ColumnMetadata;
@@ -532,21 +532,21 @@ public class TpchMetadata
     }
 
     @Override
-    public Optional<TableId> getTableId(ConnectorTableHandle table)
+    public Optional<CacheTableId> getCacheTableId(ConnectorTableHandle table)
     {
         TpchTableHandle handle = (TpchTableHandle) table;
         if (!handle.getConstraint().isAll()) {
             // Unique conversion of TupleDomain to string requires JSON serialization
             return Optional.empty();
         }
-        return Optional.of(new TableId(handle.getSchemaName() + ":" + handle.getTableName() + ":" + handle.getScaleFactor()));
+        return Optional.of(new CacheTableId(handle.getSchemaName() + ":" + handle.getTableName() + ":" + handle.getScaleFactor()));
     }
 
     @Override
-    public Optional<ColumnId> getColumnId(ColumnHandle column)
+    public Optional<CacheColumnId> getCacheColumnId(ColumnHandle column)
     {
         TpchColumnHandle handle = (TpchColumnHandle) column;
-        return Optional.of(new ColumnId(handle.getColumnName() + ":" + handle.getType()));
+        return Optional.of(new CacheColumnId(handle.getColumnName() + ":" + handle.getType()));
     }
 
     private static TupleDomain<ColumnHandle> toTupleDomain(Map<TpchColumnHandle, Set<NullableValue>> predicate)

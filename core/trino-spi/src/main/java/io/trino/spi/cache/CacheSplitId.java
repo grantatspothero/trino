@@ -20,14 +20,14 @@ import static io.airlift.slice.SizeOf.estimatedSizeOf;
 import static io.airlift.slice.SizeOf.instanceSize;
 import static java.util.Objects.requireNonNull;
 
-public class SplitId
+public class CacheSplitId
 {
-    private static final int INSTANCE_SIZE = instanceSize(SplitId.class);
+    private static final int INSTANCE_SIZE = instanceSize(CacheSplitId.class);
 
     private final String id;
 
     @JsonCreator
-    public SplitId(String id)
+    public CacheSplitId(String id)
     {
         this.id = requireNonNull(id, "id is null");
     }
@@ -48,7 +48,7 @@ public class SplitId
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        SplitId that = (SplitId) o;
+        CacheSplitId that = (CacheSplitId) o;
         return id.equals(that.id);
     }
 

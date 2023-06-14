@@ -13,7 +13,7 @@
  */
 package io.trino.plugin.base.classloader;
 
-import io.trino.spi.cache.SplitId;
+import io.trino.spi.cache.CacheSplitId;
 import io.trino.spi.classloader.ThreadContextClassLoader;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.ConnectorSplit;
@@ -69,10 +69,10 @@ public final class ClassLoaderSafeConnectorSplitManager
     }
 
     @Override
-    public Optional<SplitId> getSplitId(ConnectorSplit split)
+    public Optional<CacheSplitId> getCacheSplitId(ConnectorSplit split)
     {
         try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
-            return delegate.getSplitId(split);
+            return delegate.getCacheSplitId(split);
         }
     }
 }

@@ -20,14 +20,14 @@ import static io.airlift.slice.SizeOf.estimatedSizeOf;
 import static io.airlift.slice.SizeOf.instanceSize;
 import static java.util.Objects.requireNonNull;
 
-public class ColumnId
+public class CacheColumnId
 {
-    private static final int INSTANCE_SIZE = instanceSize(ColumnId.class);
+    private static final int INSTANCE_SIZE = instanceSize(CacheColumnId.class);
 
     private final String id;
 
     @JsonCreator
-    public ColumnId(String id)
+    public CacheColumnId(String id)
     {
         this.id = requireNonNull(id, "id is null");
     }
@@ -48,7 +48,7 @@ public class ColumnId
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        ColumnId that = (ColumnId) o;
+        CacheColumnId that = (CacheColumnId) o;
         return id.equals(that.id);
     }
 

@@ -26,9 +26,9 @@ import io.trino.spi.NodeManager;
 import io.trino.spi.Page;
 import io.trino.spi.cache.CacheManager;
 import io.trino.spi.cache.CacheManagerContext;
+import io.trino.spi.cache.CacheSplitId;
 import io.trino.spi.cache.MemoryAllocator;
 import io.trino.spi.cache.PlanSignature;
-import io.trino.spi.cache.SplitId;
 import io.trino.spi.connector.ConnectorPageSink;
 import io.trino.spi.connector.ConnectorPageSource;
 import io.trino.spi.connector.FixedPageSource;
@@ -136,7 +136,7 @@ public class MemoryCacheManager
         removeEldestSplits(() -> initialAllocatedBytes - allocatedRevocableBytes >= bytesToRevoke);
     }
 
-    private synchronized Optional<ConnectorPageSource> loadPages(long signatureId, SplitId splitId)
+    private synchronized Optional<ConnectorPageSource> loadPages(long signatureId, CacheSplitId splitId)
     {
         SplitKey key = new SplitKey(signatureId, splitId);
         ListenableFuture<?> loaded = splitLoaded.get(key);
@@ -152,7 +152,7 @@ public class MemoryCacheManager
         return Optional.of(new FixedPageSource(pages));
     }
 
-    private synchronized Optional<ConnectorPageSink> storePages(long signatureId, SplitId splitId)
+    private synchronized Optional<ConnectorPageSink> storePages(long signatureId, CacheSplitId splitId)
     {
         SplitKey key = new SplitKey(signatureId, splitId);
         SettableFuture<?> loaded = splitLoaded.get(key);
@@ -268,14 +268,14 @@ public class MemoryCacheManager
         }
 
         @Override
-        public Optional<ConnectorPageSource> loadPages(SplitId splitId)
+        public Optional<ConnectorPageSource> loadPages(CacheSplitId splitId)
         {
             checkState(!closed, "MemorySplitCache already closed");
             return MemoryCacheManager.this.loadPages(signatureId, splitId);
         }
 
         @Override
-        public Optional<ConnectorPageSink> storePages(SplitId splitId)
+        public Optional<ConnectorPageSink> storePages(CacheSplitId splitId)
         {
             checkState(!closed, "MemorySplitCache already closed");
             return MemoryCacheManager.this.storePages(signatureId, splitId);
@@ -352,7 +352,7 @@ public class MemoryCacheManager
         }
 
         @Override
-        public HostAddress getPreferredAddress(SplitId splitId)
+        public HostAddress getPreferredAddress(CacheSplitId splitId)
         {
             List<Node> nodes = nodesSupplier.get();
             return nodes.get(consistentHash(31 * signatureHash + splitId.hashCode(), nodes.size())).getHostAndPort();
@@ -360,11 +360,11 @@ public class MemoryCacheManager
     }
 
     @VisibleForTesting
-    record SplitKey(long signatureId, SplitId splitId)
+    record SplitKey(long signatureId, CacheSplitId splitId)
     {
         static final int INSTANCE_SIZE = instanceSize(SplitKey.class);
 
-        public SplitKey(long signatureId, SplitId splitId)
+        public SplitKey(long signatureId, CacheSplitId splitId)
         {
             this.signatureId = signatureId;
             this.splitId = requireNonNull(splitId, "splitId is null");
