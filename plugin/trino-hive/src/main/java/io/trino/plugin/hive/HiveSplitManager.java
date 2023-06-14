@@ -334,8 +334,6 @@ public class HiveSplitManager
                 hiveSplit.getBucketValidation(),
                 hiveSplit.isS3SelectPushdownEnabled(),
                 Optional.empty(),
-                // split number is currently unused
-                0,
                 // weight does not impact split rows
                 SplitWeight.standard());
 

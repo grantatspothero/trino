@@ -299,7 +299,6 @@ public class TestCacheIds
                 Optional.empty(),
                 false,
                 Optional.empty(),
-                0,
                 SplitWeight.standard());
     }
 
