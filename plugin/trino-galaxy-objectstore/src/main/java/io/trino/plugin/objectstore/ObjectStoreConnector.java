@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.objectstore;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableList;
@@ -127,6 +128,12 @@ public class ObjectStoreConnector
                 .filter(procedure -> procedure.getName().equals("migrate"))
                 .collect(onlyElement());
         this.hiveRecursiveDirWalkerEnabled = ((HiveConnector) hiveConnector).isRecursiveDirWalkerEnabled();
+    }
+
+    @VisibleForTesting
+    Connector getIcebergConnector()
+    {
+        return icebergConnector;
     }
 
     private static List<PropertyMetadata<?>> schemaProperties()

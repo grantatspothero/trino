@@ -34,6 +34,7 @@ import static io.trino.plugin.base.util.Closables.closeAllSuppress;
 import static io.trino.plugin.objectstore.ObjectStoreQueryRunner.initializeTpchTables;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.testing.TestingSession.testSessionBuilder;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Tests ObjectStore connector with Delta backend, exercising all
@@ -136,6 +137,117 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
         {
             HELPER.updateOverrides();
         }
+    }
+
+    @Override
+    public void testCdfCommitTimestamp()
+    {
+        // Delta $history system table isn't exposed. TODO (https://github.com/starburstdata/team-lakehouse/issues/221) determine whether we want to expose that. Maybe not.
+        assertThatThrownBy(super::testCdfCommitTimestamp)
+                .hasMessageMatching("line 1:23: Table 'delta.test_schema.test_cdf_commit_timestamp_\\w+\\$history' does not exist");
+    }
+
+    @Override
+    public void testCdfOnTableWhichDoesntHaveItEnabledInitially()
+    {
+        // TODO (https://github.com/starburstdata/team-lakehouse/issues/221) support Delta CDF reads
+        assertThatThrownBy(super::testCdfOnTableWhichDoesntHaveItEnabledInitially)
+                .hasMessage("line 1:21: Table function system.table_changes not registered");
+    }
+
+    @Override
+    public void testCdfWithOptimize()
+    {
+        // TODO (https://github.com/starburstdata/team-lakehouse/issues/221) support Delta CDF reads
+        assertThatThrownBy(super::testCdfWithOptimize)
+                .hasMessage("line 1:21: Table function system.table_changes not registered");
+    }
+
+    @Override
+    public void testReadCdfChanges()
+    {
+        // TODO (https://github.com/starburstdata/team-lakehouse/issues/221) support Delta CDF reads
+        assertThatThrownBy(super::testReadCdfChanges)
+                .hasMessage("line 1:21: Table function system.table_changes not registered");
+    }
+
+    @Override
+    public void testReadCdfChangesOnPartitionedTable()
+    {
+        // TODO (https://github.com/starburstdata/team-lakehouse/issues/221) support Delta CDF reads
+        assertThatThrownBy(super::testReadCdfChangesOnPartitionedTable)
+                .hasMessage("line 1:21: Table function system.table_changes not registered");
+    }
+
+    @Override
+    public void testReadChangesFromCtasTable()
+    {
+        // TODO (https://github.com/starburstdata/team-lakehouse/issues/221) support Delta CDF reads
+        assertThatThrownBy(super::testReadChangesFromCtasTable)
+                .hasMessage("line 1:21: Table function system.table_changes not registered");
+    }
+
+    @Override
+    public void testReadChangesOnTableWithColumnAdded()
+    {
+        // TODO (https://github.com/starburstdata/team-lakehouse/issues/221) support Delta CDF reads
+        assertThatThrownBy(super::testReadChangesOnTableWithColumnAdded)
+                .hasMessage("line 1:21: Table function system.table_changes not registered");
+    }
+
+    @Override
+    public void testReadChangesOnTableWithRowColumn()
+    {
+        // TODO (https://github.com/starburstdata/team-lakehouse/issues/221) support Delta CDF reads
+        assertThatThrownBy(super::testReadChangesOnTableWithRowColumn)
+                .hasMessage("line 1:21: Table function system.table_changes not registered");
+    }
+
+    @Override
+    public void testReadDifferentChangeRanges()
+    {
+        // TODO (https://github.com/starburstdata/team-lakehouse/issues/221) support Delta CDF reads
+        assertThatThrownBy(super::testReadDifferentChangeRanges)
+                .hasMessage("line 1:21: Table function system.table_changes not registered");
+    }
+
+    @Override
+    public void testReadMergeChanges()
+    {
+        // TODO (https://github.com/starburstdata/team-lakehouse/issues/221) support Delta CDF reads
+        assertThatThrownBy(super::testReadMergeChanges)
+                .hasMessage("line 1:21: Table function system.table_changes not registered");
+    }
+
+    @Override
+    public void testReadMergeChangesOnPartitionedTable()
+    {
+        // TODO (https://github.com/starburstdata/team-lakehouse/issues/221) support Delta CDF reads
+        assertThatThrownBy(super::testReadMergeChangesOnPartitionedTable)
+                .hasMessage("line 1:21: Table function system.table_changes not registered");
+    }
+
+    @Override
+    public void testTableChangesAccessControl()
+    {
+        // TODO (https://github.com/starburstdata/team-lakehouse/issues/221) support Delta CDF reads
+//        super.testTableChangesAccessControl();
+        assertThatThrownBy(super::testTableChangesAccessControl)
+                .hasStackTraceContaining("Table function system.table_changes not registered");
+    }
+
+    @Override
+    public void testVacuumDeletesCdfFiles()
+    {
+        // TODO (https://github.com/starburstdata/team-lakehouse/issues/221) support Delta CDF reads
+        assertThatThrownBy(super::testVacuumDeletesCdfFiles)
+                .hasMessageStartingWith("""
+
+                        Expecting message:
+                          "line 1:21: Table function system.table_changes not registered"
+                        to match regex:
+                          "Error opening Hive split .*"
+                        but did not.""");
     }
 
     /////// ----------------------------------------- please put generated code below this line ----------------------------------------- ///////
@@ -929,6 +1041,36 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
+    public void testProjectionPushdown()
+    {
+        skipDuplicateTestCoverage("testProjectionPushdown");
+    }
+
+    @Override
+    public void testProjectionPushdownMultipleRows()
+    {
+        skipDuplicateTestCoverage("testProjectionPushdownMultipleRows");
+    }
+
+    @Override
+    public void testProjectionPushdownPhysicalInputSize()
+    {
+        skipDuplicateTestCoverage("testProjectionPushdownPhysicalInputSize");
+    }
+
+    @Override
+    public void testProjectionPushdownReadsLessData()
+    {
+        skipDuplicateTestCoverage("testProjectionPushdownReadsLessData");
+    }
+
+    @Override
+    public void testProjectionWithCaseSensitiveField()
+    {
+        skipDuplicateTestCoverage("testProjectionWithCaseSensitiveField");
+    }
+
+    @Override
     public void testQueryLoggingCount()
     {
         skipDuplicateTestCoverage("testQueryLoggingCount");
@@ -938,6 +1080,12 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     public void testRangePredicate()
     {
         skipDuplicateTestCoverage("testRangePredicate");
+    }
+
+    @Override
+    public void testReadHighlyNestedData()
+    {
+        skipDuplicateTestCoverage("testReadHighlyNestedData");
     }
 
     @Override

@@ -15,8 +15,10 @@ package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableMap;
 import io.trino.filesystem.Location;
+import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.iceberg.BaseIcebergConnectorTest;
 import io.trino.plugin.iceberg.IcebergConfig;
+import io.trino.plugin.iceberg.IcebergConnector;
 import io.trino.plugin.iceberg.IcebergFileFormat;
 import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.plugin.tpch.TpchPlugin;
@@ -25,6 +27,7 @@ import io.trino.testing.BaseConnectorTest;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryFailedException;
 import io.trino.testing.QueryRunner;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 
 import java.io.IOException;
@@ -35,6 +38,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static io.trino.plugin.base.util.Closables.closeAllSuppress;
 import static io.trino.plugin.iceberg.IcebergTestUtils.checkOrcFileSorting;
 import static io.trino.plugin.objectstore.ObjectStoreQueryRunner.initializeTpchTables;
+import static io.trino.testing.TestingConnectorSession.SESSION;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -115,6 +119,14 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
             closeAllSuppress(e, queryRunner);
             throw e;
         }
+    }
+
+    @BeforeClass
+    @Override
+    public void initFileSystem()
+    {
+        ObjectStoreConnector objectStoreConnector = (ObjectStoreConnector) getDistributedQueryRunner().getCoordinator().getConnector(getSession().getCatalog().orElseThrow());
+        fileSystem = ((IcebergConnector) objectStoreConnector.getIcebergConnector()).getInjector().getInstance(TrinoFileSystemFactory.class).create(SESSION);
     }
 
     @Override
@@ -976,6 +988,36 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
+    public void testProjectionPushdown()
+    {
+        skipDuplicateTestCoverage("testProjectionPushdown");
+    }
+
+    @Override
+    public void testProjectionPushdownMultipleRows()
+    {
+        skipDuplicateTestCoverage("testProjectionPushdownMultipleRows");
+    }
+
+    @Override
+    public void testProjectionPushdownPhysicalInputSize()
+    {
+        skipDuplicateTestCoverage("testProjectionPushdownPhysicalInputSize");
+    }
+
+    @Override
+    public void testProjectionPushdownReadsLessData()
+    {
+        skipDuplicateTestCoverage("testProjectionPushdownReadsLessData");
+    }
+
+    @Override
+    public void testProjectionWithCaseSensitiveField()
+    {
+        skipDuplicateTestCoverage("testProjectionWithCaseSensitiveField");
+    }
+
+    @Override
     public void testQueryLoggingCount()
     {
         skipDuplicateTestCoverage("testQueryLoggingCount");
@@ -985,6 +1027,12 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     public void testRangePredicate()
     {
         skipDuplicateTestCoverage("testRangePredicate");
+    }
+
+    @Override
+    public void testReadHighlyNestedData()
+    {
+        skipDuplicateTestCoverage("testReadHighlyNestedData");
     }
 
     @Override
