@@ -315,7 +315,6 @@ public class HiveSplitManager
         // ensure cache id generation is revisited whenever handle classes change
         hiveSplit = new HiveSplit(
                 // database and table names are already part of table id
-                hiveSplit.getDatabase(),
                 hiveSplit.getTable(),
                 hiveSplit.getPartitionName(),
                 hiveSplit.getPath(),

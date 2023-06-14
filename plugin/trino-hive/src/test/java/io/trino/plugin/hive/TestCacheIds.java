@@ -283,7 +283,6 @@ public class TestCacheIds
             OptionalInt readBucketNumber)
     {
         return new HiveSplit(
-                "",
                 table,
                 partitionName,
                 path,
