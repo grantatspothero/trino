@@ -1239,11 +1239,11 @@ public class TracingConnectorMetadata
     }
 
     @Override
-    public Optional<CacheColumnId> getCacheColumnId(ColumnHandle columnHandle)
+    public Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
     {
         Span span = startSpan("getColumnId");
         try (var ignored = scopedSpan(span)) {
-            return delegate.getCacheColumnId(columnHandle);
+            return delegate.getCacheColumnId(tableHandle, columnHandle);
         }
     }
 

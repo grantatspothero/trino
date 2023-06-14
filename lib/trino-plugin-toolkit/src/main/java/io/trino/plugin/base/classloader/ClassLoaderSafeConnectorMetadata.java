@@ -1130,10 +1130,10 @@ public class ClassLoaderSafeConnectorMetadata
     }
 
     @Override
-    public Optional<CacheColumnId> getCacheColumnId(ColumnHandle columnHandle)
+    public Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
     {
         try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
-            return delegate.getCacheColumnId(columnHandle);
+            return delegate.getCacheColumnId(tableHandle, columnHandle);
         }
     }
 

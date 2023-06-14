@@ -543,7 +543,7 @@ public class TpchMetadata
     }
 
     @Override
-    public Optional<CacheColumnId> getCacheColumnId(ColumnHandle column)
+    public Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle column)
     {
         TpchColumnHandle handle = (TpchColumnHandle) column;
         return Optional.of(new CacheColumnId(handle.getColumnName() + ":" + handle.getType()));

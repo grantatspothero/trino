@@ -1502,7 +1502,7 @@ public interface ConnectorMetadata
      * can represent simple column reference or more complex reference
      * (e.g. map or array dereference expressions).
      */
-    default Optional<CacheColumnId> getCacheColumnId(ColumnHandle columnHandle)
+    default Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
     {
         return Optional.empty();
     }
