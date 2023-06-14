@@ -85,8 +85,8 @@ public class EnvMultinodeTrino415
                 .waitingForAll(forLogMessage(".*======== SERVER STARTED ========.*", 1), forHealthcheck())
                 .withStartupTimeout(Duration.ofMinutes(5))
                 .withCopyFileToContainer(forHostPath(dockerFiles.getDockerFilesHostPath("conf/presto/etc/jvm.config")), "/etc/trino/jvm.config")
-                .withCopyFileToContainer(forHostPath(configDir.getPath("iceberg.properties")), "/etc/trino/catalog/iceberg.properties")
-                .withCopyFileToContainer(forHostPath(configDir.getPath("delta.properties")), "/etc/trino/catalog/delta.properties")
+                .withCopyFileToContainer(forHostPath(configDir.getPath("iceberg-415.properties")), "/etc/trino/catalog/iceberg.properties")
+                .withCopyFileToContainer(forHostPath(configDir.getPath("delta-415.properties")), "/etc/trino/catalog/delta.properties")
                 .withExposedPorts(8080);
         exportAWSCredentials(container);
         portBinder.exposePort(container, 8070, 8080);
