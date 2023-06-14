@@ -26,6 +26,7 @@ import io.trino.testing.QueryRunner;
 import io.trino.testing.minio.MinioClient;
 import org.testng.annotations.BeforeMethod;
 
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Map;
 
@@ -131,8 +132,9 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
         private UpdateOverrides() {}
 
         public static void main(String[] args)
+                throws IOException
         {
-            HELPER.generateOverrides();
+            HELPER.updateOverrides();
         }
     }
 

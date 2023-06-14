@@ -27,6 +27,7 @@ import io.trino.testing.QueryFailedException;
 import io.trino.testing.QueryRunner;
 import org.testng.annotations.BeforeMethod;
 
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Map;
 
@@ -184,8 +185,9 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
         private UpdateOverrides() {}
 
         public static void main(String[] args)
+                throws IOException
         {
-            HELPER.generateOverrides();
+            HELPER.updateOverrides();
         }
     }
 

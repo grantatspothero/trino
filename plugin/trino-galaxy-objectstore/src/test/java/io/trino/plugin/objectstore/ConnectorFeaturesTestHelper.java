@@ -17,13 +17,22 @@ import io.trino.testing.BaseConnectorTest;
 import org.testng.SkipException;
 import org.testng.annotations.Test;
 
+import java.io.IOException;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.MoreCollectors.onlyElement;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static org.testng.Assert.fail;
@@ -49,7 +58,7 @@ class ConnectorFeaturesTestHelper
         if (declaringClass.isAssignableFrom(BaseConnectorTest.class) && !isOverridden(testMethod, objectStoreConnectorFeaturesTestClass)) {
             fail("The %s test is covered by %s, no need to run it again in %s. You can use main() to generate overrides".formatted(
                     testMethod.getName(),
-                    objectStoreTestClass .getSimpleName(),
+                    objectStoreTestClass.getSimpleName(),
                     objectStoreConnectorFeaturesTestClass.getSimpleName()));
         }
     }
@@ -80,27 +89,52 @@ class ConnectorFeaturesTestHelper
         }
     }
 
-    public void generateOverrides()
+    public void updateOverrides()
+            throws IOException
     {
-        Stream.of(BaseConnectorTest.class.getMethods())
-                .filter(method -> method.isAnnotationPresent(Test.class) && !isOverridden(method, objectStoreConnectorFeaturesTestClass))
+        Path sourceFile;
+        try (Stream<Path> walk = Files.walk(Paths.get("."))) {
+            sourceFile = walk
+                    .filter(path -> path.getFileName().toString().equals(objectStoreConnectorFeaturesTestClass.getSimpleName() + ".java"))
+                    .collect(onlyElement());
+        }
+        System.out.printf("Updating %s...\n", sourceFile);
+
+        String contents = Files.readString(sourceFile, UTF_8);
+        String nonGeneratedContents = contents.replaceFirst(
+                "(/////// ----------------------------------------- please put generated code below this line as well --------------------------------- ///////\n)(?s:.*)(}\n$)",
+                "$1");
+        checkState(!nonGeneratedContents.equals(contents), "Pattern not found");
+
+        String overrides = generateOverrides(method ->
+                !Pattern.compile("@Override\n    public void " + Pattern.quote(method.getName()) + "\\(")
+                        .matcher(nonGeneratedContents)
+                        .find());
+        Files.writeString(sourceFile, nonGeneratedContents + "\n" + overrides + "}\n", UTF_8);
+    }
+
+    private String generateOverrides(Predicate<Method> testMethodFilter)
+    {
+        return Stream.of(BaseConnectorTest.class.getMethods())
+                .filter(method -> method.isAnnotationPresent(Test.class) && !isOverridden(method, connectorTestClass))
+                .filter(testMethodFilter)
                 .sorted(Comparator.comparing(Method::getName))
-                .forEachOrdered(method -> {
-                    System.out.printf(
-                            """
+                .map(method ->
+                        """
                                     @Override
                                     public void %s(%s)
                                     {
                                         skipDuplicateTestCoverage("%1$s"%s);
                                     }
-                                    \n""", method.getName(),
-                            IntStream.range(0, method.getParameterTypes().length)
-                                    .mapToObj(i -> "%s arg%s".formatted(formatClassName(method.getParameterTypes()[i]), i))
-                                    .collect(joining(", ")),
-                            Stream.of(method.getParameterTypes())
-                                    .map(clazz -> ", %s.class".formatted(formatClassName(clazz)))
-                                    .collect(joining()));
-                });
+                                """.formatted(
+                                method.getName(),
+                                IntStream.range(0, method.getParameterTypes().length)
+                                        .mapToObj(i -> "%s arg%s".formatted(formatClassName(method.getParameterTypes()[i]), i))
+                                        .collect(joining(", ")),
+                                Stream.of(method.getParameterTypes())
+                                        .map(clazz -> ", %s.class".formatted(formatClassName(clazz)))
+                                        .collect(joining())))
+                .collect(joining("\n"));
     }
 
     private static boolean isOverridden(Method method, Class<?> byClazz)
