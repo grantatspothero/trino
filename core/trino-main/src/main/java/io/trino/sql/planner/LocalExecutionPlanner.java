@@ -727,7 +727,7 @@ public class LocalExecutionPlanner
                         .map(OperatorFactoryWithTypes::getOperatorFactory)
                         .map(SharedOperatorFactory::new)
                         .collect(toImmutableList());
-                int pipelineId = nextPipelineId.get();
+                int pipelineId = getNextPipelineId();
                 Map<TableHandle, DriverFactory> alternatives = Maps.transformValues(physicalOperation.pipelineHeadAlternatives,
                         alternative -> new DriverFactory(pipelineId, inputDriver, outputDriver,
                                 ImmutableList.<OperatorFactory>builder()
