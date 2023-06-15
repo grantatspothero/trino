@@ -19,6 +19,7 @@ import io.trino.spi.connector.ConnectorFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.isNullOrEmpty;
@@ -41,8 +42,8 @@ public class ObjectStoreConnectorFactory
         ClassLoader classLoader = context.duplicatePluginClassLoader();
         try {
             return (Connector) classLoader.loadClass(InternalObjectStoreConnectorFactory.class.getName())
-                    .getMethod("createConnector", String.class, Map.class, ConnectorContext.class)
-                    .invoke(null, catalogName, config, context);
+                    .getMethod("createConnector", String.class, Map.class, Optional.class, Optional.class, Optional.class, ConnectorContext.class)
+                    .invoke(null, catalogName, config, Optional.empty(), Optional.empty(), Optional.empty(), context);
         }
         catch (InvocationTargetException e) {
             Throwable targetException = e.getTargetException();

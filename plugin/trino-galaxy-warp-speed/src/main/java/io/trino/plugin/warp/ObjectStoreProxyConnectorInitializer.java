@@ -26,6 +26,7 @@ import io.trino.spi.connector.ConnectorContext;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class ObjectStoreProxyConnectorInitializer
@@ -57,7 +58,7 @@ public class ObjectStoreProxyConnectorInitializer
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         // Because of native code, Warp Speed does not support multiple catalogs and thus doesn't need classloader duplication.
-        return InternalObjectStoreConnectorFactory.createConnector(catalogName, objectStoreConfig, context);
+        return InternalObjectStoreConnectorFactory.createConnector(catalogName, objectStoreConfig, Optional.empty(), Optional.empty(), Optional.empty(), context);
     }
 
     @Override

@@ -26,6 +26,7 @@ import io.trino.hdfs.gcs.HiveGcsModule;
 import io.trino.hdfs.s3.HiveS3Module;
 import io.trino.plugin.deltalake.InternalDeltaLakeConnectorFactory;
 import io.trino.plugin.hive.InternalHiveConnectorFactory;
+import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hudi.InternalHudiConnectorFactory;
 import io.trino.plugin.iceberg.InternalIcebergConnectorFactory;
 import io.trino.spi.classloader.ThreadContextClassLoader;
@@ -48,7 +49,13 @@ public final class InternalObjectStoreConnectorFactory
 {
     private InternalObjectStoreConnectorFactory() {}
 
-    public static Connector createConnector(String catalogName, Map<String, String> config, ConnectorContext context)
+    public static Connector createConnector(
+            String catalogName,
+            Map<String, String> config,
+            Optional<HiveMetastore> hiveMetastore,
+            Optional<Module> icebergCatalogModule,
+            Optional<Module> deltaMetastoreModule,
+            ConnectorContext context)
     {
         ClassLoader classLoader = InternalObjectStoreConnectorFactory.class.getClassLoader();
         try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
@@ -60,7 +67,9 @@ public final class InternalObjectStoreConnectorFactory
                     context,
                     combine(
                             new ConfigureCachingMetastoreModule(),
-                            new GalaxyLocationSecurityModule()));
+                            new GalaxyLocationSecurityModule()),
+                    hiveMetastore,
+                    Optional.empty());
 
             Map<String, String> icebergConfig = new HashMap<>(filteredConfig(config, "ICEBERG"));
             // The procedure is disabled in OSS because of security issues.
@@ -73,7 +82,7 @@ public final class InternalObjectStoreConnectorFactory
                     combine(
                             new ConfigureCachingMetastoreModule(),
                             new GalaxyLocationSecurityModule()),
-                    Optional.empty(),
+                    icebergCatalogModule,
                     Optional.empty());
 
             Map<String, String> deltaConfig = new HashMap<>(filteredConfig(config, "DELTA"));
@@ -85,7 +94,7 @@ public final class InternalObjectStoreConnectorFactory
                     catalogName,
                     deltaConfig,
                     context,
-                    Optional.empty(),
+                    deltaMetastoreModule,
                     Optional.empty(),
                     combine(
                             new ConfigureCachingMetastoreModule(),
@@ -95,7 +104,7 @@ public final class InternalObjectStoreConnectorFactory
                     catalogName,
                     filteredConfig(config, "HUDI"),
                     context,
-                    Optional.empty(),
+                    hiveMetastore,
                     Optional.of(combine(
                             new ConfigureCachingMetastoreModule(),
                             new GalaxyLocationSecurityModule())));
