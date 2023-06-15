@@ -379,9 +379,9 @@ jobs:
             plugin/trino-hive-hadoop2/bin/run_hive_tests.sh
       - name: Run Hive S3 Tests
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.TRINO_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.TRINO_AWS_SECRET_ACCESS_KEY }}
-          S3_BUCKET: "trino-ci-test"
+          AWS_ACCESS_KEY_ID: ${{ secrets.GALAXY_TRINO_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.GALAXY_TRINO_AWS_SECRET_ACCESS_KEY }}
+          S3_BUCKET: "galaxy-trino-ci"
           S3_BUCKET_ENDPOINT: "https://s3.us-east-2.amazonaws.com"
         run: |
           if [ "${AWS_ACCESS_KEY_ID}" != "" ]; then
@@ -394,10 +394,10 @@ jobs:
           fi
       - name: Run Hive AWS Tests
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.TRINO_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.TRINO_AWS_SECRET_ACCESS_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.GALAXY_TRINO_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.GALAXY_TRINO_AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: us-east-2
-          S3_BUCKET: "trino-ci-test"
+          S3_BUCKET: "galaxy-trino-ci"
           S3_BUCKET_ENDPOINT: "s3.us-east-2.amazonaws.com"
         run: |
           if [ "${AWS_ACCESS_KEY_ID}" != "" ]; then
