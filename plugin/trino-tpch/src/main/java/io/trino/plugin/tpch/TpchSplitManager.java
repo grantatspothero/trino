@@ -81,7 +81,14 @@ public class TpchSplitManager
     public Optional<CacheSplitId> getCacheSplitId(ConnectorSplit split)
     {
         TpchSplit tpchSplit = (TpchSplit) split;
-        // ignore host addresses as it's irrelevant for ID
+
+        // this ensures that when split changes someone will look if id has to updated
+        tpchSplit = new TpchSplit(
+                tpchSplit.getPartNumber(),
+                tpchSplit.getTotalParts(),
+                // ignore host addresses as it's irrelevant for ID
+                ImmutableList.of());
+
         return Optional.of(new CacheSplitId(tpchSplit.getTotalParts() + ":" + tpchSplit.getPartNumber()));
     }
 }

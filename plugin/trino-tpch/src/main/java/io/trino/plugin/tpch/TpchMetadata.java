@@ -536,9 +536,17 @@ public class TpchMetadata
     {
         TpchTableHandle handle = (TpchTableHandle) table;
         if (!handle.getConstraint().isAll()) {
-            // Unique conversion of TupleDomain to string requires JSON serialization
+            // lossless conversion of TupleDomain to string requires JSON serialization
             return Optional.empty();
         }
+
+        // ensure cache id generation is revisited whenever handle classes change
+        handle = new TpchTableHandle(
+                handle.getSchemaName(),
+                handle.getTableName(),
+                handle.getScaleFactor(),
+                handle.getConstraint());
+
         return Optional.of(new CacheTableId(handle.getSchemaName() + ":" + handle.getTableName() + ":" + handle.getScaleFactor()));
     }
 
@@ -546,6 +554,12 @@ public class TpchMetadata
     public Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle column)
     {
         TpchColumnHandle handle = (TpchColumnHandle) column;
+
+        // ensure cache id generation is revisited whenever handle classes change
+        handle = new TpchColumnHandle(
+                handle.getColumnName(),
+                handle.getType());
+
         return Optional.of(new CacheColumnId(handle.getColumnName() + ":" + handle.getType()));
     }
 
