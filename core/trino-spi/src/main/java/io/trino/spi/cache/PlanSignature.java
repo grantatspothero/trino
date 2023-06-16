@@ -49,7 +49,10 @@ public class PlanSignature
      */
     private final List<CacheColumnId> columns;
     /**
-     * Predicate that is satisfied by result set represented by {@link PlanSignature}.
+     * Predicate that is enforced on result rows represented by {@link PlanSignature}.
+     * You can use output of `PlanSignature A` to derive output of matching `PlanSignature B`
+     * as long as `B.predicate` is a strict subset of `A.predicate`. To do so, `B.predicate`
+     * must be applied on output of `PlanSignature A`.
      */
     private final TupleDomain<CacheColumnId> predicate;
 
