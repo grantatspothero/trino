@@ -9,6 +9,7 @@
  */
 package io.starburst.stargate.buffer.trino.exchange.fallbacking;
 
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import io.airlift.slice.Slice;
 import io.starburst.stargate.buffer.trino.exchange.BufferExchangeSourceHandle;
 import io.trino.plugin.exchange.filesystem.FileSystemExchangeSourceHandle;
@@ -16,9 +17,7 @@ import io.trino.spi.exchange.ExchangeManager;
 import io.trino.spi.exchange.ExchangeSource;
 import io.trino.spi.exchange.ExchangeSourceHandle;
 import io.trino.spi.exchange.ExchangeSourceOutputSelector;
-
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
+import jakarta.annotation.Nullable;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;

@@ -11,6 +11,8 @@ package io.starburst.stargate.buffer.trino.exchange.fallbacking;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.io.Closer;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
+import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.starburst.stargate.buffer.trino.exchange.BufferExchangeManager;
 import io.starburst.stargate.buffer.trino.exchange.BufferExchangeSinkInstanceHandle;
@@ -23,9 +25,6 @@ import io.trino.spi.exchange.ExchangeManager;
 import io.trino.spi.exchange.ExchangeSink;
 import io.trino.spi.exchange.ExchangeSinkInstanceHandle;
 import io.trino.spi.exchange.ExchangeSource;
-
-import javax.annotation.concurrent.GuardedBy;
-import javax.inject.Inject;
 
 import java.io.IOException;
 import java.time.Duration;

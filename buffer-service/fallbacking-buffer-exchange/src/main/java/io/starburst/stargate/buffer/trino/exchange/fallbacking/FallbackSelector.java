@@ -13,14 +13,13 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
 import com.google.common.base.Ticker;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
+import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.airlift.units.Duration;
 import io.starburst.stargate.buffer.discovery.client.failures.FailureInfo;
 import io.starburst.stargate.buffer.discovery.client.failures.FailureTrackingApi;
 import io.starburst.stargate.buffer.discovery.client.failures.FailuresStatusInfo;
-
-import javax.annotation.concurrent.GuardedBy;
-import javax.inject.Inject;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
