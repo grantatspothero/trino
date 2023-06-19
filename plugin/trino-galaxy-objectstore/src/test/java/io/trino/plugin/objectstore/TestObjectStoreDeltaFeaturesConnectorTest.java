@@ -1083,9 +1083,9 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
-    public void testReadHighlyNestedData()
+    public void testProjectionPushdownWithHighlyNestedData()
     {
-        skipDuplicateTestCoverage("testReadHighlyNestedData");
+        skipDuplicateTestCoverage("testProjectionPushdownWithHighlyNestedData");
     }
 
     @Override

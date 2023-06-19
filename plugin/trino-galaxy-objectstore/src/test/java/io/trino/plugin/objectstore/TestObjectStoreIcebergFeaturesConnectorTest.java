@@ -1030,9 +1030,9 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testReadHighlyNestedData()
+    public void testProjectionPushdownWithHighlyNestedData()
     {
-        skipDuplicateTestCoverage("testReadHighlyNestedData");
+        skipDuplicateTestCoverage("testProjectionPushdownWithHighlyNestedData");
     }
 
     @Override
