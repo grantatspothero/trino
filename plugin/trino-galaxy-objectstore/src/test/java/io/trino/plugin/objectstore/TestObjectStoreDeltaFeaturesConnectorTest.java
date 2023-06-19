@@ -88,9 +88,7 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
                     "galaxy",
                     galaxyMetastore.getMetastoreConfig(minio.getS3Url()),
                     minio.getHiveS3Config(),
-                    Map.of(
-                            // delta.projection-pushdown-enabled is disabled by default in InternalObjectStoreConnectorFactory
-                            "DELTA__delta.projection-pushdown-enabled", "true")));
+                    Map.of()));
 
             queryRunner.execute("CREATE SCHEMA %s.%s".formatted(catalog, schema));
             initializeTpchTables(queryRunner, REQUIRED_TPCH_TABLES);
