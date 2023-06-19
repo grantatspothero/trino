@@ -64,16 +64,6 @@ public class TestObjectStoreHiveS3
         assertThat(getAllDataFilesFromTableDirectory(location)).isEqualTo(updatedFiles);
     }
 
-    private String adaptTableLocation(String location)
-    {
-        if (location.endsWith("/")) {
-            //Hive removes trailing slash from location
-            location = location.substring(0, location.length() - 1);
-        }
-        //Hive normalizes double slash
-        return location.replaceAll("(?<!(s3:))//", "/");
-    }
-
     @Override // Row-level modifications are not supported for Hive tables
     @Test(dataProvider = "locationPatternsDataProvider")
     public void testBasicOperationsWithProvidedTableLocation(boolean partitioned, String locationPattern)
@@ -82,14 +72,18 @@ public class TestObjectStoreHiveS3
         String location = locationPattern.formatted(bucketName, tableName);
         String partitionQueryPart = (partitioned ? ",partitioned_by = ARRAY['col_int']" : "");
 
-        assertUpdate("CREATE TABLE " + tableName + "(col_str, col_int)" +
+        String create = "CREATE TABLE " + tableName + "(col_str, col_int)" +
                 "WITH (external_location = '" + location + "'" + partitionQueryPart + ") " +
-                "AS VALUES ('str1', 1), ('str2', 2), ('str3', 3)", 3);
+                "AS VALUES ('str1', 1), ('str2', 2), ('str3', 3)";
+        if (locationPattern.contains("//double_slash/")) {
+            assertQueryFails(create, "\\QUnsupported location that cannot be internally represented: " + location);
+            return;
+        }
+        assertUpdate(create, 3);
         assertQuery("SELECT * FROM " + tableName, "VALUES ('str1', 1), ('str2', 2), ('str3', 3)");
 
         String actualTableLocation = getTableLocation(tableName);
-        String expectedTableLocation = adaptTableLocation(location);
-        assertThat(actualTableLocation).isEqualTo(expectedTableLocation);
+        assertThat(actualTableLocation).isEqualTo(location);
 
         assertUpdate("INSERT INTO " + tableName + " VALUES ('str4', 4)", 1);
         assertQuery("SELECT * FROM " + tableName, "VALUES ('str1', 1), ('str2', 2), ('str3', 3), ('str4', 4)");
@@ -115,7 +109,8 @@ public class TestObjectStoreHiveS3
 
         assertUpdate("CREATE TABLE " + qualifiedTableName + "(col_str varchar, col_int int)" + partitionQueryPart);
         String expectedTableLocation = (schemaLocation.endsWith("/") ? schemaLocation : schemaLocation + "/") + tableName;
-        expectedTableLocation = adaptTableLocation(expectedTableLocation);
+        // Hive normalizes double slash
+        expectedTableLocation = expectedTableLocation.replaceAll("(?<!(s3:))//", "/");
 
         String actualTableLocation = metastore.getMetastore().getTable(schemaName, tableName).orElseThrow().storage().location();
         assertThat(actualTableLocation).matches(expectedTableLocation);
@@ -147,9 +142,14 @@ public class TestObjectStoreHiveS3
         String location = locationPattern.formatted(bucketName, tableName);
         String partitionQueryPart = (partitioned ? ",partitioned_by = ARRAY['col_int']" : "");
 
-        assertUpdate("CREATE TABLE " + tableName + "(col_str, col_int)" +
+        String create = "CREATE TABLE " + tableName + "(col_str, col_int)" +
                 "WITH (external_location = '" + location + "'" + partitionQueryPart + ") " +
-                "AS VALUES ('str1', 1), ('str2', 2), ('str3', 3)", 3);
+                "AS VALUES ('str1', 1), ('str2', 2), ('str3', 3)";
+        if (locationPattern.contains("//double_slash/")) {
+            assertQueryFails(create, "\\QUnsupported location that cannot be internally represented: " + location);
+            return;
+        }
+        assertUpdate(create, 3);
 
         assertUpdate("INSERT INTO " + tableName + " VALUES ('str4', 4)", 1);
         assertQuery("SELECT * FROM " + tableName, "VALUES ('str1', 1), ('str2', 2), ('str3', 3), ('str4', 4)");
@@ -195,12 +195,9 @@ public class TestObjectStoreHiveS3
         String tableName = "test_create_table_with_incorrect_location_" + randomNameSuffix();
         String location = "s3://%s/galaxy/a#hash/%s".formatted(bucketName, tableName);
 
-        assertUpdate("CREATE TABLE " + tableName + "(col_str varchar, col_int integer)" +
-                "WITH (external_location = '" + location + "')");
-        assertThatThrownBy(() -> assertUpdate("INSERT INTO " + tableName + " VALUES ('str', 1)"))
-                .hasMessageContaining("Fragment is not allowed in a file system location");
-
-        assertUpdate("DROP TABLE " + tableName);
+        assertThatThrownBy(() -> assertUpdate("CREATE TABLE " + tableName + "(col_str varchar, col_int integer)" +
+                "WITH (external_location = '" + location + "')"))
+                .hasMessage("External location is not a valid file system URI: " + location);
     }
 
     @Test
@@ -229,11 +226,8 @@ public class TestObjectStoreHiveS3
         assertThatThrownBy(() -> assertUpdate("CREATE TABLE " + qualifiedTableName + "(col_str, col_int) AS VALUES ('str1', 1)"))
                 .hasMessageContaining("Fragment is not allowed in a file system location");
 
-        assertUpdate("CREATE TABLE " + qualifiedTableName + "(col_str varchar, col_int integer)");
-        assertThatThrownBy(() -> assertUpdate("INSERT INTO " + qualifiedTableName + " VALUES ('str', 1)"))
+        assertThatThrownBy(() -> assertUpdate("CREATE TABLE " + qualifiedTableName + "(col_str varchar, col_int integer)"))
                 .hasMessageContaining("Fragment is not allowed in a file system location");
-
-        assertUpdate("DROP TABLE " + qualifiedTableName);
 
         assertUpdate("DROP SCHEMA " + schemaName);
     }

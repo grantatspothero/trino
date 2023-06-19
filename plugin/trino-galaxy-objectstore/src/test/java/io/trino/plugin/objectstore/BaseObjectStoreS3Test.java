@@ -40,6 +40,7 @@ import java.util.stream.Collectors;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.Sets.union;
 import static io.trino.plugin.objectstore.S3Assert.s3Path;
+import static io.trino.plugin.objectstore.TableType.HIVE;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static io.trino.testing.DataProviders.cartesianProduct;
 import static io.trino.testing.DataProviders.trueFalse;
@@ -235,8 +236,13 @@ public abstract class BaseObjectStoreS3Test
         String partitionQueryPart = (partitioned ? "," + partitionByKeyword + " = ARRAY['value']" : "");
         String locationQueryPart = locationKeyword + "= '" + location + "'";
 
-        assertUpdate("CREATE TABLE " + tableName + " (key integer, value varchar) " +
-                "WITH (" + locationQueryPart + partitionQueryPart + ")");
+        String create = "CREATE TABLE " + tableName + " (key integer, value varchar) " +
+                "WITH (" + locationQueryPart + partitionQueryPart + ")";
+        if (tableType == HIVE && locationPattern.contains("//double_slash/")) {
+            assertQueryFails(create, "\\QUnsupported location that cannot be internally represented: " + location);
+            return;
+        }
+        assertUpdate(create);
         try {
             // create multiple data files, INSERT with multiple values would create only one file (if not partitioned)
             assertUpdate("INSERT INTO " + tableName + " VALUES (1, 'one')", 1);
