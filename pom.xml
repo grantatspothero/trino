@@ -43,7 +43,7 @@
         <dep.accumulo.version>1.10.2</dep.accumulo.version>
         <dep.accumulo-hadoop.version>2.7.7-1</dep.accumulo-hadoop.version>
         <dep.antlr.version>4.12.0</dep.antlr.version>
-        <dep.airlift.version>230</dep.airlift.version>
+        <dep.airlift.version>231</dep.airlift.version>
         <dep.arrow.version>11.0.0</dep.arrow.version>
         <dep.avro.version>1.11.1</dep.avro.version>
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
@@ -69,6 +69,7 @@
         <dep.jna.version>5.13.0</dep.jna.version>
         <dep.okio.version>3.3.0</dep.okio.version>
         <dep.jackson.version>2.15.1</dep.jackson.version>
+        <dep.opentelemetry.version>1.26.0</dep.opentelemetry.version>
 
         <dep.docker.images.version>79</dep.docker.images.version>
 
@@ -1717,6 +1718,18 @@
                 <scope>import</scope>
             </dependency>
 
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-api</artifactId>
+                <version>${dep.opentelemetry.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-context</artifactId>
+                <version>${dep.opentelemetry.version}</version>
+            </dependency>
+
             <!-- Stargate -->
             <dependency>
                 <groupId>io.starburst.schema-discovery</groupId>
@@ -2370,10 +2383,8 @@
                             <requireUpperBoundDeps>
                                 <excludes combine.children="append">
                                     <!-- TODO: fix this in Airlift resolver -->
-                                    <exclude>org.codehaus.plexus:plexus-utils</exclude>
-                                    <exclude>com.google.guava:guava</exclude>
-                                    <exclude>com.fasterxml.jackson.core:jackson-core</exclude>
-                                    <exclude>com.google.j2objc:j2objc-annotations</exclude>
+                                    <exclude>ch.qos.logback:logback-core</exclude>
+                                    <exclude>com.google.inject:guice</exclude>
                                 </excludes>
                             </requireUpperBoundDeps>
                             <bannedDependencies>
