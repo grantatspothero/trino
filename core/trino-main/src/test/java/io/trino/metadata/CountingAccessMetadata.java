@@ -19,6 +19,8 @@ import com.google.common.collect.Multiset;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.airlift.slice.Slice;
 import io.trino.Session;
+import io.trino.spi.cache.CacheColumnId;
+import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.AggregateFunction;
 import io.trino.spi.connector.AggregationApplicationResult;
 import io.trino.spi.connector.BeginTableExecuteResult;
@@ -885,5 +887,17 @@ public class CountingAccessMetadata
     public OptionalInt getMaxWriterTasks(Session session, String catalogName)
     {
         return delegate.getMaxWriterTasks(session, catalogName);
+    }
+
+    @Override
+    public Optional<CacheTableId> getCacheTableId(Session session, TableHandle tableHandle)
+    {
+        return delegate.getCacheTableId(session, tableHandle);
+    }
+
+    @Override
+    public Optional<CacheColumnId> getCacheColumnId(Session session, TableHandle tableHandle, ColumnHandle columnHandle)
+    {
+        return delegate.getCacheColumnId(session, tableHandle, columnHandle);
     }
 }
