@@ -149,6 +149,12 @@ public class ObjectStoreProxiedConnectorTransformer
     }
 
     @Override
+    public ConnectorSplit createProxiedConnectorSplitForMixedQuery(ConnectorSplit connectorSplit)
+    {
+        return getTransformer(connectorSplit).createProxiedConnectorSplitForMixedQuery(connectorSplit);
+    }
+
+    @Override
     public Optional<ConnectorBucketNodeMap> getBucketNodeMapping(ConnectorTransactionHandle transactionHandle, ConnectorSession session, ConnectorPartitioningHandle partitioningHandle, ConnectorNodePartitioningProvider nodePartitionProvider, List<Node> nodes)
     {
         return nodePartitionProvider.getBucketNodeMapping(
