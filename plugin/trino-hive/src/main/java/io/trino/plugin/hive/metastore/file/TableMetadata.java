@@ -49,6 +49,7 @@ public class TableMetadata
     private final Map<String, String> parameters;
 
     private final Optional<HiveFileFormat> storageFormat;
+    private final Optional<StorageFormat> originalStorageFormat;
     private final Optional<HiveBucketProperty> bucketProperty;
     private final Map<String, String> serdeParameters;
 
@@ -68,6 +69,7 @@ public class TableMetadata
             @JsonProperty("partitionColumns") List<Column> partitionColumns,
             @JsonProperty("parameters") Map<String, String> parameters,
             @JsonProperty("storageFormat") Optional<HiveFileFormat> storageFormat,
+            @JsonProperty("originalStorageFormat") Optional<StorageFormat> originalStorageFormat,
             @JsonProperty("bucketProperty") Optional<HiveBucketProperty> bucketProperty,
             @JsonProperty("serdeParameters") Map<String, String> serdeParameters,
             @JsonProperty("externalLocation") Optional<String> externalLocation,
@@ -83,6 +85,7 @@ public class TableMetadata
         this.parameters = ImmutableMap.copyOf(requireNonNull(parameters, "parameters is null"));
 
         this.storageFormat = requireNonNull(storageFormat, "storageFormat is null");
+        this.originalStorageFormat = requireNonNull(originalStorageFormat, "originalStorageFormat is null");
         this.bucketProperty = requireNonNull(bucketProperty, "bucketProperty is null");
         this.serdeParameters = requireNonNull(serdeParameters, "serdeParameters is null");
         this.externalLocation = requireNonNull(externalLocation, "externalLocation is null");
@@ -117,6 +120,12 @@ public class TableMetadata
                     .filter(format -> tableFormat.equals(StorageFormat.fromHiveStorageFormat(format)))
                     .map(HiveFileFormat::fromHiveStorageFormat)
                     .findFirst();
+        }
+        if (storageFormat.isPresent()) {
+            originalStorageFormat = Optional.empty();
+        }
+        else {
+            originalStorageFormat = Optional.of(tableFormat);
         }
         bucketProperty = table.getStorage().getBucketProperty();
         serdeParameters = table.getStorage().getSerdeParameters();
@@ -191,6 +200,12 @@ public class TableMetadata
     }
 
     @JsonProperty
+    public Optional<StorageFormat> getOriginalStorageFormat()
+    {
+        return originalStorageFormat;
+    }
+
+    @JsonProperty
     public Optional<HiveBucketProperty> getBucketProperty()
     {
         return bucketProperty;
@@ -236,6 +251,7 @@ public class TableMetadata
                 partitionColumns,
                 parameters,
                 storageFormat,
+                originalStorageFormat,
                 bucketProperty,
                 serdeParameters,
                 externalLocation,
@@ -254,6 +270,7 @@ public class TableMetadata
                 partitionColumns,
                 parameters,
                 storageFormat,
+                originalStorageFormat,
                 bucketProperty,
                 serdeParameters,
                 externalLocation,
@@ -272,6 +289,7 @@ public class TableMetadata
                 partitionColumns,
                 parameters,
                 storageFormat,
+                originalStorageFormat,
                 bucketProperty,
                 serdeParameters,
                 externalLocation,
@@ -292,6 +310,7 @@ public class TableMetadata
                     }
                     return StorageFormat.fromHiveStorageFormat(fileFormat.toHiveStorageFormat());
                 })
+                .or(() -> originalStorageFormat)
                 .orElse(VIEW_STORAGE_FORMAT);
 
         return new Table(

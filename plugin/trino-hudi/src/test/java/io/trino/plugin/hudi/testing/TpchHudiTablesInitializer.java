@@ -75,6 +75,7 @@ import static io.trino.plugin.hive.HiveType.HIVE_INT;
 import static io.trino.plugin.hive.HiveType.HIVE_LONG;
 import static io.trino.plugin.hive.HiveType.HIVE_STRING;
 import static io.trino.plugin.hive.metastore.PrincipalPrivileges.NO_PRIVILEGES;
+import static io.trino.plugin.hive.util.HiveUtil.HUDI_PARQUET_INPUT_FORMAT;
 import static io.trino.testing.TestingConnectorSession.SESSION;
 import static java.lang.String.format;
 import static java.util.Collections.unmodifiableList;
@@ -170,7 +171,7 @@ public class TpchHudiTablesInitializer
 
         StorageFormat storageFormat = StorageFormat.create(
                 ParquetHiveSerDe.class.getName(),
-                "org.apache.hudi.hadoop.HoodieParquetInputFormat",
+                HUDI_PARQUET_INPUT_FORMAT,
                 MapredParquetOutputFormat.class.getName());
 
         return Table.builder()

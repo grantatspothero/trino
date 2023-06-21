@@ -51,6 +51,7 @@ import static io.trino.plugin.hive.HiveType.HIVE_DOUBLE;
 import static io.trino.plugin.hive.HiveType.HIVE_INT;
 import static io.trino.plugin.hive.HiveType.HIVE_LONG;
 import static io.trino.plugin.hive.HiveType.HIVE_STRING;
+import static io.trino.plugin.hive.util.HiveUtil.HUDI_PARQUET_INPUT_FORMAT;
 
 public class ResourceHudiTablesInitializer
         implements HudiTablesInitializer
@@ -94,7 +95,7 @@ public class ResourceHudiTablesInitializer
     {
         StorageFormat storageFormat = StorageFormat.create(
                 ParquetHiveSerDe.class.getName(),
-                "org.apache.hudi.hadoop.HoodieParquetInputFormat",
+                HUDI_PARQUET_INPUT_FORMAT,
                 MapredParquetOutputFormat.class.getName());
 
         Table table = Table.builder()
