@@ -6683,6 +6683,14 @@ public class TestAnalyzer
                 .hasMessage("line 1:15: JSON_TABLE is not yet supported");
     }
 
+    @Test
+    public void testDisallowAggregationFunctionInUnnest()
+    {
+        assertFails("SELECT a FROM (VALUES (1), (2)) t(a), UNNEST(ARRAY[COUNT(t.a)])")
+                .hasErrorCode(EXPRESSION_NOT_SCALAR)
+                .hasMessage("line 1:46: UNNEST cannot contain aggregations, window functions or grouping operations: [COUNT(t.a)]");
+    }
+
     @BeforeClass
     public void setup()
     {
