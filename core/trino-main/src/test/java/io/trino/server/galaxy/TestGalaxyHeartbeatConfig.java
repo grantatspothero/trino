@@ -14,10 +14,12 @@
 package io.trino.server.galaxy;
 
 import com.google.common.collect.ImmutableMap;
+import io.airlift.units.Duration;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static io.airlift.configuration.testing.ConfigAssertions.assertFullMapping;
 import static io.airlift.configuration.testing.ConfigAssertions.assertRecordedDefaults;
@@ -32,7 +34,9 @@ public class TestGalaxyHeartbeatConfig
                 .setTrinoPlaneFqdn(null)
                 .setVariant(null)
                 .setRole(null)
-                .setBillingTopic("billing"));
+                .setBillingTopic("billing")
+                .setPublishInterval(new Duration(30, TimeUnit.SECONDS))
+                .setTerminationGracePeriod(new Duration(10, TimeUnit.SECONDS)));
     }
 
     @Test
@@ -44,13 +48,17 @@ public class TestGalaxyHeartbeatConfig
                 .put("galaxy.cluster-variant", "demo")
                 .put("galaxy.trino-instance-role", "coordinator")
                 .put("galaxy.billing.topic", "notbilling")
+                .put("galaxy.heartbeat.publish-interval", "5s")
+                .put("galaxy.heartbeat.termination-grace-period", "5m")
                 .buildOrThrow();
 
         GalaxyHeartbeatConfig expected = new GalaxyHeartbeatConfig()
                 .setTrinoPlaneFqdn("gcp-test-1.galaxy.gate0.net")
                 .setVariant("demo")
                 .setRole("coordinator")
-                .setBillingTopic("notbilling");
+                .setBillingTopic("notbilling")
+                .setPublishInterval(new Duration(5, TimeUnit.SECONDS))
+                .setTerminationGracePeriod(new Duration(5, TimeUnit.MINUTES));
 
         assertFullMapping(properties, expected);
     }

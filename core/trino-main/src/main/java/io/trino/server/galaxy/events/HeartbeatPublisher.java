@@ -13,12 +13,14 @@
  */
 package io.trino.server.galaxy.events;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import io.airlift.json.JsonCodec;
 import io.airlift.log.Logger;
 import io.airlift.node.NodeInfo;
+import io.airlift.units.Duration;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.provider.EventFormatProvider;
 import io.cloudevents.core.v1.CloudEventBuilder;
@@ -53,6 +55,7 @@ import static io.airlift.concurrent.MoreFutures.getDone;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.trino.spi.galaxy.CatalogNetworkMonitor.getAllCatalogNetworkMonitors;
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
@@ -61,7 +64,8 @@ public class HeartbeatPublisher
 {
     private static final Logger log = Logger.get(HeartbeatPublisher.class);
 
-    private static final JsonCodec<HeartbeatEvent> HEARTBEAT_EVENT_JSON_CODEC = jsonCodec(HeartbeatEvent.class);
+    @VisibleForTesting
+    public static final JsonCodec<HeartbeatEvent> HEARTBEAT_EVENT_JSON_CODEC = jsonCodec(HeartbeatEvent.class);
     private final AtomicLong lastAcknowledgedPublishNanoTime;
     private final NodeInfo nodeInfo;
     private final String accountId;
@@ -71,8 +75,10 @@ public class HeartbeatPublisher
     private final String variant;
     private final String role;
     private final String trinoPlaneFqdn;
-    private final KafkaPublisher kafkaPublisher;
     private final String billingTopic;
+    private final Duration publishInterval;
+    private final Duration terminationGracePeriod;
+    private final KafkaPublisher kafkaPublisher;
     private final Map<String, CatalogMetricsSnapshot> lastAcknowledgedPublishCatalogMetrics = new HashMap<>();
 
     // This must match the event type to use in deserialization in io.starburst.stargate.billing.events.StargateEvent, once
@@ -80,41 +86,43 @@ public class HeartbeatPublisher
     // a reference to that enum value
     private static final String HEARTBEAT_EVENT_TYPE_NAME = "HEARTBEAT";
 
-    private static final int BACKGROUND_THREAD_PERIODIC_DELAY_SECONDS = 30;
     private final ScheduledExecutorService heartbeatThreadPool = newSingleThreadScheduledExecutor(daemonThreadsNamed("galaxy-billing-heartbeat"));
     private final AtomicReference<ScheduledFuture<?>> heartbeatFuture = new AtomicReference<>();
 
     @Inject
     public HeartbeatPublisher(NodeInfo nodeInfo, GalaxyConfig galaxyConfig, GalaxyHeartbeatConfig heartbeatConfig, KafkaPublisherConfig kafkaPublisherConfig)
     {
+        this(nodeInfo, galaxyConfig, heartbeatConfig, new KafkaPublisherClient(kafkaPublisherConfig));
+    }
+
+    @VisibleForTesting
+    public HeartbeatPublisher(NodeInfo nodeInfo, GalaxyConfig galaxyConfig, GalaxyHeartbeatConfig heartbeatConfig, KafkaPublisher kafkaPublisher)
+    {
         this.lastAcknowledgedPublishNanoTime = new AtomicLong(System.nanoTime());
-        this.nodeInfo = nodeInfo;
+        this.nodeInfo = requireNonNull(nodeInfo, "nodeInfo is null");
+        requireNonNull(galaxyConfig, "galaxyConfig is null");
         this.accountId = galaxyConfig.getAccountId();
         this.clusterId = galaxyConfig.getClusterId();
         this.deploymentId = galaxyConfig.getDeploymentId();
         this.cloudRegionId = galaxyConfig.getCloudRegionId();
+        requireNonNull(heartbeatConfig, "heartbeatConfig is null");
         this.variant = heartbeatConfig.getVariant();
         this.role = heartbeatConfig.getRole();
         this.trinoPlaneFqdn = heartbeatConfig.getTrinoPlaneFqdn();
-        this.kafkaPublisher = new KafkaPublisherClient(kafkaPublisherConfig);
         this.billingTopic = heartbeatConfig.getBillingTopic();
+        this.publishInterval = heartbeatConfig.getPublishInterval();
+        this.terminationGracePeriod = heartbeatConfig.getTerminationGracePeriod();
+        this.kafkaPublisher = requireNonNull(kafkaPublisher, "kafkaPublisher is null");
     }
 
     @PostConstruct
     public void start()
     {
-        this.heartbeatFuture.set(heartbeatThreadPool.scheduleWithFixedDelay(() -> {
-            try {
-                publishHeartbeat();
-            }
-            catch (InterruptedException e) {
-                log.info(prependNodeInfo("Shutting down billing heartbeat"));
-                Thread.currentThread().interrupt();
-            }
-            catch (RuntimeException | Error e) {
-                log.error(e, prependNodeInfo("Exception caught publishing a heartbeat"));
-            }
-        }, 0, BACKGROUND_THREAD_PERIODIC_DELAY_SECONDS, TimeUnit.SECONDS));
+        this.heartbeatFuture.set(heartbeatThreadPool.scheduleWithFixedDelay(
+                this::tryPublishHeartbeat,
+                0,
+                publishInterval.toMillis(),
+                TimeUnit.MILLISECONDS));
     }
 
     @PreDestroy
@@ -123,10 +131,38 @@ public class HeartbeatPublisher
     {
         ScheduledFuture<?> future = heartbeatFuture.get();
         if (future != null) {
-            future.cancel(true);
+            future.cancel(false);
         }
+
+        heartbeatThreadPool.execute(this::tryPublishHeartbeat);
+        heartbeatThreadPool.shutdown();
+        try {
+            if (!heartbeatThreadPool.awaitTermination(terminationGracePeriod.toMillis(), TimeUnit.MILLISECONDS)) {
+                log.warn(prependNodeInfo("Timeout exceeded while publishing billing heartbeat info on shutdown"));
+            }
+        }
+        catch (InterruptedException e) {
+            log.error(prependNodeInfo("Failed to publish billing heartbeat info on shutdown"));
+            Thread.currentThread().interrupt();
+        }
+
         heartbeatThreadPool.shutdownNow();
         kafkaPublisher.close();
+    }
+
+    @VisibleForTesting
+    public void tryPublishHeartbeat()
+    {
+        try {
+            publishHeartbeat();
+        }
+        catch (InterruptedException e) {
+            log.info(prependNodeInfo("Shutting down billing heartbeat"));
+            Thread.currentThread().interrupt();
+        }
+        catch (RuntimeException | Error e) {
+            log.error(e, prependNodeInfo("Exception caught publishing a heartbeat"));
+        }
     }
 
     private static CloudEvent createCloudEvent(String id, URI source, OffsetDateTime publishTimestamp, HeartbeatEvent heartbeatEvent)

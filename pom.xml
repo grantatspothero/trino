@@ -423,6 +423,13 @@
 
             <dependency>
                 <groupId>io.trino</groupId>
+                <artifactId>trino-galaxy-kafka</artifactId>
+                <type>test-jar</type>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
                 <artifactId>trino-galaxy-kafka-event-listener</artifactId>
                 <version>${project.version}</version>
             </dependency>

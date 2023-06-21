@@ -15,8 +15,12 @@ package io.trino.server.galaxy;
 
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;
+import io.airlift.units.Duration;
 
 import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
+
+import java.util.concurrent.TimeUnit;
 
 public class GalaxyHeartbeatConfig
 {
@@ -24,6 +28,8 @@ public class GalaxyHeartbeatConfig
     private String role;
     private String trinoPlaneFqdn;
     private String billingTopic = "billing";
+    private Duration publishInterval = new Duration(30, TimeUnit.SECONDS);
+    private Duration terminationGracePeriod = new Duration(10, TimeUnit.SECONDS);
 
     @NotEmpty
     public String getVariant()
@@ -75,6 +81,34 @@ public class GalaxyHeartbeatConfig
     public GalaxyHeartbeatConfig setBillingTopic(String billingTopic)
     {
         this.billingTopic = billingTopic;
+        return this;
+    }
+
+    @NotNull
+    public Duration getPublishInterval()
+    {
+        return publishInterval;
+    }
+
+    @Config("galaxy.heartbeat.publish-interval")
+    @ConfigDescription("The interval between published heartbeat events")
+    public GalaxyHeartbeatConfig setPublishInterval(Duration publishInterval)
+    {
+        this.publishInterval = publishInterval;
+        return this;
+    }
+
+    @NotNull
+    public Duration getTerminationGracePeriod()
+    {
+        return terminationGracePeriod;
+    }
+
+    @Config("galaxy.heartbeat.termination-grace-period")
+    @ConfigDescription("The termination grace period for publishing a final heartbeat when the heartbeat publisher is shut down")
+    public GalaxyHeartbeatConfig setTerminationGracePeriod(Duration terminationGracePeriod)
+    {
+        this.terminationGracePeriod = terminationGracePeriod;
         return this;
     }
 }
