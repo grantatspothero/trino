@@ -21,6 +21,8 @@ import io.airlift.units.DataSize;
 import io.trino.spi.QueryId;
 import io.trino.spi.security.Identity;
 
+import java.util.Optional;
+
 import static com.google.common.util.concurrent.MoreExecutors.listeningDecorator;
 import static io.airlift.concurrent.Threads.threadsNamed;
 import static io.airlift.units.DataSize.Unit.MEGABYTE;
@@ -43,13 +45,26 @@ public class ResultsCacheManager
                 requireNonNull(httpClient, "httpClient is null"));
     }
 
-    public ResultsCacheEntry createResultsCacheEntry(Identity identity, ResultsCacheParameters resultsCacheParameters, QueryId queryId)
+    public ResultsCacheEntry createResultsCacheEntry(
+            Identity identity,
+            ResultsCacheParameters resultsCacheParameters,
+            QueryId queryId,
+            String query,
+            Optional<String> sessionCatalog,
+            Optional<String> sessionSchema,
+            Optional<String> queryType,
+            Optional<String> updateType)
     {
         long maximumSizeBytes = resultsCacheParameters.maximumSizeBytes().orElse(DEFAULT_MAXIMUM_SIZE_BYTES);
         return new ResultsCacheEntry(
                 identity,
                 resultsCacheParameters.key(),
                 queryId,
+                query,
+                sessionCatalog,
+                sessionSchema,
+                queryType,
+                updateType,
                 maximumSizeBytes,
                 resultsCacheClient,
                 executorService);

@@ -27,6 +27,7 @@ import io.trino.spi.security.Identity;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -50,6 +51,11 @@ public class ResultsCacheClient
             Identity identity,
             String key,
             QueryId queryId,
+            String query,
+            Optional<String> sessionCatalog,
+            Optional<String> sessionSchema,
+            Optional<String> queryType,
+            Optional<String> updateType,
             List<Column> columns,
             List<List<Object>> data,
             Instant creation)
@@ -59,7 +65,7 @@ public class ResultsCacheClient
             cacheClient.insertCacheEntry(
                     cacheBaseUri,
                     getTokenSupplier(identity),
-                    createCacheEntry(key, queryId, columns, data, creation));
+                    createCacheEntry(key, queryId, query, sessionCatalog, sessionSchema, queryType, updateType, columns, data, creation));
         }
         catch (JsonProcessingException ex) {
             throw new RuntimeException("Error serializing results to JSON", ex);
@@ -74,11 +80,21 @@ public class ResultsCacheClient
     private static CacheEntry createCacheEntry(
             String cacheKey,
             QueryId queryId,
+            String query,
+            Optional<String> sessionCatalog,
+            Optional<String> sessionSchema,
+            Optional<String> queryType,
+            Optional<String> updateType,
             List<Column> columns,
             List<List<Object>> data,
             Instant creation)
             throws JsonProcessingException
     {
+        requireNonNull(query, "query is required");
+        requireNonNull(sessionCatalog, "sessionCatalog is required");
+        requireNonNull(sessionSchema, "sessionSchema is required");
+        requireNonNull(queryType, "queryType is required");
+        requireNonNull(updateType, "updateType is required");
         List<List<String>> dataStr = data.stream().map(singleRow -> singleRow.stream().map(ResultsCacheClient::serializeObject).collect(toImmutableList())).collect(toImmutableList());
         return new CacheEntry(cacheKey, queryId.toString(), columns, dataStr, creation);
     }

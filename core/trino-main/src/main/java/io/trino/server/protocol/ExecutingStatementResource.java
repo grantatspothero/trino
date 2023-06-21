@@ -26,6 +26,7 @@ import io.trino.client.ProtocolHeaders;
 import io.trino.exchange.ExchangeManagerRegistry;
 import io.trino.execution.QueryManager;
 import io.trino.operator.DirectExchangeClientSupplier;
+import io.trino.server.BasicQueryInfo;
 import io.trino.server.ForStatementResource;
 import io.trino.server.ServerConfig;
 import io.trino.server.resultscache.ResultsCacheEntry;
@@ -33,6 +34,7 @@ import io.trino.server.resultscache.ResultsCacheManager;
 import io.trino.server.security.ResourceSecurity;
 import io.trino.spi.QueryId;
 import io.trino.spi.block.BlockEncodingSerde;
+import io.trino.spi.resourcegroups.QueryType;
 import jakarta.annotation.PreDestroy;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -197,11 +199,17 @@ public class ExecutingStatementResource
             throw queryNotFound();
         }
 
+        BasicQueryInfo queryInfo = queryManager.getQueryInfo(queryId);
         Optional<ResultsCacheEntry> resultsCacheEntry = queryManager.getResultsCacheParameters(queryId).map(parameters ->
                 resultsCacheManager.createResultsCacheEntry(
                         session.getIdentity(),
                         parameters,
-                        queryId));
+                        queryId,
+                        queryInfo.getQuery(),
+                        session.getCatalog(),
+                        session.getSchema(),
+                        queryInfo.getQueryType().map(QueryType::name),
+                        queryInfo.getUpdateType()));
 
         query = queries.computeIfAbsent(queryId, id -> Query.create(
                 session,

@@ -26,6 +26,7 @@ import io.trino.spi.QueryId;
 import io.trino.spi.security.Identity;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -41,6 +42,11 @@ public class ResultsCacheEntry
     private final Identity identity;
     private final String key;
     private final QueryId queryId;
+    private final String query;
+    private final Optional<String> sessionCatalog;
+    private final Optional<String> sessionSchema;
+    private final Optional<String> queryType;
+    private final Optional<String> updateType;
     private final long maximumSize;
     private final ResultsCacheClient client;
     private final ListeningExecutorService executorService;
@@ -52,6 +58,11 @@ public class ResultsCacheEntry
             Identity identity,
             String key,
             QueryId queryId,
+            String query,
+            Optional<String> sessionCatalog,
+            Optional<String> sessionSchema,
+            Optional<String> queryType,
+            Optional<String> updateType,
             long maximumSize,
             ResultsCacheClient client,
             ListeningExecutorService executorService)
@@ -59,6 +70,11 @@ public class ResultsCacheEntry
         this.identity = requireNonNull(identity, "identity is null");
         this.key = requireNonNull(key, "key is null");
         this.queryId = requireNonNull(queryId, "queryId is null");
+        this.query = requireNonNull(query, "query is null");
+        this.sessionCatalog = requireNonNull(sessionCatalog, "sessionCatalog is null");
+        this.sessionSchema = requireNonNull(sessionSchema, "sessionSchema is null");
+        this.queryType = requireNonNull(queryType, "queryType is null");
+        this.updateType = requireNonNull(updateType, "updateType is null");
         checkArgument(maximumSize > 0, "maximumSize is <= 0");
         if (maximumSize > MAX_SIZE) {
             log.warn("Cache entry size: %s is greater than the maximum: %s, using maximum", maximumSize, MAX_SIZE);
@@ -91,7 +107,19 @@ public class ResultsCacheEntry
     public void done()
     {
         if (valid) {
-            submitAsyncUpload(executorService, client, identity, key, queryId, Instant.now(), resultsData.orElseThrow());
+            submitAsyncUpload(
+                    executorService,
+                    client,
+                    identity,
+                    key,
+                    queryId,
+                    query,
+                    sessionCatalog,
+                    sessionSchema,
+                    queryType,
+                    updateType,
+                    OffsetDateTime.now().toInstant(),
+                    resultsData.orElseThrow());
             resultsData = Optional.empty();
         }
         valid = false;
@@ -103,12 +131,27 @@ public class ResultsCacheEntry
             Identity identity,
             String cacheKey,
             QueryId queryId,
-            Instant creation,
+            String query,
+            Optional<String> sessionCatalog,
+            Optional<String> sessionSchema,
+            Optional<String> queryType,
+            Optional<String> updateType,
+            Instant createdTime,
             ResultsData resultsData)
     {
         ListenableFuture<?> submitFuture = executorService.submit(() ->
-                client.uploadResultsCacheEntry(identity, cacheKey, queryId, resultsData.columns, resultsData.data, creation));
-
+                client.uploadResultsCacheEntry(
+                        identity,
+                        cacheKey,
+                        queryId,
+                        query,
+                        sessionCatalog,
+                        sessionSchema,
+                        queryType,
+                        updateType,
+                        resultsData.columns,
+                        resultsData.data,
+                        createdTime));
         MoreFutures.addExceptionCallback(submitFuture, throwable ->
                 log.error("Upload to cache failed: %s", throwable));
     }
