@@ -40,6 +40,8 @@ import io.trino.spi.connector.TableNotFoundException;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.type.TypeManager;
 
+import javax.annotation.Nullable;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -53,13 +55,16 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.trino.plugin.hive.HiveMetadata.TABLE_COMMENT;
 import static io.trino.plugin.hive.HiveTimestampPrecision.NANOSECONDS;
+import static io.trino.plugin.hive.util.HiveUtil.HUDI_INPUT_FORMAT;
+import static io.trino.plugin.hive.util.HiveUtil.HUDI_PARQUET_INPUT_FORMAT;
+import static io.trino.plugin.hive.util.HiveUtil.HUDI_PARQUET_REALTIME_INPUT_FORMAT;
+import static io.trino.plugin.hive.util.HiveUtil.HUDI_REALTIME_INPUT_FORMAT;
 import static io.trino.plugin.hive.util.HiveUtil.columnMetadataGetter;
 import static io.trino.plugin.hive.util.HiveUtil.hiveColumnHandles;
 import static io.trino.plugin.hive.util.HiveUtil.isHiveSystemSchema;
 import static io.trino.plugin.hudi.HudiSessionProperties.getColumnsToHide;
 import static io.trino.plugin.hudi.HudiTableProperties.LOCATION_PROPERTY;
 import static io.trino.plugin.hudi.HudiTableProperties.PARTITIONED_BY_PROPERTY;
-import static io.trino.plugin.hudi.HudiUtil.isHudiTable;
 import static io.trino.plugin.hudi.model.HudiTableType.COPY_ON_WRITE;
 import static io.trino.spi.StandardErrorCode.UNSUPPORTED_TABLE_TYPE;
 import static io.trino.spi.connector.SchemaTableName.schemaTableName;
@@ -102,7 +107,7 @@ public class HudiMetadata
         if (table.isEmpty()) {
             return null;
         }
-        if (!isHudiTable(fileSystemFactory.create(session), Location.of(table.get().getStorage().getLocation()))) {
+        if (!isHudiTable(session, table.get())) {
             throw new TrinoException(UNSUPPORTED_TABLE_TYPE, format("Not a Hudi table: %s", tableName));
         }
         return new HudiTableHandle(
@@ -112,6 +117,20 @@ public class HudiMetadata
                 COPY_ON_WRITE,
                 TupleDomain.all(),
                 TupleDomain.all());
+    }
+
+    // TODO: io.trino.plugin.hive.util.HiveUtil.isHudiTable and this in OSS
+    private boolean isHudiTable(ConnectorSession session, Table table)
+    {
+        @Nullable
+        String inputFormatClassName = table.getStorage().getStorageFormat().getInputFormatNullable();
+        if (!HUDI_PARQUET_INPUT_FORMAT.equals(inputFormatClassName) &&
+                !HUDI_PARQUET_REALTIME_INPUT_FORMAT.equals(inputFormatClassName) &&
+                !HUDI_INPUT_FORMAT.equals(inputFormatClassName) &&
+                !HUDI_REALTIME_INPUT_FORMAT.equals(inputFormatClassName)) {
+            return false;
+        }
+        return HudiUtil.isHudiTable(fileSystemFactory.create(session), Location.of(table.getStorage().getLocation()));
     }
 
     @Override
