@@ -108,11 +108,11 @@ public class HeartbeatPublisher
                 publishHeartbeat();
             }
             catch (InterruptedException e) {
-                log.info("Shutting down billing heartbeat");
+                log.info(prependNodeInfo("Shutting down billing heartbeat"));
                 Thread.currentThread().interrupt();
             }
             catch (RuntimeException | Error e) {
-                log.error(e, "Exception caught publishing a heartbeat");
+                log.error(e, prependNodeInfo("Exception caught publishing a heartbeat"));
             }
         }, 0, BACKGROUND_THREAD_PERIODIC_DELAY_SECONDS, TimeUnit.SECONDS));
     }
@@ -221,5 +221,10 @@ public class HeartbeatPublisher
                         monitor.getCrossRegionReadBytes(),
                         monitor.getCrossRegionWriteBytes()))
                 .collect(toImmutableList());
+    }
+
+    private String prependNodeInfo(String message)
+    {
+        return "[%s-%s-%s:%s] %s".formatted(accountId, clusterId, deploymentId, nodeInfo.getNodeId(), message);
     }
 }
