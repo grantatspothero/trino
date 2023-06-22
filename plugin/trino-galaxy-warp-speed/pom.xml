@@ -1,18 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
-        <artifactId>trino-root</artifactId>
         <groupId>io.trino</groupId>
+        <artifactId>trino-root</artifactId>
         <version>420-galaxy-1-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>trino-galaxy-warp-speed</artifactId>
-    <description>Warp Speed(formerly known as Varada) connector over ObjectStore connector</description>
     <packaging>trino-plugin</packaging>
+    <description>Warp Speed(formerly known as Varada) connector over ObjectStore connector</description>
 
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>
@@ -23,6 +22,60 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.inject</groupId>
+            <artifactId>guice</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.starburstdata.presto</groupId>
+            <artifactId>starburst-warp-speed-core</artifactId>
+            <version>${dep.warp-speed.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.linkedin.calcite</groupId>
+                    <artifactId>calcite-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.trino</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.httpcomponents</groupId>
+                    <artifactId>httpcore</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.glassfish.jaxb</groupId>
+                    <artifactId>jaxb-runtime</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>com.starburstdata.presto</groupId>
+            <artifactId>warp-speed-transformers</artifactId>
+            <version>${dep.warp-speed.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.linkedin.calcite</groupId>
+                    <artifactId>calcite-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.trino</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.httpcomponents</groupId>
+                    <artifactId>httpcore</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
         <dependency>
             <groupId>io.trino</groupId>
             <artifactId>trino-delta-lake</artifactId>
@@ -60,68 +113,57 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
         <dependency>
             <groupId>io.trino</groupId>
             <artifactId>trino-plugin-toolkit</artifactId>
         </dependency>
+
         <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
-            <groupId>com.google.inject</groupId>
-            <artifactId>guice</artifactId>
+            <groupId>io.airlift</groupId>
+            <artifactId>slice</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
-            <groupId>com.starburstdata.presto</groupId>
-            <artifactId>starburst-warp-speed-core</artifactId>
-            <version>${dep.warp-speed.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.linkedin.calcite</groupId>
-                    <artifactId>calcite-core</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.apache.httpcomponents</groupId>
-                    <artifactId>httpcore</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>io.trino</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
-            <groupId>com.starburstdata.presto</groupId>
-            <artifactId>warp-speed-transformers</artifactId>
-            <version>${dep.warp-speed.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.linkedin.calcite</groupId>
-                    <artifactId>calcite-core</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.apache.httpcomponents</groupId>
-                    <artifactId>httpcore</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>io.trino</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-context</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-spi</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openjdk.jol</groupId>
+            <artifactId>jol-core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.airlift</groupId>
+            <artifactId>configuration</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <dependency>
             <groupId>io.trino</groupId>
             <artifactId>trino-base-jdbc</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.airlift</groupId>
-            <artifactId>configuration</artifactId>
             <scope>runtime</scope>
         </dependency>
 
@@ -139,39 +181,29 @@
         </dependency>
 
         <dependency>
-            <groupId>io.trino</groupId>
-            <artifactId>trino-spi</artifactId>
-            <scope>provided</scope>
+            <groupId>com.starburstdata.presto</groupId>
+            <artifactId>starburst-warp-speed-core</artifactId>
+            <version>${dep.warp-speed.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.linkedin.calcite</groupId>
+                    <artifactId>calcite-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>jcl-over-slf4j</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
-            <groupId>io.airlift</groupId>
-            <artifactId>slice</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.opentelemetry</groupId>
-            <artifactId>opentelemetry-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.opentelemetry</groupId>
-            <artifactId>opentelemetry-context</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.openjdk.jol</groupId>
-            <artifactId>jol-core</artifactId>
-            <scope>provided</scope>
+            <groupId>com.starburstdata.presto</groupId>
+            <artifactId>starburst-warp-speed-tools</artifactId>
+            <version>${dep.warp-speed.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -230,31 +262,6 @@
             <artifactId>trino-testing-containers</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.starburstdata.presto</groupId>
-            <artifactId>starburst-warp-speed-core</artifactId>
-            <type>test-jar</type>
-            <version>${dep.warp-speed.version}</version>
-            <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.linkedin.calcite</groupId>
-                    <artifactId>calcite-core</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>jcl-over-slf4j</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>com.starburstdata.presto</groupId>
-            <artifactId>starburst-warp-speed-tools</artifactId>
-            <type>test-jar</type>
-            <version>${dep.warp-speed.version}</version>
-            <scope>test</scope>
-        </dependency>
 
         <dependency>
             <groupId>org.apache.hudi</groupId>
@@ -304,15 +311,15 @@
     <build>
         <testResources>
             <testResource>
-                <directory>src/test/resources</directory>
                 <filtering>true</filtering>
+                <directory>src/test/resources</directory>
                 <includes>
                     <include>io/trino/plugin/warp/test-warpspeed-plugin-versions.properties</include>
                 </includes>
             </testResource>
             <testResource>
-                <directory>src/test/resources</directory>
                 <filtering>false</filtering>
+                <directory>src/test/resources</directory>
                 <excludes>
                     <exclude>io/trino/plugin/warp/test-warpspeed-plugin-versions.properties</exclude>
                 </excludes>
@@ -455,14 +462,14 @@
                 <executions>
                     <execution>
                         <id>copy-native-products</id>
-                        <phase>process-resources</phase>
                         <goals>
                             <goal>run</goal>
                         </goals>
+                        <phase>process-resources</phase>
                         <configuration>
                             <target>
                                 <copy todir="${project.build.directory}/${project.build.finalName}">
-                                    <fileset dir="${project.build.directory}/tmp/starburst-warp-speed-core-${dep.warp-speed.version}" includes="**" excludes="lib/**" />
+                                    <fileset dir="${project.build.directory}/tmp/starburst-warp-speed-core-${dep.warp-speed.version}" excludes="lib/**" includes="**" />
                                 </copy>
                             </target>
                         </configuration>

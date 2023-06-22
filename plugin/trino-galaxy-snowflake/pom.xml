@@ -10,28 +10,26 @@
     </parent>
 
     <artifactId>trino-galaxy-snowflake</artifactId>
-    <description>Starburst Galaxy - Snowflake Connector</description>
     <packaging>trino-plugin</packaging>
+    <description>Starburst Galaxy - Snowflake Connector</description>
 
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>
 
         <!-- These are required for the Snowflake JDBC. -->
-        <air.test.jvm.additional-arguments>
-            --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
-            --add-opens=java.base/java.nio=ALL-UNNAMED
-        </air.test.jvm.additional-arguments>
+        <air.test.jvm.additional-arguments>--add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+            --add-opens=java.base/java.nio=ALL-UNNAMED</air.test.jvm.additional-arguments>
     </properties>
 
     <dependencies>
         <dependency>
-            <groupId>io.trino</groupId>
-            <artifactId>trino-base-jdbc</artifactId>
+            <groupId>com.google.inject</groupId>
+            <artifactId>guice</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>io.trino</groupId>
-            <artifactId>trino-plugin-toolkit</artifactId>
+            <groupId>com.starburstdata.trino.plugins</groupId>
+            <artifactId>starburst-snowflake</artifactId>
         </dependency>
 
         <dependency>
@@ -45,13 +43,13 @@
         </dependency>
 
         <dependency>
-            <groupId>com.google.inject</groupId>
-            <artifactId>guice</artifactId>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-base-jdbc</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>com.starburstdata.trino.plugins</groupId>
-            <artifactId>starburst-snowflake</artifactId>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-plugin-toolkit</artifactId>
         </dependency>
 
         <dependency>
@@ -61,38 +59,14 @@
         </dependency>
 
         <dependency>
-            <groupId>io.trino</groupId>
-            <artifactId>trino-hive</artifactId>
-            <scope>runtime</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.linkedin.calcite</groupId>
-                    <artifactId>calcite-core</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.trino</groupId>
-            <artifactId>trino-spi</artifactId>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>slice</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
             <scope>provided</scope>
         </dependency>
 
@@ -109,9 +83,40 @@
         </dependency>
 
         <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-spi</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
             <groupId>org.openjdk.jol</groupId>
             <artifactId>jol-core</artifactId>
             <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-hive</artifactId>
+            <scope>runtime</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.linkedin.calcite</groupId>
+                    <artifactId>calcite-core</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>com.starburstdata.trino.plugins</groupId>
+            <artifactId>starburst-snowflake</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -146,13 +151,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.starburstdata.trino.plugins</groupId>
-            <artifactId>starburst-snowflake</artifactId>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
             <scope>test</scope>
@@ -168,15 +166,15 @@
     <build>
         <testResources>
             <testResource>
-                <directory>src/test/resources</directory>
                 <filtering>true</filtering>
+                <directory>src/test/resources</directory>
                 <includes>
                     <include>io/trino/plugin/snowflake/test-snowflake-plugin-versions.properties</include>
                 </includes>
             </testResource>
             <testResource>
-                <directory>src/test/resources</directory>
                 <filtering>false</filtering>
+                <directory>src/test/resources</directory>
                 <excludes>
                     <exclude>io/trino/plugin/snowflake/test-snowflake-plugin-versions.properties</exclude>
                 </excludes>

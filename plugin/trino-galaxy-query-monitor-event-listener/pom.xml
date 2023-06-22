@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
@@ -9,8 +9,8 @@
     </parent>
 
     <artifactId>trino-galaxy-query-monitor-event-listener</artifactId>
-    <description>Trino - Galaxy Query Monitor Event Listener</description>
     <packaging>trino-plugin</packaging>
+    <description>Trino - Galaxy Query Monitor Event Listener</description>
 
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>
@@ -18,13 +18,13 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.airlift</groupId>
-            <artifactId>log</artifactId>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
+            <groupId>io.airlift</groupId>
+            <artifactId>log</artifactId>
         </dependency>
 
         <dependency>
