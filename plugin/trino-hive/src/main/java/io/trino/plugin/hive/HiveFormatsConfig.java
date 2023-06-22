@@ -20,6 +20,7 @@ public class HiveFormatsConfig
 {
     // TODO: Re-enable native readers and writers for Galaxy after they are vetted in the wild
     private boolean avroFileNativeReaderEnabled;
+    private boolean avroFileNativeWriterEnabled;
     private boolean csvNativeReaderEnabled;
     private boolean csvNativeWriterEnabled;
     private boolean jsonNativeReaderEnabled;
@@ -43,6 +44,19 @@ public class HiveFormatsConfig
     public HiveFormatsConfig setAvroFileNativeReaderEnabled(boolean avroFileNativeReaderEnabled)
     {
         this.avroFileNativeReaderEnabled = avroFileNativeReaderEnabled;
+        return this;
+    }
+
+    public boolean isAvroFileNativeWriterEnabled()
+    {
+        return avroFileNativeWriterEnabled;
+    }
+
+    @Config("avro.native-writer.enabled")
+    @ConfigDescription("Use native Avro file writer")
+    public HiveFormatsConfig setAvroFileNativeWriterEnabled(boolean avroFileNativeWriterEnabled)
+    {
+        this.avroFileNativeWriterEnabled = avroFileNativeWriterEnabled;
         return this;
     }
 
