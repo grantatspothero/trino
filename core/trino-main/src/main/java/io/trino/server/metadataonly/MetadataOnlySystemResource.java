@@ -26,7 +26,7 @@ import javax.ws.rs.core.Response;
 
 import java.util.Optional;
 
-import static com.google.common.base.Strings.isNullOrEmpty;
+import static io.trino.server.galaxy.GalaxyBearerToken.extractToken;
 import static io.trino.server.security.ResourceSecurity.AccessType.PUBLIC;
 import static java.util.Objects.requireNonNull;
 
@@ -51,7 +51,7 @@ public class MetadataOnlySystemResource
     @Path("shutdown")
     public void shutdown(@Context HttpHeaders httpHeaders)
     {
-        boolean hasValidKey = shutdownAuthenticationKey.map(key -> extractToken(httpHeaders).map(token -> token.equals(key)).orElse(false))
+        boolean hasValidKey = shutdownAuthenticationKey.map(key -> extractToken(httpHeaders::getHeaderString, getClass().getName()).map(token -> token.equals(key)).orElse(false))
                 .orElse(false);
         if (!hasValidKey) {
             throw new WebApplicationException(Response.Status.UNAUTHORIZED);
@@ -60,22 +60,5 @@ public class MetadataOnlySystemResource
         log.info("Shutdown request received");
 
         systemState.setShuttingDown();
-    }
-
-    private static Optional<String> extractToken(HttpHeaders httpHeaders)
-    {
-        String header = httpHeaders.getHeaderString(HttpHeaders.AUTHORIZATION);
-        if (isNullOrEmpty(header) || header.isBlank()) {
-            log.error("No headers present in the request");
-            return Optional.empty();
-        }
-
-        int space = header.indexOf(' ');
-        if ((space < 0) || !header.substring(0, space).equalsIgnoreCase("bearer")) {
-            log.error("Malformed credentials: token missing or wrong token format");
-            return Optional.empty();
-        }
-        String token = header.substring(space + 1).trim();
-        return Optional.of(token);
     }
 }
