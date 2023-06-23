@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.objectstore;
 
+import com.google.inject.Module;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
 import io.trino.spi.connector.ConnectorFactory;
@@ -42,8 +43,8 @@ public class ObjectStoreConnectorFactory
         ClassLoader classLoader = context.duplicatePluginClassLoader();
         try {
             return (Connector) classLoader.loadClass(InternalObjectStoreConnectorFactory.class.getName())
-                    .getMethod("createConnector", String.class, Map.class, Optional.class, Optional.class, Optional.class, ConnectorContext.class)
-                    .invoke(null, catalogName, config, Optional.empty(), Optional.empty(), Optional.empty(), context);
+                    .getMethod("createConnector", String.class, Map.class, Optional.class, Optional.class, Optional.class, Module.class, ConnectorContext.class)
+                    .invoke(null, catalogName, config, Optional.empty(), Optional.empty(), Optional.empty(), (Module) binder -> {}, context);
         }
         catch (InvocationTargetException e) {
             Throwable targetException = e.getTargetException();

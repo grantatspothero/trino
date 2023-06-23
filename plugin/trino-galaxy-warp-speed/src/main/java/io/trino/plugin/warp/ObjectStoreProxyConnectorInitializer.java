@@ -58,7 +58,14 @@ public class ObjectStoreProxyConnectorInitializer
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         // Because of native code, Warp Speed does not support multiple catalogs and thus doesn't need classloader duplication.
-        return InternalObjectStoreConnectorFactory.createConnector(catalogName, objectStoreConfig, Optional.empty(), Optional.empty(), Optional.empty(), context);
+        return InternalObjectStoreConnectorFactory.createConnector(
+                catalogName,
+                objectStoreConfig,
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                binder -> {},
+                context);
     }
 
     @Override

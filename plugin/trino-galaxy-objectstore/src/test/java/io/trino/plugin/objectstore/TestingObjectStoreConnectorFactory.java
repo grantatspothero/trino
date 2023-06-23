@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.objectstore;
 
+import io.trino.plugin.deltalake.TestingDeltaLakeExtensionsModule;
 import io.trino.plugin.deltalake.metastore.TestingDeltaLakeMetastoreModule;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.spi.connector.Connector;
@@ -50,6 +51,7 @@ public class TestingObjectStoreConnectorFactory
                 Optional.of(metastore),
                 Optional.of(new TestingIcebergGalaxyMetastoreCatalogModule(metastore)),
                 Optional.of(new TestingDeltaLakeMetastoreModule(metastore)),
+                new TestingDeltaLakeExtensionsModule(),
                 context);
     }
 }

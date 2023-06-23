@@ -55,6 +55,7 @@ public final class InternalObjectStoreConnectorFactory
             Optional<HiveMetastore> hiveMetastore,
             Optional<Module> icebergCatalogModule,
             Optional<Module> deltaMetastoreModule,
+            Module deltaModule,
             ConnectorContext context)
     {
         ClassLoader classLoader = InternalObjectStoreConnectorFactory.class.getClassLoader();
@@ -98,7 +99,8 @@ public final class InternalObjectStoreConnectorFactory
                     Optional.empty(),
                     combine(
                             new ConfigureCachingMetastoreModule(),
-                            new GalaxyLocationSecurityModule()));
+                            new GalaxyLocationSecurityModule(),
+                            deltaModule));
 
             Connector hudiConnector = InternalHudiConnectorFactory.createConnector(
                     catalogName,
