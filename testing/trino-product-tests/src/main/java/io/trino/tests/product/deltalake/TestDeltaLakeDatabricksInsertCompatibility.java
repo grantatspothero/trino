@@ -382,8 +382,8 @@ public class TestDeltaLakeDatabricksInsertCompatibility
         assertThat(onTrino().executeQuery("SHOW SESSION LIKE 'delta.compression_codec'"))
                 .containsOnly(row(
                         "delta.compression_codec",
-                        "SNAPPY",
-                        "SNAPPY",
+                        "DEFAULT",
+                        "DEFAULT",
                         "varchar",
                         "Compression codec to use when writing new data files. Possible values: " +
                                 Stream.of(compressionCodecs())
@@ -396,6 +396,7 @@ public class TestDeltaLakeDatabricksInsertCompatibility
     {
         return new Object[][] {
                 {"NONE"},
+                {"DEFAULT"},
                 {"SNAPPY"},
                 {"LZ4"},
                 {"ZSTD"},
