@@ -15,9 +15,8 @@ package io.trino.galaxy.kafka;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.Uninterruptibles;
+import com.google.errorprone.annotations.ThreadSafe;
 import org.apache.kafka.clients.producer.ProducerRecord;
-
-import javax.annotation.concurrent.ThreadSafe;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;

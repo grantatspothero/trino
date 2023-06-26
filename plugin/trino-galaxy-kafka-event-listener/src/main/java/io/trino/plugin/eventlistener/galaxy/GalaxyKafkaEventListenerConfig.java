@@ -15,9 +15,8 @@ package io.trino.plugin.eventlistener.galaxy;
 
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;
-
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.Positive;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Positive;
 
 public class GalaxyKafkaEventListenerConfig
 {

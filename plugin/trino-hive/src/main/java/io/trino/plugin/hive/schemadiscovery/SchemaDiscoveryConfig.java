@@ -15,8 +15,7 @@ package io.trino.plugin.hive.schemadiscovery;
 
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;
-
-import javax.validation.constraints.Min;
+import jakarta.validation.constraints.Min;
 
 public class SchemaDiscoveryConfig
 {

@@ -32,8 +32,7 @@ import io.trino.split.EmptySplit;
 import io.trino.split.PageSourceProvider;
 import io.trino.split.TableAwarePageSourceProvider;
 import io.trino.sql.planner.plan.PlanNodeId;
-
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;

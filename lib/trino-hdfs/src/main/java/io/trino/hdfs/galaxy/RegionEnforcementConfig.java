@@ -15,8 +15,7 @@ package io.trino.hdfs.galaxy;
 
 import com.google.common.collect.ImmutableList;
 import io.airlift.configuration.Config;
-
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 import java.util.Optional;

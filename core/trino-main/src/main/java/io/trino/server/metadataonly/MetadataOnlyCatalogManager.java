@@ -14,14 +14,13 @@
 package io.trino.server.metadataonly;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.errorprone.annotations.ThreadSafe;
 import io.trino.connector.CatalogProperties;
 import io.trino.connector.ConnectorName;
 import io.trino.metadata.Catalog;
 import io.trino.metadata.CatalogManager;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogHandle;
-
-import javax.annotation.concurrent.ThreadSafe;
 
 import java.util.Map;
 import java.util.Optional;

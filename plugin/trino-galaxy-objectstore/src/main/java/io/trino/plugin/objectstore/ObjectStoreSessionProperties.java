@@ -23,8 +23,7 @@ import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.security.ConnectorIdentity;
 import io.trino.spi.session.PropertyMetadata;
 import io.trino.spi.type.TimeZoneKey;
-
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
 
 import java.time.Instant;
 import java.util.List;

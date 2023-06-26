@@ -15,6 +15,7 @@ package io.trino.plugin.iceberg.catalog.file;
 
 import io.starburst.stargate.metastore.client.BadMetastoreRequestException;
 import io.starburst.stargate.metastore.client.MetastoreConflictException;
+import io.trino.annotation.NotThreadSafe;
 import io.trino.plugin.hive.metastore.Table;
 import io.trino.plugin.hive.metastore.cache.CachingHiveMetastore;
 import io.trino.plugin.iceberg.catalog.hms.AbstractMetastoreTableOperations;
@@ -24,8 +25,6 @@ import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.exceptions.CommitFailedException;
 import org.apache.iceberg.exceptions.CommitStateUnknownException;
 import org.apache.iceberg.io.FileIO;
-
-import javax.annotation.concurrent.NotThreadSafe;
 
 import java.util.Optional;
 

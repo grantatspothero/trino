@@ -17,9 +17,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigHidden;
 import io.starburst.stargate.id.CatalogId;
-
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 import java.net.URI;
 
@@ -42,7 +40,7 @@ public class GalaxySecurityConfig
         return this;
     }
 
-    @NotEmpty
+    @NotNull
     public URI getAccountUri()
     {
         return accountUri;

@@ -33,8 +33,7 @@ import io.trino.spi.connector.EmptyPageSource;
 import io.trino.spi.metrics.Metrics;
 import io.trino.split.EmptySplit;
 import io.trino.split.TableAwarePageSourceProvider;
-
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;

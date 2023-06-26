@@ -17,6 +17,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Closer;
 import com.google.common.net.HostAndPort;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -105,7 +106,6 @@ import io.trino.transaction.TransactionManager;
 import io.trino.transaction.TransactionManagerModule;
 import org.weakref.jmx.guice.MBeanModule;
 
-import javax.annotation.concurrent.GuardedBy;
 import javax.management.MBeanServer;
 
 import java.io.Closeable;

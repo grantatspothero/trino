@@ -13,7 +13,7 @@
  */
 package io.trino.plugin.objectstore;
 
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
 
 /**
  * A wrapper for property value. It's sole role is to ensure the {@link io.trino.spi.connector.ConnectorSession}

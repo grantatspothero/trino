@@ -15,8 +15,7 @@ package io.trino.plugin.objectstore;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.airlift.configuration.Config;
-
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 public class ObjectStoreConfig
 {

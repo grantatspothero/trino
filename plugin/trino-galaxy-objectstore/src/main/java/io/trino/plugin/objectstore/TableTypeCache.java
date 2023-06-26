@@ -16,12 +16,11 @@ package io.trino.plugin.objectstore;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.ThreadSafe;
 import io.airlift.stats.DecayCounter;
 import io.airlift.stats.ExponentialDecay;
 import io.trino.spi.connector.SchemaTableName;
 import org.gaul.modernizer_maven_annotations.SuppressModernizer;
-
-import javax.annotation.concurrent.ThreadSafe;
 
 import java.util.EnumMap;
 import java.util.List;

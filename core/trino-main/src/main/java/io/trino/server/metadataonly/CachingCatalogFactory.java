@@ -15,6 +15,7 @@ package io.trino.server.metadataonly;
 
 import com.google.common.base.Ticker;
 import com.google.common.collect.ImmutableMap;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.starburst.stargate.id.AccountId;
@@ -28,8 +29,6 @@ import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.CatalogHandle.CatalogHandleType;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorFactory;
-
-import javax.annotation.concurrent.GuardedBy;
 
 import java.util.Map;
 import java.util.Optional;

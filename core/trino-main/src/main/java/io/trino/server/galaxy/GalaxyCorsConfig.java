@@ -14,8 +14,7 @@
 package io.trino.server.galaxy;
 
 import io.airlift.configuration.Config;
-
-import javax.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotEmpty;
 
 public class GalaxyCorsConfig
 {
