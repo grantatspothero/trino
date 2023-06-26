@@ -38,17 +38,23 @@ runs:
         with:
           distribution: 'temurin'
           java-version: ${{ inputs.java-version }}
-      - name: Cache local Maven repo and Java distributions
+      - name: Cache local Maven repo
         id: cache
         if: ${{ format('{0}', inputs.cache) == 'true' }}
         uses: actions/cache@v3
         with:
-          path: |
-            ~/.m2/repository
-            /tmp/pt_java_downloads
+          path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
+      - name: Cache Java distributions
+        id: cache-jdk
+        uses: actions/cache@v3
+        with:
+          path: /tmp/pt_java_downloads
+          key: ${{ runner.os }}-jdk
+          restore-keys: |
+            ${{ runner.os }}-jdk
       - name: Fetch any missing dependencies
         shell: bash
         if: ${{ format('{0}', inputs.download_dependencies) == 'true' }}
