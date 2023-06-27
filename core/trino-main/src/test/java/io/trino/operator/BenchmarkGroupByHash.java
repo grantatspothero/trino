@@ -30,7 +30,6 @@ import io.trino.spi.type.StandardTypes;
 import io.trino.spi.type.Type;
 import io.trino.spi.type.TypeOperators;
 import io.trino.sql.gen.JoinCompiler;
-import io.trino.type.BlockTypeOperators;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -56,6 +55,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import static io.trino.jmh.Benchmarks.benchmark;
+import static io.trino.operator.InterpretedHashGenerator.createPagePrefixHashGenerator;
 import static io.trino.operator.UpdateMemory.NOOP;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.DateType.DATE;
@@ -79,13 +79,12 @@ public class BenchmarkGroupByHash
     private static final int GROUP_COUNT = Integer.parseInt(GROUP_COUNT_STRING);
     private static final int EXPECTED_SIZE = 10_000;
     private static final TypeOperators TYPE_OPERATORS = new TypeOperators();
-    private static final BlockTypeOperators TYPE_OPERATOR_FACTORY = new BlockTypeOperators(TYPE_OPERATORS);
 
     @Benchmark
     @OperationsPerInvocation(POSITIONS)
     public Object groupByHashPreCompute(BenchmarkData data)
     {
-        GroupByHash groupByHash = new MultiChannelGroupByHash(data.getTypes(), data.getChannels(), data.getHashChannel(), EXPECTED_SIZE, false, getJoinCompiler(), TYPE_OPERATOR_FACTORY, NOOP);
+        GroupByHash groupByHash = new MultiChannelGroupByHash(data.getTypes(), data.getChannels(), data.getHashChannel(), EXPECTED_SIZE, false, getJoinCompiler(), TYPE_OPERATORS, NOOP);
         addInputPagesToHash(groupByHash, data.getPages());
 
         ImmutableList.Builder<Page> pages = ImmutableList.builder();
@@ -106,7 +105,7 @@ public class BenchmarkGroupByHash
     @OperationsPerInvocation(POSITIONS)
     public List<Page> benchmarkHashPosition(BenchmarkData data)
     {
-        InterpretedHashGenerator hashGenerator = new InterpretedHashGenerator(data.getTypes(), data.getChannels(), TYPE_OPERATOR_FACTORY);
+        HashGenerator hashGenerator = createPagePrefixHashGenerator(data.getTypes(), TYPE_OPERATORS);
         ImmutableList.Builder<Page> results = ImmutableList.builderWithExpectedSize(data.getPages().size());
         for (Page page : data.getPages()) {
             long[] hashes = new long[page.getPositionCount()];
@@ -122,7 +121,7 @@ public class BenchmarkGroupByHash
     @OperationsPerInvocation(POSITIONS)
     public Object addPagePreCompute(BenchmarkData data)
     {
-        GroupByHash groupByHash = new MultiChannelGroupByHash(data.getTypes(), data.getChannels(), data.getHashChannel(), EXPECTED_SIZE, false, getJoinCompiler(), TYPE_OPERATOR_FACTORY, NOOP);
+        GroupByHash groupByHash = new MultiChannelGroupByHash(data.getTypes(), data.getChannels(), data.getHashChannel(), EXPECTED_SIZE, false, getJoinCompiler(), TYPE_OPERATORS, NOOP);
         addInputPagesToHash(groupByHash, data.getPages());
 
         ImmutableList.Builder<Page> pages = ImmutableList.builder();
@@ -143,7 +142,7 @@ public class BenchmarkGroupByHash
     @OperationsPerInvocation(POSITIONS)
     public Object bigintGroupByHash(SingleChannelBenchmarkData data)
     {
-        GroupByHash groupByHash = GroupByHash.createGroupByHash(ImmutableList.of(data.getHashType()), new int[] {0}, data.hashChannel, EXPECTED_SIZE, false, getJoinCompiler(), TYPE_OPERATOR_FACTORY, NOOP);
+        GroupByHash groupByHash = GroupByHash.createGroupByHash(ImmutableList.of(data.getHashType()), new int[] {0}, data.hashChannel, EXPECTED_SIZE, false, getJoinCompiler(), TYPE_OPERATORS, NOOP);
         addInputPagesToHash(groupByHash, data.pages);
 
         ImmutableList.Builder<Page> pages = ImmutableList.builder();

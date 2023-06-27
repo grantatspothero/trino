@@ -22,9 +22,9 @@ import io.trino.cache.NonEvictableLoadingCache;
 import io.trino.spi.Page;
 import io.trino.spi.PageBuilder;
 import io.trino.spi.type.Type;
+import io.trino.spi.type.TypeOperators;
 import io.trino.sql.gen.IsolatedClass;
 import io.trino.sql.gen.JoinCompiler;
-import io.trino.type.BlockTypeOperators;
 
 import java.lang.reflect.Constructor;
 import java.util.List;
@@ -68,10 +68,10 @@ public interface GroupByHash
             Optional<Integer> inputHashChannel,
             int expectedSize,
             JoinCompiler joinCompiler,
-            BlockTypeOperators blockTypeOperators,
+            TypeOperators typeOperators,
             UpdateMemory updateMemory)
     {
-        return createGroupByHash(hashTypes, hashChannels, inputHashChannel, expectedSize, isDictionaryAggregationEnabled(session), joinCompiler, blockTypeOperators, updateMemory);
+        return createGroupByHash(hashTypes, hashChannels, inputHashChannel, expectedSize, isDictionaryAggregationEnabled(session), joinCompiler, typeOperators, updateMemory);
     }
 
     static GroupByHash createGroupByHash(
@@ -81,7 +81,7 @@ public interface GroupByHash
             int expectedSize,
             boolean processDictionary,
             JoinCompiler joinCompiler,
-            BlockTypeOperators blockTypeOperators,
+            TypeOperators typeOperators,
             UpdateMemory updateMemory)
     {
         try {
@@ -90,7 +90,7 @@ public interface GroupByHash
                 Constructor<? extends GroupByHash> constructor = specializedGroupByHashClasses.getUnchecked(hashType).getConstructor(int.class, boolean.class, int.class, UpdateMemory.class, Type.class);
                 return constructor.newInstance(hashChannels[0], inputHashChannel.isPresent(), expectedSize, updateMemory, hashType);
             }
-            return new MultiChannelGroupByHash(hashTypes, hashChannels, inputHashChannel, expectedSize, processDictionary, joinCompiler, blockTypeOperators, updateMemory);
+            return new MultiChannelGroupByHash(hashTypes, hashChannels, inputHashChannel, expectedSize, processDictionary, joinCompiler, typeOperators, updateMemory);
         }
         catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
