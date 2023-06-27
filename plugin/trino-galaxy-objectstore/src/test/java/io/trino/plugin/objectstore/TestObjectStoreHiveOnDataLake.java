@@ -20,9 +20,7 @@ import io.trino.plugin.hive.containers.HiveMinioDataLake;
 import io.trino.plugin.hive.metastore.thrift.BridgingHiveMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
-import io.trino.testing.QueryFailedException;
 import io.trino.testing.QueryRunner;
-import org.testng.SkipException;
 import org.testng.annotations.BeforeClass;
 
 import static io.trino.plugin.hive.TestingThriftHiveMetastoreBuilder.testingThriftHiveMetastoreBuilder;
@@ -31,6 +29,9 @@ import static io.trino.server.security.galaxy.TestingAccountFactory.createTestin
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static io.trino.testing.containers.Minio.MINIO_ACCESS_KEY;
 import static io.trino.testing.containers.Minio.MINIO_SECRET_KEY;
+import static java.lang.String.format;
+import static java.util.regex.Pattern.quote;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
@@ -103,142 +104,51 @@ public class TestObjectStoreHiveOnDataLake
     }
 
     @Override
-    public void testDatePartitionProjectionFormatTextWillNotCauseIntervalRequirement()
-    {
-        assertThatThrownBy(super::testDatePartitionProjectionFormatTextWillNotCauseIntervalRequirement)
-                .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Catalog 'hive' column property 'partition_projection_type' does not exist");
-        throw new SkipException("partition projection not supported");
-    }
-
-    @Override
-    public void testDatePartitionProjectionOnDateColumnWithDefaults()
-    {
-        assertThatThrownBy(super::testDatePartitionProjectionOnDateColumnWithDefaults)
-                .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Catalog 'hive' column property 'partition_projection_type' does not exist");
-        throw new SkipException("partition projection not supported");
-    }
-
-    @Override
-    public void testDatePartitionProjectionOnTimestampColumnWithInterval()
-    {
-        assertThatThrownBy(super::testDatePartitionProjectionOnTimestampColumnWithInterval)
-                .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Catalog 'hive' column property 'partition_projection_type' does not exist");
-        throw new SkipException("partition projection not supported");
-    }
-
-    @Override
-    public void testDatePartitionProjectionOnTimestampColumnWithIntervalExpressionCreatedOnTrino()
-    {
-        assertThatThrownBy(super::testDatePartitionProjectionOnTimestampColumnWithIntervalExpressionCreatedOnTrino)
-                .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Catalog 'hive' column property 'partition_projection_type' does not exist");
-        throw new SkipException("partition projection not supported");
-    }
-
-    @Override
-    public void testDatePartitionProjectionOnVarcharColumnWithDaysInterval()
-    {
-        assertThatThrownBy(super::testDatePartitionProjectionOnVarcharColumnWithDaysInterval)
-                .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Catalog 'hive' column property 'partition_projection_type' does not exist");
-        throw new SkipException("partition projection not supported");
-    }
-
-    @Override
-    public void testDatePartitionProjectionOnVarcharColumnWithHoursInterval()
-    {
-        assertThatThrownBy(super::testDatePartitionProjectionOnVarcharColumnWithHoursInterval)
-                .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Catalog 'hive' column property 'partition_projection_type' does not exist");
-        throw new SkipException("partition projection not supported");
-    }
-
-    @Override
-    public void testDatePartitionProjectionOnVarcharColumnWithIntervalExpression()
-    {
-        assertThatThrownBy(super::testDatePartitionProjectionOnVarcharColumnWithIntervalExpression)
-                .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Catalog 'hive' column property 'partition_projection_type' does not exist");
-        throw new SkipException("partition projection not supported");
-    }
-
-    @Override
-    public void testEnumPartitionProjectionOnVarcharColumnWithWhitespace()
-    {
-        assertThatThrownBy(super::testEnumPartitionProjectionOnVarcharColumnWithWhitespace)
-                .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Catalog 'hive' column property 'partition_projection_type' does not exist");
-        throw new SkipException("partition projection not supported");
-    }
-
-    @Override
     public void testEnumPartitionProjectionOnVarcharColumnWithStorageLocationTemplateCreatedOnTrino()
     {
-        assertThatThrownBy(super::testEnumPartitionProjectionOnVarcharColumnWithStorageLocationTemplateCreatedOnTrino)
-                .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Catalog 'hive' column property 'partition_projection_type' does not exist");
-        throw new SkipException("partition projection not supported");
-    }
+        // It's important to mix case here to detect if we properly handle rewriting
+        // properties between Trino and Hive (e.g for Partition Projection)
+        String schemaName = "Hive_Datalake_MixedCase";
+        String tableName = getRandomTestTableName();
 
-    @Override
-    public void testEnumPartitionProjectionOnVarcharColumn()
-    {
-        assertThatThrownBy(super::testEnumPartitionProjectionOnVarcharColumn)
-                .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Catalog 'hive' column property 'partition_projection_type' does not exist");
-        throw new SkipException("partition projection not supported");
-    }
+        // We create new schema to include mixed case location path and create such keys in Object Store
+        computeActual("CREATE SCHEMA hive.%1$s WITH (location='s3a://%2$s/%1$s')".formatted(schemaName, bucketName));
+        computeActual("GRANT ALL PRIVILEGES ON hive.\"Hive_Datalake_MixedCase\".\"*\" TO ROLE %s WITH GRANT OPTION".formatted(ACCOUNT_ADMIN));
 
-    @Override
-    public void testIntegerPartitionProjectionOnVarcharColumnWithDigitsAlignCreatedOnTrino()
-    {
-        assertThatThrownBy(super::testIntegerPartitionProjectionOnVarcharColumnWithDigitsAlignCreatedOnTrino)
-                .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Catalog 'hive' column property 'partition_projection_type' does not exist");
-        throw new SkipException("partition projection not supported");
-    }
-
-    @Override
-    public void testIntegerPartitionProjectionOnIntegerColumnWithInterval()
-    {
-        assertThatThrownBy(super::testIntegerPartitionProjectionOnIntegerColumnWithInterval)
-                .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Catalog 'hive' column property 'partition_projection_type' does not exist");
-        throw new SkipException("partition projection not supported");
-    }
-
-    @Override
-    public void testIntegerPartitionProjectionOnIntegerColumnWithDefaults()
-    {
-        assertThatThrownBy(super::testIntegerPartitionProjectionOnIntegerColumnWithDefaults)
-                .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Catalog 'hive' column property 'partition_projection_type' does not exist");
-        throw new SkipException("partition projection not supported");
-    }
-
-    @Override
-    public void testInjectedPartitionProjectionOnVarcharColumn()
-    {
-        assertThatThrownBy(super::testInjectedPartitionProjectionOnVarcharColumn)
-                .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Catalog 'hive' column property 'partition_projection_type' does not exist");
-        throw new SkipException("partition projection not supported");
-    }
-
-    @Override
-    public void testPartitionProjectionInvalidTableProperties()
-    {
-        assertThatThrownBy(super::testPartitionProjectionInvalidTableProperties)
-                .hasMessageStartingWith("""
-
-                        Expecting message to be:
-                          "Partition projection can't be defined for non partition column: 'name'"
-                        but was:
-                          "Catalog 'hive' column property 'partition_projection_type' does not exist\"""");
-        throw new SkipException("partition projection not supported");
+        String storageFormat = format(
+                "s3a://%s/%s/%s/short_name1=${short_name1}/short_name2=${short_name2}/",
+                this.bucketName,
+                schemaName,
+                tableName);
+        computeActual(
+                "CREATE TABLE " + getFullyQualifiedTestTableName(schemaName, tableName) + " ( " +
+                        "  name varchar(25), " +
+                        "  comment varchar(152), " +
+                        "  nationkey bigint, " +
+                        "  regionkey bigint, " +
+                        "  short_name1 varchar(152) WITH (" +
+                        "    partition_projection_type='enum', " +
+                        "    partition_projection_values=ARRAY['PL1', 'CZ1'] " +
+                        "  ), " +
+                        "  short_name2 varchar(152) WITH (" +
+                        "    partition_projection_type='enum', " +
+                        "    partition_projection_values=ARRAY['PL2', 'CZ2'] " +
+                        "  )" +
+                        ") WITH ( " +
+                        "  partitioned_by=ARRAY['short_name1', 'short_name2'], " +
+                        "  partition_projection_enabled=true, " +
+                        "  partition_projection_location_template='" + storageFormat + "' " +
+                        ")");
+        assertThat(
+                hiveMinioDataLake.getHiveHadoop()
+                        .runOnHive("SHOW TBLPROPERTIES " + getHiveTestTableName(schemaName, tableName)))
+                .containsPattern("[ |]+projection\\.enabled[ |]+true[ |]+")
+                .containsPattern("[ |]+storage\\.location\\.template[ |]+" + quote(storageFormat) + "[ |]+")
+                .containsPattern("[ |]+projection\\.short_name1\\.type[ |]+enum[ |]+")
+                .containsPattern("[ |]+projection\\.short_name1\\.values[ |]+PL1,CZ1[ |]+")
+                .containsPattern("[ |]+projection\\.short_name2\\.type[ |]+enum[ |]+")
+                .containsPattern("[ |]+projection\\.short_name2\\.values[ |]+PL2,CZ2[ |]+");
+        testEnumPartitionProjectionOnVarcharColumnWithStorageLocationTemplate(schemaName, tableName);
     }
 
     @Override

@@ -458,7 +458,7 @@ public abstract class BaseTestHiveOnDataLake
         testEnumPartitionProjectionOnVarcharColumnWithStorageLocationTemplate(HIVE_TEST_SCHEMA, tableName);
     }
 
-    private void testEnumPartitionProjectionOnVarcharColumnWithStorageLocationTemplate(String schemaName, String tableName)
+    protected void testEnumPartitionProjectionOnVarcharColumnWithStorageLocationTemplate(String schemaName, String tableName)
     {
         String fullyQualifiedTestTableName = getFullyQualifiedTestTableName(schemaName, tableName);
         computeActual(createInsertStatement(

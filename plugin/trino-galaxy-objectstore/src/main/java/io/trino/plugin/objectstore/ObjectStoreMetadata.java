@@ -15,6 +15,8 @@ package io.trino.plugin.objectstore;
 
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import io.airlift.slice.Slice;
 import io.trino.plugin.deltalake.CorruptedDeltaLakeTableHandle;
 import io.trino.plugin.deltalake.DeltaLakeInsertTableHandle;
@@ -110,6 +112,7 @@ import static io.trino.plugin.objectstore.TableType.HIVE;
 import static io.trino.plugin.objectstore.TableType.HUDI;
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
+import static io.trino.spi.StandardErrorCode.INVALID_COLUMN_PROPERTY;
 import static io.trino.spi.StandardErrorCode.INVALID_SESSION_PROPERTY;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.StandardErrorCode.UNSUPPORTED_TABLE_TYPE;
@@ -1223,6 +1226,7 @@ public class ObjectStoreMetadata
 
     private ConnectorTableMetadata unwrap(TableType tableType, ConnectorTableMetadata metadata)
     {
+        validateColumnProperties(tableType, metadata.getColumns());
         return withProperties(metadata, unwrap(tableType, metadata.getProperties()));
     }
 
@@ -1253,6 +1257,25 @@ public class ObjectStoreMetadata
         }
         catch (IllegalArgumentException e) {
             throw new TrinoException(INVALID_SESSION_PROPERTY, "%s is invalid: %s".formatted(property.getName(), value), e);
+        }
+    }
+
+    private static void validateColumnProperties(TableType tableType, List<ColumnMetadata> columnMetadata)
+    {
+        switch (tableType) {
+            case HIVE -> {
+                // Hive is the only connector using column properties
+                return;
+            }
+            case ICEBERG, DELTA, HUDI -> {
+                Set<String> columnProperties = columnMetadata.stream()
+                        .map(ColumnMetadata::getProperties)
+                        .map(Map::keySet)
+                        .reduce(ImmutableSet.of(), Sets::union);
+                if (!columnProperties.isEmpty()) {
+                    throw new TrinoException(INVALID_COLUMN_PROPERTY, "%s tables do not support column properties %s".formatted(tableType.displayName(), columnProperties));
+                }
+            }
         }
     }
 

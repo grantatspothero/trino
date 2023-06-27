@@ -165,9 +165,11 @@ public final class InternalHiveConnectorFactory
             Optional<ConnectorAccessControl> hiveAccessControl = injector.getInstance(Key.get(new TypeLiteral<Optional<ConnectorAccessControl>>() {}))
                     .map(accessControl -> new SystemTableAwareAccessControl(accessControl, systemTableProviders))
                     .map(accessControl -> new ClassLoaderSafeConnectorAccessControl(accessControl, classLoader));
+            HiveConfig hiveConfig = injector.getInstance(HiveConfig.class);
 
             return new HiveConnector(
-                    injector.getInstance(HiveConfig.class).getRecursiveDirWalkerEnabled(),
+                    hiveConfig.getRecursiveDirWalkerEnabled(),
+                    hiveConfig.isPartitionProjectionEnabled(),
                     lifeCycleManager,
                     transactionManager,
                     new ClassLoaderSafeConnectorSplitManager(splitManager, classLoader),

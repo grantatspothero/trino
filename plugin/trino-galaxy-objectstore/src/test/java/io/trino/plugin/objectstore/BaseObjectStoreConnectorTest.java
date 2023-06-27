@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.objectstore;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.filesystem.hdfs.HdfsFileSystemFactory;
@@ -115,6 +116,11 @@ public abstract class BaseObjectStoreConnectorTest
         TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> !location.contains("denied")));
         TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> galaxyCockroachContainer));
 
+        Map<String, String> objectStoreProperties = ImmutableMap.<String, String>builder()
+                .putAll(extraObjectStoreProperties)
+                .put("HIVE__hive.partition-projection-enabled", "true")
+                .buildOrThrow();
+
         DistributedQueryRunner queryRunner = ObjectStoreQueryRunner.builder()
                 .withTableType(tableType)
                 .withAccountClient(testingAccountFactory.createAccountClient())
@@ -124,7 +130,7 @@ public abstract class BaseObjectStoreConnectorTest
                 .withLocationSecurityServer(locationSecurityServer)
                 .withMockConnectorPlugin(buildMockConnectorPlugin())
                 .withCoordinatorProperties(coordinatorProperties)
-                .withExtraObjectStoreProperties(extraObjectStoreProperties)
+                .withExtraObjectStoreProperties(objectStoreProperties)
                 .withPlugin(getObjectStorePlugin())
                 .build();
 
@@ -476,6 +482,34 @@ public abstract class BaseObjectStoreConnectorTest
                 "WITH (\n" +
                 "   auto_purge = true,\n" +
                 "   format = 'ORC',\n" +
+                "   type = 'HIVE'\n" +
+                ")");
+    }
+
+    @Test
+    public void testHiveSpecificColumnProperty()
+    {
+        assertUpdate("" +
+                "CREATE TABLE test_hive_specific_column_property(\n" +
+                "   xyz bigint,\n" +
+                "   abc bigint\n" +
+                "     WITH (partition_projection_type = 'INTEGER', partition_projection_range = ARRAY['0', '10'])\n" +
+                ") WITH (" +
+                "    partitioned_by = ARRAY['abc'],\n" +
+                "    partition_projection_enabled = true,\n" +
+                "    partition_projection_location_template = 's3://example/${abc}'\n" +
+                ")");
+
+        assertQueryReturns("SHOW CREATE TABLE test_hive_specific_column_property", "" +
+                "CREATE TABLE objectstore.tpch.test_hive_specific_column_property (\n" +
+                "   xyz bigint,\n" +
+                "   abc bigint WITH ( partition_projection_range = ARRAY['0','10'], partition_projection_type = 'INTEGER' )\n" +
+                ")\n" +
+                "WITH (\n" +
+                "   format = 'ORC',\n" +
+                "   partition_projection_enabled = true,\n" +
+                "   partition_projection_location_template = 's3://example/${abc}',\n" +
+                "   partitioned_by = ARRAY['abc'],\n" +
                 "   type = 'HIVE'\n" +
                 ")");
     }

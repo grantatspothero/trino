@@ -317,6 +317,13 @@ public class TestObjectStoreHudiConnectorTest
     }
 
     @Override
+    public void testHiveSpecificColumnProperty()
+    {
+        assertThatThrownBy(super::testHiveSpecificColumnProperty)
+                .hasMessage("Table creation is not supported for Hudi");
+    }
+
+    @Override
     public void testIcebergSpecificTableProperty()
     {
         assertThatThrownBy(super::testIcebergSpecificTableProperty)

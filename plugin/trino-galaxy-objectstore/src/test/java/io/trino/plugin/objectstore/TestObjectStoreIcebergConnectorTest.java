@@ -245,6 +245,13 @@ public class TestObjectStoreIcebergConnectorTest
     }
 
     @Override
+    public void testHiveSpecificColumnProperty()
+    {
+        assertThatThrownBy(super::testHiveSpecificColumnProperty)
+                .hasMessage("Iceberg tables do not support column properties [partition_projection_type, partition_projection_range]");
+    }
+
+    @Override
     public void testDeltaSpecificTableProperty()
     {
         assertThatThrownBy(super::testDeltaSpecificTableProperty)

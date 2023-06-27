@@ -114,7 +114,8 @@ public class ObjectStoreConnector
         this.nodePartitioningProvider = requireNonNull(nodePartitioningProvider, "nodePartitioningProvider is null");
         this.schemaProperties = schemaProperties();
         this.tableProperties = requireNonNull(tableProperties, "tableProperties is null");
-        this.columnProperties = columnProperties(delegates);
+        boolean hivePartitionProjectionEnabled = ((HiveConnector) hiveConnector).isPartitionProjectionEnabled();
+        this.columnProperties = columnProperties(delegates, hivePartitionProjectionEnabled);
         this.materializedViewProperties = requireNonNull(materializedViewProperties, "materializedViewProperties is null");
         this.sessionProperties = requireNonNull(sessionProperties, "sessionProperties is null");
         this.analyzeProperties = analyzeProperties(delegates);
@@ -140,14 +141,19 @@ public class ObjectStoreConnector
                 .build();
     }
 
-    private static List<PropertyMetadata<?>> columnProperties(DelegateConnectors delegates)
+    private static List<PropertyMetadata<?>> columnProperties(DelegateConnectors delegates, boolean partitionProjectionEnabled)
     {
         verify(delegates.hiveConnector().getColumnProperties().stream().allMatch(
                 property -> property.getName().startsWith("partition_projection_")), "Unexpected Hive column properties");
         verify(delegates.icebergConnector().getColumnProperties().isEmpty(), "Unexpected Iceberg column properties");
         verify(delegates.deltaConnector().getColumnProperties().isEmpty(), "Unexpected Delta Lake column properties");
         verify(delegates.hudiConnector().getColumnProperties().isEmpty(), "Unexpected Hudi column properties");
-        return ImmutableList.of();
+
+        ImmutableList.Builder<PropertyMetadata<?>> columnProperties = ImmutableList.builder();
+        if (partitionProjectionEnabled) {
+            columnProperties.addAll(delegates.hiveConnector().getColumnProperties());
+        }
+        return columnProperties.build();
     }
 
     private static List<PropertyMetadata<?>> analyzeProperties(DelegateConnectors delegates)
