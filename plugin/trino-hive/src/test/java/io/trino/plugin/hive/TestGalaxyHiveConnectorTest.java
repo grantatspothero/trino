@@ -63,6 +63,7 @@ public class TestGalaxyHiveConnectorTest
                         // Reduce writer sort buffer size to ensure SortingFileWriter gets used
                         .put("hive.writer-sort-buffer-size", "1MB")
                         .put("hive.security", "allow-all")
+                        .put("hive.partition-projection-enabled", "true")
                         .buildOrThrow())
                 .setInitialTables(ImmutableList.of(CUSTOMER, NATION, ORDERS, REGION))
                 .setTpchBucketedCatalogEnabled(true)
