@@ -31,6 +31,7 @@ import java.util.List;
 
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.trino.SystemSessionProperties.isDictionaryAggregationEnabled;
+import static io.trino.SystemSessionProperties.isFlatGroupByHash;
 import static io.trino.cache.SafeCaches.buildNonEvictableCache;
 
 public interface GroupByHash
@@ -69,11 +70,13 @@ public interface GroupByHash
             TypeOperators typeOperators,
             UpdateMemory updateMemory)
     {
+        boolean flatGroupByHash = isFlatGroupByHash(session);
         boolean dictionaryAggregationEnabled = isDictionaryAggregationEnabled(session);
-        return createGroupByHash(types, hasPrecomputedHash, expectedSize, dictionaryAggregationEnabled, joinCompiler, typeOperators, updateMemory);
+        return createGroupByHash(flatGroupByHash, types, hasPrecomputedHash, expectedSize, dictionaryAggregationEnabled, joinCompiler, typeOperators, updateMemory);
     }
 
     static GroupByHash createGroupByHash(
+            boolean flatGroupByHash,
             List<Type> types,
             boolean hasPrecomputedHash,
             int expectedSize,
@@ -87,6 +90,9 @@ public interface GroupByHash
                 Type hashType = getOnlyElement(types);
                 Constructor<? extends GroupByHash> constructor = specializedGroupByHashClasses.getUnchecked(hashType).getConstructor(boolean.class, int.class, UpdateMemory.class, Type.class);
                 return constructor.newInstance(hasPrecomputedHash, expectedSize, updateMemory, hashType);
+            }
+            if (flatGroupByHash) {
+                return new FlatGroupByHash(types, hasPrecomputedHash, expectedSize, dictionaryAggregationEnabled, joinCompiler, updateMemory);
             }
             return new MultiChannelGroupByHash(types, hasPrecomputedHash, expectedSize, dictionaryAggregationEnabled, joinCompiler, typeOperators, updateMemory);
         }

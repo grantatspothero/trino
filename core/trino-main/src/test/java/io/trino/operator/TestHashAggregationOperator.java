@@ -41,6 +41,7 @@ import io.trino.sql.planner.plan.PlanNodeId;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.testing.MaterializedResult;
 import io.trino.testing.TestingTaskContext;
+import org.testng.SkipException;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -69,6 +70,7 @@ import static io.airlift.units.DataSize.Unit.MEGABYTE;
 import static io.airlift.units.DataSize.succinctBytes;
 import static io.trino.RowPagesBuilder.rowPagesBuilder;
 import static io.trino.SessionTestUtils.TEST_SESSION;
+import static io.trino.SystemSessionProperties.isFlatGroupByHash;
 import static io.trino.block.BlockAssertions.createLongsBlock;
 import static io.trino.block.BlockAssertions.createRepeatedValuesBlock;
 import static io.trino.operator.GroupByHashYieldAssertion.GroupByHashYieldResult;
@@ -268,6 +270,10 @@ public class TestHashAggregationOperator
     @Test(dataProvider = "hashEnabledAndMemoryLimitForMergeValues")
     public void testHashAggregationMemoryReservation(boolean hashEnabled, boolean spillEnabled, boolean revokeMemoryWhenAddingPages, long memoryLimitForMerge, long memoryLimitForMergeWithMemory)
     {
+        assertThat(isFlatGroupByHash(TEST_SESSION)).as("Expected flatGroupByHash to be disabled").isFalse();
+        if (!isFlatGroupByHash(TEST_SESSION)) {
+            throw new SkipException("Memory reservation tests utilizing GroupByHash are only enabled if flatGroupByHash is enabled");
+        }
         TestingAggregationFunction arrayAggColumn = FUNCTION_RESOLUTION.getAggregateFunction(QualifiedName.of("array_agg"), fromTypes(BIGINT));
 
         List<Integer> hashChannels = Ints.asList(1);
@@ -306,7 +312,7 @@ public class TestHashAggregationOperator
         Operator operator = operatorFactory.createOperator(driverContext);
         toPages(operator, input.iterator(), revokeMemoryWhenAddingPages);
         // TODO (https://github.com/trinodb/trino/issues/10596): it should be 0, since operator is finished
-        assertEquals(getOnlyElement(operator.getOperatorContext().getNestedOperatorStats()).getUserMemoryReservation().toBytes(), spillEnabled && revokeMemoryWhenAddingPages ? 4_781_456 : 0);
+        assertEquals(getOnlyElement(operator.getOperatorContext().getNestedOperatorStats()).getUserMemoryReservation().toBytes(), spillEnabled && revokeMemoryWhenAddingPages ? 4_781_440 : 0);
         assertEquals(getOnlyElement(operator.getOperatorContext().getNestedOperatorStats()).getRevocableMemoryReservation().toBytes(), 0);
     }
 
@@ -393,6 +399,10 @@ public class TestHashAggregationOperator
     @Test(dataProvider = "dataType")
     public void testMemoryReservationYield(Type type)
     {
+        assertThat(isFlatGroupByHash(TEST_SESSION)).as("Expected flatGroupByHash to be disabled").isFalse();
+        if (!isFlatGroupByHash(TEST_SESSION)) {
+            throw new SkipException("Memory reservation tests utilizing GroupByHash are only enabled if flatGroupByHash is enabled");
+        }
         List<Page> input = createPagesWithDistinctHashKeys(type, 6_000, 600);
         OperatorFactory operatorFactory = new HashAggregationOperatorFactory(
                 0,

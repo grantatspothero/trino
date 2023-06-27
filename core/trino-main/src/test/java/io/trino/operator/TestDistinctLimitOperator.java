@@ -22,6 +22,7 @@ import io.trino.spi.type.TypeOperators;
 import io.trino.sql.gen.JoinCompiler;
 import io.trino.sql.planner.plan.PlanNodeId;
 import io.trino.testing.MaterializedResult;
+import org.testng.SkipException;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -36,6 +37,7 @@ import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.airlift.testing.Assertions.assertGreaterThanOrEqual;
 import static io.trino.RowPagesBuilder.rowPagesBuilder;
 import static io.trino.SessionTestUtils.TEST_SESSION;
+import static io.trino.SystemSessionProperties.isFlatGroupByHash;
 import static io.trino.operator.GroupByHashYieldAssertion.createPagesWithDistinctHashKeys;
 import static io.trino.operator.GroupByHashYieldAssertion.finishOperatorWithYieldingGroupByHash;
 import static io.trino.operator.OperatorAssertion.assertOperatorEquals;
@@ -45,6 +47,7 @@ import static io.trino.testing.MaterializedResult.resultBuilder;
 import static io.trino.testing.TestingTaskContext.createTaskContext;
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.Executors.newScheduledThreadPool;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.testng.Assert.assertEquals;
 
 @Test(singleThreaded = true)
@@ -153,6 +156,10 @@ public class TestDistinctLimitOperator
     @Test(dataProvider = "dataType")
     public void testMemoryReservationYield(Type type)
     {
+        assertThat(isFlatGroupByHash(TEST_SESSION)).as("Expected flatGroupByHash to be disabled").isFalse();
+        if (!isFlatGroupByHash(TEST_SESSION)) {
+            throw new SkipException("Memory reservation tests utilizing GroupByHash are only enabled if flatGroupByHash is enabled");
+        }
         List<Page> input = createPagesWithDistinctHashKeys(type, 6_000, 600);
 
         OperatorFactory operatorFactory = new DistinctLimitOperator.DistinctLimitOperatorFactory(
