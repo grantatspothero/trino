@@ -346,15 +346,15 @@ public class TestGroupByHash
     public void testContainsMultipleColumns()
     {
         Block valuesBlock = BlockAssertions.createDoubleSequenceBlock(0, 10);
-        Block stringValuesBlock = BlockAssertions.createStringSequenceBlock(0, 10);
-        Block hashBlock = TypeTestUtils.getHashBlock(ImmutableList.of(DOUBLE, VARCHAR), valuesBlock, stringValuesBlock);
+        Block stringValuesBlock = createStringSequenceBlock(0, 10);
+        Block hashBlock = getHashBlock(ImmutableList.of(DOUBLE, VARCHAR), valuesBlock, stringValuesBlock);
         int[] hashChannels = {0, 1};
         GroupByHash groupByHash = createGroupByHash(ImmutableList.of(DOUBLE, VARCHAR), hashChannels, Optional.of(2), 100, isDictionaryAggregationEnabled(TEST_SESSION), JOIN_COMPILER, TYPE_OPERATOR_FACTORY, NOOP);
         groupByHash.getGroupIds(new Page(valuesBlock, stringValuesBlock, hashBlock)).process();
 
         Block testValuesBlock = BlockAssertions.createDoublesBlock((double) 3);
         Block testStringValuesBlock = BlockAssertions.createStringsBlock("3");
-        Block testHashBlock = TypeTestUtils.getHashBlock(ImmutableList.of(DOUBLE, VARCHAR), testValuesBlock, testStringValuesBlock);
+        Block testHashBlock = getHashBlock(ImmutableList.of(DOUBLE, VARCHAR), testValuesBlock, testStringValuesBlock);
         assertTrue(groupByHash.contains(0, new Page(testValuesBlock, testStringValuesBlock, testHashBlock), hashChannels));
     }
 
@@ -369,7 +369,7 @@ public class TestGroupByHash
         GroupByHash groupByHash = groupByHashType.createGroupByHash(4, NOOP, hashType);
         groupByHash.getGroupIds(new Page(valuesBlock, hashBlock)).process();
 
-        // Ensure that all groups are present in group by hash
+        // Ensure that all groups are present in GroupByHash
         for (int i = 0; i < valuesBlock.getPositionCount(); i++) {
             assertTrue(groupByHash.contains(i, new Page(valuesBlock, hashBlock), CONTAINS_CHANNELS));
         }
@@ -392,7 +392,7 @@ public class TestGroupByHash
         }
         Block hashBlock = getHashBlock(ImmutableList.of(type), valuesBlock);
 
-        // Create group by hash with extremely small size
+        // Create GroupByHash with tiny size
         AtomicInteger rehashCount = new AtomicInteger();
         GroupByHash groupByHash = createGroupByHash(
                 ImmutableList.of(type),
@@ -618,7 +618,7 @@ public class TestGroupByHash
     @Test
     public void testLowCardinalityDictionariesGetGroupIds()
     {
-        // Compare group id results from page with dictionaries only (processed via low cardinality work) and the same page processed normally
+        // Compare group ids results from page with dictionaries only (processed via low cardinality work) and the same page processed normally
         GroupByHash groupByHash = createGroupByHash(
                 ImmutableList.of(BIGINT, BIGINT, BIGINT, BIGINT, BIGINT),
                 new int[] {0, 1, 2, 3, 4},
@@ -689,7 +689,7 @@ public class TestGroupByHash
 
         work.process();
         int[] results = work.getResult();
-        // Records with group id '0' should come before '1' despite being in the end of the block
+        // Records with group id '0' should come before '1' despite being at the end of the block
         for (int i = 0; i < 16; i++) {
             assertThat(results[i]).isEqualTo(0);
         }
@@ -701,7 +701,7 @@ public class TestGroupByHash
     @Test
     public void testProperWorkTypesSelected()
     {
-        Block bigintBlock = BlockAssertions.createLongsBlock(1, 2, 3, 4, 5, 6, 7, 8);
+        Block bigintBlock = createLongsBlock(1, 2, 3, 4, 5, 6, 7, 8);
         Block bigintDictionaryBlock = BlockAssertions.createLongDictionaryBlock(0, 8);
         Block bigintRleBlock = BlockAssertions.createRepeatedValuesBlock(42L, 8);
 
@@ -781,7 +781,7 @@ public class TestGroupByHash
         assertGroupByHashWork(lowCardinalityHugeDictionaryPage, ImmutableList.of(BIGINT, BIGINT), MultiChannelGroupByHash.GetNonDictionaryGroupIdsWork.class);
     }
 
-    private void assertGroupByHashWork(Page page, List<Type> types, Class<?> clazz)
+    private static void assertGroupByHashWork(Page page, List<Type> types, Class<?> clazz)
     {
         GroupByHash groupByHash = createGroupByHash(
                 types,

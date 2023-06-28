@@ -123,7 +123,7 @@ public interface GroupByHash
         return contains(position, page, hashChannels);
     }
 
-    long getRawHash(int groupyId);
+    long getRawHash(int groupId);
 
     @VisibleForTesting
     int getCapacity();
