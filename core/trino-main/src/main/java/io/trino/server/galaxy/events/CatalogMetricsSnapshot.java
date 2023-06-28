@@ -13,6 +13,7 @@
  */
 package io.trino.server.galaxy.events;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -32,7 +33,14 @@ public class CatalogMetricsSnapshot
         this(catalogId, catalogName, 0, 0, 0, 0);
     }
 
-    public CatalogMetricsSnapshot(String catalogId, String catalogName, long intraRegionReadBytes, long intraRegionWriteBytes, long crossRegionReadBytes, long crossRegionWriteBytes)
+    @JsonCreator
+    public CatalogMetricsSnapshot(
+            @JsonProperty("catalogId") String catalogId,
+            @JsonProperty("catalogName") String catalogName,
+            @JsonProperty("intraRegionReadBytes") long intraRegionReadBytes,
+            @JsonProperty("intraRegionWriteBytes") long intraRegionWriteBytes,
+            @JsonProperty("crossRegionReadBytes") long crossRegionReadBytes,
+            @JsonProperty("crossRegionWriteBytes") long crossRegionWriteBytes)
     {
         this.catalogId = requireNonNull(catalogId, "catalogId is null");
         this.catalogName = requireNonNull(catalogName, "catalogName is null");

@@ -13,6 +13,7 @@
  */
 package io.trino.server.galaxy.events;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 
@@ -34,7 +35,18 @@ public class HeartbeatEvent
     private final String podIp;
     private final List<CatalogMetricsSnapshot> catalogMetrics;
 
-    public HeartbeatEvent(long durationMillis, String clusterId, String accountId, String deploymentId, Optional<String> cloudRegionId, String variant, String role, String podName, String podIp, List<CatalogMetricsSnapshot> catalogMetrics)
+    @JsonCreator
+    public HeartbeatEvent(
+            @JsonProperty("durationMillis") long durationMillis,
+            @JsonProperty("clusterId") String clusterId,
+            @JsonProperty("accountId") String accountId,
+            @JsonProperty("deploymentId") String deploymentId,
+            @JsonProperty("cloudRegionId") Optional<String> cloudRegionId,
+            @JsonProperty("variant") String variant,
+            @JsonProperty("role") String role,
+            @JsonProperty("podName") String podName,
+            @JsonProperty("podIp") String podIp,
+            @JsonProperty("catalogMetrics") List<CatalogMetricsSnapshot> catalogMetrics)
     {
         this.durationMillis = durationMillis;
         this.clusterId = requireNonNull(clusterId, "clusterId is null");
