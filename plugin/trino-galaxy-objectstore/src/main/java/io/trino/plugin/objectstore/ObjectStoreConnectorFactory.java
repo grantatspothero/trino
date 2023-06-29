@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.objectstore;
 
+import com.google.inject.Binder;
 import com.google.inject.Module;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
@@ -42,9 +43,13 @@ public class ObjectStoreConnectorFactory
     {
         ClassLoader classLoader = context.duplicatePluginClassLoader();
         try {
+            // the module must be from the same classloader as InternalObjectStoreConnectorFactory
+            Object moduleInstance = classLoader.loadClass(EmptyModule.class.getName()).getConstructor().newInstance();
+            // use the class instance from InternalObjectStoreConnectorFactory's classloader
+            Class<?> moduleClass = classLoader.loadClass(Module.class.getName());
             return (Connector) classLoader.loadClass(InternalObjectStoreConnectorFactory.class.getName())
-                    .getMethod("createConnector", String.class, Map.class, Optional.class, Optional.class, Optional.class, Module.class, ConnectorContext.class)
-                    .invoke(null, catalogName, config, Optional.empty(), Optional.empty(), Optional.empty(), (Module) binder -> {}, context);
+                    .getMethod("createConnector", String.class, Map.class, Optional.class, Optional.class, Optional.class, moduleClass, ConnectorContext.class)
+                    .invoke(null, catalogName, config, Optional.empty(), Optional.empty(), Optional.empty(), moduleInstance, context);
         }
         catch (InvocationTargetException e) {
             Throwable targetException = e.getTargetException();
@@ -60,5 +65,12 @@ public class ObjectStoreConnectorFactory
     public String getName()
     {
         return name;
+    }
+
+    public static class EmptyModule
+            implements Module
+    {
+        @Override
+        public void configure(Binder binder) {}
     }
 }
