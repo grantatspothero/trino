@@ -14,21 +14,53 @@
 package io.trino.operator;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import io.airlift.bytecode.DynamicClassLoader;
 import io.trino.Session;
+import io.trino.collect.cache.NonEvictableLoadingCache;
 import io.trino.spi.Page;
 import io.trino.spi.PageBuilder;
 import io.trino.spi.type.Type;
+import io.trino.sql.gen.IsolatedClass;
 import io.trino.sql.gen.JoinCompiler;
 import io.trino.type.BlockTypeOperators;
 
+import java.lang.reflect.Constructor;
 import java.util.List;
 import java.util.Optional;
 
+import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.trino.SystemSessionProperties.isDictionaryAggregationEnabled;
-import static io.trino.spi.type.BigintType.BIGINT;
+import static io.trino.collect.cache.SafeCaches.buildNonEvictableCache;
 
 public interface GroupByHash
 {
+    NonEvictableLoadingCache<Type, Class<? extends GroupByHash>> specializedGroupByHashClasses = buildNonEvictableCache(
+            CacheBuilder.newBuilder()
+                .maximumSize(256),
+            CacheLoader.from(type -> isolateGroupByHashClass()));
+
+    static Class<? extends GroupByHash> isolateGroupByHashClass()
+    {
+        return IsolatedClass.isolateClass(
+                    new DynamicClassLoader(GroupByHash.class.getClassLoader()),
+                    GroupByHash.class,
+                    BigintGroupByHash.class,
+                    BigintGroupByHash.AddPageWork.class,
+                    BigintGroupByHash.AddDictionaryPageWork.class,
+                    BigintGroupByHash.AddRunLengthEncodedPageWork.class,
+                    BigintGroupByHash.GetGroupIdsWork.class,
+                    BigintGroupByHash.GetDictionaryGroupIdsWork.class,
+                    BigintGroupByHash.GetRunLengthEncodedGroupIdsWork.class,
+                    BigintGroupByHash.DictionaryLookBack.class,
+                    BigintGroupByHash.ValuesArray.class,
+                    BigintGroupByHash.LongValuesArray.class,
+                    BigintGroupByHash.IntegerValuesArray.class,
+                    BigintGroupByHash.ShortValuesArray.class,
+                    BigintGroupByHash.ByteValuesArray.class);
+    }
+
     static GroupByHash createGroupByHash(
             Session session,
             List<? extends Type> hashTypes,
@@ -52,10 +84,17 @@ public interface GroupByHash
             BlockTypeOperators blockTypeOperators,
             UpdateMemory updateMemory)
     {
-        if (hashTypes.size() == 1 && hashTypes.get(0).equals(BIGINT) && hashChannels.length == 1) {
-            return new BigintGroupByHash(hashChannels[0], inputHashChannel.isPresent(), expectedSize, updateMemory);
+        try {
+            if (hashTypes.size() == 1 && BigintGroupByHash.isSupportedType(hashTypes.get(0)) && hashChannels.length == 1) {
+                Type hashType = getOnlyElement(hashTypes);
+                Constructor<? extends GroupByHash> constructor = specializedGroupByHashClasses.getUnchecked(hashType).getConstructor(int.class, boolean.class, int.class, UpdateMemory.class, Type.class);
+                return constructor.newInstance(hashChannels[0], inputHashChannel.isPresent(), expectedSize, updateMemory, hashType);
+            }
+            return new MultiChannelGroupByHash(hashTypes, hashChannels, inputHashChannel, expectedSize, processDictionary, joinCompiler, blockTypeOperators, updateMemory);
         }
-        return new MultiChannelGroupByHash(hashTypes, hashChannels, inputHashChannel, expectedSize, processDictionary, joinCompiler, blockTypeOperators, updateMemory);
+        catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     long getEstimatedSize();

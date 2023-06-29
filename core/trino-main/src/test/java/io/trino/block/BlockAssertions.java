@@ -706,7 +706,7 @@ public final class BlockAssertions
     public static Block createLongDictionaryBlock(int start, int length)
     {
         checkArgument(length > 5, "block must have more than 5 entries");
-        return createDictionaryBlock(start, length, length / 5, BIGINT);
+        return createDictionaryBlock(start, length, BIGINT);
     }
 
     public static Block createLongDictionaryBlock(int start, int length, int dictionarySize)

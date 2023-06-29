@@ -26,6 +26,7 @@ import io.trino.spi.block.DictionaryBlock;
 import io.trino.spi.block.LongArrayBlock;
 import io.trino.spi.block.RunLengthEncodedBlock;
 import io.trino.spi.type.AbstractLongType;
+import io.trino.spi.type.StandardTypes;
 import io.trino.spi.type.Type;
 import io.trino.spi.type.TypeOperators;
 import io.trino.sql.gen.JoinCompiler;
@@ -57,6 +58,10 @@ import java.util.stream.IntStream;
 import static io.trino.jmh.Benchmarks.benchmark;
 import static io.trino.operator.UpdateMemory.NOOP;
 import static io.trino.spi.type.BigintType.BIGINT;
+import static io.trino.spi.type.DateType.DATE;
+import static io.trino.spi.type.IntegerType.INTEGER;
+import static io.trino.spi.type.SmallintType.SMALLINT;
+import static io.trino.spi.type.TinyintType.TINYINT;
 import static io.trino.spi.type.VarcharType.VARCHAR;
 import static it.unimi.dsi.fastutil.HashCommon.arraySize;
 
@@ -138,8 +143,8 @@ public class BenchmarkGroupByHash
     @OperationsPerInvocation(POSITIONS)
     public Object bigintGroupByHash(SingleChannelBenchmarkData data)
     {
-        GroupByHash groupByHash = new BigintGroupByHash(0, data.getHashEnabled(), EXPECTED_SIZE, NOOP);
-        addInputPagesToHash(groupByHash, data.getPages());
+        GroupByHash groupByHash = GroupByHash.createGroupByHash(ImmutableList.of(data.getHashType()), new int[] {0}, data.hashChannel, EXPECTED_SIZE, false, getJoinCompiler(), TYPE_OPERATOR_FACTORY, NOOP);
+        addInputPagesToHash(groupByHash, data.pages);
 
         ImmutableList.Builder<Page> pages = ImmutableList.builder();
         PageBuilder pageBuilder = new PageBuilder(groupByHash.getTypes());
@@ -225,9 +230,9 @@ public class BenchmarkGroupByHash
         }
     }
 
-    private static List<Page> createBigintPages(int positionCount, int groupCount, int channelCount, boolean hashEnabled, boolean useMixedBlockTypes)
+    private static List<Page> createIntegerPages(int positionCount, int groupCount, int channelCount, boolean hashEnabled, Type type, boolean useMixedBlockTypes)
     {
-        List<Type> types = Collections.nCopies(channelCount, BIGINT);
+        List<Type> types = Collections.nCopies(channelCount, type);
         ImmutableList.Builder<Page> pages = ImmutableList.builder();
         if (hashEnabled) {
             types = ImmutableList.copyOf(Iterables.concat(types, ImmutableList.of(BIGINT)));
@@ -239,7 +244,7 @@ public class BenchmarkGroupByHash
             int rand = ThreadLocalRandom.current().nextInt(groupCount);
             pageBuilder.declarePosition();
             for (int numChannel = 0; numChannel < channelCount; numChannel++) {
-                BIGINT.writeLong(pageBuilder.getBlockBuilder(numChannel), rand);
+                type.writeLong(pageBuilder.getBlockBuilder(numChannel), rand);
             }
             if (hashEnabled) {
                 BIGINT.writeLong(pageBuilder.getBlockBuilder(channelCount), AbstractLongType.hash(rand));
@@ -325,7 +330,7 @@ public class BenchmarkGroupByHash
         @Setup
         public void setup()
         {
-            pages = createBigintPages(POSITIONS, groupCount, channelCount, hashEnabled, false);
+            pages = createIntegerPages(POSITIONS, groupCount, channelCount, hashEnabled, BIGINT, false);
         }
 
         public List<Page> getPages()
@@ -340,13 +345,12 @@ public class BenchmarkGroupByHash
     {
         @Param("1")
         private int channelCount = 1;
-
         @Param({"true", "false"})
         private boolean hashEnabled = true;
-
+        @Param({StandardTypes.DATE, StandardTypes.BIGINT, StandardTypes.INTEGER, StandardTypes.SMALLINT, StandardTypes.TINYINT})
+        private String rawHashType = StandardTypes.BIGINT;
         private List<Page> pages;
-        private List<Type> types;
-        private int[] channels;
+        private Optional<Integer> hashChannel = Optional.empty();
 
         @Setup
         public void setup()
@@ -356,27 +360,25 @@ public class BenchmarkGroupByHash
 
         public void setup(boolean useMixedBlockTypes)
         {
-            pages = createBigintPages(POSITIONS, GROUP_COUNT, channelCount, hashEnabled, useMixedBlockTypes);
-            types = Collections.nCopies(1, BIGINT);
-            channels = new int[1];
-            for (int i = 0; i < 1; i++) {
-                channels[i] = i;
-            }
+            pages = switch (rawHashType) {
+                case StandardTypes.BIGINT, StandardTypes.INTEGER, StandardTypes.DATE -> createIntegerPages(POSITIONS, GROUP_COUNT, channelCount, hashEnabled, getHashType(), useMixedBlockTypes);
+                case StandardTypes.SMALLINT -> createIntegerPages(POSITIONS, Short.MAX_VALUE, channelCount, hashEnabled, getHashType(), useMixedBlockTypes);
+                case StandardTypes.TINYINT -> createIntegerPages(POSITIONS, Byte.MAX_VALUE, channelCount, hashEnabled, getHashType(), useMixedBlockTypes);
+                default -> throw new UnsupportedOperationException("Unsupported dataType");
+            };
+            hashChannel = hashEnabled ? Optional.of(channelCount) : Optional.empty();
         }
 
-        public List<Page> getPages()
+        public Type getHashType()
         {
-            return pages;
-        }
-
-        public List<Type> getTypes()
-        {
-            return types;
-        }
-
-        public boolean getHashEnabled()
-        {
-            return hashEnabled;
+            return switch (rawHashType) {
+                case StandardTypes.BIGINT -> BIGINT;
+                case StandardTypes.DATE -> DATE;
+                case StandardTypes.INTEGER -> INTEGER;
+                case StandardTypes.SMALLINT -> SMALLINT;
+                case StandardTypes.TINYINT -> TINYINT;
+                default -> throw new UnsupportedOperationException("%s is not supported".formatted(rawHashType));
+            };
         }
     }
 
@@ -394,8 +396,8 @@ public class BenchmarkGroupByHash
         @Param({"true", "false"})
         private boolean hashEnabled;
 
-        @Param({"VARCHAR", "BIGINT"})
-        private String dataType = "VARCHAR";
+        @Param({StandardTypes.VARCHAR, StandardTypes.BIGINT})
+        private String dataType = StandardTypes.VARCHAR;
 
         private List<Page> pages;
         private Optional<Integer> hashChannel;
@@ -406,13 +408,13 @@ public class BenchmarkGroupByHash
         public void setup()
         {
             switch (dataType) {
-                case "VARCHAR":
+                case StandardTypes.VARCHAR:
                     types = Collections.nCopies(channelCount, VARCHAR);
                     pages = createVarcharPages(POSITIONS, groupCount, channelCount, hashEnabled);
                     break;
-                case "BIGINT":
+                case StandardTypes.BIGINT:
                     types = Collections.nCopies(channelCount, BIGINT);
-                    pages = createBigintPages(POSITIONS, groupCount, channelCount, hashEnabled, false);
+                    pages = createIntegerPages(POSITIONS, groupCount, channelCount, hashEnabled, BIGINT, false);
                     break;
                 default:
                     throw new UnsupportedOperationException("Unsupported dataType");
@@ -452,12 +454,15 @@ public class BenchmarkGroupByHash
 
     static {
         // pollute BigintGroupByHash profile by different block types
-        SingleChannelBenchmarkData singleChannelBenchmarkData = new SingleChannelBenchmarkData();
-        singleChannelBenchmarkData.setup(true);
         BenchmarkGroupByHash hash = new BenchmarkGroupByHash();
-        for (int i = 0; i < 5; ++i) {
-            hash.bigintGroupByHash(singleChannelBenchmarkData);
-        }
+        ImmutableList.of(StandardTypes.DATE, StandardTypes.BIGINT, StandardTypes.INTEGER, StandardTypes.SMALLINT, StandardTypes.TINYINT).forEach(type -> {
+            SingleChannelBenchmarkData singleChannelBenchmarkData = new SingleChannelBenchmarkData();
+            singleChannelBenchmarkData.rawHashType = type;
+            singleChannelBenchmarkData.setup(true);
+            for (int i = 0; i < 5; ++i) {
+                hash.bigintGroupByHash(singleChannelBenchmarkData);
+            }
+        });
     }
 
     public static void main(String[] args)
