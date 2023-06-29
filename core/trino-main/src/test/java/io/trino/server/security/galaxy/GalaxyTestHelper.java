@@ -52,7 +52,7 @@ import java.util.stream.IntStream;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static io.trino.collect.cache.SafeCaches.buildNonEvictableCache;
+import static io.trino.cache.SafeCaches.buildNonEvictableCache;
 import static io.trino.server.security.galaxy.GalaxyIdentity.createIdentity;
 import static io.trino.server.security.galaxy.GalaxyIdentity.createPrincipalString;
 import static io.trino.server.security.galaxy.GalaxyIdentity.toDispatchSession;

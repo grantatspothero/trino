@@ -23,7 +23,7 @@ import io.starburst.stargate.id.EntityId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.RoleName;
 import io.starburst.stargate.identity.DispatchSession;
-import io.trino.collect.cache.EvictableCacheBuilder;
+import io.trino.cache.EvictableCacheBuilder;
 import io.trino.spi.QueryId;
 
 import java.util.HashMap;

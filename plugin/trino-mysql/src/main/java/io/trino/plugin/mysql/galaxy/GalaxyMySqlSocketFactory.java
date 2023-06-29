@@ -41,7 +41,7 @@ import java.util.Properties;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.net.InetAddresses.toAddrString;
-import static io.trino.collect.cache.SafeCaches.buildNonEvictableCache;
+import static io.trino.cache.SafeCaches.buildNonEvictableCache;
 import static io.trino.plugin.base.galaxy.InetAddresses.asInetSocketAddress;
 import static io.trino.plugin.base.galaxy.InetAddresses.toInetAddresses;
 import static io.trino.spi.galaxy.CatalogNetworkMonitor.getCatalogNetworkMonitor;

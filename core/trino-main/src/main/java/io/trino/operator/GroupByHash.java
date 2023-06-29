@@ -18,7 +18,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import io.airlift.bytecode.DynamicClassLoader;
 import io.trino.Session;
-import io.trino.collect.cache.NonEvictableLoadingCache;
+import io.trino.cache.NonEvictableLoadingCache;
 import io.trino.spi.Page;
 import io.trino.spi.PageBuilder;
 import io.trino.spi.type.Type;
@@ -32,7 +32,7 @@ import java.util.Optional;
 
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.trino.SystemSessionProperties.isDictionaryAggregationEnabled;
-import static io.trino.collect.cache.SafeCaches.buildNonEvictableCache;
+import static io.trino.cache.SafeCaches.buildNonEvictableCache;
 
 public interface GroupByHash
 {
