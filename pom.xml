@@ -10,7 +10,7 @@
 
     <groupId>io.trino</groupId>
     <artifactId>trino-root</artifactId>
-    <version>419-galaxy-1-SNAPSHOT</version>
+    <version>420-galaxy-1-SNAPSHOT</version>
 
     <name>trino-root</name>
     <description>Trino</description>
@@ -70,7 +70,7 @@
         <dep.netty.version>4.1.92.Final</dep.netty.version>
         <dep.jna.version>5.13.0</dep.jna.version>
         <dep.okio.version>3.3.0</dep.okio.version>
-        <dep.jackson.version>2.15.1</dep.jackson.version>
+        <dep.jackson.version>2.15.2</dep.jackson.version>
         <dep.opentelemetry.version>1.26.0</dep.opentelemetry.version>
 
         <dep.docker.images.version>80</dep.docker.images.version>
@@ -78,13 +78,13 @@
         <!-- released from https://github.com/starburstdata/varada -->
         <dep.warp-speed.version>417.2.5</dep.warp-speed.version>
         <!-- released from https://github.com/starburstdata/trino-buffer-service -->
-        <dep.trino-buffer-service.version>419-trino-buffer-service-551-g48a0177</dep.trino-buffer-service.version>
+        <dep.trino-buffer-service.version>420-trino-buffer-service-566-gd922d54</dep.trino-buffer-service.version>
         <!-- released form https://github.com/starburstdata/schema-discovery -->
-        <dep.schema-discovery.version>419.20230611-a3c7686</dep.schema-discovery.version>
+        <dep.schema-discovery.version>420.20230703-b81d082</dep.schema-discovery.version>
         <!-- released from https://github.com/starburstdata/stargate -->
-        <dep.stargate.version>stargate-9280-g51ddf1695</dep.stargate.version>
+        <dep.stargate.version>stargate-9352-g159338286</dep.stargate.version> <!-- stargate-9352-g159338286 is newest stargate client which does not pull airlift 234 -->
         <!-- released from https://github.com/starburstdata/starburst-trino-plugins -->
-        <dep.starburst-trino-plugins.version>419</dep.starburst-trino-plugins.version>
+        <dep.starburst-trino-plugins.version>420</dep.starburst-trino-plugins.version>
         <dep.cloudevents.version>2.2.0</dep.cloudevents.version>
 
         <!--
@@ -2160,7 +2160,7 @@
                 <groupId>org.jdbi</groupId>
                 <artifactId>jdbi3-bom</artifactId>
                 <type>pom</type>
-                <version>3.38.2</version>
+                <version>3.39.1</version>
                 <scope>import</scope>
             </dependency>
 
