@@ -54,7 +54,6 @@ import io.trino.testing.LocalQueryRunner;
 import io.trino.testing.TestingTransactionHandle;
 import org.testng.annotations.Test;
 
-import java.util.AbstractMap.SimpleEntry;
 import java.util.Map;
 import java.util.Optional;
 
@@ -240,10 +239,9 @@ public class TestCommonSubqueriesExtractor
         PlanNode subqueryACommonSubplan = subqueryA.getCommonSubplan();
         assertThat(subqueryA.adaptCommonSubplan(subqueryACommonSubplan, idAllocator)).isEqualTo(subqueryACommonSubplan);
 
-        assertThat(subqueryB.getAdaptationPredicate()).contains(expression("subquery_b_column1 > BIGINT '42'"));
-        assertThat(subqueryB.getAdaptationAssignments()).isPresent();
-        assertThat(subqueryB.getAdaptationAssignments().get().getMap()).contains(
-                new SimpleEntry<>(subqueryBProjection1, expression("subquery_b_column1 * 10")));
+        assertPlan(symbolAllocator, subqueryB.adaptCommonSubplan(subqueryB.getCommonSubplan(), idAllocator),
+                project(ImmutableMap.of("projection", PlanMatchPattern.expression("projection")),
+                        filter("column1 > BIGINT '42'", commonSubplan)));
 
         // make sure plan signatures are same
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(subqueryB.getCommonSubplanSignature());
@@ -319,11 +317,13 @@ public class TestCommonSubqueriesExtractor
         assertPlan(symbolAllocator, subqueryB.getCommonSubplan(), commonSubplan);
 
         // filtering adaptation is required
-        assertThat(subqueryA.getAdaptationPredicate()).contains(expression("subquery_a_column1 > BIGINT '42'"));
-        assertThat(subqueryA.getAdaptationAssignments()).isEmpty();
+        assertPlan(symbolAllocator, subqueryA.adaptCommonSubplan(subqueryA.getCommonSubplan(), idAllocator),
+                filter("column1 > BIGINT '42'",
+                        commonSubplan));
 
-        assertThat(subqueryB.getAdaptationPredicate()).contains(expression("subquery_b_column1 < BIGINT '0'"));
-        assertThat(subqueryB.getAdaptationAssignments()).isEmpty();
+        assertPlan(symbolAllocator, subqueryB.adaptCommonSubplan(subqueryB.getCommonSubplan(), idAllocator),
+                filter("column1 < BIGINT '0'",
+                        commonSubplan));
 
         // make sure plan signatures are same and contain domain
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(subqueryB.getCommonSubplanSignature());
@@ -351,12 +351,12 @@ public class TestCommonSubqueriesExtractor
                 false,
                 Optional.of(true));
 
-        Symbol subqueryBColumn1 = symbolAllocator.newSymbol("subquery_b_column1", BIGINT);
+        Symbol subqueryBColumn2 = symbolAllocator.newSymbol("subquery_b_column2", BIGINT);
         PlanNode scanB = new TableScanNode(
                 new PlanNodeId("scanB"),
                 testTableHandle,
-                ImmutableList.of(subqueryBColumn1),
-                ImmutableMap.of(subqueryBColumn1, HANDLE_2),
+                ImmutableList.of(subqueryBColumn2),
+                ImmutableMap.of(subqueryBColumn2, HANDLE_2),
                 TupleDomain.all(),
                 Optional.empty(),
                 false,
@@ -391,15 +391,13 @@ public class TestCommonSubqueriesExtractor
         assertPlan(symbolAllocator, subqueryB.getCommonSubplan(), commonSubplan);
 
         // only projection adaptation is required
-        assertThat(subqueryA.getAdaptationPredicate()).isEmpty();
-        assertThat(subqueryA.getAdaptationAssignments()).isPresent();
-        assertThat(subqueryA.getAdaptationAssignments().get().getMap()).contains(
-                new SimpleEntry<>(subqueryAColumn1, expression("subquery_a_column1")));
+        assertPlan(symbolAllocator, subqueryA.adaptCommonSubplan(subqueryA.getCommonSubplan(), idAllocator),
+                project(ImmutableMap.of("column1", PlanMatchPattern.expression("column1")),
+                        commonSubplan));
 
-        assertThat(subqueryB.getAdaptationPredicate()).isEmpty();
-        assertThat(subqueryB.getAdaptationAssignments()).isPresent();
-        assertThat(subqueryB.getAdaptationAssignments().get().getMap()).contains(
-                new SimpleEntry<>(subqueryBColumn1, expression("subquery_b_column1")));
+        assertPlan(symbolAllocator, subqueryB.adaptCommonSubplan(subqueryB.getCommonSubplan(), idAllocator),
+                project(ImmutableMap.of("column2", PlanMatchPattern.expression("column2")),
+                        commonSubplan));
 
         // make sure plan signatures are same and contain domain
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(subqueryB.getCommonSubplanSignature());

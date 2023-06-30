@@ -273,7 +273,8 @@ public final class CommonSubqueriesExtractor
             adaptationAssignments = Optional.of(Assignments.copyOf(subplan.getAssignments().entrySet().stream()
                     .collect(toImmutableMap(
                             entry -> subqueryColumnIdMapping.get(entry.getKey()),
-                            entry -> subquerySymbolMapper.map(entry.getValue())))));
+                            // expression is already evaluated in common subquery, therefore symbol just needs to be passed through
+                            entry -> subqueryColumnIdMapping.get(entry.getKey()).toSymbolReference()))));
         }
 
         return new CommonPlanAdaptation(commonSubplan, planSignature, adaptationPredicate, adaptationAssignments);

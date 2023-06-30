@@ -206,7 +206,9 @@ public final class CanonicalSubplanExtractor
                     node,
                     symbolMapping,
                     assignments,
-                    // no filters in table scan
+                    // No filters in table scan. Relevant pushed predicates are
+                    // part of CacheTableId, so such subplans won't be considered
+                    // as similar.
                     ImmutableList.of(),
                     // no dynamic filters in table scan
                     ImmutableList.of(),

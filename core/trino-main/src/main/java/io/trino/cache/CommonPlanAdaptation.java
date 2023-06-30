@@ -13,7 +13,6 @@
  */
 package io.trino.cache;
 
-import com.google.common.annotations.VisibleForTesting;
 import io.trino.spi.cache.PlanSignature;
 import io.trino.sql.planner.PlanNodeIdAllocator;
 import io.trino.sql.planner.plan.Assignments;
@@ -91,17 +90,5 @@ public class CommonPlanAdaptation
     public PlanSignature getCommonSubplanSignature()
     {
         return commonSubplanSignature;
-    }
-
-    @VisibleForTesting
-    Optional<Expression> getAdaptationPredicate()
-    {
-        return adaptationPredicate;
-    }
-
-    @VisibleForTesting
-    Optional<Assignments> getAdaptationAssignments()
-    {
-        return adaptationAssignments;
     }
 }
