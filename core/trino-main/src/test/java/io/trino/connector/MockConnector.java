@@ -28,6 +28,8 @@ import io.trino.connector.MockConnectorFactory.ApplyTopN;
 import io.trino.connector.MockConnectorFactory.ListRoleGrants;
 import io.trino.spi.HostAddress;
 import io.trino.spi.Page;
+import io.trino.spi.cache.CacheColumnId;
+import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.AggregateFunction;
 import io.trino.spi.connector.AggregationApplicationResult;
 import io.trino.spi.connector.BeginTableExecuteResult;
@@ -174,6 +176,8 @@ public class MockConnector
     private final List<PropertyMetadata<?>> sessionProperties;
     private final Function<ConnectorTableFunctionHandle, ConnectorSplitSource> tableFunctionSplitsSources;
     private final OptionalInt maxWriterTasks;
+    private final Function<ConnectorTableHandle, Optional<CacheTableId>> getCacheTableId;
+    private final Function<ColumnHandle, Optional<CacheColumnId>> getCacheColumnId;
     private final BiFunction<ConnectorSession, ConnectorTableExecuteHandle, Optional<ConnectorTableLayout>> getLayoutForTableExecute;
 
     MockConnector(
@@ -220,6 +224,8 @@ public class MockConnector
             boolean supportsReportingWrittenBytes,
             Function<ConnectorTableFunctionHandle, ConnectorSplitSource> tableFunctionSplitsSources,
             OptionalInt maxWriterTasks,
+            Function<ConnectorTableHandle, Optional<CacheTableId>> getCacheTableId,
+            Function<ColumnHandle, Optional<CacheColumnId>> getCacheColumnId,
             BiFunction<ConnectorSession, ConnectorTableExecuteHandle, Optional<ConnectorTableLayout>> getLayoutForTableExecute)
     {
         this.sessionProperties = ImmutableList.copyOf(requireNonNull(sessionProperties, "sessionProperties is null"));
@@ -265,6 +271,8 @@ public class MockConnector
         this.columnProperties = requireNonNull(columnProperties, "columnProperties is null");
         this.tableFunctionSplitsSources = requireNonNull(tableFunctionSplitsSources, "tableFunctionSplitsSources is null");
         this.maxWriterTasks = requireNonNull(maxWriterTasks, "maxWriterTasks is null");
+        this.getCacheTableId = requireNonNull(getCacheTableId, "getCacheTableId is null");
+        this.getCacheColumnId = requireNonNull(getCacheColumnId, "getCacheColumnId is null");
         this.getLayoutForTableExecute = requireNonNull(getLayoutForTableExecute, "getLayoutForTableExecute is null");
     }
 
@@ -850,6 +858,18 @@ public class MockConnector
         public OptionalInt getMaxWriterTasks(ConnectorSession session)
         {
             return maxWriterTasks;
+        }
+
+        @Override
+        public Optional<CacheTableId> getCacheTableId(ConnectorTableHandle tableHandle)
+        {
+            return getCacheTableId.apply(tableHandle);
+        }
+
+        @Override
+        public Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
+        {
+            return getCacheColumnId.apply(columnHandle);
         }
 
         @Override

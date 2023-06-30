@@ -16,6 +16,8 @@ package io.trino.connector;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.trino.spi.cache.CacheColumnId;
+import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.AggregateFunction;
 import io.trino.spi.connector.AggregationApplicationResult;
 import io.trino.spi.connector.CatalogSchemaTableName;
@@ -131,6 +133,8 @@ public class MockConnectorFactory
     private final Optional<ConnectorAccessControl> accessControl;
     private final boolean supportsReportingWrittenBytes;
     private final OptionalInt maxWriterTasks;
+    private final Function<ConnectorTableHandle, Optional<CacheTableId>> getCacheTableId;
+    private final Function<ColumnHandle, Optional<CacheColumnId>> getCacheColumnId;
     private final BiFunction<ConnectorSession, ConnectorTableExecuteHandle, Optional<ConnectorTableLayout>> getLayoutForTableExecute;
 
     private MockConnectorFactory(
@@ -178,6 +182,8 @@ public class MockConnectorFactory
             boolean allowMissingColumnsOnInsert,
             Function<ConnectorTableFunctionHandle, ConnectorSplitSource> tableFunctionSplitsSources,
             OptionalInt maxWriterTasks,
+            Function<ConnectorTableHandle, Optional<CacheTableId>> getCacheTableId,
+            Function<ColumnHandle, Optional<CacheColumnId>> getCacheColumnId,
             BiFunction<ConnectorSession, ConnectorTableExecuteHandle, Optional<ConnectorTableLayout>> getLayoutForTableExecute)
     {
         this.name = requireNonNull(name, "name is null");
@@ -224,6 +230,8 @@ public class MockConnectorFactory
         this.supportsReportingWrittenBytes = supportsReportingWrittenBytes;
         this.tableFunctionSplitsSources = requireNonNull(tableFunctionSplitsSources, "tableFunctionSplitsSources is null");
         this.maxWriterTasks = maxWriterTasks;
+        this.getCacheTableId = requireNonNull(getCacheTableId, "getCacheTableId is null");
+        this.getCacheColumnId = requireNonNull(getCacheColumnId, "getCacheColumnId is null");
         this.getLayoutForTableExecute = requireNonNull(getLayoutForTableExecute, "getLayoutForTableExecute is null");
     }
 
@@ -280,6 +288,8 @@ public class MockConnectorFactory
                 supportsReportingWrittenBytes,
                 tableFunctionSplitsSources,
                 maxWriterTasks,
+                getCacheTableId,
+                getCacheColumnId,
                 getLayoutForTableExecute);
     }
 
@@ -419,6 +429,8 @@ public class MockConnectorFactory
         private boolean supportsReportingWrittenBytes;
         private boolean allowMissingColumnsOnInsert;
         private OptionalInt maxWriterTasks = OptionalInt.empty();
+        private Function<ConnectorTableHandle, Optional<CacheTableId>> getCacheTableId = handle -> Optional.empty();
+        private Function<ColumnHandle, Optional<CacheColumnId>> getCacheColumnId = handle -> Optional.empty();
         private BiFunction<ConnectorSession, ConnectorTableExecuteHandle, Optional<ConnectorTableLayout>> getLayoutForTableExecute = (session, handle) -> Optional.empty();
 
         private Builder() {}
@@ -729,6 +741,18 @@ public class MockConnectorFactory
             return this;
         }
 
+        public Builder withGetCacheTableId(Function<ConnectorTableHandle, Optional<CacheTableId>> getCacheTableId)
+        {
+            this.getCacheTableId = requireNonNull(getCacheTableId, "getCacheTableId is null");
+            return this;
+        }
+
+        public Builder withGetCacheColumnId(Function<ColumnHandle, Optional<CacheColumnId>> getCacheColumnId)
+        {
+            this.getCacheColumnId = requireNonNull(getCacheColumnId, "getCacheColumnId is null");
+            return this;
+        }
+
         public Builder withAllowMissingColumnsOnInsert(boolean allowMissingColumnsOnInsert)
         {
             this.allowMissingColumnsOnInsert = allowMissingColumnsOnInsert;
@@ -786,6 +810,8 @@ public class MockConnectorFactory
                     allowMissingColumnsOnInsert,
                     tableFunctionSplitsSources,
                     maxWriterTasks,
+                    getCacheTableId,
+                    getCacheColumnId,
                     getLayoutForTableExecute);
         }
 
