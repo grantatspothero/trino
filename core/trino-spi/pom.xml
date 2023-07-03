@@ -255,6 +255,12 @@
                                     <old>interface io.trino.spi.ptf.TableFunctionDataProcessor</old>
                                     <justification>Relocate table function infrastructure</justification>
                                 </item>
+                                <item>
+                                    <ignore>true</ignore>
+                                    <code>java.method.addedToInterface</code>
+                                    <new>method long io.trino.spi.connector.DynamicFilter::getPreferredDynamicFilterTimeout()</new>
+                                    <justification>Internal change</justification>
+                                </item>
                             </differences>
                         </revapi.differences>
                     </analysisConfiguration>
