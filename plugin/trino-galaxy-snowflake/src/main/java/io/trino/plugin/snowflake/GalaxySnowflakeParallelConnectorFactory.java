@@ -33,7 +33,7 @@ import java.util.Map;
 
 import static com.starburstdata.trino.plugins.snowflake.SnowflakePlugin.SNOWFLAKE_PARALLEL;
 import static io.airlift.configuration.ConfigBinder.configBinder;
-import static io.trino.plugin.base.Versions.checkSpiVersion;
+import static io.trino.plugin.base.Versions.checkStrictSpiVersionMatch;
 import static java.util.Objects.requireNonNull;
 
 public class GalaxySnowflakeParallelConnectorFactory
@@ -49,7 +49,7 @@ public class GalaxySnowflakeParallelConnectorFactory
     public Connector create(String catalogName, Map<String, String> requiredConfig, ConnectorContext context)
     {
         requireNonNull(requiredConfig, "requiredConfig is null");
-        checkSpiVersion(context, this);
+        checkStrictSpiVersionMatch(context, this);
 
         Bootstrap app = new Bootstrap(
                 binder -> binder.bind(TypeManager.class).toInstance(context.getTypeManager()),
