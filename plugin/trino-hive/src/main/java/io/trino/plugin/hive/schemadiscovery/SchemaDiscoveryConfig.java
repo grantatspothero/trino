@@ -20,7 +20,7 @@ import javax.validation.constraints.Min;
 
 public class SchemaDiscoveryConfig
 {
-    private int executorThreadCount = 5;
+    private int executorThreadCount = 100;
 
     @Min(1)
     public int getExecutorThreadCount()
