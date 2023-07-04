@@ -130,7 +130,7 @@ public class TestObjectStoreMetastoreAccessOperations
                 ImmutableMultiset.builder()
                         .addCopies(GET_DATABASE, occurrences(0, 1, 0).get(type))
                         .add(CREATE_TABLE)
-                        .addCopies(GET_TABLE, occurrences(2, 1, 2).get(type))
+                        .add(GET_TABLE)
                         .addCopies(UPDATE_TABLE_STATISTICS, occurrences(1, 0, 0).get(type))
                         .build());
     }
@@ -141,7 +141,7 @@ public class TestObjectStoreMetastoreAccessOperations
         assertMetastoreInvocations("CREATE TABLE test_ctas WITH (type = '" + type + "') AS SELECT 1 AS age",
                 ImmutableMultiset.builder()
                         .add(CREATE_TABLE)
-                        .addCopies(GET_TABLE, occurrences(3, 5, 2).get(type))
+                        .addCopies(GET_TABLE, occurrences(2, 5, 1).get(type))
                         .addCopies(GET_DATABASE, occurrences(0, 1, 0).get(type))
                         .addCopies(REPLACE_TABLE, occurrences(0, 1, 0).get(type))
                         .addCopies(UPDATE_TABLE_STATISTICS, occurrences(1, 0, 0).get(type))
