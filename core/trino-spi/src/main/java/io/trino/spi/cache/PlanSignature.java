@@ -13,6 +13,8 @@
  */
 package io.trino.spi.cache;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.trino.spi.predicate.TupleDomain;
 
 import java.util.List;
@@ -56,6 +58,7 @@ public class PlanSignature
      */
     private final TupleDomain<CacheColumnId> predicate;
 
+    @JsonCreator
     public PlanSignature(
             SignatureKey key,
             Optional<List<CacheColumnId>> groupByColumns,
@@ -68,21 +71,25 @@ public class PlanSignature
         this.predicate = requireNonNull(predicate, "predicate is null");
     }
 
+    @JsonProperty
     public SignatureKey getKey()
     {
         return key;
     }
 
+    @JsonProperty
     public Optional<List<CacheColumnId>> getGroupByColumns()
     {
         return groupByColumns;
     }
 
+    @JsonProperty
     public List<CacheColumnId> getColumns()
     {
         return columns;
     }
 
+    @JsonProperty
     public TupleDomain<CacheColumnId> getPredicate()
     {
         return predicate;
