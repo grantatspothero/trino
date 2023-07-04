@@ -78,6 +78,15 @@ public class TestObjectStoreHiveConnectorTest
     }
 
     @Override
+    public void testWrittenDataSize()
+    {
+        // mechanism of reporting written bytes is to be dropped in OSS
+        // disabling test for now as Objectstore reports it cannot report writtenDataSize while connectors it wraps can
+        assertThatThrownBy(super::testWrittenDataSize)
+                .hasMessageMatching("expected:<\\[0\\]L> but was:<\\[16[0-9]{2}\\]L>");
+    }
+
+    @Override
     protected boolean supportsPhysicalPushdown()
     {
         // Hive table is created using default format which is ORC. Currently ORC reader has issue

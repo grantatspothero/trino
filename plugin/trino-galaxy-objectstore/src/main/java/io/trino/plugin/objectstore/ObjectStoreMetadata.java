@@ -801,21 +801,6 @@ public class ObjectStoreMetadata
     }
 
     @Override
-    public boolean supportsReportingWrittenBytes(ConnectorSession session, ConnectorTableHandle tableHandle)
-    {
-        TableType tableType = tableType(tableHandle);
-        return delegate(tableType).supportsReportingWrittenBytes(unwrap(tableType, session), tableHandle);
-    }
-
-    @Override
-    public boolean supportsReportingWrittenBytes(ConnectorSession session, SchemaTableName schemaTableName, Map<String, Object> tableProperties)
-    {
-        // This is called for a new table
-        TableType tableType = tableType(tableProperties);
-        return delegate(tableType).supportsReportingWrittenBytes(unwrap(tableType, session), schemaTableName, tableProperties);
-    }
-
-    @Override
     public TableStatisticsMetadata getStatisticsCollectionMetadataForWrite(ConnectorSession session, ConnectorTableMetadata tableMetadata)
     {
         TableType tableType = tableType(tableMetadata);
@@ -1256,11 +1241,6 @@ public class ObjectStoreMetadata
     private static TableType tableType(ConnectorTableMetadata tableMetadata)
     {
         return (TableType) tableMetadata.getProperties().get("type");
-    }
-
-    private static TableType tableType(Map<String, Object> tableProperties)
-    {
-        return (TableType) tableProperties.get("type");
     }
 
     private Map<String, Object> wrap(TableType tableType, Map<String, Object> tableProperties)

@@ -104,6 +104,15 @@ public class TestObjectStoreDeltaConnectorTest
                 .hasMessageMatching(transactionConflictErrors());
     }
 
+    @Override
+    public void testWrittenDataSize()
+    {
+        // mechanism of reporting written bytes is to be dropped in OSS
+        // disabling test for now as Objectstore reports it cannot report writtenDataSize while connectors it wraps can
+        assertThatThrownBy(super::testWrittenDataSize)
+                .hasMessageContaining("expected:<[]0L> but was:<[230]0L>");
+    }
+
     @Language("RegExp")
     private static String transactionConflictErrors()
     {

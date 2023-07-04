@@ -167,7 +167,6 @@ public class MockConnector
     private final Set<TableProcedureMetadata> tableProcedures;
     private final Set<ConnectorTableFunction> tableFunctions;
     private final Optional<FunctionProvider> functionProvider;
-    private final boolean supportsReportingWrittenBytes;
     private final boolean allowMissingColumnsOnInsert;
     private final Supplier<List<PropertyMetadata<?>>> analyzeProperties;
     private final Supplier<List<PropertyMetadata<?>>> schemaProperties;
@@ -222,7 +221,6 @@ public class MockConnector
             Supplier<List<PropertyMetadata<?>>> schemaProperties,
             Supplier<List<PropertyMetadata<?>>> tableProperties,
             Supplier<List<PropertyMetadata<?>>> columnProperties,
-            boolean supportsReportingWrittenBytes,
             Function<ConnectorTableFunctionHandle, ConnectorSplitSource> tableFunctionSplitsSources,
             OptionalInt maxWriterTasks,
             Function<ConnectorTableHandle, Optional<CacheTableId>> getCacheTableId,
@@ -265,7 +263,6 @@ public class MockConnector
         this.tableProcedures = requireNonNull(tableProcedures, "tableProcedures is null");
         this.tableFunctions = requireNonNull(tableFunctions, "tableFunctions is null");
         this.functionProvider = requireNonNull(functionProvider, "functionProvider is null");
-        this.supportsReportingWrittenBytes = supportsReportingWrittenBytes;
         this.allowMissingColumnsOnInsert = allowMissingColumnsOnInsert;
         this.analyzeProperties = requireNonNull(analyzeProperties, "analyzeProperties is null");
         this.schemaProperties = requireNonNull(schemaProperties, "schemaProperties is null");
@@ -843,18 +840,6 @@ public class MockConnector
         public void revokeTablePrivileges(ConnectorSession session, SchemaTableName tableName, Set<Privilege> privileges, TrinoPrincipal revokee, boolean grantOption)
         {
             getMockAccessControl().revokeTablePrivileges(tableName, privileges, revokee, grantOption);
-        }
-
-        @Override
-        public boolean supportsReportingWrittenBytes(ConnectorSession session, SchemaTableName schemaTableName, Map<String, Object> tableProperties)
-        {
-            return supportsReportingWrittenBytes;
-        }
-
-        @Override
-        public boolean supportsReportingWrittenBytes(ConnectorSession session, ConnectorTableHandle tableHandle)
-        {
-            return supportsReportingWrittenBytes;
         }
 
         @Override

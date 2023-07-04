@@ -131,7 +131,6 @@ public class MockConnectorFactory
     // access control
     private final ListRoleGrants roleGrants;
     private final Optional<ConnectorAccessControl> accessControl;
-    private final boolean supportsReportingWrittenBytes;
     private final OptionalInt maxWriterTasks;
     private final Function<ConnectorTableHandle, Optional<CacheTableId>> getCacheTableId;
     private final Function<ColumnHandle, Optional<CacheColumnId>> getCacheColumnId;
@@ -178,7 +177,6 @@ public class MockConnectorFactory
             Supplier<List<PropertyMetadata<?>>> columnProperties,
             Optional<ConnectorNodePartitioningProvider> partitioningProvider,
             ListRoleGrants roleGrants,
-            boolean supportsReportingWrittenBytes,
             Optional<ConnectorAccessControl> accessControl,
             boolean allowMissingColumnsOnInsert,
             Function<ConnectorTableFunctionHandle, ConnectorSplitSource> tableFunctionSplitsSources,
@@ -229,7 +227,6 @@ public class MockConnectorFactory
         this.tableFunctions = requireNonNull(tableFunctions, "tableFunctions is null");
         this.functionProvider = requireNonNull(functionProvider, "functionProvider is null");
         this.allowMissingColumnsOnInsert = allowMissingColumnsOnInsert;
-        this.supportsReportingWrittenBytes = supportsReportingWrittenBytes;
         this.tableFunctionSplitsSources = requireNonNull(tableFunctionSplitsSources, "tableFunctionSplitsSources is null");
         this.maxWriterTasks = maxWriterTasks;
         this.getCacheTableId = requireNonNull(getCacheTableId, "getCacheTableId is null");
@@ -288,7 +285,6 @@ public class MockConnectorFactory
                 schemaProperties,
                 tableProperties,
                 columnProperties,
-                supportsReportingWrittenBytes,
                 tableFunctionSplitsSources,
                 maxWriterTasks,
                 getCacheTableId,
@@ -430,7 +426,6 @@ public class MockConnectorFactory
         private Grants<SchemaTableName> tableGrants = new AllowAllGrants<>();
         private Function<SchemaTableName, ViewExpression> rowFilter = tableName -> null;
         private BiFunction<SchemaTableName, String, ViewExpression> columnMask = (tableName, columnName) -> null;
-        private boolean supportsReportingWrittenBytes;
         private boolean allowMissingColumnsOnInsert;
         private OptionalInt maxWriterTasks = OptionalInt.empty();
         private Function<ConnectorTableHandle, Optional<CacheTableId>> getCacheTableId = handle -> Optional.empty();
@@ -734,12 +729,6 @@ public class MockConnectorFactory
             return this;
         }
 
-        public Builder withSupportsReportingWrittenBytes(boolean supportsReportingWrittenBytes)
-        {
-            this.supportsReportingWrittenBytes = supportsReportingWrittenBytes;
-            return this;
-        }
-
         public Builder withMaxWriterTasks(OptionalInt maxWriterTasks)
         {
             this.maxWriterTasks = maxWriterTasks;
@@ -816,7 +805,6 @@ public class MockConnectorFactory
                     columnProperties,
                     partitioningProvider,
                     roleGrants,
-                    supportsReportingWrittenBytes,
                     accessControl,
                     allowMissingColumnsOnInsert,
                     tableFunctionSplitsSources,
