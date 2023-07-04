@@ -1171,6 +1171,9 @@ jobs:
             - config: default
               suite: suite-s3-compatibility
             # this suite is not meant to be run with different configs
+            - config: default
+              suite: suite-objectstore
+            # this suite is not meant to be run with different configs
           EOF
       - name: Build PT matrix (all)
         if: |
