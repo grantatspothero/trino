@@ -80,13 +80,7 @@ public class BenchmarkGroupByHash
     @OperationsPerInvocation(POSITIONS)
     public Object addPages(MultiChannelBenchmarkData data)
     {
-        GroupByHash groupByHash;
-        if (data.isFlat()) {
-            groupByHash = new FlatGroupByHash(data.getTypes(), data.isHashEnabled(), EXPECTED_SIZE, false, JOIN_COMPILER, NOOP);
-        }
-        else {
-            groupByHash = GroupByHash.createGroupByHash(data.isFlat(), data.getTypes(), data.isHashEnabled(), EXPECTED_SIZE, false, JOIN_COMPILER, TYPE_OPERATORS, NOOP);
-        }
+        GroupByHash groupByHash = new FlatGroupByHash(data.getTypes(), data.isHashEnabled(), EXPECTED_SIZE, false, JOIN_COMPILER, NOOP);
         addInputPagesToHash(groupByHash, data.getPages());
         return groupByHash;
     }
@@ -209,9 +203,6 @@ public class BenchmarkGroupByHash
     @State(Scope.Thread)
     public static class MultiChannelBenchmarkData
     {
-        @Param({"true", "false"})
-        private boolean flat = true;
-
         @Param({"1", "5", "10", "15", "20"})
         private int channelCount = 1;
 
@@ -252,11 +243,6 @@ public class BenchmarkGroupByHash
             }
         }
 
-        public boolean isFlat()
-        {
-            return flat;
-        }
-
         public int getChannelCount()
         {
             return channelCount;
@@ -289,13 +275,7 @@ public class BenchmarkGroupByHash
         @Setup
         public void setup(MultiChannelBenchmarkData data)
         {
-            if (data.isFlat()) {
-                prefilledHash = new FlatGroupByHash(data.getTypes(), data.isHashEnabled(), EXPECTED_SIZE, false, JOIN_COMPILER, NOOP);
-            }
-            else {
-                prefilledHash = GroupByHash.createGroupByHash(data.isFlat(), data.getTypes(), data.isHashEnabled(), EXPECTED_SIZE, false, JOIN_COMPILER, TYPE_OPERATORS, NOOP);
-            }
-
+            prefilledHash = new FlatGroupByHash(data.getTypes(), data.isHashEnabled(), EXPECTED_SIZE, false, JOIN_COMPILER, NOOP);
             addInputPagesToHash(prefilledHash, data.getPages());
 
             Integer[] groupIds = new Integer[prefilledHash.getGroupCount()];
