@@ -1239,6 +1239,15 @@ public class TracingConnectorMetadata
     }
 
     @Override
+    public ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle tableHandle)
+    {
+        Span span = startSpan("getCanonicalTableHandle");
+        try (var ignored = scopedSpan(span)) {
+            return delegate.getCanonicalTableHandle(tableHandle);
+        }
+    }
+
+    @Override
     public Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
     {
         Span span = startSpan("getColumnId");

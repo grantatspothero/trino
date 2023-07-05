@@ -2590,6 +2590,13 @@ public final class MetadataManager
         return metadata.getCacheColumnId(tableHandle.getConnectorHandle(), columnHandle);
     }
 
+    @Override
+    public TableHandle getCanonicalTableHandle(Session session, TableHandle tableHandle)
+    {
+        ConnectorMetadata metadata = getMetadata(session, tableHandle.getCatalogHandle());
+        return new TableHandle(tableHandle.getCatalogHandle(), metadata.getCanonicalTableHandle(tableHandle.getConnectorHandle()), tableHandle.getTransaction());
+    }
+
     private Optional<ConnectorTableVersion> toConnectorVersion(Optional<TableVersion> version)
     {
         Optional<ConnectorTableVersion> connectorVersion = Optional.empty();

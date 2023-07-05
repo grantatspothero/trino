@@ -745,4 +745,6 @@ public interface Metadata
     Optional<CacheTableId> getCacheTableId(Session session, TableHandle tableHandle);
 
     Optional<CacheColumnId> getCacheColumnId(Session session, TableHandle tableHandle, ColumnHandle columnHandle);
+
+    TableHandle getCanonicalTableHandle(Session session, TableHandle handle);
 }

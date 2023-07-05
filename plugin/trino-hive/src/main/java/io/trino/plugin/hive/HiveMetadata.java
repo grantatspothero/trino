@@ -4000,4 +4000,10 @@ public class HiveMetadata
                 Optional.empty());
         return Optional.of(new CacheColumnId(columnHandleCodec.toJson(canonicalizedHandle)));
     }
+
+    @Override
+    public ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle handle)
+    {
+        return ((HiveTableHandle) handle).toCanonical();
+    }
 }

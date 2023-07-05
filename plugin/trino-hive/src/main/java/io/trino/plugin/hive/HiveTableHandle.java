@@ -305,6 +305,28 @@ public class HiveTableHandle
                 maxScannedFileSize);
     }
 
+    public HiveTableHandle toCanonical()
+    {
+        return new HiveTableHandle(
+                schemaName,
+                tableName,
+                tableParameters,
+                partitionColumns,
+                dataColumns,
+                partitionNames,
+                partitions,
+                TupleDomain.all(),
+                enforcedConstraint,
+                bucketHandle,
+                bucketFilter,
+                analyzePartitionValues,
+                constraintColumns,
+                projectedColumns,
+                transaction,
+                recordScannedFiles,
+                maxScannedFileSize);
+    }
+
     @JsonProperty
     public String getSchemaName()
     {

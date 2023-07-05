@@ -921,4 +921,10 @@ public abstract class AbstractMockMetadata
     {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public TableHandle getCanonicalTableHandle(Session session, TableHandle tableHandle)
+    {
+        throw new UnsupportedOperationException();
+    }
 }

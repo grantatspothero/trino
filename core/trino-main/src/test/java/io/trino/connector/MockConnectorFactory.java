@@ -136,6 +136,7 @@ public class MockConnectorFactory
     private final Function<ConnectorTableHandle, Optional<CacheTableId>> getCacheTableId;
     private final Function<ColumnHandle, Optional<CacheColumnId>> getCacheColumnId;
     private final BiFunction<ConnectorSession, ConnectorTableExecuteHandle, Optional<ConnectorTableLayout>> getLayoutForTableExecute;
+    private final Function<ConnectorTableHandle, ConnectorTableHandle> getCanonicalTableHandle;
 
     private MockConnectorFactory(
             String name,
@@ -184,6 +185,7 @@ public class MockConnectorFactory
             OptionalInt maxWriterTasks,
             Function<ConnectorTableHandle, Optional<CacheTableId>> getCacheTableId,
             Function<ColumnHandle, Optional<CacheColumnId>> getCacheColumnId,
+            Function<ConnectorTableHandle, ConnectorTableHandle> getCanonicalTableHandle,
             BiFunction<ConnectorSession, ConnectorTableExecuteHandle, Optional<ConnectorTableLayout>> getLayoutForTableExecute)
     {
         this.name = requireNonNull(name, "name is null");
@@ -232,6 +234,7 @@ public class MockConnectorFactory
         this.maxWriterTasks = maxWriterTasks;
         this.getCacheTableId = requireNonNull(getCacheTableId, "getCacheTableId is null");
         this.getCacheColumnId = requireNonNull(getCacheColumnId, "getCacheColumnId is null");
+        this.getCanonicalTableHandle = requireNonNull(getCanonicalTableHandle, "getCacheColumnId is null");
         this.getLayoutForTableExecute = requireNonNull(getLayoutForTableExecute, "getLayoutForTableExecute is null");
     }
 
@@ -290,6 +293,7 @@ public class MockConnectorFactory
                 maxWriterTasks,
                 getCacheTableId,
                 getCacheColumnId,
+                getCanonicalTableHandle,
                 getLayoutForTableExecute);
     }
 
@@ -432,6 +436,7 @@ public class MockConnectorFactory
         private Function<ConnectorTableHandle, Optional<CacheTableId>> getCacheTableId = handle -> Optional.empty();
         private Function<ColumnHandle, Optional<CacheColumnId>> getCacheColumnId = handle -> Optional.empty();
         private BiFunction<ConnectorSession, ConnectorTableExecuteHandle, Optional<ConnectorTableLayout>> getLayoutForTableExecute = (session, handle) -> Optional.empty();
+        private Function<ConnectorTableHandle, ConnectorTableHandle> getCanonicalTableHandle = Function.identity();
 
         private Builder() {}
 
@@ -747,6 +752,12 @@ public class MockConnectorFactory
             return this;
         }
 
+        public Builder withGetCanonicalTableHandle(Function<ConnectorTableHandle, ConnectorTableHandle> getCanonicalTableHandle)
+        {
+            this.getCanonicalTableHandle = requireNonNull(getCanonicalTableHandle, "getCanonicalTableHandle is null");
+            return this;
+        }
+
         public Builder withGetCacheColumnId(Function<ColumnHandle, Optional<CacheColumnId>> getCacheColumnId)
         {
             this.getCacheColumnId = requireNonNull(getCacheColumnId, "getCacheColumnId is null");
@@ -812,6 +823,7 @@ public class MockConnectorFactory
                     maxWriterTasks,
                     getCacheTableId,
                     getCacheColumnId,
+                    getCanonicalTableHandle,
                     getLayoutForTableExecute);
         }
 

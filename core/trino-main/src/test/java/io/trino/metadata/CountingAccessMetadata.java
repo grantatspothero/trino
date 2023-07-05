@@ -900,4 +900,10 @@ public class CountingAccessMetadata
     {
         return delegate.getCacheColumnId(session, tableHandle, columnHandle);
     }
+
+    @Override
+    public TableHandle getCanonicalTableHandle(Session session, TableHandle tableHandle)
+    {
+        throw new UnsupportedOperationException();
+    }
 }

@@ -178,6 +178,7 @@ public class MockConnector
     private final OptionalInt maxWriterTasks;
     private final Function<ConnectorTableHandle, Optional<CacheTableId>> getCacheTableId;
     private final Function<ColumnHandle, Optional<CacheColumnId>> getCacheColumnId;
+    private final Function<ConnectorTableHandle, ConnectorTableHandle> getCanonicalTableHandle;
     private final BiFunction<ConnectorSession, ConnectorTableExecuteHandle, Optional<ConnectorTableLayout>> getLayoutForTableExecute;
 
     MockConnector(
@@ -226,6 +227,7 @@ public class MockConnector
             OptionalInt maxWriterTasks,
             Function<ConnectorTableHandle, Optional<CacheTableId>> getCacheTableId,
             Function<ColumnHandle, Optional<CacheColumnId>> getCacheColumnId,
+            Function<ConnectorTableHandle, ConnectorTableHandle> getCanonicalTableHandle,
             BiFunction<ConnectorSession, ConnectorTableExecuteHandle, Optional<ConnectorTableLayout>> getLayoutForTableExecute)
     {
         this.sessionProperties = ImmutableList.copyOf(requireNonNull(sessionProperties, "sessionProperties is null"));
@@ -274,6 +276,7 @@ public class MockConnector
         this.getCacheTableId = requireNonNull(getCacheTableId, "getCacheTableId is null");
         this.getCacheColumnId = requireNonNull(getCacheColumnId, "getCacheColumnId is null");
         this.getLayoutForTableExecute = requireNonNull(getLayoutForTableExecute, "getLayoutForTableExecute is null");
+        this.getCanonicalTableHandle = requireNonNull(getCanonicalTableHandle, "getCanonicalTableHandle is null");
     }
 
     @Override
@@ -870,6 +873,12 @@ public class MockConnector
         public Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
         {
             return getCacheColumnId.apply(columnHandle);
+        }
+
+        @Override
+        public ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle tableHandle)
+        {
+            return getCanonicalTableHandle.apply(tableHandle);
         }
 
         @Override

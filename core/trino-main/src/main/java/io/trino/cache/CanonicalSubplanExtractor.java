@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.trino.Session;
 import io.trino.metadata.Metadata;
+import io.trino.metadata.TableHandle;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.ColumnHandle;
@@ -177,7 +178,8 @@ public final class CanonicalSubplanExtractor
                 return Optional.empty();
             }
 
-            Optional<CacheTableId> tableId = metadata.getCacheTableId(session, node.getTable());
+            TableHandle canonicalTableHandle = metadata.getCanonicalTableHandle(session, node.getTable());
+            Optional<CacheTableId> tableId = metadata.getCacheTableId(session, canonicalTableHandle);
             if (tableId.isEmpty()) {
                 return Optional.empty();
             }

@@ -56,6 +56,7 @@ import org.testng.annotations.Test;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.cost.StatsCalculator.noopStatsCalculator;
@@ -100,6 +101,7 @@ public class TestCommonSubqueriesExtractor
                                 new ColumnMetadata("column1", BIGINT),
                                 new ColumnMetadata("column2", BIGINT)))
                         .withGetCacheTableId(handle -> Optional.of(CACHE_TABLE_ID))
+                        .withGetCanonicalTableHandle(Function.identity())
                         .withGetCacheColumnId(handle -> {
                             MockConnectorColumnHandle column = (MockConnectorColumnHandle) handle;
                             return Optional.of(new CacheColumnId("cache_" + column.getName()));

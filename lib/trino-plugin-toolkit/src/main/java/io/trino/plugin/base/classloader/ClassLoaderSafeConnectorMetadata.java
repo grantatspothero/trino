@@ -1137,6 +1137,14 @@ public class ClassLoaderSafeConnectorMetadata
     }
 
     @Override
+    public ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle tableHandle)
+    {
+        try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
+            return delegate.getCanonicalTableHandle(tableHandle);
+        }
+    }
+
+    @Override
     protected Object clone()
             throws CloneNotSupportedException
     {

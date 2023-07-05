@@ -1347,6 +1347,15 @@ public class TracingMetadata
         }
     }
 
+    @Override
+    public TableHandle getCanonicalTableHandle(Session session, TableHandle tableHandle)
+    {
+        Span span = startSpan("getCanonicalTableHandle", tableHandle);
+        try (var ignored = scopedSpan(span)) {
+            return delegate.getCanonicalTableHandle(session, tableHandle);
+        }
+    }
+
     private Span startSpan(String methodName)
     {
         return tracer.spanBuilder("Metadata." + methodName)
