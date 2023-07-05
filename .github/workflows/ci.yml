@@ -1363,7 +1363,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
   # TODO: Don't always run the Snowflake tests; add impact analysis or integrate with above if possible.
-  #       (When integrating with 'pt', make sep-init conditional.)
   snowflake-pt:
     runs-on: [ sep-cicd, gha-fleet-small ]
     needs: build-pt
@@ -1388,28 +1387,11 @@ jobs:
       - name: Fix artifact permissions
         run: |
           find . -type f -name \*-executable.jar -exec chmod 0777 {} \;
-      - name: Checkout SEP to access the sep-init action
-        uses: actions/checkout@v3
-        with:
-          token: "${{ secrets.gitHubAccessToken }}"
-          path: sep-init
-          repository: starburstdata/starburst-enterprise
       - uses: ./.github/actions/setup
-      - name: Set up SEP requirements
-        uses: ./sep-init/.github/actions/sep-init
-        id: sep-init
-        with:
-          aws-access-key-id: ${{ secrets.ENG_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.ENG_AWS_SECRET_ACCESS_KEY }}
-          secret-id: ${{ secrets.SEP_SECRETS_AWS_ID }}
-          distribution: 'temurin'
-          java-version: 19
-          install-trino: "false"
       - name: Product Tests
-        if: steps.sep-init.outputs.run-job
         env:
-          SNOWFLAKE_ACCOUNT_NAME: ${{ env.SNOWFLAKE_ACCOUNT_NAME }}
-          SNOWFLAKE_PASSWORD: ${{ env.SNOWFLAKE_PASSWORD }}
+          SNOWFLAKE_ACCOUNT_NAME: ${{ secrets.SNOWFLAKE_ACCOUNT_NAME }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
           SNOWFLAKE_OAUTH_CLIENT_ID: ${{ env.SNOWFLAKE_OAUTH_CLIENT_ID }}
           SNOWFLAKE_OAUTH_CLIENT_SECRET: ${{ env.SNOWFLAKE_OAUTH_CLIENT_SECRET }}
         # Suite timeouts after 1h45m, just before job timeouts (2h)
