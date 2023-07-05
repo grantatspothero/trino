@@ -1364,7 +1364,7 @@ jobs:
 
   # TODO: Don't always run the Snowflake tests; add impact analysis or integrate with above if possible.
   snowflake-pt:
-    runs-on: [ sep-cicd, gha-fleet-small ]
+    runs-on: ubuntu-latest
     needs: build-pt
     strategy:
       fail-fast: false
