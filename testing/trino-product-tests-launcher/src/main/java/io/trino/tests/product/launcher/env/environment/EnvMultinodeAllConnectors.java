@@ -56,6 +56,7 @@ public final class EnvMultinodeAllConnectors
                         "druid",
                         "delta_lake",
                         "elasticsearch",
+                        "galaxy_objectstore",
                         "gsheets",
                         "hive",
                         "hudi",
@@ -68,6 +69,8 @@ public final class EnvMultinodeAllConnectors
                         "mariadb",
                         "memory",
                         "singlestore",
+                        "snowflake_jdbc",
+                        "synapse",
                         "mongodb",
                         "mysql",
                         "oracle",
@@ -80,7 +83,7 @@ public final class EnvMultinodeAllConnectors
                         "redshift",
                         "sqlserver",
                         "trino_thrift",
-                        "tpcds")
+                        "tpcds") // TODO: Add warp speed connector
                 .forEach(connector -> builder.addConnector(
                         connector,
                         forHostPath(configDir.getPath(connector + ".properties"))));
