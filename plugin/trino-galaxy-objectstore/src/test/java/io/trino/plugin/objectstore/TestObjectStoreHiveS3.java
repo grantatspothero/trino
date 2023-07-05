@@ -113,7 +113,7 @@ public class TestObjectStoreHiveS3
         expectedTableLocation = expectedTableLocation.replaceAll("(?<!(s3:))//", "/");
 
         String actualTableLocation = metastore.getMetastore().getTable(schemaName, tableName).orElseThrow().storage().location();
-        assertThat(actualTableLocation).matches(expectedTableLocation);
+        assertThat(actualTableLocation).isEqualTo(expectedTableLocation);
 
         assertUpdate("INSERT INTO " + qualifiedTableName + "  VALUES ('str1', 1), ('str2', 2), ('str3', 3)", 3);
         assertQuery("SELECT * FROM " + qualifiedTableName, "VALUES ('str1', 1), ('str2', 2), ('str3', 3)");
