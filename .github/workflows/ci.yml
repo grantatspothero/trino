@@ -1333,7 +1333,7 @@ jobs:
   # TODO: Don't always run the Snowflake tests; add impact analysis or integrate with above if possible.
   #       (When integrating with 'pt', make sep-init conditional.)
   snowflake-pt:
-    runs-on: ubuntu-latest
+    runs-on: [ sep-cicd, gha-fleet-small ]
     needs: build-pt
     strategy:
       fail-fast: false
