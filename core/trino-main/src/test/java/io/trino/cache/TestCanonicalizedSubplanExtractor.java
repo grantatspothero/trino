@@ -228,8 +228,8 @@ public class TestCanonicalizedSubplanExtractor
         TableHandle tableHandle2 = TestingHandles.createTestTableHandle(SchemaTableName.schemaTableName("schema", "table2"));
 
         PlanNode root = planBuilder.union(ImmutableListMultimap.of(), ImmutableList.of(
-                planBuilder.tableScan(tableHandle1, ImmutableList.of(), ImmutableMap.of(), Optional.of(true)),
-                planBuilder.tableScan(tableHandle2, ImmutableList.of(), ImmutableMap.of(), Optional.of(true))));
+                planBuilder.tableScan(tableHandle1, ImmutableList.of(), ImmutableMap.of(), Optional.of(false)),
+                planBuilder.tableScan(tableHandle2, ImmutableList.of(), ImmutableMap.of(), Optional.of(false))));
 
         // TableHandles will be turned into common canonical version
         List<CacheTableId> tableIds = extractCanonicalSubplans(
@@ -313,7 +313,7 @@ public class TestCanonicalizedSubplanExtractor
                 TupleDomain.all(),
                 Optional.empty(),
                 false,
-                Optional.of(true));
+                Optional.of(false));
     }
 
     private static class TestMetadata

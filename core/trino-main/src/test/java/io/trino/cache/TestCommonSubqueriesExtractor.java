@@ -131,7 +131,7 @@ public class TestCommonSubqueriesExtractor
                 TupleDomain.all(),
                 Optional.empty(),
                 false,
-                Optional.of(true));
+                Optional.of(false));
         // subquery A has complex predicate, but no DF
         FilterNode filterA = new FilterNode(
                 new PlanNodeId("filterA"),
@@ -213,7 +213,7 @@ public class TestCommonSubqueriesExtractor
                 .whereIsInstanceOfAny(TableScanNode.class)
                 .findOnlyElement())
                 .isUseConnectorNodePartitioning())
-                .isTrue();
+                .isFalse();
         assertThat(((TableScanNode) PlanNodeSearcher.searchFrom(subqueryB.getCommonSubplan())
                 .whereIsInstanceOfAny(TableScanNode.class)
                 .findOnlyElement())
@@ -268,7 +268,7 @@ public class TestCommonSubqueriesExtractor
                 TupleDomain.all(),
                 Optional.empty(),
                 false,
-                Optional.of(true));
+                Optional.of(false));
         FilterNode filterA = new FilterNode(
                 new PlanNodeId("filterA"),
                 scanA,
@@ -283,7 +283,7 @@ public class TestCommonSubqueriesExtractor
                 TupleDomain.all(),
                 Optional.empty(),
                 false,
-                Optional.of(true));
+                Optional.of(false));
         FilterNode filterB = new FilterNode(
                 new PlanNodeId("filterB"),
                 scanB,
@@ -351,7 +351,7 @@ public class TestCommonSubqueriesExtractor
                 TupleDomain.all(),
                 Optional.empty(),
                 false,
-                Optional.of(true));
+                Optional.of(false));
 
         Symbol subqueryBColumn2 = symbolAllocator.newSymbol("subquery_b_column2", BIGINT);
         PlanNode scanB = new TableScanNode(
@@ -362,7 +362,7 @@ public class TestCommonSubqueriesExtractor
                 TupleDomain.all(),
                 Optional.empty(),
                 false,
-                Optional.of(true));
+                Optional.of(false));
 
         PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
         Map<PlanNode, CommonPlanAdaptation> planAdaptations = extractCommonSubqueries(

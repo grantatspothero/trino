@@ -178,6 +178,11 @@ public final class CanonicalSubplanExtractor
                 return Optional.empty();
             }
 
+            if (node.isUseConnectorNodePartitioning()) {
+                // TODO: add support for node partitioning
+                return Optional.empty();
+            }
+
             TableHandle canonicalTableHandle = metadata.getCanonicalTableHandle(session, node.getTable());
             Optional<CacheTableId> tableId = metadata.getCacheTableId(session, canonicalTableHandle);
             if (tableId.isEmpty()) {
