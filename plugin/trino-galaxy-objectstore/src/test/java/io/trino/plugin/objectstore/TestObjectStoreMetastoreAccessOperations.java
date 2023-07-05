@@ -39,6 +39,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.CREATE_TABLE;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_DATABASE;
@@ -280,7 +281,7 @@ public class TestObjectStoreMetastoreAccessOperations
         assertMetastoreInvocations("SHOW STATS FOR (SELECT * FROM test_show_stats_with_filter where age >= 2)",
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(4, 2, 2).get(type))
-                        .addCopies(GET_TABLE_STATISTICS, occurrences(1, 1, 1).get(type))
+                        .add(GET_TABLE_STATISTICS)
                         .build());
     }
 
@@ -372,7 +373,6 @@ public class TestObjectStoreMetastoreAccessOperations
                         .addCopies(GET_TABLE, occurrences(1, 2, 0).get(type))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(1, 0, 0).get(type))
                         .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(2, 0, 0).get(type))
-                        .addCopies(REPLACE_TABLE, occurrences(0, 0, 0).get(type))
                         .build());
     }
 
@@ -397,6 +397,11 @@ public class TestObjectStoreMetastoreAccessOperations
     @SuppressWarnings("unused")
     private record Occurrences(int hive, int iceberg, int delta)
     {
+        private Occurrences
+        {
+            checkArgument(!(hive == iceberg && iceberg == delta), "No need to use Occurrences when hive, iceberg and delta values are same");
+        }
+
         int get(TableType type)
         {
             return switch (type) {
