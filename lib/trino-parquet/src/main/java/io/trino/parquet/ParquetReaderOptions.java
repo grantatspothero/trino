@@ -52,7 +52,7 @@ public class ParquetReaderOptions
         useBloomFilter = true;
         nativeZstdDecompressorEnabled = true;
         nativeSnappyDecompressorEnabled = true;
-        vectorizedDecodingEnabled = false;
+        vectorizedDecodingEnabled = true;
     }
 
     private ParquetReaderOptions(
