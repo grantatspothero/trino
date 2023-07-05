@@ -209,7 +209,7 @@ public class TestObjectStoreHiveS3
         assertThatThrownBy(() -> assertUpdate("CREATE TABLE " + tableName + "(col_str, col_int)" +
                 " WITH (external_location = '" + location + "')" +
                 " AS VALUES ('str1', 1)"))
-                .hasMessageContaining("Fragment is not allowed in a file system location");
+                .hasMessage("External location is not a valid file system URI: " + location);
     }
 
     @Test
