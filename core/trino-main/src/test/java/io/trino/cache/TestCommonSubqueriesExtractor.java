@@ -68,8 +68,8 @@ import static io.trino.sql.DynamicFilters.createDynamicFilterExpression;
 import static io.trino.sql.DynamicFilters.extractDynamicFilters;
 import static io.trino.sql.ExpressionUtils.and;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.filter;
-import static io.trino.sql.planner.assertions.PlanMatchPattern.project;
-import static io.trino.sql.planner.assertions.PlanMatchPattern.tableScan;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.strictProject;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.strictTableScan;
 import static io.trino.sql.planner.iterative.rule.test.PlanBuilder.expression;
 import static io.trino.testing.TestingHandles.TEST_CATALOG_NAME;
 import static io.trino.testing.TestingSession.testSessionBuilder;
@@ -194,13 +194,13 @@ public class TestCommonSubqueriesExtractor
         CommonPlanAdaptation subqueryB = planAdaptations.get(projectB);
 
         // common subplan should be identical for both subqueries
-        PlanMatchPattern commonSubplan = project(
+        PlanMatchPattern commonSubplan = strictProject(
                 ImmutableMap.of(
                         "column1", PlanMatchPattern.expression("column1"),
                         "projection", PlanMatchPattern.expression("column1 * 10")),
                 filter(
                         expression("column1 > BIGINT '42' OR column2 % 2 = BIGINT '0'"),
-                        tableScan(
+                        strictTableScan(
                                 TEST_TABLE,
                                 ImmutableMap.of(
                                         "column1", "column1",
@@ -242,7 +242,7 @@ public class TestCommonSubqueriesExtractor
         assertThat(subqueryA.adaptCommonSubplan(subqueryACommonSubplan, idAllocator)).isEqualTo(subqueryACommonSubplan);
 
         assertPlan(symbolAllocator, subqueryB.adaptCommonSubplan(subqueryB.getCommonSubplan(), idAllocator),
-                project(ImmutableMap.of("projection", PlanMatchPattern.expression("projection")),
+                strictProject(ImmutableMap.of("projection", PlanMatchPattern.expression("projection")),
                         filter("column1 > BIGINT '42'", commonSubplan)));
 
         // make sure plan signatures are same
@@ -311,7 +311,7 @@ public class TestCommonSubqueriesExtractor
         PlanMatchPattern commonSubplan =
                 filter(
                         expression("column1 > BIGINT '42' OR column1 < BIGINT '0'"),
-                        tableScan(
+                        strictTableScan(
                                 TEST_TABLE,
                                 ImmutableMap.of(
                                         "column1", "column1")));
@@ -384,7 +384,7 @@ public class TestCommonSubqueriesExtractor
 
         // common subplan should be identical for both subqueries
         PlanMatchPattern commonSubplan =
-                tableScan(
+                strictTableScan(
                         TEST_TABLE,
                         ImmutableMap.of(
                                 "column1", "column1",
@@ -394,11 +394,11 @@ public class TestCommonSubqueriesExtractor
 
         // only projection adaptation is required
         assertPlan(symbolAllocator, subqueryA.adaptCommonSubplan(subqueryA.getCommonSubplan(), idAllocator),
-                project(ImmutableMap.of("column1", PlanMatchPattern.expression("column1")),
+                strictProject(ImmutableMap.of("column1", PlanMatchPattern.expression("column1")),
                         commonSubplan));
 
         assertPlan(symbolAllocator, subqueryB.adaptCommonSubplan(subqueryB.getCommonSubplan(), idAllocator),
-                project(ImmutableMap.of("column2", PlanMatchPattern.expression("column2")),
+                strictProject(ImmutableMap.of("column2", PlanMatchPattern.expression("column2")),
                         commonSubplan));
 
         // make sure plan signatures are same and contain domain
