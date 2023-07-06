@@ -64,6 +64,7 @@ import io.trino.sql.planner.plan.AggregationNode.Aggregation;
 import io.trino.sql.planner.plan.ApplyNode;
 import io.trino.sql.planner.plan.AssignUniqueId;
 import io.trino.sql.planner.plan.Assignments;
+import io.trino.sql.planner.plan.CacheDataPlanNode;
 import io.trino.sql.planner.plan.ChooseAlternativeNode;
 import io.trino.sql.planner.plan.CorrelatedJoinNode;
 import io.trino.sql.planner.plan.DistinctLimitNode;
@@ -1924,6 +1925,13 @@ public class PlanPrinter
                 properties.append(", pass through columns");
             }
             return format("%s => TableArgument{%s}", argumentName, properties);
+        }
+
+        @Override
+        public Void visitCacheDataPlanNode(CacheDataPlanNode node, Context context)
+        {
+            addNode(node, "CacheData", context.tag());
+            return processChildren(node, new Context());
         }
 
         @Override
