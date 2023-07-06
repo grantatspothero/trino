@@ -205,12 +205,6 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
-    public void testAlterTableRenameColumnToLongName()
-    {
-        skipDuplicateTestCoverage("testAlterTableRenameColumnToLongName");
-    }
-
-    @Override
     public void testArithmeticNegation()
     {
         skipDuplicateTestCoverage("testArithmeticNegation");
@@ -970,18 +964,6 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     public void testReadMetadataWithRelationsConcurrentModifications()
     {
         skipDuplicateTestCoverage("testReadMetadataWithRelationsConcurrentModifications");
-    }
-
-    @Override
-    public void testRenameColumn()
-    {
-        skipDuplicateTestCoverage("testRenameColumn");
-    }
-
-    @Override
-    public void testRenameColumnName(String arg0)
-    {
-        skipDuplicateTestCoverage("testRenameColumnName", String.class);
     }
 
     @Override

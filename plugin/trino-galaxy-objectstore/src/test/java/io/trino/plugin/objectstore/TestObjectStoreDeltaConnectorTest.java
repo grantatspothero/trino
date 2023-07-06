@@ -437,6 +437,33 @@ public class TestObjectStoreDeltaConnectorTest
                 .hasMessageContaining("Cannot drop column from table using column mapping mode NONE");
     }
 
+    @Override
+    public void testRenameColumn()
+    {
+        // Override because the connector doesn't support renaming columns with 'none' column mapping
+        // There are some tests in in io.trino.tests.product.deltalake.TestDeltaLakeColumnMappingMode
+        assertThatThrownBy(super::testRenameColumn)
+                .hasMessageContaining("Cannot rename column in table using column mapping mode NONE");
+    }
+
+    @Override
+    public void testAlterTableRenameColumnToLongName()
+    {
+        // Override because the connector doesn't support renaming columns with 'none' column mapping
+        // There are some tests in in io.trino.tests.product.deltalake.TestDeltaLakeColumnMappingMode
+        assertThatThrownBy(super::testAlterTableRenameColumnToLongName)
+                .hasMessageContaining("Cannot rename column in table using column mapping mode NONE");
+    }
+
+    @Override
+    public void testRenameColumnName(String columnName)
+    {
+        // Override because the connector doesn't support renaming columns with 'none' column mapping
+        // There are some tests in in io.trino.tests.product.deltalake.TestDeltaLakeColumnMappingMode
+        assertThatThrownBy(() -> super.testRenameColumnName(columnName))
+                .hasMessageContaining("Cannot rename column in table using column mapping mode NONE");
+    }
+
     private void runAnalyzeVerifySplitCount(String tableName, long expectedSplitCount)
     {
         MaterializedResultWithQueryId analyzeResult = getDistributedQueryRunner().executeWithQueryId(getSession(), "ANALYZE " + tableName);
