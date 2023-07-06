@@ -320,6 +320,7 @@ public class LocalQueryRunner
     private final CacheManagerRegistry cacheManagerRegistry;
 
     private final TaskManagerConfig taskManagerConfig;
+    private final CacheConfig cacheConfig;
     private final boolean alwaysRevokeMemory;
     private final DataSize maxSpillPerNode;
     private final DataSize queryMaxSpillPerNode;
@@ -345,6 +346,7 @@ public class LocalQueryRunner
             Session defaultSession,
             FeaturesConfig featuresConfig,
             NodeSpillConfig nodeSpillConfig,
+            CacheConfig cacheConfig,
             boolean withInitialTransaction,
             boolean alwaysRevokeMemory,
             int nodeCountForStats,
@@ -359,6 +361,7 @@ public class LocalQueryRunner
 
         Tracer tracer = noopTracer();
         this.taskManagerConfig = new TaskManagerConfig().setTaskConcurrency(4);
+        this.cacheConfig = requireNonNull(cacheConfig, "cacheConfig is null");
         requireNonNull(nodeSpillConfig, "nodeSpillConfig is null");
         this.maxSpillPerNode = nodeSpillConfig.getMaxSpillPerNode();
         this.queryMaxSpillPerNode = nodeSpillConfig.getQueryMaxSpillPerNode();
@@ -429,7 +432,7 @@ public class LocalQueryRunner
         this.pageSinkManager = new PageSinkManager(createPageSinkProvider(catalogManager));
         this.indexManager = new IndexManager(createIndexProvider(catalogManager));
         NodeScheduler nodeScheduler = new NodeScheduler(new UniformNodeSelectorFactory(nodeManager, nodeSchedulerConfig, new NodeTaskMap(finalizerService)));
-        this.sessionPropertyManager = createSessionPropertyManager(catalogManager, extraSessionProperties, taskManagerConfig, featuresConfig, optimizerConfig);
+        this.sessionPropertyManager = createSessionPropertyManager(catalogManager, extraSessionProperties, taskManagerConfig, featuresConfig, cacheConfig, optimizerConfig);
         this.nodePartitioningManager = new NodePartitioningManager(nodeScheduler, blockTypeOperators, createNodePartitioningProvider(catalogManager));
         TableProceduresRegistry tableProceduresRegistry = new TableProceduresRegistry(createTableProceduresProvider(catalogManager));
         this.functionManager = new FunctionManager(createFunctionProvider(catalogManager), globalFunctionCatalog);
@@ -490,7 +493,7 @@ public class LocalQueryRunner
                 ImmutableSet.of(new ExcludeColumnsFunction()));
 
         exchangeManagerRegistry = new ExchangeManagerRegistry();
-        cacheManagerRegistry = new CacheManagerRegistry(new CacheConfig(), new LocalMemoryManager(new NodeMemoryConfig()));
+        cacheManagerRegistry = new CacheManagerRegistry(cacheConfig, new LocalMemoryManager(new NodeMemoryConfig()));
         this.pluginManager = new PluginManager(
                 (loader, createClassLoader) -> {},
                 catalogFactory,
@@ -551,6 +554,7 @@ public class LocalQueryRunner
             Set<SystemSessionPropertiesProvider> extraSessionProperties,
             TaskManagerConfig taskManagerConfig,
             FeaturesConfig featuresConfig,
+            CacheConfig cacheConfig,
             OptimizerConfig optimizerConfig)
     {
         Set<SystemSessionPropertiesProvider> systemSessionProperties = ImmutableSet.<SystemSessionPropertiesProvider>builder()
@@ -563,6 +567,7 @@ public class LocalQueryRunner
                         optimizerConfig,
                         new NodeMemoryConfig(),
                         new DynamicFilterConfig(),
+                        cacheConfig,
                         new NodeSchedulerConfig()))
                 .build();
 
@@ -1155,6 +1160,7 @@ public class LocalQueryRunner
                 new TypeAnalyzer(plannerContext, statementAnalyzerFactory),
                 statsCalculator,
                 costCalculator,
+                cacheConfig,
                 warningCollector,
                 planOptimizersStatsCollector);
 
@@ -1172,6 +1178,7 @@ public class LocalQueryRunner
                 statementAnalyzerFactory,
                 statsCalculator,
                 costCalculator,
+                cacheConfig,
                 new NodeVersion("test"));
     }
 
@@ -1222,6 +1229,7 @@ public class LocalQueryRunner
         private final Session defaultSession;
         private FeaturesConfig featuresConfig = new FeaturesConfig();
         private NodeSpillConfig nodeSpillConfig = new NodeSpillConfig();
+        private CacheConfig cacheConfig = new CacheConfig();
         private boolean initialTransaction;
         private boolean alwaysRevokeMemory;
         private Map<String, List<PropertyMetadata<?>>> defaultSessionProperties = ImmutableMap.of();
@@ -1244,6 +1252,12 @@ public class LocalQueryRunner
         public Builder withNodeSpillConfig(NodeSpillConfig nodeSpillConfig)
         {
             this.nodeSpillConfig = requireNonNull(nodeSpillConfig, "nodeSpillConfig is null");
+            return this;
+        }
+
+        public Builder withCacheConfig(CacheConfig cacheConfig)
+        {
+            this.cacheConfig = requireNonNull(cacheConfig, "cacheConfig is null");
             return this;
         }
 
@@ -1300,6 +1314,7 @@ public class LocalQueryRunner
                     defaultSession,
                     featuresConfig,
                     nodeSpillConfig,
+                    cacheConfig,
                     initialTransaction,
                     alwaysRevokeMemory,
                     nodeCountForStats,

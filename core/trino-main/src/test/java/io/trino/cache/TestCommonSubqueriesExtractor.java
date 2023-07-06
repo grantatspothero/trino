@@ -32,7 +32,6 @@ import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.predicate.ValueSet;
 import io.trino.sql.DynamicFilters;
-import io.trino.sql.planner.ExpressionExtractor;
 import io.trino.sql.planner.Plan;
 import io.trino.sql.planner.PlanNodeIdAllocator;
 import io.trino.sql.planner.Symbol;
@@ -54,6 +53,7 @@ import io.trino.testing.LocalQueryRunner;
 import io.trino.testing.TestingTransactionHandle;
 import org.testng.annotations.Test;
 
+import java.util.AbstractMap.SimpleEntry;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -67,6 +67,7 @@ import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.sql.DynamicFilters.createDynamicFilterExpression;
 import static io.trino.sql.DynamicFilters.extractDynamicFilters;
 import static io.trino.sql.ExpressionUtils.and;
+import static io.trino.sql.planner.ExpressionExtractor.extractExpressions;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.filter;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.strictProject;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.strictTableScan;
@@ -194,19 +195,34 @@ public class TestCommonSubqueriesExtractor
         CommonPlanAdaptation subqueryB = planAdaptations.get(projectB);
 
         // common subplan should be identical for both subqueries
+        PlanMatchPattern commonSubplanTableScan = strictTableScan(
+                TEST_TABLE,
+                ImmutableMap.of(
+                        "column1", "column1",
+                        "column2", "column2"));
         PlanMatchPattern commonSubplan = strictProject(
                 ImmutableMap.of(
                         "column1", PlanMatchPattern.expression("column1"),
                         "projection", PlanMatchPattern.expression("column1 * 10")),
                 filter(
                         expression("column1 % 4 = BIGINT '0' OR column2 % 2 = BIGINT '0'"),
-                        strictTableScan(
-                                TEST_TABLE,
-                                ImmutableMap.of(
-                                        "column1", "column1",
-                                        "column2", "column2"))));
+                        commonSubplanTableScan));
         assertPlan(symbolAllocator, subqueryA.getCommonSubplan(), commonSubplan);
         assertPlan(symbolAllocator, subqueryB.getCommonSubplan(), commonSubplan);
+
+        // assert that FilteredTableScan has correct table and predicate for both subplans
+        assertPlan(symbolAllocator, subqueryA.getCommonSubplanFilteredTableScan().tableScanNode(), commonSubplanTableScan);
+        assertPlan(symbolAllocator, subqueryB.getCommonSubplanFilteredTableScan().tableScanNode(), commonSubplanTableScan);
+        assertThat(subqueryA.getCommonSubplanFilteredTableScan().filterPredicate()).hasValue(
+                ((FilterNode) PlanNodeSearcher.searchFrom(subqueryA.getCommonSubplan())
+                        .whereIsInstanceOfAny(FilterNode.class)
+                        .findOnlyElement())
+                        .getPredicate());
+        assertThat(subqueryB.getCommonSubplanFilteredTableScan().filterPredicate()).hasValue(
+                ((FilterNode) PlanNodeSearcher.searchFrom(subqueryB.getCommonSubplan())
+                        .whereIsInstanceOfAny(FilterNode.class)
+                        .findOnlyElement())
+                        .getPredicate());
 
         // assert that useConnectorNodePartitioning is propagated correctly
         assertThat(((TableScanNode) PlanNodeSearcher.searchFrom(subqueryA.getCommonSubplan())
@@ -221,17 +237,20 @@ public class TestCommonSubqueriesExtractor
                 .isFalse();
 
         // assert that common subplan for subquery A doesn't have dynamic filter
-        assertThat(ExpressionExtractor.extractExpressions(subqueryA.getCommonSubplan()).stream()
+        assertThat(extractExpressions(subqueryA.getCommonSubplan()).stream()
                 .flatMap(expression -> extractDynamicFilters(expression).getDynamicConjuncts().stream()))
                 .isEmpty();
+        assertThat(subqueryA.getDynamicFilterColumnMapping()).isEmpty();
 
         // assert that common subplan for subquery B has dynamic filter preserved
-        assertThat(ExpressionExtractor.extractExpressions(subqueryB.getCommonSubplan()).stream()
+        assertThat(extractExpressions(subqueryB.getCommonSubplan()).stream()
                 .flatMap(expression -> extractDynamicFilters(expression).getDynamicConjuncts().stream())
                 .collect(toImmutableList()))
                 .containsExactly(new DynamicFilters.Descriptor(
                         new DynamicFilterId("subquery_b_dynamic_id"),
                         expression("subquery_b_column1")));
+        assertThat(subqueryB.getDynamicFilterColumnMapping()).containsExactly(
+                new SimpleEntry<>(HANDLE_1, new CacheColumnId("cache_column1")));
 
         // symbols used in common subplans for both subqueries should be unique
         assertThat(SymbolsExtractor.extractUnique(subqueryA.getCommonSubplan()))

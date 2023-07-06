@@ -13,14 +13,18 @@
  */
 package io.trino.cache;
 
+import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.PlanSignature;
+import io.trino.spi.connector.ColumnHandle;
 import io.trino.sql.planner.PlanNodeIdAllocator;
 import io.trino.sql.planner.plan.Assignments;
+import io.trino.sql.planner.plan.ChooseAlternativeNode.FilteredTableScan;
 import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.PlanNode;
 import io.trino.sql.planner.plan.ProjectNode;
 import io.trino.sql.tree.Expression;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -37,9 +41,18 @@ public class CommonPlanAdaptation
      */
     private final PlanNode commonSubplan;
     /**
+     * Common subplan {@link FilteredTableScan}.
+     */
+    private final FilteredTableScan commonSubplanFilteredTableScan;
+    /**
      * Signature of common subplan.
      */
     private final PlanSignature commonSubplanSignature;
+    /**
+     * Mapping from relevant (for plan signature) dynamic filtering columns
+     * to {@link CacheColumnId}.
+     */
+    private final Map<ColumnHandle, CacheColumnId> dynamicFilterColumnMapping;
     /**
      * Optional predicate that needs to be applied in order to adapt common subplan to
      * original plan.
@@ -53,12 +66,16 @@ public class CommonPlanAdaptation
 
     public CommonPlanAdaptation(
             PlanNode commonSubplan,
+            FilteredTableScan commonSubplanFilteredTableScan,
             PlanSignature commonSubplanSignature,
+            Map<ColumnHandle, CacheColumnId> dynamicFilterColumnMapping,
             Optional<Expression> adaptationPredicate,
             Optional<Assignments> adaptationAssignments)
     {
         this.commonSubplan = requireNonNull(commonSubplan, "commonSubplan is null");
+        this.commonSubplanFilteredTableScan = requireNonNull(commonSubplanFilteredTableScan, "commonSubplanFilteredTableScan is null");
         this.commonSubplanSignature = requireNonNull(commonSubplanSignature, "commonSubplanSignature is null");
+        this.dynamicFilterColumnMapping = requireNonNull(dynamicFilterColumnMapping, "dynamicFilterColumnMapping is null");
         this.adaptationPredicate = requireNonNull(adaptationPredicate, "adaptationPredicate is null");
         this.adaptationAssignments = requireNonNull(adaptationAssignments, "adaptationAssignments is null");
     }
@@ -87,8 +104,18 @@ public class CommonPlanAdaptation
         return commonSubplan;
     }
 
+    public FilteredTableScan getCommonSubplanFilteredTableScan()
+    {
+        return commonSubplanFilteredTableScan;
+    }
+
     public PlanSignature getCommonSubplanSignature()
     {
         return commonSubplanSignature;
+    }
+
+    public Map<ColumnHandle, CacheColumnId> getDynamicFilterColumnMapping()
+    {
+        return dynamicFilterColumnMapping;
     }
 }

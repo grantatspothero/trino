@@ -36,6 +36,7 @@ import io.trino.sql.planner.SymbolsExtractor;
 import io.trino.sql.planner.TypeProvider;
 import io.trino.sql.planner.optimizations.SymbolMapper;
 import io.trino.sql.planner.plan.Assignments;
+import io.trino.sql.planner.plan.ChooseAlternativeNode.FilteredTableScan;
 import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.PlanNode;
 import io.trino.sql.planner.plan.ProjectNode;
@@ -55,6 +56,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.trino.cache.CanonicalSubplanExtractor.extractCanonicalSubplans;
+import static io.trino.sql.DynamicFilters.extractDynamicFilters;
+import static io.trino.sql.DynamicFilters.extractSourceSymbol;
 import static io.trino.sql.ExpressionFormatter.formatExpression;
 import static io.trino.sql.ExpressionUtils.and;
 import static io.trino.sql.ExpressionUtils.combineConjuncts;
@@ -226,7 +229,7 @@ public final class CommonSubqueriesExtractor
         SymbolMapper subquerySymbolMapper = new SymbolMapper(subqueryColumnIdMapping.entrySet().stream()
                 .collect(toImmutableMap(entry -> columnIdToSymbol(entry.getKey()), Map.Entry::getValue))::get);
 
-        PlanNode commonSubplan = new TableScanNode(
+        TableScanNode commonSubplanTableScan = new TableScanNode(
                 subplan.getTableScanId(),
                 subplan.getTable(),
                 // Remap column ids into specific subquery symbols
@@ -242,16 +245,20 @@ public final class CommonSubqueriesExtractor
                 false,
                 Optional.of(subplan.isUseConnectorNodePartitioning()));
 
+        PlanNode commonSubplan = commonSubplanTableScan;
+        Optional<Expression> commonSubplanPredicate = Optional.empty();
         if (!commonPredicate.equals(TRUE_LITERAL) || !subplan.getDynamicConjuncts().isEmpty()) {
-            commonSubplan = new FilterNode(
-                    idAllocator.getNextId(),
-                    commonSubplan,
+            commonSubplanPredicate = Optional.of(
                     // Subquery specific dynamic filters need to be added back to common subplan.
                     // Actual dynamic filter domains are accounted for in PlanSignature on worker nodes.
                     subquerySymbolMapper.map(combineConjuncts(
                             plannerContext.getMetadata(),
                             commonPredicate,
                             and(subplan.getDynamicConjuncts()))));
+            commonSubplan = new FilterNode(
+                    idAllocator.getNextId(),
+                    commonSubplan,
+                    commonSubplanPredicate.get());
         }
 
         if (isAdaptationProjectionNeeded(commonColumnHandles.keySet(), commonProjections.keySet())) {
@@ -280,7 +287,23 @@ public final class CommonSubqueriesExtractor
                             entry -> subqueryColumnIdMapping.get(entry.getKey()).toSymbolReference()))));
         }
 
-        return new CommonPlanAdaptation(commonSubplan, planSignature, adaptationPredicate, adaptationAssignments);
+        // Create mapping between dynamic filtering columns and column ids.
+        // All dynamic filtering columns are part of planSignature columns
+        // because joins are not supported yet.
+        Map<ColumnHandle, CacheColumnId> dynamicFilterColumnMapping = subplan.getDynamicConjuncts().stream()
+                .flatMap(conjunct -> extractDynamicFilters(conjunct).getDynamicConjuncts().stream())
+                .map(filter -> canonicalSymbolToColumnId(extractSourceSymbol(filter)))
+                .collect(toImmutableMap(
+                        columnId -> subplan.getColumnHandles().get(columnId),
+                        identity()));
+
+        return new CommonPlanAdaptation(
+                commonSubplan,
+                new FilteredTableScan(commonSubplanTableScan, commonSubplanPredicate),
+                planSignature,
+                dynamicFilterColumnMapping,
+                adaptationPredicate,
+                adaptationAssignments);
     }
 
     private static boolean isAdaptationProjectionNeeded(Set<CacheColumnId> actualColumns, Set<CacheColumnId> expectedColumns)

@@ -82,6 +82,7 @@ import io.trino.sql.planner.plan.IndexSourceNode;
 import io.trino.sql.planner.plan.IntersectNode;
 import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.planner.plan.LimitNode;
+import io.trino.sql.planner.plan.LoadCachedDataPlanNode;
 import io.trino.sql.planner.plan.MarkDistinctNode;
 import io.trino.sql.planner.plan.MergeProcessorNode;
 import io.trino.sql.planner.plan.MergeWriterNode;
@@ -1925,6 +1926,13 @@ public class PlanPrinter
                 properties.append(", pass through columns");
             }
             return format("%s => TableArgument{%s}", argumentName, properties);
+        }
+
+        @Override
+        public Void visitLoadCachedDataPlanNode(LoadCachedDataPlanNode node, Context context)
+        {
+            addNode(node, "LoadCachedData", context.tag());
+            return null;
         }
 
         @Override

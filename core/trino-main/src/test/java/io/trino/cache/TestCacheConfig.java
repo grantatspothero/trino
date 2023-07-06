@@ -30,7 +30,8 @@ public class TestCacheConfig
         assertRecordedDefaults(recordDefaults(CacheConfig.class)
                 .setEnabled(false)
                 .setRevokingThreshold(0.9)
-                .setRevokingTarget(0.7));
+                .setRevokingTarget(0.7)
+                .setCacheSubqueriesEnabled(false));
     }
 
     @Test
@@ -40,12 +41,14 @@ public class TestCacheConfig
                 .put("cache.enabled", "true")
                 .put("cache.revoking-threshold", "0.6")
                 .put("cache.revoking-target", "0.5")
+                .put("cache.subqueries.enabled", "true")
                 .buildOrThrow();
 
         CacheConfig expected = new CacheConfig()
                 .setEnabled(true)
                 .setRevokingThreshold(0.6)
-                .setRevokingTarget(0.5);
+                .setRevokingTarget(0.5)
+                .setCacheSubqueriesEnabled(true);
         assertFullMapping(properties, expected);
     }
 }

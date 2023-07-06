@@ -24,6 +24,7 @@ public class CacheConfig
     private boolean enabled;
     private double revokingThreshold = 0.9;
     private double revokingTarget = 0.7;
+    private boolean cacheSubqueriesEnabled;
 
     public boolean isEnabled()
     {
@@ -65,6 +66,19 @@ public class CacheConfig
     public CacheConfig setRevokingTarget(double revokingTarget)
     {
         this.revokingTarget = revokingTarget;
+        return this;
+    }
+
+    public boolean isCacheSubqueriesEnabled()
+    {
+        return cacheSubqueriesEnabled;
+    }
+
+    @Config("cache.subqueries.enabled")
+    @ConfigDescription("Enables caching of common subqueries when running a single query")
+    public CacheConfig setCacheSubqueriesEnabled(boolean cacheSubqueriesEnabled)
+    {
+        this.cacheSubqueriesEnabled = cacheSubqueriesEnabled;
         return this;
     }
 }

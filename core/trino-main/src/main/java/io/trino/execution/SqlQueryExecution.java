@@ -23,6 +23,7 @@ import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
 import io.trino.Session;
 import io.trino.SystemSessionProperties;
+import io.trino.cache.CacheConfig;
 import io.trino.cost.CostCalculator;
 import io.trino.cost.StatsCalculator;
 import io.trino.exchange.ExchangeManagerRegistry;
@@ -140,6 +141,7 @@ public class SqlQueryExecution
     private final SqlTaskManager coordinatorTaskManager;
     private final ExchangeManagerRegistry exchangeManagerRegistry;
     private final EventDrivenTaskSourceFactory eventDrivenTaskSourceFactory;
+    private final CacheConfig cacheConfig;
     private final TaskDescriptorStorage taskDescriptorStorage;
     private final PlanOptimizersStatsCollector planOptimizersStatsCollector;
     private final Optional<ResultsCacheParameters> resultsCacheParameters;
@@ -178,6 +180,7 @@ public class SqlQueryExecution
             ExchangeManagerRegistry exchangeManagerRegistry,
             EventDrivenTaskSourceFactory eventDrivenTaskSourceFactory,
             ResultsCacheAnalyzerFactory resultsCacheAnalyzerFactory,
+            CacheConfig cacheConfig,
             TaskDescriptorStorage taskDescriptorStorage)
     {
         try (SetThreadName ignored = new SetThreadName("Query-%s", stateMachine.getQueryId())) {
@@ -226,6 +229,7 @@ public class SqlQueryExecution
             this.coordinatorTaskManager = requireNonNull(coordinatorTaskManager, "coordinatorTaskManager is null");
             this.exchangeManagerRegistry = requireNonNull(exchangeManagerRegistry, "exchangeManagerRegistry is null");
             this.eventDrivenTaskSourceFactory = requireNonNull(eventDrivenTaskSourceFactory, "taskSourceFactory is null");
+            this.cacheConfig = requireNonNull(cacheConfig, "cacheConfig is null");
             this.taskDescriptorStorage = requireNonNull(taskDescriptorStorage, "taskDescriptorStorage is null");
             this.planOptimizersStatsCollector = requireNonNull(planOptimizersStatsCollector, "planOptimizersStatsCollector is null");
             this.resultsCacheParameters = createResultsCacheParameters(stateMachine.getSession()).filter(ignore ->
@@ -486,6 +490,7 @@ public class SqlQueryExecution
                 typeAnalyzer,
                 statsCalculator,
                 costCalculator,
+                cacheConfig,
                 stateMachine.getWarningCollector(),
                 planOptimizersStatsCollector);
         Plan plan = logicalPlanner.plan(analysis);
@@ -790,6 +795,7 @@ public class SqlQueryExecution
         private final ExchangeManagerRegistry exchangeManagerRegistry;
         private final EventDrivenTaskSourceFactory eventDrivenTaskSourceFactory;
         private final ResultsCacheAnalyzerFactory resultsCacheAnalyzerFactory;
+        private final CacheConfig cacheConfig;
         private final TaskDescriptorStorage taskDescriptorStorage;
 
         @Inject
@@ -822,6 +828,7 @@ public class SqlQueryExecution
                 ExchangeManagerRegistry exchangeManagerRegistry,
                 EventDrivenTaskSourceFactory eventDrivenTaskSourceFactory,
                 ResultsCacheAnalyzerFactory resultsCacheAnalyzerFactory,
+                CacheConfig cacheConfig,
                 TaskDescriptorStorage taskDescriptorStorage)
         {
             this.tracer = requireNonNull(tracer, "tracer is null");
@@ -852,6 +859,7 @@ public class SqlQueryExecution
             this.exchangeManagerRegistry = requireNonNull(exchangeManagerRegistry, "exchangeManagerRegistry is null");
             this.eventDrivenTaskSourceFactory = requireNonNull(eventDrivenTaskSourceFactory, "eventDrivenTaskSourceFactory is null");
             this.resultsCacheAnalyzerFactory = requireNonNull(resultsCacheAnalyzerFactory, "resultsCacheAnalyzerFactory is null");
+            this.cacheConfig = requireNonNull(cacheConfig, "cacheConfig is null");
             this.taskDescriptorStorage = requireNonNull(taskDescriptorStorage, "taskDescriptorStorage is null");
         }
 
@@ -901,6 +909,7 @@ public class SqlQueryExecution
                     exchangeManagerRegistry,
                     eventDrivenTaskSourceFactory,
                     resultsCacheAnalyzerFactory,
+                    cacheConfig,
                     taskDescriptorStorage);
         }
     }

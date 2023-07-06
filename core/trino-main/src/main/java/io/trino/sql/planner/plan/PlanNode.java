@@ -71,6 +71,7 @@ import static java.util.Objects.requireNonNull;
         @JsonSubTypes.Type(value = ChooseAlternativeNode.class, name = "chooseAlternative"),
         @JsonSubTypes.Type(value = TableFunctionNode.class, name = "tableFunction"),
         @JsonSubTypes.Type(value = CacheDataPlanNode.class, name = "cacheData"),
+        @JsonSubTypes.Type(value = LoadCachedDataPlanNode.class, name = "loadCachedData"),
         @JsonSubTypes.Type(value = TableFunctionProcessorNode.class, name = "tableFunctionProcessor"),
 })
 public abstract class PlanNode

@@ -21,6 +21,8 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.context.Context;
 import io.trino.Session;
+import io.trino.cache.CacheCommonSubqueries;
+import io.trino.cache.CacheConfig;
 import io.trino.cost.CachingCostProvider;
 import io.trino.cost.CachingStatsProvider;
 import io.trino.cost.CachingTableStatsProvider;
@@ -185,6 +187,7 @@ public class LogicalPlanner
     private final StatisticsAggregationPlanner statisticsAggregationPlanner;
     private final StatsCalculator statsCalculator;
     private final CostCalculator costCalculator;
+    private final CacheCommonSubqueries cacheCommonSubqueries;
     private final WarningCollector warningCollector;
     private final PlanOptimizersStatsCollector planOptimizersStatsCollector;
 
@@ -196,10 +199,11 @@ public class LogicalPlanner
             TypeAnalyzer typeAnalyzer,
             StatsCalculator statsCalculator,
             CostCalculator costCalculator,
+            CacheConfig cacheConfig,
             WarningCollector warningCollector,
             PlanOptimizersStatsCollector planOptimizersStatsCollector)
     {
-        this(session, planOptimizers, DISTRIBUTED_PLAN_SANITY_CHECKER, idAllocator, plannerContext, typeAnalyzer, statsCalculator, costCalculator, warningCollector, planOptimizersStatsCollector);
+        this(session, planOptimizers, DISTRIBUTED_PLAN_SANITY_CHECKER, idAllocator, plannerContext, typeAnalyzer, statsCalculator, costCalculator, cacheConfig, warningCollector, planOptimizersStatsCollector);
     }
 
     public LogicalPlanner(
@@ -211,6 +215,7 @@ public class LogicalPlanner
             TypeAnalyzer typeAnalyzer,
             StatsCalculator statsCalculator,
             CostCalculator costCalculator,
+            CacheConfig cacheConfig,
             WarningCollector warningCollector,
             PlanOptimizersStatsCollector planOptimizersStatsCollector)
     {
@@ -225,6 +230,12 @@ public class LogicalPlanner
         this.statisticsAggregationPlanner = new StatisticsAggregationPlanner(symbolAllocator, metadata, session);
         this.statsCalculator = requireNonNull(statsCalculator, "statsCalculator is null");
         this.costCalculator = requireNonNull(costCalculator, "costCalculator is null");
+        this.cacheCommonSubqueries = new CacheCommonSubqueries(
+                cacheConfig,
+                plannerContext,
+                session,
+                idAllocator,
+                symbolAllocator);
         this.warningCollector = requireNonNull(warningCollector, "warningCollector is null");
         this.planOptimizersStatsCollector = requireNonNull(planOptimizersStatsCollector, "planOptimizersStatsCollector is null");
     }
@@ -278,6 +289,8 @@ public class LogicalPlanner
                 planSanityChecker.validateFinalPlan(root, session, plannerContext, typeAnalyzer, symbolAllocator.getTypes(), warningCollector);
             }
         }
+
+        root = cacheCommonSubqueries.cacheSubqueries(root);
 
         TypeProvider types = symbolAllocator.getTypes();
 
