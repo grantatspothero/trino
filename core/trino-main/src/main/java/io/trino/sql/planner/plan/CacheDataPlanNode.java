@@ -59,6 +59,12 @@ public class CacheDataPlanNode
     }
 
     @Override
+    public <R, C> R accept(PlanVisitor<R, C> visitor, C context)
+    {
+        return visitor.visitCacheDataPlanNode(this, context);
+    }
+
+    @Override
     public PlanNode replaceChildren(List<PlanNode> newChildren)
     {
         return new CacheDataPlanNode(getId(), Iterables.getOnlyElement(newChildren));
