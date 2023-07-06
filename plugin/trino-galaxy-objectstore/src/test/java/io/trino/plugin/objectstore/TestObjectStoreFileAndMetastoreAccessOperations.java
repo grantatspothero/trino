@@ -596,7 +596,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
             String fileName = path.replaceFirst(".*/", "");
 
             if (path.contains("/metadata/") && path.endsWith("metadata.json")) {
-                return new FileOperation(METADATA_JSON, "%05d.metadata.json".formatted(IcebergUtil.parseVersion(path).orElseThrow()), operationType);
+                return new FileOperation(METADATA_JSON, "%05d.metadata.json".formatted(IcebergUtil.parseVersion(fileName)), operationType);
             }
             if (path.contains("/metadata/") && path.contains("/snap-")) {
                 String fileId = fileName.replaceFirst("snap-(?<randomNumber>\\d+)-(?<number>\\d+)-(?<uuid>" + UUID_PATTERN + ").avro", "snap-${number}.avro");
