@@ -52,6 +52,7 @@ import io.trino.spi.TrinoException;
 import io.trino.spi.block.Block;
 import io.trino.spi.connector.Assignment;
 import io.trino.spi.connector.BeginTableExecuteResult;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.CatalogSchemaTableName;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.ColumnMetadata;
@@ -302,6 +303,7 @@ public class IcebergMetadata
 
     private final LocationAccessControl locationAccessControl;
     private final TypeManager typeManager;
+    private final CatalogHandle trinoCatalogHandle;
     private final JsonCodec<CommitTaskData> commitTaskCodec;
     private final TrinoCatalog catalog;
     private final TrinoFileSystemFactory fileSystemFactory;
@@ -314,6 +316,7 @@ public class IcebergMetadata
     public IcebergMetadata(
             LocationAccessControl locationAccessControl,
             TypeManager typeManager,
+            CatalogHandle trinoCatalogHandle,
             JsonCodec<CommitTaskData> commitTaskCodec,
             TrinoCatalog catalog,
             TrinoFileSystemFactory fileSystemFactory,
@@ -321,6 +324,7 @@ public class IcebergMetadata
     {
         this.locationAccessControl = requireNonNull(locationAccessControl, "locationAccessControl is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
+        this.trinoCatalogHandle = requireNonNull(trinoCatalogHandle, "trinoCatalogHandle is null");
         this.commitTaskCodec = requireNonNull(commitTaskCodec, "commitTaskCodec is null");
         this.catalog = requireNonNull(catalog, "catalog is null");
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
@@ -407,6 +411,7 @@ public class IcebergMetadata
         Map<String, String> tableProperties = table.properties();
         String nameMappingJson = tableProperties.get(TableProperties.DEFAULT_NAME_MAPPING);
         return new IcebergTableHandle(
+                trinoCatalogHandle,
                 tableName.getSchemaName(),
                 tableName.getTableName(),
                 DATA,
@@ -2319,6 +2324,7 @@ public class IcebergMetadata
         }
 
         table = new IcebergTableHandle(
+                table.getCatalog(),
                 table.getSchemaName(),
                 table.getTableName(),
                 table.getTableType(),
@@ -2412,6 +2418,7 @@ public class IcebergMetadata
 
         return Optional.of(new ConstraintApplicationResult<>(
                 new IcebergTableHandle(
+                        table.getCatalog(),
                         table.getSchemaName(),
                         table.getTableName(),
                         table.getTableType(),
@@ -2559,6 +2566,7 @@ public class IcebergMetadata
 
         return tableStatisticsCache.computeIfAbsent(
                 new IcebergTableHandle(
+                        originalHandle.getCatalog(),
                         originalHandle.getSchemaName(),
                         originalHandle.getTableName(),
                         originalHandle.getTableType(),

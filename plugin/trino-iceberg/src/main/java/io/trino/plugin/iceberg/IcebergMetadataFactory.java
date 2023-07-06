@@ -18,6 +18,7 @@ import io.airlift.json.JsonCodec;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.hive.LocationAccessControl;
 import io.trino.plugin.iceberg.catalog.TrinoCatalogFactory;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.security.ConnectorIdentity;
 import io.trino.spi.type.TypeManager;
 
@@ -27,6 +28,7 @@ public class IcebergMetadataFactory
 {
     private final LocationAccessControl locationAccessControl;
     private final TypeManager typeManager;
+    private final CatalogHandle trinoCatalogHandle;
     private final JsonCodec<CommitTaskData> commitTaskCodec;
     private final TrinoCatalogFactory catalogFactory;
     private final TrinoFileSystemFactory fileSystemFactory;
@@ -36,6 +38,7 @@ public class IcebergMetadataFactory
     public IcebergMetadataFactory(
             LocationAccessControl locationAccessControl,
             TypeManager typeManager,
+            CatalogHandle trinoCatalogHandle,
             JsonCodec<CommitTaskData> commitTaskCodec,
             TrinoCatalogFactory catalogFactory,
             TrinoFileSystemFactory fileSystemFactory,
@@ -43,6 +46,7 @@ public class IcebergMetadataFactory
     {
         this.locationAccessControl = requireNonNull(locationAccessControl, "locationAccessControl is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
+        this.trinoCatalogHandle = requireNonNull(trinoCatalogHandle, "trinoCatalogHandle is null");
         this.commitTaskCodec = requireNonNull(commitTaskCodec, "commitTaskCodec is null");
         this.catalogFactory = requireNonNull(catalogFactory, "catalogFactory is null");
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
@@ -54,6 +58,7 @@ public class IcebergMetadataFactory
         return new IcebergMetadata(
                 locationAccessControl,
                 typeManager,
+                trinoCatalogHandle,
                 commitTaskCodec,
                 catalogFactory.create(identity),
                 fileSystemFactory,

@@ -22,6 +22,7 @@ import io.trino.plugin.iceberg.CommitTaskData;
 import io.trino.plugin.iceberg.IcebergMetadata;
 import io.trino.plugin.iceberg.TableStatisticsWriter;
 import io.trino.spi.TrinoException;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.ConnectorMetadata;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.ConnectorViewDefinition;
@@ -110,6 +111,7 @@ public abstract class BaseTrinoCatalogTest
             ConnectorMetadata icebergMetadata = new IcebergMetadata(
                     LocationAccessControl.ALLOW_ALL,
                     PLANNER_CONTEXT.getTypeManager(),
+                    CatalogHandle.fromId("iceberg:NORMAL:v12345"),
                     jsonCodec(CommitTaskData.class),
                     catalog,
                     connectorIdentity -> {
