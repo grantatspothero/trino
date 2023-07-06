@@ -86,6 +86,7 @@ import io.trino.spi.connector.RelationColumnsMetadata;
 import io.trino.spi.connector.RelationCommentMetadata;
 import io.trino.spi.connector.RetryMode;
 import io.trino.spi.connector.RowChangeParadigm;
+import io.trino.spi.connector.SaveMode;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SchemaTablePrefix;
 import io.trino.spi.connector.SystemTable;
@@ -855,7 +856,7 @@ public class ObjectStoreMetadata
     }
 
     @Override
-    public void createTable(ConnectorSession session, ConnectorTableMetadata tableMetadata, boolean ignoreExisting)
+    public void createTable(ConnectorSession session, ConnectorTableMetadata tableMetadata, SaveMode saveMode)
     {
         TableType tableType = tableType(tableMetadata);
         if (tableType == HUDI) {
@@ -865,7 +866,7 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "%s tables do not support NOT NULL columns".formatted(tableType.displayName()));
         }
         tableMetadata = unwrap(tableType, tableMetadata);
-        delegate(tableType).createTable(unwrap(tableType, session), tableMetadata, ignoreExisting);
+        delegate(tableType).createTable(unwrap(tableType, session), tableMetadata, saveMode);
         relationTypeCache.record(tableMetadata.getTableSchema().getTable(), tableType);
         flushMetadataCache(tableMetadata.getTable());
     }
@@ -1118,14 +1119,14 @@ public class ObjectStoreMetadata
     }
 
     @Override
-    public ConnectorOutputTableHandle beginCreateTable(ConnectorSession session, ConnectorTableMetadata tableMetadata, Optional<ConnectorTableLayout> layout, RetryMode retryMode)
+    public ConnectorOutputTableHandle beginCreateTable(ConnectorSession session, ConnectorTableMetadata tableMetadata, Optional<ConnectorTableLayout> layout, RetryMode retryMode, boolean replace)
     {
         TableType tableType = tableType(tableMetadata);
         if (tableType == HUDI) {
             throw new TrinoException(NOT_SUPPORTED, "Table creation is not supported for Hudi");
         }
         tableMetadata = unwrap(tableType, tableMetadata);
-        return delegate(tableType).beginCreateTable(unwrap(tableType, session), tableMetadata, layout, retryMode);
+        return delegate(tableType).beginCreateTable(unwrap(tableType, session), tableMetadata, layout, retryMode, replace);
     }
 
     @Override

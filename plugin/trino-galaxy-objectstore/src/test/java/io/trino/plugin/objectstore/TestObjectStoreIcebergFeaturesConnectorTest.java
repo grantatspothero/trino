@@ -420,6 +420,48 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
+    public void testCreateOrReplaceTableAsSelectWhenTableDoesNotExists()
+    {
+        skipDuplicateTestCoverage("testCreateOrReplaceTableAsSelectWhenTableDoesNotExists");
+    }
+
+    @Override
+    public void testCreateOrReplaceTableConcurrently()
+    {
+        skipDuplicateTestCoverage("testCreateOrReplaceTableConcurrently");
+    }
+
+    @Override
+    public void testCreateOrReplaceTableWhenTableAlreadyExistsSameSchema()
+    {
+        skipDuplicateTestCoverage("testCreateOrReplaceTableWhenTableAlreadyExistsSameSchema");
+    }
+
+    @Override
+    public void testCreateOrReplaceTableWhenTableAlreadyExistsSameSchemaNoData()
+    {
+        skipDuplicateTestCoverage("testCreateOrReplaceTableWhenTableAlreadyExistsSameSchemaNoData");
+    }
+
+    @Override
+    public void testCreateOrReplaceTableWhenTableDoesNotExist()
+    {
+        skipDuplicateTestCoverage("testCreateOrReplaceTableWhenTableDoesNotExist");
+    }
+
+    @Override
+    public void testCreateOrReplaceTableWithDifferentDataType()
+    {
+        skipDuplicateTestCoverage("testCreateOrReplaceTableWithDifferentDataType");
+    }
+
+    @Override
+    public void testCreateOrReplaceTableWithNewColumnNames()
+    {
+        skipDuplicateTestCoverage("testCreateOrReplaceTableWithNewColumnNames");
+    }
+
+    @Override
     public void testCreateSchema()
     {
         skipDuplicateTestCoverage("testCreateSchema");

@@ -63,6 +63,7 @@ import io.trino.spi.connector.RetryMode;
 import io.trino.spi.connector.RowChangeParadigm;
 import io.trino.spi.connector.SampleApplicationResult;
 import io.trino.spi.connector.SampleType;
+import io.trino.spi.connector.SaveMode;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SchemaTablePrefix;
 import io.trino.spi.connector.SortItem;
@@ -275,9 +276,9 @@ public class MockPlanAlternativeMetadata
     }
 
     @Override
-    public void createTable(ConnectorSession session, ConnectorTableMetadata tableMetadata, boolean ignoreExisting)
+    public void createTable(ConnectorSession session, ConnectorTableMetadata tableMetadata, SaveMode saveMode)
     {
-        delegate.createTable(session, tableMetadata, ignoreExisting);
+        delegate.createTable(session, tableMetadata, saveMode);
     }
 
     @Override
@@ -442,9 +443,9 @@ public class MockPlanAlternativeMetadata
     }
 
     @Override
-    public ConnectorOutputTableHandle beginCreateTable(ConnectorSession session, ConnectorTableMetadata tableMetadata, Optional<ConnectorTableLayout> layout, RetryMode retryMode)
+    public ConnectorOutputTableHandle beginCreateTable(ConnectorSession session, ConnectorTableMetadata tableMetadata, Optional<ConnectorTableLayout> layout, RetryMode retryMode, boolean replace)
     {
-        return delegate.beginCreateTable(session, tableMetadata, layout, retryMode);
+        return delegate.beginCreateTable(session, tableMetadata, layout, retryMode, replace);
     }
 
     @Override

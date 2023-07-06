@@ -74,6 +74,7 @@ import io.trino.spi.connector.RelationCommentMetadata;
 import io.trino.spi.connector.RowChangeParadigm;
 import io.trino.spi.connector.SampleApplicationResult;
 import io.trino.spi.connector.SampleType;
+import io.trino.spi.connector.SaveMode;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SortItem;
 import io.trino.spi.connector.SystemTable;
@@ -1339,9 +1340,9 @@ public class TestMultipleDistinctAggregationsToSubqueries
         }
 
         @Override
-        public void createTable(Session session, String catalogName, ConnectorTableMetadata tableMetadata, boolean ignoreExisting)
+        public void createTable(Session session, String catalogName, ConnectorTableMetadata tableMetadata, SaveMode saveMode)
         {
-            metadata.createTable(session, catalogName, tableMetadata, ignoreExisting);
+            metadata.createTable(session, catalogName, tableMetadata, saveMode);
         }
 
         @Override
@@ -1465,9 +1466,9 @@ public class TestMultipleDistinctAggregationsToSubqueries
         }
 
         @Override
-        public OutputTableHandle beginCreateTable(Session session, String catalogName, ConnectorTableMetadata tableMetadata, Optional<TableLayout> layout)
+        public OutputTableHandle beginCreateTable(Session session, String catalogName, ConnectorTableMetadata tableMetadata, Optional<TableLayout> layout, boolean replace)
         {
-            return metadata.beginCreateTable(session, catalogName, tableMetadata, layout);
+            return metadata.beginCreateTable(session, catalogName, tableMetadata, layout, replace);
         }
 
         @Override
