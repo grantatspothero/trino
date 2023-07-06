@@ -51,7 +51,6 @@ public class ResultsCacheManager
                 resultsCacheParameters.key(),
                 queryId,
                 maximumSizeBytes,
-                resultsCacheParameters.ttl(),
                 resultsCacheClient,
                 executorService);
     }

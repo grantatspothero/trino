@@ -98,7 +98,6 @@ import static io.trino.execution.QueryState.FAILED;
 import static io.trino.execution.QueryState.PLANNING;
 import static io.trino.server.DynamicFilterService.DynamicFiltersStats;
 import static io.trino.server.resultscache.ResultsCacheSessionProperties.getResultsCacheKey;
-import static io.trino.server.resultscache.ResultsCacheSessionProperties.getResultsCacheTtl;
 import static io.trino.spi.StandardErrorCode.STACK_OVERFLOW;
 import static io.trino.tracing.ScopedSpan.scopedSpan;
 import static java.lang.Thread.currentThread;
@@ -732,12 +731,10 @@ public class SqlQueryExecution
 
     private static Optional<ResultsCacheParameters> createResultsCacheParameters(Session session)
     {
-        return getResultsCacheKey(session).flatMap(cacheKey ->
-                getResultsCacheTtl(session).map(ttl ->
-                        new ResultsCacheParameters(
-                                cacheKey,
-                                ttl,
-                                ResultsCacheSessionProperties.getResultsCacheEntryMaxSizeBytes(session))));
+        return getResultsCacheKey(session).map(cacheKey ->
+                new ResultsCacheParameters(
+                        cacheKey,
+                        ResultsCacheSessionProperties.getResultsCacheEntryMaxSizeBytes(session)));
     }
 
     private static class PlanRoot

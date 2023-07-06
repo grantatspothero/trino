@@ -15,7 +15,6 @@
 package io.trino.server.resultscache;
 
 import com.google.common.collect.ImmutableList;
-import io.airlift.units.Duration;
 import io.trino.Session;
 import io.trino.SystemSessionPropertiesProvider;
 import io.trino.spi.session.PropertyMetadata;
@@ -23,7 +22,6 @@ import io.trino.spi.session.PropertyMetadata;
 import java.util.List;
 import java.util.Optional;
 
-import static io.trino.plugin.base.session.PropertyMetadataUtil.durationProperty;
 import static io.trino.spi.session.PropertyMetadata.longProperty;
 import static io.trino.spi.session.PropertyMetadata.stringProperty;
 
@@ -31,18 +29,12 @@ public final class ResultsCacheSessionProperties
         implements SystemSessionPropertiesProvider
 {
     private static final String CACHE_KEY = "galaxy_results_cache_key";
-    private static final String CACHE_TTL = "galaxy_results_cache_ttl";
     private static final String CACHE_ENTRY_MAX_SIZE_BYTES = "galaxy_results_cache_entry_max_size_bytes";
 
     private static final List<PropertyMetadata<?>> sessionProperties = ImmutableList.of(
             stringProperty(
                     CACHE_KEY,
                     "Unique key to identify the cache entry",
-                    null,
-                    true),
-            durationProperty(
-                    CACHE_TTL,
-                    "TTL for the cache entry",
                     null,
                     true),
             longProperty(
@@ -60,11 +52,6 @@ public final class ResultsCacheSessionProperties
     public static Optional<String> getResultsCacheKey(Session session)
     {
         return Optional.ofNullable(session.getSystemProperty(CACHE_KEY, String.class));
-    }
-
-    public static Optional<Duration> getResultsCacheTtl(Session session)
-    {
-        return Optional.ofNullable(session.getSystemProperty(CACHE_TTL, Duration.class));
     }
 
     public static Optional<Long> getResultsCacheEntryMaxSizeBytes(Session session)

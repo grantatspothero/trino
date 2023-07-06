@@ -19,7 +19,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airlift.http.client.HttpClient;
 import io.airlift.json.ObjectMapperProvider;
 import io.airlift.log.Logger;
-import io.airlift.units.Duration;
 import io.starburst.stargate.resultscache.client.CacheClient;
 import io.starburst.stargate.resultscache.model.CacheEntry;
 import io.trino.client.Column;
@@ -53,14 +52,14 @@ public class ResultsCacheClient
             QueryId queryId,
             List<Column> columns,
             List<List<Object>> data,
-            Duration expirationInterval)
+            Instant creation)
     {
         log.debug("Sending cache entry %s for query %s to results cache", key, queryId);
         try {
             cacheClient.insertCacheEntry(
                     cacheBaseUri,
                     getTokenSupplier(identity),
-                    createCacheEntry(key, queryId, columns, data, expirationInterval));
+                    createCacheEntry(key, queryId, columns, data, creation));
         }
         catch (JsonProcessingException ex) {
             throw new RuntimeException("Error serializing results to JSON", ex);
@@ -77,12 +76,11 @@ public class ResultsCacheClient
             QueryId queryId,
             List<Column> columns,
             List<List<Object>> data,
-            Duration expirationInterval)
+            Instant creation)
             throws JsonProcessingException
     {
-        Instant expirationTime = Instant.now().plusMillis(expirationInterval.toMillis());
         List<List<String>> dataStr = data.stream().map(singleRow -> singleRow.stream().map(ResultsCacheClient::serializeObject).collect(toImmutableList())).collect(toImmutableList());
-        return new CacheEntry(cacheKey, queryId.toString(), columns, dataStr, expirationTime);
+        return new CacheEntry(cacheKey, queryId.toString(), columns, dataStr, creation);
     }
 
     private static String serializeObject(Object object)

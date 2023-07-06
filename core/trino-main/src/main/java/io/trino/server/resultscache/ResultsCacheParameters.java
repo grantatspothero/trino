@@ -14,18 +14,15 @@
 
 package io.trino.server.resultscache;
 
-import io.airlift.units.Duration;
-
 import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
-public record ResultsCacheParameters(String key, Duration ttl, Optional<Long> maximumSizeBytes)
+public record ResultsCacheParameters(String key, Optional<Long> maximumSizeBytes)
 {
     public ResultsCacheParameters
     {
         requireNonNull(key, "key is null");
-        requireNonNull(ttl, "ttl is null");
         requireNonNull(maximumSizeBytes, "maximumSizeBytes is null");
     }
 }
