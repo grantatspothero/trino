@@ -26,13 +26,13 @@ import java.util.List;
 import static java.util.Objects.requireNonNull;
 
 @Immutable
-public class CachePlanNode
+public class CacheDataPlanNode
         extends PlanNode
 {
     private final PlanNode source;
 
     @JsonCreator
-    public CachePlanNode(
+    public CacheDataPlanNode(
             @JsonProperty("id") PlanNodeId id,
             @JsonProperty("source") PlanNode source)
     {
@@ -61,6 +61,6 @@ public class CachePlanNode
     @Override
     public PlanNode replaceChildren(List<PlanNode> newChildren)
     {
-        return new CachePlanNode(getId(), Iterables.getOnlyElement(newChildren));
+        return new CacheDataPlanNode(getId(), Iterables.getOnlyElement(newChildren));
     }
 }
