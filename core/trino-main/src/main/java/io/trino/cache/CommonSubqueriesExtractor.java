@@ -25,7 +25,6 @@ import io.trino.spi.cache.PlanSignature;
 import io.trino.spi.cache.SignatureKey;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.predicate.TupleDomain;
-import io.trino.spi.type.Type;
 import io.trino.sql.PlannerContext;
 import io.trino.sql.planner.DomainTranslator;
 import io.trino.sql.planner.DomainTranslator.ExtractionResult;
@@ -138,14 +137,15 @@ public final class CommonSubqueriesExtractor
                     .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
 
             // Extract CacheColumnIds used in common subquery
-            Map<CacheColumnId, Type> commonColumnIds = new LinkedHashMap<>();
+            Map<CacheColumnId, Symbol> commonColumnIds = new LinkedHashMap<>();
             subplans.stream()
                     .flatMap(subplan -> subplan.getOriginalSymbolMapping().entrySet().stream())
-                    .forEach(entry -> commonColumnIds.putIfAbsent(entry.getKey(), symbolAllocator.getTypes().get(entry.getValue())));
+                    .forEach(entry -> commonColumnIds.putIfAbsent(entry.getKey(), entry.getValue()));
 
             PlanSignature planSignature = computePlanSignature(
                     plannerContext,
                     session,
+                    symbolAllocator.getTypes(),
                     commonColumnIds,
                     tableId,
                     commonPredicate,
@@ -172,7 +172,8 @@ public final class CommonSubqueriesExtractor
     private static PlanSignature computePlanSignature(
             PlannerContext plannerContext,
             Session session,
-            Map<CacheColumnId, Type> commonColumnIds,
+            TypeProvider typeProvider,
+            Map<CacheColumnId, Symbol> commonColumnIds,
             CacheTableId tableId,
             Expression predicate,
             List<CacheColumnId> projections)
@@ -186,7 +187,7 @@ public final class CommonSubqueriesExtractor
                     session,
                     predicate,
                     TypeProvider.viewOf(commonColumnIds.entrySet().stream()
-                            .collect(toImmutableMap(entry -> columnIdToSymbol(entry.getKey()), Map.Entry::getValue))));
+                            .collect(toImmutableMap(entry -> columnIdToSymbol(entry.getKey()), entry -> typeProvider.get(entry.getValue())))));
             // Only domains for projected columns can be part of signature
             Set<CacheColumnId> projectionSet = ImmutableSet.copyOf(projections);
             signaturePredicate = extractionResult.getTupleDomain()
@@ -215,12 +216,12 @@ public final class CommonSubqueriesExtractor
             Map<CacheColumnId, Expression> commonProjections,
             Expression commonPredicate,
             Map<CacheColumnId, ColumnHandle> commonColumnHandles,
-            Map<CacheColumnId, Type> commonColumnIds,
+            Map<CacheColumnId, Symbol> commonColumnIds,
             PlanSignature planSignature)
     {
         Map<CacheColumnId, Symbol> subqueryColumnIdMapping = new HashMap<>(subplan.getOriginalSymbolMapping());
         // Create symbol mapping for column ids that were not used in original plan
-        commonColumnIds.forEach((key, value) -> subqueryColumnIdMapping.putIfAbsent(key, symbolAllocator.newSymbol(key.toString(), value)));
+        commonColumnIds.forEach((key, value) -> subqueryColumnIdMapping.putIfAbsent(key, symbolAllocator.newSymbol(value)));
         SymbolMapper subquerySymbolMapper = new SymbolMapper(subqueryColumnIdMapping.entrySet().stream()
                 .collect(toImmutableMap(entry -> columnIdToSymbol(entry.getKey()), Map.Entry::getValue))::get);
 
