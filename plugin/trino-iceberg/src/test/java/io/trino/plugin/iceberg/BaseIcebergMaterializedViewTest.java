@@ -165,6 +165,7 @@ public abstract class BaseIcebergMaterializedViewTest
         assertUpdate("CREATE MATERIALIZED VIEW test_mv_show_create " +
                 "WITH (\n" +
                 "   partitioning = ARRAY['_date'],\n" +
+                (isObjectStore() ? "" : "   format = 'ORC',\n") +
                 "   orc_bloom_filter_columns = ARRAY['_date'],\n" +
                 "   orc_bloom_filter_fpp = 0.1) AS " +
                 "SELECT _bigint, _date FROM base_table1");
@@ -447,7 +448,7 @@ public abstract class BaseIcebergMaterializedViewTest
         assertThat((String) computeScalar("SHOW CREATE MATERIALIZED VIEW materialized_view_window"))
                 .matches("\\QCREATE MATERIALIZED VIEW " + qualifiedMaterializedViewName + "\n" +
                         "WITH (\n" +
-                        (isObjectStore() ? "" : "   format = 'ORC',\n") +
+                        (isObjectStore() ? "" : "   format = 'PARQUET',\n") +
                         (isObjectStore() ? "" : "   format_version = 2,\n") +
                         (isObjectStore() ? "" : "   location = '" + getSchemaDirectory() + "/st_\\E[0-9a-f]+-[0-9a-f]+\\Q',\n") +
                         "   partitioning = ARRAY['_date'],\n" +

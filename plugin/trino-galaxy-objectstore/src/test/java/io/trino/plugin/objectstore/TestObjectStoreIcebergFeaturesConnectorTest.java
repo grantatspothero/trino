@@ -14,7 +14,6 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableMap;
-import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.iceberg.BaseIcebergConnectorTest;
 import io.trino.plugin.iceberg.IcebergConfig;
@@ -36,7 +35,7 @@ import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkState;
 import static io.trino.plugin.base.util.Closables.closeAllSuppress;
-import static io.trino.plugin.iceberg.IcebergTestUtils.checkOrcFileSorting;
+import static io.trino.plugin.iceberg.IcebergTestUtils.checkParquetFileSorting;
 import static io.trino.plugin.objectstore.ObjectStoreQueryRunner.initializeTpchTables;
 import static io.trino.testing.TestingConnectorSession.SESSION;
 import static io.trino.testing.TestingSession.testSessionBuilder;
@@ -138,22 +137,24 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     @Override
     protected boolean supportsIcebergFileStatistics(String typeName)
     {
-        checkState(format == IcebergFileFormat.ORC, "The logic here is appropriate for ORC, got %s", format);
-        return !typeName.equalsIgnoreCase("varbinary") &&
-                !typeName.equalsIgnoreCase("uuid");
+        checkState(format == IcebergFileFormat.PARQUET, "The logic here is appropriate for PARQUET, got %s", format);
+        return true;
     }
 
     @Override
     protected boolean supportsRowGroupStatistics(String typeName)
     {
-        checkState(format == IcebergFileFormat.ORC, "The logic here is appropriate for ORC, got %s", format);
-        return !typeName.equalsIgnoreCase("varbinary");
+        checkState(format == IcebergFileFormat.PARQUET, "The logic here is appropriate for PARQUET, got %s", format);
+        return !(typeName.equalsIgnoreCase("varbinary") ||
+                typeName.equalsIgnoreCase("time(6)") ||
+                typeName.equalsIgnoreCase("timestamp(6) with time zone"));
     }
 
     @Override
     protected boolean isFileSorted(String path, String sortColumnName)
     {
-        return checkOrcFileSorting(fileSystem, Location.of(path), sortColumnName);
+        checkState(format == IcebergFileFormat.PARQUET, "The logic here is appropriate for PARQUET, got %s", format);
+        return checkParquetFileSorting(path, sortColumnName);
     }
 
     @BeforeMethod(alwaysRun = true)

@@ -80,8 +80,8 @@ public class TestObjectStoreIcebergConnectorTest
     @Override
     protected boolean supportsPhysicalPushdown()
     {
-        // TODO https://github.com/trinodb/trino/issues/17156
-        return false;
+        // https://github.com/trinodb/trino/issues/17156 is done for Parquet already and Parquet is now default file format for Iceberg
+        return true;
     }
 
     @BeforeClass
@@ -117,6 +117,9 @@ public class TestObjectStoreIcebergConnectorTest
     protected Optional<SetColumnTypeSetup> filterSetColumnTypesDataProvider(SetColumnTypeSetup setup)
     {
         switch ("%s -> %s".formatted(setup.sourceColumnType(), setup.newColumnType())) {
+            case "row(x integer) -> row(y integer)":
+                // TODO https://github.com/trinodb/trino/issues/15822 The connector returns incorrect NULL when a field in row type doesn't exist in Parquet files
+                return Optional.of(setup.withNewValueLiteral("NULL"));
             case "bigint -> integer":
             case "decimal(5,3) -> decimal(5,2)":
             case "varchar -> char(20)":
@@ -187,7 +190,7 @@ public class TestObjectStoreIcebergConnectorTest
                 "   comment varchar\n" +
                 ")\n" +
                 "WITH (\n" +
-                "   format = 'ORC',\n" +
+                "   format = 'PARQUET',\n" +
                 "   format_version = 2,\n" +
                 "   location = 's3://test-bucket/tpch/orders-\\E.*\\Q',\n" +
                 "   type = 'ICEBERG'\n" +

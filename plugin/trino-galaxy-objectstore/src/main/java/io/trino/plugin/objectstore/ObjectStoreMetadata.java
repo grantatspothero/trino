@@ -1283,13 +1283,21 @@ public class ObjectStoreMetadata
         Map<String, Object> properties = new HashMap<>(tableProperties);
         switch (tableType) {
             case HIVE -> {
-                Optional.ofNullable(properties.get("format")).ifPresent(value ->
-                        properties.put("format", decodeProperty(hiveFormatProperty, value)));
+                Optional.ofNullable(properties.get("format")).ifPresent(value -> {
+                    if (value.equals("DEFAULT")) {
+                        value = "ORC";
+                    }
+                    properties.put("format", decodeProperty(hiveFormatProperty, value));
+                });
                 Optional.ofNullable(properties.get("sorted_by")).ifPresent(value ->
                         properties.put("sorted_by", decodeProperty(hiveSortedByProperty, value)));
             }
-            case ICEBERG -> Optional.ofNullable(properties.get("format")).ifPresent(value ->
-                    properties.put("format", decodeProperty(icebergFormatProperty, value)));
+            case ICEBERG -> Optional.ofNullable(properties.get("format")).ifPresent(value -> {
+                if (value.equals("DEFAULT")) {
+                    value = "PARQUET";
+                }
+                properties.put("format", decodeProperty(icebergFormatProperty, value));
+            });
             case DELTA, HUDI -> { /* ignore 'format' property */ }
             default -> throw new VerifyException("Unhandled type: " + tableType);
         }

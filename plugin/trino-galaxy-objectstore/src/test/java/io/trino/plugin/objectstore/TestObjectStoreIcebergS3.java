@@ -40,7 +40,7 @@ public class TestObjectStoreIcebergS3
         {
             String locationDirectory = location.endsWith("/") ? location : location + "/";
             String partitionPart = partitionColumn.isEmpty() ? "" : partitionColumn + "=[a-z0-9]+/";
-            assertThat(dataFile).matches("^" + locationDirectory + "data/" + partitionPart + "[a-zA-Z0-9_-]+.orc$");
+            assertThat(dataFile).matches("^" + locationDirectory + "data/" + partitionPart + "[a-zA-Z0-9_-]+.parquet$");
             verifyPathExist(dataFile);
         });
     }
@@ -99,18 +99,22 @@ public class TestObjectStoreIcebergS3
 
         String expectedStatistics = """
                 VALUES
-                ('col_str', null, 4.0, 0.0, null, null, null),
-                ('col_int', null, 4.0, 0.0, null, 1, 4),
-                (null, null, null, null, 4.0, null, null)""";
+                ('col_str', 4e0, 0e0, null, null, null),
+                ('col_int', 4e0, 0e0, null, '1', '4'),
+                (null, null, null, 4e0, null, null)""";
 
-        //Check extended statistics collection on write
-        assertQuery("SHOW STATS FOR " + tableName, expectedStatistics);
+        // Check extended statistics collection on write
+        assertThat(query("SHOW STATS FOR " + tableName)).exceptColumns("data_size")
+                .skippingTypesCheck()
+                .matches(expectedStatistics);
 
         // drop stats
         assertUpdate("ALTER TABLE " + tableName + " EXECUTE DROP_EXTENDED_STATS");
-        //Check extended statistics collection explicitly
+        // Check extended statistics collection explicitly
         assertUpdate("ANALYZE " + tableName);
-        assertQuery("SHOW STATS FOR " + tableName, expectedStatistics);
+        assertThat(query("SHOW STATS FOR " + tableName)).exceptColumns("data_size")
+                .skippingTypesCheck()
+                .matches(expectedStatistics);
 
         assertUpdate("DROP TABLE " + tableName);
     }

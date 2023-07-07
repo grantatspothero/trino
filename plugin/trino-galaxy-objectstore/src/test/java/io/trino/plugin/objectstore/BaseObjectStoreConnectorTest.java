@@ -533,7 +533,7 @@ public abstract class BaseObjectStoreConnectorTest
                 "   xyz varchar\n" +
                 ")\n" +
                 "WITH (\n" +
-                "   format = 'ORC',\n" +
+                "   format = 'PARQUET',\n" +
                 "   format_version = 2,\n" +
                 "   location = 's3://test-bucket/tpch/test_iceberg_specific_property\\E" + locationUuidRegex() + "\\Q',\n" +
                 "   partitioning = ARRAY['bucket(abc, 13)'],\n" +

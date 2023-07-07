@@ -146,7 +146,7 @@ public final class ObjectStoreTableProperties
         addProperty(properties, stringProperty(
                 "format",
                 "File format for the table",
-                "ORC",
+                "DEFAULT",
                 false));
 
         addProperty(properties, enumProperty(
