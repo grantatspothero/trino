@@ -166,6 +166,11 @@ public class SplitSourceFactory
 
         private SplitSource createSplitSource(TableHandle table, Map<Symbol, ColumnHandle> assignments, Optional<Expression> filterPredicate)
         {
+            return createSplitSource(table, assignments, filterPredicate, false);
+        }
+
+        private SplitSource createSplitSource(TableHandle table, Map<Symbol, ColumnHandle> assignments, Optional<Expression> filterPredicate, boolean preferDeterministicSplits)
+        {
             List<DynamicFilters.Descriptor> dynamicFilters = filterPredicate
                     .map(DynamicFilters::extractDynamicFilters)
                     .map(DynamicFilters.ExtractResult::getDynamicConjuncts)
@@ -189,6 +194,7 @@ public class SplitSourceFactory
                     stageSpan,
                     table,
                     dynamicFilter,
+                    preferDeterministicSplits,
                     constraint);
         }
 
