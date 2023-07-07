@@ -762,9 +762,9 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
-    public void testLargeIn(int arg0)
+    public void testLargeIn()
     {
-        skipDuplicateTestCoverage("testLargeIn", int.class);
+        skipDuplicateTestCoverage("testLargeIn");
     }
 
     @Override
