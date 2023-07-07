@@ -56,6 +56,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.trino.cache.CanonicalSubplanExtractor.extractCanonicalSubplans;
+import static io.trino.plugin.base.cache.CacheUtils.normalizeTupleDomain;
 import static io.trino.sql.DynamicFilters.extractDynamicFilters;
 import static io.trino.sql.DynamicFilters.extractSourceSymbol;
 import static io.trino.sql.ExpressionFormatter.formatExpression;
@@ -209,7 +210,11 @@ public final class CommonSubqueriesExtractor
             }
         }
 
-        return new PlanSignature(signatureKey, Optional.empty(), projections, signaturePredicate);
+        return new PlanSignature(
+                signatureKey,
+                Optional.empty(),
+                projections,
+                normalizeTupleDomain(signaturePredicate));
     }
 
     private static CommonPlanAdaptation createCommonPlanAdaptation(

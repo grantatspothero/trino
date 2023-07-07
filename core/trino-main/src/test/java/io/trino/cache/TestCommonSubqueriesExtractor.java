@@ -22,6 +22,7 @@ import io.trino.connector.MockConnectorFactory;
 import io.trino.connector.MockConnectorTableHandle;
 import io.trino.cost.StatsAndCosts;
 import io.trino.metadata.TableHandle;
+import io.trino.spi.block.LongArrayBlockBuilder;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.cache.PlanSignature;
@@ -29,6 +30,7 @@ import io.trino.spi.cache.SignatureKey;
 import io.trino.spi.connector.ColumnMetadata;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.predicate.Domain;
+import io.trino.spi.predicate.SortedRangeSet;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.predicate.ValueSet;
 import io.trino.sql.DynamicFilters;
@@ -61,6 +63,7 @@ import java.util.function.Function;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.cost.StatsCalculator.noopStatsCalculator;
 import static io.trino.metadata.FunctionManager.createTestingFunctionManager;
+import static io.trino.spi.block.BlockTestUtils.assertBlockEquals;
 import static io.trino.spi.predicate.Range.greaterThan;
 import static io.trino.spi.predicate.Range.lessThan;
 import static io.trino.spi.type.BigintType.BIGINT;
@@ -347,13 +350,25 @@ public class TestCommonSubqueriesExtractor
                         commonSubplan));
 
         // make sure plan signatures are same and contain domain
+        SortedRangeSet expectedValues = (SortedRangeSet) ValueSet.ofRanges(lessThan(BIGINT, 0L), greaterThan(BIGINT, 42L));
+        TupleDomain<CacheColumnId> expectedTupleDomain = TupleDomain.withColumnDomains(ImmutableMap.of(
+                new CacheColumnId("cache_column1"), Domain.create(expectedValues, false)));
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(subqueryB.getCommonSubplanSignature());
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
                 new SignatureKey("cache_table_id"),
                 Optional.empty(),
                 ImmutableList.of(new CacheColumnId("cache_column1")),
-                TupleDomain.withColumnDomains(ImmutableMap.of(
-                        new CacheColumnId("cache_column1"), Domain.create(ValueSet.ofRanges(lessThan(BIGINT, 0L), greaterThan(BIGINT, 42L)), false)))));
+                expectedTupleDomain));
+
+        // make sure signature tuple domain is normalized
+        SortedRangeSet actualValues = (SortedRangeSet) subqueryA.getCommonSubplanSignature()
+                .getPredicate()
+                .getDomains()
+                .orElseThrow()
+                .get(new CacheColumnId("cache_column1"))
+                .getValues();
+        assertBlockEquals(BIGINT, actualValues.getSortedRanges(), expectedValues.getSortedRanges());
+        assertThat(actualValues.getSortedRanges()).isInstanceOf(LongArrayBlockBuilder.class);
     }
 
     @Test
