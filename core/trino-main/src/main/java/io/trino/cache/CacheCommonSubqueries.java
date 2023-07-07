@@ -16,10 +16,12 @@ package io.trino.cache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.trino.Session;
+import io.trino.cost.StatsProvider;
 import io.trino.spi.cache.CacheManager;
 import io.trino.sql.PlannerContext;
 import io.trino.sql.planner.PlanNodeIdAllocator;
 import io.trino.sql.planner.SymbolAllocator;
+import io.trino.sql.planner.TypeAnalyzer;
 import io.trino.sql.planner.optimizations.PlanNodeSearcher;
 import io.trino.sql.planner.plan.CacheDataPlanNode;
 import io.trino.sql.planner.plan.ChooseAlternativeNode;
@@ -52,22 +54,25 @@ public class CacheCommonSubqueries
     private final Session session;
     private final PlanNodeIdAllocator idAllocator;
     private final SymbolAllocator symbolAllocator;
+    private final TypeAnalyzer typeAnalyzer;
 
     public CacheCommonSubqueries(
             CacheConfig cacheConfig,
             PlannerContext plannerContext,
             Session session,
             PlanNodeIdAllocator idAllocator,
-            SymbolAllocator symbolAllocator)
+            SymbolAllocator symbolAllocator,
+            TypeAnalyzer typeAnalyzer)
     {
         this.cacheEnabled = requireNonNull(cacheConfig, "cacheConfig is null").isEnabled();
         this.plannerContext = requireNonNull(plannerContext, "plannerContext is null");
         this.session = requireNonNull(session, "session is null");
         this.idAllocator = requireNonNull(idAllocator, "idAllocator is null");
         this.symbolAllocator = requireNonNull(symbolAllocator, "symbolAllocator is null");
+        this.typeAnalyzer = requireNonNull(typeAnalyzer, "typeAnalyzer is null");
     }
 
-    public PlanNode cacheSubqueries(PlanNode node)
+    public PlanNode cacheSubqueries(PlanNode node, StatsProvider statsProvider)
     {
         if (!cacheEnabled || !isCacheSubqueriesEnabled(session)) {
             return node;
@@ -78,6 +83,8 @@ public class CacheCommonSubqueries
                 session,
                 idAllocator,
                 symbolAllocator,
+                typeAnalyzer,
+                statsProvider,
                 node);
 
         // add alternatives for each adaptation

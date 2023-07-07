@@ -20,16 +20,22 @@ import io.trino.Session;
 import io.trino.connector.MockConnectorColumnHandle;
 import io.trino.connector.MockConnectorFactory;
 import io.trino.connector.MockConnectorTableHandle;
+import io.trino.cost.PlanNodeStatsEstimate;
 import io.trino.cost.StatsAndCosts;
+import io.trino.metadata.Metadata;
 import io.trino.metadata.TableHandle;
 import io.trino.spi.block.LongArrayBlockBuilder;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.cache.PlanSignature;
 import io.trino.spi.cache.SignatureKey;
+import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.ColumnMetadata;
+import io.trino.spi.connector.ConnectorTableProperties;
+import io.trino.spi.connector.ConstraintApplicationResult;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.predicate.Domain;
+import io.trino.spi.predicate.Range;
 import io.trino.spi.predicate.SortedRangeSet;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.predicate.ValueSet;
@@ -42,6 +48,8 @@ import io.trino.sql.planner.SymbolsExtractor;
 import io.trino.sql.planner.assertions.BasePlanTest;
 import io.trino.sql.planner.assertions.PlanAssert;
 import io.trino.sql.planner.assertions.PlanMatchPattern;
+import io.trino.sql.planner.iterative.rule.test.PlanBuilder;
+import io.trino.sql.planner.iterative.rule.test.RuleTester;
 import io.trino.sql.planner.optimizations.PlanNodeSearcher;
 import io.trino.sql.planner.plan.Assignments;
 import io.trino.sql.planner.plan.DynamicFilterId;
@@ -74,9 +82,12 @@ import static io.trino.sql.planner.ExpressionExtractor.extractExpressions;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.filter;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.strictProject;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.strictTableScan;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.tableScan;
 import static io.trino.sql.planner.iterative.rule.test.PlanBuilder.expression;
+import static io.trino.sql.tree.BooleanLiteral.TRUE_LITERAL;
 import static io.trino.testing.TestingHandles.TEST_CATALOG_NAME;
 import static io.trino.testing.TestingSession.testSessionBuilder;
+import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestCommonSubqueriesExtractor
@@ -91,6 +102,23 @@ public class TestCommonSubqueriesExtractor
             .build();
     private static final MockConnectorColumnHandle HANDLE_1 = new MockConnectorColumnHandle("column1", BIGINT);
     private static final MockConnectorColumnHandle HANDLE_2 = new MockConnectorColumnHandle("column2", BIGINT);
+    private static final TupleDomain<ColumnHandle> CONSTRAINT_1 = TupleDomain.withColumnDomains(ImmutableMap.of(
+            HANDLE_1,
+            Domain.create(ValueSet.ofRanges(
+                    Range.lessThan(BIGINT, 50L),
+                    Range.greaterThan(BIGINT, 150L)), false)));
+    private static final TupleDomain<ColumnHandle> CONSTRAINT_2 = TupleDomain.withColumnDomains(ImmutableMap.of(
+            HANDLE_1,
+            Domain.create(ValueSet.ofRanges(
+                    Range.lessThan(BIGINT, 20L),
+                    Range.greaterThan(BIGINT, 40L)), false)));
+
+    private static final TupleDomain<ColumnHandle> CONSTRAINT_3 = TupleDomain.withColumnDomains(ImmutableMap.of(
+            HANDLE_1,
+            Domain.create(ValueSet.ofRanges(
+                    Range.lessThan(BIGINT, 30L),
+                    Range.greaterThan(BIGINT, 70L)), false)));
+    private static final SchemaTableName TABLE_NAME = new SchemaTableName(TEST_SCHEMA, TEST_TABLE);
 
     private TableHandle testTableHandle;
 
@@ -110,11 +138,33 @@ public class TestCommonSubqueriesExtractor
                             MockConnectorColumnHandle column = (MockConnectorColumnHandle) handle;
                             return Optional.of(new CacheColumnId("cache_" + column.getName()));
                         })
+                        .withApplyFilter((session, tableHandle, constraint) -> {
+                            // predicate is fully subsumed
+                            if (constraint.getSummary().equals(CONSTRAINT_1)) {
+                                return Optional.of(new ConstraintApplicationResult<>(new MockConnectorTableHandle(TABLE_NAME, CONSTRAINT_1, Optional.of(ImmutableList.of(HANDLE_1))), TupleDomain.all(), false));
+                            }
+                            // predicate is rejected
+                            else if (constraint.getSummary().equals(CONSTRAINT_2)) {
+                                return Optional.of(new ConstraintApplicationResult<>(new MockConnectorTableHandle(TABLE_NAME, TupleDomain.all(), Optional.empty()), CONSTRAINT_2, false));
+                            }
+                            // predicate is subsumed opportunistically
+                            else if (constraint.getSummary().equals(CONSTRAINT_3)) {
+                                return Optional.of(new ConstraintApplicationResult<>(new MockConnectorTableHandle(TABLE_NAME, CONSTRAINT_3, Optional.empty()), CONSTRAINT_3, false));
+                            }
+                            return Optional.empty();
+                        })
+                        .withGetTableProperties((session, tableHandle) -> {
+                            MockConnectorTableHandle handle = (MockConnectorTableHandle) tableHandle;
+                            if (handle.getConstraint().equals(CONSTRAINT_2)) {
+                                return new ConnectorTableProperties(TupleDomain.none(), Optional.empty(), Optional.empty(), emptyList());
+                            }
+                            return new ConnectorTableProperties(TupleDomain.all(), Optional.empty(), Optional.empty(), emptyList());
+                        })
                         .build(),
                 ImmutableMap.of());
         testTableHandle = new TableHandle(
                 queryRunner.getCatalogHandle(TEST_CATALOG_NAME),
-                new MockConnectorTableHandle(new SchemaTableName(TEST_SCHEMA, TEST_TABLE)),
+                new MockConnectorTableHandle(TABLE_NAME),
                 TestingTransactionHandle.create());
         return queryRunner;
     }
@@ -275,6 +325,223 @@ public class TestCommonSubqueriesExtractor
                 ImmutableList.of(new CacheColumnId("(\"cache_column1\" * 10)"), new CacheColumnId("cache_column1")),
                 TupleDomain.all(),
                 TupleDomain.all()));
+    }
+
+    @Test
+    public void testCommonPredicateWasPushedDownAndDynamicFilter()
+    {
+        Metadata metadata = getQueryRunner().getMetadata();
+        SymbolAllocator symbolAllocator = new SymbolAllocator();
+        PlanBuilder planBuilder = new PlanBuilder(new PlanNodeIdAllocator(), metadata, TEST_SESSION);
+        PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
+
+        // subquery A
+        Symbol subqueryAColumn1 = symbolAllocator.newSymbol("subquery_a_column1", BIGINT);
+
+        PlanNode planA = planBuilder.filter(
+                        expression("subquery_a_column1 > BIGINT '150'"),
+                        planBuilder.tableScan(
+                                tableScan -> tableScan
+                                        .setTableHandle(testTableHandle)
+                                        .setSymbols(ImmutableList.of(subqueryAColumn1))
+                                        .setAssignments(ImmutableMap.of(subqueryAColumn1, HANDLE_1))
+                                        .setEnforcedConstraint(TupleDomain.all())
+                                        .setUseConnectorNodePartitioning(Optional.of(false))));
+
+        // subquery B
+        Symbol subqueryBColumn1 = symbolAllocator.newSymbol("subquery_b_column1", BIGINT);
+        Symbol subqueryBColumn2 = symbolAllocator.newSymbol("subquery_b_column2", BIGINT);
+
+        PlanNode planB = planBuilder.filter(
+                        and(
+                                expression("subquery_b_column1 < BIGINT '50'"),
+                                createDynamicFilterExpression(
+                                        TEST_SESSION,
+                                        getQueryRunner().getMetadata(),
+                                        new DynamicFilterId("subquery_b_dynamic_id"),
+                                        BIGINT,
+                                        expression("subquery_b_column2"))),
+                        planBuilder.tableScan(
+                                tableScan -> tableScan
+                                        .setTableHandle(testTableHandle)
+                                        .setSymbols(ImmutableList.of(subqueryBColumn1, subqueryBColumn2))
+                                        .setAssignments(ImmutableMap.of(subqueryBColumn1, HANDLE_1, subqueryBColumn2, HANDLE_2))
+                                        .setEnforcedConstraint(TupleDomain.all())
+                                        .setUseConnectorNodePartitioning(Optional.of(false))));
+
+        // create a plan
+        PlanNode root = planBuilder.union(ImmutableListMultimap.of(), ImmutableList.of(planA, planB));
+
+        // extract common subqueries
+        Map<PlanNode, CommonPlanAdaptation> planAdaptations = extractCommonSubqueries(idAllocator, symbolAllocator, root);
+        CommonPlanAdaptation subqueryA = planAdaptations.get(planA);
+        CommonPlanAdaptation subqueryB = planAdaptations.get(planB);
+        PlanMatchPattern commonTableScan = tableScan(TEST_TABLE, ImmutableMap.of("column2", "column2"))
+                .with(TableScanNode.class, tableScan -> ((MockConnectorTableHandle) tableScan.getTable().getConnectorHandle()).getConstraint().equals(CONSTRAINT_1));
+
+        // check whether common predicates were pushed down to common table scan
+        assertPlan(symbolAllocator, subqueryA.getCommonSubplan(), commonTableScan);
+
+        // There is a FilterNode because of dynamic filters
+        PlanMatchPattern commonSubplanB = filter(TRUE_LITERAL, createDynamicFilterExpression(
+                TEST_SESSION,
+                getQueryRunner().getMetadata(),
+                new DynamicFilterId("subquery_b_dynamic_id"),
+                BIGINT,
+                expression("column2")),
+                commonTableScan);
+        assertPlan(symbolAllocator, subqueryB.getCommonSubplan(), commonSubplanB);
+    }
+
+    @Test
+    public void testCommonPredicateWasFullyPushedDown()
+    {
+        Metadata metadata = getQueryRunner().getMetadata();
+        SymbolAllocator symbolAllocator = new SymbolAllocator();
+        PlanBuilder planBuilder = new PlanBuilder(new PlanNodeIdAllocator(), metadata, TEST_SESSION);
+        PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
+
+        // subquery A
+        Symbol subqueryAColumn1 = symbolAllocator.newSymbol("subquery_a_column1", BIGINT);
+
+        PlanNode planA = planBuilder.filter(
+                expression("subquery_a_column1 > BIGINT '150'"),
+                planBuilder.tableScan(
+                        tableScan -> tableScan
+                                .setTableHandle(testTableHandle)
+                                .setSymbols(ImmutableList.of(subqueryAColumn1))
+                                .setAssignments(ImmutableMap.of(subqueryAColumn1, HANDLE_1))
+                                .setEnforcedConstraint(TupleDomain.all())
+                                .setUseConnectorNodePartitioning(Optional.of(false))));
+
+        // subquery B
+        Symbol subqueryBColumn1 = symbolAllocator.newSymbol("subquery_b_column1", BIGINT);
+
+        PlanNode planB = planBuilder.filter(
+                expression("subquery_b_column1 < BIGINT '50'"),
+                planBuilder.tableScan(
+                        tableScan -> tableScan
+                                .setTableHandle(testTableHandle)
+                                .setSymbols(ImmutableList.of(subqueryBColumn1))
+                                .setAssignments(ImmutableMap.of(subqueryBColumn1, HANDLE_1))
+                                .setEnforcedConstraint(TupleDomain.all())
+                                .setUseConnectorNodePartitioning(Optional.of(false))));
+
+        // create a plan
+        PlanNode root = planBuilder.union(ImmutableListMultimap.of(), ImmutableList.of(planA, planB));
+
+        // extract common subqueries
+        Map<PlanNode, CommonPlanAdaptation> planAdaptations = extractCommonSubqueries(idAllocator, symbolAllocator, root);
+        CommonPlanAdaptation subqueryA = planAdaptations.get(planA);
+        CommonPlanAdaptation subqueryB = planAdaptations.get(planB);
+
+        // check whether common predicates were pushed down to common table scan
+        PlanMatchPattern commonSubplan = tableScan(TEST_TABLE)
+                .with(TableScanNode.class, tableScan -> ((MockConnectorTableHandle) tableScan.getTable().getConnectorHandle()).getConstraint().equals(CONSTRAINT_1));
+        assertPlan(symbolAllocator, subqueryA.getCommonSubplan(), commonSubplan);
+        assertPlan(symbolAllocator, subqueryB.getCommonSubplan(), commonSubplan);
+    }
+
+    @Test
+    public void testCommonPredicateWasPartiallyPushedDown()
+    {
+        Metadata metadata = getQueryRunner().getMetadata();
+        SymbolAllocator symbolAllocator = new SymbolAllocator();
+        PlanBuilder planBuilder = new PlanBuilder(new PlanNodeIdAllocator(), metadata, TEST_SESSION);
+        PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
+
+        // subquery A
+        Symbol subqueryAColumn1 = symbolAllocator.newSymbol("subquery_a_column1", BIGINT);
+
+        PlanNode planA = planBuilder.filter(
+                expression("subquery_a_column1 > BIGINT '70'"),
+                planBuilder.tableScan(
+                        tableScan -> tableScan
+                                .setTableHandle(testTableHandle)
+                                .setSymbols(ImmutableList.of(subqueryAColumn1))
+                                .setAssignments(ImmutableMap.of(subqueryAColumn1, HANDLE_1))
+                                .setEnforcedConstraint(TupleDomain.all())
+                                .setUseConnectorNodePartitioning(Optional.of(false))));
+
+        // subquery B
+        Symbol subqueryBColumn1 = symbolAllocator.newSymbol("subquery_b_column1", BIGINT);
+
+        PlanNode planB = planBuilder.filter(
+                expression("subquery_b_column1 < BIGINT '30'"),
+                planBuilder.tableScan(
+                        tableScan -> tableScan
+                                .setTableHandle(testTableHandle)
+                                .setSymbols(ImmutableList.of(subqueryBColumn1))
+                                .setAssignments(ImmutableMap.of(subqueryBColumn1, HANDLE_1))
+                                .setEnforcedConstraint(TupleDomain.all())
+                                .setUseConnectorNodePartitioning(Optional.of(false))));
+
+        // create a plan
+        PlanNode root = planBuilder.union(ImmutableListMultimap.of(), ImmutableList.of(planA, planB));
+
+        // extract common subqueries
+        Map<PlanNode, CommonPlanAdaptation> planAdaptations = extractCommonSubqueries(idAllocator, symbolAllocator, root);
+        CommonPlanAdaptation subqueryA = planAdaptations.get(planA);
+        CommonPlanAdaptation subqueryB = planAdaptations.get(planB);
+
+        // check whether common predicates were partially pushed down (there is remaining filter and pushed down filter to table handle)
+        // to common table scan
+        PlanMatchPattern commonSubplan = filter("column1 < BIGINT '30' OR column1 > BIGINT '70'",
+                tableScan(TEST_TABLE, ImmutableMap.of("column1", "column1"))
+                .with(TableScanNode.class, tableScan -> ((MockConnectorTableHandle) tableScan.getTable().getConnectorHandle()).getConstraint().equals(CONSTRAINT_3)));
+
+        assertPlan(symbolAllocator, subqueryA.getCommonSubplan(), commonSubplan);
+        assertPlan(symbolAllocator, subqueryB.getCommonSubplan(), commonSubplan);
+    }
+
+    @Test
+    public void testCommonPredicateWasNotPushedDownWhenValuesNode()
+    {
+        Metadata metadata = getQueryRunner().getMetadata();
+        SymbolAllocator symbolAllocator = new SymbolAllocator();
+        PlanBuilder planBuilder = new PlanBuilder(new PlanNodeIdAllocator(), metadata, TEST_SESSION);
+        PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
+
+        // subquery A
+        Symbol subqueryAColumn1 = symbolAllocator.newSymbol("subquery_a_column1", BIGINT);
+
+        PlanNode planA = planBuilder.filter(
+                        expression("subquery_a_column1 > BIGINT '40'"),
+                        planBuilder.tableScan(
+                                tableScan -> tableScan
+                                        .setTableHandle(testTableHandle)
+                                        .setSymbols(ImmutableList.of(subqueryAColumn1))
+                                        .setAssignments(ImmutableMap.of(subqueryAColumn1, HANDLE_1))
+                                        .setEnforcedConstraint(TupleDomain.all())
+                                        .setUseConnectorNodePartitioning(Optional.of(false))));
+
+        // subquery B
+        Symbol subqueryBColumn1 = symbolAllocator.newSymbol("subquery_b_column1", BIGINT);
+
+        PlanNode planB = planBuilder.filter(
+                expression("subquery_b_column1 < BIGINT '20'"),
+                planBuilder.tableScan(
+                        tableScan -> tableScan
+                                .setTableHandle(testTableHandle)
+                                .setSymbols(ImmutableList.of(subqueryBColumn1))
+                                .setAssignments(ImmutableMap.of(subqueryBColumn1, HANDLE_1))
+                                .setEnforcedConstraint(TupleDomain.all())
+                                .setUseConnectorNodePartitioning(Optional.of(false))));
+
+        // create a plan
+        PlanNode root = planBuilder.union(ImmutableListMultimap.of(), ImmutableList.of(planA, planB));
+
+        // extract common subqueries
+        Map<PlanNode, CommonPlanAdaptation> planAdaptations = extractCommonSubqueries(idAllocator, symbolAllocator, root);
+        CommonPlanAdaptation subqueryA = planAdaptations.get(planA);
+        CommonPlanAdaptation subqueryB = planAdaptations.get(planB);
+
+        PlanMatchPattern commonSubplan = filter("column1 < BIGINT '20' OR column1 > BIGINT '40'",
+                tableScan(TEST_TABLE, ImmutableMap.of("column1", "column1"))
+                        .with(TableScanNode.class, tableScan -> ((MockConnectorTableHandle) tableScan.getTable().getConnectorHandle()).getConstraint().equals(TupleDomain.all())));
+
+        assertPlan(symbolAllocator, subqueryA.getCommonSubplan(), commonSubplan);
+        assertPlan(symbolAllocator, subqueryB.getCommonSubplan(), commonSubplan);
     }
 
     @Test
@@ -529,6 +796,8 @@ public class TestCommonSubqueriesExtractor
                     session,
                     idAllocator,
                     symbolAllocator,
+                    new RuleTester(getQueryRunner()).getTypeAnalyzer(),
+                    node -> PlanNodeStatsEstimate.unknown(),
                     root);
         });
     }

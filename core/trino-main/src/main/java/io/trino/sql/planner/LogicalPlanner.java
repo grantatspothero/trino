@@ -28,6 +28,7 @@ import io.trino.cost.CachingStatsProvider;
 import io.trino.cost.CachingTableStatsProvider;
 import io.trino.cost.CostCalculator;
 import io.trino.cost.CostProvider;
+import io.trino.cost.PlanNodeStatsEstimate;
 import io.trino.cost.StatsAndCosts;
 import io.trino.cost.StatsCalculator;
 import io.trino.cost.StatsProvider;
@@ -234,7 +235,8 @@ public class LogicalPlanner
                 plannerContext,
                 session,
                 idAllocator,
-                symbolAllocator);
+                symbolAllocator,
+                typeAnalyzer);
         this.warningCollector = requireNonNull(warningCollector, "warningCollector is null");
         this.planOptimizersStatsCollector = requireNonNull(planOptimizersStatsCollector, "planOptimizersStatsCollector is null");
     }
@@ -289,13 +291,15 @@ public class LogicalPlanner
             }
         }
 
-        root = cacheCommonSubqueries.cacheSubqueries(root);
-
         TypeProvider types = symbolAllocator.getTypes();
+        StatsProvider statsProvider = collectPlanStatistics
+                ? new CachingStatsProvider(statsCalculator, session, types, tableStatsProvider)
+                : node -> PlanNodeStatsEstimate.unknown();
+
+        root = cacheCommonSubqueries.cacheSubqueries(root, statsProvider);
 
         StatsAndCosts statsAndCosts = StatsAndCosts.empty();
         if (collectPlanStatistics) {
-            StatsProvider statsProvider = new CachingStatsProvider(statsCalculator, session, types, tableStatsProvider);
             CostProvider costProvider = new CachingCostProvider(costCalculator, statsProvider, Optional.empty(), session, types);
             try (var ignored = scopedSpan(plannerContext.getTracer(), "plan-stats")) {
                 statsAndCosts = StatsAndCosts.create(root, statsProvider, costProvider);

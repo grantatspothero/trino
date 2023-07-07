@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Streams;
 import io.trino.Session;
+import io.trino.cost.StatsProvider;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheManager;
 import io.trino.spi.cache.CacheTableId;
@@ -33,6 +34,7 @@ import io.trino.sql.planner.PlanNodeIdAllocator;
 import io.trino.sql.planner.Symbol;
 import io.trino.sql.planner.SymbolAllocator;
 import io.trino.sql.planner.SymbolsExtractor;
+import io.trino.sql.planner.TypeAnalyzer;
 import io.trino.sql.planner.TypeProvider;
 import io.trino.sql.planner.optimizations.SymbolMapper;
 import io.trino.sql.planner.plan.Assignments;
@@ -41,6 +43,7 @@ import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.PlanNode;
 import io.trino.sql.planner.plan.ProjectNode;
 import io.trino.sql.planner.plan.TableScanNode;
+import io.trino.sql.planner.plan.ValuesNode;
 import io.trino.sql.tree.Expression;
 
 import java.util.AbstractMap.SimpleEntry;
@@ -52,6 +55,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -66,8 +70,10 @@ import static io.trino.sql.ExpressionUtils.extractConjuncts;
 import static io.trino.sql.ExpressionUtils.or;
 import static io.trino.sql.planner.iterative.rule.ExtractCommonPredicatesExpressionRewriter.extractCommonPredicates;
 import static io.trino.sql.planner.iterative.rule.NormalizeOrExpressionRewriter.normalizeOrExpression;
+import static io.trino.sql.planner.iterative.rule.PushPredicateIntoTableScan.pushFilterIntoTableScan;
 import static io.trino.sql.tree.BooleanLiteral.TRUE_LITERAL;
 import static java.util.function.Function.identity;
+import static java.util.function.Predicate.not;
 
 /**
  * Identifies common subqueries and provides adaptation to original query plan. Result of common
@@ -96,6 +102,8 @@ public final class CommonSubqueriesExtractor
             Session session,
             PlanNodeIdAllocator idAllocator,
             SymbolAllocator symbolAllocator,
+            TypeAnalyzer typeAnalyzer,
+            StatsProvider statsProvider,
             PlanNode root)
     {
         ImmutableMap.Builder<PlanNode, CommonPlanAdaptation> planAdaptations = ImmutableMap.builder();
@@ -169,6 +177,9 @@ public final class CommonSubqueriesExtractor
                             commonPredicate,
                             commonColumnHandles,
                             commonColumnIds,
+                            typeAnalyzer,
+                            session,
+                            statsProvider,
                             planSignature)));
         }
         return planAdaptations.buildOrThrow();
@@ -227,6 +238,9 @@ public final class CommonSubqueriesExtractor
             Expression commonPredicate,
             Map<CacheColumnId, ColumnHandle> commonColumnHandles,
             Map<CacheColumnId, Symbol> commonColumnIds,
+            TypeAnalyzer typeAnalyzer,
+            Session session,
+            StatsProvider statsProvider,
             PlanSignature planSignature)
     {
         Map<CacheColumnId, Symbol> subqueryColumnIdMapping = new HashMap<>(subplan.getOriginalSymbolMapping());
@@ -264,10 +278,45 @@ public final class CommonSubqueriesExtractor
                             plannerContext.getMetadata(),
                             commonPredicate,
                             and(subplan.getDynamicConjuncts()))));
-            commonSubplan = new FilterNode(
+            FilterNode filterNode = new FilterNode(
                     idAllocator.getNextId(),
-                    commonSubplan,
+                    commonSubplanTableScan,
                     commonSubplanPredicate.get());
+
+            // Try to push down predicates to table scan
+            Optional<PlanNode> rewritten = pushFilterIntoTableScan(
+                    filterNode,
+                    commonSubplanTableScan,
+                    false,
+                    session,
+                    symbolAllocator,
+                    plannerContext,
+                    typeAnalyzer,
+                    statsProvider,
+                    new DomainTranslator(plannerContext));
+
+            // If ValuesNode was returned as a result of pushing down predicates we fall back
+            // to filterNode to avoid introducing significant changes in plan. Changing node from TableScan to ValuesNode
+            // potentially interfere with partitioning - note that this step is executed after planning.
+            rewritten = rewritten.filter(not(ValuesNode.class::isInstance));
+
+            if (rewritten.isPresent()) {
+                PlanNode node = rewritten.get();
+                if (node instanceof FilterNode rewrittenFilterNode) {
+                    commonSubplanPredicate = Optional.of(rewrittenFilterNode.getPredicate());
+                    checkState(rewrittenFilterNode.getSource() instanceof TableScanNode, "Expected filter source to be TableScanNode");
+                    commonSubplanTableScan = (TableScanNode) rewrittenFilterNode.getSource();
+                }
+                else {
+                    checkState(node instanceof TableScanNode, "Expected rewritten node to be TableScanNode");
+                    commonSubplanPredicate = Optional.empty();
+                    commonSubplanTableScan = (TableScanNode) node;
+                }
+                commonSubplan = node;
+            }
+            else {
+                commonSubplan = filterNode;
+            }
         }
 
         if (isAdaptationProjectionNeeded(commonColumnHandles.keySet(), commonProjections.keySet())) {
