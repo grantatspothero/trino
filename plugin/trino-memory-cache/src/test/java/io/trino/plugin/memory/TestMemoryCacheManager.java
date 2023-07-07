@@ -15,7 +15,6 @@ package io.trino.plugin.memory;
 
 import com.google.common.collect.ImmutableList;
 import io.trino.client.NodeVersion;
-import io.trino.metadata.InternalNode;
 import io.trino.plugin.memory.MemoryCacheManager.SplitKey;
 import io.trino.spi.Page;
 import io.trino.spi.block.BlockBuilder;
@@ -28,7 +27,6 @@ import io.trino.spi.cache.SignatureKey;
 import io.trino.spi.connector.ConnectorPageSink;
 import io.trino.spi.connector.ConnectorPageSource;
 import io.trino.spi.predicate.TupleDomain;
-import io.trino.testing.TestingNodeManager;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 

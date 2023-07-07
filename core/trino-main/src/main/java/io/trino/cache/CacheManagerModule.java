@@ -16,7 +16,6 @@ package io.trino.cache;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
-import io.airlift.configuration.ConfigBinder;
 
 import static io.airlift.configuration.ConfigBinder.configBinder;
 
@@ -27,10 +26,6 @@ public class CacheManagerModule
     public void configure(Binder binder)
     {
         configBinder(binder).bindConfig(CacheConfig.class);
-        // make cache enabled by default when config file is present
-        ConfigBinder.configBinder(binder).bindConfigDefaults(
-                CacheConfig.class,
-                (config) -> config.setEnabled(CacheManagerRegistry.CONFIG_FILE.exists()));
         binder.bind(CacheManagerRegistry.class).in(Scopes.SINGLETON);
     }
 }

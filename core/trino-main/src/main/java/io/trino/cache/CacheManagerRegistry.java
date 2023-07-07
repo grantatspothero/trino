@@ -14,6 +14,7 @@
 package io.trino.cache;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import io.airlift.log.Logger;
@@ -21,6 +22,7 @@ import io.trino.memory.LocalMemoryManager;
 import io.trino.memory.MemoryPool;
 import io.trino.memory.context.LocalMemoryContext;
 import io.trino.memory.context.MemoryReservationHandler;
+import io.trino.plugin.memory.MemoryCacheManagerFactory;
 import io.trino.spi.TrinoException;
 import io.trino.spi.cache.CacheManager;
 import io.trino.spi.cache.CacheManagerContext;
@@ -100,10 +102,17 @@ public class CacheManagerRegistry
 
     public void loadCacheManager()
     {
-        if (!CONFIG_FILE.exists()) {
-            checkState(!enabled, "Cache is enabled, but cache-manager.properties does not exist");
+        if (!enabled) {
+            // don't load CacheManager when caching is not enabled
             return;
         }
+
+        if (!CONFIG_FILE.exists()) {
+            // use MemoryCacheManager by default
+            loadCacheManager(new MemoryCacheManagerFactory(), ImmutableMap.of());
+            return;
+        }
+
         Map<String, String> properties = loadProperties(CONFIG_FILE);
         String name = properties.remove(CACHE_MANAGER_NAME_PROPERTY);
         checkArgument(!isNullOrEmpty(name), "Cache manager configuration %s does not contain %s", CONFIG_FILE, CACHE_MANAGER_NAME_PROPERTY);
@@ -112,12 +121,17 @@ public class CacheManagerRegistry
 
     public synchronized void loadCacheManager(String name, Map<String, String> properties)
     {
-        log.info("-- Loading cache manager %s --", name);
-
-        checkState(cacheManager == null, "cacheManager is already loaded");
-
         CacheManagerFactory factory = cacheManagerFactories.get(name);
         checkArgument(factory != null, "Cache manager factory '%s' is not registered. Available factories: %s", name, cacheManagerFactories.keySet());
+        loadCacheManager(factory, properties);
+    }
+
+    public synchronized void loadCacheManager(CacheManagerFactory factory, Map<String, String> properties)
+    {
+        requireNonNull(factory, "cacheManagerFactory is null");
+        log.info("-- Loading cache manager %s --", factory.getName());
+
+        checkState(cacheManager == null, "cacheManager is already loaded");
 
         LocalMemoryContext revocableMemoryContext = newRootAggregatedMemoryContext(
                 createReservationHandler(bytes -> {
@@ -145,7 +159,7 @@ public class CacheManagerRegistry
             }
         });
 
-        log.info("-- Loaded cache manager %s --", name);
+        log.info("-- Loaded cache manager %s --", factory.getName());
     }
 
     public CacheManager getCacheManager()

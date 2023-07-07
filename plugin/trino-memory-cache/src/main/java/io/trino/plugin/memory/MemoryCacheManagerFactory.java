@@ -26,10 +26,12 @@ import static java.util.Objects.requireNonNull;
 public class MemoryCacheManagerFactory
         implements CacheManagerFactory
 {
+    public static final String NAME = "memory-cache";
+
     @Override
     public String getName()
     {
-        return "memory-cache";
+        return NAME;
     }
 
     @Override

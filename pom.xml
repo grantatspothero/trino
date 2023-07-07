@@ -1443,6 +1443,12 @@
 
             <dependency>
                 <groupId>io.trino</groupId>
+                <artifactId>trino-memory-cache</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
                 <artifactId>trino-memory-context</artifactId>
                 <version>${project.version}</version>
             </dependency>
