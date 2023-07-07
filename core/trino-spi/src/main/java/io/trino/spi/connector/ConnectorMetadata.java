@@ -1517,12 +1517,14 @@ public interface ConnectorMetadata
 
     /**
      * Returns a canonical {@link ConnectorTableHandle}.
-     * If any property of {@link ConnectorTableHandle} affects query result when underlying table is queried, then such property is considered canonical.
-     * Otherwise, the property is non-canonical.
-     * This method converts given {@link ConnectorTableHandle} into canonical one by pruning of every non-canonical field.
+     * If any property of {@link ConnectorTableHandle} affects final query result when underlying table
+     * is queried, then such property is considered canonical. Otherwise, the property is non-canonical.
+     * Canonical {@link ConnectorTableHandle}s allow to match more similar subqueries that
+     * are eligible for caching with {@link CacheManager}. Connector should convert provided
+     * {@link ConnectorTableHandle} into canonical one by pruning of every non-canonical field.
      */
     default ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle handle)
     {
-        throw new TrinoException(NOT_SUPPORTED, "This connector does not support for getting canonical table handle");
+        return handle;
     }
 }
