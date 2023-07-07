@@ -15,20 +15,26 @@ package io.trino.plugin.objectstore;
 
 import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
-import io.trino.plugin.iceberg.TestIcebergSystemTables;
+import io.trino.plugin.iceberg.BaseIcebergSystemTables;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.testing.DistributedQueryRunner;
 import org.testng.annotations.BeforeClass;
 
+import static io.trino.plugin.iceberg.IcebergFileFormat.PARQUET;
 import static io.trino.plugin.objectstore.ObjectStoreQueryRunner.CATALOG;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static java.lang.String.format;
 
 public class TestObjectStoreIcebergSystemTables
-        extends TestIcebergSystemTables
+        extends BaseIcebergSystemTables
 {
+    public TestObjectStoreIcebergSystemTables()
+    {
+        super(PARQUET);
+    }
+
     @Override
     protected DistributedQueryRunner createQueryRunner()
             throws Exception
