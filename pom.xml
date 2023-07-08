@@ -10,7 +10,7 @@
 
     <groupId>io.trino</groupId>
     <artifactId>trino-root</artifactId>
-    <version>420-galaxy-1-SNAPSHOT</version>
+    <version>421-galaxy-1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>trino-root</name>
@@ -189,7 +189,7 @@
         <dep.docker.images.version>80</dep.docker.images.version>
 
         <!-- released from https://github.com/starburstdata/varada -->
-        <dep.warp-speed.version>420.2.0</dep.warp-speed.version>
+        <dep.warp-speed.version>421.2.0-cand</dep.warp-speed.version>
         <!-- released from https://github.com/starburstdata/trino-buffer-service -->
         <dep.trino-buffer-service.version>420-trino-buffer-service-568-g65df7a2</dep.trino-buffer-service.version>
         <!-- released form https://github.com/starburstdata/schema-discovery -->
@@ -199,7 +199,7 @@
         <!-- stargate-9352-g159338286 is newest stargate client which does not pull airlift 234 -->
         <dep.stargate.version>stargate-9352-g159338286</dep.stargate.version>
         <!-- released from https://github.com/starburstdata/starburst-trino-plugins -->
-        <dep.starburst-trino-plugins.version>420</dep.starburst-trino-plugins.version>
+        <dep.starburst-trino-plugins.version>421</dep.starburst-trino-plugins.version>
         <dep.cloudevents.version>2.2.0</dep.cloudevents.version>
 
         <!--
