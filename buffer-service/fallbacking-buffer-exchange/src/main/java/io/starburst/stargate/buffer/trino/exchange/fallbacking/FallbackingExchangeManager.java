@@ -176,6 +176,12 @@ public class FallbackingExchangeManager
         return new LazyFallbackingExchangeSource(bufferExchangeManager, fileSystemExchangeManager, fallbackSelector);
     }
 
+    @Override
+    public boolean supportsConcurrentReadAndWrite()
+    {
+        return false;
+    }
+
     @VisibleForTesting
     public FallbackingExchangeStats.Snapshot getStats()
     {
