@@ -21,6 +21,7 @@ import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
+import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
@@ -127,6 +128,15 @@ public class TestGalaxyHiveConnectorTest
     @Test(enabled = false)
     @Override
     public void testCreateSchemaWithAuthorizationForUser() {}
+
+    @Override
+    public void testTimestampWithTimeZone()
+    {
+        // test in superclass assumes we are using FileHiveMetastore.
+        assertThatThrownBy(super::testTimestampWithTimeZone)
+                .hasMessage("Schema tpch not found");
+        throw new SkipException("skipped");
+    }
 
     @Test(enabled = false)
     @Override
