@@ -192,16 +192,17 @@ public final class CanonicalSubplanExtractor
             // canonicalize output symbols using column ids
             ImmutableBiMap.Builder<CacheColumnId, Symbol> symbolMappingBuilder = ImmutableBiMap.builder();
             ImmutableMap.Builder<CacheColumnId, ColumnHandle> columnHandlesBuilder = ImmutableMap.builder();
-            for (Map.Entry<Symbol, ColumnHandle> assignment : node.getAssignments().entrySet()) {
+            for (Symbol outputSymbol : node.getOutputSymbols()) {
+                ColumnHandle columnHandle = node.getAssignments().get(outputSymbol);
                 Optional<CacheColumnId> columnId = metadata.getCacheColumnId(
                         session,
                         node.getTable(),
-                        assignment.getValue());
+                        columnHandle);
                 if (columnId.isEmpty()) {
                     return Optional.empty();
                 }
-                symbolMappingBuilder.put(columnId.get(), assignment.getKey());
-                columnHandlesBuilder.put(columnId.get(), assignment.getValue());
+                symbolMappingBuilder.put(columnId.get(), outputSymbol);
+                columnHandlesBuilder.put(columnId.get(), columnHandle);
             }
             BiMap<CacheColumnId, Symbol> symbolMapping = symbolMappingBuilder.build();
 

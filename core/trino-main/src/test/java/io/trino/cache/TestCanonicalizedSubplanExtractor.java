@@ -309,7 +309,7 @@ public class TestCanonicalizedSubplanExtractor
                 new PlanNodeId("scan_id"),
                 TEST_TABLE_HANDLE,
                 ImmutableList.of(symbol1, symbol2),
-                ImmutableMap.of(symbol1, handle1, symbol2, handle2),
+                ImmutableMap.of(symbol2, handle2, symbol1, handle1),
                 TupleDomain.all(),
                 Optional.empty(),
                 false,
