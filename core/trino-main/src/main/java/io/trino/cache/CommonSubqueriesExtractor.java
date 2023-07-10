@@ -13,6 +13,7 @@
  */
 package io.trino.cache;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
@@ -253,7 +254,7 @@ public final class CommonSubqueriesExtractor
                             and(subplan.getDynamicConjuncts()))));
         }
 
-        if (!commonProjections.keySet().equals(commonColumnHandles.keySet())) {
+        if (isAdaptationProjectionNeeded(commonColumnHandles.keySet(), commonProjections.keySet())) {
             commonSubplan = new ProjectNode(
                     idAllocator.getNextId(),
                     commonSubplan,
@@ -269,8 +270,9 @@ public final class CommonSubqueriesExtractor
             adaptationPredicate = Optional.of(subquerySymbolMapper.map(and(subplan.getConjuncts())));
         }
 
+        // prune and order common subquery output in order to match original subquery
         Optional<Assignments> adaptationAssignments = Optional.empty();
-        if (!commonProjections.keySet().equals(subplan.getAssignments().keySet())) {
+        if (isAdaptationProjectionNeeded(commonProjections.keySet(), subplan.getAssignments().keySet())) {
             adaptationAssignments = Optional.of(Assignments.copyOf(subplan.getAssignments().entrySet().stream()
                     .collect(toImmutableMap(
                             entry -> subqueryColumnIdMapping.get(entry.getKey()),
@@ -279,6 +281,12 @@ public final class CommonSubqueriesExtractor
         }
 
         return new CommonPlanAdaptation(commonSubplan, planSignature, adaptationPredicate, adaptationAssignments);
+    }
+
+    private static boolean isAdaptationProjectionNeeded(Set<CacheColumnId> actualColumns, Set<CacheColumnId> expectedColumns)
+    {
+        // sensitive to elements order in actual and expected sets
+        return !ImmutableList.copyOf(actualColumns).equals(ImmutableList.copyOf(expectedColumns));
     }
 
     private static boolean isAdaptationPredicateNeeded(CanonicalSubplan subplan, Set<Expression> commonConjuncts)

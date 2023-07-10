@@ -353,12 +353,13 @@ public class TestCommonSubqueriesExtractor
                 false,
                 Optional.of(false));
 
+        Symbol subqueryBColumn1 = symbolAllocator.newSymbol("subquery_b_column1", BIGINT);
         Symbol subqueryBColumn2 = symbolAllocator.newSymbol("subquery_b_column2", BIGINT);
         PlanNode scanB = new TableScanNode(
                 new PlanNodeId("scanB"),
                 testTableHandle,
-                ImmutableList.of(subqueryBColumn2),
-                ImmutableMap.of(subqueryBColumn2, HANDLE_2),
+                ImmutableList.of(subqueryBColumn2, subqueryBColumn1),
+                ImmutableMap.of(subqueryBColumn2, HANDLE_2, subqueryBColumn1, HANDLE_1),
                 TupleDomain.all(),
                 Optional.empty(),
                 false,
@@ -398,7 +399,10 @@ public class TestCommonSubqueriesExtractor
                         commonSubplan));
 
         assertPlan(symbolAllocator, subqueryB.adaptCommonSubplan(subqueryB.getCommonSubplan(), idAllocator),
-                strictProject(ImmutableMap.of("column2", PlanMatchPattern.expression("column2")),
+                // order of common subquery output needs to shuffled to match original query
+                strictProject(ImmutableMap.of(
+                                "column2", PlanMatchPattern.expression("column2"),
+                                "column1", PlanMatchPattern.expression("column1")),
                         commonSubplan));
 
         // make sure plan signatures are same and contain domain
