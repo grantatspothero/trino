@@ -136,7 +136,7 @@ public class TestCommonSubqueriesExtractor
         FilterNode filterA = new FilterNode(
                 new PlanNodeId("filterA"),
                 scanA,
-                expression("subquery_a_column1 > BIGINT '42' OR subquery_a_column2 % 2 = BIGINT '0'"));
+                expression("subquery_a_column1 % 4 = BIGINT '0' OR subquery_a_column2 % 2 = BIGINT '0'"));
         ProjectNode projectA = new ProjectNode(
                 new PlanNodeId("projectA"),
                 filterA,
@@ -161,7 +161,7 @@ public class TestCommonSubqueriesExtractor
                 new PlanNodeId("filterB"),
                 scanB,
                 and(
-                        expression("subquery_b_column1 > BIGINT '42'"),
+                        expression("subquery_b_column1 % 4 = BIGINT '0'"),
                         createDynamicFilterExpression(
                                 TEST_SESSION,
                                 getQueryRunner().getMetadata(),
@@ -199,7 +199,7 @@ public class TestCommonSubqueriesExtractor
                         "column1", PlanMatchPattern.expression("column1"),
                         "projection", PlanMatchPattern.expression("column1 * 10")),
                 filter(
-                        expression("column1 > BIGINT '42' OR column2 % 2 = BIGINT '0'"),
+                        expression("column1 % 4 = BIGINT '0' OR column2 % 2 = BIGINT '0'"),
                         strictTableScan(
                                 TEST_TABLE,
                                 ImmutableMap.of(
@@ -243,12 +243,12 @@ public class TestCommonSubqueriesExtractor
 
         assertPlan(symbolAllocator, subqueryB.adaptCommonSubplan(subqueryB.getCommonSubplan(), idAllocator),
                 strictProject(ImmutableMap.of("projection", PlanMatchPattern.expression("projection")),
-                        filter("column1 > BIGINT '42'", commonSubplan)));
+                        filter("column1 % 4 = BIGINT '0'", commonSubplan)));
 
         // make sure plan signatures are same
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(subqueryB.getCommonSubplanSignature());
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
-                new SignatureKey("cache_table_id:((\"cache_column1\" > BIGINT '42') OR ((\"cache_column2\" % 2) = BIGINT '0'))"),
+                new SignatureKey("cache_table_id:(((\"cache_column1\" % 4) = BIGINT '0') OR ((\"cache_column2\" % 2) = BIGINT '0'))"),
                 Optional.empty(),
                 ImmutableList.of(new CacheColumnId("(\"cache_column1\" * 10)"), new CacheColumnId("cache_column1")),
                 TupleDomain.all()));
