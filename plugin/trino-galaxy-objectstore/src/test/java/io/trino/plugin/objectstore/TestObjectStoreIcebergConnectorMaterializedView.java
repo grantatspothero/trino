@@ -21,7 +21,6 @@ import io.starburst.stargate.accesscontrol.privilege.Privilege;
 import io.starburst.stargate.id.SchemaId;
 import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
-import io.trino.plugin.iceberg.BaseIcebergMaterializedViewTest;
 import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.server.security.galaxy.GalaxyTestHelper;
@@ -43,7 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestObjectStoreIcebergConnectorMaterializedView
-        extends BaseIcebergMaterializedViewTest
+        extends BaseObjectStoreMaterializedViewTest
 {
     private static final String TEST_CATALOG = "iceberg";
     private static final String TEST_BUCKET = "test-bucket";
@@ -149,6 +148,7 @@ public class TestObjectStoreIcebergConnectorMaterializedView
         getQueryRunner().execute("DROP SCHEMA %s".formatted(schemaForDroppedMaterializedView));
     }
 
+    // TODO move test to BaseObjectStoreMaterializedViewTest
     @Test
     public void testMaterializedViewPermissions()
     {
@@ -164,6 +164,7 @@ public class TestObjectStoreIcebergConnectorMaterializedView
         assertQueryFails(galaxyTestHelper.publicSession(), "SELECT 1 FROM " + String.format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
     }
 
+    // TODO move test to BaseObjectStoreMaterializedViewTest
     @Test
     public void testRefreshedMaterializedViewPermissions()
     {
@@ -180,6 +181,7 @@ public class TestObjectStoreIcebergConnectorMaterializedView
         assertQueryFails(galaxyTestHelper.publicSession(), "SELECT 1 FROM " + String.format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
     }
 
+    // TODO move test to BaseObjectStoreMaterializedViewTest
     @Test
     public void testStorageSchemaPropertyGalaxyAccessControl()
     {

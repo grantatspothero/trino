@@ -26,7 +26,6 @@ import io.starburst.stargate.accesscontrol.privilege.Privilege;
 import io.starburst.stargate.id.SchemaId;
 import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.aws.AwsApiCallStats;
-import io.trino.plugin.iceberg.BaseIcebergMaterializedViewTest;
 import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.server.security.galaxy.GalaxyTestHelper;
@@ -49,7 +48,7 @@ import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.lang.String.format;
 
 public class TestObjectStoreIcebergGlueCatalogMaterializedView
-        extends BaseIcebergMaterializedViewTest
+        extends BaseObjectStoreMaterializedViewTest
 {
     private static final String TEST_CATALOG = "iceberg";
 
