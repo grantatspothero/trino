@@ -62,7 +62,7 @@ import static io.trino.testing.TestingHandles.TEST_TABLE_HANDLE;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class TestCanonicalizedSubplanExtractor
+public class TestCanonicalSubplanExtractor
 {
     private static final Session TEST_SESSION = testSessionBuilder().build();
     private static final CacheTableId CACHE_TABLE_ID = new CacheTableId("cache_table_id");
