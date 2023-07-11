@@ -78,6 +78,7 @@ import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.trino.plugin.hive.HiveFileSystemTestUtils.filterTable;
 import static io.trino.plugin.hive.HiveFileSystemTestUtils.getSplitsCount;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_STATS;
+import static io.trino.plugin.hive.HiveTestUtils.getDefaultHiveFileWriterFactories;
 import static io.trino.plugin.hive.HiveTestUtils.getDefaultHivePageSourceFactories;
 import static io.trino.plugin.hive.HiveTestUtils.getDefaultHiveRecordCursorProviders;
 import static io.trino.plugin.hive.LocationAccessControl.ALLOW_ALL;
@@ -151,6 +152,7 @@ public class S3SelectTestHelper
                 this.hiveConfig,
                 new HiveMetastoreConfig(),
                 HiveMetastoreFactory.ofInstance(metastoreClient),
+                getDefaultHiveFileWriterFactories(hiveConfig, hdfsEnvironment),
                 new HdfsFileSystemFactory(hdfsEnvironment, HDFS_FILE_SYSTEM_STATS),
                 hdfsEnvironment,
                 hivePartitionManager,

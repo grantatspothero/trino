@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.hive;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import io.airlift.concurrent.BoundedExecutor;
 import io.airlift.json.JsonCodec;
@@ -58,6 +59,7 @@ public class HiveMetadataFactory
     private final boolean hideDeltaLakeTables;
     private final long perTransactionCacheMaximumSize;
     private final HiveMetastoreFactory metastoreFactory;
+    private final Set<HiveFileWriterFactory> fileWriterFactories;
     private final TrinoFileSystemFactory fileSystemFactory;
     private final HdfsEnvironment hdfsEnvironment;
     private final HivePartitionManager partitionManager;
@@ -91,6 +93,7 @@ public class HiveMetadataFactory
             HiveConfig hiveConfig,
             HiveMetastoreConfig hiveMetastoreConfig,
             HiveMetastoreFactory metastoreFactory,
+            Set<HiveFileWriterFactory> fileWriterFactories,
             TrinoFileSystemFactory fileSystemFactory,
             HdfsEnvironment hdfsEnvironment,
             HivePartitionManager partitionManager,
@@ -116,6 +119,7 @@ public class HiveMetadataFactory
                 locationAccessControl,
                 catalogName,
                 metastoreFactory,
+                fileWriterFactories,
                 fileSystemFactory,
                 hdfsEnvironment,
                 partitionManager,
@@ -157,6 +161,7 @@ public class HiveMetadataFactory
             LocationAccessControl locationAccessControl,
             CatalogName catalogName,
             HiveMetastoreFactory metastoreFactory,
+            Set<HiveFileWriterFactory> fileWriterFactories,
             TrinoFileSystemFactory fileSystemFactory,
             HdfsEnvironment hdfsEnvironment,
             HivePartitionManager partitionManager,
@@ -206,6 +211,7 @@ public class HiveMetadataFactory
         this.perTransactionCacheMaximumSize = perTransactionCacheMaximumSize;
 
         this.metastoreFactory = requireNonNull(metastoreFactory, "metastoreFactory is null");
+        this.fileWriterFactories = ImmutableSet.copyOf(requireNonNull(fileWriterFactories, "fileWriterFactories is null"));
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.hdfsEnvironment = requireNonNull(hdfsEnvironment, "hdfsEnvironment is null");
         this.partitionManager = requireNonNull(partitionManager, "partitionManager is null");
@@ -265,6 +271,7 @@ public class HiveMetadataFactory
                 catalogName,
                 metastore,
                 autoCommit,
+                fileWriterFactories,
                 fileSystemFactory,
                 hdfsEnvironment,
                 partitionManager,
