@@ -231,6 +231,9 @@ public final class CommonSubqueriesExtractor
 
         TableScanNode commonSubplanTableScan = new TableScanNode(
                 subplan.getTableScanId(),
+                // use original table handle as it contains information about
+                // split enumeration (e.g. enforced partition or bucket filter) for
+                // a given subquery
                 subplan.getTable(),
                 // Remap column ids into specific subquery symbols
                 commonColumnHandles.keySet().stream()
