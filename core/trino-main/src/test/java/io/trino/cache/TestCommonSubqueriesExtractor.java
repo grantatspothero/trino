@@ -359,7 +359,7 @@ public class TestCommonSubqueriesExtractor
     @Test
     public void testSimpleSubqueries()
     {
-        // both subqueries just select single column
+        // both subqueries are just table scans
         SymbolAllocator symbolAllocator = new SymbolAllocator();
         Symbol subqueryAColumn1 = symbolAllocator.newSymbol("subquery_a_column1", BIGINT);
         PlanNode scanA = new TableScanNode(
@@ -431,6 +431,71 @@ public class TestCommonSubqueriesExtractor
                 Optional.empty(),
                 ImmutableList.of(new CacheColumnId("cache_column1"), new CacheColumnId("cache_column2")),
                 TupleDomain.all()));
+    }
+
+    @Test
+    public void testPredicateInSingleSubquery()
+    {
+        // one subquery has filter, the other does not
+        // common subquery shouldn't have any predicate
+        SymbolAllocator symbolAllocator = new SymbolAllocator();
+        Symbol subqueryAColumn1 = symbolAllocator.newSymbol("subquery_a_column1", BIGINT);
+        PlanNode scanA = new TableScanNode(
+                new PlanNodeId("scanA"),
+                testTableHandle,
+                ImmutableList.of(subqueryAColumn1),
+                ImmutableMap.of(subqueryAColumn1, HANDLE_1),
+                TupleDomain.all(),
+                Optional.empty(),
+                false,
+                Optional.of(false));
+        FilterNode filterA = new FilterNode(
+                new PlanNodeId("filterA"),
+                scanA,
+                expression("subquery_a_column1 % 4 = BIGINT '0'"));
+
+        Symbol subqueryBColumn1 = symbolAllocator.newSymbol("subquery_b_column1", BIGINT);
+        PlanNode scanB = new TableScanNode(
+                new PlanNodeId("scanB"),
+                testTableHandle,
+                ImmutableList.of(subqueryBColumn1),
+                ImmutableMap.of(subqueryBColumn1, HANDLE_1),
+                TupleDomain.all(),
+                Optional.empty(),
+                false,
+                Optional.of(false));
+
+        PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
+        Map<PlanNode, CommonPlanAdaptation> planAdaptations = extractCommonSubqueries(
+                idAllocator,
+                symbolAllocator,
+                new UnionNode(
+                        new PlanNodeId("union"),
+                        ImmutableList.of(filterA, scanB),
+                        ImmutableListMultimap.of(),
+                        ImmutableList.of()));
+
+        // there should be a common subquery found for both subplans
+        assertThat(planAdaptations).hasSize(2);
+        assertThat(planAdaptations).containsKey(filterA);
+        assertThat(planAdaptations).containsKey(scanB);
+
+        CommonPlanAdaptation subqueryA = planAdaptations.get(filterA);
+        CommonPlanAdaptation subqueryB = planAdaptations.get(scanB);
+
+        // common subplan should consist on only table scan
+        PlanMatchPattern commonSubplan = strictTableScan(
+                TEST_TABLE,
+                ImmutableMap.of("column1", "column1"));
+        assertPlan(symbolAllocator, subqueryA.getCommonSubplan(), commonSubplan);
+        assertPlan(symbolAllocator, subqueryB.getCommonSubplan(), commonSubplan);
+
+        // only filtering adaptation is required on subplan a
+        assertPlan(symbolAllocator, subqueryA.adaptCommonSubplan(subqueryA.getCommonSubplan(), idAllocator),
+                filter("column1 % 4 = BIGINT '0'",
+                        commonSubplan));
+
+        assertPlan(symbolAllocator, subqueryB.adaptCommonSubplan(subqueryB.getCommonSubplan(), idAllocator), commonSubplan);
     }
 
     private Map<PlanNode, CommonPlanAdaptation> extractCommonSubqueries(
