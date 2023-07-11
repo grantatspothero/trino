@@ -315,6 +315,11 @@ public class HiveTableHandle
                 dataColumns,
                 partitionNames,
                 partitions,
+                /*
+                    It overwrites `compactEffectivePredicate` because setting this property to `TupleDomain.all()` does not affect
+                    final result when table is queried. It allows to match more similar subqueries that reads from same table
+                    but has different predicates.
+                */
                 TupleDomain.all(),
                 enforcedConstraint,
                 bucketHandle,
