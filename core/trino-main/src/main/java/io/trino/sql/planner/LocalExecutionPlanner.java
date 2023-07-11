@@ -161,6 +161,7 @@ import io.trino.plugin.base.MappedRecordSet;
 import io.trino.spi.Page;
 import io.trino.spi.PageBuilder;
 import io.trino.spi.TrinoException;
+import io.trino.spi.block.Block;
 import io.trino.spi.block.SqlRow;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.PlanSignature;
@@ -2382,10 +2383,12 @@ public class LocalExecutionPlanner
                     Map<NodeRef<Expression>, Type> types = typeAnalyzer.getTypes(session, TypeProvider.empty(), row);
                     checkState(types.get(NodeRef.of(row)) instanceof RowType, "unexpected type of Values row: %s", types);
                     // evaluate the literal value
-                    Object result = new ExpressionInterpreter(row, plannerContext, session, types).evaluate();
+                    SqlRow result = (SqlRow) new ExpressionInterpreter(row, plannerContext, session, types).evaluate();
+                    int rawIndex = result.getRawIndex();
                     for (int j = 0; j < outputTypes.size(); j++) {
                         // divide row into fields
-                        writeNativeValue(outputTypes.get(j), pageBuilder.getBlockBuilder(j), readNativeValue(outputTypes.get(j), (SqlRow) result, j));
+                        Block fieldBlock = result.getRawFieldBlock(j);
+                        writeNativeValue(outputTypes.get(j), pageBuilder.getBlockBuilder(j), readNativeValue(outputTypes.get(j), fieldBlock, rawIndex));
                     }
                 }
             }
