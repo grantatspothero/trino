@@ -138,13 +138,6 @@ public final class HiveTestUtils
         return getHiveSession(hiveConfig, new OrcReaderConfig());
     }
 
-    public static ConnectorSession getHiveSession(HiveFormatsConfig formatsConfig)
-    {
-        return TestingConnectorSession.builder()
-                .setPropertyMetadata(getHiveSessionProperties(formatsConfig).getSessionProperties())
-                .build();
-    }
-
     public static TestingConnectorSession getHiveSession(HiveConfig hiveConfig, OrcReaderConfig orcReaderConfig)
     {
         return TestingConnectorSession.builder()
@@ -164,22 +157,10 @@ public final class HiveTestUtils
         return getHiveSessionProperties(hiveConfig, new OrcReaderConfig());
     }
 
-    public static HiveSessionProperties getHiveSessionProperties(HiveFormatsConfig hiveFormatsConfig)
-    {
-        return new HiveSessionProperties(
-                new HiveConfig(),
-                hiveFormatsConfig,
-                new OrcReaderConfig(),
-                new OrcWriterConfig(),
-                new ParquetReaderConfig(),
-                new ParquetWriterConfig());
-    }
-
     public static HiveSessionProperties getHiveSessionProperties(HiveConfig hiveConfig, OrcReaderConfig orcReaderConfig)
     {
         return new HiveSessionProperties(
                 hiveConfig,
-                new HiveFormatsConfig(),
                 orcReaderConfig,
                 new OrcWriterConfig(),
                 new ParquetReaderConfig(),
@@ -190,7 +171,6 @@ public final class HiveTestUtils
     {
         return new HiveSessionProperties(
                 hiveConfig,
-                new HiveFormatsConfig(),
                 new OrcReaderConfig(),
                 new OrcWriterConfig(),
                 new ParquetReaderConfig(),
@@ -201,7 +181,6 @@ public final class HiveTestUtils
     {
         return new HiveSessionProperties(
                 hiveConfig,
-                new HiveFormatsConfig(),
                 new OrcReaderConfig(),
                 new OrcWriterConfig(),
                 parquetReaderConfig,
