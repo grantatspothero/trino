@@ -92,7 +92,8 @@ public class TestCacheCommonSubqueries
                 Optional.empty(),
                 ImmutableList.of(REGIONKEY_COLUMN_ID, NATIONKEY_COLUMN_ID),
                 TupleDomain.withColumnDomains(ImmutableMap.of(
-                        NATIONKEY_COLUMN_ID, Domain.create(ValueSet.ofRanges(lessThan(BIGINT, 5L), greaterThan(BIGINT, 10L)), false))));
+                        NATIONKEY_COLUMN_ID, Domain.create(ValueSet.ofRanges(lessThan(BIGINT, 5L), greaterThan(BIGINT, 10L)), false))),
+                TupleDomain.all());
         assertPlan("""
                         SELECT * FROM
                         (SELECT regionkey FROM nation WHERE nationkey > 10)
@@ -141,6 +142,7 @@ public class TestCacheCommonSubqueries
                 new SignatureKey("tiny:nation:0.01"),
                 Optional.empty(),
                 ImmutableList.of(NATIONKEY_COLUMN_ID, REGIONKEY_COLUMN_ID),
+                TupleDomain.all(),
                 TupleDomain.all());
         Predicate<FilterNode> isNationKeyDynamicFilter = node -> DynamicFilters.getDescriptor(node.getPredicate())
                 .map(descriptor -> descriptor.getInput().equals(new SymbolReference("nationkey")))

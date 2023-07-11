@@ -273,6 +273,7 @@ public class TestCommonSubqueriesExtractor
                 new SignatureKey("cache_table_id:(((\"cache_column1\" % 4) = BIGINT '0') OR ((\"cache_column2\" % 2) = BIGINT '0'))"),
                 Optional.empty(),
                 ImmutableList.of(new CacheColumnId("(\"cache_column1\" * 10)"), new CacheColumnId("cache_column1")),
+                TupleDomain.all(),
                 TupleDomain.all()));
     }
 
@@ -358,7 +359,8 @@ public class TestCommonSubqueriesExtractor
                 new SignatureKey("cache_table_id"),
                 Optional.empty(),
                 ImmutableList.of(new CacheColumnId("cache_column1")),
-                expectedTupleDomain));
+                expectedTupleDomain,
+                TupleDomain.all()));
 
         // make sure signature tuple domain is normalized
         SortedRangeSet actualValues = (SortedRangeSet) subqueryA.getCommonSubplanSignature()
@@ -445,6 +447,7 @@ public class TestCommonSubqueriesExtractor
                 new SignatureKey("cache_table_id"),
                 Optional.empty(),
                 ImmutableList.of(new CacheColumnId("cache_column1"), new CacheColumnId("cache_column2")),
+                TupleDomain.all(),
                 TupleDomain.all()));
     }
 

@@ -214,7 +214,8 @@ public final class CommonSubqueriesExtractor
                 signatureKey,
                 Optional.empty(),
                 projections,
-                normalizeTupleDomain(signaturePredicate));
+                normalizeTupleDomain(signaturePredicate),
+                TupleDomain.all());
     }
 
     private static CommonPlanAdaptation createCommonPlanAdaptation(

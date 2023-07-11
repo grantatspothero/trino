@@ -233,6 +233,7 @@ public class TestMemoryCacheManager
                 new SignatureKey(signature),
                 Optional.empty(),
                 ImmutableList.of(),
+                TupleDomain.all(),
                 TupleDomain.all());
     }
 
