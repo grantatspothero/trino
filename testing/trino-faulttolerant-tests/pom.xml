@@ -204,12 +204,6 @@
             <groupId>io.trino</groupId>
             <artifactId>trino-hive</artifactId>
             <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.alluxio</groupId>
-                    <artifactId>alluxio-shaded-client</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
 
         <dependency>
@@ -225,10 +219,6 @@
                 <exclusion>
                     <groupId>com.google.apis</groupId>
                     <artifactId>google-api-services-storage</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.alluxio</groupId>
-                    <artifactId>alluxio-shaded-client</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
