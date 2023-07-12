@@ -641,7 +641,6 @@ public class LocalExecutionPlanner
                 .collect(toImmutableList());
 
         context.addDriverFactory(
-                context.isInputDriver(),
                 true,
                 new PhysicalOperation(
                         outputOperatorFactory.createOutputOperator(
@@ -651,7 +650,7 @@ public class LocalExecutionPlanner
                                 pagePreprocessor,
                                 new PagesSerdeFactory(plannerContext.getBlockEncodingSerde(), isExchangeCompressionEnabled(session))),
                         physicalOperation),
-                context.getDriverInstanceCount());
+                context);
 
         // notify operator factories that planning has completed
         context.getDriverFactories().forEach(SplitDriverFactory::localPlannerComplete);
@@ -706,8 +705,10 @@ public class LocalExecutionPlanner
             this.nextPipelineId = nextPipelineId;
         }
 
-        public void addDriverFactory(boolean inputDriver, boolean outputDriver, PhysicalOperation physicalOperation, OptionalInt driverInstances)
+        public void addDriverFactory(boolean outputDriver, PhysicalOperation physicalOperation, LocalExecutionPlanContext context)
         {
+            boolean inputDriver = context.isInputDriver();
+            OptionalInt driverInstances = context.getDriverInstanceCount();
             List<OperatorFactoryWithTypes> operatorFactoriesWithTypes = physicalOperation.pipelineTail;
             addLookupOuterDrivers(outputDriver, toOperatorFactories(operatorFactoriesWithTypes));
             if (physicalOperation.pipelineHeadAlternatives.isEmpty()) {
@@ -2735,10 +2736,9 @@ public class LocalExecutionPlanner
             }
 
             context.addDriverFactory(
-                    buildContext.isInputDriver(),
                     false,
                     new PhysicalOperation(nestedLoopBuildOperatorFactory, buildSource),
-                    buildContext.getDriverInstanceCount());
+                    buildContext);
 
             // build output mapping
             ImmutableMap.Builder<Symbol, Integer> outputMappings = ImmutableMap.builder();
@@ -2866,10 +2866,9 @@ public class LocalExecutionPlanner
                     pagesIndexFactory);
 
             context.addDriverFactory(
-                    buildContext.isInputDriver(),
                     false,
                     new PhysicalOperation(builderOperatorFactory, buildSource),
-                    buildContext.getDriverInstanceCount());
+                    buildContext);
 
             return builderOperatorFactory.getPagesSpatialIndexFactory();
         }
@@ -3014,10 +3013,9 @@ public class LocalExecutionPlanner
                                 taskConcurrency / partitionCount));
 
                 context.addDriverFactory(
-                        buildContext.isInputDriver(),
                         false,
                         new PhysicalOperation(hashBuilderOperatorFactory, buildSource),
-                        buildContext.getDriverInstanceCount());
+                        buildContext);
 
                 JoinOperatorType joinType = JoinOperatorType.ofJoinNodeType(node.getType(), outputSingleMatch, waitForBuild);
                 operator = operatorFactories.spillingJoin(
@@ -3067,10 +3065,9 @@ public class LocalExecutionPlanner
                                 taskConcurrency / partitionCount));
 
                 context.addDriverFactory(
-                        buildContext.isInputDriver(),
                         false,
                         new PhysicalOperation(hashBuilderOperatorFactory, buildSource),
-                        buildContext.getDriverInstanceCount());
+                        buildContext);
 
                 JoinOperatorType joinType = JoinOperatorType.ofJoinNodeType(node.getType(), outputSingleMatch, waitForBuild);
                 operator = operatorFactories.join(
@@ -3313,10 +3310,9 @@ public class LocalExecutionPlanner
                     blockTypeOperators);
             SetSupplier setProvider = setBuilderOperatorFactory.getSetProvider();
             context.addDriverFactory(
-                    buildContext.isInputDriver(),
                     false,
                     new PhysicalOperation(setBuilderOperatorFactory, buildSource),
-                    buildContext.getDriverInstanceCount());
+                    buildContext);
 
             // Source channels are always laid out first, followed by the boolean output symbol
             Map<Symbol, Integer> outputMappings = ImmutableMap.<Symbol, Integer>builder()
@@ -3707,7 +3703,6 @@ public class LocalExecutionPlanner
             List<Symbol> expectedLayout = node.getInputs().get(0);
             Function<Page, Page> pagePreprocessor = enforceLoadedLayoutProcessor(expectedLayout, source.getLayout());
             context.addDriverFactory(
-                    subContext.isInputDriver(),
                     false,
                     new PhysicalOperation(
                             new LocalExchangeSinkOperatorFactory(
@@ -3716,7 +3711,7 @@ public class LocalExecutionPlanner
                                     node.getId(),
                                     pagePreprocessor),
                             source),
-                    subContext.getDriverInstanceCount());
+                    subContext);
             // the main driver is not an input... the exchange sources are the input for the plan
             context.setInputDriver(false);
 
@@ -3789,7 +3784,6 @@ public class LocalExecutionPlanner
                 Function<Page, Page> pagePreprocessor = enforceLoadedLayoutProcessor(expectedLayout, source.getLayout());
 
                 context.addDriverFactory(
-                        subContext.isInputDriver(),
                         false,
                         new PhysicalOperation(
                                 new LocalExchangeSinkOperatorFactory(
@@ -3798,7 +3792,7 @@ public class LocalExecutionPlanner
                                         node.getId(),
                                         pagePreprocessor),
                                 source),
-                        subContext.getDriverInstanceCount());
+                        subContext);
             }
 
             // the main driver is not an input... the exchange sources are the input for the plan
