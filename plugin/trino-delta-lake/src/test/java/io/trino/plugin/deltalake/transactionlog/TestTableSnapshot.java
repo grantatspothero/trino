@@ -145,7 +145,8 @@ public class TestTableSnapshot
                                     "\"nullCount\":{\"name\":0,\"married\":0,\"phones\":0,\"address\":{\"street\":0,\"city\":0,\"state\":0,\"zip\":0},\"income\":0}" +
                                     "}"),
                             Optional.empty(),
-                            null));
+                            null,
+                            Optional.empty()));
 
             assertThat(entries).element(7).extracting(DeltaLakeTransactionLogEntry::getAdd).isEqualTo(
                     new AddFileEntry(
@@ -161,7 +162,8 @@ public class TestTableSnapshot
                                     "\"nullCount\":{\"name\":0,\"married\":0,\"phones\":0,\"address\":{\"street\":0,\"city\":0,\"state\":0,\"zip\":0},\"income\":0}" +
                                     "}"),
                             Optional.empty(),
-                            null));
+                            null,
+                            Optional.empty()));
         }
 
         // lets read two entry types in one call; add and protocol
@@ -185,7 +187,8 @@ public class TestTableSnapshot
                                     "\"nullCount\":{\"name\":0,\"married\":0,\"phones\":0,\"address\":{\"street\":0,\"city\":0,\"state\":0,\"zip\":0},\"income\":0}" +
                                     "}"),
                             Optional.empty(),
-                            null));
+                            null,
+                            Optional.empty()));
 
             assertThat(entries).element(6).extracting(DeltaLakeTransactionLogEntry::getProtocol).isEqualTo(new ProtocolEntry(1, 2, Optional.empty(), Optional.empty()));
 
@@ -203,7 +206,8 @@ public class TestTableSnapshot
                                     "\"nullCount\":{\"name\":0,\"married\":0,\"phones\":0,\"address\":{\"street\":0,\"city\":0,\"state\":0,\"zip\":0},\"income\":0}" +
                                     "}"),
                             Optional.empty(),
-                            null));
+                            null,
+                            Optional.empty()));
         }
     }
 

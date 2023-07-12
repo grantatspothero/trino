@@ -1691,7 +1691,8 @@ public class DeltaLakeMetadata
                             dataChange,
                             Optional.of(serializeStatsAsJson(statisticsWithExactNames)),
                             Optional.empty(),
-                            ImmutableMap.of()));
+                            ImmutableMap.of(),
+                            Optional.empty()));
         }
     }
 
@@ -3157,7 +3158,8 @@ public class DeltaLakeMetadata
                     false,
                     Optional.of(serializeStatsAsJson(deltaLakeJsonFileStatistics)),
                     Optional.empty(),
-                    addFileEntry.getTags());
+                    addFileEntry.getTags(),
+                    addFileEntry.getDeletionVector());
         }
         catch (JsonProcessingException e) {
             throw new TrinoException(GENERIC_INTERNAL_ERROR, "Statistics serialization error", e);
