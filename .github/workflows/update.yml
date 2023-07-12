@@ -22,7 +22,7 @@ env:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, sep-cicd, gha-fleet-nano]
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/setup

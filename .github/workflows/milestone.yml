@@ -11,7 +11,7 @@ defaults:
 jobs:
   set-milestone:
     if: github.repository_owner == 'trinodb'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, sep-cicd, gha-fleet-nano]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
