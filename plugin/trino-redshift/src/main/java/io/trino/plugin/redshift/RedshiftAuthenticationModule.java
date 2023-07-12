@@ -40,6 +40,8 @@ import static io.airlift.configuration.ConditionalModule.conditionalModule;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionReadLimit;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionWriteLimit;
 import static io.trino.plugin.base.galaxy.RegionVerifier.addCrossRegionAllowed;
 import static io.trino.plugin.base.galaxy.RegionVerifier.addRegionLocalIpAddresses;
 import static io.trino.plugin.redshift.RedshiftAuthenticationConfig.RedshiftAuthenticationType.AWS;
@@ -150,6 +152,10 @@ public class RedshiftAuthenticationModule
         addCatalogId(properties, catalogHandle.getVersion().toString());
         addCrossRegionAllowed(properties, regionEnforcementConfig.getAllowCrossRegionAccess());
         addRegionLocalIpAddresses(properties, regionEnforcementConfig.getAllowedIpAddresses());
+        if (regionEnforcementConfig.getAllowCrossRegionAccess()) {
+            addCrossRegionReadLimit(properties, regionEnforcementConfig.getCrossRegionReadLimit());
+            addCrossRegionWriteLimit(properties, regionEnforcementConfig.getCrossRegionWriteLimit());
+        }
 
         SshTunnelProperties.generateFrom(sshTunnelConfig)
                 .ifPresent(sshTunnelProperties -> addSshTunnelProperties(properties::setProperty, sshTunnelProperties));

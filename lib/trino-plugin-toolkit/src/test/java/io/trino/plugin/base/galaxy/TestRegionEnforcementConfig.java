@@ -15,6 +15,8 @@ package io.trino.plugin.base.galaxy;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.airlift.units.DataSize;
+import io.airlift.units.DataSize.Unit;
 import org.testng.annotations.Test;
 
 import java.util.Map;
@@ -29,21 +31,27 @@ public class TestRegionEnforcementConfig
     public void testDefaults()
     {
         assertRecordedDefaults(recordDefaults(RegionEnforcementConfig.class)
-                .setAllowedIpAddresses(ImmutableList.of("0.0.0.0/0"))
-                .setAllowCrossRegionAccess(false));
+                .setAllowCrossRegionAccess(false)
+                .setCrossRegionReadLimit(DataSize.of(20, Unit.GIGABYTE))
+                .setCrossRegionWriteLimit(DataSize.of(10, Unit.GIGABYTE))
+                .setAllowedIpAddresses(ImmutableList.of("0.0.0.0/0")));
     }
 
     @Test
     public void testExplicitPropertyMappings()
     {
         Map<String, String> properties = ImmutableMap.<String, String>builder()
-                .put("galaxy.region-enforcement.allowed-ip-addresses", "1.2.3.4, 5.6.7.8/29")
                 .put("galaxy.region-enforcement.allow-cross-region-access", "true")
+                .put("galaxy.region-enforcement.cross-region-read-limit", "500TB")
+                .put("galaxy.region-enforcement.cross-region-write-limit", "250MB")
+                .put("galaxy.region-enforcement.allowed-ip-addresses", "1.2.3.4, 5.6.7.8/29")
                 .buildOrThrow();
 
         RegionEnforcementConfig expected = new RegionEnforcementConfig()
-                .setAllowedIpAddresses(ImmutableList.of("1.2.3.4", "5.6.7.8/29"))
-                .setAllowCrossRegionAccess(true);
+                .setAllowCrossRegionAccess(true)
+                .setCrossRegionReadLimit(DataSize.of(500, Unit.TERABYTE))
+                .setCrossRegionWriteLimit(DataSize.of(250, Unit.MEGABYTE))
+                .setAllowedIpAddresses(ImmutableList.of("1.2.3.4", "5.6.7.8/29"));
 
         assertFullMapping(properties, expected);
     }

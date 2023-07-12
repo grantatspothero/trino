@@ -22,6 +22,7 @@ import com.google.common.net.HostAndPort;
 import com.mysql.cj.conf.PropertySet;
 import com.mysql.cj.conf.RuntimeProperty;
 import com.mysql.cj.protocol.StandardSocketFactory;
+import io.airlift.units.DataSize;
 import io.trino.plugin.base.galaxy.IpRangeMatcher;
 import io.trino.sshtunnel.SshTunnelManager;
 import io.trino.sshtunnel.SshTunnelManager.Tunnel;
@@ -54,6 +55,8 @@ public class GalaxyMySqlSocketFactory
     private static final String CATALOG_ID_PROPERTY_NAME = "catalogId";
     private static final String CROSS_REGION_ALLOWED_PROPERTY_NAME = "crossRegionAllowed";
     private static final String REGION_LOCAL_IP_ADDRESSES_PROPERTY_NAME = "regionLocalIpAddresses";
+    private static final String CROSS_REGION_READ_LIMIT_PROPERTY_NAME = "crossRegionReadLimit";
+    private static final String CROSS_REGION_WRITE_LIMIT_PROPERTY_NAME = "crossRegionWriteLimit";
 
     // Use static caches to retain state because socket factories are unfortunately recreated for each socket
     private static final LoadingCache<List<String>, IpRangeMatcher> IP_RANGE_MATCHER_CACHE =
@@ -177,6 +180,16 @@ public class GalaxyMySqlSocketFactory
     private static List<String> getRegionLocalIpAddresses(PropertySet propertySet)
     {
         return Splitter.on(',').splitToList(getRequiredProperty(propertySet, REGION_LOCAL_IP_ADDRESSES_PROPERTY_NAME));
+    }
+
+    public static void addCrossRegionReadLimit(Properties properties, DataSize crossRegionReadLimit)
+    {
+        properties.setProperty(CROSS_REGION_READ_LIMIT_PROPERTY_NAME, crossRegionReadLimit.toBytesValueString());
+    }
+
+    public static void addCrossRegionWriteLimit(Properties properties, DataSize crossRegionWriteLimit)
+    {
+        properties.setProperty(CROSS_REGION_WRITE_LIMIT_PROPERTY_NAME, crossRegionWriteLimit.toBytesValueString());
     }
 
     public static void addSshTunnelProperties(Properties properties, SshTunnelProperties sshTunnelProperties)

@@ -17,6 +17,7 @@ import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.airlift.units.DataSize;
 import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
@@ -34,6 +35,8 @@ import java.util.Properties;
 
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionReadLimit;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionWriteLimit;
 import static io.trino.plugin.base.galaxy.RegionVerifier.addCrossRegionAllowed;
 import static io.trino.plugin.base.galaxy.RegionVerifier.addRegionLocalIpAddresses;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
@@ -64,6 +67,12 @@ public class PostgreSqlConnectionFactoryModule
         addCatalogId(connectionProperties, catalogHandle.getVersion().toString());
         addCrossRegionAllowed(connectionProperties, regionEnforcementConfig.getAllowCrossRegionAccess());
         addRegionLocalIpAddresses(connectionProperties, regionEnforcementConfig.getAllowedIpAddresses());
+        if (regionEnforcementConfig.getAllowCrossRegionAccess()) {
+            DataSize crossRegionReadLimit = regionEnforcementConfig.getCrossRegionReadLimit();
+            addCrossRegionReadLimit(connectionProperties, crossRegionReadLimit);
+            DataSize crossRegionWriteLimit = regionEnforcementConfig.getCrossRegionWriteLimit();
+            addCrossRegionWriteLimit(connectionProperties, crossRegionWriteLimit);
+        }
 
         SshTunnelProperties.generateFrom(sshTunnelConfig)
                 .ifPresent(sshTunnelProperties -> addSshTunnelProperties(connectionProperties::setProperty, sshTunnelProperties));

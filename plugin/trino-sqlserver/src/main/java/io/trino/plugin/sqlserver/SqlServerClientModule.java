@@ -20,6 +20,7 @@ import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.microsoft.sqlserver.jdbc.SQLServerDriver;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.airlift.units.DataSize;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
@@ -49,6 +50,8 @@ import static io.airlift.configuration.ConditionalModule.conditionalModule;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionReadLimit;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionWriteLimit;
 import static io.trino.plugin.base.galaxy.RegionVerifier.addCrossRegionAllowed;
 import static io.trino.plugin.base.galaxy.RegionVerifier.addRegionLocalIpAddresses;
 import static io.trino.plugin.jdbc.JdbcModule.bindSessionPropertiesProvider;
@@ -94,6 +97,12 @@ public class SqlServerClientModule
         addCatalogId(socketArgs, catalogHandle.getVersion().toString());
         addCrossRegionAllowed(socketArgs, regionEnforcementConfig.getAllowCrossRegionAccess());
         addRegionLocalIpAddresses(socketArgs, regionEnforcementConfig.getAllowedIpAddresses());
+        if (regionEnforcementConfig.getAllowCrossRegionAccess()) {
+            DataSize crossRegionReadLimit = regionEnforcementConfig.getCrossRegionReadLimit();
+            addCrossRegionReadLimit(socketArgs, crossRegionReadLimit);
+            DataSize crossRegionWriteLimit = regionEnforcementConfig.getCrossRegionWriteLimit();
+            addCrossRegionWriteLimit(socketArgs, crossRegionWriteLimit);
+        }
         SshTunnelProperties.generateFrom(sshTunnelConfig)
                 .ifPresent(sshTunnelProperties -> addSshTunnelProperties(socketArgs::setProperty, sshTunnelProperties));
 

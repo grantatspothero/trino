@@ -18,6 +18,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
+import io.airlift.units.DataSize;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
@@ -37,6 +38,8 @@ import java.util.Properties;
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionReadLimit;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionWriteLimit;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addTlsEnabled;
 import static io.trino.plugin.base.galaxy.RegionVerifier.addCrossRegionAllowed;
 import static io.trino.plugin.base.galaxy.RegionVerifier.addRegionLocalIpAddresses;
@@ -70,6 +73,12 @@ public class DruidJdbcClientModule
         addCatalogId(galaxyProperties, catalogHandle.getVersion().toString());
         addRegionLocalIpAddresses(galaxyProperties, regionEnforcementConfig.getAllowedIpAddresses());
         addCrossRegionAllowed(galaxyProperties, regionEnforcementConfig.getAllowCrossRegionAccess());
+        if (regionEnforcementConfig.getAllowCrossRegionAccess()) {
+            DataSize crossRegionReadLimit = regionEnforcementConfig.getCrossRegionReadLimit();
+            addCrossRegionReadLimit(galaxyProperties, crossRegionReadLimit);
+            DataSize crossRegionWriteLimit = regionEnforcementConfig.getCrossRegionWriteLimit();
+            addCrossRegionWriteLimit(galaxyProperties, crossRegionWriteLimit);
+        }
 
         if (config.getConnectionUrl().toLowerCase(ENGLISH).startsWith(CONNECT_STRING_PREFIX + "url=https")) {
             addTlsEnabled(galaxyProperties);

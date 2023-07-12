@@ -14,6 +14,7 @@
 package io.trino.plugin.base.galaxy;
 
 import com.google.common.net.HostAndPort;
+import io.airlift.units.DataSize;
 import io.trino.sshtunnel.SshTunnelManager;
 import io.trino.sshtunnel.SshTunnelManager.Tunnel;
 import io.trino.sshtunnel.SshTunnelProperties;
@@ -49,6 +50,8 @@ public class GalaxySqlSocketFactory
     // tlsEnabled is only needed for the mongo socket factory currently
     // JDBC drivers wrap the socket in an SSLSocket if necessary
     public static final String TLS_ENABLED_PROPERTY_NAME = "tlsEnabled";
+    private static final String CROSS_REGION_READ_LIMIT_PROPERTY_NAME = "crossRegionReadLimit";
+    private static final String CROSS_REGION_WRITE_LIMIT_PROPERTY_NAME = "crossRegionWriteLimit";
 
     private final String catalogName;
     private final String catalogId;
@@ -171,6 +174,16 @@ public class GalaxySqlSocketFactory
     public static void addTlsEnabled(Properties properties)
     {
         properties.setProperty(TLS_ENABLED_PROPERTY_NAME, "true");
+    }
+
+    public static void addCrossRegionReadLimit(Properties properties, DataSize crossRegionReadLimit)
+    {
+        properties.setProperty(CROSS_REGION_READ_LIMIT_PROPERTY_NAME, crossRegionReadLimit.toBytesValueString());
+    }
+
+    public static void addCrossRegionWriteLimit(Properties properties, DataSize crossRegionWriteLimit)
+    {
+        properties.setProperty(CROSS_REGION_WRITE_LIMIT_PROPERTY_NAME, crossRegionWriteLimit.toBytesValueString());
     }
 
     private static Optional<SshTunnelProperties> getSshTunnelProperties(Properties properties)

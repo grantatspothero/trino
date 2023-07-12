@@ -44,6 +44,8 @@ import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.trino.plugin.mysql.galaxy.GalaxyMySqlSocketFactory.addCatalogId;
 import static io.trino.plugin.mysql.galaxy.GalaxyMySqlSocketFactory.addCatalogName;
 import static io.trino.plugin.mysql.galaxy.GalaxyMySqlSocketFactory.addCrossRegionAllowed;
+import static io.trino.plugin.mysql.galaxy.GalaxyMySqlSocketFactory.addCrossRegionReadLimit;
+import static io.trino.plugin.mysql.galaxy.GalaxyMySqlSocketFactory.addCrossRegionWriteLimit;
 import static io.trino.plugin.mysql.galaxy.GalaxyMySqlSocketFactory.addRegionLocalIpAddresses;
 import static io.trino.plugin.mysql.galaxy.GalaxyMySqlSocketFactory.addSshTunnelProperties;
 
@@ -80,6 +82,10 @@ public class MySqlClientModule
         addCatalogId(properties, catalogHandle.getVersion().toString());
         addCrossRegionAllowed(properties, regionEnforcementConfig.getAllowCrossRegionAccess());
         addRegionLocalIpAddresses(properties, regionEnforcementConfig.getAllowedIpAddresses());
+        if (regionEnforcementConfig.getAllowCrossRegionAccess()) {
+            addCrossRegionReadLimit(properties, regionEnforcementConfig.getCrossRegionReadLimit());
+            addCrossRegionWriteLimit(properties, regionEnforcementConfig.getCrossRegionWriteLimit());
+        }
 
         SshTunnelProperties.generateFrom(sshTunnelConfig)
                 .ifPresent(sshTunnelProperties -> addSshTunnelProperties(properties, sshTunnelProperties));

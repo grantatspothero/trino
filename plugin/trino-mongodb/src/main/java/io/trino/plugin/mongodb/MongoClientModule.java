@@ -52,6 +52,8 @@ import static io.airlift.configuration.ConditionalModule.conditionalModule;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionReadLimit;
+import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionWriteLimit;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addTlsEnabled;
 import static io.trino.plugin.base.galaxy.RegionVerifier.addCrossRegionAllowed;
 import static io.trino.plugin.base.galaxy.RegionVerifier.addRegionLocalIpAddresses;
@@ -168,6 +170,10 @@ public class MongoClientModule
             addCatalogId(properties, catalogHandle.getVersion().toString());
             addCrossRegionAllowed(properties, false);
             addRegionLocalIpAddresses(properties, regionEnforcementConfig.getAllowedIpAddresses());
+            if (regionEnforcementConfig.getAllowCrossRegionAccess()) {
+                addCrossRegionReadLimit(properties, regionEnforcementConfig.getCrossRegionReadLimit());
+                addCrossRegionWriteLimit(properties, regionEnforcementConfig.getCrossRegionWriteLimit());
+            }
             sshTunnelProperties.ifPresent(sshProps -> addSshTunnelProperties(properties::setProperty, sshProps));
             if (sslSettings.isEnabled()) {
                 addTlsEnabled(properties);
