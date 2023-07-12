@@ -143,8 +143,7 @@ public class HiveConfig
     private Duration fileStatusCacheExpireAfterWrite = new Duration(1, MINUTES);
     private DataSize fileStatusCacheMaxRetainedSize = DataSize.of(1, GIGABYTE);
     private List<String> fileStatusCacheTables = ImmutableList.of();
-    // private DataSize perTransactionFileStatusCacheMaxRetainedSize = DataSize.of(100, MEGABYTE); Galaxy has this disabled since 59b9663d2e798bbc649508ca730e4c920e333a44
-    private DataSize perTransactionFileStatusCacheMaxRetainedSize = DataSize.of(0, MEGABYTE);
+    private DataSize perTransactionFileStatusCacheMaxRetainedSize = DataSize.of(100, MEGABYTE);
 
     private boolean translateHiveViews;
     private boolean legacyHiveViewTranslation;
