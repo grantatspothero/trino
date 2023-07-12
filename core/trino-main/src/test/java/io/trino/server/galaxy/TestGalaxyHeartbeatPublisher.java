@@ -40,6 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestGalaxyHeartbeatPublisher
 {
     private static final int CHUNK_SIZE = 64;
+    private static final int MAX_CROSS_REGION_BYTES = CHUNK_SIZE * 2;
 
     @Test
     public void testHeartbeatPublisherOnShutdown()
@@ -54,7 +55,7 @@ public class TestGalaxyHeartbeatPublisher
             // wait for initial publish, which shouldn't contain any catalog metrics
             kafkaPublisher.awaitPublish(records -> records.size() > 0, 1000);
 
-            CatalogNetworkMonitor catalogNetworkMonitor = CatalogNetworkMonitor.getCatalogNetworkMonitor("foocatalog", "c-1234567890");
+            CatalogNetworkMonitor catalogNetworkMonitor = CatalogNetworkMonitor.getCatalogNetworkMonitor("foocatalog", "c-1234567890", MAX_CROSS_REGION_BYTES, MAX_CROSS_REGION_BYTES);
             try (InputStream baseInputStream = new ByteArrayInputStream(new byte[CHUNK_SIZE])) {
                 // create monitored input stream, read a certain amount of bytes, and verify that the amount read is correctly reported
                 InputStream monitoredInputStream = catalogNetworkMonitor.monitorInputStream(true, baseInputStream);

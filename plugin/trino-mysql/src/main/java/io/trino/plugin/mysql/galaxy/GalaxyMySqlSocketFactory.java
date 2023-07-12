@@ -45,6 +45,7 @@ import static com.google.common.net.InetAddresses.toAddrString;
 import static io.trino.cache.SafeCaches.buildNonEvictableCache;
 import static io.trino.plugin.base.galaxy.InetAddresses.asInetSocketAddress;
 import static io.trino.plugin.base.galaxy.InetAddresses.toInetAddresses;
+import static io.trino.spi.galaxy.CatalogNetworkMonitor.checkCrossRegionLimitsAndThrowIfExceeded;
 import static io.trino.spi.galaxy.CatalogNetworkMonitor.getCatalogNetworkMonitor;
 import static java.lang.String.format;
 
@@ -69,6 +70,8 @@ public class GalaxyMySqlSocketFactory
         String catalogId = getCatalogId(props);
         boolean crossRegionAllowed = isCrossRegionAllowed(props);
         IpRangeMatcher ipRangeMatcher = IP_RANGE_MATCHER_CACHE.getUnchecked(getRegionLocalIpAddresses(props));
+        Optional<DataSize> crossRegionReadLimit = getCrossRegionReadLimit(props);
+        Optional<DataSize> crossRegionWriteLimit = getCrossRegionWriteLimit(props);
         Optional<SshTunnelManager> sshTunnelManager = getSshTunnelProperties(props)
                 .map(SshTunnelManager::getCached);
 
@@ -130,14 +133,26 @@ public class GalaxyMySqlSocketFactory
             public InputStream getInputStream()
                     throws IOException
             {
-                return getCatalogNetworkMonitor(catalogName, catalogId).monitorInputStream(crossRegionAddress, super.getInputStream());
+                long crossRegionReadLimitBytes = crossRegionReadLimit.orElseGet(() -> DataSize.ofBytes(0)).toBytes();
+                long crossRegionWriteLimitBytes = crossRegionWriteLimit.orElseGet(() -> DataSize.ofBytes(0)).toBytes();
+
+                if (crossRegionAddress) {
+                    checkCrossRegionLimitsAndThrowIfExceeded(crossRegionReadLimitBytes, crossRegionWriteLimitBytes);
+                }
+                return getCatalogNetworkMonitor(catalogName, catalogId, crossRegionReadLimitBytes, crossRegionWriteLimitBytes).monitorInputStream(crossRegionAddress, super.getInputStream());
             }
 
             @Override
             public OutputStream getOutputStream()
                     throws IOException
             {
-                return getCatalogNetworkMonitor(catalogName, catalogId).monitorOutputStream(crossRegionAddress, super.getOutputStream());
+                long crossRegionReadLimitBytes = crossRegionReadLimit.orElseGet(() -> DataSize.ofBytes(0)).toBytes();
+                long crossRegionWriteLimitBytes = crossRegionWriteLimit.orElseGet(() -> DataSize.ofBytes(0)).toBytes();
+
+                if (crossRegionAddress) {
+                    checkCrossRegionLimitsAndThrowIfExceeded(crossRegionReadLimitBytes, crossRegionWriteLimitBytes);
+                }
+                return getCatalogNetworkMonitor(catalogName, catalogId, crossRegionReadLimitBytes, crossRegionWriteLimitBytes).monitorOutputStream(crossRegionAddress, super.getOutputStream());
             }
         };
     }
@@ -190,6 +205,16 @@ public class GalaxyMySqlSocketFactory
     public static void addCrossRegionWriteLimit(Properties properties, DataSize crossRegionWriteLimit)
     {
         properties.setProperty(CROSS_REGION_WRITE_LIMIT_PROPERTY_NAME, crossRegionWriteLimit.toBytesValueString());
+    }
+
+    private static Optional<DataSize> getCrossRegionReadLimit(PropertySet propertySet)
+    {
+        return getOptionalProperty(propertySet, CROSS_REGION_READ_LIMIT_PROPERTY_NAME).map(DataSize::valueOf);
+    }
+
+    private static Optional<DataSize> getCrossRegionWriteLimit(PropertySet propertySet)
+    {
+        return getOptionalProperty(propertySet, CROSS_REGION_WRITE_LIMIT_PROPERTY_NAME).map(DataSize::valueOf);
     }
 
     public static void addSshTunnelProperties(Properties properties, SshTunnelProperties sshTunnelProperties)

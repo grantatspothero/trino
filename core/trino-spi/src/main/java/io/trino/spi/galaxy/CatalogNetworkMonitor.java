@@ -30,10 +30,11 @@ public final class CatalogNetworkMonitor
      * local context available when using socket factories.
      */
     private static final ConcurrentMap<String, CatalogNetworkMonitor> CATALOG_NETWORK_MONITORS = new ConcurrentHashMap<>();
+    private static final NetworkUsageQuotaEnforcer CROSS_REGION_NETWORK_USAGE_ENFORCER = new NetworkUsageQuotaEnforcer();
 
-    public static CatalogNetworkMonitor getCatalogNetworkMonitor(String catalogName, String catalogId)
+    public static CatalogNetworkMonitor getCatalogNetworkMonitor(String catalogName, String catalogId, long maxCrossRegionReadBytes, long maxCrossRegionWriteBytes)
     {
-        return CATALOG_NETWORK_MONITORS.computeIfAbsent(catalogId, id -> new CatalogNetworkMonitor(catalogName, id));
+        return CATALOG_NETWORK_MONITORS.computeIfAbsent(catalogId, id -> new CatalogNetworkMonitor(catalogName, id, maxCrossRegionReadBytes, maxCrossRegionWriteBytes));
     }
 
     public static Collection<CatalogNetworkMonitor> getAllCatalogNetworkMonitors()
@@ -41,15 +42,21 @@ public final class CatalogNetworkMonitor
         return List.copyOf(CATALOG_NETWORK_MONITORS.values());
     }
 
+    public static void checkCrossRegionLimitsAndThrowIfExceeded(long readLimit, long writeLimit)
+    {
+        CROSS_REGION_NETWORK_USAGE_ENFORCER.checkLimitsAndThrowIfExceeded(readLimit, writeLimit);
+    }
+
     private final String catalogName;
     private final String catalogId;
     private final NetworkMonitor intraRegionMonitor = new NetworkMonitor();
-    private final NetworkMonitor crossRegionMonitor = new NetworkMonitor();
+    private final NetworkMonitor crossRegionMonitor;
 
-    private CatalogNetworkMonitor(String catalogName, String catalogId)
+    private CatalogNetworkMonitor(String catalogName, String catalogId, long maxCrossRegionReadBytes, long maxCrossRegionWriteBytes)
     {
         this.catalogName = requireNonNull(catalogName, "catalogName is null");
         this.catalogId = requireNonNull(catalogId, "catalogId is null");
+        this.crossRegionMonitor = new QuotaEnforcingNetworkMonitor(CROSS_REGION_NETWORK_USAGE_ENFORCER, maxCrossRegionReadBytes, maxCrossRegionWriteBytes);
     }
 
     public String getCatalogName()

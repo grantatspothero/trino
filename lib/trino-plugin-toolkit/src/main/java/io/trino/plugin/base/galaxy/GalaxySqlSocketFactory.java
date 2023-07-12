@@ -37,6 +37,7 @@ import java.util.Properties;
 
 import static io.trino.plugin.base.galaxy.InetAddresses.asInetSocketAddress;
 import static io.trino.plugin.base.galaxy.InetAddresses.toInetAddresses;
+import static io.trino.spi.galaxy.CatalogNetworkMonitor.checkCrossRegionLimitsAndThrowIfExceeded;
 import static io.trino.spi.galaxy.CatalogNetworkMonitor.getCatalogNetworkMonitor;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.getOptionalProperty;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.getRequiredProperty;
@@ -58,6 +59,8 @@ public class GalaxySqlSocketFactory
     private final Optional<SshTunnelManager> sshTunnelManager;
     private final boolean tlsEnabled;
     private final RegionVerifier regionVerifier;
+    private final Optional<DataSize> crossRegionReadLimit;
+    private final Optional<DataSize> crossRegionWriteLimit;
 
     public GalaxySqlSocketFactory(Properties properties)
     {
@@ -70,6 +73,8 @@ public class GalaxySqlSocketFactory
                 .map(Boolean::parseBoolean)
                 .orElse(false);
         regionVerifier = new RegionVerifier(properties);
+        crossRegionReadLimit = getOptionalProperty(properties, CROSS_REGION_READ_LIMIT_PROPERTY_NAME).map(DataSize::valueOf);
+        crossRegionWriteLimit = getOptionalProperty(properties, CROSS_REGION_WRITE_LIMIT_PROPERTY_NAME).map(DataSize::valueOf);
     }
 
     private SSLSocket createSSLSocket()
@@ -105,13 +110,25 @@ public class GalaxySqlSocketFactory
         public InputStream getInputStream(InputStream inputStream)
                 throws IOException
         {
-            return getCatalogNetworkMonitor(catalogName, catalogId).monitorInputStream(isCrossRegion, inputStream);
+            long crossRegionReadLimitBytes = crossRegionReadLimit.orElseGet(() -> DataSize.ofBytes(0)).toBytes();
+            long crossRegionWriteLimitBytes = crossRegionWriteLimit.orElseGet(() -> DataSize.ofBytes(0)).toBytes();
+
+            if (isCrossRegion) {
+                checkCrossRegionLimitsAndThrowIfExceeded(crossRegionReadLimitBytes, crossRegionWriteLimitBytes);
+            }
+            return getCatalogNetworkMonitor(catalogName, catalogId, crossRegionReadLimitBytes, crossRegionWriteLimitBytes).monitorInputStream(isCrossRegion, inputStream);
         }
 
         public OutputStream getOutputStream(OutputStream outputStream)
                 throws IOException
         {
-            return getCatalogNetworkMonitor(catalogName, catalogId).monitorOutputStream(isCrossRegion, outputStream);
+            long crossRegionReadLimitBytes = crossRegionReadLimit.orElseGet(() -> DataSize.ofBytes(0)).toBytes();
+            long crossRegionWriteLimitBytes = crossRegionWriteLimit.orElseGet(() -> DataSize.ofBytes(0)).toBytes();
+
+            if (isCrossRegion) {
+                checkCrossRegionLimitsAndThrowIfExceeded(crossRegionReadLimitBytes, crossRegionWriteLimitBytes);
+            }
+            return getCatalogNetworkMonitor(catalogName, catalogId, crossRegionReadLimitBytes, crossRegionWriteLimitBytes).monitorOutputStream(isCrossRegion, outputStream);
         }
     }
 
