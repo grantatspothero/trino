@@ -21,6 +21,7 @@ import com.google.inject.Key;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.client.testing.TestUser;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
+import io.starburst.stargate.id.EntityKind;
 import io.starburst.stargate.id.PolicyId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.RoleName;
@@ -992,7 +993,7 @@ public class TestGalaxyQueries
         PolicyId policyId = client.createRowFilterPolicy("row_filter_policy", "memory.row_filters.base_table", "has_tag(tag1)", policyEnablerId, rowFilterId);
 
         // Apply the tag to the base_table
-        client.applyTagToTable(tagId, "memory.row_filters.base_table");
+        client.applyTag(tagId, EntityKind.TABLE, "memory.row_filters.base_table");
 
         // Show that the row filter is in effect for filterOwner
         assertUpdate("GRANT policy_enabler TO ROLE filter_owner");
