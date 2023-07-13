@@ -63,6 +63,11 @@ public class TestingBufferServiceCluster
             String dataServerImage)
     {
         try {
+            log.info("Starting up buffer service cluster with %s data servers; using discoveryServerImage '%s' and dataServerImage '%s'",
+                    dataServersCount,
+                    discoveryServerImage,
+                    dataServerImage);
+
             Network network = closer.register(Network.newNetwork());
             this.discoveryServerContainer = closer.register(new DiscoveryServerContainer(discoveryServerImage, "buffer-discovery-server", network));
             ImmutableList.Builder<DataServerContainer> dataServerContainersBuilder = ImmutableList.builder();
