@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -9,23 +9,14 @@
     </parent>
 
     <artifactId>fallbacking-buffer-exchange</artifactId>
-    <description>Buffer Service based Trino Exchange with fallback capabilities</description>
     <packaging>trino-plugin</packaging>
+    <description>Buffer Service based Trino Exchange with fallback capabilities</description>
 
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>io.starburst.stargate.buffer</groupId>
-            <artifactId>buffer-exchange</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.starburst.stargate.buffer</groupId>
-            <artifactId>discovery-client</artifactId>
-        </dependency>
 
         <dependency>
             <groupId>com.google.errorprone</groupId>
@@ -76,6 +67,15 @@
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>units</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.starburst.stargate.buffer</groupId>
+            <artifactId>buffer-exchange</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.starburst.stargate.buffer</groupId>
+            <artifactId>discovery-client</artifactId>
         </dependency>
 
         <dependency>
@@ -152,16 +152,15 @@
         </dependency>
     </dependencies>
 
-
-<!--    <build>-->
-<!--        <plugins>-->
-<!--            <plugin>-->
-<!--                &lt;!&ndash; for some reason required since update to airbase 134 &ndash;&gt;-->
-<!--                <groupId>ca.vanzyl.provisio.maven.plugins</groupId>-->
-<!--                <artifactId>provisio-maven-plugin</artifactId>-->
-<!--                <version>1.0.18</version>-->
-<!--                <extensions>true</extensions>-->
-<!--            </plugin>-->
-<!--        </plugins>-->
-<!--    </build>-->
+    <!--    <build>-->
+    <!--        <plugins>-->
+    <!--            <plugin>-->
+    <!--                &lt;!&ndash; for some reason required since update to airbase 134 &ndash;&gt;-->
+    <!--                <groupId>ca.vanzyl.provisio.maven.plugins</groupId>-->
+    <!--                <artifactId>provisio-maven-plugin</artifactId>-->
+    <!--                <version>1.0.18</version>-->
+    <!--                <extensions>true</extensions>-->
+    <!--            </plugin>-->
+    <!--        </plugins>-->
+    <!--    </build>-->
 </project>
