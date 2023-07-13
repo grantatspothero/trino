@@ -129,10 +129,10 @@ public class TestObjectStoreMetastoreAccessOperations
     {
         assertMetastoreInvocations("CREATE TABLE test_create(id VARCHAR, age INT) WITH (type = '" + type + "')",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_DATABASE, occurrences(0, 1, 0).get(type))
+                        .addCopies(GET_DATABASE, occurrences(type, 0, 1, 0))
                         .add(CREATE_TABLE)
                         .add(GET_TABLE)
-                        .addCopies(UPDATE_TABLE_STATISTICS, occurrences(1, 0, 0).get(type))
+                        .addCopies(UPDATE_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .build());
     }
 
@@ -142,10 +142,10 @@ public class TestObjectStoreMetastoreAccessOperations
         assertMetastoreInvocations("CREATE TABLE test_ctas WITH (type = '" + type + "') AS SELECT 1 AS age",
                 ImmutableMultiset.builder()
                         .add(CREATE_TABLE)
-                        .addCopies(GET_TABLE, occurrences(2, 5, 1).get(type))
-                        .addCopies(GET_DATABASE, occurrences(0, 1, 0).get(type))
-                        .addCopies(REPLACE_TABLE, occurrences(0, 1, 0).get(type))
-                        .addCopies(UPDATE_TABLE_STATISTICS, occurrences(1, 0, 0).get(type))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 5, 1))
+                        .addCopies(GET_DATABASE, occurrences(type, 0, 1, 0))
+                        .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
+                        .addCopies(UPDATE_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .build());
     }
 
@@ -156,7 +156,7 @@ public class TestObjectStoreMetastoreAccessOperations
 
         assertMetastoreInvocations("SELECT * FROM test_select_from",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(4, 2, 3).get(type))
+                        .addCopies(GET_TABLE, occurrences(type, 4, 2, 3))
                         .build());
     }
 
@@ -168,24 +168,24 @@ public class TestObjectStoreMetastoreAccessOperations
 
         assertMetastoreInvocations("SELECT * FROM test_select_partition",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(5, 2, 3).get(type))
-                        .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(1, 0, 0).get(type))
-                        .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(1, 0, 0).get(type))
+                        .addCopies(GET_TABLE, occurrences(type, 5, 2, 3))
+                        .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
+                        .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
                         .build());
 
         assertUpdate("INSERT INTO test_select_partition SELECT 2 AS data, 20 AS part", 1);
         assertMetastoreInvocations("SELECT * FROM test_select_partition",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(2, 1, 1).get(type))
-                        .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(1, 0, 0).get(type))
-                        .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(1, 0, 0).get(type))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 1, 1))
+                        .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
+                        .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
                         .build());
 
         // Specify a specific partition
         assertMetastoreInvocations("SELECT * FROM test_select_partition WHERE part = 10",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(2, 1, 1).get(type))
-                        .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(1, 0, 0).get(type))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 1, 1))
+                        .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .build());
     }
 
@@ -196,7 +196,7 @@ public class TestObjectStoreMetastoreAccessOperations
 
         assertMetastoreInvocations("SELECT * FROM test_select_from_where WHERE age = 2",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, new Occurrences(4, 2, 3).get(type))
+                        .addCopies(GET_TABLE, occurrences(type, 4, 2, 3))
                         .build());
     }
 
@@ -232,8 +232,8 @@ public class TestObjectStoreMetastoreAccessOperations
 
         assertMetastoreInvocations("SELECT name, age FROM test_join_t1 JOIN test_join_t2 ON test_join_t2.id = test_join_t1.id",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(8, 4, 6).get(type))
-                        .addCopies(GET_TABLE_STATISTICS, occurrences(2, 0, 0).get(type))
+                        .addCopies(GET_TABLE, occurrences(type, 8, 4, 6))
+                        .addCopies(GET_TABLE_STATISTICS, occurrences(type, 2, 0, 0))
                         .build());
     }
 
@@ -244,8 +244,8 @@ public class TestObjectStoreMetastoreAccessOperations
 
         assertMetastoreInvocations("SELECT child.age, parent.age FROM test_self_join_table child JOIN test_self_join_table parent ON child.parent = parent.id",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(4, 2, 3).get(type))
-                        .addCopies(GET_TABLE_STATISTICS, occurrences(1, 0, 0).get(type))
+                        .addCopies(GET_TABLE, occurrences(type, 4, 2, 3))
+                        .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .build());
     }
 
@@ -256,8 +256,8 @@ public class TestObjectStoreMetastoreAccessOperations
 
         assertMetastoreInvocations("EXPLAIN SELECT * FROM test_explain",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(4, 2, 3).get(type))
-                        .addCopies(GET_TABLE_STATISTICS, occurrences(1, 0, 0).get(type))
+                        .addCopies(GET_TABLE, occurrences(type, 4, 2, 3))
+                        .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .build());
     }
 
@@ -268,8 +268,8 @@ public class TestObjectStoreMetastoreAccessOperations
 
         assertMetastoreInvocations("SHOW STATS FOR test_show_stats",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(4, 2, 3).get(type))
-                        .addCopies(GET_TABLE_STATISTICS, occurrences(1, 0, 0).get(type))
+                        .addCopies(GET_TABLE, occurrences(type, 4, 2, 3))
+                        .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .build());
     }
 
@@ -280,7 +280,7 @@ public class TestObjectStoreMetastoreAccessOperations
 
         assertMetastoreInvocations("SHOW STATS FOR (SELECT * FROM test_show_stats_with_filter where age >= 2)",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(4, 2, 2).get(type))
+                        .addCopies(GET_TABLE, occurrences(type, 4, 2, 2))
                         .add(GET_TABLE_STATISTICS)
                         .build());
     }
@@ -292,9 +292,9 @@ public class TestObjectStoreMetastoreAccessOperations
 
         assertMetastoreInvocations("ANALYZE test_analyze",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(4, 4, 3).get(type))
-                        .addCopies(UPDATE_TABLE_STATISTICS, occurrences(1, 0, 0).get(type))
-                        .addCopies(REPLACE_TABLE, occurrences(0, 1, 0).get(type))
+                        .addCopies(GET_TABLE, occurrences(type, 4, 4, 3))
+                        .addCopies(UPDATE_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
+                        .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
                         .build());
     }
 
@@ -306,24 +306,24 @@ public class TestObjectStoreMetastoreAccessOperations
 
         assertMetastoreInvocations("ANALYZE test_analyze_partition",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(5, 4, 3).get(type))
-                        .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(1, 0, 0).get(type))
-                        .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(1, 0, 0).get(type))
-                        .addCopies(GET_PARTITION_STATISTICS, occurrences(1, 0, 0).get(type))
-                        .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(1, 0, 0).get(type))
-                        .addCopies(REPLACE_TABLE, occurrences(0, 1, 0).get(type))
+                        .addCopies(GET_TABLE, occurrences(type, 5, 4, 3))
+                        .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
+                        .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
+                        .addCopies(GET_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
+                        .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
+                        .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
                         .build());
 
         assertUpdate("INSERT INTO test_analyze_partition SELECT 2 AS data, 20 AS part", 1);
 
         assertMetastoreInvocations("ANALYZE test_analyze_partition",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(1, 3, 0).get(type))
-                        .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(1, 0, 0).get(type))
-                        .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(1, 0, 0).get(type))
-                        .addCopies(GET_PARTITION_STATISTICS, occurrences(1, 0, 0).get(type))
-                        .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(1, 0, 0).get(type))
-                        .addCopies(REPLACE_TABLE, occurrences(0, 1, 0).get(type))
+                        .addCopies(GET_TABLE, occurrences(type, 1, 3, 0))
+                        .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
+                        .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
+                        .addCopies(GET_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
+                        .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
+                        .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
                         .build());
     }
 
@@ -340,9 +340,9 @@ public class TestObjectStoreMetastoreAccessOperations
         };
         assertMetastoreInvocations(dropStats,
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(1, 4, 1).get(type))
-                        .addCopies(UPDATE_TABLE_STATISTICS, occurrences(1, 0, 0).get(type))
-                        .addCopies(REPLACE_TABLE, occurrences(0, 1, 0).get(type))
+                        .addCopies(GET_TABLE, occurrences(type, 1, 4, 1))
+                        .addCopies(UPDATE_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
+                        .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
                         .build());
     }
 
@@ -360,19 +360,19 @@ public class TestObjectStoreMetastoreAccessOperations
         };
         assertMetastoreInvocations(dropStats,
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(2, 4, 1).get(type))
-                        .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(1, 0, 0).get(type))
-                        .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(1, 0, 0).get(type))
-                        .addCopies(REPLACE_TABLE, occurrences(0, 1, 0).get(type))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 4, 1))
+                        .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
+                        .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
+                        .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
                         .build());
 
         assertUpdate("INSERT INTO drop_stats_partition SELECT 2 AS data, 20 AS part", 1);
 
         assertMetastoreInvocations(dropStats,
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(1, 2, 0).get(type))
-                        .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(1, 0, 0).get(type))
-                        .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(2, 0, 0).get(type))
+                        .addCopies(GET_TABLE, occurrences(type, 1, 2, 0))
+                        .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
+                        .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(type, 2, 0, 0))
                         .build());
     }
 
@@ -389,27 +389,14 @@ public class TestObjectStoreMetastoreAccessOperations
         CountingAccessHiveMetastoreUtil.assertMetastoreInvocations(metastore, getQueryRunner(), getQueryRunner().getDefaultSession(), query, expectedInvocations);
     }
 
-    private static Occurrences occurrences(int hive, int iceberg, int delta)
+    private static int occurrences(TableType tableType, int hiveValue, int icebergValue, int deltaValue)
     {
-        return new Occurrences(hive, iceberg, delta);
-    }
-
-    @SuppressWarnings("unused")
-    private record Occurrences(int hive, int iceberg, int delta)
-    {
-        private Occurrences
-        {
-            checkArgument(!(hive == iceberg && iceberg == delta), "No need to use Occurrences when hive, iceberg and delta values are same");
-        }
-
-        int get(TableType type)
-        {
-            return switch (type) {
-                case HIVE -> hive;
-                case ICEBERG -> iceberg;
-                case DELTA -> delta;
-                default -> throw new IllegalArgumentException("Unexpected table type: " + type);
-            };
-        }
+        checkArgument(!(hiveValue == icebergValue && icebergValue == deltaValue), "No need to use Occurrences when hive, iceberg and delta values are same");
+        return switch (tableType) {
+            case HIVE -> hiveValue;
+            case ICEBERG -> icebergValue;
+            case DELTA -> deltaValue;
+            case HUDI -> throw new UnsupportedOperationException();
+        };
     }
 }
