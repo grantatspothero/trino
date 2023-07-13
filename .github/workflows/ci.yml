@@ -521,6 +521,20 @@ jobs:
           aws-region: us-east-1
       - name: Login to the ECR Docker Registry
         uses: aws-actions/amazon-ecr-login@v1
+      - name: Checkout stargate
+        # Check out stargate repo to determine buffer service version configured there.
+        # The information is consumed by TestStargateBufferExchangeDistributedEngineOnlyQueries test.
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUBACCESSTOKEN }}
+          repository: starburstdata/stargate
+          path: stargate
+      - name: Determine Stargate Buffer Service version
+        run: |
+          cd stargate
+          STARGATE_BUFFER_EXCHANGE_VERSION=$(./mvnw -B help:evaluate -Dexpression=dep.buffer-service-version -q -DforceStdout)
+          echo "Determined Stargate Buffer Service version: ${STARGATE_BUFFER_EXCHANGE_VERSION}"
+          echo "STARGATE_BUFFER_EXCHANGE_VERSION=${STARGATE_BUFFER_EXCHANGE_VERSION}" >> "$GITHUB_ENV"
       - name: Maven Install
         run: |
           export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
