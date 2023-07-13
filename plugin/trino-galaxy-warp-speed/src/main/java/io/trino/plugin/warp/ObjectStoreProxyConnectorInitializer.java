@@ -64,6 +64,7 @@ public class ObjectStoreProxyConnectorInitializer
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
                 binder -> {},
                 context);
     }

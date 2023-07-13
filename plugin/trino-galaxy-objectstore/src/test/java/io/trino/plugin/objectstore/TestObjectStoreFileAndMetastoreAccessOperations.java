@@ -13,16 +13,20 @@
  */
 package io.trino.plugin.objectstore;
 
+import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
+import io.trino.filesystem.TrackingFileSystemFactory;
+import io.trino.filesystem.hdfs.HdfsFileSystemFactory;
 import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.CountingAccessHiveMetastore;
 import io.trino.plugin.hive.metastore.CountingAccessHiveMetastoreUtil;
 import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastore;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.iceberg.IcebergPlugin;
+import io.trino.plugin.iceberg.IcebergUtil;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.testing.AbstractTestQueryFramework;
@@ -37,10 +41,19 @@ import org.testng.annotations.Test;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
+import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.INPUT_FILE_GET_LENGTH;
+import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.INPUT_FILE_NEW_STREAM;
+import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.OUTPUT_FILE_CREATE;
+import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.OUTPUT_FILE_CREATE_OR_OVERWRITE;
+import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.OUTPUT_FILE_LOCATION;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
+import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_STATS;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.CREATE_TABLE;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_DATABASE;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_PARTITIONS_BY_NAMES;
@@ -51,21 +64,34 @@ import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.REPLACE_TABLE;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.UPDATE_PARTITION_STATISTICS;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.UPDATE_TABLE_STATISTICS;
-import static io.trino.plugin.objectstore.TestObjectStoreMetastoreAccessOperations.TableType.ICEBERG;
+import static io.trino.plugin.hive.util.MultisetAssertions.assertMultisetsEqual;
+import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.CDF_DATA;
+import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.DATA;
+import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.LAST_CHECKPOINT;
+import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.MANIFEST;
+import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.METADATA_JSON;
+import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.SNAPSHOT;
+import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.TRANSACTION_LOG_JSON;
+import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.TRINO_EXTENDED_STATS_JSON;
+import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.TableType.ICEBERG;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static io.trino.testing.DataProviders.toDataProvider;
 import static java.nio.file.Files.createTempDirectory;
+import static java.util.Collections.nCopies;
+import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toCollection;
 
 // TODO Investigate why there are many invocations in some tests
-@Test(singleThreaded = true) // metastore invocation counters shares mutable state so can't be run from many threads simultaneously
-public class TestObjectStoreMetastoreAccessOperations
+@Test(singleThreaded = true) // metastore and filesystem invocation counters shares mutable state so can't be run from many threads simultaneously
+public class TestObjectStoreFileAndMetastoreAccessOperations
         extends AbstractTestQueryFramework
 {
     private static final String CATALOG_NAME = "objectstore";
     private static final String SCHEMA_NAME = "test_schema";
 
     private CountingAccessHiveMetastore metastore;
+    private TrackingFileSystemFactory trackingFileSystemFactory;
 
     @Override
     protected QueryRunner createQueryRunner()
@@ -78,6 +104,7 @@ public class TestObjectStoreMetastoreAccessOperations
 
         TestingGalaxyMetastore galaxyMetastore = closeAfterClass(new TestingGalaxyMetastore(galaxyCockroachContainer));
         metastore = new CountingAccessHiveMetastore(new GalaxyHiveMetastore(galaxyMetastore.getMetastore(), HDFS_ENVIRONMENT, schemaDirectory.toUri().toString()));
+        trackingFileSystemFactory = new TrackingFileSystemFactory(new HdfsFileSystemFactory(HDFS_ENVIRONMENT, HDFS_FILE_SYSTEM_STATS));
 
         TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> galaxyCockroachContainer));
 
@@ -108,7 +135,7 @@ public class TestObjectStoreMetastoreAccessOperations
         DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder(CATALOG_NAME, SCHEMA_NAME)
                 .setAccountClient(testingAccountFactory.createAccountClient())
                 .addPlugin(new IcebergPlugin())
-                .addPlugin(new TestingObjectStorePlugin(metastore))
+                .addPlugin(new TestingObjectStorePlugin(metastore, trackingFileSystemFactory))
                 .addCatalog(CATALOG_NAME, "galaxy_objectstore", properties)
                 .build();
         queryRunner.execute("CREATE SCHEMA %s.%s WITH (location = '%s')".formatted(CATALOG_NAME, SCHEMA_NAME, schemaDirectory.toUri().toString()));
@@ -132,37 +159,66 @@ public class TestObjectStoreMetastoreAccessOperations
     @Test(dataProvider = "tableTypeDataProvider")
     public void testCreateTable(TableType type)
     {
-        assertMetastoreInvocations("CREATE TABLE test_create(id VARCHAR, age INT) WITH (type = '" + type + "')",
+        assertInvocations("CREATE TABLE test_create(id VARCHAR, age INT) WITH (type = '" + type + "')",
                 ImmutableMultiset.builder()
                         .addCopies(GET_DATABASE, 1)
                         .add(CREATE_TABLE)
                         .add(GET_TABLE)
                         .addCopies(UPDATE_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
-                        .build());
+                        .build(),
+                switch (type) {
+                    case HIVE -> ImmutableMultiset.of();
+                    case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
+                            .add(new FileOperation(METADATA_JSON, "00000.metadata.json", OUTPUT_FILE_LOCATION))
+                            .add(new FileOperation(METADATA_JSON, "00000.metadata.json", OUTPUT_FILE_CREATE))
+                            .addCopies(new FileOperation(SNAPSHOT, "snap-1.avro", OUTPUT_FILE_LOCATION), 2)
+                            .add(new FileOperation(SNAPSHOT, "snap-1.avro", OUTPUT_FILE_CREATE_OR_OVERWRITE))
+                            .add(new FileOperation(SNAPSHOT, "snap-1.avro", INPUT_FILE_GET_LENGTH))
+                            .add(new FileOperation(SNAPSHOT, "snap-1.avro", INPUT_FILE_NEW_STREAM))
+                            .build();
+                    case DELTA -> ImmutableMultiset.<FileOperation>builder()
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", OUTPUT_FILE_CREATE))
+                            .build();
+                });
     }
 
     @Test(dataProvider = "tableTypeDataProvider")
     public void testCreateTableAsSelect(TableType type)
     {
-        assertMetastoreInvocations("CREATE TABLE test_ctas WITH (type = '" + type + "') AS SELECT 1 AS age",
+        assertInvocations("CREATE TABLE test_ctas WITH (type = '" + type + "') AS SELECT 1 AS age",
                 ImmutableMultiset.builder()
                         .add(CREATE_TABLE)
                         .addCopies(GET_TABLE, occurrences(type, 2, 5, 1))
                         .addCopies(GET_DATABASE, 1)
                         .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
                         .addCopies(UPDATE_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
-                        .build());
+                        .build()
+                /* TODO add expected file operations */);
     }
 
     @Test(dataProvider = "tableTypeDataProvider")
-    public void testSelect(TableType type)
+    public void testSelectFromEmpty(TableType type)
     {
         assertUpdate("CREATE TABLE test_select_from(id VARCHAR, age INT) WITH (type = '" + type + "')");
 
-        assertMetastoreInvocations("SELECT * FROM test_select_from",
+        assertInvocations("SELECT * FROM test_select_from",
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(type, 4, 2, 3))
-                        .build());
+                        .build(),
+                switch (type) {
+                    case HIVE -> ImmutableMultiset.<FileOperation>builder()
+                            .build();
+                    case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
+                            .add(new FileOperation(METADATA_JSON, "00000.metadata.json", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(SNAPSHOT, "snap-1.avro", INPUT_FILE_GET_LENGTH))
+                            .add(new FileOperation(SNAPSHOT, "snap-1.avro", INPUT_FILE_NEW_STREAM))
+                            .build();
+                    case DELTA -> ImmutableMultiset.<FileOperation>builder()
+                            .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), 2)
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM))
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM), 2)
+                            .build();
+                });
     }
 
     @Test(dataProvider = "tableTypeDataProvider")
@@ -171,28 +227,31 @@ public class TestObjectStoreMetastoreAccessOperations
         String partitionProperty = type == ICEBERG ? "partitioning" : "partitioned_by";
         assertUpdate("CREATE TABLE test_select_partition WITH (" + partitionProperty + " = ARRAY['part'], type = '" + type + "') AS SELECT 1 AS data, 10 AS part", 1);
 
-        assertMetastoreInvocations("SELECT * FROM test_select_partition",
+        assertInvocations("SELECT * FROM test_select_partition",
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(type, 5, 2, 3))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
-                        .build());
+                        .build()
+                /* TODO add expected file operations */);
 
         assertUpdate("INSERT INTO test_select_partition SELECT 2 AS data, 20 AS part", 1);
-        assertMetastoreInvocations("SELECT * FROM test_select_partition",
+        assertInvocations("SELECT * FROM test_select_partition",
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(type, 3, 2, 3))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
-                        .build());
+                        .build()
+                /* TODO add expected file operations */);
 
         // Specify a specific partition
-        assertMetastoreInvocations("SELECT * FROM test_select_partition WHERE part = 10",
+        assertInvocations("SELECT * FROM test_select_partition WHERE part = 10",
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(type, 3, 2, 3))
                         .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
-                        .build());
+                        .build()
+                /* TODO add expected file operations */);
     }
 
     @Test(dataProvider = "tableTypeDataProvider")
@@ -200,10 +259,31 @@ public class TestObjectStoreMetastoreAccessOperations
     {
         assertUpdate("CREATE TABLE test_select_from_where WITH (type = '" + type + "') AS SELECT 2 AS age", 1);
 
-        assertMetastoreInvocations("SELECT * FROM test_select_from_where WHERE age = 2",
+        assertInvocations("SELECT * FROM test_select_from_where WHERE age = 2",
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(type, 4, 2, 3))
-                        .build());
+                        .build(),
+                switch (type) {
+                    case HIVE -> ImmutableMultiset.<FileOperation>builder()
+                            .add(new FileOperation(DATA, "no partition", INPUT_FILE_NEW_STREAM))
+                            .build();
+                    case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
+                            .add(new FileOperation(METADATA_JSON, "00001.metadata.json", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(SNAPSHOT, "snap-1.avro", INPUT_FILE_GET_LENGTH))
+                            .add(new FileOperation(SNAPSHOT, "snap-1.avro", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(MANIFEST, "", INPUT_FILE_GET_LENGTH))
+                            .add(new FileOperation(MANIFEST, "", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(DATA, "no partition", INPUT_FILE_GET_LENGTH))
+                            .add(new FileOperation(DATA, "no partition", INPUT_FILE_NEW_STREAM))
+                            .build();
+                    case DELTA -> ImmutableMultiset.<FileOperation>builder()
+                            .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), 2)
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM))
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM), 2)
+                            .add(new FileOperation(DATA, "no partition", INPUT_FILE_GET_LENGTH))
+                            .add(new FileOperation(DATA, "no partition", INPUT_FILE_NEW_STREAM))
+                            .build();
+                });
     }
 
     @Test(dataProvider = "tableTypeDataProvider")
@@ -212,10 +292,11 @@ public class TestObjectStoreMetastoreAccessOperations
         assertUpdate("CREATE TABLE test_select_view_table(id VARCHAR, age INT) WITH (type = '" + type + "')");
         assertUpdate("CREATE VIEW test_select_view_view AS SELECT id, age FROM test_select_view_table");
 
-        assertMetastoreInvocations("SELECT * FROM test_select_view_view",
+        assertInvocations("SELECT * FROM test_select_view_view",
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(type, 4, 4, 5))
-                        .build());
+                        .build()
+                /* TODO add expected file operations */);
     }
 
     @Test(dataProvider = "tableTypeDataProvider")
@@ -224,10 +305,11 @@ public class TestObjectStoreMetastoreAccessOperations
         assertUpdate("CREATE TABLE test_select_view_where_table WITH (type = '" + type + "') AS SELECT 2 AS age", 1);
         assertUpdate("CREATE VIEW test_select_view_where_view AS SELECT age FROM test_select_view_where_table");
 
-        assertMetastoreInvocations("SELECT * FROM test_select_view_where_view WHERE age = 2",
+        assertInvocations("SELECT * FROM test_select_view_where_view WHERE age = 2",
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(type, 4, 4, 5))
-                        .build());
+                        .build()
+                /* TODO add expected file operations */);
     }
 
     @Test(dataProvider = "tableTypeDataProvider")
@@ -236,11 +318,12 @@ public class TestObjectStoreMetastoreAccessOperations
         assertUpdate("CREATE TABLE test_join_t1 WITH (type = '" + type + "') AS SELECT 2 AS age, 'id1' AS id", 1);
         assertUpdate("CREATE TABLE test_join_t2 WITH (type = '" + type + "') AS SELECT 'name1' AS name, 'id1' AS id", 1);
 
-        assertMetastoreInvocations("SELECT name, age FROM test_join_t1 JOIN test_join_t2 ON test_join_t2.id = test_join_t1.id",
+        assertInvocations("SELECT name, age FROM test_join_t1 JOIN test_join_t2 ON test_join_t2.id = test_join_t1.id",
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(type, 8, 4, 6))
                         .addCopies(GET_TABLE_STATISTICS, occurrences(type, 2, 0, 0))
-                        .build());
+                        .build()
+                /* TODO add expected file operations */);
     }
 
     @Test(dataProvider = "tableTypeDataProvider")
@@ -248,11 +331,12 @@ public class TestObjectStoreMetastoreAccessOperations
     {
         assertUpdate("CREATE TABLE test_self_join_table WITH (type = '" + type + "') AS SELECT 2 AS age, 0 parent, 3 AS id", 1);
 
-        assertMetastoreInvocations("SELECT child.age, parent.age FROM test_self_join_table child JOIN test_self_join_table parent ON child.parent = parent.id",
+        assertInvocations("SELECT child.age, parent.age FROM test_self_join_table child JOIN test_self_join_table parent ON child.parent = parent.id",
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(type, 4, 2, 3))
                         .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
-                        .build());
+                        .build()
+                /* TODO add expected file operations */);
     }
 
     @Test(dataProvider = "tableTypeDataProvider")
@@ -260,11 +344,12 @@ public class TestObjectStoreMetastoreAccessOperations
     {
         assertUpdate("CREATE TABLE test_explain WITH (type = '" + type + "') AS SELECT 2 AS age", 1);
 
-        assertMetastoreInvocations("EXPLAIN SELECT * FROM test_explain",
+        assertInvocations("EXPLAIN SELECT * FROM test_explain",
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(type, 4, 2, 3))
                         .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
-                        .build());
+                        .build()
+                /* TODO add expected file operations */);
     }
 
     @Test(dataProvider = "tableTypeDataProvider")
@@ -272,11 +357,12 @@ public class TestObjectStoreMetastoreAccessOperations
     {
         assertUpdate("CREATE TABLE test_show_stats WITH (type = '" + type + "') AS SELECT 2 AS age", 1);
 
-        assertMetastoreInvocations("SHOW STATS FOR test_show_stats",
+        assertInvocations("SHOW STATS FOR test_show_stats",
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(type, 4, 2, 3))
                         .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
-                        .build());
+                        .build()
+                /* TODO add expected file operations */);
     }
 
     @Test(dataProvider = "tableTypeDataProvider")
@@ -284,11 +370,12 @@ public class TestObjectStoreMetastoreAccessOperations
     {
         assertUpdate("CREATE TABLE test_show_stats_with_filter AS SELECT 2 AS age", 1);
 
-        assertMetastoreInvocations("SHOW STATS FOR (SELECT * FROM test_show_stats_with_filter where age >= 2)",
+        assertInvocations("SHOW STATS FOR (SELECT * FROM test_show_stats_with_filter where age >= 2)",
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(type, 4, 2, 2))
                         .add(GET_TABLE_STATISTICS)
-                        .build());
+                        .build()
+                /* TODO add expected file operations */);
     }
 
     @Test(dataProvider = "tableTypeDataProvider")
@@ -296,12 +383,13 @@ public class TestObjectStoreMetastoreAccessOperations
     {
         assertUpdate("CREATE TABLE test_analyze WITH (type = '" + type + "') AS SELECT 2 AS age", 1);
 
-        assertMetastoreInvocations("ANALYZE test_analyze",
+        assertInvocations("ANALYZE test_analyze",
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(type, 4, 4, 3))
                         .addCopies(UPDATE_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
-                        .build());
+                        .build()
+                /* TODO add expected file operations */);
     }
 
     @Test(dataProvider = "tableTypeDataProvider")
@@ -310,7 +398,7 @@ public class TestObjectStoreMetastoreAccessOperations
         String partitionProperty = type == ICEBERG ? "partitioning" : "partitioned_by";
         assertUpdate("CREATE TABLE test_analyze_partition WITH (" + partitionProperty + " = ARRAY['part'], type = '" + type + "') AS SELECT 1 AS data, 10 AS part", 1);
 
-        assertMetastoreInvocations("ANALYZE test_analyze_partition",
+        assertInvocations("ANALYZE test_analyze_partition",
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(type, 5, 4, 3))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
@@ -318,11 +406,12 @@ public class TestObjectStoreMetastoreAccessOperations
                         .addCopies(GET_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
                         .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
                         .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
-                        .build());
+                        .build()
+                /* TODO add expected file operations */);
 
         assertUpdate("INSERT INTO test_analyze_partition SELECT 2 AS data, 20 AS part", 1);
 
-        assertMetastoreInvocations("ANALYZE test_analyze_partition",
+        assertInvocations("ANALYZE test_analyze_partition",
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(type, 2, 4, 2))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
@@ -330,7 +419,8 @@ public class TestObjectStoreMetastoreAccessOperations
                         .addCopies(GET_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
                         .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
                         .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
-                        .build());
+                        .build()
+                /* TODO add expected file operations */);
     }
 
     @Test(dataProvider = "tableTypeDataProvider")
@@ -343,12 +433,13 @@ public class TestObjectStoreMetastoreAccessOperations
             case ICEBERG -> "ALTER TABLE drop_stats EXECUTE drop_extended_stats";
             case DELTA -> "CALL system.drop_extended_stats('test_schema', 'drop_stats')";
         };
-        assertMetastoreInvocations(dropStats,
+        assertInvocations(dropStats,
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(type, 1, 4, 1))
                         .addCopies(UPDATE_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
-                        .build());
+                        .build()
+                /* TODO add expected file operations */);
     }
 
     @Test(dataProvider = "tableTypeDataProvider")
@@ -362,22 +453,24 @@ public class TestObjectStoreMetastoreAccessOperations
             case ICEBERG -> "ALTER TABLE drop_stats_partition EXECUTE drop_extended_stats";
             case DELTA -> "CALL system.drop_extended_stats('test_schema', 'drop_stats_partition')";
         };
-        assertMetastoreInvocations(dropStats,
+        assertInvocations(dropStats,
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(type, 2, 4, 1))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
                         .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
-                        .build());
+                        .build()
+                /* TODO add expected file operations */);
 
         assertUpdate("INSERT INTO drop_stats_partition SELECT 2 AS data, 20 AS part", 1);
 
-        assertMetastoreInvocations(dropStats,
+        assertInvocations(dropStats,
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(type, 2, 3, 1))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(type, 2, 0, 0))
-                        .build());
+                        .build()
+                /* TODO add expected file operations */);
     }
 
     @DataProvider
@@ -387,9 +480,30 @@ public class TestObjectStoreMetastoreAccessOperations
                 .collect(toDataProvider());
     }
 
-    private void assertMetastoreInvocations(@Language("SQL") String query, Multiset<?> expectedInvocations)
+    /**
+     * @deprecated use {@link #assertInvocations(String, Multiset, Multiset)}.
+     */
+    @Deprecated
+    private void assertInvocations(@Language("SQL") String query, Multiset<?> expectedMetastoreInvocations)
     {
-        CountingAccessHiveMetastoreUtil.assertMetastoreInvocations(metastore, getQueryRunner(), getQueryRunner().getDefaultSession(), query, expectedInvocations);
+        CountingAccessHiveMetastoreUtil.assertMetastoreInvocations(metastore, getQueryRunner(), getQueryRunner().getDefaultSession(), query, expectedMetastoreInvocations);
+    }
+
+    private void assertInvocations(@Language("SQL") String query, Multiset<?> expectedMetastoreInvocations, Multiset<FileOperation> expectedFileAccesses)
+    {
+        trackingFileSystemFactory.reset();
+        CountingAccessHiveMetastoreUtil.assertMetastoreInvocations(metastore, getQueryRunner(), getQueryRunner().getDefaultSession(), query, expectedMetastoreInvocations);
+        assertMultisetsEqual(getOperations(), expectedFileAccesses);
+    }
+
+    private Multiset<FileOperation> getOperations()
+    {
+        return trackingFileSystemFactory.getOperationCounts()
+                .entrySet().stream()
+                .flatMap(entry -> nCopies(entry.getValue(), FileOperation.create(
+                        entry.getKey().getLocation().path(),
+                        entry.getKey().getOperationType())).stream())
+                .collect(toCollection(HashMultiset::create));
     }
 
     private static int occurrences(TableType tableType, int hiveValue, int icebergValue, int deltaValue)
@@ -405,10 +519,86 @@ public class TestObjectStoreMetastoreAccessOperations
     /**
      * An enum similar to {@link io.trino.plugin.objectstore.TableType} containing only the options tested here.
      */
-    enum TableType {
+    enum TableType
+    {
         HIVE,
         ICEBERG,
         DELTA,
         // HUDI -- TODO include Hudi when it supports creating tables. Then replace this enum with io.trino.plugin.objectstore.TableType
+    }
+
+    private record FileOperation(FileType fileType, String fileId, TrackingFileSystemFactory.OperationType operationType)
+    {
+        public static final String QUERY_ID_PATTERN = "\\d{8}_\\d{6}_\\d{5}_\\w{5}";
+        private static final String UUID_PATTERN = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+        private static final Pattern DATA_FILE_PATTERN = Pattern.compile(".*?/(?<partition>key=[^/]*/)?(?<queryId>" + QUERY_ID_PATTERN + ")[-_](?<uuid>" + UUID_PATTERN + ")(\\.orc)?");
+
+        public static FileOperation create(String path, TrackingFileSystemFactory.OperationType operationType)
+        {
+            String fileName = path.replaceFirst(".*/", "");
+
+            if (path.contains("/metadata/") && path.endsWith("metadata.json")) {
+                return new FileOperation(METADATA_JSON, "%05d.metadata.json".formatted(IcebergUtil.parseVersion(path).orElseThrow()), operationType);
+            }
+            if (path.contains("/metadata/") && path.contains("/snap-")) {
+                String fileId = fileName.replaceFirst("snap-(?<randomNumber>\\d+)-(?<number>\\d+)-(?<uuid>" + UUID_PATTERN + ").avro", "snap-${number}.avro");
+                return new FileOperation(SNAPSHOT, fileId, operationType);
+            }
+            if (path.contains("/metadata/") && path.endsWith("-m0.avro")) {
+                return new FileOperation(MANIFEST, "", operationType);
+            }
+            // TODO recognize .stats Puffin files
+
+            if (path.matches(".*/_delta_log/_last_checkpoint")) {
+                return new FileOperation(LAST_CHECKPOINT, fileName, operationType);
+            }
+            if (path.matches(".*/_delta_log/\\d+\\.json")) {
+                return new FileOperation(TRANSACTION_LOG_JSON, fileName, operationType);
+            }
+            if (path.matches(".*/_delta_log/_trino_meta/extended_stats.json")) {
+                return new FileOperation(TRINO_EXTENDED_STATS_JSON, fileName, operationType);
+            }
+            if (path.matches(".*/_change_data/.*")) {
+                Matcher matcher = DATA_FILE_PATTERN.matcher(path);
+                if (matcher.matches()) {
+                    return new FileOperation(CDF_DATA, matcher.group("partition"), operationType);
+                }
+            }
+
+            if (!path.contains("_delta_log") && !path.contains("metadata")) {
+                Matcher matcher = DATA_FILE_PATTERN.matcher(path);
+                if (matcher.matches()) {
+                    return new FileOperation(DATA, firstNonNull(matcher.group("partition"), "no partition"), operationType);
+                }
+            }
+
+            throw new IllegalArgumentException("File not recognized: " + path);
+        }
+
+        public FileOperation
+        {
+            requireNonNull(fileType, "fileType is null");
+            requireNonNull(fileId, "fileId is null");
+            requireNonNull(operationType, "operationType is null");
+        }
+    }
+
+    enum FileType
+    {
+        // Iceberg
+        METADATA_JSON,
+        SNAPSHOT,
+        MANIFEST,
+        STATS,
+
+        // Delta
+        LAST_CHECKPOINT,
+        TRANSACTION_LOG_JSON,
+        TRINO_EXTENDED_STATS_JSON,
+        CDF_DATA,
+
+        // Delta, Iceberg
+        DATA,
+        /**/;
     }
 }

@@ -48,8 +48,8 @@ public class ObjectStoreConnectorFactory
             // use the class instance from InternalObjectStoreConnectorFactory's classloader
             Class<?> moduleClass = classLoader.loadClass(Module.class.getName());
             return (Connector) classLoader.loadClass(InternalObjectStoreConnectorFactory.class.getName())
-                    .getMethod("createConnector", String.class, Map.class, Optional.class, Optional.class, Optional.class, moduleClass, ConnectorContext.class)
-                    .invoke(null, catalogName, config, Optional.empty(), Optional.empty(), Optional.empty(), moduleInstance, context);
+                    .getMethod("createConnector", String.class, Map.class, Optional.class, Optional.class, Optional.class, Optional.class, moduleClass, ConnectorContext.class)
+                    .invoke(null, catalogName, config, Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), moduleInstance, context);
         }
         catch (InvocationTargetException e) {
             Throwable targetException = e.getTargetException();

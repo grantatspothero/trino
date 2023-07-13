@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.objectstore;
 
+import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.deltalake.TestingDeltaLakeExtensionsModule;
 import io.trino.plugin.deltalake.metastore.TestingDeltaLakeMetastoreModule;
 import io.trino.plugin.hive.metastore.HiveMetastore;
@@ -30,10 +31,12 @@ public class TestingObjectStoreConnectorFactory
         implements ConnectorFactory
 {
     private final HiveMetastore metastore;
+    private final TrinoFileSystemFactory fileSystemFactory;
 
-    public TestingObjectStoreConnectorFactory(HiveMetastore metastore)
+    public TestingObjectStoreConnectorFactory(HiveMetastore metastore, TrinoFileSystemFactory fileSystemFactory)
     {
         this.metastore = requireNonNull(metastore, "metastore is null");
+        this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
     }
 
     @Override
@@ -49,6 +52,7 @@ public class TestingObjectStoreConnectorFactory
                 catalogName,
                 config,
                 Optional.of(metastore),
+                Optional.of(fileSystemFactory),
                 Optional.of(new TestingIcebergGalaxyMetastoreCatalogModule(metastore)),
                 Optional.of(new TestingDeltaLakeMetastoreModule(metastore)),
                 new TestingDeltaLakeExtensionsModule(),

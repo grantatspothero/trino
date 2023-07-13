@@ -18,6 +18,7 @@ import com.google.inject.Module;
 import io.airlift.bootstrap.Bootstrap;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;
+import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.filesystem.hdfs.HdfsFileSystemModule;
 import io.trino.filesystem.manager.FileSystemModule;
 import io.trino.hdfs.HdfsModule;
@@ -54,6 +55,7 @@ public final class InternalObjectStoreConnectorFactory
             String catalogName,
             Map<String, String> config,
             Optional<HiveMetastore> hiveMetastore,
+            Optional<TrinoFileSystemFactory> fileSystemFactory,
             Optional<Module> icebergCatalogModule,
             Optional<Module> deltaMetastoreModule,
             Module deltaModule,
@@ -71,7 +73,7 @@ public final class InternalObjectStoreConnectorFactory
                             new ConfigureCachingMetastoreModule(),
                             new GalaxyLocationSecurityModule()),
                     hiveMetastore,
-                    Optional.empty(),
+                    fileSystemFactory,
                     Optional.empty());
 
             Map<String, String> icebergConfig = new HashMap<>(filteredConfig(config, "ICEBERG"));
@@ -86,7 +88,7 @@ public final class InternalObjectStoreConnectorFactory
                             new ConfigureCachingMetastoreModule(),
                             new GalaxyLocationSecurityModule()),
                     icebergCatalogModule,
-                    Optional.empty());
+                    fileSystemFactory);
 
             Map<String, String> deltaConfig = new HashMap<>(filteredConfig(config, "DELTA"));
             // The procedure is disabled in OSS because of security issues.
@@ -97,7 +99,7 @@ public final class InternalObjectStoreConnectorFactory
                     deltaConfig,
                     context,
                     deltaMetastoreModule,
-                    Optional.empty(),
+                    fileSystemFactory,
                     combine(
                             new ConfigureCachingMetastoreModule(),
                             new GalaxyLocationSecurityModule(),
@@ -108,7 +110,7 @@ public final class InternalObjectStoreConnectorFactory
                     filteredConfig(config, "HUDI"),
                     context,
                     hiveMetastore,
-                    Optional.empty(),
+                    fileSystemFactory,
                     Optional.of(combine(
                             new ConfigureCachingMetastoreModule(),
                             new GalaxyLocationSecurityModule())));
