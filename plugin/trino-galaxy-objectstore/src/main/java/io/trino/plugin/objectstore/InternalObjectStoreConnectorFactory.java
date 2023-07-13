@@ -71,6 +71,7 @@ public final class InternalObjectStoreConnectorFactory
                             new ConfigureCachingMetastoreModule(),
                             new GalaxyLocationSecurityModule()),
                     hiveMetastore,
+                    Optional.empty(),
                     Optional.empty());
 
             Map<String, String> icebergConfig = new HashMap<>(filteredConfig(config, "ICEBERG"));
@@ -107,6 +108,7 @@ public final class InternalObjectStoreConnectorFactory
                     filteredConfig(config, "HUDI"),
                     context,
                     hiveMetastore,
+                    Optional.empty(),
                     Optional.of(combine(
                             new ConfigureCachingMetastoreModule(),
                             new GalaxyLocationSecurityModule())));
