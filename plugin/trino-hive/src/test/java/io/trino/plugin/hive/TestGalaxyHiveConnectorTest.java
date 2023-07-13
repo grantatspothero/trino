@@ -67,6 +67,9 @@ public class TestGalaxyHiveConnectorTest
                         .put("hive.security", "allow-all")
                         .put("hive.partition-projection-enabled", "true")
                         .buildOrThrow())
+                // This is needed for e2e scale writers test otherwise 50% threshold of
+                // bufferSize won't get exceeded for scaling to happen.
+                .addExtraProperty("task.max-local-exchange-buffer-size", "32MB")
                 .setInitialTables(ImmutableList.of(CUSTOMER, NATION, ORDERS, REGION))
                 .setTpchBucketedCatalogEnabled(true)
                 .setMetastore(metastore)
