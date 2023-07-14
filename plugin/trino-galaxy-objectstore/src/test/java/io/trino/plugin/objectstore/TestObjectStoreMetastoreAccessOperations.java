@@ -111,7 +111,7 @@ public class TestObjectStoreMetastoreAccessOperations
     }
 
     @AfterMethod(alwaysRun = true)
-    public void tearDown()
+    public void cleanUp()
     {
         listTables("BASE TABLE").forEach(tableName -> query("DROP TABLE " + tableName));
         listTables("VIEW").forEach(tableName -> query("DROP VIEW " + tableName));
