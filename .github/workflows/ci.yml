@@ -513,28 +513,6 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache: restore
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.PROD_AWS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-      - name: Login to the ECR Docker Registry
-        uses: aws-actions/amazon-ecr-login@v1
-      - name: Checkout stargate
-        # Check out stargate repo to determine buffer service version configured there.
-        # The information is consumed by TestStargateBufferExchangeDistributedEngineOnlyQueries test.
-        uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.GITHUBACCESSTOKEN }}
-          repository: starburstdata/stargate
-          path: stargate
-      - name: Determine Stargate Buffer Service version
-        run: |
-          cd stargate
-          STARGATE_BUFFER_EXCHANGE_VERSION=$(./mvnw -B help:evaluate -Dexpression=dep.buffer-service-version -q -DforceStdout)
-          echo "Determined Stargate Buffer Service version: ${STARGATE_BUFFER_EXCHANGE_VERSION}"
-          echo "STARGATE_BUFFER_EXCHANGE_VERSION=${STARGATE_BUFFER_EXCHANGE_VERSION}" >> "$GITHUB_ENV"
       - name: Maven Install
         run: |
           export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
@@ -577,7 +555,8 @@ jobs:
             !:trino-singlestore,
             !:trino-sqlserver,
             !:trino-test-jdbc-compatibility-old-server,
-            !:trino-tests'
+            !:trino-tests,
+            !:trino-tests-galaxy-buffer-exchange'
       - name: trino-hdfs isolated JVM tests
         # Isolate HDFS file system cache concurrency test to avoid flakiness
         run: |
@@ -692,6 +671,7 @@ jobs:
             - { modules: testing/trino-faulttolerant-tests, profile: test-fault-tolerant-hive }
             - { modules: testing/trino-faulttolerant-tests, profile: test-fault-tolerant-iceberg }
             - { modules: testing/trino-tests }
+            - { modules: testing/trino-tests-galaxy-buffer-exchange }
           EOF
           ./.github/bin/build-matrix-from-impacted.py -v -i gib-impacted.log -m .github/test-matrix.yaml -o matrix.json
           echo "Matrix: $(jq '.' matrix.json)"
@@ -736,6 +716,22 @@ jobs:
         run: |
           export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
           $MAVEN clean install ${MAVEN_FAST_INSTALL} ${MAVEN_GIB} -am -pl "${{ matrix.modules }}"
+      - name: Checkout stargate
+        # Check out stargate repo to determine buffer service version configured there.
+        # The information is consumed by TestStargateBufferExchangeDistributedEngineOnlyQueries test.
+        if: matrix.modules == 'testing/trino-tests-galaxy-buffer-exchange'
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUBACCESSTOKEN }}
+          repository: starburstdata/stargate
+          path: stargate
+      - name: Determine Stargate Buffer Service version
+        if: matrix.modules == 'testing/trino-tests-galaxy-buffer-exchange'
+        run: |
+          cd stargate
+          STARGATE_BUFFER_EXCHANGE_VERSION=$(./mvnw -B help:evaluate -Dexpression=dep.buffer-service-version -q -DforceStdout)
+          echo "Determined Stargate Buffer Service version: ${STARGATE_BUFFER_EXCHANGE_VERSION}"
+          echo "STARGATE_BUFFER_EXCHANGE_VERSION=${STARGATE_BUFFER_EXCHANGE_VERSION}" >> "$GITHUB_ENV"
       - name: Maven Tests
         if: >-
           matrix.modules != 'plugin/trino-singlestore'
