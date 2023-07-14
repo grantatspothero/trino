@@ -102,7 +102,6 @@ public class TestCanonicalSubplanExtractor
                 new SimpleEntry<>(new CacheColumnId("cache_column1"), new TestingColumnHandle("column1")),
                 new SimpleEntry<>(new CacheColumnId("cache_column2"), new TestingColumnHandle("column2")));
         assertThat(subplan.getTableId()).isEqualTo(CACHE_TABLE_ID);
-        assertThat(subplan.getTableScanId()).isEqualTo(new PlanNodeId("scan_id"));
         assertThat(subplan.getTable()).isEqualTo(TEST_TABLE_HANDLE);
     }
 
@@ -139,7 +138,6 @@ public class TestCanonicalSubplanExtractor
                 new SimpleEntry<>(new CacheColumnId("cache_column1"), new TestingColumnHandle("column1")),
                 new SimpleEntry<>(new CacheColumnId("cache_column2"), new TestingColumnHandle("column2")));
         assertThat(subplan.getTableId()).isEqualTo(CACHE_TABLE_ID);
-        assertThat(subplan.getTableScanId()).isEqualTo(new PlanNodeId("scan_id"));
         assertThat(subplan.getTable()).isEqualTo(TEST_TABLE_HANDLE);
     }
 
@@ -175,7 +173,6 @@ public class TestCanonicalSubplanExtractor
                 new SimpleEntry<>(new CacheColumnId("cache_column1"), new TestingColumnHandle("column1")),
                 new SimpleEntry<>(new CacheColumnId("cache_column2"), new TestingColumnHandle("column2")));
         assertThat(subplan.getTableId()).isEqualTo(CACHE_TABLE_ID);
-        assertThat(subplan.getTableScanId()).isEqualTo(new PlanNodeId("scan_id"));
         assertThat(subplan.getTable()).isEqualTo(TEST_TABLE_HANDLE);
     }
 
@@ -217,7 +214,6 @@ public class TestCanonicalSubplanExtractor
                 new SimpleEntry<>(new CacheColumnId("cache_column1"), new TestingColumnHandle("column1")),
                 new SimpleEntry<>(new CacheColumnId("cache_column2"), new TestingColumnHandle("column2")));
         assertThat(subplan.getTableId()).isEqualTo(CACHE_TABLE_ID);
-        assertThat(subplan.getTableScanId()).isEqualTo(new PlanNodeId("scan_id"));
         assertThat(subplan.getTable()).isEqualTo(TEST_TABLE_HANDLE);
     }
 

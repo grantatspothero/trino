@@ -236,7 +236,7 @@ public final class CommonSubqueriesExtractor
                 .collect(toImmutableMap(entry -> columnIdToSymbol(entry.getKey()), Map.Entry::getValue))::get);
 
         TableScanNode commonSubplanTableScan = new TableScanNode(
-                subplan.getTableScanId(),
+                idAllocator.getNextId(),
                 // use original table handle as it contains information about
                 // split enumeration (e.g. enforced partition or bucket filter) for
                 // a given subquery

@@ -123,7 +123,6 @@ public final class CanonicalSubplanExtractor
                     subplan.getDynamicConjuncts(),
                     subplan.getColumnHandles(),
                     subplan.getTable(),
-                    subplan.getTableScanId(),
                     subplan.getTableId(),
                     subplan.isUseConnectorNodePartitioning()));
         }
@@ -165,7 +164,6 @@ public final class CanonicalSubplanExtractor
                     dynamicConjuncts.build(),
                     subplan.getColumnHandles(),
                     subplan.getTable(),
-                    subplan.getTableScanId(),
                     subplan.getTableId(),
                     subplan.isUseConnectorNodePartitioning()));
         }
@@ -222,7 +220,6 @@ public final class CanonicalSubplanExtractor
                     ImmutableList.of(),
                     columnHandlesBuilder.buildOrThrow(),
                     canonicalTableHandle,
-                    node.getId(),
                     tableId.get(),
                     node.isUseConnectorNodePartitioning()));
         }

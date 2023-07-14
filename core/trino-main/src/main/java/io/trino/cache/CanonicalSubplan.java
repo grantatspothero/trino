@@ -24,8 +24,6 @@ import io.trino.spi.connector.ColumnHandle;
 import io.trino.sql.planner.Symbol;
 import io.trino.sql.planner.optimizations.SymbolMapper;
 import io.trino.sql.planner.plan.PlanNode;
-import io.trino.sql.planner.plan.PlanNodeId;
-import io.trino.sql.planner.plan.TableScanNode;
 import io.trino.sql.tree.Expression;
 
 import java.util.List;
@@ -71,10 +69,6 @@ public class CanonicalSubplan
      */
     private final TableHandle table;
     /**
-     * {@link PlanNodeId} of original {@link TableScanNode}
-     */
-    private final PlanNodeId tableScanId;
-    /**
      * {@link CacheTableId} of scanned table.
      */
     private final CacheTableId tableId;
@@ -91,7 +85,6 @@ public class CanonicalSubplan
             List<Expression> dynamicConjuncts,
             Map<CacheColumnId, ColumnHandle> columnHandles,
             TableHandle table,
-            PlanNodeId tableScanId,
             CacheTableId tableId,
             boolean useConnectorNodePartitioning)
     {
@@ -102,7 +95,6 @@ public class CanonicalSubplan
         this.dynamicConjuncts = ImmutableList.copyOf(requireNonNull(dynamicConjuncts, "dynamicConjuncts is null"));
         this.columnHandles = ImmutableMap.copyOf(requireNonNull(columnHandles, "columnHandles is null"));
         this.table = requireNonNull(table, "table is null");
-        this.tableScanId = requireNonNull(tableScanId, "tableScanId is null");
         this.tableId = requireNonNull(tableId, "tableId is null");
         this.useConnectorNodePartitioning = useConnectorNodePartitioning;
     }
@@ -149,11 +141,6 @@ public class CanonicalSubplan
     public TableHandle getTable()
     {
         return table;
-    }
-
-    public PlanNodeId getTableScanId()
-    {
-        return tableScanId;
     }
 
     public CacheTableId getTableId()
