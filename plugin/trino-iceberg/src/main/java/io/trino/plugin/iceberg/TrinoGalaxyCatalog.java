@@ -195,7 +195,7 @@ public class TrinoGalaxyCatalog
     }
 
     @Override
-    public void registerTable(ConnectorSession session, SchemaTableName schemaTableName, String tableLocation, String metadataLocation)
+    public void registerTable(ConnectorSession session, SchemaTableName schemaTableName, String tableLocation, TableMetadata tableMetadata)
     {
         io.trino.plugin.hive.metastore.Table.Builder table = io.trino.plugin.hive.metastore.Table.builder()
                 .setDatabaseName(schemaTableName.getSchemaName())
@@ -208,7 +208,7 @@ public class TrinoGalaxyCatalog
                 // This is a must-have property for the EXTERNAL_TABLE table type
                 .setParameter("EXTERNAL", "TRUE")
                 .setParameter(TABLE_TYPE_PROP, ICEBERG_TABLE_TYPE_VALUE.toUpperCase(ENGLISH))
-                .setParameter(METADATA_LOCATION_PROP, metadataLocation);
+                .setParameter(METADATA_LOCATION_PROP, tableMetadata.metadataFileLocation());
 
         metastore.createTable(table.build(), NO_PRIVILEGES);
     }
