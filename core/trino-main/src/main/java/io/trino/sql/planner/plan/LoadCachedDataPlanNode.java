@@ -32,14 +32,14 @@ public class LoadCachedDataPlanNode
         extends PlanNode
 {
     private final PlanSignature planSignature;
-    private final Map<ColumnHandle, CacheColumnId> dynamicFilterColumnMapping;
+    private final Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping;
     private final List<Symbol> outputSymbols;
 
     @JsonCreator
     public LoadCachedDataPlanNode(
             @JsonProperty PlanNodeId id,
             @JsonProperty PlanSignature planSignature,
-            @JsonProperty Map<ColumnHandle, CacheColumnId> dynamicFilterColumnMapping,
+            @JsonProperty Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping,
             @JsonProperty List<Symbol> outputSymbols)
     {
         super(id);
@@ -55,7 +55,7 @@ public class LoadCachedDataPlanNode
     }
 
     @JsonProperty
-    public Map<ColumnHandle, CacheColumnId> getDynamicFilterColumnMapping()
+    public Map<CacheColumnId, ColumnHandle> getDynamicFilterColumnMapping()
     {
         return dynamicFilterColumnMapping;
     }

@@ -299,12 +299,13 @@ public final class CommonSubqueriesExtractor
         // Create mapping between dynamic filtering columns and column ids.
         // All dynamic filtering columns are part of planSignature columns
         // because joins are not supported yet.
-        Map<ColumnHandle, CacheColumnId> dynamicFilterColumnMapping = subplan.getDynamicConjuncts().stream()
+        Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping = subplan.getDynamicConjuncts().stream()
                 .flatMap(conjunct -> extractDynamicFilters(conjunct).getDynamicConjuncts().stream())
                 .map(filter -> canonicalSymbolToColumnId(extractSourceSymbol(filter)))
+                .distinct()
                 .collect(toImmutableMap(
-                        columnId -> subplan.getColumnHandles().get(columnId),
-                        identity()));
+                        identity(),
+                        columnId -> subplan.getColumnHandles().get(columnId)));
 
         return new CommonPlanAdaptation(
                 commonSubplan,

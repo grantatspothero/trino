@@ -170,7 +170,7 @@ public class TestCacheCommonSubqueries
                                 strictProject(ImmutableMap.of("NATIONKEY", expression("NATIONKEY")),
                                         loadCachedDataPlanNode(
                                                 signature,
-                                                ImmutableMap.of(new TpchColumnHandle("nationkey", BIGINT), NATIONKEY_COLUMN_ID),
+                                                ImmutableMap.of(NATIONKEY_COLUMN_ID, new TpchColumnHandle("nationkey", BIGINT)),
                                                 "NATIONKEY", "REGIONKEY"))),
                         anyTree(
                                 chooseAlternativeNode(

@@ -49,10 +49,9 @@ public class CommonPlanAdaptation
      */
     private final PlanSignature commonSubplanSignature;
     /**
-     * Mapping from relevant (for plan signature) dynamic filtering columns
-     * to {@link CacheColumnId}.
+     * Mapping from {@link CacheColumnId} to relevant (for plan signature) dynamic filtering columns.
      */
-    private final Map<ColumnHandle, CacheColumnId> dynamicFilterColumnMapping;
+    private final Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping;
     /**
      * Optional predicate that needs to be applied in order to adapt common subplan to
      * original plan.
@@ -68,7 +67,7 @@ public class CommonPlanAdaptation
             PlanNode commonSubplan,
             FilteredTableScan commonSubplanFilteredTableScan,
             PlanSignature commonSubplanSignature,
-            Map<ColumnHandle, CacheColumnId> dynamicFilterColumnMapping,
+            Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping,
             Optional<Expression> adaptationPredicate,
             Optional<Assignments> adaptationAssignments)
     {
@@ -114,7 +113,7 @@ public class CommonPlanAdaptation
         return commonSubplanSignature;
     }
 
-    public Map<ColumnHandle, CacheColumnId> getDynamicFilterColumnMapping()
+    public Map<CacheColumnId, ColumnHandle> getDynamicFilterColumnMapping()
     {
         return dynamicFilterColumnMapping;
     }

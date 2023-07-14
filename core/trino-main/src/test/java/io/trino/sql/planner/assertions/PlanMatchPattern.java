@@ -156,7 +156,7 @@ public final class PlanMatchPattern
         return node(CacheDataPlanNode.class, source);
     }
 
-    public static PlanMatchPattern loadCachedDataPlanNode(PlanSignature signature, Map<ColumnHandle, CacheColumnId> dynamicFilterColumnMapping, String... outputSymbolAliases)
+    public static PlanMatchPattern loadCachedDataPlanNode(PlanSignature signature, Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping, String... outputSymbolAliases)
     {
         PlanMatchPattern result = node(LoadCachedDataPlanNode.class);
         for (int i = 0; i < outputSymbolAliases.length; i++) {

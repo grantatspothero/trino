@@ -253,7 +253,7 @@ public class TestCommonSubqueriesExtractor
                         new DynamicFilterId("subquery_b_dynamic_id"),
                         expression("subquery_b_column1")));
         assertThat(subqueryB.getDynamicFilterColumnMapping()).containsExactly(
-                new SimpleEntry<>(HANDLE_1, new CacheColumnId("cache_column1")));
+                new SimpleEntry<>(new CacheColumnId("cache_column1"), HANDLE_1));
 
         // symbols used in common subplans for both subqueries should be unique
         assertThat(SymbolsExtractor.extractUnique(subqueryA.getCommonSubplan()))
