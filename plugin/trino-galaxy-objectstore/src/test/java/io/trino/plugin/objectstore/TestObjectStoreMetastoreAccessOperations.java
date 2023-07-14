@@ -51,8 +51,7 @@ import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.REPLACE_TABLE;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.UPDATE_PARTITION_STATISTICS;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.UPDATE_TABLE_STATISTICS;
-import static io.trino.plugin.objectstore.TableType.HUDI;
-import static io.trino.plugin.objectstore.TableType.ICEBERG;
+import static io.trino.plugin.objectstore.TestObjectStoreMetastoreAccessOperations.TableType.ICEBERG;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static io.trino.testing.DataProviders.toDataProvider;
@@ -343,7 +342,6 @@ public class TestObjectStoreMetastoreAccessOperations
             case HIVE -> "CALL system.drop_stats('test_schema', 'drop_stats')";
             case ICEBERG -> "ALTER TABLE drop_stats EXECUTE drop_extended_stats";
             case DELTA -> "CALL system.drop_extended_stats('test_schema', 'drop_stats')";
-            default -> throw new IllegalArgumentException("Unexpected table type: " + type);
         };
         assertMetastoreInvocations(dropStats,
                 ImmutableMultiset.builder()
@@ -363,7 +361,6 @@ public class TestObjectStoreMetastoreAccessOperations
             case HIVE -> "CALL system.drop_stats('test_schema', 'drop_stats_partition')";
             case ICEBERG -> "ALTER TABLE drop_stats_partition EXECUTE drop_extended_stats";
             case DELTA -> "CALL system.drop_extended_stats('test_schema', 'drop_stats_partition')";
-            default -> throw new IllegalArgumentException("Unexpected table type: " + type);
         };
         assertMetastoreInvocations(dropStats,
                 ImmutableMultiset.builder()
@@ -387,7 +384,6 @@ public class TestObjectStoreMetastoreAccessOperations
     public Object[][] tableTypeDataProvider()
     {
         return Arrays.stream(TableType.values())
-                .filter(type -> type != HUDI) // TODO Remove this filter once Hudi connector supports creating tables
                 .collect(toDataProvider());
     }
 
@@ -403,7 +399,16 @@ public class TestObjectStoreMetastoreAccessOperations
             case HIVE -> hiveValue;
             case ICEBERG -> icebergValue;
             case DELTA -> deltaValue;
-            case HUDI -> throw new UnsupportedOperationException();
         };
+    }
+
+    /**
+     * An enum similar to {@link io.trino.plugin.objectstore.TableType} containing only the options tested here.
+     */
+    enum TableType {
+        HIVE,
+        ICEBERG,
+        DELTA,
+        // HUDI -- TODO include Hudi when it supports creating tables. Then replace this enum with io.trino.plugin.objectstore.TableType
     }
 }
