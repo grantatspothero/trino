@@ -24,7 +24,6 @@ import io.trino.testing.FaultTolerantExecutionConnectorTestHelper;
 import io.trino.testing.QueryRunner;
 import io.trino.tpch.TpchTable;
 import org.assertj.core.api.Assertions;
-import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import static io.airlift.testing.Closeables.closeAllSuppress;
@@ -32,8 +31,6 @@ import static io.airlift.testing.Closeables.closeAllSuppress;
 public abstract class AbstractBufferExchangeDistributedEngineOnlyQueries
         extends AbstractDistributedEngineOnlyQueries
 {
-    private TestingBufferServiceCluster bufferServiceCluster;
-
     @Override
     protected QueryRunner createQueryRunner()
             throws Exception
@@ -41,6 +38,7 @@ public abstract class AbstractBufferExchangeDistributedEngineOnlyQueries
         TestingBufferServiceCluster bufferServiceCluster = TestingBufferServiceCluster.builder()
                 .withImages("179619298502.dkr.ecr.us-east-1.amazonaws.com/galaxy/trino-buffer-service", getBufferServiceVersion())
                 .build();
+        closeAfterClass(bufferServiceCluster);
 
         ImmutableMap<String, String> exchangeManagerProperties = ImmutableMap.<String, String>builder()
                 .put("exchange.buffer-discovery.uri", bufferServiceCluster.getDiscoveryUri())
@@ -90,15 +88,5 @@ public abstract class AbstractBufferExchangeDistributedEngineOnlyQueries
     public void testSelectiveLimit()
     {
         // FTE mode does not terminate query when limit is reached
-    }
-
-    @AfterClass(alwaysRun = true)
-    public void destroy()
-            throws Exception
-    {
-        if (bufferServiceCluster != null) {
-            bufferServiceCluster.close();
-            bufferServiceCluster = null;
-        }
     }
 }
