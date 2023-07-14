@@ -167,7 +167,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 1)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), 1)
                         .build());
     }
@@ -193,7 +192,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 1)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), min(icebergManifestPrefetching, numberOfFiles))
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), min(icebergManifestPrefetching, numberOfFiles))
                         .build());
 
@@ -202,7 +200,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 1)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), numberOfFiles)
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), numberOfFiles)
                         .build());
 
@@ -211,7 +208,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 1)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), numberOfFiles + min(icebergManifestPrefetching, numberOfFiles))
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), numberOfFiles + min(icebergManifestPrefetching, numberOfFiles))
                         .build());
 
@@ -250,7 +246,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 1)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), 1)
                         .build());
         assertFileSystemAccesses("SELECT * FROM " + tableName + " FOR VERSION AS OF " + v3SnapshotId,
@@ -258,7 +253,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 1)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), 2)
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), 2)
                         .build());
         assertFileSystemAccesses("SELECT * FROM " + tableName,
@@ -266,7 +260,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 1)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), 2)
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), 2)
                         .build());
     }
@@ -293,7 +286,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 1)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), 1)
                         .build());
         assertFileSystemAccesses("SELECT * FROM " + tableName + " FOR VERSION AS OF " + v3SnapshotId,
@@ -301,7 +293,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 1)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), 2)
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), 2)
                         .build());
         assertFileSystemAccesses("SELECT * FROM " + tableName,
@@ -309,7 +300,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 1)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), 2)
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), 2)
                         .build());
     }
@@ -323,7 +313,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 1)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), 1)
                         .build());
     }
@@ -339,7 +328,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 2)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 2)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 2)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), 4)
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), 4)
                         .build());
     }
@@ -357,7 +345,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 2)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 2)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 2)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), 4)
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), 4)
                         .build());
     }
@@ -372,7 +359,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 1)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), 1)
                         .build());
     }
@@ -387,7 +373,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 1)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), 1)
                         .build());
     }
@@ -404,7 +389,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 1)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), 1)
                         .build());
     }
@@ -419,7 +403,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 1)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), 1)
                         .build());
     }
@@ -436,7 +419,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 1)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), 2)
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), 2)
                         .build());
 
@@ -446,7 +428,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 1)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), 1) // fewer than without filter
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), 1) // fewer than without filter
                         .build());
 
@@ -456,7 +437,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 1)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), 1) // fewer than without filter
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), 1) // fewer than without filter
                         .build());
 
@@ -466,7 +446,6 @@ public class TestIcebergMetadataFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 1)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 1)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), 1) // fewer than without filter
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), 1) // fewer than without filter
                         .build());
 
@@ -492,7 +471,6 @@ public class TestIcebergMetadataFileOperations
                         .add(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM))
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 4)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 4)
-                        .addCopies(new FileOperation(MANIFEST, INPUT_FILE_GET_LENGTH), 5)
                         .addCopies(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM), 5)
                         .build());
 
