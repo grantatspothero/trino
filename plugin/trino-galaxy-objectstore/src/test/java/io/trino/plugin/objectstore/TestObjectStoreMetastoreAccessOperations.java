@@ -92,7 +92,13 @@ public class TestObjectStoreMetastoreAccessOperations
                 "galaxy",
                 ImmutableMap.of(),
                 ImmutableMap.of(),
-                ImmutableMap.of("DELTA__delta.enable-non-concurrent-writes", "true"));
+                ImmutableMap.of(
+                        // Disable caching for test method isolation
+                        "HIVE__hive.metastore-cache-ttl", "0s",
+                        "DELTA__hive.metastore-cache-ttl", "0s",
+                        "HUDI__hive.metastore-cache-ttl", "0s",
+                        // Enable Delta table creation
+                        "DELTA__delta.enable-non-concurrent-writes", "true"));
         properties = Maps.filterEntries(
                 properties,
                 entry -> !entry.getKey().equals("HIVE__hive.metastore") &&
@@ -129,7 +135,7 @@ public class TestObjectStoreMetastoreAccessOperations
     {
         assertMetastoreInvocations("CREATE TABLE test_create(id VARCHAR, age INT) WITH (type = '" + type + "')",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_DATABASE, occurrences(type, 0, 1, 0))
+                        .addCopies(GET_DATABASE, 1)
                         .add(CREATE_TABLE)
                         .add(GET_TABLE)
                         .addCopies(UPDATE_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
@@ -143,7 +149,7 @@ public class TestObjectStoreMetastoreAccessOperations
                 ImmutableMultiset.builder()
                         .add(CREATE_TABLE)
                         .addCopies(GET_TABLE, occurrences(type, 2, 5, 1))
-                        .addCopies(GET_DATABASE, occurrences(type, 0, 1, 0))
+                        .addCopies(GET_DATABASE, 1)
                         .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
                         .addCopies(UPDATE_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .build());
@@ -176,7 +182,7 @@ public class TestObjectStoreMetastoreAccessOperations
         assertUpdate("INSERT INTO test_select_partition SELECT 2 AS data, 20 AS part", 1);
         assertMetastoreInvocations("SELECT * FROM test_select_partition",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(type, 2, 1, 1))
+                        .addCopies(GET_TABLE, occurrences(type, 3, 2, 3))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
                         .build());
@@ -184,7 +190,8 @@ public class TestObjectStoreMetastoreAccessOperations
         // Specify a specific partition
         assertMetastoreInvocations("SELECT * FROM test_select_partition WHERE part = 10",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(type, 2, 1, 1))
+                        .addCopies(GET_TABLE, occurrences(type, 3, 2, 3))
+                        .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .build());
     }
@@ -208,7 +215,7 @@ public class TestObjectStoreMetastoreAccessOperations
 
         assertMetastoreInvocations("SELECT * FROM test_select_view_view",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, 3)
+                        .addCopies(GET_TABLE, occurrences(type, 4, 4, 5))
                         .build());
     }
 
@@ -220,7 +227,7 @@ public class TestObjectStoreMetastoreAccessOperations
 
         assertMetastoreInvocations("SELECT * FROM test_select_view_where_view WHERE age = 2",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, 3)
+                        .addCopies(GET_TABLE, occurrences(type, 4, 4, 5))
                         .build());
     }
 
@@ -318,7 +325,7 @@ public class TestObjectStoreMetastoreAccessOperations
 
         assertMetastoreInvocations("ANALYZE test_analyze_partition",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(type, 1, 3, 0))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 4, 2))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
@@ -370,7 +377,7 @@ public class TestObjectStoreMetastoreAccessOperations
 
         assertMetastoreInvocations(dropStats,
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(type, 1, 2, 0))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 3, 1))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(type, 2, 0, 0))
                         .build());
