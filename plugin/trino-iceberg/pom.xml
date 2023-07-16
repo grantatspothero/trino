@@ -164,11 +164,6 @@
                     <groupId>io.airlift</groupId>
                     <artifactId>http-client</artifactId>
                 </exclusion>
-                <!-- TODO: remove when removed from trino-hive -->
-                <exclusion>
-                    <groupId>io.trino.hive</groupId>
-                    <artifactId>hive-apache</artifactId>
-                </exclusion>
             </exclusions>
         </dependency>
 
@@ -404,6 +399,13 @@
         <dependency>
             <groupId>io.trino.hadoop</groupId>
             <artifactId>hadoop-apache</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <!-- TODO (https://github.com/starburstdata/galaxy-trino/issues/1120) needed by tests but also by io.starburst.schema-discovery:schema-discovery-core -->
+            <groupId>io.trino.hive</groupId>
+            <artifactId>hive-apache</artifactId>
             <scope>runtime</scope>
         </dependency>
 

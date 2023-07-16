@@ -23,8 +23,6 @@ import io.trino.plugin.hive.metastore.HiveColumnStatistics;
 import io.trino.plugin.hive.metastore.Storage;
 import io.trino.plugin.hive.metastore.StorageFormat;
 import io.trino.plugin.hive.metastore.Table;
-import org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat;
-import org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe;
 
 import java.util.Arrays;
 import java.util.List;
@@ -303,9 +301,9 @@ public class TableMetadata
                 .map(fileFormat -> {
                     if (fileFormat == HiveFileFormat.HUDI) {
                         return StorageFormat.create(
-                                ParquetHiveSerDe.class.getName(),
+                                "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
                                 "org.apache.hudi.hadoop.HoodieParquetInputFormat",
-                                MapredParquetOutputFormat.class.getName());
+                                "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat");
                     }
                     return StorageFormat.fromHiveStorageFormat(fileFormat.toHiveStorageFormat());
                 })
