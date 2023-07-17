@@ -243,17 +243,17 @@ public class TestCanonicalSubplanExtractor
 
         // TableHandles will not be turned into common canonical version
         tableIds = extractCanonicalSubplans(new TestMetadata(
-                handle -> Optional.of(new CacheColumnId(handle.getName())),
-                (tableHandle) -> {
-                    TestingMetadata.TestingTableHandle handle = (TestingMetadata.TestingTableHandle) tableHandle.getConnectorHandle();
-                    if (handle.getTableName().getTableName().equals("table1")) {
-                        return TestingHandles.createTestTableHandle(SchemaTableName.schemaTableName("schema", "common1"));
-                    }
-                    else {
-                        return TestingHandles.createTestTableHandle(SchemaTableName.schemaTableName("schema", "common2"));
-                    }
-                },
-                (tableHandle) -> Optional.of(new CacheTableId(tableHandle.getConnectorHandle().toString()))),
+                        handle -> Optional.of(new CacheColumnId(handle.getName())),
+                        (tableHandle) -> {
+                            TestingMetadata.TestingTableHandle handle = (TestingMetadata.TestingTableHandle) tableHandle.getConnectorHandle();
+                            if (handle.getTableName().getTableName().equals("table1")) {
+                                return TestingHandles.createTestTableHandle(SchemaTableName.schemaTableName("schema", "common1"));
+                            }
+                            else {
+                                return TestingHandles.createTestTableHandle(SchemaTableName.schemaTableName("schema", "common2"));
+                            }
+                        },
+                        (tableHandle) -> Optional.of(new CacheTableId(tableHandle.getConnectorHandle().toString()))),
                 TEST_SESSION,
                 root).stream().map(CanonicalSubplan::getTableId).toList();
         assertThat(tableIds).isEqualTo(ImmutableList.of(new CacheTableId("schema.common1"), new CacheTableId("schema.common2")));
