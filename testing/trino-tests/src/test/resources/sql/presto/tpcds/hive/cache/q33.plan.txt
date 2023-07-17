@@ -14,22 +14,39 @@ local exchange (GATHER, SINGLE, [])
                                                     scan store_sales
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
-                                                        scan date_dim
+                                                        alternatives
+                                                            scan date_dim
+                                                            cache data
+                                                                scan date_dim
+                                                            load from cache
                                             local exchange (GATHER, SINGLE, [])
                                                 remote exchange (REPLICATE, BROADCAST, [])
-                                                    scan customer_address
+                                                    alternatives
+                                                        scan customer_address
+                                                        cache data
+                                                            scan customer_address
+                                                        load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPLICATE, BROADCAST, [])
                                                 join (INNER, REPLICATED):
-                                                    dynamic filter (["i_manufact_id_8"])
-                                                        scan item
+                                                    alternatives
+                                                        dynamic filter (["i_manufact_id_8"])
+                                                            scan item
+                                                        cache data
+                                                            dynamic filter (["i_manufact_id_8"])
+                                                                scan item
+                                                        load from cache
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])
                                                             final aggregation over (i_manufact_id_25)
                                                                 local exchange (GATHER, SINGLE, [])
                                                                     remote exchange (REPARTITION, HASH, ["i_manufact_id_25"])
                                                                         partial aggregation over (i_manufact_id_25)
-                                                                            scan item
+                                                                            alternatives
+                                                                                scan item
+                                                                                cache data
+                                                                                    scan item
+                                                                                load from cache
                 partial aggregation over (i_manufact_id_102)
                     final aggregation over (i_manufact_id_102)
                         local exchange (GATHER, SINGLE, [])
@@ -42,22 +59,39 @@ local exchange (GATHER, SINGLE, [])
                                                     scan catalog_sales
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
-                                                        scan date_dim
+                                                        alternatives
+                                                            scan date_dim
+                                                            cache data
+                                                                scan date_dim
+                                                            load from cache
                                             local exchange (GATHER, SINGLE, [])
                                                 remote exchange (REPLICATE, BROADCAST, [])
-                                                    scan customer_address
+                                                    alternatives
+                                                        scan customer_address
+                                                        cache data
+                                                            scan customer_address
+                                                        load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPLICATE, BROADCAST, [])
                                                 join (INNER, REPLICATED):
-                                                    dynamic filter (["i_manufact_id_102"])
-                                                        scan item
+                                                    alternatives
+                                                        dynamic filter (["i_manufact_id_102"])
+                                                            scan item
+                                                        cache data
+                                                            dynamic filter (["i_manufact_id_102"])
+                                                                scan item
+                                                        load from cache
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])
                                                             final aggregation over (i_manufact_id_129)
                                                                 local exchange (GATHER, SINGLE, [])
                                                                     remote exchange (REPARTITION, HASH, ["i_manufact_id_129"])
                                                                         partial aggregation over (i_manufact_id_129)
-                                                                            scan item
+                                                                            alternatives
+                                                                                scan item
+                                                                                cache data
+                                                                                    scan item
+                                                                                load from cache
                 partial aggregation over (i_manufact_id_208)
                     final aggregation over (i_manufact_id_208)
                         local exchange (GATHER, SINGLE, [])
@@ -70,19 +104,36 @@ local exchange (GATHER, SINGLE, [])
                                                     scan web_sales
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
-                                                        scan date_dim
+                                                        alternatives
+                                                            scan date_dim
+                                                            cache data
+                                                                scan date_dim
+                                                            load from cache
                                             local exchange (GATHER, SINGLE, [])
                                                 remote exchange (REPLICATE, BROADCAST, [])
-                                                    scan customer_address
+                                                    alternatives
+                                                        scan customer_address
+                                                        cache data
+                                                            scan customer_address
+                                                        load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPLICATE, BROADCAST, [])
                                                 join (INNER, REPLICATED):
-                                                    dynamic filter (["i_manufact_id_208"])
-                                                        scan item
+                                                    alternatives
+                                                        dynamic filter (["i_manufact_id_208"])
+                                                            scan item
+                                                        cache data
+                                                            dynamic filter (["i_manufact_id_208"])
+                                                                scan item
+                                                        load from cache
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])
                                                             final aggregation over (i_manufact_id_235)
                                                                 local exchange (GATHER, SINGLE, [])
                                                                     remote exchange (REPARTITION, HASH, ["i_manufact_id_235"])
                                                                         partial aggregation over (i_manufact_id_235)
-                                                                            scan item
+                                                                            alternatives
+                                                                                scan item
+                                                                                cache data
+                                                                                    scan item
+                                                                                load from cache

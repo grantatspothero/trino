@@ -14,11 +14,20 @@ local exchange (GATHER, SINGLE, [])
                                         remote exchange (REPARTITION, HASH, ["sr_customer_sk", "sr_store_sk"])
                                             partial aggregation over (sr_customer_sk, sr_store_sk)
                                                 join (INNER, REPLICATED):
-                                                    dynamic filter (await ["sr_returned_date_sk", "sr_store_sk"])
-                                                        scan store_returns
+                                                    alternatives
+                                                        dynamic filter (await ["sr_returned_date_sk", "sr_store_sk"])
+                                                            scan store_returns
+                                                        cache data
+                                                            dynamic filter (await ["sr_returned_date_sk", "sr_store_sk"])
+                                                                scan store_returns
+                                                        load from cache
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])
-                                                            scan date_dim
+                                                            alternatives
+                                                                scan date_dim
+                                                                cache data
+                                                                    scan date_dim
+                                                                load from cache
                                 local exchange (GATHER, SINGLE, [])
                                     remote exchange (REPLICATE, BROADCAST, [])
                                         scan store
@@ -33,11 +42,20 @@ local exchange (GATHER, SINGLE, [])
                                                 remote exchange (REPARTITION, HASH, ["sr_customer_sk_12", "sr_store_sk_16"])
                                                     partial aggregation over (sr_customer_sk_12, sr_store_sk_16)
                                                         join (INNER, REPLICATED):
-                                                            dynamic filter (await ["sr_returned_date_sk_9"])
-                                                                scan store_returns
+                                                            alternatives
+                                                                dynamic filter (await ["sr_returned_date_sk_9"])
+                                                                    scan store_returns
+                                                                cache data
+                                                                    dynamic filter (await ["sr_returned_date_sk_9"])
+                                                                        scan store_returns
+                                                                load from cache
                                                             local exchange (GATHER, SINGLE, [])
                                                                 remote exchange (REPLICATE, BROADCAST, [])
-                                                                    scan date_dim
+                                                                    alternatives
+                                                                        scan date_dim
+                                                                        cache data
+                                                                            scan date_dim
+                                                                        load from cache
             local exchange (GATHER, SINGLE, [])
                 remote exchange (REPLICATE, BROADCAST, [])
                     single aggregation over ()

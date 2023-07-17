@@ -23,13 +23,25 @@ local exchange (GATHER, SINGLE, [])
                                                                             scan store_returns
                                                             local exchange (GATHER, SINGLE, [])
                                                                 remote exchange (REPLICATE, BROADCAST, [])
-                                                                    scan date_dim
+                                                                    alternatives
+                                                                        scan date_dim
+                                                                        cache data
+                                                                            scan date_dim
+                                                                        load from cache
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPLICATE, BROADCAST, [])
-                                                                scan item
+                                                                alternatives
+                                                                    scan item
+                                                                    cache data
+                                                                        scan item
+                                                                    load from cache
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])
-                                                            scan promotion
+                                                            alternatives
+                                                                scan promotion
+                                                                cache data
+                                                                    scan promotion
+                                                                load from cache
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
                                                         scan store
@@ -51,13 +63,25 @@ local exchange (GATHER, SINGLE, [])
                                                                             scan catalog_returns
                                                             local exchange (GATHER, SINGLE, [])
                                                                 remote exchange (REPLICATE, BROADCAST, [])
-                                                                    scan date_dim
+                                                                    alternatives
+                                                                        scan date_dim
+                                                                        cache data
+                                                                            scan date_dim
+                                                                        load from cache
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPLICATE, BROADCAST, [])
-                                                                scan item
+                                                                alternatives
+                                                                    scan item
+                                                                    cache data
+                                                                        scan item
+                                                                    load from cache
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])
-                                                            scan promotion
+                                                            alternatives
+                                                                scan promotion
+                                                                cache data
+                                                                    scan promotion
+                                                                load from cache
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
                                                         scan catalog_page
@@ -79,13 +103,25 @@ local exchange (GATHER, SINGLE, [])
                                                                             scan web_returns
                                                             local exchange (GATHER, SINGLE, [])
                                                                 remote exchange (REPLICATE, BROADCAST, [])
-                                                                    scan date_dim
+                                                                    alternatives
+                                                                        scan date_dim
+                                                                        cache data
+                                                                            scan date_dim
+                                                                        load from cache
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPLICATE, BROADCAST, [])
-                                                                scan item
+                                                                alternatives
+                                                                    scan item
+                                                                    cache data
+                                                                        scan item
+                                                                    load from cache
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])
-                                                            scan promotion
+                                                            alternatives
+                                                                scan promotion
+                                                                cache data
+                                                                    scan promotion
+                                                                load from cache
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
                                                         scan web_site

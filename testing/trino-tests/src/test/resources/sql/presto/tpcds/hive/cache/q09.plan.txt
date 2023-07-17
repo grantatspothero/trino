@@ -17,7 +17,11 @@ cross join:
                                                                 local exchange (GATHER, SINGLE, [])
                                                                     remote exchange (GATHER, SINGLE, [])
                                                                         partial aggregation over ()
-                                                                            scan store_sales
+                                                                            alternatives
+                                                                                scan store_sales
+                                                                                cache data
+                                                                                    scan store_sales
+                                                                                load from cache
                                                             local exchange (GATHER, SINGLE, [])
                                                                 remote exchange (GATHER, SINGLE, [])
                                                                     scan reason
@@ -25,69 +29,125 @@ cross join:
                                                             local exchange (GATHER, SINGLE, [])
                                                                 remote exchange (GATHER, SINGLE, [])
                                                                     partial aggregation over ()
-                                                                        scan store_sales
+                                                                        alternatives
+                                                                            scan store_sales
+                                                                            cache data
+                                                                                scan store_sales
+                                                                            load from cache
                                                     final aggregation over ()
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (GATHER, SINGLE, [])
                                                                 partial aggregation over ()
-                                                                    scan store_sales
+                                                                    alternatives
+                                                                        scan store_sales
+                                                                        cache data
+                                                                            scan store_sales
+                                                                        load from cache
                                                 final aggregation over ()
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (GATHER, SINGLE, [])
                                                             partial aggregation over ()
-                                                                scan store_sales
+                                                                alternatives
+                                                                    scan store_sales
+                                                                    cache data
+                                                                        scan store_sales
+                                                                    load from cache
                                             final aggregation over ()
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (GATHER, SINGLE, [])
                                                         partial aggregation over ()
-                                                            scan store_sales
+                                                            alternatives
+                                                                scan store_sales
+                                                                cache data
+                                                                    scan store_sales
+                                                                load from cache
                                         final aggregation over ()
                                             local exchange (GATHER, SINGLE, [])
                                                 remote exchange (GATHER, SINGLE, [])
                                                     partial aggregation over ()
-                                                        scan store_sales
+                                                        alternatives
+                                                            scan store_sales
+                                                            cache data
+                                                                scan store_sales
+                                                            load from cache
                                     final aggregation over ()
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (GATHER, SINGLE, [])
                                                 partial aggregation over ()
-                                                    scan store_sales
+                                                    alternatives
+                                                        scan store_sales
+                                                        cache data
+                                                            scan store_sales
+                                                        load from cache
                                 final aggregation over ()
                                     local exchange (GATHER, SINGLE, [])
                                         remote exchange (GATHER, SINGLE, [])
                                             partial aggregation over ()
-                                                scan store_sales
+                                                alternatives
+                                                    scan store_sales
+                                                    cache data
+                                                        scan store_sales
+                                                    load from cache
                             final aggregation over ()
                                 local exchange (GATHER, SINGLE, [])
                                     remote exchange (GATHER, SINGLE, [])
                                         partial aggregation over ()
-                                            scan store_sales
+                                            alternatives
+                                                scan store_sales
+                                                cache data
+                                                    scan store_sales
+                                                load from cache
                         final aggregation over ()
                             local exchange (GATHER, SINGLE, [])
                                 remote exchange (GATHER, SINGLE, [])
                                     partial aggregation over ()
-                                        scan store_sales
+                                        alternatives
+                                            scan store_sales
+                                            cache data
+                                                scan store_sales
+                                            load from cache
                     final aggregation over ()
                         local exchange (GATHER, SINGLE, [])
                             remote exchange (GATHER, SINGLE, [])
                                 partial aggregation over ()
-                                    scan store_sales
+                                    alternatives
+                                        scan store_sales
+                                        cache data
+                                            scan store_sales
+                                        load from cache
                 final aggregation over ()
                     local exchange (GATHER, SINGLE, [])
                         remote exchange (GATHER, SINGLE, [])
                             partial aggregation over ()
-                                scan store_sales
+                                alternatives
+                                    scan store_sales
+                                    cache data
+                                        scan store_sales
+                                    load from cache
             final aggregation over ()
                 local exchange (GATHER, SINGLE, [])
                     remote exchange (GATHER, SINGLE, [])
                         partial aggregation over ()
-                            scan store_sales
+                            alternatives
+                                scan store_sales
+                                cache data
+                                    scan store_sales
+                                load from cache
         final aggregation over ()
             local exchange (GATHER, SINGLE, [])
                 remote exchange (GATHER, SINGLE, [])
                     partial aggregation over ()
-                        scan store_sales
+                        alternatives
+                            scan store_sales
+                            cache data
+                                scan store_sales
+                            load from cache
     final aggregation over ()
         local exchange (GATHER, SINGLE, [])
             remote exchange (GATHER, SINGLE, [])
                 partial aggregation over ()
-                    scan store_sales
+                    alternatives
+                        scan store_sales
+                        cache data
+                            scan store_sales
+                        load from cache

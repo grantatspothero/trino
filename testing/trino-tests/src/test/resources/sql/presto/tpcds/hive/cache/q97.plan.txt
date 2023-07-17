@@ -12,7 +12,11 @@ final aggregation over ()
                                             scan store_sales
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPLICATE, BROADCAST, [])
-                                                scan date_dim
+                                                alternatives
+                                                    scan date_dim
+                                                    cache data
+                                                        scan date_dim
+                                                    load from cache
                     final aggregation over (cs_bill_customer_sk, cs_item_sk)
                         local exchange (GATHER, SINGLE, [])
                             remote exchange (REPARTITION, HASH, ["cs_bill_customer_sk", "cs_item_sk"])
@@ -22,4 +26,8 @@ final aggregation over ()
                                             scan catalog_sales
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPLICATE, BROADCAST, [])
-                                                scan date_dim
+                                                alternatives
+                                                    scan date_dim
+                                                    cache data
+                                                        scan date_dim
+                                                    load from cache

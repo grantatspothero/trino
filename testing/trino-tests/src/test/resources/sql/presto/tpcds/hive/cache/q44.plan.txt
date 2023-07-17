@@ -11,7 +11,11 @@ local exchange (GATHER, SINGLE, [])
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPARTITION, HASH, ["ss_item_sk"])
                                                 partial aggregation over (ss_item_sk)
-                                                    scan store_sales
+                                                    alternatives
+                                                        scan store_sales
+                                                        cache data
+                                                            scan store_sales
+                                                        load from cache
                                     local exchange (GATHER, SINGLE, [])
                                         remote exchange (REPLICATE, BROADCAST, [])
                                             local exchange (GATHER, SINGLE, [])
@@ -20,7 +24,11 @@ local exchange (GATHER, SINGLE, [])
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPARTITION, HASH, ["ss_store_sk_7"])
                                                                 partial aggregation over (ss_store_sk_7)
-                                                                    scan store_sales
+                                                                    alternatives
+                                                                        scan store_sales
+                                                                        cache data
+                                                                            scan store_sales
+                                                                        load from cache
                     local exchange (GATHER, SINGLE, [])
                         remote exchange (REPARTITION, HASH, ["rank_83"])
                             local exchange (GATHER, SINGLE, [])
@@ -30,7 +38,11 @@ local exchange (GATHER, SINGLE, [])
                                             local exchange (GATHER, SINGLE, [])
                                                 remote exchange (REPARTITION, HASH, ["ss_item_sk_29"])
                                                     partial aggregation over (ss_item_sk_29)
-                                                        scan store_sales
+                                                        alternatives
+                                                            scan store_sales
+                                                            cache data
+                                                                scan store_sales
+                                                            load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPLICATE, BROADCAST, [])
                                                 local exchange (GATHER, SINGLE, [])
@@ -39,10 +51,22 @@ local exchange (GATHER, SINGLE, [])
                                                             local exchange (GATHER, SINGLE, [])
                                                                 remote exchange (REPARTITION, HASH, ["ss_store_sk_62"])
                                                                     partial aggregation over (ss_store_sk_62)
-                                                                        scan store_sales
+                                                                        alternatives
+                                                                            scan store_sales
+                                                                            cache data
+                                                                                scan store_sales
+                                                                            load from cache
                 local exchange (GATHER, SINGLE, [])
                     remote exchange (REPLICATE, BROADCAST, [])
-                        scan item
+                        alternatives
+                            scan item
+                            cache data
+                                scan item
+                            load from cache
             local exchange (GATHER, SINGLE, [])
                 remote exchange (REPLICATE, BROADCAST, [])
-                    scan item
+                    alternatives
+                        scan item
+                        cache data
+                            scan item
+                        load from cache

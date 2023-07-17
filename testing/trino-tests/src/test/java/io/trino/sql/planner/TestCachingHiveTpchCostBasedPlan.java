@@ -59,7 +59,7 @@ public class TestCachingHiveTpchCostBasedPlan
         LocalQueryRunner queryRunner = LocalQueryRunner.builder(sessionBuilder.build())
                 .withNodeCountForStats(8)
                 .withCacheConfig(new CacheConfig()
-                        .setEnabled(false)
+                        .setEnabled(true)
                         .setCacheSubqueriesEnabled(true))
                 .build();
         queryRunner.createCatalog(

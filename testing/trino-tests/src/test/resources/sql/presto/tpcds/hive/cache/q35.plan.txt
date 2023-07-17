@@ -27,7 +27,11 @@ local exchange (GATHER, SINGLE, [])
                                                                         scan store_sales
                                                                     local exchange (GATHER, SINGLE, [])
                                                                         remote exchange (REPLICATE, BROADCAST, [])
-                                                                            scan date_dim
+                                                                            alternatives
+                                                                                scan date_dim
+                                                                                cache data
+                                                                                    scan date_dim
+                                                                                load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPARTITION, HASH, ["cd_demo_sk"])
                                                 scan customer_demographics
@@ -40,7 +44,11 @@ local exchange (GATHER, SINGLE, [])
                                                         scan web_sales
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])
-                                                            scan date_dim
+                                                            alternatives
+                                                                scan date_dim
+                                                                cache data
+                                                                    scan date_dim
+                                                                load from cache
                             final aggregation over (cs_ship_customer_sk)
                                 local exchange (GATHER, SINGLE, [])
                                     remote exchange (REPARTITION, HASH, ["cs_ship_customer_sk"])
@@ -50,4 +58,8 @@ local exchange (GATHER, SINGLE, [])
                                                     scan catalog_sales
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
-                                                        scan date_dim
+                                                        alternatives
+                                                            scan date_dim
+                                                            cache data
+                                                                scan date_dim
+                                                            load from cache

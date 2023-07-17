@@ -8,15 +8,24 @@ remote exchange (GATHER, SINGLE, [])
                             join (LEFT, PARTITIONED):
                                 remote exchange (REPARTITION, HASH, ["custkey"])
                                     cross join:
-                                        dynamic filter (["acctbal"])
-                                            scan customer
+                                        alternatives
+                                            dynamic filter (["acctbal"])
+                                                scan customer
+                                            cache data
+                                                dynamic filter (["acctbal"])
+                                                    scan customer
+                                            load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPLICATE, BROADCAST, [])
                                                 final aggregation over ()
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (GATHER, SINGLE, [])
                                                             partial aggregation over ()
-                                                                scan customer
+                                                                alternatives
+                                                                    scan customer
+                                                                    cache data
+                                                                        scan customer
+                                                                    load from cache
                                 final aggregation over (custkey_11)
                                     local exchange (GATHER, SINGLE, [])
                                         remote exchange (REPARTITION, HASH, ["custkey_11"])

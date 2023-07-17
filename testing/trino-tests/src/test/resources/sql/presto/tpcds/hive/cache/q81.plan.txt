@@ -10,14 +10,27 @@ local exchange (GATHER, SINGLE, [])
                                     join (INNER, PARTITIONED):
                                         remote exchange (REPARTITION, HASH, ["cr_returning_addr_sk"])
                                             join (INNER, REPLICATED):
-                                                dynamic filter (["cr_returning_addr_sk", "cr_returning_customer_sk"], await ["cr_returned_date_sk"])
-                                                    scan catalog_returns
+                                                alternatives
+                                                    dynamic filter (["cr_returning_addr_sk", "cr_returning_customer_sk"], await ["cr_returned_date_sk"])
+                                                        scan catalog_returns
+                                                    cache data
+                                                        dynamic filter (["cr_returning_addr_sk", "cr_returning_customer_sk"], await ["cr_returned_date_sk"])
+                                                            scan catalog_returns
+                                                    load from cache
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
-                                                        scan date_dim
+                                                        alternatives
+                                                            scan date_dim
+                                                            cache data
+                                                                scan date_dim
+                                                            load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPARTITION, HASH, ["ca_address_sk"])
-                                                scan customer_address
+                                                alternatives
+                                                    scan customer_address
+                                                    cache data
+                                                        scan customer_address
+                                                    load from cache
                     local exchange (GATHER, SINGLE, [])
                         remote exchange (REPLICATE, BROADCAST, [])
                             join (INNER, REPLICATED):
@@ -25,7 +38,11 @@ local exchange (GATHER, SINGLE, [])
                                     scan customer
                                 local exchange (GATHER, SINGLE, [])
                                     remote exchange (REPLICATE, BROADCAST, [])
-                                        scan customer_address
+                                        alternatives
+                                            scan customer_address
+                                            cache data
+                                                scan customer_address
+                                            load from cache
                 local exchange (GATHER, SINGLE, [])
                     remote exchange (REPLICATE, BROADCAST, [])
                         final aggregation over (ca_state_94)
@@ -39,14 +56,27 @@ local exchange (GATHER, SINGLE, [])
                                                         join (INNER, PARTITIONED):
                                                             remote exchange (REPARTITION, HASH, ["cr_returning_addr_sk_35"])
                                                                 join (INNER, REPLICATED):
-                                                                    dynamic filter (["cr_returning_addr_sk_35"], await ["cr_returned_date_sk_25"])
-                                                                        scan catalog_returns
+                                                                    alternatives
+                                                                        dynamic filter (["cr_returning_addr_sk_35"], await ["cr_returned_date_sk_25"])
+                                                                            scan catalog_returns
+                                                                        cache data
+                                                                            dynamic filter (["cr_returning_addr_sk_35"], await ["cr_returned_date_sk_25"])
+                                                                                scan catalog_returns
+                                                                        load from cache
                                                                     local exchange (GATHER, SINGLE, [])
                                                                         remote exchange (REPLICATE, BROADCAST, [])
-                                                                            scan date_dim
+                                                                            alternatives
+                                                                                scan date_dim
+                                                                                cache data
+                                                                                    scan date_dim
+                                                                                load from cache
                                                             local exchange (GATHER, SINGLE, [])
                                                                 remote exchange (REPARTITION, HASH, ["ca_address_sk_86"])
-                                                                    scan customer_address
+                                                                    alternatives
+                                                                        scan customer_address
+                                                                        cache data
+                                                                            scan customer_address
+                                                                        load from cache
             local exchange (GATHER, SINGLE, [])
                 remote exchange (REPLICATE, BROADCAST, [])
                     single aggregation over ()

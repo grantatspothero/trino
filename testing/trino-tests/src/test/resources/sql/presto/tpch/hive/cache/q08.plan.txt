@@ -29,8 +29,13 @@ remote exchange (GATHER, SINGLE, [])
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])
                                                             join (INNER, REPLICATED):
-                                                                dynamic filter (await ["regionkey"])
-                                                                    scan nation
+                                                                alternatives
+                                                                    dynamic filter (await ["regionkey"])
+                                                                        scan nation
+                                                                    cache data
+                                                                        dynamic filter (await ["regionkey"])
+                                                                            scan nation
+                                                                    load from cache
                                                                 local exchange (GATHER, SINGLE, [])
                                                                     remote exchange (REPLICATE, BROADCAST, [])
                                                                         scan region
@@ -41,4 +46,8 @@ remote exchange (GATHER, SINGLE, [])
                                                 scan supplier
                                             local exchange (GATHER, SINGLE, [])
                                                 remote exchange (REPLICATE, BROADCAST, [])
-                                                    scan nation
+                                                    alternatives
+                                                        scan nation
+                                                        cache data
+                                                            scan nation
+                                                        load from cache

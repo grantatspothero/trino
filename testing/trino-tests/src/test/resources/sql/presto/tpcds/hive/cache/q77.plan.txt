@@ -16,10 +16,18 @@ local exchange (GATHER, SINGLE, [])
                                                             scan store_sales
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPLICATE, BROADCAST, [])
-                                                                scan date_dim
+                                                                alternatives
+                                                                    scan date_dim
+                                                                    cache data
+                                                                        scan date_dim
+                                                                    load from cache
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
-                                                        scan store
+                                                        alternatives
+                                                            scan store
+                                                            cache data
+                                                                scan store
+                                                            load from cache
                                 final aggregation over (sr_store_sk)
                                     local exchange (GATHER, SINGLE, [])
                                         remote exchange (REPARTITION, HASH, ["sr_store_sk"])
@@ -30,10 +38,18 @@ local exchange (GATHER, SINGLE, [])
                                                             scan store_returns
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPLICATE, BROADCAST, [])
-                                                                scan date_dim
+                                                                alternatives
+                                                                    scan date_dim
+                                                                    cache data
+                                                                        scan date_dim
+                                                                    load from cache
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
-                                                        scan store
+                                                        alternatives
+                                                            scan store
+                                                            cache data
+                                                                scan store
+                                                            load from cache
                             cross join:
                                 final aggregation over (cs_call_center_sk)
                                     local exchange (GATHER, SINGLE, [])
@@ -44,7 +60,11 @@ local exchange (GATHER, SINGLE, [])
                                                         scan catalog_sales
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])
-                                                            scan date_dim
+                                                            alternatives
+                                                                scan date_dim
+                                                                cache data
+                                                                    scan date_dim
+                                                                load from cache
                                 local exchange (GATHER, SINGLE, [])
                                     remote exchange (REPLICATE, BROADCAST, [])
                                         final aggregation over (cr_call_center_sk)
@@ -56,7 +76,11 @@ local exchange (GATHER, SINGLE, [])
                                                                 scan catalog_returns
                                                             local exchange (GATHER, SINGLE, [])
                                                                 remote exchange (REPLICATE, BROADCAST, [])
-                                                                    scan date_dim
+                                                                    alternatives
+                                                                        scan date_dim
+                                                                        cache data
+                                                                            scan date_dim
+                                                                        load from cache
                             join (LEFT, PARTITIONED):
                                 final aggregation over (ws_web_page_sk)
                                     local exchange (GATHER, SINGLE, [])
@@ -68,10 +92,18 @@ local exchange (GATHER, SINGLE, [])
                                                             scan web_sales
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPLICATE, BROADCAST, [])
-                                                                scan date_dim
+                                                                alternatives
+                                                                    scan date_dim
+                                                                    cache data
+                                                                        scan date_dim
+                                                                    load from cache
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
-                                                        scan web_page
+                                                        alternatives
+                                                            scan web_page
+                                                            cache data
+                                                                scan web_page
+                                                            load from cache
                                 final aggregation over (wr_web_page_sk)
                                     local exchange (GATHER, SINGLE, [])
                                         remote exchange (REPARTITION, HASH, ["wr_web_page_sk"])
@@ -82,7 +114,15 @@ local exchange (GATHER, SINGLE, [])
                                                             scan web_returns
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPLICATE, BROADCAST, [])
-                                                                scan date_dim
+                                                                alternatives
+                                                                    scan date_dim
+                                                                    cache data
+                                                                        scan date_dim
+                                                                    load from cache
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
-                                                        scan web_page
+                                                        alternatives
+                                                            scan web_page
+                                                            cache data
+                                                                scan web_page
+                                                            load from cache

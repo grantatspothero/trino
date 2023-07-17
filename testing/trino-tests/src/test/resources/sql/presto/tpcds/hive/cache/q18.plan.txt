@@ -14,7 +14,11 @@ local exchange (GATHER, SINGLE, [])
                                                     scan catalog_sales
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
-                                                        scan customer_demographics
+                                                        alternatives
+                                                            scan customer_demographics
+                                                            cache data
+                                                                scan customer_demographics
+                                                            load from cache
                                             local exchange (GATHER, SINGLE, [])
                                                 remote exchange (REPLICATE, BROADCAST, [])
                                                     join (INNER, PARTITIONED):
@@ -28,7 +32,11 @@ local exchange (GATHER, SINGLE, [])
                                                                         scan customer_address
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPARTITION, HASH, ["cd_demo_sk_3"])
-                                                                scan customer_demographics
+                                                                alternatives
+                                                                    scan customer_demographics
+                                                                    cache data
+                                                                        scan customer_demographics
+                                                                    load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPLICATE, BROADCAST, [])
                                                 scan date_dim

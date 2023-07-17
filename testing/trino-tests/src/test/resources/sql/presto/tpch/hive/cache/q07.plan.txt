@@ -17,7 +17,11 @@ remote exchange (GATHER, SINGLE, [])
                                                         scan supplier
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])
-                                                            scan nation
+                                                            alternatives
+                                                                scan nation
+                                                                cache data
+                                                                    scan nation
+                                                                load from cache
                                 local exchange (GATHER, SINGLE, [])
                                     remote exchange (REPARTITION, HASH, ["orderkey_5"])
                                         join (INNER, PARTITIONED):
@@ -31,4 +35,8 @@ remote exchange (GATHER, SINGLE, [])
                                                             scan customer
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPLICATE, BROADCAST, [])
-                                                                scan nation
+                                                                alternatives
+                                                                    scan nation
+                                                                    cache data
+                                                                        scan nation
+                                                                    load from cache

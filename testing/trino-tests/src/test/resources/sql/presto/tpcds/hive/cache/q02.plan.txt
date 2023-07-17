@@ -10,18 +10,38 @@ remote exchange (GATHER, SINGLE, [])
                                     partial aggregation over (d_day_name, d_week_seq)
                                         join (INNER, REPLICATED):
                                             local exchange (REPARTITION, ROUND_ROBIN, [])
-                                                dynamic filter (await ["ws_sold_date_sk"])
-                                                    scan web_sales
-                                                dynamic filter (await ["cs_sold_date_sk"])
-                                                    scan catalog_sales
+                                                alternatives
+                                                    dynamic filter (await ["ws_sold_date_sk"])
+                                                        scan web_sales
+                                                    cache data
+                                                        dynamic filter (await ["ws_sold_date_sk"])
+                                                            scan web_sales
+                                                    load from cache
+                                                alternatives
+                                                    dynamic filter (await ["cs_sold_date_sk"])
+                                                        scan catalog_sales
+                                                    cache data
+                                                        dynamic filter (await ["cs_sold_date_sk"])
+                                                            scan catalog_sales
+                                                    load from cache
                                             local exchange (GATHER, SINGLE, [])
                                                 remote exchange (REPLICATE, BROADCAST, [])
-                                                    dynamic filter (["d_week_seq"], await ["d_week_seq"])
-                                                        scan date_dim
+                                                    alternatives
+                                                        dynamic filter (["d_week_seq"], await ["d_week_seq"])
+                                                            scan date_dim
+                                                        cache data
+                                                            dynamic filter (["d_week_seq"], await ["d_week_seq"])
+                                                                scan date_dim
+                                                        load from cache
                     local exchange (GATHER, SINGLE, [])
                         remote exchange (REPARTITION, HASH, ["d_week_seq_22"])
-                            dynamic filter (["d_week_seq_22"])
-                                scan date_dim
+                            alternatives
+                                dynamic filter (["d_week_seq_22"])
+                                    scan date_dim
+                                cache data
+                                    dynamic filter (["d_week_seq_22"])
+                                        scan date_dim
+                                load from cache
                 local exchange (GATHER, SINGLE, [])
                     remote exchange (REPARTITION, HASH, ["expr_226"])
                         join (INNER, PARTITIONED):
@@ -32,14 +52,33 @@ remote exchange (GATHER, SINGLE, [])
                                             partial aggregation over (d_day_name_139, d_week_seq_129)
                                                 join (INNER, REPLICATED):
                                                     local exchange (REPARTITION, ROUND_ROBIN, [])
-                                                        dynamic filter (await ["ws_sold_date_sk_51"])
-                                                            scan web_sales
-                                                        dynamic filter (await ["cs_sold_date_sk_88"])
-                                                            scan catalog_sales
+                                                        alternatives
+                                                            dynamic filter (await ["ws_sold_date_sk_51"])
+                                                                scan web_sales
+                                                            cache data
+                                                                dynamic filter (await ["ws_sold_date_sk_51"])
+                                                                    scan web_sales
+                                                            load from cache
+                                                        alternatives
+                                                            dynamic filter (await ["cs_sold_date_sk_88"])
+                                                                scan catalog_sales
+                                                            cache data
+                                                                dynamic filter (await ["cs_sold_date_sk_88"])
+                                                                    scan catalog_sales
+                                                            load from cache
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])
-                                                            dynamic filter (await ["d_week_seq_129"])
-                                                                scan date_dim
+                                                            alternatives
+                                                                dynamic filter (await ["d_week_seq_129"])
+                                                                    scan date_dim
+                                                                cache data
+                                                                    dynamic filter (await ["d_week_seq_129"])
+                                                                        scan date_dim
+                                                                load from cache
                             local exchange (GATHER, SINGLE, [])
                                 remote exchange (REPARTITION, HASH, ["d_week_seq_175"])
-                                    scan date_dim
+                                    alternatives
+                                        scan date_dim
+                                        cache data
+                                            scan date_dim
+                                        load from cache

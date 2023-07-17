@@ -10,7 +10,11 @@ remote exchange (GATHER, SINGLE, [])
                         local exchange (GATHER, SINGLE, [])
                             remote exchange (REPARTITION, HASH, ["suppkey_0"])
                                 partial aggregation over (suppkey_0)
-                                    scan lineitem
+                                    alternatives
+                                        scan lineitem
+                                        cache data
+                                            scan lineitem
+                                        load from cache
                 local exchange (GATHER, SINGLE, [])
                     remote exchange (REPLICATE, BROADCAST, [])
                         final aggregation over ()
@@ -21,4 +25,8 @@ remote exchange (GATHER, SINGLE, [])
                                             local exchange (GATHER, SINGLE, [])
                                                 remote exchange (REPARTITION, HASH, ["suppkey_7"])
                                                     partial aggregation over (suppkey_7)
-                                                        scan lineitem
+                                                        alternatives
+                                                            scan lineitem
+                                                            cache data
+                                                                scan lineitem
+                                                            load from cache
