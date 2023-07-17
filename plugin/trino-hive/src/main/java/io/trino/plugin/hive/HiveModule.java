@@ -20,7 +20,6 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
-import com.starburstdata.trino.plugins.dynamicfiltering.DynamicRowFilteringModule;
 import com.starburstdata.trino.plugins.dynamicfiltering.ForDynamicRowFiltering;
 import io.airlift.concurrent.BoundedExecutor;
 import io.airlift.concurrent.ExecutorServiceAdapter;
@@ -30,6 +29,7 @@ import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.hdfs.TrinoFileSystemCacheStats;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.hive.avro.AvroHivePageSourceFactory;
+import io.trino.plugin.hive.dynamicfiltering.DynamicRowFilteringModule;
 import io.trino.plugin.hive.fs.CachingDirectoryLister;
 import io.trino.plugin.hive.fs.TransactionScopeCachingDirectoryListerFactory;
 import io.trino.plugin.hive.line.CsvFileWriterFactory;
@@ -189,7 +189,7 @@ public class HiveModule
         binder.bind(Runnable.class)
                 .annotatedWith(ForDynamicRowFiltering.class)
                 .toInstance(() -> {});
-        binder.install(new DynamicRowFilteringModule(() -> true));
+        binder.install(new DynamicRowFilteringModule());
     }
 
     @Singleton
