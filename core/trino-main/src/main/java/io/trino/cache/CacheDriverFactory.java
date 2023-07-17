@@ -1,0 +1,187 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.trino.cache;
+
+import com.google.common.collect.ImmutableBiMap;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
+import io.trino.Session;
+import io.trino.execution.ScheduledSplit;
+import io.trino.metadata.TableHandle;
+import io.trino.operator.Driver;
+import io.trino.operator.DriverContext;
+import io.trino.operator.DriverFactory;
+import io.trino.spi.cache.CacheColumnId;
+import io.trino.spi.cache.CacheManager.SplitCache;
+import io.trino.spi.cache.CacheSplitId;
+import io.trino.spi.cache.PlanSignature;
+import io.trino.spi.connector.ColumnHandle;
+import io.trino.spi.connector.ConnectorPageSink;
+import io.trino.spi.connector.ConnectorPageSource;
+import io.trino.spi.predicate.TupleDomain;
+import io.trino.split.PageSourceProvider;
+import jakarta.annotation.Nullable;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Supplier;
+
+import static io.trino.cache.CacheCommonSubqueries.LOAD_PAGES_ALTERNATIVE;
+import static io.trino.cache.CacheCommonSubqueries.ORIGINAL_PLAN_ALTERNATIVE;
+import static io.trino.cache.CacheCommonSubqueries.STORE_PAGES_ALTERNATIVE;
+import static io.trino.plugin.base.cache.CacheUtils.normalizeTupleDomain;
+import static java.util.Objects.requireNonNull;
+
+public class CacheDriverFactory
+{
+    private final Session session;
+    private final PageSourceProvider pageSourceProvider;
+    private final CacheManagerRegistry cacheManagerRegistry;
+    private final TableHandle originalTableHandle;
+    private final PlanSignature basePlanSignature;
+    private final Map<ColumnHandle, CacheColumnId> dynamicFilterColumnMapping;
+    private final Supplier<StaticDynamicFilter> dynamicFilterSupplier;
+    private final List<DriverFactory> alternatives;
+
+    @GuardedBy("this")
+    @Nullable
+    private SplitCache splitCache;
+    @GuardedBy("this")
+    @Nullable
+    private PlanSignature cachePlanSignature;
+    @GuardedBy("this")
+    private boolean cachePlanSignatureComplete;
+
+    public CacheDriverFactory(
+            Session session,
+            PageSourceProvider pageSourceProvider,
+            CacheManagerRegistry cacheManagerRegistry,
+            TableHandle originalTableHandle,
+            PlanSignature basePlanSignature,
+            Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping,
+            Supplier<StaticDynamicFilter> dynamicFilterSupplier,
+            List<DriverFactory> alternatives)
+    {
+        this.session = requireNonNull(session, "session is null");
+        this.pageSourceProvider = requireNonNull(pageSourceProvider, "pageSourceProvider is null");
+        this.cacheManagerRegistry = requireNonNull(cacheManagerRegistry, "cacheManagerRegistry is null");
+        this.originalTableHandle = requireNonNull(originalTableHandle, "originalTableHandle is null");
+        this.basePlanSignature = requireNonNull(basePlanSignature, "basePlanSignature is null");
+        this.dynamicFilterColumnMapping = ImmutableBiMap.copyOf(requireNonNull(dynamicFilterColumnMapping, "dynamicFilterColumnMapping is null")).inverse();
+        this.dynamicFilterSupplier = requireNonNull(dynamicFilterSupplier, "dynamicFilterSupplier is null");
+        this.alternatives = requireNonNull(alternatives, "alternatives is null");
+    }
+
+    public Driver createDriver(DriverContext driverContext, ScheduledSplit split, Optional<CacheSplitId> cacheSplitIdOptional)
+    {
+        if (cacheSplitIdOptional.isEmpty()) {
+            // no split id, fallback to original plan
+            return alternatives.get(ORIGINAL_PLAN_ALTERNATIVE).createDriver(driverContext);
+        }
+        CacheSplitId splitId = cacheSplitIdOptional.get();
+
+        // simplify dynamic filter predicate to improve cache hits
+        StaticDynamicFilter dynamicFilter = dynamicFilterSupplier.get();
+        TupleDomain<ColumnHandle> dynamicPredicate = pageSourceProvider.simplifyPredicate(
+                session,
+                split.getSplit(),
+                originalTableHandle,
+                dynamicFilter
+                        .getCurrentPredicate()
+                        // filter out DF columns which are not mapped to signature output columns
+                        .filter((column, domain) -> dynamicFilterColumnMapping.containsKey(column)));
+
+        if (dynamicPredicate.isNone()) {
+            // skip caching of completely filtered out splits
+            return alternatives.get(ORIGINAL_PLAN_ALTERNATIVE).createDriver(driverContext);
+        }
+
+        // enhance plan signature with current dynamic filter
+        PlanSignature planSignature = basePlanSignature
+                .withDynamicPredicate(normalizeTupleDomain(dynamicPredicate.transformKeys(dynamicFilterColumnMapping::get)));
+        boolean planSignatureComplete = dynamicFilter.isComplete();
+
+        // load data from cache
+        Optional<ConnectorPageSource> pageSource = loadPages(splitId, planSignature, planSignatureComplete);
+        if (pageSource.isPresent()) {
+            driverContext.setCacheDriverContext(new CacheDriverContext(pageSource, Optional.empty(), dynamicFilter));
+            return alternatives.get(LOAD_PAGES_ALTERNATIVE).createDriver(driverContext);
+        }
+
+        // try storing results instead
+        Optional<ConnectorPageSink> pageSink = storePages(splitId, planSignature, planSignatureComplete);
+        if (pageSink.isPresent()) {
+            driverContext.setCacheDriverContext(new CacheDriverContext(Optional.empty(), pageSink, dynamicFilter));
+            return alternatives.get(STORE_PAGES_ALTERNATIVE).createDriver(driverContext);
+        }
+
+        // fallback to original subplan
+        return alternatives.get(ORIGINAL_PLAN_ALTERNATIVE).createDriver(driverContext);
+    }
+
+    public synchronized void closeSplitCache()
+    {
+        try {
+            if (splitCache != null) {
+                splitCache.close();
+                splitCache = null;
+                cachePlanSignature = null;
+                cachePlanSignatureComplete = false;
+            }
+        }
+        catch (IOException exception) {
+            throw new UncheckedIOException(exception);
+        }
+    }
+
+    private synchronized Optional<ConnectorPageSource> loadPages(
+            CacheSplitId splitId,
+            PlanSignature planSignature,
+            boolean planSignatureComplete)
+    {
+        updateSplitCache(planSignature, planSignatureComplete);
+        return splitCache.loadPages(splitId);
+    }
+
+    private synchronized Optional<ConnectorPageSink> storePages(
+            CacheSplitId splitId,
+            PlanSignature planSignature,
+            boolean planSignatureComplete)
+    {
+        updateSplitCache(planSignature, planSignatureComplete);
+        return splitCache.storePages(splitId);
+    }
+
+    private synchronized void updateSplitCache(PlanSignature planSignature, boolean planSignatureComplete)
+    {
+        if (splitCache != null) {
+            if (cachePlanSignatureComplete) {
+                // plan signature cannot be enhanced further, no need to compare signatures or re-create SplitCache
+                return;
+            }
+
+            // do not re-create SplitCache if dynamic predicate hasn't changed
+            if (cachePlanSignature.getDynamicPredicate().equals(planSignature.getDynamicPredicate())) {
+                return;
+            }
+        }
+
+        closeSplitCache();
+        splitCache = cacheManagerRegistry.getCacheManager().getSplitCache(planSignature);
+        cachePlanSignature = planSignature;
+        cachePlanSignatureComplete = planSignatureComplete;
+    }
+}

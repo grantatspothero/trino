@@ -17,6 +17,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.airlift.json.ObjectMapperProvider;
 import io.opentelemetry.api.trace.Span;
+import io.trino.cache.CacheConfig;
+import io.trino.cache.CacheManagerRegistry;
 import io.trino.client.NodeVersion;
 import io.trino.connector.CatalogServiceProvider;
 import io.trino.cost.StatsAndCosts;
@@ -30,6 +32,8 @@ import io.trino.execution.scheduler.NodeScheduler;
 import io.trino.execution.scheduler.NodeSchedulerConfig;
 import io.trino.execution.scheduler.UniformNodeSelectorFactory;
 import io.trino.index.IndexManager;
+import io.trino.memory.LocalMemoryManager;
+import io.trino.memory.NodeMemoryConfig;
 import io.trino.metadata.InMemoryNodeManager;
 import io.trino.metadata.Split;
 import io.trino.operator.PagesIndex;
@@ -181,6 +185,7 @@ public final class TaskTestUtils
                 blockTypeOperators,
                 new TableExecuteContextManager(),
                 new ExchangeManagerRegistry(),
+                new CacheManagerRegistry(new CacheConfig(), new LocalMemoryManager(new NodeMemoryConfig())),
                 new NodeVersion("test"));
     }
 

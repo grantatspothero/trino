@@ -43,6 +43,7 @@ import java.util.function.Function;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static io.airlift.concurrent.MoreFutures.getFutureValue;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.airlift.configuration.ConfigurationLoader.loadPropertiesFrom;
 import static io.trino.memory.context.AggregatedMemoryContext.newRootAggregatedMemoryContext;
@@ -169,6 +170,16 @@ public class CacheManagerRegistry
             throw new TrinoException(CACHE_MANAGER_NOT_CONFIGURED, "Cache manager must be configured for cache capabilities to be fully functional");
         }
         return cacheManager;
+    }
+
+    public void flushCache()
+    {
+        getFutureValue(executor.submit(() -> {
+            long bytesToRevoke = memoryPool.getMaxBytes() - memoryPool.getFreeBytes();
+            if (bytesToRevoke > 0) {
+                cacheManager.revokeMemory(bytesToRevoke);
+            }
+        }));
     }
 
     private static Map<String, String> loadProperties(File configFile)

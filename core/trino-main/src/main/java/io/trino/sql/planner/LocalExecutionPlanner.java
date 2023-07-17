@@ -33,7 +33,12 @@ import io.airlift.log.Logger;
 import io.airlift.units.DataSize;
 import io.trino.Session;
 import io.trino.SystemSessionProperties;
+import io.trino.cache.CacheDataOperator.CacheDataOperatorFactory;
+import io.trino.cache.CacheDriverFactory;
+import io.trino.cache.CacheManagerRegistry;
+import io.trino.cache.LoadCachedDataOperator.LoadCachedDataOperatorFactory;
 import io.trino.cache.NonEvictableCache;
+import io.trino.cache.StaticDynamicFilter;
 import io.trino.client.NodeVersion;
 import io.trino.exchange.ExchangeManagerRegistry;
 import io.trino.execution.DynamicFilterConfig;
@@ -158,9 +163,14 @@ import io.trino.spi.Page;
 import io.trino.spi.PageBuilder;
 import io.trino.spi.TrinoException;
 import io.trino.spi.block.SingleRowBlock;
+import io.trino.spi.cache.CacheColumnId;
+import io.trino.spi.cache.PlanSignature;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.ConnectorIndex;
 import io.trino.spi.connector.ConnectorSession;
+import io.trino.spi.connector.ConnectorTableHandle;
+import io.trino.spi.connector.ConnectorTransactionHandle;
 import io.trino.spi.connector.DynamicFilter;
 import io.trino.spi.connector.RecordSet;
 import io.trino.spi.connector.SortOrder;
@@ -194,6 +204,7 @@ import io.trino.sql.planner.plan.AggregationNode.Aggregation;
 import io.trino.sql.planner.plan.AggregationNode.Step;
 import io.trino.sql.planner.plan.AssignUniqueId;
 import io.trino.sql.planner.plan.Assignments;
+import io.trino.sql.planner.plan.CacheDataPlanNode;
 import io.trino.sql.planner.plan.ChooseAlternativeNode;
 import io.trino.sql.planner.plan.DataOrganizationSpecification;
 import io.trino.sql.planner.plan.DistinctLimitNode;
@@ -208,6 +219,7 @@ import io.trino.sql.planner.plan.IndexJoinNode;
 import io.trino.sql.planner.plan.IndexSourceNode;
 import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.planner.plan.LimitNode;
+import io.trino.sql.planner.plan.LoadCachedDataPlanNode;
 import io.trino.sql.planner.plan.MarkDistinctNode;
 import io.trino.sql.planner.plan.MergeProcessorNode;
 import io.trino.sql.planner.plan.MergeWriterNode;
@@ -316,8 +328,11 @@ import static io.trino.SystemSessionProperties.isExchangeCompressionEnabled;
 import static io.trino.SystemSessionProperties.isForceSpillingOperator;
 import static io.trino.SystemSessionProperties.isLateMaterializationEnabled;
 import static io.trino.SystemSessionProperties.isSpillEnabled;
+import static io.trino.cache.CacheCommonSubqueries.getLoadCachedDataPlanNode;
+import static io.trino.cache.CacheCommonSubqueries.isCacheChooseAlternativeNode;
 import static io.trino.cache.CacheUtils.uncheckedCacheGet;
 import static io.trino.cache.SafeCaches.buildNonEvictableCache;
+import static io.trino.cache.StaticDynamicFilter.createStaticDynamicFilter;
 import static io.trino.operator.DistinctLimitOperator.DistinctLimitOperatorFactory;
 import static io.trino.operator.HashArraySizeSupplier.incrementalLoadFactorHashArraySizeSupplier;
 import static io.trino.operator.TableFinishOperator.TableFinishOperatorFactory;
@@ -339,6 +354,8 @@ import static io.trino.operator.output.SkewedPartitionRebalancer.getTaskCount;
 import static io.trino.operator.window.pattern.PhysicalValuePointer.CLASSIFIER;
 import static io.trino.operator.window.pattern.PhysicalValuePointer.MATCH_NUMBER;
 import static io.trino.spi.StandardErrorCode.COMPILER_ERROR;
+import static io.trino.spi.connector.CatalogHandle.createRootCatalogHandle;
+import static io.trino.spi.connector.DynamicFilter.EMPTY;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.TypeUtils.readNativeValue;
 import static io.trino.spi.type.TypeUtils.writeNativeValue;
@@ -397,6 +414,7 @@ public class LocalExecutionPlanner
     private final TypeAnalyzer typeAnalyzer;
     private final Optional<ExplainAnalyzeContext> explainAnalyzeContext;
     private final PageSourceProvider pageSourceProvider;
+    private final CacheManagerRegistry cacheManagerRegistry;
     private final AlternativeChooser alternativeChooser;
     private final IndexManager indexManager;
     private final NodePartitioningManager nodePartitioningManager;
@@ -473,6 +491,7 @@ public class LocalExecutionPlanner
             BlockTypeOperators blockTypeOperators,
             TableExecuteContextManager tableExecuteContextManager,
             ExchangeManagerRegistry exchangeManagerRegistry,
+            CacheManagerRegistry cacheManagerRegistry,
             NodeVersion version)
     {
         this.plannerContext = requireNonNull(plannerContext, "plannerContext is null");
@@ -519,6 +538,7 @@ public class LocalExecutionPlanner
         this.blockTypeOperators = requireNonNull(blockTypeOperators, "blockTypeOperators is null");
         this.tableExecuteContextManager = requireNonNull(tableExecuteContextManager, "tableExecuteContextManager is null");
         this.exchangeManagerRegistry = requireNonNull(exchangeManagerRegistry, "exchangeManagerRegistry is null");
+        this.cacheManagerRegistry = requireNonNull(cacheManagerRegistry, "cacheManagerRegistry is null");
         this.positionsAppenderFactory = new PositionsAppenderFactory(blockTypeOperators);
         this.version = requireNonNull(version, "version is null");
     }
@@ -658,7 +678,7 @@ public class LocalExecutionPlanner
         return new LocalExecutionPlan(context.getDriverFactories(), partitionedSourceOrder);
     }
 
-    private static class LocalExecutionPlanContext
+    private class LocalExecutionPlanContext
     {
         private final TaskContext taskContext;
         private final Metadata metadata;
@@ -673,6 +693,7 @@ public class LocalExecutionPlanner
 
         private int nextOperatorId;
         private boolean inputDriver = true;
+        private Optional<CacheContext> cacheContext = Optional.empty();
         private OptionalInt driverInstanceCount = OptionalInt.empty();
 
         public LocalExecutionPlanContext(TaskContext taskContext, TypeProvider types, Metadata metadata, AlternativeChooser alternativeChooser)
@@ -735,11 +756,22 @@ public class LocalExecutionPlanner
                                         .addAll(commonOperators)
                                         .build(),
                                 driverInstances));
+                Optional<CacheDriverFactory> cacheDriverFactory = context.getCacheContext()
+                        .map(cacheContext -> new CacheDriverFactory(
+                                taskContext.getSession(),
+                                pageSourceProvider,
+                                cacheManagerRegistry,
+                                cacheContext.getOriginalTableHandle(),
+                                cacheContext.getBasePlanSignature(),
+                                cacheContext.getDynamicFilterColumnMapping(),
+                                cacheContext.getDynamicFilterSupplier(),
+                                ImmutableList.copyOf(alternatives.values())));
                 driverFactories.add(new AlternativesAwareDriverFactory(
                         alternativeChooser,
                         taskContext.getSession(),
                         alternatives,
                         physicalOperation.chooseAlternativePlanNodeId.get(),
+                        cacheDriverFactory,
                         pipelineId,
                         inputDriver,
                         outputDriver,
@@ -866,6 +898,16 @@ public class LocalExecutionPlanner
             return new LocalExecutionPlanContext(taskContext, metadata, alternativeChooser, types, driverFactories, Optional.of(indexSourceContext), nextPipelineId);
         }
 
+        public Optional<CacheContext> getCacheContext()
+        {
+            return cacheContext;
+        }
+
+        public void setCacheContext(CacheContext cacheContext)
+        {
+            this.cacheContext = Optional.of(requireNonNull(cacheContext, "cacheContext is null"));
+        }
+
         public OptionalInt getDriverInstanceCount()
         {
             return driverInstanceCount;
@@ -878,6 +920,42 @@ public class LocalExecutionPlanner
                 checkState(this.driverInstanceCount.getAsInt() == driverInstanceCount, "driverInstance count already set to " + this.driverInstanceCount.getAsInt());
             }
             this.driverInstanceCount = OptionalInt.of(driverInstanceCount);
+        }
+    }
+
+    private static class CacheContext
+    {
+        private final TableHandle originalTableHandle;
+        private final PlanSignature basePlanSignature;
+        private final Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping;
+        private final Supplier<StaticDynamicFilter> dynamicFilterSupplier;
+
+        public CacheContext(TableHandle originalTableHandle, PlanSignature basePlanSignature, Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping, Supplier<StaticDynamicFilter> dynamicFilterSupplier)
+        {
+            this.originalTableHandle = requireNonNull(originalTableHandle, "originalTableHandle is null");
+            this.basePlanSignature = requireNonNull(basePlanSignature, "basePlanSignature is null");
+            this.dynamicFilterColumnMapping = requireNonNull(dynamicFilterColumnMapping, "dynamicFilterColumnMapping is null");
+            this.dynamicFilterSupplier = requireNonNull(dynamicFilterSupplier, "dynamicFilterSupplier is null");
+        }
+
+        public TableHandle getOriginalTableHandle()
+        {
+            return originalTableHandle;
+        }
+
+        public PlanSignature getBasePlanSignature()
+        {
+            return basePlanSignature;
+        }
+
+        public Map<CacheColumnId, ColumnHandle> getDynamicFilterColumnMapping()
+        {
+            return dynamicFilterColumnMapping;
+        }
+
+        public Supplier<StaticDynamicFilter> getDynamicFilterSupplier()
+        {
+            return dynamicFilterSupplier;
         }
     }
 
@@ -2160,10 +2238,30 @@ public class LocalExecutionPlanner
         @Override
         public PhysicalOperation visitChooseAlternativeNode(ChooseAlternativeNode node, LocalExecutionPlanContext context)
         {
+            Function<PlanNode, TableHandle> tableHandleProvider = this::findTableScanForAlternative;
+
+            if (isCacheChooseAlternativeNode(node)) {
+                // Load from cache alternative does not have table handle.
+                // Cache alternatives have specific ordering and are handled explicitly,
+                // therefore table handle is not needed.
+                tableHandleProvider = ignored -> createCacheTableHandle();
+                // when splits are cached dynamic filter needs to be static during split processing
+                Supplier<StaticDynamicFilter> dynamicFilterSupplier = node.getOriginalTableScan().filterPredicate()
+                        .map(predicate -> getDynamicFilter(node.getOriginalTableScan().tableScanNode(), predicate, context))
+                        .map(dynamicFilter -> (Supplier<StaticDynamicFilter>) () -> createStaticDynamicFilter(dynamicFilter))
+                        .orElse(() -> createStaticDynamicFilter(EMPTY));
+                LoadCachedDataPlanNode loadCachedData = getLoadCachedDataPlanNode(node);
+                context.setCacheContext(new CacheContext(
+                        node.getOriginalTableScan().tableHandle(),
+                        loadCachedData.getPlanSignature(),
+                        loadCachedData.getDynamicFilterColumnMapping(),
+                        dynamicFilterSupplier));
+            }
+
             ImmutableMap.Builder<TableHandle, PhysicalOperation> alternatives = ImmutableMap.builder();
             Map<Symbol, Integer> outputLayout = null;
             for (PlanNode alternative : node.getSources()) {
-                TableHandle tableHandle = findTableScanForAlternative(alternative);
+                TableHandle tableHandle = tableHandleProvider.apply(alternative);
                 PhysicalOperation alternativeOperation = alternative.accept(this, context);
                 if (outputLayout == null) {
                     // we need an output layout, we may as well take it from the first alternative.
@@ -2192,6 +2290,26 @@ public class LocalExecutionPlanner
                     .findFirst()
                     .map(node -> ((TableScanNode) node).getTable())
                     .orElseThrow(() -> new IllegalArgumentException("TableHandle not found / not a node chain"));
+        }
+
+        @Override
+        public PhysicalOperation visitCacheDataPlanNode(CacheDataPlanNode node, LocalExecutionPlanContext context)
+        {
+            PhysicalOperation source = node.getSource().accept(this, context);
+            return new PhysicalOperation(
+                    new CacheDataOperatorFactory(context.getNextOperatorId(), node.getId()),
+                    source.getLayout(),
+                    context,
+                    source);
+        }
+
+        @Override
+        public PhysicalOperation visitLoadCachedDataPlanNode(LoadCachedDataPlanNode node, LocalExecutionPlanContext context)
+        {
+            return new PhysicalOperation(
+                    new LoadCachedDataOperatorFactory(context.getNextOperatorId(), node.getId()),
+                    makeLayout(node),
+                    context);
         }
 
         @Override
@@ -4279,6 +4397,14 @@ public class LocalExecutionPlanner
                 .flatMap(expression -> extractDynamicFilters(expression).getDynamicConjuncts().stream())
                 .map(DynamicFilters.Descriptor::getId)
                 .collect(toImmutableSet());
+    }
+
+    private TableHandle createCacheTableHandle()
+    {
+        return new TableHandle(
+                createRootCatalogHandle("cache", new CatalogHandle.CatalogVersion("cache")),
+                new ConnectorTableHandle() {},
+                new ConnectorTransactionHandle() {});
     }
 
     /**

@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import io.trino.cache.CacheDriverContext;
 import io.trino.memory.context.LocalMemoryContext;
 import io.trino.memory.context.MemoryTrackingContext;
 import io.trino.metadata.Split;
@@ -108,7 +109,7 @@ public class TableScanOperator
                     sourceId,
                     TableAwarePageSourceProvider.create(operatorContext, table, pageSourceProvider),
                     columns,
-                    dynamicFilter);
+                    CacheDriverContext.getDynamicFilter(operatorContext, dynamicFilter));
         }
 
         @Override
@@ -124,7 +125,7 @@ public class TableScanOperator
                     splits,
                     TableAwarePageSourceProvider.create(operatorContext, table, pageSourceProvider),
                     columns,
-                    dynamicFilter);
+                    CacheDriverContext.getDynamicFilter(operatorContext, dynamicFilter));
         }
 
         @Override

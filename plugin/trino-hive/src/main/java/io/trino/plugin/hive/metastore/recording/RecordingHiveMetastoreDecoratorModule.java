@@ -18,13 +18,9 @@ import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.plugin.hive.RecordingMetastoreConfig;
 import io.trino.plugin.hive.metastore.HiveMetastoreDecorator;
-import io.trino.plugin.hive.util.BlockJsonSerde;
-import io.trino.plugin.hive.util.HiveBlockEncodingSerde;
-import io.trino.spi.block.Block;
 import io.trino.spi.procedure.Procedure;
 
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
-import static io.airlift.json.JsonBinder.jsonBinder;
 import static io.airlift.json.JsonCodecBinder.jsonCodecBinder;
 import static org.weakref.jmx.guice.ExportBinder.newExporter;
 
@@ -36,12 +32,9 @@ public class RecordingHiveMetastoreDecoratorModule
     {
         if (buildConfigObject(RecordingMetastoreConfig.class).getRecordingPath() != null) {
             newSetBinder(binder, HiveMetastoreDecorator.class).addBinding().to(RecordingHiveMetastoreDecorator.class).in(Scopes.SINGLETON);
-            binder.bind(HiveBlockEncodingSerde.class).in(Scopes.SINGLETON);
 
             binder.bind(HiveMetastoreRecording.class).in(Scopes.SINGLETON);
             jsonCodecBinder(binder).bindJsonCodec(HiveMetastoreRecording.Recording.class);
-            jsonBinder(binder).addSerializerBinding(Block.class).to(BlockJsonSerde.Serializer.class);
-            jsonBinder(binder).addDeserializerBinding(Block.class).to(BlockJsonSerde.Deserializer.class);
 
             // export under the old name, for backwards compatibility
             newExporter(binder).export(HiveMetastoreRecording.class).as(generator -> generator.generatedNameOf(RecordingHiveMetastore.class));

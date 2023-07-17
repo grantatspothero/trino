@@ -115,6 +115,11 @@ public class SplitManager
         return new TracingSplitSource(splitSource, tracer, Optional.of(span), "split-buffer");
     }
 
+    public ConnectorSplitManager getConnectorSplitManager(TableHandle tableHandle)
+    {
+        return splitManagerProvider.getService(tableHandle.getCatalogHandle());
+    }
+
     private Span splitSourceSpan(Span querySpan, CatalogHandle catalogHandle)
     {
         return tracer.spanBuilder("split-source")

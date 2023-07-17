@@ -1,0 +1,142 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.trino.cache;
+
+import io.trino.memory.context.LocalMemoryContext;
+import io.trino.operator.DriverContext;
+import io.trino.operator.Operator;
+import io.trino.operator.OperatorContext;
+import io.trino.operator.OperatorFactory;
+import io.trino.spi.Page;
+import io.trino.spi.connector.ConnectorPageSink;
+import io.trino.sql.planner.plan.PlanNodeId;
+import jakarta.annotation.Nullable;
+
+import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
+
+public class CacheDataOperator
+        implements Operator
+{
+    public static class CacheDataOperatorFactory
+            implements OperatorFactory
+    {
+        private final int operatorId;
+        private final PlanNodeId planNodeId;
+        private boolean closed;
+
+        public CacheDataOperatorFactory(
+                int operatorId,
+                PlanNodeId planNodeId)
+        {
+            this.operatorId = operatorId;
+            this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
+        }
+
+        @Override
+        public Operator createOperator(DriverContext driverContext)
+        {
+            checkState(!closed, "Factory is already closed");
+            OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId, CacheDataOperator.class.getSimpleName());
+            return new CacheDataOperator(operatorContext);
+        }
+
+        @Override
+        public void noMoreOperators()
+        {
+            closed = true;
+        }
+
+        @Override
+        public OperatorFactory duplicate()
+        {
+            return new CacheDataOperatorFactory(operatorId, planNodeId);
+        }
+    }
+
+    private final OperatorContext operatorContext;
+    private final LocalMemoryContext memoryContext;
+
+    @Nullable
+    private ConnectorPageSink pageSink;
+    @Nullable
+    private Page page;
+
+    private CacheDataOperator(OperatorContext operatorContext)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.memoryContext = operatorContext.newLocalUserMemoryContext(CacheDataOperator.class.getSimpleName());
+        this.pageSink = operatorContext.getDriverContext().getCacheDriverContext()
+                .orElseThrow(() -> new IllegalArgumentException("Cache context is not present"))
+                .pageSink()
+                .orElseThrow(() -> new IllegalArgumentException("Cache page sink is not present"));
+        memoryContext.setBytes(pageSink.getMemoryUsage());
+    }
+
+    @Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+    @Override
+    public boolean needsInput()
+    {
+        return pageSink != null && page == null;
+    }
+
+    @Override
+    public void addInput(Page page)
+    {
+        checkState(needsInput());
+        this.page = page;
+        checkState(pageSink.appendPage(page).isDone(), "appendPage future must be done");
+        memoryContext.setBytes(pageSink.getMemoryUsage());
+    }
+
+    @Override
+    public Page getOutput()
+    {
+        Page page = this.page;
+        this.page = null;
+        return page;
+    }
+
+    @Override
+    public void finish()
+    {
+        if (pageSink != null) {
+            checkState(pageSink.finish().isDone(), "finish future must be done");
+            pageSink = null;
+            memoryContext.close();
+        }
+    }
+
+    @Override
+    public boolean isFinished()
+    {
+        return pageSink == null && page == null;
+    }
+
+    @Override
+    public void close()
+            throws Exception
+    {
+        if (pageSink != null) {
+            pageSink.abort();
+            pageSink = null;
+            memoryContext.close();
+        }
+    }
+}

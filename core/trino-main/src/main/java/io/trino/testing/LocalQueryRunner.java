@@ -1025,6 +1025,7 @@ public class LocalQueryRunner
                 blockTypeOperators,
                 tableExecuteContextManager,
                 exchangeManagerRegistry,
+                cacheManagerRegistry,
                 nodeManager.getCurrentNode().getNodeVersion());
 
         // plan query

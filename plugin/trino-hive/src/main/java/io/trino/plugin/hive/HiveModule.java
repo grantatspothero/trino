@@ -61,6 +61,9 @@ import io.trino.plugin.hive.s3select.TrinoS3ClientFactory;
 import io.trino.plugin.hive.schemadiscovery.ForSchemaDiscovery;
 import io.trino.plugin.hive.schemadiscovery.SchemaDiscoveryConfig;
 import io.trino.plugin.hive.schemadiscovery.SchemaDiscoverySystemTableProvider;
+import io.trino.plugin.hive.util.BlockJsonSerde;
+import io.trino.plugin.hive.util.HiveBlockEncodingSerde;
+import io.trino.spi.block.Block;
 import io.trino.spi.connector.ConnectorNodePartitioningProvider;
 import io.trino.spi.connector.ConnectorPageSinkProvider;
 import io.trino.spi.connector.ConnectorPageSourceProvider;
@@ -73,6 +76,7 @@ import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.airlift.configuration.ConfigBinder.configBinder;
+import static io.airlift.json.JsonBinder.jsonBinder;
 import static io.airlift.json.JsonCodecBinder.jsonCodecBinder;
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.Executors.newScheduledThreadPool;
@@ -190,6 +194,11 @@ public class HiveModule
                 .annotatedWith(ForDynamicRowFiltering.class)
                 .toInstance(() -> {});
         binder.install(new DynamicRowFilteringModule());
+
+        // bind block serializers for the purpose of TupleDomain serde
+        binder.bind(HiveBlockEncodingSerde.class).in(Scopes.SINGLETON);
+        jsonBinder(binder).addSerializerBinding(Block.class).to(BlockJsonSerde.Serializer.class);
+        jsonBinder(binder).addDeserializerBinding(Block.class).to(BlockJsonSerde.Deserializer.class);
     }
 
     @Singleton
