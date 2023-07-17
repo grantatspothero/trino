@@ -706,7 +706,7 @@ public abstract class AbstractTestQueryFramework
                 tableName);
     }
 
-    private CatalogSchemaTableName getTableName(TableHandle tableHandle)
+    protected CatalogSchemaTableName getTableName(TableHandle tableHandle)
     {
         return inTransaction(getSession(), transactionSession -> {
             // metadata.getCatalogHandle() registers the catalog for the transaction

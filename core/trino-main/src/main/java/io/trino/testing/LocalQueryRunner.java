@@ -177,6 +177,7 @@ import io.trino.sql.gen.JoinFilterFunctionCompiler;
 import io.trino.sql.gen.OrderingCompiler;
 import io.trino.sql.gen.PageFunctionCompiler;
 import io.trino.sql.parser.SqlParser;
+import io.trino.sql.planner.AlternativesOptimizers;
 import io.trino.sql.planner.LocalExecutionPlanner;
 import io.trino.sql.planner.LocalExecutionPlanner.LocalExecutionPlan;
 import io.trino.sql.planner.LogicalPlanner;
@@ -1115,7 +1116,7 @@ public class LocalQueryRunner
 
     public Plan createPlan(Session session, @Language("SQL") String sql, LogicalPlanner.Stage stage, boolean forceSingleNode, WarningCollector warningCollector, PlanOptimizersStatsCollector planOptimizersStatsCollector)
     {
-        return createPlan(session, sql, getPlanOptimizers(forceSingleNode), stage, warningCollector, planOptimizersStatsCollector);
+        return createPlan(session, sql, getPlanOptimizers(forceSingleNode), getAlternativeOptimizers(), stage, warningCollector, planOptimizersStatsCollector);
     }
 
     public List<PlanOptimizer> getPlanOptimizers(boolean forceSingleNode)
@@ -1138,12 +1139,22 @@ public class LocalQueryRunner
                 new RuleStatsRecorder()).get();
     }
 
-    public Plan createPlan(Session session, @Language("SQL") String sql, List<PlanOptimizer> optimizers, WarningCollector warningCollector, PlanOptimizersStatsCollector planOptimizersStatsCollector)
+    public List<PlanOptimizer> getAlternativeOptimizers()
     {
-        return createPlan(session, sql, optimizers, OPTIMIZED_AND_VALIDATED, warningCollector, planOptimizersStatsCollector);
+        return new AlternativesOptimizers(
+                plannerContext,
+                new TypeAnalyzer(plannerContext, statementAnalyzerFactory),
+                statsCalculator,
+                costCalculator,
+                new RuleStatsRecorder()).get();
     }
 
-    public Plan createPlan(Session session, @Language("SQL") String sql, List<PlanOptimizer> optimizers, LogicalPlanner.Stage stage, WarningCollector warningCollector, PlanOptimizersStatsCollector planOptimizersStatsCollector)
+    public Plan createPlan(Session session, @Language("SQL") String sql, List<PlanOptimizer> optimizers, List<PlanOptimizer> alternativeOptimizers, WarningCollector warningCollector, PlanOptimizersStatsCollector planOptimizersStatsCollector)
+    {
+        return createPlan(session, sql, optimizers, alternativeOptimizers, OPTIMIZED_AND_VALIDATED, warningCollector, planOptimizersStatsCollector);
+    }
+
+    public Plan createPlan(Session session, @Language("SQL") String sql, List<PlanOptimizer> optimizers, List<PlanOptimizer> alternativeOptimizers, LogicalPlanner.Stage stage, WarningCollector warningCollector, PlanOptimizersStatsCollector planOptimizersStatsCollector)
     {
         PreparedQuery preparedQuery = new QueryPreparer(sqlParser).prepareQuery(session, sql);
 
@@ -1162,6 +1173,7 @@ public class LocalQueryRunner
         LogicalPlanner logicalPlanner = new LogicalPlanner(
                 session,
                 optimizers,
+                alternativeOptimizers,
                 new PlanSanityChecker(true),
                 idAllocator,
                 getPlannerContext(),
@@ -1181,6 +1193,7 @@ public class LocalQueryRunner
     {
         return new QueryExplainerFactory(
                 () -> optimizers,
+                ImmutableList::of, // TODO: when alternatives planning is supported by LocalQueryRunner, pass the optimizers
                 planFragmenter,
                 plannerContext,
                 statementAnalyzerFactory,

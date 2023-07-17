@@ -44,7 +44,9 @@ import io.trino.sql.planner.plan.PlanNode;
 import io.trino.sql.planner.plan.PlanNodeId;
 import io.trino.transaction.TransactionManager;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -149,29 +151,31 @@ public class RuleAssert
                     formatPlan(plan, types)));
         }
 
-        PlanNode actual = ruleApplication.getTransformedPlan();
+        List<PlanNode> transformedPlans = ruleApplication.getTransformedPlans();
 
-        if (actual == plan) { // plans are not comparable, so we can only ensure they are not the same instance
-            fail(format(
-                    "%s: rule fired but return the original plan:\n%s",
-                    rule,
-                    formatPlan(plan, types)));
+        for (PlanNode actual : transformedPlans) {
+            if (actual == plan) { // plans are not comparable, so we can only ensure they are not the same instance
+                fail(format(
+                        "%s: rule fired but return the original plan:\n%s",
+                        rule,
+                        formatPlan(plan, types)));
+            }
+
+            if (!ImmutableSet.copyOf(plan.getOutputSymbols()).equals(ImmutableSet.copyOf(actual.getOutputSymbols()))) {
+                fail(format(
+                        "%s: output schema of transformed and original plans are not equivalent\n" +
+                                "\texpected: %s\n" +
+                                "\tactual:   %s",
+                        rule,
+                        plan.getOutputSymbols(),
+                        actual.getOutputSymbols()));
+            }
+
+            inTransaction(session -> {
+                assertPlan(session, metadata, functionManager, ruleApplication.statsProvider, new Plan(actual, types, StatsAndCosts.empty()), ruleApplication.lookup, pattern);
+                return null;
+            });
         }
-
-        if (!ImmutableSet.copyOf(plan.getOutputSymbols()).equals(ImmutableSet.copyOf(actual.getOutputSymbols()))) {
-            fail(format(
-                    "%s: output schema of transformed and original plans are not equivalent\n" +
-                            "\texpected: %s\n" +
-                            "\tactual:   %s",
-                    rule,
-                    plan.getOutputSymbols(),
-                    actual.getOutputSymbols()));
-        }
-
-        inTransaction(session -> {
-            assertPlan(session, metadata, functionManager, ruleApplication.statsProvider, new Plan(actual, types, StatsAndCosts.empty()), ruleApplication.lookup, pattern);
-            return null;
-        });
     }
 
     private RuleApplication applyRule()
@@ -297,9 +301,19 @@ public class RuleAssert
             return !result.isEmpty();
         }
 
-        public PlanNode getTransformedPlan()
+        public List<PlanNode> getTransformedPlans()
         {
-            return result.getTransformedPlan().orElseThrow(() -> new IllegalStateException("Rule did not produce transformed plan"));
+            if (result.isEmpty()) {
+                throw new IllegalStateException("Rule did not produce transformed plans");
+            }
+            if (result.getMainAlternative().isEmpty()) {
+                throw new IllegalStateException("The main alternative wasn't transformed");
+            }
+
+            List<PlanNode> transformedPlans = new ArrayList<>(1 + result.getAdditionalAlternatives().size());
+            transformedPlans.add(result.getMainAlternative().get());
+            transformedPlans.addAll(result.getAdditionalAlternatives());
+            return transformedPlans;
         }
     }
 

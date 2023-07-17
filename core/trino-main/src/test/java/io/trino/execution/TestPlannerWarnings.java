@@ -51,6 +51,7 @@ import static io.trino.sql.planner.LogicalPlanner.Stage.OPTIMIZED;
 import static io.trino.sql.planner.plan.Patterns.project;
 import static io.trino.testing.TestingHandles.TEST_CATALOG_NAME;
 import static io.trino.testing.TestingSession.testSessionBuilder;
+import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.IntStream.range;
 import static org.testng.Assert.fail;
@@ -132,7 +133,7 @@ public class TestPlannerWarnings
                 queryRunner.getCostCalculator(),
                 ImmutableSet.copyOf(rules));
 
-        return queryRunner.createPlan(session, sql, ImmutableList.of(optimizer), OPTIMIZED, warningCollector, planOptimizersStatsCollector);
+        return queryRunner.createPlan(session, sql, ImmutableList.of(optimizer), emptyList(), OPTIMIZED, warningCollector, planOptimizersStatsCollector);
     }
 
     public static List<TrinoWarning> createTestWarnings(int numberOfWarnings)

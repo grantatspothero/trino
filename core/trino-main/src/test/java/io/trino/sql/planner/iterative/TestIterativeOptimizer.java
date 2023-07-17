@@ -42,6 +42,7 @@ import static io.trino.sql.planner.plan.Patterns.tableScan;
 import static io.trino.testing.TestingHandles.TEST_CATALOG_NAME;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 import static io.trino.testing.assertions.TrinoExceptionAssert.assertTrinoExceptionThrownBy;
+import static java.util.Collections.emptyList;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -92,7 +93,7 @@ public class TestIterativeOptimizer
                     queryRunner.getCostCalculator(),
                     ImmutableSet.of(new AddIdentityOverTableScan(), new RemoveRedundantIdentityProjections()));
 
-            queryRunner.createPlan(sessionBuilder.build(), "SELECT 1", ImmutableList.of(optimizer), WarningCollector.NOOP, planOptimizersStatsCollector);
+            queryRunner.createPlan(sessionBuilder.build(), "SELECT 1", ImmutableList.of(optimizer), emptyList(), WarningCollector.NOOP, planOptimizersStatsCollector);
             Optional<QueryPlanOptimizerStatistics> queryRuleStats = planOptimizersStatsCollector.getTopRuleStats().stream().findFirst();
 
             assertTrue(queryRuleStats.isPresent());
@@ -119,7 +120,7 @@ public class TestIterativeOptimizer
                 queryRunner.getCostCalculator(),
                 ImmutableSet.of(new AddIdentityOverTableScan(), new RemoveRedundantIdentityProjections()));
 
-        assertTrinoExceptionThrownBy(() -> queryRunner.inTransaction(transactionSession -> queryRunner.createPlan(transactionSession, "SELECT nationkey FROM nation", ImmutableList.of(optimizer), WarningCollector.NOOP, createPlanOptimizersStatsCollector())))
+        assertTrinoExceptionThrownBy(() -> queryRunner.inTransaction(transactionSession -> queryRunner.createPlan(transactionSession, "SELECT nationkey FROM nation", ImmutableList.of(optimizer), emptyList(), WarningCollector.NOOP, createPlanOptimizersStatsCollector())))
                 .hasErrorCode(OPTIMIZER_TIMEOUT)
                 .hasMessageMatching("The optimizer exhausted the time limit of 1 ms: (no rules invoked|(?s)Top rules:.*(RemoveRedundantIdentityProjections|AddIdentityOverTableScan).*)");
     }

@@ -49,6 +49,7 @@ import static io.trino.sql.planner.LogicalPlanner.Stage.OPTIMIZED_AND_VALIDATED;
 import static io.trino.sql.planner.PlanOptimizers.columnPruningRules;
 import static io.trino.testing.TestingHandles.TEST_CATALOG_NAME;
 import static io.trino.testing.TestingSession.testSessionBuilder;
+import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
@@ -152,7 +153,9 @@ public class BasePlanTest
     {
         try {
             queryRunner.inTransaction(transactionSession -> {
-                Plan actualPlan = queryRunner.createPlan(transactionSession, sql, optimizers, stage, WarningCollector.NOOP, createPlanOptimizersStatsCollector());
+                // TODO: Support alternativeOptimizers
+                List<PlanOptimizer> alternativeOptimizers = emptyList();
+                Plan actualPlan = queryRunner.createPlan(transactionSession, sql, optimizers, alternativeOptimizers, stage, WarningCollector.NOOP, createPlanOptimizersStatsCollector());
                 PlanAssert.assertPlan(transactionSession, queryRunner.getMetadata(), queryRunner.getFunctionManager(), queryRunner.getStatsCalculator(), actualPlan, pattern);
                 return null;
             });

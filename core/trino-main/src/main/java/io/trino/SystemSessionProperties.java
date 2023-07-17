@@ -209,6 +209,7 @@ public final class SystemSessionProperties
     public static final String MIN_INPUT_ROWS_PER_TASK = "min_input_rows_per_task";
     public static final String USE_EXACT_PARTITIONING = "use_exact_partitioning";
     public static final String USE_COST_BASED_PARTITIONING = "use_cost_based_partitioning";
+    public static final String USE_SUB_PLAN_ALTERNATIVES = "use_sub_plan_alternatives";
     public static final String FORCE_SPILLING_JOIN = "force_spilling_join";
     public static final String FAULT_TOLERANT_EXECUTION_FORCE_PREFERRED_WRITE_PARTITIONING_ENABLED = "fault_tolerant_execution_force_preferred_write_partitioning_enabled";
     public static final String CACHE_SUBQUERIES_ENABLED = "cache_subqueries_enabled";
@@ -1081,6 +1082,11 @@ public final class SystemSessionProperties
                         optimizerConfig.isUseCostBasedPartitioning(),
                         false),
                 booleanProperty(
+                        USE_SUB_PLAN_ALTERNATIVES,
+                        "When enabled the optimizer might create sub-plan alternatives based on pushdown to connectors",
+                        optimizerConfig.isUseSubPlanAlternatives(),
+                        false),
+                booleanProperty(
                         FORCE_SPILLING_JOIN,
                         "Force the usage of spliing join operator in favor of the non-spilling one, even if spill is not enabled",
                         featuresConfig.isForceSpillingJoin(),
@@ -1950,6 +1956,11 @@ public final class SystemSessionProperties
     public static boolean isUseCostBasedPartitioning(Session session)
     {
         return session.getSystemProperty(USE_COST_BASED_PARTITIONING, Boolean.class);
+    }
+
+    public static boolean isUseSubPlanAlternatives(Session session)
+    {
+        return session.getSystemProperty(USE_SUB_PLAN_ALTERNATIVES, Boolean.class);
     }
 
     public static boolean isForceSpillingOperator(Session session)

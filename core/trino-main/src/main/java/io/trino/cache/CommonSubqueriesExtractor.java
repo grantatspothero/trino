@@ -291,11 +291,13 @@ public final class CommonSubqueriesExtractor
                     commonSubplanTableScan,
                     false,
                     session,
+                    idAllocator,
                     symbolAllocator,
                     plannerContext,
                     typeAnalyzer,
                     statsProvider,
-                    new DomainTranslator(plannerContext));
+                    new DomainTranslator(plannerContext))
+                    .getMainAlternative();
 
             // If ValuesNode was returned as a result of pushing down predicates we fall back
             // to filterNode to avoid introducing significant changes in plan. Changing node from TableScan to ValuesNode

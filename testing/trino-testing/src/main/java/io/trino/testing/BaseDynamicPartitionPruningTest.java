@@ -60,7 +60,7 @@ import static org.testng.Assert.assertTrue;
 public abstract class BaseDynamicPartitionPruningTest
         extends AbstractTestQueryFramework
 {
-    private static final String PARTITIONED_LINEITEM = "partitioned_lineitem";
+    protected static final String PARTITIONED_LINEITEM = "partitioned_lineitem";
     private static final long LINEITEM_COUNT = 60175;
     protected static final Set<TpchTable<?>> REQUIRED_TABLES = ImmutableSet.of(LINE_ITEM, ORDERS, SUPPLIER);
     protected static final Map<String, String> EXTRA_PROPERTIES = ImmutableMap.of(
@@ -509,7 +509,7 @@ public abstract class BaseDynamicPartitionPruningTest
                 .collect(toDataProvider());
     }
 
-    private Session withDynamicFilteringDisabled()
+    protected Session withDynamicFilteringDisabled()
     {
         return withDynamicFilteringDisabled(getSession());
     }
