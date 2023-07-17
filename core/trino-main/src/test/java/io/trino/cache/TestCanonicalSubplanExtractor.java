@@ -232,14 +232,17 @@ public class TestCanonicalSubplanExtractor
                 planBuilder.tableScan(tableHandle2, ImmutableList.of(), ImmutableMap.of(), Optional.of(false))));
 
         // TableHandles will be turned into common canonical version
-        List<CacheTableId> tableIds = extractCanonicalSubplans(
+        TableHandle canonicalTableHandle = TestingHandles.createTestTableHandle(SchemaTableName.schemaTableName("schema", "common"));
+        List<CanonicalSubplan> canonicalSubplans = extractCanonicalSubplans(
                 new TestMetadata(
                         handle -> Optional.of(new CacheColumnId(handle.getName())),
-                        (tableHandle) -> TestingHandles.createTestTableHandle(SchemaTableName.schemaTableName("schema", "common")),
+                        (tableHandle) -> canonicalTableHandle,
                         (tableHandle) -> Optional.of(new CacheTableId(tableHandle.getConnectorHandle().toString()))),
                 TEST_SESSION,
-                root).stream().map(CanonicalSubplan::getTableId).toList();
+                root);
+        List<CacheTableId> tableIds = canonicalSubplans.stream().map(CanonicalSubplan::getTableId).toList();
         assertThat(tableIds).isEqualTo(ImmutableList.of(new CacheTableId("schema.common"), new CacheTableId("schema.common")));
+        assertThat(canonicalSubplans).allMatch(subplan -> subplan.getTable().equals(canonicalTableHandle));
 
         // TableHandles will not be turned into common canonical version
         tableIds = extractCanonicalSubplans(new TestMetadata(

@@ -221,7 +221,7 @@ public final class CanonicalSubplanExtractor
                     // no dynamic filters in table scan
                     ImmutableList.of(),
                     columnHandlesBuilder.buildOrThrow(),
-                    node.getTable(),
+                    canonicalTableHandle,
                     node.getId(),
                     tableId.get(),
                     node.isUseConnectorNodePartitioning()));
