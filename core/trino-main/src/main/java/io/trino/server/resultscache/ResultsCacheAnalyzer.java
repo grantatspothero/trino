@@ -14,13 +14,13 @@
 
 package io.trino.server.resultscache;
 
+import io.trino.execution.QueryPreparer.PreparedQuery;
 import io.trino.metadata.QualifiedObjectName;
 import io.trino.metadata.TableHandle;
 import io.trino.security.AccessControl;
 import io.trino.security.SecurityContext;
 import io.trino.sql.analyzer.Analysis;
 import io.trino.sql.tree.Query;
-import io.trino.sql.tree.Statement;
 
 import static java.util.Objects.requireNonNull;
 
@@ -35,27 +35,32 @@ public class ResultsCacheAnalyzer
         this.securityContext = requireNonNull(securityContext, "securityContext is null");
     }
 
-    public boolean isStatementCacheable(Statement originalStatement, Analysis analysis)
+    public boolean isStatementCacheable(PreparedQuery preparedQuery, Analysis analysis)
     {
-        if (originalStatement instanceof Query) {
-            for (TableHandle tableHandle : analysis.getTables()) {
-                switch (tableHandle.getCatalogHandle().getType()) {
-                    case INFORMATION_SCHEMA:
-                    case SYSTEM:
-                        return false;
-                    case NORMAL:
-                        continue;
-                }
-            }
-
-            for (QualifiedObjectName qualifiedObjectName : analysis.getTableNames()) {
-                if (!accessControl.getRowFilters(securityContext, qualifiedObjectName).isEmpty()) {
-                    return false;
-                }
-            }
-
-            return true;
+        if (preparedQuery.isExecuteStatement()) {
+            return false;
         }
-        return false;
+
+        if (!(preparedQuery.getStatement() instanceof Query)) {
+            return false;
+        }
+
+        for (TableHandle tableHandle : analysis.getTables()) {
+            switch (tableHandle.getCatalogHandle().getType()) {
+                case INFORMATION_SCHEMA:
+                case SYSTEM:
+                    return false;
+                case NORMAL:
+                    continue;
+            }
+        }
+
+        for (QualifiedObjectName qualifiedObjectName : analysis.getTableNames()) {
+            if (!accessControl.getRowFilters(securityContext, qualifiedObjectName).isEmpty()) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

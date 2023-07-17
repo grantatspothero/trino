@@ -61,9 +61,11 @@ public class QueryPreparer
     {
         Statement statement = wrappedStatement;
         Optional<String> prepareSql = Optional.empty();
+        boolean isExecuteStatement = false;
         if (statement instanceof Execute executeStatement) {
             prepareSql = Optional.of(session.getPreparedStatementFromExecute(executeStatement));
             statement = sqlParser.createStatement(prepareSql.get(), createParsingOptions(session));
+            isExecuteStatement = true;
         }
         else if (statement instanceof ExecuteImmediate executeImmediateStatement) {
             statement = sqlParser.createStatement(
@@ -88,7 +90,7 @@ public class QueryPreparer
         }
         validateParameters(statement, parameters);
 
-        return new PreparedQuery(statement, parameters, prepareSql);
+        return new PreparedQuery(statement, parameters, prepareSql, isExecuteStatement);
     }
 
     private static void validateParameters(Statement node, List<Expression> parameterValues)
@@ -107,12 +109,14 @@ public class QueryPreparer
         private final Statement statement;
         private final List<Expression> parameters;
         private final Optional<String> prepareSql;
+        private final boolean isExecuteStatement;
 
-        public PreparedQuery(Statement statement, List<Expression> parameters, Optional<String> prepareSql)
+        public PreparedQuery(Statement statement, List<Expression> parameters, Optional<String> prepareSql, boolean isExecuteStatement)
         {
             this.statement = requireNonNull(statement, "statement is null");
             this.parameters = ImmutableList.copyOf(requireNonNull(parameters, "parameters is null"));
             this.prepareSql = requireNonNull(prepareSql, "prepareSql is null");
+            this.isExecuteStatement = isExecuteStatement;
         }
 
         public Statement getStatement()
@@ -128,6 +132,11 @@ public class QueryPreparer
         public Optional<String> getPrepareSql()
         {
             return prepareSql;
+        }
+
+        public boolean isExecuteStatement()
+        {
+            return isExecuteStatement;
         }
     }
 }

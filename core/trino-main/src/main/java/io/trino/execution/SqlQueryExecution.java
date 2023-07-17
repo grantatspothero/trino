@@ -232,7 +232,7 @@ public class SqlQueryExecution
             this.taskDescriptorStorage = requireNonNull(taskDescriptorStorage, "taskDescriptorStorage is null");
             this.planOptimizersStatsCollector = requireNonNull(planOptimizersStatsCollector, "planOptimizersStatsCollector is null");
             this.resultsCacheParameters = createResultsCacheParameters(stateMachine.getSession()).filter(ignore ->
-                    resultsCacheAnalyzerFactory.createResultsCacheAnalyzer(stateMachine.getSession().toSecurityContext()).isStatementCacheable(preparedQuery.getStatement(), analysis));
+                    resultsCacheAnalyzerFactory.createResultsCacheAnalyzer(stateMachine.getSession().toSecurityContext()).isStatementCacheable(preparedQuery, analysis));
         }
     }
 
