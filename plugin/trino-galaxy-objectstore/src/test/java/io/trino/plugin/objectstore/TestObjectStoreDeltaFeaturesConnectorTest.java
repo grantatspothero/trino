@@ -142,7 +142,7 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     @Override
     public void testCdfCommitTimestamp()
     {
-        // Delta $history system table isn't exposed. TODO (https://github.com/starburstdata/team-lakehouse/issues/221) determine whether we want to expose that. Maybe not.
+        // Delta $history system table isn't exposed. TODO (https://github.com/starburstdata/team-lakehouse/issues/254) determine whether we want to expose that. Maybe not.
         assertThatThrownBy(super::testCdfCommitTimestamp)
                 .hasMessageMatching("line 1:23: Table 'delta.test_schema.test_cdf_commit_timestamp_\\w+\\$history' does not exist");
     }
