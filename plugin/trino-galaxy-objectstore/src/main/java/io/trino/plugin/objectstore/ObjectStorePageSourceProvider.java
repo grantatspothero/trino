@@ -27,6 +27,7 @@ import io.trino.spi.connector.ConnectorSplit;
 import io.trino.spi.connector.ConnectorTableHandle;
 import io.trino.spi.connector.ConnectorTransactionHandle;
 import io.trino.spi.connector.DynamicFilter;
+import io.trino.spi.predicate.TupleDomain;
 
 import java.util.List;
 
@@ -75,6 +76,28 @@ public class ObjectStorePageSourceProvider
         }
         if (table instanceof HudiTableHandle) {
             return hudiPageSourceProvider.createPageSource(transaction.getHudiHandle(), unwrap(HUDI, session), split, table, columns, dynamicFilter);
+        }
+        throw new VerifyException("Unhandled class: " + table.getClass().getName());
+    }
+
+    @Override
+    public TupleDomain<ColumnHandle> simplifyPredicate(
+            ConnectorSession session,
+            ConnectorSplit split,
+            ConnectorTableHandle table,
+            TupleDomain<ColumnHandle> predicate)
+    {
+        if (table instanceof HiveTableHandle) {
+            return hivePageSourceProvider.simplifyPredicate(unwrap(HIVE, session), split, table, predicate);
+        }
+        if (table instanceof IcebergTableHandle) {
+            return icebergPageSourceProvider.simplifyPredicate(unwrap(ICEBERG, session), split, table, predicate);
+        }
+        if (table instanceof DeltaLakeTableHandle) {
+            return deltaPageSourceProvider.simplifyPredicate(unwrap(DELTA, session), split, table, predicate);
+        }
+        if (table instanceof HudiTableHandle) {
+            return hudiPageSourceProvider.simplifyPredicate(unwrap(HUDI, session), split, table, predicate);
         }
         throw new VerifyException("Unhandled class: " + table.getClass().getName());
     }

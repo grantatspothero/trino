@@ -13,6 +13,8 @@
  */
 package io.trino.spi.connector;
 
+import io.trino.spi.predicate.TupleDomain;
+
 import java.util.List;
 
 public interface ConnectorPageSourceProvider
@@ -28,4 +30,17 @@ public interface ConnectorPageSourceProvider
             ConnectorTableHandle table,
             List<ColumnHandle> columns,
             DynamicFilter dynamicFilter);
+
+    /**
+     * Simplify predicate into a predicate that {@link ConnectorPageSource} would use
+     * to filter split data.
+     */
+    default TupleDomain<ColumnHandle> simplifyPredicate(
+            ConnectorSession session,
+            ConnectorSplit split,
+            ConnectorTableHandle table,
+            TupleDomain<ColumnHandle> predicate)
+    {
+        throw new UnsupportedOperationException();
+    }
 }
