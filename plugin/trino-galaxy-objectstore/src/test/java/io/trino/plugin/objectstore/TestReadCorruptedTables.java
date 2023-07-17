@@ -147,7 +147,7 @@ public class TestReadCorruptedTables
                             .setTableType(EXTERNAL_TABLE.name())
                             .setParameter("EXTERNAL", "TRUE")
                             .setOwner(Optional.of("whoever"))
-                            .addDataColumn(new Column("ignored", HIVE_INT, Optional.empty()))
+                            .addDataColumn(new Column("ignored", HIVE_INT, Optional.empty(), Map.of()))
                             .withStorage(storage -> storage
                                     .setLocation(tableInfo.location)
                                     .setStorageFormat(AbstractIcebergTableOperations.ICEBERG_METASTORE_STORAGE_FORMAT))
@@ -170,7 +170,7 @@ public class TestReadCorruptedTables
                             .setTableName(tableName)
                             .setTableType(EXTERNAL_TABLE.name())
                             .setOwner(Optional.of("whoever"))
-                            .addDataColumn(new Column("ignored", HIVE_INT, Optional.empty()))
+                            .addDataColumn(new Column("ignored", HIVE_INT, Optional.empty(), Map.of()))
                             .setParameter(HiveMetastoreBackedDeltaLakeMetastore.TABLE_PROVIDER_PROPERTY, HiveMetastoreBackedDeltaLakeMetastore.TABLE_PROVIDER_VALUE)
                             .setParameter(DeltaLakeTableProperties.LOCATION_PROPERTY, tableLocation)
                             .withStorage(storage -> storage
