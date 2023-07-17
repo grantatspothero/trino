@@ -24,6 +24,7 @@ import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
 import io.trino.plugin.iceberg.catalog.TrinoCatalog;
 import io.trino.plugin.iceberg.fileio.ForwardingFileIo;
 import io.trino.spi.connector.ConnectorSession;
+import io.trino.spi.type.TypeManager;
 
 import java.util.Optional;
 
@@ -33,18 +34,24 @@ import static java.util.Objects.requireNonNull;
 public class TestingGlueIcebergTableOperationsProvider
         implements IcebergTableOperationsProvider
 {
+    private final TypeManager typeManager;
+    private final boolean cacheTableMetadata;
     private final TrinoFileSystemFactory fileSystemFactory;
     private final AWSGlueAsync glueClient;
     private final GlueMetastoreStats stats;
 
     @Inject
     public TestingGlueIcebergTableOperationsProvider(
+            TypeManager typeManager,
+            IcebergGlueCatalogConfig catalogConfig,
             TrinoFileSystemFactory fileSystemFactory,
             GlueMetastoreStats stats,
             GlueHiveMetastoreConfig glueConfig,
             AWSCredentialsProvider credentialsProvider,
             AWSGlueAsyncAdapterProvider awsGlueAsyncAdapterProvider)
     {
+        this.typeManager = requireNonNull(typeManager, "typeManager is null");
+        this.cacheTableMetadata = catalogConfig.isCacheTableMetadata();
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.stats = requireNonNull(stats, "stats is null");
         requireNonNull(glueConfig, "glueConfig is null");
@@ -64,8 +71,11 @@ public class TestingGlueIcebergTableOperationsProvider
             Optional<String> location)
     {
         return new GlueIcebergTableOperations(
+                typeManager,
+                cacheTableMetadata,
                 glueClient,
                 stats,
+                ((TrinoGlueCatalog) catalog)::getTable,
                 new ForwardingFileIo(fileSystemFactory.create(session)),
                 session,
                 database,
