@@ -188,6 +188,20 @@ public class HivePageSourceProvider
             ConnectorTableHandle tableHandle,
             TupleDomain<ColumnHandle> predicate)
     {
+        return prunePredicate(split, tableHandle, predicate)
+                .simplify(domainCompactionThreshold);
+    }
+
+    /**
+     * Prunes prefilled columns that won't be used for filtering split data.
+     * Returns {@link TupleDomain#none()} if no data would be returned for a
+     * given split and predicate.
+     */
+    public TupleDomain<ColumnHandle> prunePredicate(
+            ConnectorSplit split,
+            ConnectorTableHandle tableHandle,
+            TupleDomain<ColumnHandle> predicate)
+    {
         HiveTableHandle hiveTable = (HiveTableHandle) tableHandle;
         HiveSplit hiveSplit = (HiveSplit) split;
 
@@ -227,8 +241,7 @@ public class HivePageSourceProvider
         // at HivePageSource creation time (see shouldSkipSplit). Such columns
         // won't be used to filter split data when reading files.
         return predicate
-                .filter(((columnHandle, domain) -> !prefilledColumns.contains(columnHandle)))
-                .simplify(domainCompactionThreshold);
+                .filter(((columnHandle, domain) -> !prefilledColumns.contains(columnHandle)));
     }
 
     public static Optional<ConnectorPageSource> createHivePageSource(

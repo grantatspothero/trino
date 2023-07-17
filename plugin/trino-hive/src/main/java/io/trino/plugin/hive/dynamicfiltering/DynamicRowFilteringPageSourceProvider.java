@@ -17,6 +17,7 @@ import com.google.inject.Inject;
 import com.starburstdata.trino.plugins.dynamicfiltering.DynamicPageFilterCache;
 import com.starburstdata.trino.plugins.dynamicfiltering.DynamicRowFilteringPageSource;
 import com.starburstdata.trino.plugins.dynamicfiltering.ForDynamicRowFiltering;
+import io.trino.plugin.hive.HivePageSourceProvider;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.ConnectorPageSource;
 import io.trino.spi.connector.ConnectorPageSourceProvider;
@@ -26,6 +27,7 @@ import io.trino.spi.connector.ConnectorTableHandle;
 import io.trino.spi.connector.ConnectorTransactionHandle;
 import io.trino.spi.connector.DynamicFilter;
 import io.trino.spi.connector.RecordPageSource;
+import io.trino.spi.predicate.TupleDomain;
 
 import java.util.List;
 
@@ -78,5 +80,26 @@ public class DynamicRowFilteringPageSourceProvider
                 getDynamicRowFilteringWaitTimeout(session),
                 columns,
                 dynamicPageFilterCache.getDynamicPageFilter(dynamicFilter, columns));
+    }
+
+    @Override
+    public TupleDomain<ColumnHandle> simplifyPredicate(
+            ConnectorSession session,
+            ConnectorSplit split,
+            ConnectorTableHandle table,
+            TupleDomain<ColumnHandle> predicate)
+    {
+        if (!isDynamicRowFilteringEnabled(session)) {
+            return delegatePageSourceProvider.simplifyPredicate(session, split, table, predicate);
+        }
+
+        // DynamicRowFilteringPageSourceProvider doesn't simplify dynamic predicate,
+        // but we can still prune prefilled columns from predicate, which are ineffective
+        // in filtering split data
+        if (delegatePageSourceProvider instanceof HivePageSourceProvider hivePageSourceProvider) {
+            return hivePageSourceProvider.prunePredicate(split, table, predicate);
+        }
+
+        return predicate;
     }
 }
