@@ -1167,11 +1167,4 @@ public class ClassLoaderSafeConnectorMetadata
             return delegate.getCanonicalTableHandle(tableHandle);
         }
     }
-
-    @Override
-    protected Object clone()
-            throws CloneNotSupportedException
-    {
-        return super.clone();
-    }
 }
