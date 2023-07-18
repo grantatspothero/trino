@@ -18,6 +18,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
+import io.trino.filesystem.TrackingFileSystemFactory;
+import io.trino.filesystem.hdfs.HdfsFileSystemFactory;
 import io.trino.plugin.hive.metastore.CountingAccessHiveMetastore;
 import io.trino.plugin.hive.metastore.CountingAccessHiveMetastoreUtil;
 import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastore;
@@ -36,6 +38,7 @@ import java.nio.file.Path;
 import java.util.Map;
 
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
+import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_STATS;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_ALL_DATABASES;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_ALL_TABLES_FROM_DATABASE;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_ALL_VIEWS_FROM_DATABASE;
@@ -59,6 +62,8 @@ public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
 
     private CountingAccessHiveMetastore metastore;
 
+    private TrackingFileSystemFactory trackingFileSystemFactory;
+
     @Override
     protected QueryRunner createQueryRunner()
             throws Exception
@@ -68,6 +73,7 @@ public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
 
         TestingGalaxyMetastore galaxyMetastore = closeAfterClass(new TestingGalaxyMetastore(galaxyCockroachContainer));
         metastore = new CountingAccessHiveMetastore(new GalaxyHiveMetastore(galaxyMetastore.getMetastore(), HDFS_ENVIRONMENT, schemaDirectory.toUri().toString()));
+        trackingFileSystemFactory = new TrackingFileSystemFactory(new HdfsFileSystemFactory(HDFS_ENVIRONMENT, HDFS_FILE_SYSTEM_STATS));
 
         TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> galaxyCockroachContainer));
 
@@ -98,7 +104,7 @@ public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
         DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder(CATALOG_NAME, SCHEMA_NAME)
                 .setAccountClient(testingAccountFactory.createAccountClient())
                 .addPlugin(new IcebergPlugin())
-                .addPlugin(new TestingObjectStorePlugin(metastore))
+                .addPlugin(new TestingObjectStorePlugin(metastore, trackingFileSystemFactory))
                 .addCatalog(CATALOG_NAME, "galaxy_objectstore", properties)
                 .build();
         queryRunner.execute("CREATE SCHEMA %s.%s WITH (location = '%s')".formatted(CATALOG_NAME, SCHEMA_NAME, schemaDirectory.toUri().toString()));
