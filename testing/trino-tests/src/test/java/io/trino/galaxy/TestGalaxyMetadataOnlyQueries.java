@@ -226,6 +226,25 @@ public class TestGalaxyMetadataOnlyQueries
                 .hasMessageMatching("\\QQueryError{message=150000 is too many, sqlState=null, errorCode=0, errorName=GENERIC_USER_ERROR, errorType=USER_ERROR, errorLocation=null, failureInfo=io.trino.client.FailureInfo@\\E\\w+\\Q}");
     }
 
+    @Test
+    public void testShowCreateMaterializedView()
+    {
+        queryMetadata("CREATE MATERIALIZED VIEW objectstore.default.metadata_object_store_materialized_view_iceberg AS (SELECT * FROM objectstore.default.metadata_object_store_table_iceberg LIMIT 1)");
+        assertThat(queryMetadata("SHOW CREATE MATERIALIZED VIEW objectstore.default.metadata_object_store_materialized_view_iceberg"))
+                .skippingTypesCheck()
+                .matches(matchResult("""
+                     CREATE MATERIALIZED VIEW objectstore.default.metadata_object_store_materialized_view_iceberg
+                     WITH (
+                        storage_schema = 'default'
+                     ) AS
+                     (
+                        SELECT *
+                        FROM
+                          objectstore.default.metadata_object_store_table_iceberg
+                        LIMIT 1
+                     )"""));
+    }
+
     private AssertProvider<QueryAssert> queryMetadata(@Language("SQL") String statement)
     {
         Request request = buildRequest(statement);
