@@ -39,7 +39,7 @@ import io.trino.execution.scheduler.TaskExecutionStats;
 import io.trino.execution.scheduler.faulttolerant.EventDrivenFaultTolerantQueryScheduler;
 import io.trino.execution.scheduler.faulttolerant.EventDrivenTaskSourceFactory;
 import io.trino.execution.scheduler.faulttolerant.NodeAllocatorService;
-import io.trino.execution.scheduler.faulttolerant.OutputDataSizeEstimatorFactory;
+import io.trino.execution.scheduler.faulttolerant.OutputStatsEstimatorFactory;
 import io.trino.execution.scheduler.faulttolerant.PartitionMemoryEstimatorFactory;
 import io.trino.execution.scheduler.faulttolerant.TaskDescriptorStorage;
 import io.trino.execution.scheduler.policy.ExecutionPolicy;
@@ -120,7 +120,7 @@ public class SqlQueryExecution
     private final NodeScheduler nodeScheduler;
     private final NodeAllocatorService nodeAllocatorService;
     private final PartitionMemoryEstimatorFactory partitionMemoryEstimatorFactory;
-    private final OutputDataSizeEstimatorFactory outputDataSizeEstimatorFactory;
+    private final OutputStatsEstimatorFactory outputStatsEstimatorFactory;
     private final TaskExecutionStats taskExecutionStats;
     private final List<PlanOptimizer> planOptimizers;
     private final List<PlanOptimizer> alternativeOptimizers;
@@ -161,7 +161,7 @@ public class SqlQueryExecution
             NodeScheduler nodeScheduler,
             NodeAllocatorService nodeAllocatorService,
             PartitionMemoryEstimatorFactory partitionMemoryEstimatorFactory,
-            OutputDataSizeEstimatorFactory outputDataSizeEstimatorFactory,
+            OutputStatsEstimatorFactory outputStatsEstimatorFactory,
             TaskExecutionStats taskExecutionStats,
             List<PlanOptimizer> planOptimizers,
             List<PlanOptimizer> alternativeOptimizers,
@@ -196,7 +196,7 @@ public class SqlQueryExecution
             this.nodeScheduler = requireNonNull(nodeScheduler, "nodeScheduler is null");
             this.nodeAllocatorService = requireNonNull(nodeAllocatorService, "nodeAllocatorService is null");
             this.partitionMemoryEstimatorFactory = requireNonNull(partitionMemoryEstimatorFactory, "partitionMemoryEstimatorFactory is null");
-            this.outputDataSizeEstimatorFactory = requireNonNull(outputDataSizeEstimatorFactory, "outputDataSizeEstimatorFactory is null");
+            this.outputStatsEstimatorFactory = requireNonNull(outputStatsEstimatorFactory, "outputDataSizeEstimatorFactory is null");
             this.taskExecutionStats = requireNonNull(taskExecutionStats, "taskExecutionStats is null");
             this.planOptimizers = requireNonNull(planOptimizers, "planOptimizers is null");
             this.alternativeOptimizers = requireNonNull(alternativeOptimizers, "alternativeOptimizers is null");
@@ -608,7 +608,7 @@ public class SqlQueryExecution
                         tracer,
                         schedulerStats,
                         partitionMemoryEstimatorFactory,
-                        outputDataSizeEstimatorFactory,
+                        outputStatsEstimatorFactory,
                         nodePartitioningManager,
                         exchangeManagerRegistry.getExchangeManager(),
                         nodeAllocatorService,
@@ -816,7 +816,7 @@ public class SqlQueryExecution
         private final NodeScheduler nodeScheduler;
         private final NodeAllocatorService nodeAllocatorService;
         private final PartitionMemoryEstimatorFactory partitionMemoryEstimatorFactory;
-        private final OutputDataSizeEstimatorFactory outputDataSizeEstimatorFactory;
+        private final OutputStatsEstimatorFactory outputStatsEstimatorFactory;
         private final TaskExecutionStats taskExecutionStats;
         private final List<PlanOptimizer> planOptimizers;
         private final List<PlanOptimizer> alternativeOptimizers;
@@ -849,7 +849,7 @@ public class SqlQueryExecution
                 NodeScheduler nodeScheduler,
                 NodeAllocatorService nodeAllocatorService,
                 PartitionMemoryEstimatorFactory partitionMemoryEstimatorFactory,
-                OutputDataSizeEstimatorFactory outputDataSizeEstimatorFactory,
+                OutputStatsEstimatorFactory outputStatsEstimatorFactory,
                 TaskExecutionStats taskExecutionStats,
                 PlanOptimizersFactory planOptimizersFactory,
                 @ForAlternatives PlanOptimizersFactory alternativesOptimizersFactory,
@@ -882,7 +882,7 @@ public class SqlQueryExecution
             this.nodeScheduler = requireNonNull(nodeScheduler, "nodeScheduler is null");
             this.nodeAllocatorService = requireNonNull(nodeAllocatorService, "nodeAllocatorService is null");
             this.partitionMemoryEstimatorFactory = requireNonNull(partitionMemoryEstimatorFactory, "partitionMemoryEstimatorFactory is null");
-            this.outputDataSizeEstimatorFactory = requireNonNull(outputDataSizeEstimatorFactory, "outputDataSizeEstimatorFactory is null");
+            this.outputStatsEstimatorFactory = requireNonNull(outputStatsEstimatorFactory, "outputDataSizeEstimatorFactory is null");
             this.taskExecutionStats = requireNonNull(taskExecutionStats, "taskExecutionStats is null");
             this.planFragmenter = requireNonNull(planFragmenter, "planFragmenter is null");
             this.remoteTaskFactory = requireNonNull(remoteTaskFactory, "remoteTaskFactory is null");
@@ -929,7 +929,7 @@ public class SqlQueryExecution
                     nodeScheduler,
                     nodeAllocatorService,
                     partitionMemoryEstimatorFactory,
-                    outputDataSizeEstimatorFactory,
+                    outputStatsEstimatorFactory,
                     taskExecutionStats,
                     planOptimizers,
                     alternativeOptimizers,
