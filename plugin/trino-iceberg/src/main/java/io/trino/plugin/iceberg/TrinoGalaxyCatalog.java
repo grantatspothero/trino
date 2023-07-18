@@ -195,7 +195,7 @@ public class TrinoGalaxyCatalog
     }
 
     @Override
-    public void registerTable(ConnectorSession session, SchemaTableName schemaTableName, String tableLocation, TableMetadata tableMetadata)
+    public void registerTable(ConnectorSession session, SchemaTableName schemaTableName, TableMetadata tableMetadata)
     {
         io.trino.plugin.hive.metastore.Table.Builder table = io.trino.plugin.hive.metastore.Table.builder()
                 .setDatabaseName(schemaTableName.getSchemaName())
@@ -203,7 +203,7 @@ public class TrinoGalaxyCatalog
                 .setOwner(Optional.of("galaxy")) // not used by Galaxy
                 // Table needs to be EXTERNAL, otherwise table rename in HMS would rename table directory and break table contents.
                 .setTableType(TableType.EXTERNAL_TABLE.name())
-                .withStorage(storage -> storage.setLocation(tableLocation))
+                .withStorage(storage -> storage.setLocation(tableMetadata.location()))
                 .withStorage(storage -> storage.setStorageFormat(ICEBERG_METASTORE_STORAGE_FORMAT))
                 // This is a must-have property for the EXTERNAL_TABLE table type
                 .setParameter("EXTERNAL", "TRUE")
