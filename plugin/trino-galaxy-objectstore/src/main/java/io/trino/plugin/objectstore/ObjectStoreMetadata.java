@@ -427,7 +427,7 @@ public class ObjectStoreMetadata
         materializedView
                 .flatMap(ConnectorMaterializedViewDefinition::getStorageTable)
                 .map(CatalogSchemaTableName::getSchemaTableName)
-                .ifPresent(storageTable -> flushMetadataCache(storageTable));
+                .ifPresent(this::flushMetadataCache);
     }
 
     @Override
@@ -1341,7 +1341,6 @@ public class ObjectStoreMetadata
         switch (tableType) {
             case HIVE -> {
                 // Hive is the only connector using column properties
-                return;
             }
             case ICEBERG, DELTA, HUDI -> {
                 Set<String> columnProperties = columnMetadata.stream()
