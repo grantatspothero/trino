@@ -32,6 +32,9 @@ import io.trino.plugin.hive.HiveOutputTableHandle;
 import io.trino.plugin.hive.HivePartitioningHandle;
 import io.trino.plugin.hive.HiveTableExecuteHandle;
 import io.trino.plugin.hive.HiveTableHandle;
+import io.trino.plugin.hive.TransactionalMetadata;
+import io.trino.plugin.hive.metastore.SemiTransactionalHiveMetastore;
+import io.trino.plugin.hive.metastore.Table;
 import io.trino.plugin.hudi.HudiTableHandle;
 import io.trino.plugin.iceberg.CorruptedIcebergTableHandle;
 import io.trino.plugin.iceberg.IcebergFileFormat;
@@ -113,6 +116,12 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_UNSUPPORTED_FORMAT;
 import static io.trino.plugin.hive.HiveMetadata.MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE;
+import static io.trino.plugin.hive.ViewReaderUtil.isHiveOrPrestoView;
+import static io.trino.plugin.hive.ViewReaderUtil.isPrestoView;
+import static io.trino.plugin.hive.ViewReaderUtil.isTrinoMaterializedView;
+import static io.trino.plugin.hive.util.HiveUtil.isDeltaLakeTable;
+import static io.trino.plugin.hive.util.HiveUtil.isHudiTable;
+import static io.trino.plugin.hive.util.HiveUtil.isIcebergTable;
 import static io.trino.plugin.objectstore.ObjectStoreSessionProperties.getInformationSchemaQueriesAcceleration;
 import static io.trino.plugin.objectstore.TableType.DELTA;
 import static io.trino.plugin.objectstore.TableType.HIVE;
@@ -128,7 +137,7 @@ import static java.util.Objects.requireNonNull;
 public class ObjectStoreMetadata
         implements ConnectorMetadata
 {
-    private final ConnectorMetadata hiveMetadata;
+    private final TransactionalMetadata hiveMetadata;
     private final ConnectorMetadata icebergMetadata;
     private final ConnectorMetadata deltaMetadata;
     private final ConnectorMetadata hudiMetadata;
@@ -160,7 +169,7 @@ public class ObjectStoreMetadata
             TableTypeCache tableTypeCache,
             ExecutorService parallelInformationSchemaQueryingExecutor)
     {
-        this.hiveMetadata = requireNonNull(hiveMetadata, "hiveMetadata is null");
+        this.hiveMetadata = (TransactionalMetadata) requireNonNull(hiveMetadata, "hiveMetadata is null");
         this.icebergMetadata = requireNonNull(icebergMetadata, "icebergMetadata is null");
         this.deltaMetadata = requireNonNull(deltaMetadata, "deltaMetadata is null");
         this.hudiMetadata = requireNonNull(hudiMetadata, "hudiMetadata is null");
@@ -582,6 +591,72 @@ public class ObjectStoreMetadata
                         }
                     }
                 });
+            }
+
+            case V2 -> {
+                List<SchemaTableName> relations = prefix.toOptionalSchemaTableName()
+                        .map(List::of)
+                        .orElseGet(() -> listTables(session, prefix.getSchema()));
+
+                ConnectorSession hiveSession = unwrap(HIVE, session);
+                ConnectorSession icebergSession = unwrap(ICEBERG, session);
+                ConnectorSession deltaSession = unwrap(DELTA, session);
+
+                SemiTransactionalHiveMetastore metastore = hiveMetadata.getMetastore();
+
+                // TODO parallel and/or bulk
+                Map<SchemaTableName, TableColumnsMetadata> tables = new HashMap<>();
+                for (SchemaTableName relation : relations) {
+                    Optional<Table> metastoreTable = metastore.getTable(relation.getSchemaName(), relation.getTableName());
+                    if (metastoreTable.isEmpty()) {
+                        // Perhaps disappeared during listing or prefix points at a table that does not exist
+                        continue;
+                    }
+
+                    Table table = metastoreTable.get();
+                    boolean trinoMaterializedView = isTrinoMaterializedView(table);
+                    boolean trinoView = !trinoMaterializedView && isPrestoView(table);
+                    boolean hiveView = !trinoMaterializedView && !trinoView && isHiveOrPrestoView(table);
+
+                    if (trinoView || trinoMaterializedView) {
+                        // streamTableColumns does not include views and materialized views.
+                        // When Hive view translation is not enabled, they are treated as unusable tables, which is kind of useless.
+                        continue;
+                    }
+                    if (hiveView) {
+                        // `hive.hive-views.enabled` is conditional in Galaxy, so we don't know whether this is "a table" (and returned) or "a view" (and ignored)
+                        hiveMetadata.streamTableColumns(hiveSession, new SchemaTablePrefix(relation.getSchemaName(), relation.getTableName()))
+                                .forEachRemaining(metadata -> tables.put(metadata.getTable(), metadata));
+                        continue;
+                    }
+
+                    boolean icebergTable = isIcebergTable(table);
+                    boolean deltaLakeTable = isDeltaLakeTable(table);
+                    boolean hudiTable = isHudiTable(table);
+                    boolean hiveTable = !(icebergTable || deltaLakeTable || hudiTable);
+
+                    if (hiveTable || hudiTable) {
+                        hiveMetadata.streamTableColumns(hiveSession, new SchemaTablePrefix(relation.getSchemaName(), relation.getTableName()))
+                                .forEachRemaining(metadata -> tables.put(metadata.getTable(), metadata));
+                    }
+                    else if (icebergTable) {
+                        // TODO (https://github.com/starburstdata/galaxy-trino/issues/818) skip IcebergMetadata's metastore call
+                        //  - pull cached column name/types/comments information directly from the table object, i.e. leverage wonders of https://github.com/trinodb/trino/pull/18315
+                        //  - otherwise load Iceberg table from it's location, without going to metastore again
+                        icebergMetadata.streamTableColumns(icebergSession, new SchemaTablePrefix(relation.getSchemaName(), relation.getTableName()))
+                                .forEachRemaining(metadata -> tables.put(metadata.getTable(), metadata));
+                    }
+                    else {
+                        //noinspection ConstantConditions
+                        verify(deltaLakeTable);
+                        // TODO (https://github.com/starburstdata/galaxy-trino/issues/818) skip DeltaMetadata's metastore call. Ideally by sharing CachingHiveMetastore between metadatas within transaction,
+                        //  or by injecting into the cache here, or by going directly to transaction log access
+                        deltaMetadata.streamTableColumns(deltaSession, new SchemaTablePrefix(relation.getSchemaName(), relation.getTableName()))
+                                .forEachRemaining(metadata -> tables.put(metadata.getTable(), metadata));
+                    }
+                }
+
+                yield tables.values().iterator();
             }
         };
     }
@@ -1093,12 +1168,6 @@ public class ObjectStoreMetadata
     public Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
     {
         return delegate(tableType(tableHandle)).getCacheColumnId(tableHandle, columnHandle);
-    }
-
-    @Override
-    public ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle tableHandle)
-    {
-        return delegate(tableType(tableHandle)).getCanonicalTableHandle(tableHandle);
     }
 
     private void flushMetadataCache()

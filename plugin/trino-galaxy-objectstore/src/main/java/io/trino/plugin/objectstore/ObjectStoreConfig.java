@@ -28,6 +28,11 @@ public class ObjectStoreConfig
          * Query underlying connectors in parallel
          */
         V1,
+
+        /**
+         * Query iterating over table listing once.
+         */
+        V2,
     }
 
     private TableType tableType = TableType.HIVE;

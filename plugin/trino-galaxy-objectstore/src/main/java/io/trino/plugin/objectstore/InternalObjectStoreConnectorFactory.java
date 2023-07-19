@@ -38,6 +38,7 @@ import io.trino.spi.connector.ConnectorNodePartitioningProvider;
 import io.trino.spi.connector.ConnectorPageSinkProvider;
 import io.trino.spi.connector.ConnectorPageSourceProvider;
 import io.trino.spi.connector.ConnectorSplitManager;
+import io.trino.spi.type.TypeManager;
 
 import java.lang.annotation.Annotation;
 import java.util.HashMap;
@@ -130,6 +131,7 @@ public final class InternalObjectStoreConnectorFactory
                     new HdfsAuthenticationModule(),
                     new HdfsFileSystemModule(),
                     binder -> {
+                        binder.bind(TypeManager.class).toInstance(context.getTypeManager());
                         binder.bind(OpenTelemetry.class).toInstance(context.getOpenTelemetry());
                         binder.bind(Tracer.class).toInstance(context.getTracer());
                     });
