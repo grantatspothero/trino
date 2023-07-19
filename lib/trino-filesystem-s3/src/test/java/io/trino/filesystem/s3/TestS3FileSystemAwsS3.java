@@ -14,12 +14,17 @@
 package io.trino.filesystem.s3;
 
 import io.airlift.units.DataSize;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
+import io.trino.spi.connector.CatalogHandle;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
 import static java.util.Objects.requireNonNull;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestS3FileSystemAwsS3
         extends AbstractTestS3FileSystem
@@ -32,10 +37,12 @@ public class TestS3FileSystemAwsS3
     @Override
     protected void initEnvironment()
     {
+        assertThat(System.getenv("EMPTY_S3_BUCKET")).isEqualTo("todo");
+        assumeTrue(false);
         accessKey = environmentVariable("AWS_ACCESS_KEY_ID");
         secretKey = environmentVariable("AWS_SECRET_ACCESS_KEY");
         region = environmentVariable("AWS_REGION");
-        bucket = environmentVariable("S3_BUCKET");
+        bucket = environmentVariable("EMPTY_S3_BUCKET");
     }
 
     @Override
@@ -60,7 +67,10 @@ public class TestS3FileSystemAwsS3
                 .setAwsAccessKey(accessKey)
                 .setAwsSecretKey(secretKey)
                 .setRegion(region)
-                .setStreamingPartSize(DataSize.valueOf("5.5MB")));
+                .setStreamingPartSize(DataSize.valueOf("5.5MB")),
+                CatalogHandle.fromId("catalog:normal:1"),
+                new LocalRegionConfig(),
+                new CrossRegionConfig());
     }
 
     private static String environmentVariable(String name)

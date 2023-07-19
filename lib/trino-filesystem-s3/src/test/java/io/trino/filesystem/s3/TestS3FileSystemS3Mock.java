@@ -15,6 +15,9 @@ package io.trino.filesystem.s3;
 
 import com.adobe.testing.s3mock.testcontainers.S3MockContainer;
 import io.airlift.units.DataSize;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
+import io.trino.spi.connector.CatalogHandle;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -61,6 +64,9 @@ public class TestS3FileSystemS3Mock
                 .setEndpoint(S3_MOCK.getHttpEndpoint())
                 .setRegion(Region.US_EAST_1.id())
                 .setPathStyleAccess(true)
-                .setStreamingPartSize(DataSize.valueOf("5.5MB")));
+                .setStreamingPartSize(DataSize.valueOf("5.5MB")),
+                CatalogHandle.fromId("catalog:normal:1"),
+                new LocalRegionConfig(),
+                new CrossRegionConfig());
     }
 }

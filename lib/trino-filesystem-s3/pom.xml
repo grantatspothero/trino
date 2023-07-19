@@ -49,6 +49,11 @@
 
         <dependency>
             <groupId>io.trino</groupId>
+            <artifactId>trino-plugin-toolkit</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
             <artifactId>trino-spi</artifactId>
         </dependency>
 
@@ -60,6 +65,24 @@
         <dependency>
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.13</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore</artifactId>
+            <version>4.4.13</version>
         </dependency>
 
         <dependency>
@@ -120,14 +143,20 @@
         </dependency>
 
         <dependency>
-            <groupId>com.adobe.testing</groupId>
-            <artifactId>s3mock-testcontainers</artifactId>
-            <scope>test</scope>
+            <groupId>io.airlift</groupId>
+            <artifactId>log-manager</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <dependency>
             <groupId>io.airlift</groupId>
-            <artifactId>log-manager</artifactId>
+            <artifactId>slice</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.adobe.testing</groupId>
+            <artifactId>s3mock-testcontainers</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -195,6 +224,7 @@
                         <configuration>
                             <excludes>
                                 <exclude>**/TestS3FileSystemAwsS3.java</exclude>
+                                <exclude>**/TestS3FileSystemNetworkTracking.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -212,6 +242,7 @@
                         <configuration>
                             <includes>
                                 <include>**/TestS3FileSystemAwsS3.java</include>
+                                <include>**/TestS3FileSystemNetworkTracking.java</include>
                             </includes>
                         </configuration>
                     </plugin>

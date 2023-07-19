@@ -16,6 +16,12 @@ package io.trino.filesystem.s3;
 import com.google.inject.Inject;
 import io.trino.filesystem.TrinoFileSystem;
 import io.trino.filesystem.TrinoFileSystemFactory;
+import io.trino.filesystem.s3.galaxy.GalaxyS3ConnectionSocketFactory;
+import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
+import io.trino.plugin.base.galaxy.RegionVerifierProperties;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.security.ConnectorIdentity;
 import jakarta.annotation.PreDestroy;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -31,6 +37,7 @@ import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider
 
 import java.net.URI;
 import java.util.Optional;
+import java.util.Properties;
 
 import static java.lang.Math.toIntExact;
 
@@ -41,7 +48,7 @@ public final class S3FileSystemFactory
     private final S3Context context;
 
     @Inject
-    public S3FileSystemFactory(S3FileSystemConfig config)
+    public S3FileSystemFactory(S3FileSystemConfig config, CatalogHandle catalogHandle, LocalRegionConfig localRegionConfig, CrossRegionConfig crossRegionConfig)
     {
         S3ClientBuilder s3 = S3Client.builder();
 
@@ -71,7 +78,14 @@ public final class S3FileSystemFactory
                     .build());
         }
 
+        Properties connectionProperties = new Properties();
+        RegionVerifierProperties.addRegionVerifierProperties(connectionProperties::setProperty, RegionVerifierProperties.generateFrom(localRegionConfig, crossRegionConfig));
+        CatalogNetworkMonitorProperties catalogNetworkMonitorProperties = CatalogNetworkMonitorProperties.generateFrom(crossRegionConfig, catalogHandle)
+                .withTlsEnabled(true);
+        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(connectionProperties::setProperty, catalogNetworkMonitorProperties);
+
         ApacheHttpClient.Builder httpClient = ApacheHttpClient.builder()
+                .socketFactory(new GalaxyS3ConnectionSocketFactory(connectionProperties))
                 .maxConnections(config.getMaxConnections());
 
         if (config.getHttpProxy() != null) {

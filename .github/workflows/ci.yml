@@ -778,18 +778,19 @@ jobs:
         if: contains(matrix.modules, 'trino-hdfs')
         run: |
           $MAVEN test ${MAVEN_TEST} -pl :trino-hdfs -P test-isolated-jvm-suites
-      # TODO: re-enable these tests: https://github.com/starburstdata/galaxy-trino/issues/771
-#      - name: S3 FileSystem Cloud Tests
-#        env:
-#          AWS_ACCESS_KEY_ID: ${{ secrets.TRINO_AWS_ACCESS_KEY_ID }}
-#          AWS_SECRET_ACCESS_KEY: ${{ secrets.TRINO_AWS_SECRET_ACCESS_KEY }}
-#          AWS_REGION: us-east-2
-#          S3_BUCKET: trino-ci-s3fs-test
-#        if: >-
-#          contains(matrix.modules, 'trino-filesystem-s3') && contains(matrix.profile, 'cloud-tests') &&
-#          (env.CI_SKIP_SECRETS_PRESENCE_CHECKS != '' || env.AWS_ACCESS_KEY_ID != '' || env.AWS_SECRET_ACCESS_KEY != '')
-#        run: |
-#          $MAVEN test ${MAVEN_TEST} -pl ${{ matrix.modules }} ${{ format('-P {0}', matrix.profile) }}
+      - name: S3 FileSystem Cloud Tests
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.GALAXY_TRINO_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.GALAXY_TRINO_AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.TRINO_AWS_REGION }}
+          S3_BUCKET: ${{ vars.TRINO_S3_BUCKET }}
+        # TODO: enable remaining s3 filesystem cloud tests https://github.com/starburstdata/galaxy-trino/issues/771
+          EMPTY_S3_BUCKET: todo
+        if: >-
+          contains(matrix.modules, 'trino-filesystem-s3') && contains(matrix.profile, 'cloud-tests') &&
+          (env.CI_SKIP_SECRETS_PRESENCE_CHECKS != '' || env.AWS_ACCESS_KEY_ID != '' || env.AWS_SECRET_ACCESS_KEY != '')
+        run: |
+          $MAVEN test ${MAVEN_TEST} -pl ${{ matrix.modules }} ${{ format('-P {0}', matrix.profile) }}
       - name: Cloud Object Store Tests
         # Cloud tests are separate because they are time intensive, requiring cross-cloud network communication
         env:

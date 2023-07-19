@@ -59,8 +59,10 @@ public abstract class AbstractTestS3FileSystem
     final void cleanup()
     {
         fileSystem = null;
-        fileSystemFactory.destroy();
-        fileSystemFactory = null;
+        if (fileSystemFactory != null) {
+            fileSystemFactory.destroy();
+            fileSystemFactory = null;
+        }
     }
 
     /**

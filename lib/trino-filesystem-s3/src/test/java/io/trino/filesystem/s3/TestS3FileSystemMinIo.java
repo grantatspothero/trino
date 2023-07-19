@@ -14,6 +14,9 @@
 package io.trino.filesystem.s3;
 
 import io.airlift.units.DataSize;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.testing.containers.Minio;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -78,7 +81,10 @@ public class TestS3FileSystemMinIo
                 .setPathStyleAccess(true)
                 .setAwsAccessKey(Minio.MINIO_ACCESS_KEY)
                 .setAwsSecretKey(Minio.MINIO_SECRET_KEY)
-                .setStreamingPartSize(DataSize.valueOf("5.5MB")));
+                .setStreamingPartSize(DataSize.valueOf("5.5MB")),
+                CatalogHandle.fromId("catalog:normal:1"),
+                new LocalRegionConfig(),
+                new CrossRegionConfig());
     }
 
     @Test
