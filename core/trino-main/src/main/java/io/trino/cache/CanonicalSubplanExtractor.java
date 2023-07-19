@@ -25,6 +25,7 @@ import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.sql.planner.Symbol;
 import io.trino.sql.planner.optimizations.SymbolMapper;
+import io.trino.sql.planner.plan.ChooseAlternativeNode;
 import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.PlanNode;
 import io.trino.sql.planner.plan.PlanVisitor;
@@ -76,6 +77,13 @@ public final class CanonicalSubplanExtractor
         protected Optional<CanonicalSubplan> visitPlan(PlanNode node, Void context)
         {
             node.getSources().forEach(this::canonicalizeRecursively);
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<CanonicalSubplan> visitChooseAlternativeNode(ChooseAlternativeNode node, Void context)
+        {
+            // do not canonicalize plans that already contain alternative
             return Optional.empty();
         }
 
