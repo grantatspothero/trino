@@ -2569,16 +2569,6 @@ public abstract class AbstractTestHive
     }
 
     @Test
-    public void testHiveViewsHaveNoColumns()
-    {
-        try (Transaction transaction = newTransaction()) {
-            ConnectorMetadata metadata = transaction.getMetadata();
-            assertThat(listTableColumns(metadata, newSession(), new SchemaTablePrefix(view.getSchemaName(), view.getTableName())))
-                    .isEmpty();
-        }
-    }
-
-    @Test
     public void testRenameTable()
     {
         SchemaTableName temporaryRenameTableOld = temporaryTable("rename_old");
@@ -3525,7 +3515,7 @@ public abstract class AbstractTestHive
         }
     }
 
-    private static Map<SchemaTableName, List<ColumnMetadata>> listTableColumns(ConnectorMetadata metadata, ConnectorSession session, SchemaTablePrefix prefix)
+    protected static Map<SchemaTableName, List<ColumnMetadata>> listTableColumns(ConnectorMetadata metadata, ConnectorSession session, SchemaTablePrefix prefix)
     {
         return stream(metadata.streamTableColumns(session, prefix))
                 .collect(toImmutableMap(
