@@ -1025,6 +1025,12 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
+    public void testProjectionPushdownWithHighlyNestedData()
+    {
+        skipDuplicateTestCoverage("testProjectionPushdownWithHighlyNestedData");
+    }
+
+    @Override
     public void testProjectionWithCaseSensitiveField()
     {
         skipDuplicateTestCoverage("testProjectionWithCaseSensitiveField");
@@ -1040,12 +1046,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     public void testRangePredicate()
     {
         skipDuplicateTestCoverage("testRangePredicate");
-    }
-
-    @Override
-    public void testProjectionPushdownWithHighlyNestedData()
-    {
-        skipDuplicateTestCoverage("testProjectionPushdownWithHighlyNestedData");
     }
 
     @Override

@@ -949,6 +949,12 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
+    public void testProjectionPushdownWithHighlyNestedData()
+    {
+        skipDuplicateTestCoverage("testProjectionPushdownWithHighlyNestedData");
+    }
+
+    @Override
     public void testProjectionWithCaseSensitiveField()
     {
         skipDuplicateTestCoverage("testProjectionWithCaseSensitiveField");
@@ -964,12 +970,6 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     public void testRangePredicate()
     {
         skipDuplicateTestCoverage("testRangePredicate");
-    }
-
-    @Override
-    public void testProjectionPushdownWithHighlyNestedData()
-    {
-        skipDuplicateTestCoverage("testProjectionPushdownWithHighlyNestedData");
     }
 
     @Override
