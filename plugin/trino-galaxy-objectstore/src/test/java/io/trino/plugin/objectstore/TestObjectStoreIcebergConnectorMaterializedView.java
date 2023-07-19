@@ -134,4 +134,35 @@ public class TestObjectStoreIcebergConnectorMaterializedView
 
         getQueryRunner().execute("DROP SCHEMA %s".formatted(schemaForDroppedMaterializedView));
     }
+
+    @Test
+    public void testMaterializedViewPermissions()
+    {
+        String materializedViewName = "test_materialized_view_permission_" + randomNameSuffix();
+        String tableName = "test_materialized_table_" + randomNameSuffix();
+
+        computeActual("CREATE TABLE " + tableName + " (a varchar)");
+        assertUpdate("INSERT INTO " + tableName + " VALUES '42'", 1);
+        assertUpdate("INSERT INTO " + tableName + " VALUES '45'", 1);
+        computeActual("CREATE MATERIALIZED VIEW " + materializedViewName + " AS SELECT * FROM " + tableName);
+        assertQuery("SELECT * FROM " + materializedViewName, "VALUES 42, 45");
+        assertQueryFails(galaxyTestHelper.publicSession(), "SELECT * FROM " + String.format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
+        assertQueryFails(galaxyTestHelper.publicSession(), "SELECT 1 FROM " + String.format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
+    }
+
+    @Test
+    public void testRefreshedMaterializedViewPermissions()
+    {
+        String materializedViewName = "test_refreshed_materialized_view_permission_" + randomNameSuffix();
+        String tableName = "test_materialized_table_" + randomNameSuffix();
+
+        computeActual("CREATE TABLE " + tableName + " (a varchar)");
+        assertUpdate("INSERT INTO " + tableName + " VALUES '42'", 1);
+        assertUpdate("INSERT INTO " + tableName + " VALUES '45'", 1);
+        computeActual("CREATE MATERIALIZED VIEW " + materializedViewName + " AS SELECT * FROM " + tableName);
+        computeActual("REFRESH MATERIALIZED VIEW " + materializedViewName);
+        assertQuery("SELECT * FROM " + materializedViewName, "VALUES 42, 45");
+        assertQueryFails(galaxyTestHelper.publicSession(), "SELECT * FROM " + String.format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
+        assertQueryFails(galaxyTestHelper.publicSession(), "SELECT 1 FROM " + String.format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
+    }
 }
