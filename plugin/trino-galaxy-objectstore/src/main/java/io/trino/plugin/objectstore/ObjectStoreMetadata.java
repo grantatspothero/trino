@@ -1027,6 +1027,12 @@ public class ObjectStoreMetadata
         return delegate(tableType(tableHandle)).getCacheColumnId(tableHandle, columnHandle);
     }
 
+    @Override
+    public ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle tableHandle)
+    {
+        return delegate(tableType(tableHandle)).getCanonicalTableHandle(tableHandle);
+    }
+
     private void flushMetadataCache()
     {
         try {

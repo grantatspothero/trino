@@ -74,6 +74,7 @@ public final class ObjectStoreQueryRunner
         private Plugin objectStorePlugin = new ObjectStorePlugin();
         private Map<String, String> extraObjectStoreProperties = ImmutableMap.of();
         private Map<String, String> coordinatorProperties = ImmutableMap.of();
+        private Map<String, String> extraProperties = ImmutableMap.of();
         private MockConnectorPlugin mockConnectorPlugin;
         private TestingAccountClient accountClient;
 
@@ -165,6 +166,13 @@ public final class ObjectStoreQueryRunner
         }
 
         @CanIgnoreReturnValue
+        public Builder withExtraProperties(Map<String, String> properties)
+        {
+            this.extraProperties = properties;
+            return this;
+        }
+
+        @CanIgnoreReturnValue
         public Builder withAccountClient(TestingAccountClient accountClient)
         {
             this.accountClient = accountClient;
@@ -191,6 +199,7 @@ public final class ObjectStoreQueryRunner
                 GalaxyQueryRunner.Builder builder = GalaxyQueryRunner.builder(catalogName, schemaName);
                 builder.setNodeCount(3);
                 builder.setCoordinatorProperties(coordinatorProperties);
+                builder.setExtraProperties(extraProperties);
                 builder.addPlugin(new TpchPlugin());
                 builder.addCatalog(TPCH_SCHEMA, TPCH_SCHEMA, ImmutableMap.of());
                 builder.addPlugin(objectStorePlugin);
