@@ -89,7 +89,7 @@ public record MockPlanAlternativeTableHandle(ConnectorTableHandle delegate, Colu
                 for (int i = 0; i < values.getPositionCount(); i++) {
                     int leftLength = block.getSliceLength(position);
                     int rightLength = values.getSliceLength(i);
-                    if (leftLength == rightLength && block.equals(position, 0, values, i, 0, rightLength)) {
+                    if (leftLength == rightLength && block.getSlice(position, 0, leftLength).equals(values.getSlice(i, 0, rightLength))) {
                         return true;
                     }
                 }
