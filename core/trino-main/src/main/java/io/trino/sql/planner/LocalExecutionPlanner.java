@@ -622,7 +622,7 @@ public class LocalExecutionPlanner
             // Keep the task bucket count to 50% of total local writers
             int taskBucketCount = (int) ceil(0.5 * partitionedWriterCount);
             skewedPartitionRebalancer = Optional.of(new SkewedPartitionRebalancer(
-                    partitionFunction.getPartitionCount(),
+                    partitionFunction.partitionCount(),
                     taskCount,
                     taskBucketCount,
                     getWriterScalingMinDataProcessed(taskContext.getSession()).toBytes(),
