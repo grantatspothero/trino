@@ -22,6 +22,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
 import com.google.inject.Inject;
 import io.airlift.bootstrap.LifeCycleManager;
+import io.trino.plugin.base.classloader.ClassLoaderSafeConnectorMetadata;
 import io.trino.plugin.hive.HiveConnector;
 import io.trino.plugin.hive.HiveTransactionHandle;
 import io.trino.plugin.iceberg.IcebergFileFormat;
@@ -338,20 +339,23 @@ public class ObjectStoreConnector
         ConnectorMetadata deltaMetadata = deltaConnector.getMetadata(session, handle.getDeltaHandle());
         ConnectorMetadata hudiMetadata = hudiConnector.getMetadata(session, handle.getHudiHandle());
 
-        return new ObjectStoreMetadata(
-                hiveMetadata,
-                icebergMetadata,
-                deltaMetadata,
-                hudiMetadata,
-                tableProperties,
-                materializedViewProperties,
-                sessionProperties,
-                flushMetadataCache,
-                migrateHiveToIcebergProcedure,
-                hiveRecursiveDirWalkerEnabled,
-                defaultIcebergFileFormat,
-                tableTypeCache,
-                parallelInformationSchemaQueryingExecutor);
+        return new ClassLoaderSafeConnectorMetadata(
+                new ObjectStoreMetadata(
+                        // It's enough to have ClassLoaderSafeConnectorMetadata once (outside of ObjectStoreMetadata). All delegates share same classloader.
+                        ((ClassLoaderSafeConnectorMetadata) hiveMetadata).unwrap(),
+                        ((ClassLoaderSafeConnectorMetadata) icebergMetadata).unwrap(),
+                        ((ClassLoaderSafeConnectorMetadata) deltaMetadata).unwrap(),
+                        ((ClassLoaderSafeConnectorMetadata) hudiMetadata).unwrap(),
+                        tableProperties,
+                        materializedViewProperties,
+                        sessionProperties,
+                        flushMetadataCache,
+                        migrateHiveToIcebergProcedure,
+                        hiveRecursiveDirWalkerEnabled,
+                        defaultIcebergFileFormat,
+                        tableTypeCache,
+                        parallelInformationSchemaQueryingExecutor),
+                getClass().getClassLoader());
     }
 
     @Override
