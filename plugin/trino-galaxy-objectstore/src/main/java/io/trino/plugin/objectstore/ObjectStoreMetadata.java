@@ -327,9 +327,10 @@ public class ObjectStoreMetadata
     @Override
     public Optional<SystemTable> getSystemTable(ConnectorSession session, SchemaTableName tableName)
     {
-        // Delta Lake does not have system tables
         return getHiveSystemTable(session, tableName).or(() ->
-                getIcebergSystemTable(session, tableName));
+                getIcebergSystemTable(session, tableName)).or(() ->
+                getDeltaLakeSystemTable(session, tableName)).or(() ->
+                getHudiSystemTable(session, tableName));
     }
 
     private Optional<SystemTable> getHiveSystemTable(ConnectorSession session, SchemaTableName tableName)
@@ -349,6 +350,32 @@ public class ObjectStoreMetadata
     {
         try {
             return icebergMetadata.getSystemTable(unwrap(ICEBERG, session), tableName);
+        }
+        catch (TrinoException e) {
+            if (isError(e, UNSUPPORTED_TABLE_TYPE, NOT_SUPPORTED)) {
+                return Optional.empty();
+            }
+            throw e;
+        }
+    }
+
+    private Optional<SystemTable> getDeltaLakeSystemTable(ConnectorSession session, SchemaTableName tableName)
+    {
+        try {
+            return deltaMetadata.getSystemTable(unwrap(DELTA, session), tableName);
+        }
+        catch (TrinoException e) {
+            if (isError(e, UNSUPPORTED_TABLE_TYPE, NOT_SUPPORTED)) {
+                return Optional.empty();
+            }
+            throw e;
+        }
+    }
+
+    private Optional<SystemTable> getHudiSystemTable(ConnectorSession session, SchemaTableName tableName)
+    {
+        try {
+            return hudiMetadata.getSystemTable(unwrap(HUDI, session), tableName);
         }
         catch (TrinoException e) {
             if (isError(e, UNSUPPORTED_TABLE_TYPE, NOT_SUPPORTED)) {

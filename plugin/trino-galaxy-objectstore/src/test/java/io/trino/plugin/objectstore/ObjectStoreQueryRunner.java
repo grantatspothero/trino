@@ -51,8 +51,8 @@ import static org.apache.hudi.common.model.HoodieTableType.COPY_ON_WRITE;
 
 public final class ObjectStoreQueryRunner
 {
-    private static final String CATALOG = "objectstore";
-    private static final String TPCH_SCHEMA = "tpch";
+    public static final String CATALOG = "objectstore";
+    public static final String TPCH_SCHEMA = "tpch";
 
     private ObjectStoreQueryRunner() {}
 
