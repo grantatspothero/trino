@@ -66,6 +66,8 @@ public class TestCanonicalSubplanExtractor
 {
     private static final Session TEST_SESSION = testSessionBuilder().build();
     private static final CacheTableId CACHE_TABLE_ID = new CacheTableId("cache_table_id");
+    private static final String CATALOG_ID = TEST_TABLE_HANDLE.getCatalogHandle().getId();
+    private static final CacheTableId CATALOG_CACHE_TABLE_ID = new CacheTableId(CATALOG_ID + ":" + CACHE_TABLE_ID);
     private static final Metadata TEST_METADATA = new TestMetadata();
 
     private PlanBuilder planBuilder;
@@ -101,7 +103,7 @@ public class TestCanonicalSubplanExtractor
         assertThat(subplan.getColumnHandles()).containsExactly(
                 new SimpleEntry<>(new CacheColumnId("cache_column1"), new TestingColumnHandle("column1")),
                 new SimpleEntry<>(new CacheColumnId("cache_column2"), new TestingColumnHandle("column2")));
-        assertThat(subplan.getTableId()).isEqualTo(CACHE_TABLE_ID);
+        assertThat(subplan.getTableId()).isEqualTo(CATALOG_CACHE_TABLE_ID);
         assertThat(subplan.getTable()).isEqualTo(TEST_TABLE_HANDLE);
     }
 
@@ -137,7 +139,7 @@ public class TestCanonicalSubplanExtractor
         assertThat(subplan.getColumnHandles()).containsExactly(
                 new SimpleEntry<>(new CacheColumnId("cache_column1"), new TestingColumnHandle("column1")),
                 new SimpleEntry<>(new CacheColumnId("cache_column2"), new TestingColumnHandle("column2")));
-        assertThat(subplan.getTableId()).isEqualTo(CACHE_TABLE_ID);
+        assertThat(subplan.getTableId()).isEqualTo(CATALOG_CACHE_TABLE_ID);
         assertThat(subplan.getTable()).isEqualTo(TEST_TABLE_HANDLE);
     }
 
@@ -172,7 +174,7 @@ public class TestCanonicalSubplanExtractor
         assertThat(subplan.getColumnHandles()).containsExactly(
                 new SimpleEntry<>(new CacheColumnId("cache_column1"), new TestingColumnHandle("column1")),
                 new SimpleEntry<>(new CacheColumnId("cache_column2"), new TestingColumnHandle("column2")));
-        assertThat(subplan.getTableId()).isEqualTo(CACHE_TABLE_ID);
+        assertThat(subplan.getTableId()).isEqualTo(CATALOG_CACHE_TABLE_ID);
         assertThat(subplan.getTable()).isEqualTo(TEST_TABLE_HANDLE);
     }
 
@@ -213,7 +215,7 @@ public class TestCanonicalSubplanExtractor
         assertThat(subplan.getColumnHandles()).containsExactly(
                 new SimpleEntry<>(new CacheColumnId("cache_column1"), new TestingColumnHandle("column1")),
                 new SimpleEntry<>(new CacheColumnId("cache_column2"), new TestingColumnHandle("column2")));
-        assertThat(subplan.getTableId()).isEqualTo(CACHE_TABLE_ID);
+        assertThat(subplan.getTableId()).isEqualTo(CATALOG_CACHE_TABLE_ID);
         assertThat(subplan.getTable()).isEqualTo(TEST_TABLE_HANDLE);
     }
 
@@ -237,7 +239,8 @@ public class TestCanonicalSubplanExtractor
                 TEST_SESSION,
                 root);
         List<CacheTableId> tableIds = canonicalSubplans.stream().map(CanonicalSubplan::getTableId).toList();
-        assertThat(tableIds).isEqualTo(ImmutableList.of(new CacheTableId("schema.common"), new CacheTableId("schema.common")));
+        CacheTableId schemaCommonId = new CacheTableId(CATALOG_ID + ":schema.common");
+        assertThat(tableIds).isEqualTo(ImmutableList.of(schemaCommonId, schemaCommonId));
         assertThat(canonicalSubplans).allMatch(subplan -> subplan.getTable().equals(canonicalTableHandle));
 
         // TableHandles will not be turned into common canonical version
@@ -255,7 +258,9 @@ public class TestCanonicalSubplanExtractor
                         (tableHandle) -> Optional.of(new CacheTableId(tableHandle.getConnectorHandle().toString()))),
                 TEST_SESSION,
                 root).stream().map(CanonicalSubplan::getTableId).toList();
-        assertThat(tableIds).isEqualTo(ImmutableList.of(new CacheTableId("schema.common1"), new CacheTableId("schema.common2")));
+        assertThat(tableIds).isEqualTo(ImmutableList.of(
+                new CacheTableId(CATALOG_ID + ":schema.common1"),
+                new CacheTableId(CATALOG_ID + ":schema.common2")));
     }
 
     private ProjectNode createScanAndProjectNode()

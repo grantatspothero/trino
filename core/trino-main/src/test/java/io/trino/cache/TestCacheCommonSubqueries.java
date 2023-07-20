@@ -69,6 +69,8 @@ public class TestCacheCommonSubqueries
     private static final CacheColumnId NATIONKEY_COLUMN_ID = new CacheColumnId("nationkey:bigint");
     private static final CacheColumnId REGIONKEY_COLUMN_ID = new CacheColumnId("regionkey:bigint");
 
+    private String testCatalogId;
+
     @Override
     protected LocalQueryRunner createLocalQueryRunner()
     {
@@ -81,6 +83,8 @@ public class TestCacheCommonSubqueries
         queryRunner.createCatalog(queryRunner.getDefaultSession().getCatalog().get(),
                 new TpchConnectorFactory(1, false),
                 ImmutableMap.of());
+        testCatalogId = queryRunner.getCatalogHandle(TEST_SESSION.getCatalog().orElseThrow()).getId();
+
         return queryRunner;
     }
 
@@ -88,7 +92,7 @@ public class TestCacheCommonSubqueries
     public void testCacheCommonSubqueries()
     {
         PlanSignature signature = new PlanSignature(
-                new SignatureKey("tiny:nation:0.01"),
+                new SignatureKey(testCatalogId + ":tiny:nation:0.01"),
                 Optional.empty(),
                 ImmutableList.of(REGIONKEY_COLUMN_ID, NATIONKEY_COLUMN_ID),
                 TupleDomain.withColumnDomains(ImmutableMap.of(
@@ -139,7 +143,7 @@ public class TestCacheCommonSubqueries
     public void testJoinQuery()
     {
         PlanSignature signature = new PlanSignature(
-                new SignatureKey("tiny:nation:0.01"),
+                new SignatureKey(testCatalogId + ":tiny:nation:0.01"),
                 Optional.empty(),
                 ImmutableList.of(NATIONKEY_COLUMN_ID, REGIONKEY_COLUMN_ID),
                 TupleDomain.all(),

@@ -270,7 +270,7 @@ public class TestCommonSubqueriesExtractor
         // make sure plan signatures are same
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(subqueryB.getCommonSubplanSignature());
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
-                new SignatureKey("cache_table_id:(((\"cache_column1\" % 4) = BIGINT '0') OR ((\"cache_column2\" % 2) = BIGINT '0'))"),
+                new SignatureKey(testTableHandle.getCatalogHandle().getId() + ":cache_table_id:(((\"cache_column1\" % 4) = BIGINT '0') OR ((\"cache_column2\" % 2) = BIGINT '0'))"),
                 Optional.empty(),
                 ImmutableList.of(new CacheColumnId("(\"cache_column1\" * 10)"), new CacheColumnId("cache_column1")),
                 TupleDomain.all(),
@@ -356,7 +356,7 @@ public class TestCommonSubqueriesExtractor
                 new CacheColumnId("cache_column1"), Domain.create(expectedValues, false)));
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(subqueryB.getCommonSubplanSignature());
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
-                new SignatureKey("cache_table_id"),
+                new SignatureKey(testTableHandle.getCatalogHandle().getId() + ":cache_table_id"),
                 Optional.empty(),
                 ImmutableList.of(new CacheColumnId("cache_column1")),
                 expectedTupleDomain,
@@ -444,7 +444,7 @@ public class TestCommonSubqueriesExtractor
         // make sure plan signatures are same and contain domain
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(subqueryB.getCommonSubplanSignature());
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
-                new SignatureKey("cache_table_id"),
+                new SignatureKey(testTableHandle.getCatalogHandle().getId() + ":cache_table_id"),
                 Optional.empty(),
                 ImmutableList.of(new CacheColumnId("cache_column1"), new CacheColumnId("cache_column2")),
                 TupleDomain.all(),
