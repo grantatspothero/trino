@@ -277,4 +277,7 @@ class TestingSystemSecurityMetadata
     {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public void finishStatisticsCollection(Session session, CatalogSchemaTableName table) {}
 }

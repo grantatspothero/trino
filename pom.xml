@@ -196,7 +196,7 @@
         <!-- using PR version as schema discovery is on trino 422 already, and we needed to backport bugfix on 421, take version from master once update to 422 happens -->
         <dep.schema-discovery.version>421.pr115-2ff28ec</dep.schema-discovery.version>
         <!-- released from https://github.com/starburstdata/stargate -->
-        <dep.stargate.version>stargate-9780-gbc737b5d0</dep.stargate.version>
+        <dep.stargate.version>stargate-9856-gb397ad260</dep.stargate.version>
         <!-- released from https://github.com/starburstdata/starburst-trino-plugins -->
         <dep.starburst-trino-plugins.version>421</dep.starburst-trino-plugins.version>
         <dep.cloudevents.version>2.2.0</dep.cloudevents.version>

@@ -240,6 +240,12 @@ public class MetadataSystemSecurityMetadata
         get(session).columnDropped(session, table, column);
     }
 
+    @Override
+    public void finishStatisticsCollection(Session session, CatalogSchemaTableName table)
+    {
+        throw notSupportedException(table.getCatalogName());
+    }
+
     private GalaxySecurityMetadata get(Session session)
     {
         TransactionId transactionId = session.getTransactionId().orElseThrow(() -> new IllegalStateException("Transaction ID is not present"));

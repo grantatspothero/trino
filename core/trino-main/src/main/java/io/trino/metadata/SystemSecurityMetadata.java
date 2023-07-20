@@ -191,4 +191,9 @@ public interface SystemSecurityMetadata
      * A column was dropped
      */
     void columnDropped(Session session, CatalogSchemaTableName table, String column);
+
+    /**
+     * A table has been analyzed
+     */
+    void finishStatisticsCollection(Session session, CatalogSchemaTableName table);
 }

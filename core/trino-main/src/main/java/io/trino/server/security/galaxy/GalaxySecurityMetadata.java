@@ -444,6 +444,14 @@ public class GalaxySecurityMetadata
         accessControlClient.entityDropped(toDispatchSession(session), toColumnEntity(table, column));
     }
 
+    @Override
+    public void finishStatisticsCollection(Session session, CatalogSchemaTableName table)
+    {
+        // this will never happen but be safe
+        throwIfSystemCatalog(table);
+        accessControlClient.analyzeTableFinished(toDispatchSession(session), toTableEntity(table));
+    }
+
     // Helper methods
 
     private static GalaxyPrincipal toGalaxyPrincipal(TrinoPrincipal principal)

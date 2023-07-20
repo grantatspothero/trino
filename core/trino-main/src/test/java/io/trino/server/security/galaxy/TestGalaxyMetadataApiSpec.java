@@ -1745,6 +1745,21 @@ public class TestGalaxyMetadataApiSpec
     }
 
     @Test
+    public void testStatisticsCollectionFinished()
+    {
+        withNewRoleAndPrincipal(adminRoleId, (roleName, roleId, rolePrincipal) -> {
+            withNewCatalog(adminRoleId, (catalogName, catalogId) -> {
+                SchemaId schemaId = makeSchemaId(catalogId);
+                TableId tableId = makeTableId(schemaId);
+                CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName(catalogName, schemaId.getSchemaName(), tableId.getTableName());
+
+                // This should just complete without error, notifying galaxy that new stats are available on table
+                securityApi.finishStatisticsCollection(admin(), catalogSchemaTableName);
+            });
+        });
+    }
+
+    @Test
     public void testViewApis()
     {
         withNewCatalog(adminRoleId, (catalogName, catalogId) -> {
