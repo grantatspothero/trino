@@ -14,6 +14,7 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableMap;
+import io.trino.plugin.iceberg.IcebergFileFormat;
 import io.trino.plugin.objectstore.ObjectStoreConfig.InformationSchemaQueriesAcceleration;
 import org.testng.annotations.Test;
 
@@ -30,7 +31,8 @@ public class TestObjectStoreConfig
     {
         assertRecordedDefaults(recordDefaults(ObjectStoreConfig.class)
                 .setTableType(TableType.HIVE)
-                .setInformationSchemaQueriesAcceleration(InformationSchemaQueriesAcceleration.NONE));
+                .setInformationSchemaQueriesAcceleration(InformationSchemaQueriesAcceleration.NONE)
+                .setDefaultIcebergFileFormat(IcebergFileFormat.PARQUET));
     }
 
     @Test
@@ -39,11 +41,13 @@ public class TestObjectStoreConfig
         Map<String, String> properties = ImmutableMap.<String, String>builder()
                 .put("object-store.table-type", "ICEBERG")
                 .put("object-store.information-schema-queries-acceleration", "V1")
+                .put("object-store.iceberg-default-file-format", "ORC")
                 .buildOrThrow();
 
         ObjectStoreConfig expected = new ObjectStoreConfig()
                 .setTableType(TableType.ICEBERG)
-                .setInformationSchemaQueriesAcceleration(InformationSchemaQueriesAcceleration.V1);
+                .setInformationSchemaQueriesAcceleration(InformationSchemaQueriesAcceleration.V1)
+                .setDefaultIcebergFileFormat(IcebergFileFormat.ORC);
 
         assertFullMapping(properties, expected);
     }

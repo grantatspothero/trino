@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import io.airlift.bootstrap.LifeCycleManager;
 import io.trino.plugin.hive.HiveConnector;
 import io.trino.plugin.hive.HiveTransactionHandle;
+import io.trino.plugin.iceberg.IcebergFileFormat;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorCapabilities;
 import io.trino.spi.connector.ConnectorMetadata;
@@ -96,6 +97,7 @@ public class ObjectStoreConnector
     private final Set<ConnectorTableFunction> tableFunctions;
     private final FunctionProvider functionProvider;
 
+    private final IcebergFileFormat defaultIcebergFileFormat;
     private final TableTypeCache tableTypeCache = new TableTypeCache();
     private final ExecutorService parallelInformationSchemaQueryingExecutor;
 
@@ -112,7 +114,8 @@ public class ObjectStoreConnector
             ObjectStoreSessionProperties sessionProperties,
             Set<Procedure> objectStoreProcedures,
             Set<ConnectorTableFunction> tableFunctions,
-            FunctionProvider functionProvider)
+            FunctionProvider functionProvider,
+            ObjectStoreConfig objectStoreConfig)
     {
         this.hiveConnector = delegates.hiveConnector();
         this.icebergConnector = delegates.icebergConnector();
@@ -142,6 +145,7 @@ public class ObjectStoreConnector
         this.parallelInformationSchemaQueryingExecutor = newCachedThreadPool(daemonThreadsNamed("osc-information-schema"));
         this.tableFunctions = ImmutableSet.copyOf(requireNonNull(tableFunctions, "tableFunctions is null"));
         this.functionProvider = requireNonNull(functionProvider, "functionProvider is null");
+        this.defaultIcebergFileFormat = objectStoreConfig.getDefaultIcebergFileFormat();
     }
 
     @VisibleForTesting
@@ -345,6 +349,7 @@ public class ObjectStoreConnector
                 flushMetadataCache,
                 migrateHiveToIcebergProcedure,
                 hiveRecursiveDirWalkerEnabled,
+                defaultIcebergFileFormat,
                 tableTypeCache,
                 parallelInformationSchemaQueryingExecutor);
     }

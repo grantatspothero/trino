@@ -34,6 +34,7 @@ import io.trino.plugin.hive.HiveTableExecuteHandle;
 import io.trino.plugin.hive.HiveTableHandle;
 import io.trino.plugin.hudi.HudiTableHandle;
 import io.trino.plugin.iceberg.CorruptedIcebergTableHandle;
+import io.trino.plugin.iceberg.IcebergFileFormat;
 import io.trino.plugin.iceberg.IcebergMergeTableHandle;
 import io.trino.plugin.iceberg.IcebergPartitioningHandle;
 import io.trino.plugin.iceberg.IcebergTableHandle;
@@ -140,6 +141,7 @@ public class ObjectStoreMetadata
     private final Procedure flushMetadataCache;
     private final Procedure migrateHiveToIcebergProcedure;
     private final boolean hiveRecursiveDirWalkerEnabled;
+    private final IcebergFileFormat defaultIcebergFileFormat;
     private final TableTypeCache tableTypeCache;
     private final ExecutorService parallelInformationSchemaQueryingExecutor;
 
@@ -154,6 +156,7 @@ public class ObjectStoreMetadata
             Procedure flushMetadataCache,
             Procedure migrateHiveToIcebergProcedure,
             boolean hiveRecursiveDirWalkerEnabled,
+            IcebergFileFormat defaultIcebergFileFormat,
             TableTypeCache tableTypeCache,
             ExecutorService parallelInformationSchemaQueryingExecutor)
     {
@@ -170,6 +173,7 @@ public class ObjectStoreMetadata
         this.flushMetadataCache = requireNonNull(flushMetadataCache, "flushMetadataCache is null");
         this.migrateHiveToIcebergProcedure = requireNonNull(migrateHiveToIcebergProcedure, "migrateHiveToIcebergProcedure is null");
         this.hiveRecursiveDirWalkerEnabled = hiveRecursiveDirWalkerEnabled;
+        this.defaultIcebergFileFormat = defaultIcebergFileFormat;
         this.tableTypeCache = requireNonNull(tableTypeCache, "tableTypeCache is null");
         this.parallelInformationSchemaQueryingExecutor = requireNonNull(parallelInformationSchemaQueryingExecutor, "parallelInformationSchemaQueryingExecutor is null");
     }
@@ -1310,7 +1314,7 @@ public class ObjectStoreMetadata
             }
             case ICEBERG -> Optional.ofNullable(properties.get("format")).ifPresent(value -> {
                 if (value.equals("DEFAULT")) {
-                    value = "PARQUET";
+                    value = defaultIcebergFileFormat.name();
                 }
                 properties.put("format", decodeProperty(icebergFormatProperty, value));
             });

@@ -15,7 +15,10 @@ package io.trino.plugin.objectstore;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.airlift.configuration.Config;
+import io.trino.plugin.iceberg.IcebergFileFormat;
 import jakarta.validation.constraints.NotNull;
+
+import static io.trino.plugin.iceberg.IcebergFileFormat.PARQUET;
 
 public class ObjectStoreConfig
 {
@@ -29,6 +32,7 @@ public class ObjectStoreConfig
 
     private TableType tableType = TableType.HIVE;
     private InformationSchemaQueriesAcceleration informationSchemaQueriesAcceleration = InformationSchemaQueriesAcceleration.NONE;
+    private IcebergFileFormat defaultIcebergFileFormat = PARQUET;
 
     @NotNull
     public TableType getTableType()
@@ -53,6 +57,18 @@ public class ObjectStoreConfig
     public ObjectStoreConfig setInformationSchemaQueriesAcceleration(InformationSchemaQueriesAcceleration informationSchemaQueriesAcceleration)
     {
         this.informationSchemaQueriesAcceleration = informationSchemaQueriesAcceleration;
+        return this;
+    }
+
+    public IcebergFileFormat getDefaultIcebergFileFormat()
+    {
+        return defaultIcebergFileFormat;
+    }
+
+    @Config("object-store.iceberg-default-file-format")
+    public ObjectStoreConfig setDefaultIcebergFileFormat(IcebergFileFormat defaultIcebergFileFormat)
+    {
+        this.defaultIcebergFileFormat = defaultIcebergFileFormat;
         return this;
     }
 }
