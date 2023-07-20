@@ -16,13 +16,21 @@ package io.trino.server.resultscache;
 
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;
+import jakarta.annotation.PostConstruct;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+
+import java.util.Optional;
+
+import static com.google.common.base.Preconditions.checkState;
 
 public class ResultsCacheConfig
 {
     private int cacheUploadThreads = 5;
     private String cacheEndpoint = "http://results-cache.trino-results-cache.svc:8080";
+    private boolean galaxyEnabled;
+    private Optional<String> clusterId = Optional.empty();
+    private Optional<String> deploymentId = Optional.empty();
 
     @Positive
     public int getCacheUploadThreads()
@@ -50,5 +58,52 @@ public class ResultsCacheConfig
     {
         this.cacheEndpoint = cacheEndpoint;
         return this;
+    }
+
+    public boolean isGalaxyEnabled()
+    {
+        return galaxyEnabled;
+    }
+
+    @Config("galaxy.enabled")
+    public ResultsCacheConfig setGalaxyEnabled(boolean galaxyEnabled)
+    {
+        this.galaxyEnabled = galaxyEnabled;
+        return this;
+    }
+
+    @NotNull
+    public Optional<String> getClusterId()
+    {
+        return clusterId;
+    }
+
+    @Config("galaxy.cluster-id")
+    public ResultsCacheConfig setClusterId(String clusterId)
+    {
+        this.clusterId = Optional.of(clusterId);
+        return this;
+    }
+
+    @NotNull
+    public Optional<String> getDeploymentId()
+    {
+        return deploymentId;
+    }
+
+    @Config("galaxy.deployment-id")
+    public ResultsCacheConfig setDeploymentId(String deploymentId)
+    {
+        this.deploymentId = Optional.of(deploymentId);
+        return this;
+    }
+
+    @PostConstruct
+    public void validate()
+    {
+        if (galaxyEnabled) {
+            checkState(clusterId.isPresent() && deploymentId.isPresent(),
+                    "Cluster and Deployment Id's must be set when galaxy is enabled.");
+        }
     }
 }

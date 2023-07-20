@@ -42,7 +42,10 @@ public class ResultsCacheManager
         this.executorService = listeningDecorator(newFixedThreadPool(config.getCacheUploadThreads(), threadsNamed("resultscache-upload-%s")));
         this.resultsCacheClient = new ResultsCacheClient(
                 config.getCacheEndpoint(),
-                requireNonNull(httpClient, "httpClient is null"));
+                requireNonNull(httpClient, "httpClient is null"),
+                config.isGalaxyEnabled(),
+                config.getClusterId(),
+                config.getDeploymentId());
     }
 
     public ResultsCacheEntry createResultsCacheEntry(

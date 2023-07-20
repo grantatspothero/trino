@@ -40,11 +40,17 @@ public class ResultsCacheClient
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapperProvider().get();
     private final String cacheBaseUri;
     private final CacheClient cacheClient;
+    private final boolean galaxyEnabled;
+    private final Optional<String> clusterId;
+    private final Optional<String> deploymentId;
 
-    public ResultsCacheClient(String cacheBaseUri, HttpClient httpClient)
+    public ResultsCacheClient(String cacheBaseUri, HttpClient httpClient, boolean galaxyEnabled, Optional<String> clusterId, Optional<String> deploymentId)
     {
         this.cacheBaseUri = requireNonNull(cacheBaseUri, "cacheBaseUri is null");
         this.cacheClient = new CacheClient(requireNonNull(httpClient, "httpClient is null"));
+        this.galaxyEnabled = galaxyEnabled;
+        this.clusterId = requireNonNull(clusterId, "clusterId is null");
+        this.deploymentId = requireNonNull(deploymentId, "deploymentId is null");
     }
 
     public void uploadResultsCacheEntry(
@@ -60,12 +66,17 @@ public class ResultsCacheClient
             List<List<Object>> data,
             Instant creation)
     {
+        if (!galaxyEnabled) {
+            log.debug("Galaxy not enabled. Skip sending cache entry %s for query %s to results cache", key, queryId);
+            return;
+        }
+
         log.debug("Sending cache entry %s for query %s to results cache", key, queryId);
         try {
             cacheClient.insertCacheEntry(
                     cacheBaseUri,
                     getTokenSupplier(identity),
-                    createCacheEntry(key, queryId, query, sessionCatalog, sessionSchema, queryType, updateType, columns, data, creation));
+                    createCacheEntry(key, queryId, query, sessionCatalog, sessionSchema, queryType, updateType, clusterId.get(), deploymentId.get(), columns, data, creation));
         }
         catch (JsonProcessingException ex) {
             throw new RuntimeException("Error serializing results to JSON", ex);
@@ -85,6 +96,8 @@ public class ResultsCacheClient
             Optional<String> sessionSchema,
             Optional<String> queryType,
             Optional<String> updateType,
+            String clusterId,
+            String deploymentId,
             List<Column> columns,
             List<List<Object>> data,
             Instant creation)
@@ -95,7 +108,10 @@ public class ResultsCacheClient
         requireNonNull(sessionSchema, "sessionSchema is required");
         requireNonNull(queryType, "queryType is required");
         requireNonNull(updateType, "updateType is required");
+        requireNonNull(clusterId, "clusterId is required");
+        requireNonNull(deploymentId, "deploymentId is required");
         List<List<String>> dataStr = data.stream().map(singleRow -> singleRow.stream().map(ResultsCacheClient::serializeObject).collect(toImmutableList())).collect(toImmutableList());
+        // return new CacheEntry(cacheKey, queryId.toString(), query, sessionCatalog, sessionSchema, queryType, updateType, sessionCatalog.stream().toList(), clusterId, deploymentId, columns, dataStr, creation);
         return new CacheEntry(cacheKey, queryId.toString(), columns, dataStr, creation);
     }
 
