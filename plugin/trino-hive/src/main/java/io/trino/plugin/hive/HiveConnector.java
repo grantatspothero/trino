@@ -15,6 +15,7 @@ package io.trino.plugin.hive;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.Injector;
 import io.airlift.bootstrap.LifeCycleManager;
 import io.trino.plugin.base.classloader.ClassLoaderSafeConnectorMetadata;
 import io.trino.plugin.base.session.SessionPropertiesProvider;
@@ -46,6 +47,7 @@ import static java.util.Objects.requireNonNull;
 public class HiveConnector
         implements Connector
 {
+    private final Injector injector;
     private final boolean recursiveDirWalkerEnabled;
     private final boolean partitionProjectionEnabled;
     private final LifeCycleManager lifeCycleManager;
@@ -70,6 +72,7 @@ public class HiveConnector
     private final boolean singleStatementWritesOnly;
 
     public HiveConnector(
+            Injector injector,
             boolean recursiveDirWalkerEnabled,
             boolean partitionProjectionEnabled,
             LifeCycleManager lifeCycleManager,
@@ -91,6 +94,7 @@ public class HiveConnector
             boolean singleStatementWritesOnly,
             ClassLoader classLoader)
     {
+        this.injector = requireNonNull(injector, "injector is null");
         this.recursiveDirWalkerEnabled = recursiveDirWalkerEnabled;
         this.partitionProjectionEnabled = partitionProjectionEnabled;
         this.lifeCycleManager = requireNonNull(lifeCycleManager, "lifeCycleManager is null");
@@ -248,5 +252,10 @@ public class HiveConnector
     public Set<TableProcedureMetadata> getTableProcedures()
     {
         return tableProcedures;
+    }
+
+    public Injector getInjector()
+    {
+        return injector;
     }
 }

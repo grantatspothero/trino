@@ -170,6 +170,7 @@ public final class InternalHiveConnectorFactory
             HiveConfig hiveConfig = injector.getInstance(HiveConfig.class);
 
             return new HiveConnector(
+                    injector,
                     hiveConfig.getRecursiveDirWalkerEnabled(),
                     hiveConfig.isPartitionProjectionEnabled(),
                     lifeCycleManager,
