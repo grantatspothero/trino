@@ -37,6 +37,7 @@ import static java.util.Objects.requireNonNull;
 public class ResultsCacheClient
 {
     private static final Logger log = Logger.get(ResultsCacheClient.class);
+    private static final String AUTH_TOKEN_TYPE = "X-Trino-Plane-Token";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapperProvider().get();
     private final String cacheBaseUri;
     private final CacheClient cacheClient;
@@ -85,7 +86,7 @@ public class ResultsCacheClient
 
     private static Supplier<String> getTokenSupplier(Identity identity)
     {
-        return () -> toDispatchSession(identity).getAccessToken();
+        return () -> AUTH_TOKEN_TYPE + " " + toDispatchSession(identity).getAccessToken();
     }
 
     private static CacheEntry createCacheEntry(
