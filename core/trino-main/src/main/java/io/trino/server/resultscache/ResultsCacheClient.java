@@ -104,16 +104,21 @@ public class ResultsCacheClient
             Instant creation)
             throws JsonProcessingException
     {
-        requireNonNull(query, "query is required");
-        requireNonNull(sessionCatalog, "sessionCatalog is required");
-        requireNonNull(sessionSchema, "sessionSchema is required");
-        requireNonNull(queryType, "queryType is required");
-        requireNonNull(updateType, "updateType is required");
-        requireNonNull(clusterId, "clusterId is required");
-        requireNonNull(deploymentId, "deploymentId is required");
         List<List<String>> dataStr = data.stream().map(singleRow -> singleRow.stream().map(ResultsCacheClient::serializeObject).collect(toImmutableList())).collect(toImmutableList());
-        // return new CacheEntry(cacheKey, queryId.toString(), query, sessionCatalog, sessionSchema, queryType, updateType, sessionCatalog.stream().toList(), clusterId, deploymentId, columns, dataStr, creation);
-        return new CacheEntry(cacheKey, queryId.toString(), columns, dataStr, creation);
+        return new CacheEntry(
+                cacheKey,
+                queryId.toString(),
+                query,
+                sessionCatalog,
+                sessionSchema,
+                queryType,
+                updateType,
+                sessionCatalog.stream().toList(),
+                clusterId,
+                deploymentId,
+                columns,
+                dataStr,
+                creation);
     }
 
     private static String serializeObject(Object object)

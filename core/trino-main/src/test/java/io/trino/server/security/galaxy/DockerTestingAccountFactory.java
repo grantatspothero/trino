@@ -70,7 +70,7 @@ public class DockerTestingAccountFactory
             portalServer.addExposedPort(PORTAL_PORT);
 
             portalServer.setCommand(
-                    "/opt/portal/bin/launcher",
+                    "/opt/app/bin/launcher",
                     "run",
                     "-Dhttp-server.https.port=" + PORTAL_PORT,
                     "--config", API_TESTING_CONFIG_FILE,

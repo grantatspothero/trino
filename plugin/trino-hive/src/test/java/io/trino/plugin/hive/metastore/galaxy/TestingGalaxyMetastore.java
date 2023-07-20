@@ -60,7 +60,7 @@ public class TestingGalaxyMetastore
             metastoreContainer.setNetwork(cockroach.getNetwork());
             metastoreContainer.addExposedPort(8443);
             metastoreContainer.setCommand(
-                    "/opt/metastore/bin/launcher",
+                    "/opt/app/bin/launcher",
                     "run",
                     "--config", "/tmp/config.properties");
 
