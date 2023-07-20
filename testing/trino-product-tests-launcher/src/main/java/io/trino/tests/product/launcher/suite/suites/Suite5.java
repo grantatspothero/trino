@@ -15,10 +15,17 @@ package io.trino.tests.product.launcher.suite.suites;
 
 import com.google.common.collect.ImmutableList;
 import io.trino.tests.product.launcher.env.EnvironmentConfig;
+import io.trino.tests.product.launcher.env.environment.EnvMultinodeHiveCaching;
+import io.trino.tests.product.launcher.env.environment.EnvSinglenodeHiveImpersonation;
+import io.trino.tests.product.launcher.env.environment.EnvSinglenodeKerberosHiveImpersonation;
+import io.trino.tests.product.launcher.env.environment.EnvSinglenodeKerberosHiveImpersonationWithCredentialCache;
 import io.trino.tests.product.launcher.suite.Suite;
 import io.trino.tests.product.launcher.suite.SuiteTestRun;
 
 import java.util.List;
+
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.trino.tests.product.launcher.suite.SuiteTestRun.testOnEnvironment;
 
 public class Suite5
         extends Suite
@@ -26,21 +33,31 @@ public class Suite5
     @Override
     public List<SuiteTestRun> getTestRuns(EnvironmentConfig config)
     {
-        return ImmutableList.of();
-        // Disable Kerberos and impersonation tests in Galaxy-trino, as these features are not used
-//                testOnEnvironment(EnvSinglenodeHiveImpersonation.class)
-//                        .withGroups("configured_features", "storage_formats", "hdfs_impersonation")
-//                        .build(),
-//                testOnEnvironment(EnvSinglenodeKerberosHiveImpersonation.class)
-//                        .withGroups("configured_features", "storage_formats", "hdfs_impersonation", "authorization", "hive_kerberos")
-//                        .build(),
-//                testOnEnvironment(EnvSinglenodeKerberosHiveImpersonationWithCredentialCache.class)
-//                        .withGroups("configured_features", "storage_formats", "hdfs_impersonation", "authorization")
-//                        .build());
-        // Rubix caching tests temporarily removed. https://github.com/starburstdata/galaxy-trino/issues/833
-                /*testOnEnvironment(EnvMultinodeHiveCaching.class)
+        return testRuns().stream()
+                // Galaxy does not use Hive impersonation
+                .filter(run -> run.getEnvironment() != EnvSinglenodeHiveImpersonation.class)
+                // Galaxy does not support Kerberos
+                .filter(run -> !run.getEnvironment().getSimpleName().contains("Kerberos"))
+                // Galaxy doesn't use Rubix-based Hive caching (and it currently does not work)
+                .filter(run -> run.getEnvironment() != EnvMultinodeHiveCaching.class)
+                .collect(toImmutableList());
+    }
+
+    private List<SuiteTestRun> testRuns()
+    {
+        return ImmutableList.of(
+                testOnEnvironment(EnvSinglenodeHiveImpersonation.class)
+                        .withGroups("configured_features", "storage_formats", "hdfs_impersonation")
+                        .build(),
+                testOnEnvironment(EnvSinglenodeKerberosHiveImpersonation.class)
+                        .withGroups("configured_features", "storage_formats", "hdfs_impersonation", "authorization", "hive_kerberos")
+                        .build(),
+                testOnEnvironment(EnvSinglenodeKerberosHiveImpersonationWithCredentialCache.class)
+                        .withGroups("configured_features", "storage_formats", "hdfs_impersonation", "authorization")
+                        .build(),
+                testOnEnvironment(EnvMultinodeHiveCaching.class)
                         .withGroups("configured_features", "hive_caching", "storage_formats")
                         .withExcludedGroups("iceberg")
-                        .build());*/
+                        .build());
     }
 }
