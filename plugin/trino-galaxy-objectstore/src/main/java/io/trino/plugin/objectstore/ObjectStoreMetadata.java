@@ -14,6 +14,7 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.base.VerifyException;
+import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
@@ -97,6 +98,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Stream;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
@@ -107,6 +112,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_UNSUPPORTED_FORMAT;
 import static io.trino.plugin.hive.HiveMetadata.MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE;
+import static io.trino.plugin.objectstore.ObjectStoreSessionProperties.getInformationSchemaQueriesAcceleration;
 import static io.trino.plugin.objectstore.TableType.DELTA;
 import static io.trino.plugin.objectstore.TableType.HIVE;
 import static io.trino.plugin.objectstore.TableType.HUDI;
@@ -135,6 +141,7 @@ public class ObjectStoreMetadata
     private final Procedure migrateHiveToIcebergProcedure;
     private final boolean hiveRecursiveDirWalkerEnabled;
     private final TableTypeCache tableTypeCache;
+    private final ExecutorService parallelInformationSchemaQueryingExecutor;
 
     public ObjectStoreMetadata(
             ConnectorMetadata hiveMetadata,
@@ -147,7 +154,8 @@ public class ObjectStoreMetadata
             Procedure flushMetadataCache,
             Procedure migrateHiveToIcebergProcedure,
             boolean hiveRecursiveDirWalkerEnabled,
-            TableTypeCache tableTypeCache)
+            TableTypeCache tableTypeCache,
+            ExecutorService parallelInformationSchemaQueryingExecutor)
     {
         this.hiveMetadata = requireNonNull(hiveMetadata, "hiveMetadata is null");
         this.icebergMetadata = requireNonNull(icebergMetadata, "icebergMetadata is null");
@@ -163,6 +171,7 @@ public class ObjectStoreMetadata
         this.migrateHiveToIcebergProcedure = requireNonNull(migrateHiveToIcebergProcedure, "migrateHiveToIcebergProcedure is null");
         this.hiveRecursiveDirWalkerEnabled = hiveRecursiveDirWalkerEnabled;
         this.tableTypeCache = requireNonNull(tableTypeCache, "tableTypeCache is null");
+        this.parallelInformationSchemaQueryingExecutor = requireNonNull(parallelInformationSchemaQueryingExecutor, "parallelInformationSchemaQueryingExecutor is null");
     }
 
     @Override
@@ -501,13 +510,49 @@ public class ObjectStoreMetadata
     @Override
     public Iterator<TableColumnsMetadata> streamTableColumns(ConnectorSession session, SchemaTablePrefix prefix)
     {
-        return Iterators.concat(
+        return switch (getInformationSchemaQueriesAcceleration(session)) {
+            case NONE -> Iterators.concat(
+                    // Hive lists Hive and Hudi tables
+                    hiveMetadata.streamTableColumns(unwrap(HIVE, session), prefix),
+                    // Iceberg only lists Iceberg tables
+                    icebergMetadata.streamTableColumns(unwrap(ICEBERG, session), prefix),
+                    // Delta Lake only lists Delta Lake tables
+                    deltaMetadata.streamTableColumns(unwrap(DELTA, session), prefix));
+
+            case V1 -> {
+                CompletionService<Iterator<TableColumnsMetadata>> completionService = new ExecutorCompletionService<>(parallelInformationSchemaQueryingExecutor);
                 // Hive lists Hive and Hudi tables
-                hiveMetadata.streamTableColumns(unwrap(HIVE, session), prefix),
+                completionService.submit(() -> hiveMetadata.streamTableColumns(unwrap(HIVE, session), prefix));
                 // Iceberg only lists Iceberg tables
-                icebergMetadata.streamTableColumns(unwrap(ICEBERG, session), prefix),
+                completionService.submit(() -> icebergMetadata.streamTableColumns(unwrap(ICEBERG, session), prefix));
                 // Delta Lake only lists Delta Lake tables
-                deltaMetadata.streamTableColumns(unwrap(DELTA, session), prefix));
+                completionService.submit(() -> deltaMetadata.streamTableColumns(unwrap(DELTA, session), prefix));
+
+                yield Iterators.concat(new AbstractIterator<Iterator<TableColumnsMetadata>>()
+                {
+                    private int completedDelegates;
+
+                    @Override
+                    protected Iterator<TableColumnsMetadata> computeNext()
+                    {
+                        if (completedDelegates == 3) {
+                            return endOfData();
+                        }
+                        try {
+                            completedDelegates++;
+                            return completionService.take().get();
+                        }
+                        catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Interrupted while loading column metadata", e);
+                        }
+                        catch (ExecutionException e) {
+                            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error while loading column metadata", e);
+                        }
+                    }
+                });
+            }
+        };
     }
 
     @Override

@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Table;
 import com.google.inject.Inject;
+import io.trino.plugin.objectstore.ObjectStoreConfig.InformationSchemaQueriesAcceleration;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.security.ConnectorIdentity;
 import io.trino.spi.session.PropertyMetadata;
@@ -40,15 +41,18 @@ import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDefau
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDescription.IGNORE_DESCRIPTION;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDescription.VERIFY_DESCRIPTION;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.verifyPropertyMetadata;
+import static io.trino.spi.session.PropertyMetadata.enumProperty;
 import static java.util.Objects.requireNonNull;
 
 public class ObjectStoreSessionProperties
 {
+    private static final String INFORMATION_SCHEMA_QUERIES_ACCELERATION = "experimental_information_schema_queries_acceleration";
+
     private final List<PropertyMetadata<?>> sessionProperties;
     private final Table<String, TableType, Optional<Object>> defaultPropertyValue;
 
     @Inject
-    public ObjectStoreSessionProperties(DelegateConnectors delegates)
+    public ObjectStoreSessionProperties(DelegateConnectors delegates, ObjectStoreConfig objectStoreConfig)
     {
         Set<String> ignoredDescriptions = ImmutableSet.<String>builder()
                 .add("compression_codec")
@@ -103,9 +107,24 @@ public class ObjectStoreSessionProperties
             }
         }
 
-        this.sessionProperties = sessionProperties.build().stream()
+        List<PropertyMetadata<?>> wrappedDelegateProperties = sessionProperties.build().stream()
                 .map(ObjectStoreSessionProperties::toWrapped)
                 .collect(toImmutableList());
+
+        List<PropertyMetadata<?>> objectStoreProperties = ImmutableList.<PropertyMetadata<?>>builder()
+                .add(enumProperty(
+                        INFORMATION_SCHEMA_QUERIES_ACCELERATION,
+                        "Enabled leading multiple tables in parallel when loading metadata for information_schema queries",
+                        InformationSchemaQueriesAcceleration.class,
+                        objectStoreConfig.getInformationSchemaQueriesAcceleration(),
+                        // Hidden because we will remove configurability for this once stable.
+                        true))
+                .build();
+
+        this.sessionProperties = ImmutableList.<PropertyMetadata<?>>builder()
+                .addAll(wrappedDelegateProperties)
+                .addAll(objectStoreProperties)
+                .build();
         this.defaultPropertyValue = defaultPropertyValue.buildOrThrow();
     }
 
@@ -127,6 +146,11 @@ public class ObjectStoreSessionProperties
                 WrappedPropertyValue.class,
                 WrappedPropertyValue::new,
                 wrappedPropertyValue -> propertyMetadata.getJavaType().cast(wrappedPropertyValue.value()));
+    }
+
+    public static InformationSchemaQueriesAcceleration getInformationSchemaQueriesAcceleration(ConnectorSession session)
+    {
+        return session.getProperty(INFORMATION_SCHEMA_QUERIES_ACCELERATION, InformationSchemaQueriesAcceleration.class);
     }
 
     private class DelegateSession

@@ -19,7 +19,16 @@ import jakarta.validation.constraints.NotNull;
 
 public class ObjectStoreConfig
 {
+    public enum InformationSchemaQueriesAcceleration {
+        NONE,
+        /**
+         * Query underlying connectors in parallel
+         */
+        V1,
+    }
+
     private TableType tableType = TableType.HIVE;
+    private InformationSchemaQueriesAcceleration informationSchemaQueriesAcceleration = InformationSchemaQueriesAcceleration.NONE;
 
     @NotNull
     public TableType getTableType()
@@ -32,6 +41,18 @@ public class ObjectStoreConfig
     public ObjectStoreConfig setTableType(TableType tableType)
     {
         this.tableType = tableType;
+        return this;
+    }
+
+    public InformationSchemaQueriesAcceleration getInformationSchemaQueriesAcceleration()
+    {
+        return informationSchemaQueriesAcceleration;
+    }
+
+    @Config("object-store.information-schema-queries-acceleration")
+    public ObjectStoreConfig setInformationSchemaQueriesAcceleration(InformationSchemaQueriesAcceleration informationSchemaQueriesAcceleration)
+    {
+        this.informationSchemaQueriesAcceleration = informationSchemaQueriesAcceleration;
         return this;
     }
 }

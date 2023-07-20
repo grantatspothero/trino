@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Verify.verify;
@@ -50,6 +51,7 @@ import static com.google.common.collect.MoreCollectors.onlyElement;
 import static com.google.common.collect.Sets.immutableEnumSet;
 import static com.google.common.collect.Sets.symmetricDifference;
 import static com.google.common.collect.Streams.forEachPair;
+import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.trino.plugin.objectstore.FeatureExposure.UNDEFINED;
 import static io.trino.plugin.objectstore.FeatureExposures.procedureExposureDecisions;
 import static io.trino.plugin.objectstore.FeatureExposures.tableProcedureExposureDecisions;
@@ -62,6 +64,7 @@ import static io.trino.spi.transaction.IsolationLevel.READ_UNCOMMITTED;
 import static io.trino.spi.transaction.IsolationLevel.checkConnectorSupports;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.stream.Collectors.toSet;
 
 public class ObjectStoreConnector
@@ -89,6 +92,7 @@ public class ObjectStoreConnector
     private final boolean hiveRecursiveDirWalkerEnabled;
 
     private final TableTypeCache tableTypeCache = new TableTypeCache();
+    private final ExecutorService parallelInformationSchemaQueryingExecutor;
 
     @Inject
     public ObjectStoreConnector(
@@ -128,6 +132,7 @@ public class ObjectStoreConnector
                 .filter(procedure -> procedure.getName().equals("migrate"))
                 .collect(onlyElement());
         this.hiveRecursiveDirWalkerEnabled = ((HiveConnector) hiveConnector).isRecursiveDirWalkerEnabled();
+        this.parallelInformationSchemaQueryingExecutor = newCachedThreadPool(daemonThreadsNamed("osc-information-schema"));
     }
 
     @VisibleForTesting
@@ -307,6 +312,7 @@ public class ObjectStoreConnector
         icebergConnector.shutdown();
         deltaConnector.shutdown();
         hudiConnector.shutdown();
+        parallelInformationSchemaQueryingExecutor.shutdown();
     }
 
     @Override
@@ -330,7 +336,8 @@ public class ObjectStoreConnector
                 flushMetadataCache,
                 migrateHiveToIcebergProcedure,
                 hiveRecursiveDirWalkerEnabled,
-                tableTypeCache);
+                tableTypeCache,
+                parallelInformationSchemaQueryingExecutor);
     }
 
     @Override

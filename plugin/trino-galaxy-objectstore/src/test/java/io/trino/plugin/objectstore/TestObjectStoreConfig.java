@@ -14,6 +14,7 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableMap;
+import io.trino.plugin.objectstore.ObjectStoreConfig.InformationSchemaQueriesAcceleration;
 import org.testng.annotations.Test;
 
 import java.util.Map;
@@ -28,7 +29,8 @@ public class TestObjectStoreConfig
     public void testDefaults()
     {
         assertRecordedDefaults(recordDefaults(ObjectStoreConfig.class)
-                .setTableType(TableType.HIVE));
+                .setTableType(TableType.HIVE)
+                .setInformationSchemaQueriesAcceleration(InformationSchemaQueriesAcceleration.NONE));
     }
 
     @Test
@@ -36,10 +38,12 @@ public class TestObjectStoreConfig
     {
         Map<String, String> properties = ImmutableMap.<String, String>builder()
                 .put("object-store.table-type", "ICEBERG")
+                .put("object-store.information-schema-queries-acceleration", "V1")
                 .buildOrThrow();
 
         ObjectStoreConfig expected = new ObjectStoreConfig()
-                .setTableType(TableType.ICEBERG);
+                .setTableType(TableType.ICEBERG)
+                .setInformationSchemaQueriesAcceleration(InformationSchemaQueriesAcceleration.V1);
 
         assertFullMapping(properties, expected);
     }
