@@ -13,23 +13,39 @@
  */
 package io.trino.plugin.objectstore;
 
-import io.trino.plugin.hudi.BaseHudiConnectorTest;
-import io.trino.testing.QueryRunner;
+import io.trino.plugin.hudi.TestHudiConnectorTest;
 import io.trino.testing.TestingConnectorBehavior;
 
-class GetHudiConnectorTestBehavior
-        extends BaseHudiConnectorTest
+import java.lang.invoke.MethodHandle;
+import java.lang.reflect.Method;
+
+import static com.google.common.base.Throwables.throwIfUnchecked;
+import static io.trino.util.Reflection.methodHandle;
+
+final class GetHudiConnectorTestBehavior
 {
-    @Override
-    protected QueryRunner createQueryRunner()
-    {
-        throw new UnsupportedOperationException();
+    private static final TestHudiConnectorTest TEST_INSTANCE = new TestHudiConnectorTest();
+    private static final MethodHandle HAS_BEHAVIOR;
+
+    static {
+        try {
+            Method method = TestHudiConnectorTest.class.getDeclaredMethod("hasBehavior", TestingConnectorBehavior.class);
+            method.setAccessible(true);
+            HAS_BEHAVIOR = methodHandle(method).bindTo(TEST_INSTANCE);
+        }
+        catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    // Override to make visible
-    @Override
-    protected boolean hasBehavior(TestingConnectorBehavior connectorBehavior)
+    boolean hasBehavior(TestingConnectorBehavior connectorBehavior)
     {
-        return super.hasBehavior(connectorBehavior);
+        try {
+            return (boolean) HAS_BEHAVIOR.invokeExact(connectorBehavior);
+        }
+        catch (Throwable e) {
+            throwIfUnchecked(e);
+            throw new RuntimeException(e);
+        }
     }
 }
