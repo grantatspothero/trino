@@ -29,6 +29,8 @@ public class TestTpchCacheSubqueriesTest
                 .addExtraProperties(EXTRA_PROPERTIES)
                 // cache doesn't support table partitioning yet
                 .withPartitioningEnabled(false)
+                // create enough splits for caching to be effective
+                .withSplitsPerNode(100)
                 .build();
     }
 }
