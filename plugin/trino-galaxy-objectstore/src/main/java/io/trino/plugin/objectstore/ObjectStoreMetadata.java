@@ -16,6 +16,7 @@ package io.trino.plugin.objectstore;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
 import io.airlift.slice.Slice;
 import io.trino.plugin.deltalake.CorruptedDeltaLakeTableHandle;
@@ -500,23 +501,13 @@ public class ObjectStoreMetadata
     @Override
     public Iterator<TableColumnsMetadata> streamTableColumns(ConnectorSession session, SchemaTablePrefix prefix)
     {
-        Map<SchemaTableName, TableColumnsMetadata> tables = new HashMap<>();
-
-        // Hive will include Iceberg tables with the wrong schema, so overwrite later
-        hiveMetadata.streamTableColumns(unwrap(HIVE, session), prefix)
-                .forEachRemaining(metadata -> tables.put(metadata.getTable(), metadata));
-
-        // Iceberg only lists Iceberg tables
-        icebergMetadata.streamTableColumns(unwrap(ICEBERG, session), prefix)
-                .forEachRemaining(metadata -> tables.put(metadata.getTable(), metadata));
-
-        // Delta Lake only lists Delta Lake tables
-        deltaMetadata.streamTableColumns(unwrap(DELTA, session), prefix)
-                .forEachRemaining(metadata -> tables.put(metadata.getTable(), metadata));
-
-        // Hudi lists all tables, so keep the Hive listing
-
-        return tables.values().iterator();
+        return Iterators.concat(
+                // Hive lists Hive and Hudi tables
+                hiveMetadata.streamTableColumns(unwrap(HIVE, session), prefix),
+                // Iceberg only lists Iceberg tables
+                icebergMetadata.streamTableColumns(unwrap(ICEBERG, session), prefix),
+                // Delta Lake only lists Delta Lake tables
+                deltaMetadata.streamTableColumns(unwrap(DELTA, session), prefix));
     }
 
     @Override

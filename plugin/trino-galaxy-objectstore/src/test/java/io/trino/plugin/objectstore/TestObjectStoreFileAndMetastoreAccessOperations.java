@@ -505,6 +505,32 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
                 });
     }
 
+    @Test
+    public void testInformationSchemaColumnsWithMixedTableTypes()
+    {
+        assertUpdate("CREATE TABLE test_select_i_s_columns_delta (delta_id VARCHAR, delta_age INT) WITH (type = 'DELTA')");
+        assertUpdate("CREATE TABLE test_select_i_s_columns_iceberg (iceberg_id VARCHAR, iceberg_age INT) WITH (type = 'ICEBERG')");
+        assertUpdate("CREATE TABLE test_select_i_s_columns_hive (hive_id VARCHAR, hive_age INT) WITH (type = 'HIVE')");
+
+        assertQuery(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema = '" + SCHEMA_NAME + "'",
+                "VALUES 'delta_id', 'delta_age', 'iceberg_id', 'iceberg_age', 'hive_id', 'hive_age'");
+
+        assertInvocations("TABLE information_schema.columns",
+                ImmutableMultiset.builder()
+                        .addCopies(GET_ALL_DATABASES, 3)
+                        .addCopies(GET_TABLE, 9)
+                        .addCopies(GET_ALL_TABLES_FROM_DATABASE, 3)
+                        .addCopies(GET_ALL_VIEWS_FROM_DATABASE, 1)
+                        .addCopies(GET_TABLE_WITH_PARAMETER, 1)
+                        .build(),
+                ImmutableMultiset.<FileOperation>builder()
+                        .add(new FileOperation(METADATA_JSON, "00000.metadata.json", INPUT_FILE_NEW_STREAM))
+                        .add(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM))
+                        .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM))
+                        .build());
+    }
+
     @DataProvider
     public Object[][] tableTypeDataProvider()
     {
