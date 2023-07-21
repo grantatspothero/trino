@@ -1051,6 +1051,12 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
+    public void testRowLevelUpdate()
+    {
+        skipDuplicateTestCoverage("testRowLevelUpdate");
+    }
+
+    @Override
     public void testSelectAfterInsertInTransaction()
     {
         skipDuplicateTestCoverage("testSelectAfterInsertInTransaction");
@@ -1414,5 +1420,17 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     public void verifySupportsRowLevelDeleteDeclaration()
     {
         skipDuplicateTestCoverage("verifySupportsRowLevelDeleteDeclaration");
+    }
+
+    @Override
+    public void verifySupportsRowLevelUpdateDeclaration()
+    {
+        skipDuplicateTestCoverage("verifySupportsRowLevelUpdateDeclaration");
+    }
+
+    @Override
+    public void verifySupportsUpdateDeclaration()
+    {
+        skipDuplicateTestCoverage("verifySupportsUpdateDeclaration");
     }
 }

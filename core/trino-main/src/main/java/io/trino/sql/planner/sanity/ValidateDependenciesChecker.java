@@ -72,6 +72,7 @@ import io.trino.sql.planner.plan.TableFunctionNode.PassThroughColumn;
 import io.trino.sql.planner.plan.TableFunctionNode.PassThroughSpecification;
 import io.trino.sql.planner.plan.TableFunctionProcessorNode;
 import io.trino.sql.planner.plan.TableScanNode;
+import io.trino.sql.planner.plan.TableUpdateNode;
 import io.trino.sql.planner.plan.TableWriterNode;
 import io.trino.sql.planner.plan.TopNNode;
 import io.trino.sql.planner.plan.TopNRankingNode;
@@ -811,6 +812,12 @@ public final class ValidateDependenciesChecker
 
         @Override
         public Void visitTableDelete(TableDeleteNode node, Set<Symbol> boundSymbols)
+        {
+            return null;
+        }
+
+        @Override
+        public Void visitTableUpdate(TableUpdateNode node, Set<Symbol> boundSymbols)
         {
             return null;
         }

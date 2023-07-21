@@ -325,6 +325,12 @@ public class TestObjectStoreHiveConnectorTest
     }
 
     @Override
+    public void testRowLevelUpdate()
+    {
+        assertThatThrownBy(super::testRowLevelUpdate).hasMessage("Row-level modifications are not supported for Hive tables");
+    }
+
+    @Override
     public void testMergeLarge()
     {
         assertThatThrownBy(super::testMergeLarge).hasMessage("Row-level modifications are not supported for Hive tables");

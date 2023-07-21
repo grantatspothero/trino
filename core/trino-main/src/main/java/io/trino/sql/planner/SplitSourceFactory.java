@@ -72,6 +72,7 @@ import io.trino.sql.planner.plan.TableExecuteNode;
 import io.trino.sql.planner.plan.TableFinishNode;
 import io.trino.sql.planner.plan.TableFunctionProcessorNode;
 import io.trino.sql.planner.plan.TableScanNode;
+import io.trino.sql.planner.plan.TableUpdateNode;
 import io.trino.sql.planner.plan.TableWriterNode;
 import io.trino.sql.planner.plan.TopNNode;
 import io.trino.sql.planner.plan.TopNRankingNode;
@@ -496,6 +497,13 @@ public class SplitSourceFactory
 
         @Override
         public Map<PlanNodeId, SplitSource> visitTableDelete(TableDeleteNode node, Void context)
+        {
+            // node does not have splits
+            return ImmutableMap.of();
+        }
+
+        @Override
+        public Map<PlanNodeId, SplitSource> visitTableUpdate(TableUpdateNode node, Void context)
         {
             // node does not have splits
             return ImmutableMap.of();
