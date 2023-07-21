@@ -426,7 +426,8 @@ public class LocalQueryRunner
                 transactionManager,
                 new CatalogManagerConfig(),
                 typeManager,
-                nodeSchedulerConfig));
+                nodeSchedulerConfig,
+                optimizerConfig));
         this.splitManager = new SplitManager(createSplitManagerProvider(catalogManager), tracer, new QueryManagerConfig());
         this.pageSourceManager = new PageSourceManager(createPageSourceProvider(catalogManager));
         this.alternativeChooser = new AlternativeChooser(createAlternativeChooser(catalogManager));
