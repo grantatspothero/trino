@@ -75,6 +75,7 @@ public final class InternalObjectStoreConnectorFactory
                             new GalaxyLocationSecurityModule()),
                     hiveMetastore,
                     fileSystemFactory,
+                    Optional.empty(),
                     Optional.empty());
 
             Map<String, String> icebergConfig = new HashMap<>(filteredConfig(config, "ICEBERG"));
