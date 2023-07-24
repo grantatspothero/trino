@@ -585,7 +585,7 @@ public class TrinoS3FileSystem
     }
 
     @Override
-    public OutputStream create(Path path, AggregatedMemoryContext aggregatedMemoryContext)
+    public FSDataOutputStream create(Path path, AggregatedMemoryContext aggregatedMemoryContext)
             throws IOException
     {
         return new FSDataOutputStream(createOutputStream(path, aggregatedMemoryContext), statistics);
