@@ -124,11 +124,6 @@ public class HdfsEnvironment
         return hdfsAuthentication.doAs(identity, action);
     }
 
-    public void doAs(ConnectorIdentity identity, Runnable action)
-    {
-        hdfsAuthentication.doAs(identity, action);
-    }
-
     private static void stopFileSystemStatsThread()
     {
         try {
