@@ -1229,6 +1229,48 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
+    public void testSetFieldIncompatibleType()
+    {
+        skipDuplicateTestCoverage("testSetFieldIncompatibleType");
+    }
+
+    @Override
+    public void testSetFieldOutOfRangeType()
+    {
+        skipDuplicateTestCoverage("testSetFieldOutOfRangeType");
+    }
+
+    @Override
+    public void testSetFieldType()
+    {
+        skipDuplicateTestCoverage("testSetFieldType");
+    }
+
+    @Override
+    public void testSetFieldTypeCaseSensitivity()
+    {
+        skipDuplicateTestCoverage("testSetFieldTypeCaseSensitivity");
+    }
+
+    @Override
+    public void testSetFieldTypeWithComment()
+    {
+        skipDuplicateTestCoverage("testSetFieldTypeWithComment");
+    }
+
+    @Override
+    public void testSetFieldTypeWithNotNull()
+    {
+        skipDuplicateTestCoverage("testSetFieldTypeWithNotNull");
+    }
+
+    @Override
+    public void testSetFieldTypes(BaseConnectorTest.SetColumnTypeSetup arg0)
+    {
+        skipDuplicateTestCoverage("testSetFieldTypes", BaseConnectorTest.SetColumnTypeSetup.class);
+    }
+
+    @Override
     public void testShowColumns()
     {
         skipDuplicateTestCoverage("testShowColumns");

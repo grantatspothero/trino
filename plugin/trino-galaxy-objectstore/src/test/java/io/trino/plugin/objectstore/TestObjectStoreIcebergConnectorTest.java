@@ -428,6 +428,18 @@ public class TestObjectStoreIcebergConnectorTest
                 .hasStackTraceContaining("Multiple entries with same key");
     }
 
+    @Override
+    protected Optional<SetColumnTypeSetup> filterSetFieldTypesDataProvider(SetColumnTypeSetup setup)
+    {
+        return new GetIcebergConnectorTestBehavior().filterSetFieldTypesDataProvider(setup);
+    }
+
+    @Override
+    protected void verifySetFieldTypeFailurePermissible(Throwable e)
+    {
+        new GetIcebergConnectorTestBehavior().verifySetFieldTypeFailurePermissible(e);
+    }
+
     @Test
     public void testSystemTables()
     {

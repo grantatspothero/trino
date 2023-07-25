@@ -929,6 +929,17 @@ public class ObjectStoreMetadata
     }
 
     @Override
+    public void setFieldType(ConnectorSession session, ConnectorTableHandle tableHandle, List<String> fieldPath, Type type)
+    {
+        TableType tableType = tableType(tableHandle);
+        if (tableType != ICEBERG) {
+            throw new TrinoException(NOT_SUPPORTED, "Setting field type in %s tables is not supported".formatted(tableType.displayName()));
+        }
+        delegate(tableType).setFieldType(unwrap(tableType, session), tableHandle, fieldPath, type);
+        flushMetadataCache(tableName(tableHandle));
+    }
+
+    @Override
     public void renameColumn(ConnectorSession session, ConnectorTableHandle tableHandle, ColumnHandle source, String target)
     {
         TableType tableType = tableType(tableHandle);

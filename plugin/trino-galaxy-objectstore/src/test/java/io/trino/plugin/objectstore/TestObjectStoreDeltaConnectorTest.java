@@ -492,6 +492,21 @@ public class TestObjectStoreDeltaConnectorTest
                         but did not.""");
     }
 
+    @Override
+    public void testSetFieldType()
+    {
+        // Setting row field type is not supported, but a non standard exception message is thrown.
+        assertThatThrownBy(super::testSetFieldType)
+                .isInstanceOf(AssertionError.class)
+                .hasMessageStartingWith("""
+
+                        Expecting message:
+                          "Setting field type in Delta Lake tables is not supported"
+                        to match regex:
+                          "This connector does not support setting field types"
+                        but did not.""");
+    }
+
     private void runAnalyzeVerifySplitCount(String tableName, long expectedSplitCount)
     {
         MaterializedResultWithQueryId analyzeResult = getDistributedQueryRunner().executeWithQueryId(getSession(), "ANALYZE " + tableName);

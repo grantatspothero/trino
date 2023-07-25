@@ -871,4 +871,19 @@ public class TestObjectStoreHiveConnectorTest
                           "This connector does not support renaming fields"
                         but did not.""");
     }
+
+    @Override
+    public void testSetFieldType()
+    {
+        // Setting row field type is not supported, but a non standard exception message is thrown.
+        assertThatThrownBy(super::testSetFieldType)
+                .isInstanceOf(AssertionError.class)
+                .hasMessageStartingWith("""
+
+                        Expecting message:
+                          "Setting field type in Hive tables is not supported"
+                        to match regex:
+                          "This connector does not support setting field types"
+                        but did not.""");
+    }
 }

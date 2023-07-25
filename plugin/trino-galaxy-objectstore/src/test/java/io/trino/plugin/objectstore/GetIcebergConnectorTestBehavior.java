@@ -17,6 +17,8 @@ import io.trino.plugin.iceberg.BaseIcebergConnectorTest;
 import io.trino.plugin.iceberg.IcebergConfig;
 import io.trino.testing.TestingConnectorBehavior;
 
+import java.util.Optional;
+
 class GetIcebergConnectorTestBehavior
         extends BaseIcebergConnectorTest
 {
@@ -48,5 +50,19 @@ class GetIcebergConnectorTestBehavior
     protected boolean hasBehavior(TestingConnectorBehavior connectorBehavior)
     {
         return super.hasBehavior(connectorBehavior);
+    }
+
+    // Override to make visible
+    @Override
+    protected Optional<SetColumnTypeSetup> filterSetFieldTypesDataProvider(SetColumnTypeSetup setup)
+    {
+        return super.filterSetFieldTypesDataProvider(setup);
+    }
+
+    // Override to make visible
+    @Override
+    protected void verifySetFieldTypeFailurePermissible(Throwable e)
+    {
+        super.verifySetFieldTypeFailurePermissible(e);
     }
 }
