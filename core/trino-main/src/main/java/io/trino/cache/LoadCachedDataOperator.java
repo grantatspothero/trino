@@ -72,7 +72,7 @@ public class LoadCachedDataOperator
         @Override
         public OperatorFactory duplicate()
         {
-            return new CacheDataOperator.CacheDataOperatorFactory(operatorId, planNodeId);
+            return new LoadCachedDataOperatorFactory(operatorId, planNodeId);
         }
     }
 
