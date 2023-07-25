@@ -21,6 +21,9 @@ import com.amazonaws.services.glue.model.GetTablesRequest;
 import com.amazonaws.services.glue.model.GetTablesResult;
 import com.amazonaws.services.glue.model.Table;
 import com.google.common.collect.ImmutableMap;
+import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
+import io.starburst.stargate.accesscontrol.privilege.Privilege;
+import io.starburst.stargate.id.SchemaId;
 import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.aws.AwsApiCallStats;
 import io.trino.plugin.iceberg.BaseIcebergMaterializedViewTest;
@@ -37,6 +40,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static io.starburst.stargate.accesscontrol.privilege.GrantKind.ALLOW;
 import static io.trino.plugin.hive.metastore.glue.AwsSdkUtil.getPaginatedResults;
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
@@ -83,6 +87,14 @@ public class TestObjectStoreIcebergGlueCatalogMaterializedView
                 .build();
         queryRunner.execute("CREATE SCHEMA %s.%s".formatted(TEST_CATALOG, schemaName));
         queryRunner.execute("GRANT SELECT ON tpch.\"*\".\"*\" TO ROLE %s WITH GRANT OPTION".formatted(ACCOUNT_ADMIN));
+
+        // Allows for tests in BaseIcebergMaterializedViewTest which use non_existent to check for not found
+        galaxyTestHelper.getAccountClient()
+                .grantFunctionPrivilege(new TestingAccountClient.GrantDetails(Privilege.CREATE_TABLE,
+                        galaxyTestHelper.getAccountClient().getAdminRoleId(),
+                        ALLOW,
+                        false,
+                        new SchemaId(galaxyTestHelper.getAccountClient().getOrCreateCatalog(TEST_CATALOG), "non_existent")));
         return queryRunner;
     }
 

@@ -466,6 +466,7 @@ public class GalaxyAccessControl
     {
         checkCatalogIsWritable(controllerSupplier.apply(context), materializedView.getCatalogName(), explanation -> denyCreateMaterializedView(materializedView.toString(), explanation));
         checkHasSchemaPrivilege(context, materializedView, CREATE_TABLE, explanation -> denyCreateMaterializedView(materializedView.toString(), explanation));
+        checkCreateMaterializedViewProperties(context, materializedView, properties);
     }
 
     @Override
@@ -794,6 +795,22 @@ public class GalaxyAccessControl
     {
         if (!isTableOwner(context, view)) {
             denier.accept(format("Role %s does not own the view", currentRoleName(context)));
+        }
+    }
+
+    /**
+     * Make sure the current active role set has CREATE_TABLE on the schema specified by the
+     * storage_schema materialized view property, if it exists, to prevent creating a table in a schema
+     * the active role set doesn't have privileges to do so.
+     */
+    private void checkCreateMaterializedViewProperties(SystemSecurityContext context, CatalogSchemaTableName materializedView, Map<String, Object> properties)
+    {
+        if (properties != null) {
+            Optional<String> storageSchema = Optional.ofNullable(properties.get("storage_schema")).map(String::valueOf);
+            if (storageSchema.isPresent() && !storageSchema.get().equals(materializedView.getSchemaTableName().getSchemaName())) {
+                CatalogSchemaTableName storageSchemaTable = new CatalogSchemaTableName(materializedView.getCatalogName(), new SchemaTableName(storageSchema.get(), materializedView.getSchemaTableName().getTableName()));
+                checkHasSchemaPrivilege(context, storageSchemaTable, CREATE_TABLE, explanation -> denyCreateMaterializedView(storageSchemaTable.toString(), explanation));
+            }
         }
     }
 

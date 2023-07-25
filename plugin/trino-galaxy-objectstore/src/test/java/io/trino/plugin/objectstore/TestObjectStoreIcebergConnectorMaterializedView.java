@@ -16,6 +16,9 @@ package io.trino.plugin.objectstore;
 import com.google.common.collect.ImmutableMap;
 import io.minio.ListObjectsArgs;
 import io.minio.MinioClient;
+import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
+import io.starburst.stargate.accesscontrol.privilege.Privilege;
+import io.starburst.stargate.id.SchemaId;
 import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.iceberg.BaseIcebergMaterializedViewTest;
@@ -30,11 +33,13 @@ import org.testng.annotations.Test;
 
 import java.util.Map;
 
+import static io.starburst.stargate.accesscontrol.privilege.GrantKind.ALLOW;
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestObjectStoreIcebergConnectorMaterializedView
         extends BaseIcebergMaterializedViewTest
@@ -87,6 +92,14 @@ public class TestObjectStoreIcebergConnectorMaterializedView
                 .build();
         queryRunner.execute("CREATE SCHEMA %s.%s".formatted(TEST_CATALOG, queryRunner.getDefaultSession().getSchema().orElseThrow()));
         queryRunner.execute("GRANT SELECT ON tpch.\"*\".\"*\" TO ROLE %s WITH GRANT OPTION".formatted(ACCOUNT_ADMIN));
+
+        // Allows for tests in BaseIcebergMaterializedViewTest which use non_existent to check for not found
+        galaxyTestHelper.getAccountClient()
+                .grantFunctionPrivilege(new TestingAccountClient.GrantDetails(Privilege.CREATE_TABLE,
+                        galaxyTestHelper.getAccountClient().getAdminRoleId(),
+                        ALLOW,
+                        false,
+                        new SchemaId(galaxyTestHelper.getAccountClient().getOrCreateCatalog(TEST_CATALOG), "non_existent")));
         return queryRunner;
     }
 
@@ -164,5 +177,20 @@ public class TestObjectStoreIcebergConnectorMaterializedView
         assertQuery("SELECT * FROM " + materializedViewName, "VALUES 42, 45");
         assertQueryFails(galaxyTestHelper.publicSession(), "SELECT * FROM " + String.format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
         assertQueryFails(galaxyTestHelper.publicSession(), "SELECT 1 FROM " + String.format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
+    }
+
+    @Test
+    public void testStorageSchemaPropertyGalaxyAccessControl()
+    {
+        String schemaName = getSession().getSchema().orElseThrow();
+        String viewName = "galaxy_storage_schema_test_view";
+
+        assertThatThrownBy(() -> query(
+                "CREATE MATERIALIZED VIEW " + viewName + " " +
+                        "WITH (storage_schema = 'different_storage_schema') AS " +
+                        "SELECT * FROM base_table1"))
+                .hasMessageContaining("Access Denied: Cannot create materialized view iceberg.different_storage_schema.%s: Role accountadmin does not have the privilege CREATE_TABLE on the schema iceberg.different_storage_schema".formatted(viewName));
+        assertThatThrownBy(() -> query("DESCRIBE " + viewName))
+                .hasMessageContaining(String.format("'iceberg.%s.%s' does not exist", schemaName, viewName));
     }
 }
