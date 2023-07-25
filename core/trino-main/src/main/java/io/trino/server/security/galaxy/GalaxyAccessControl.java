@@ -457,7 +457,7 @@ public class GalaxyAccessControl
     @Override
     public void checkCanCreateViewWithSelectFromColumns(SystemSecurityContext context, CatalogSchemaTableName table, Set<String> columns)
     {
-        checkHasPrivilegeOnColumns(context, SELECT, true, table, columns, explanation ->
+        checkHasPrivilegeOnColumns(context, SELECT, !isTableOwner(context, table), table, columns, explanation ->
                 denyCreateViewWithSelect(table.toString(), context.getIdentity().toConnectorIdentity(), explanation));
     }
 
@@ -700,33 +700,33 @@ public class GalaxyAccessControl
         GalaxySystemAccessController controller = controllerSupplier.apply(context);
         Optional<TableId> tableId = toTableId(controller, table);
         if (tableId.isEmpty()) {
-            runPrivilegeDenier(context, privilege, columns, denier);
+            runPrivilegeDenier(context, privilege, requiresGrantOption, columns, denier);
         }
         EntityPrivileges privileges = controller.getEntityPrivileges(context, tableId.get());
         if (requiresGrantOption) {
             Optional<GalaxyPrivilegeInfo> info = privileges.getPrivileges().stream().filter(element -> element.getPrivilege() == privilege && element.isGrantOption()).findAny();
             if (info.isEmpty() || !info.get().isGrantOption()) {
-                runPrivilegeDenier(context, privilege, columns, denier);
+                runPrivilegeDenier(context, privilege, requiresGrantOption, columns, denier);
             }
         }
         ContentsVisibility visibility = privileges.getColumnPrivileges().get(privilege.name());
         Set<String> deniedColumns;
         // If there is no column visibility, or if default column visibility is DENY and there are no overrides, all columns are denied
         if (visibility == null || (visibility.defaultVisibility() == GrantKind.DENY && visibility.overrideVisibility().isEmpty())) {
-            runPrivilegeDenier(context, privilege, ImmutableSet.of(), denier);
+            runPrivilegeDenier(context, privilege, requiresGrantOption, ImmutableSet.of(), denier);
         }
         else {
             deniedColumns = columns.stream().filter(column -> !visibility.isVisible(column)).collect(toImmutableSet());
             if (!deniedColumns.isEmpty()) {
-                runPrivilegeDenier(context, privilege, deniedColumns, denier);
+                runPrivilegeDenier(context, privilege, requiresGrantOption, deniedColumns, denier);
             }
         }
     }
 
-    private void runPrivilegeDenier(SystemSecurityContext context, Privilege privilege, Set<String> deniedColumns, Consumer<String> denier)
+    private void runPrivilegeDenier(SystemSecurityContext context, Privilege privilege, boolean requiresGrantOption, Set<String> deniedColumns, Consumer<String> denier)
     {
         String kind = deniedColumns.size() == 1 ? "column" : "columns";
-        denier.accept(roleLacksPrivilege(context, privilege, kind, deniedColumns.isEmpty() ? "" : "[%s]".formatted(String.join(", ", deniedColumns))));
+        denier.accept(roleLacksPrivilege(context, privilege, requiresGrantOption, kind, deniedColumns.isEmpty() ? "" : "[%s]".formatted(String.join(", ", deniedColumns))));
     }
 
     private void checkHasAccountPrivilege(SystemSecurityContext context, Privilege privilege, Consumer<String> denier)
@@ -817,7 +817,12 @@ public class GalaxyAccessControl
 
     private String roleLacksPrivilege(SystemSecurityContext context, Privilege privilege, String kind, String entity)
     {
-        return format("Role %s does not have the privilege %s on the %s %s", currentRoleName(context), privilege, kind, entity);
+        return roleLacksPrivilege(context, privilege, false, kind, entity);
+    }
+
+    private String roleLacksPrivilege(SystemSecurityContext context, Privilege privilege, boolean requiresGrantOption, String kind, String entity)
+    {
+        return format("Role %s does not have the privilege %s%s on the %s %s", currentRoleName(context), privilege, requiresGrantOption ? " WITH GRANT OPTION" : "", kind, entity);
     }
 
     // Helper methods that call Galaxy to determine access

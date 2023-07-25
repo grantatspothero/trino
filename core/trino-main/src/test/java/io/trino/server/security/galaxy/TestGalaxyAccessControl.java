@@ -668,9 +668,9 @@ public class TestGalaxyAccessControl
         // If no privileges access fails for everyone
         checkAccessMatching(message, ImmutableList.of(), allContexts(), consumer);
 
-        // Having the privilege without grantOption is not enough to allow access
+        // Having the privilege without grantOption is not enough to allow access unless you own the view
         withGrantedTablePrivilege(SELECT, LACKEY_FOLLOWER, name, false, () ->
-                checkAccessMatching(message, ImmutableList.of(), allContexts(), consumer));
+                checkAccessMatching(message, ImmutableList.of(adminContext()), ImmutableList.of(lackeyContext(), fearlessContext(), publicContext()), consumer));
 
         // Having the privilege with grantOption allows access
         withGrantedTablePrivilege(SELECT, LACKEY_FOLLOWER, name, true, () ->
