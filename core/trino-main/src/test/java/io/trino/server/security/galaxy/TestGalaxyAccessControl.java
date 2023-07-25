@@ -641,11 +641,11 @@ public class TestGalaxyAccessControl
         CatalogSchemaTableName cname = new CatalogSchemaTableName(helper.getAnyCatalogName(), newSchemaName(), newTableName());
         assertThatThrownBy(() -> accessControl.checkCanSelectFromColumns(lackeyContext(), cname, ImmutableSet.of()))
                 .isInstanceOf(AccessDeniedException.class)
-                .hasMessage("Access Denied: Cannot select from columns [] in table or view %s: Role lackey_follower does not have the privilege SELECT on the columns ".formatted(cname));
+                .hasMessage("Access Denied: Cannot select from columns [] in table or view %s: Relation not found or not allowed".formatted(cname));
 
         assertThatThrownBy(() -> accessControl.checkCanSelectFromColumns(fearlessContext(), cname, ImmutableSet.of()))
                 .isInstanceOf(AccessDeniedException.class)
-                .hasMessage("Access Denied: Cannot select from columns [] in table or view %s: Role fearless_leader does not have the privilege SELECT on the columns ".formatted(cname));
+                .hasMessage("Access Denied: Cannot select from columns [] in table or view %s: Relation not found or not allowed".formatted(cname));
 
         // Clean up
         securityMetadata.revokeTablePrivileges(adminSession(), name, ImmutableSet.of(SELECT), new TrinoPrincipal(PrincipalType.ROLE, LACKEY_FOLLOWER), false);

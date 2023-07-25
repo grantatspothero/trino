@@ -893,10 +893,10 @@ public class TestGalaxyQueries
         // originally, the views cannot be created
         assertThatThrownBy(() -> query(innerViewOwnerSessionNoGrantOption, "CREATE VIEW memory.definer_views.inner_view_no_grant_option_definer AS SELECT * FROM memory.definer_views.base_table"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.base_table: Role inner_view_owner_no_grant_option does not have the privilege SELECT on the columns ");
+                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.base_table: Relation not found or not allowed");
         assertThatThrownBy(() -> query(innerViewOwnerSessionNoGrantOption, "CREATE VIEW memory.definer_views.inner_view_no_grant_option_invoker SECURITY INVOKER AS SELECT * FROM memory.definer_views.base_table"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.base_table: Role inner_view_owner_no_grant_option does not have the privilege SELECT on the columns ");
+                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.base_table: Relation not found or not allowed");
 
         // grant select without the grant option
         assertUpdate(baseTableOwnerSession, "GRANT SELECT ON TABLE memory.definer_views.base_table TO ROLE inner_view_owner_no_grant_option");
@@ -944,7 +944,7 @@ public class TestGalaxyQueries
                 .hasMessageContaining("cannot create view that selects from memory.definer_views.base_table: Role outer_view_owner does not have the privilege SELECT WITH GRANT OPTION on the columns");
         assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.base_table: Role outer_view_owner does not have the privilege SELECT on the columns");
+                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.base_table: Relation not found or not allowed");
 
         // set the inner view owner grant option back, then the definer query should work just fine
         // the invoker query still needs base_table granted to the outer view owner
@@ -952,7 +952,7 @@ public class TestGalaxyQueries
         assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer")).matches(tableContents);
         assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.base_table: Role outer_view_owner does not have the privilege SELECT on the columns");
+                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.base_table: Relation not found or not allowed");
 
         assertUpdate(baseTableOwnerSession, "GRANT SELECT ON TABLE memory.definer_views.base_table TO ROLE outer_view_owner");
         assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker")).matches(tableContents);
@@ -1126,7 +1126,7 @@ public class TestGalaxyQueries
         // Show that directly accessing the subquery_table fails
         assertThatThrownBy(() -> query(tableReaderSession, "SELECT * FROM memory.row_filters.subquery_table"))
                 .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Access Denied: Cannot select from columns [match_column] in table or view memory.row_filters.subquery_table: Role table_reader does not have the privilege SELECT on the columns ");
+                .hasMessage("Access Denied: Cannot select from columns [match_column] in table or view memory.row_filters.subquery_table: Relation not found or not allowed");
 
         // Show that we only get the filtered row when querying the base_table
         assertThat(query(tableReaderSession, "SELECT * FROM memory.row_filters.base_table")).matches(filteredTableContents);
@@ -1247,7 +1247,7 @@ public class TestGalaxyQueries
         // table_reader cannot query subquery_table
         assertThatThrownBy(() -> query(tableReader, "SELECT * FROM memory.column_masks.subquery_table"))
                 .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Access Denied: Cannot select from columns [match_column] in table or view memory.column_masks.subquery_table: Role table_reader does not have the privilege SELECT on the columns ");
+                .hasMessage("Access Denied: Cannot select from columns [match_column] in table or view memory.column_masks.subquery_table: Relation not found or not allowed");
 
         // The column mask depends on subquery_table
         columnMaskId = client.createColumnMask(

@@ -818,7 +818,7 @@ public class GalaxyAccessControl
         Set<String> deniedColumns;
         // If there is no column visibility, or if default column visibility is DENY and there are no overrides, all columns are denied
         if (visibility == null || (visibility.defaultVisibility() == GrantKind.DENY && visibility.overrideVisibility().isEmpty())) {
-            runPrivilegeDenier(context, privilege, requiresGrantOption, ImmutableSet.of(), denier);
+            denier.accept("Relation not found or not allowed");
         }
         else {
             deniedColumns = columns.stream().filter(column -> !visibility.isVisible(column)).collect(toImmutableSet());

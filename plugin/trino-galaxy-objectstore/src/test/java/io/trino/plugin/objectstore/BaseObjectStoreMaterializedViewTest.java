@@ -31,7 +31,7 @@ public abstract class BaseObjectStoreMaterializedViewTest
         assertThatThrownBy(super::testMaterializedViewOnTableRolledBack)
                 .isInstanceOf(QueryFailedException.class)
                 .hasMessage("Access Denied: Cannot select from columns [snapshot_id, committed_at] in table or view " +
-                        "iceberg." + schema + ".mv_on_rolled_back_base_table$snapshots: Role accountadmin does not have the privilege SELECT on the columns ");
+                        "iceberg." + schema + ".mv_on_rolled_back_base_table$snapshots: Relation not found or not allowed");
         // Cleanup after test flow interrupted
         assertUpdate("DROP MATERIALIZED VIEW mv_on_rolled_back_the_mv");
         assertUpdate("DROP TABLE mv_on_rolled_back_base_table");
@@ -51,7 +51,7 @@ public abstract class BaseObjectStoreMaterializedViewTest
         assertThatThrownBy(super::testMaterializedViewOnTableRolledBack)
                 .isInstanceOf(QueryFailedException.class)
                 .hasMessage("Access Denied: Cannot select from columns [snapshot_id, committed_at] in table or view " +
-                        "iceberg." + schema + ".mv_on_rolled_back_base_table$snapshots: Role accountadmin does not have the privilege SELECT on the columns ");
+                        "iceberg." + schema + ".mv_on_rolled_back_base_table$snapshots: Relation not found or not allowed");
         // Cleanup after test flow interrupted
         assertUpdate("DROP MATERIALIZED VIEW mv_on_rolled_back_the_mv");
         assertUpdate("DROP TABLE mv_on_rolled_back_base_table");
