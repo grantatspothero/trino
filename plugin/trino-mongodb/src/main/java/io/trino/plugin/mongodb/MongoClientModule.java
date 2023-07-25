@@ -139,7 +139,7 @@ public class MongoClientModule
     {
         private final SocketSettings settings;
         private final SslSettings sslSettings;
-        private final BufferProvider bufferProvider = new PowerOfTwoBufferPool();
+        private final BufferProvider bufferProvider = PowerOfTwoBufferPool.DEFAULT;
         private final RegionEnforcementConfig regionEnforcementConfig;
         private final Optional<SshTunnelProperties> sshTunnelProperties;
         private final CatalogHandle catalogHandle;
