@@ -39,6 +39,7 @@ import io.trino.plugin.hive.HiveTableHandle;
 import io.trino.plugin.hive.TransactionalMetadata;
 import io.trino.plugin.hive.metastore.SemiTransactionalHiveMetastore;
 import io.trino.plugin.hive.metastore.Table;
+import io.trino.plugin.hive.procedure.OptimizeTableProcedure;
 import io.trino.plugin.hudi.HudiTableHandle;
 import io.trino.plugin.iceberg.CorruptedIcebergTableHandle;
 import io.trino.plugin.iceberg.IcebergFileFormat;
@@ -315,6 +316,9 @@ public class ObjectStoreMetadata
     public Optional<ConnectorTableExecuteHandle> getTableHandleForExecute(ConnectorSession session, ConnectorTableHandle tableHandle, String procedureName, Map<String, Object> executeProperties, RetryMode retryMode)
     {
         TableType tableType = tableType(tableHandle);
+        if (tableType == HIVE && procedureName.equals(OptimizeTableProcedure.NAME)) {
+            throw new TrinoException(NOT_SUPPORTED, "Executing OPTIMIZE on Hive tables is not supported");
+        }
         return delegate(tableType).getTableHandleForExecute(unwrap(tableType, session), tableHandle, procedureName, executeProperties, retryMode);
     }
 

@@ -567,19 +567,8 @@ public class TestObjectStoreHiveConnectorTest
         for (int i = 0; i < 10; i++) {
             assertUpdate("INSERT INTO test_optimize SELECT * FROM nation", "SELECT count(*) FROM nation");
         }
-        long fileCount = (long) computeActual("SELECT count(DISTINCT \"$path\") FROM test_optimize").getOnlyValue();
-
         assertThatThrownBy(() -> computeActual("ALTER TABLE test_optimize EXECUTE optimize(file_size_threshold => '10kB')"))
-                .hasMessage("OPTIMIZE procedure must be explicitly enabled via non_transactional_optimize_enabled session property");
-
-        assertUpdate(
-                Session.builder(getSession())
-                        .setCatalogSessionProperty("objectstore", "non_transactional_optimize_enabled", "true")
-                        .build(),
-                "ALTER TABLE test_optimize EXECUTE optimize(file_size_threshold => '10kB')");
-
-        long newFileCount = (long) computeActual("SELECT count(DISTINCT \"$path\") FROM test_optimize").getOnlyValue();
-        assertThat(newFileCount).isLessThan(fileCount);
+                .hasMessage("Executing OPTIMIZE on Hive tables is not supported");
     }
 
     @Test

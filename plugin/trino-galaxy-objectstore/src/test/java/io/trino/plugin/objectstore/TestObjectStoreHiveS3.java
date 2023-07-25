@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.objectstore;
 
+import org.testng.SkipException;
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
@@ -259,5 +260,12 @@ public class TestObjectStoreHiveS3
     {
         assertThatThrownBy(() -> assertUpdate("CREATE SCHEMA \"..\""))
                 .hasMessage("Invalid schema name");
+    }
+
+    @Override
+    @Test(dataProvider = "locationPatternsDataProvider")
+    public void testOptimizeWithProvidedTableLocation(boolean partitioned, String locationPattern)
+    {
+        throw new SkipException("Objectstore connector does not support OPTIMIZE for Hive tables");
     }
 }

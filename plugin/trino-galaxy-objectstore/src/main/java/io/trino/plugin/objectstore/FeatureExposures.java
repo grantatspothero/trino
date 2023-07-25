@@ -55,7 +55,7 @@ public final class FeatureExposures
                 .put(ICEBERG, "DROP_EXTENDED_STATS", EXPOSED) // TODO similar to drop_extended_stats *procedure* exposed by Delta
                 .put(ICEBERG, "EXPIRE_SNAPSHOTS", EXPOSED)
                 .put(ICEBERG, "REMOVE_ORPHAN_FILES", EXPOSED)
-                .put(HIVE, "OPTIMIZE", EXPOSED)
+                .put(HIVE, "OPTIMIZE", HIDDEN)
                 .put(ICEBERG, "OPTIMIZE", EXPOSED)
                 .put(DELTA, "OPTIMIZE", EXPOSED)
                 .buildOrThrow();

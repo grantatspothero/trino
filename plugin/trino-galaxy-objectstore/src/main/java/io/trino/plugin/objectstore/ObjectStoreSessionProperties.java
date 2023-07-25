@@ -63,6 +63,7 @@ public class ObjectStoreSessionProperties
 
         Table<String, TableType, PropertyMetadata<?>> delegateProperties = HashBasedTable.create();
         delegates.byType().forEach((type, connector) -> {
+            // TODO (https://github.com/starburstdata/galaxy-trino/issues/919) Add feature exposures for session properties
             for (PropertyMetadata<?> property : connector.getSessionProperties()) {
                 delegateProperties.put(property.getName(), type, property);
             }
