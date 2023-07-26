@@ -1042,12 +1042,11 @@ jobs:
             # suite-4 does not exist
             - suite-5
             - suite-azure
-            # Databricks account is currently unusable https://github.com/starburstdata/galaxy-trino/issues/834
-            # suite-delta-lake-databricks73
-            # suite-delta-lake-databricks91
-            # suite-delta-lake-databricks104
-            # suite-delta-lake-databricks113
-            # suite-delta-lake-databricks122
+            - suite-delta-lake-databricks73
+            - suite-delta-lake-databricks91
+            - suite-delta-lake-databricks104
+            - suite-delta-lake-databricks113
+            - suite-delta-lake-databricks122
             - suite-gcs
             - suite-clients
             - suite-functions
