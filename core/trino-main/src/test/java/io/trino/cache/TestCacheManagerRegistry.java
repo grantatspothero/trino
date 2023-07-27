@@ -45,6 +45,7 @@ public class TestCacheManagerRegistry
 
     private LocalMemoryManager memoryManager;
     private TestCacheManager cacheManager;
+    private CacheManagerRegistry registry;
 
     @BeforeMethod
     public void setup()
@@ -54,7 +55,7 @@ public class TestCacheManagerRegistry
                 .setMaxQueryMemoryPerNode(DataSize.of(100, MEGABYTE));
 
         memoryManager = new LocalMemoryManager(config, DataSize.of(110, MEGABYTE).toBytes());
-        CacheManagerRegistry registry = new CacheManagerRegistry(new CacheConfig(), memoryManager, newDirectExecutorService());
+        registry = new CacheManagerRegistry(new CacheConfig(), memoryManager, newDirectExecutorService());
         registry.addCacheManagerFactory(new TestCacheManagerFactory());
         registry.loadCacheManager(TEST_CACHE_MANAGER, ImmutableMap.of());
     }
@@ -82,9 +83,14 @@ public class TestCacheManagerRegistry
     {
         assertThat(cacheManager.tryAllocateMemory(DataSize.of(90, MEGABYTE).toBytes())).isTrue();
         assertThat(cacheManager.getBytesToRevoke()).isEmpty();
+        assertThat(registry.getNonEmptyRevokeCount()).isEqualTo(0);
+        assertThat(registry.getDistributionSizeRevokedMemory().getCount()).isEqualTo(0);
 
         assertThat(cacheManager.tryAllocateMemory(DataSize.of(95, MEGABYTE).toBytes())).isFalse();
         assertThat(cacheManager.getBytesToRevoke()).hasValue(DataSize.of(20, MEGABYTE).toBytes());
+        assertThat(registry.getNonEmptyRevokeCount()).isEqualTo(1);
+        assertThat(registry.getDistributionSizeRevokedMemory().getCount()).isEqualTo(1);
+        assertThat(registry.getDistributionSizeRevokedMemory().getAvg()).isEqualTo(DataSize.of(20, MEGABYTE).toBytes());
     }
 
     private class TestCacheManagerFactory
@@ -128,9 +134,10 @@ public class TestCacheManagerRegistry
         }
 
         @Override
-        public void revokeMemory(long bytesToRevoke)
+        public long revokeMemory(long bytesToRevoke)
         {
             this.bytesToRevoke = OptionalLong.of(bytesToRevoke);
+            return bytesToRevoke;
         }
 
         private boolean tryAllocateMemory(long bytes)

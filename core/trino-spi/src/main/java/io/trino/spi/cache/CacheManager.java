@@ -41,8 +41,10 @@ public interface CacheManager
      * Triggers a memory revoke. {@link CacheManager} should revoke
      * at least {@code bytesToRevoke} bytes (if it has allocated
      * that much revocable memory) before allocating new memory.
+     *
+     * @return the number of revoked bytes
      */
-    void revokeMemory(long bytesToRevoke);
+    long revokeMemory(long bytesToRevoke);
 
     interface SplitCache
             extends Closeable

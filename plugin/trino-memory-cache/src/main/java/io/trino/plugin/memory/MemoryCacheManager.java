@@ -21,6 +21,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import io.airlift.slice.Slice;
+import io.airlift.stats.Distribution;
 import io.trino.spi.HostAddress;
 import io.trino.spi.Node;
 import io.trino.spi.NodeManager;
@@ -33,6 +34,8 @@ import io.trino.spi.cache.PlanSignature;
 import io.trino.spi.connector.ConnectorPageSink;
 import io.trino.spi.connector.ConnectorPageSource;
 import io.trino.spi.connector.FixedPageSource;
+import org.weakref.jmx.Managed;
+import org.weakref.jmx.Nested;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -99,7 +102,8 @@ public class MemoryCacheManager
     @GuardedBy("this")
     private final Map<Long, Long> idUsageCount = new HashMap<>();
     private final AtomicLong nextSignatureId = new AtomicLong();
-    private long allocatedRevocableBytes;
+    private volatile long allocatedRevocableBytes;
+    private final Distribution cachedSplitSizeDistribution = new Distribution();
 
     @Inject
     public MemoryCacheManager(CacheManagerContext context)
@@ -128,11 +132,30 @@ public class MemoryCacheManager
     }
 
     @Override
-    public synchronized void revokeMemory(long bytesToRevoke)
+    public synchronized long revokeMemory(long bytesToRevoke)
     {
         checkArgument(bytesToRevoke >= 0);
         long initialAllocatedBytes = allocatedRevocableBytes;
-        removeEldestSplits(() -> initialAllocatedBytes - allocatedRevocableBytes >= bytesToRevoke);
+        return removeEldestSplits(() -> initialAllocatedBytes - allocatedRevocableBytes >= bytesToRevoke);
+    }
+
+    @Managed
+    @Nested
+    public Distribution getCachedSplitSizeDistribution()
+    {
+        return cachedSplitSizeDistribution;
+    }
+
+    @Managed
+    public long getAllocatedRevocableBytes()
+    {
+        return allocatedRevocableBytes;
+    }
+
+    @Managed
+    public synchronized long getCachedPlanSignaturesCount()
+    {
+        return signatureToId.size();
     }
 
     private synchronized Optional<ConnectorPageSource> loadPages(long signatureId, CacheSplitId splitId)
@@ -181,6 +204,7 @@ public class MemoryCacheManager
         allocatedRevocableBytes += entrySize;
         splitCache.put(key, pages);
         splitLoaded.get(key).set(null);
+        cachedSplitSizeDistribution.add(memoryUsageBytes);
         checkState(idUsageCount.get(key.signatureId()) > 0, "Signature id must not be released while split is cached");
     }
 
@@ -221,13 +245,14 @@ public class MemoryCacheManager
         }
     }
 
-    private synchronized void removeEldestSplits(BooleanSupplier stopCondition)
+    private synchronized long removeEldestSplits(BooleanSupplier stopCondition)
     {
         if (splitCache.isEmpty()) {
             // no splits to remove
-            return;
+            return 0L;
         }
 
+        long freedAllocatedRevocableBytes = 0;
         for (Iterator<Map.Entry<SplitKey, List<Page>>> iterator = splitCache.entrySet().iterator(); iterator.hasNext(); ) {
             if (stopCondition.getAsBoolean()) {
                 break;
@@ -249,10 +274,12 @@ public class MemoryCacheManager
             releaseSignatureId(key.signatureId());
 
             allocatedRevocableBytes -= splitRetainedSizeInBytes;
+            freedAllocatedRevocableBytes += splitRetainedSizeInBytes;
         }
 
         checkState(allocatedRevocableBytes >= 0);
         checkState(revocableMemoryAllocator.trySetBytes(allocatedRevocableBytes));
+        return freedAllocatedRevocableBytes;
     }
 
     private class MemorySplitCache

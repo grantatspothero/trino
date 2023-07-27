@@ -14,6 +14,7 @@
 package io.trino.plugin.memory;
 
 import com.google.common.collect.ImmutableList;
+import io.airlift.stats.Distribution;
 import io.trino.client.NodeVersion;
 import io.trino.plugin.memory.MemoryCacheManager.SplitKey;
 import io.trino.spi.Page;
@@ -223,6 +224,26 @@ public class TestMemoryCacheManager
         assertThat(addressProvider1.getPreferredAddress(splitId1)).isNotEqualTo(addressProvider1.getPreferredAddress(splitId2));
         assertThat(addressProvider2.getPreferredAddress(splitId1)).isNotEqualTo(addressProvider2.getPreferredAddress(splitId2));
         assertThat(addressProvider1.getPreferredAddress(splitId1)).isNotEqualTo(addressProvider2.getPreferredAddress(splitId1));
+    }
+
+    @Test
+    public void testSplitSizeDistributionMetric()
+    {
+        PlanSignature signature = createPlanSignature("sig");
+        CacheSplitId splitId = new CacheSplitId("split1");
+        SplitCache cache = cacheManager.getSplitCache(signature);
+        assertThat(cache.loadPages(splitId)).isEmpty();
+
+        Optional<ConnectorPageSink> sink = cache.storePages(splitId);
+        assertThat(sink).isPresent();
+
+        Page page = createOneMegaBytePage();
+        sink.get().appendPage(page);
+        sink.get().finish();
+
+        Distribution splitSizeDistribution = cacheManager.getCachedSplitSizeDistribution();
+        assertThat(splitSizeDistribution.getCount()).isEqualTo(1);
+        assertThat(splitSizeDistribution.getAvg()).isEqualTo(page.getRetainedSizeInBytes());
     }
 
     private static PlanSignature createPlanSignature(String signature)

@@ -17,6 +17,8 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
 
+import static org.weakref.jmx.guice.ExportBinder.newExporter;
+
 public class MemoryCacheModule
         implements Module
 {
@@ -24,5 +26,6 @@ public class MemoryCacheModule
     public void configure(Binder binder)
     {
         binder.bind(MemoryCacheManager.class).in(Scopes.SINGLETON);
+        newExporter(binder).export(MemoryCacheManager.class).withGeneratedName();
     }
 }

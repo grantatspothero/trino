@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import io.airlift.log.Logger;
+import io.airlift.stats.Distribution;
 import io.trino.memory.LocalMemoryManager;
 import io.trino.memory.MemoryPool;
 import io.trino.memory.context.LocalMemoryContext;
@@ -28,6 +29,8 @@ import io.trino.spi.cache.CacheManager;
 import io.trino.spi.cache.CacheManagerContext;
 import io.trino.spi.cache.CacheManagerFactory;
 import io.trino.spi.classloader.ThreadContextClassLoader;
+import org.weakref.jmx.Managed;
+import org.weakref.jmx.Nested;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,6 +40,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -71,6 +75,8 @@ public class CacheManagerRegistry
     private final Map<String, CacheManagerFactory> cacheManagerFactories = new ConcurrentHashMap<>();
     private final ExecutorService executor;
     private final AtomicBoolean revokeRequested = new AtomicBoolean();
+    private final Distribution sizeOfRevokedMemoryDistribution = new Distribution();
+    private final AtomicInteger nonEmptyRevokeCount = new AtomicInteger();
 
     private volatile CacheManager cacheManager;
 
@@ -139,7 +145,7 @@ public class CacheManagerRegistry
                     // do not allocate more memory if it would exceed revoking threshold
                     if (memoryRevokingNeeded(bytes)) {
                         // schedule memory revoke to free up some space for new splits to be cached
-                        scheduleMemoryRevoke();
+                        scheduleMemoryRevoke(true);
                         return false;
                     }
 
@@ -156,7 +162,7 @@ public class CacheManagerRegistry
         // revoke cache memory when revoking target is reached
         memoryPool.addListener(pool -> {
             if (memoryRevokingNeeded(0)) {
-                scheduleMemoryRevoke();
+                scheduleMemoryRevoke(false);
             }
         });
 
@@ -182,6 +188,19 @@ public class CacheManagerRegistry
         }));
     }
 
+    @Managed
+    @Nested
+    public Distribution getDistributionSizeRevokedMemory()
+    {
+        return sizeOfRevokedMemoryDistribution;
+    }
+
+    @Managed
+    public int getNonEmptyRevokeCount()
+    {
+        return nonEmptyRevokeCount.get();
+    }
+
     private static Map<String, String> loadProperties(File configFile)
     {
         try {
@@ -192,7 +211,7 @@ public class CacheManagerRegistry
         }
     }
 
-    private void scheduleMemoryRevoke()
+    private void scheduleMemoryRevoke(boolean onAllocation)
     {
         // allow at most one revoke request to be scheduled
         if (revokeRequested.getAndSet(true)) {
@@ -202,7 +221,13 @@ public class CacheManagerRegistry
             revokeRequested.set(false);
             long bytesToRevoke = (long) (-memoryPool.getFreeBytes() + (memoryPool.getMaxBytes() * (1.0 - revokingTarget)));
             if (bytesToRevoke > 0) {
-                cacheManager.revokeMemory(bytesToRevoke);
+                long revokedBytes = cacheManager.revokeMemory(bytesToRevoke);
+                if (onAllocation) {
+                    sizeOfRevokedMemoryDistribution.add(revokedBytes);
+                }
+                if (revokedBytes > 0) {
+                    nonEmptyRevokeCount.incrementAndGet();
+                }
             }
         });
     }

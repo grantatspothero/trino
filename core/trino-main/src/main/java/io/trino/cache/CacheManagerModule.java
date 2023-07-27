@@ -18,6 +18,7 @@ import com.google.inject.Module;
 import com.google.inject.Scopes;
 
 import static io.airlift.configuration.ConfigBinder.configBinder;
+import static org.weakref.jmx.guice.ExportBinder.newExporter;
 
 public class CacheManagerModule
         implements Module
@@ -27,5 +28,6 @@ public class CacheManagerModule
     {
         configBinder(binder).bindConfig(CacheConfig.class);
         binder.bind(CacheManagerRegistry.class).in(Scopes.SINGLETON);
+        newExporter(binder).export(CacheManagerRegistry.class).withGeneratedName();
     }
 }
