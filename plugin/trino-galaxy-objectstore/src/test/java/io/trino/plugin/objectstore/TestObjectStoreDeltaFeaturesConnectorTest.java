@@ -34,7 +34,6 @@ import static io.trino.plugin.base.util.Closables.closeAllSuppress;
 import static io.trino.plugin.objectstore.ObjectStoreQueryRunner.initializeTpchTables;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.testing.TestingSession.testSessionBuilder;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Tests ObjectStore connector with Delta backend, exercising all
@@ -139,13 +138,6 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
         }
     }
 
-    @Override
-    public void testCdfCommitTimestamp()
-    {
-        // TODO (https://github.com/starburstdata/team-lakehouse/issues/254) determine whether we want to expose that. Maybe not.
-        assertThatThrownBy(super::testCdfCommitTimestamp)
-                .hasMessage("line 1:37: Table function system.table_changes not registered");
-    }
     /////// ----------------------------------------- please put generated code below this line ----------------------------------------- ///////
     /////// ----------------------------------------- please put generated code also below this line ------------------------------------ ///////
     /////// ----------------------------------------- please put generated code below this line as well --------------------------------- ///////
