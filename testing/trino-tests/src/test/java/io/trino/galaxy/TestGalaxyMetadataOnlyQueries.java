@@ -13,11 +13,13 @@
  */
 package io.trino.galaxy;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Key;
 import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.Request;
+import io.airlift.http.client.StringResponseHandler;
 import io.airlift.http.client.jetty.JettyHttpClient;
 import io.airlift.json.JsonCodec;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
@@ -34,6 +36,8 @@ import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.TrinoPlaneId;
 import io.starburst.stargate.id.Version;
 import io.starburst.stargate.metadata.StatementRequest;
+import io.trino.client.QueryData;
+import io.trino.client.QueryDataJsonSerializationModule;
 import io.trino.client.QueryResults;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.iceberg.IcebergPlugin;
@@ -73,8 +77,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import static io.airlift.http.client.JsonBodyGenerator.jsonBodyGenerator;
-import static io.airlift.http.client.JsonResponseHandler.createJsonResponseHandler;
 import static io.airlift.http.client.Request.Builder.preparePost;
+import static io.airlift.http.client.StringResponseHandler.createStringResponseHandler;
 import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.starburst.stargate.crypto.TestingMasterKeyCrypto.PORTAL_KEY;
 import static io.starburst.stargate.crypto.TestingMasterKeyCrypto.TRINO_KEY;
@@ -103,7 +107,7 @@ public class TestGalaxyMetadataOnlyQueries
         extends AbstractTestQueryFramework
 {
     private static final JsonCodec<StatementRequest> STATEMENT_REQUEST_CODEC = jsonCodec(StatementRequest.class);
-    private static final JsonCodec<QueryResults> QUERY_RESULTS_CODEC = jsonCodec(QueryResults.class);
+    private static final io.trino.client.JsonCodec<QueryResults> QUERY_RESULTS_CODEC = io.trino.client.JsonCodec.jsonCodec(QueryResults.class, new QueryDataJsonSerializationModule());
 
     private TestingAccountClient testingAccountClient;
     private Map<String, String> objectStoreProperties;
@@ -179,6 +183,7 @@ public class TestGalaxyMetadataOnlyQueries
 
     @BeforeAll
     public void setUp()
+            throws Exception
     {
         httpClient = closeAfterClass(new JettyHttpClient());
 
@@ -214,6 +219,7 @@ public class TestGalaxyMetadataOnlyQueries
 
     @Test
     public void testSimpleSelect()
+            throws Exception
     {
         assertThat(queryMetadata("SELECT '123'"))
                 .isEqualTo(matchResult("123"));
@@ -221,6 +227,7 @@ public class TestGalaxyMetadataOnlyQueries
 
     @Test
     public void testTpchSelect()
+            throws Exception
     {
         assertThat(queryMetadata("SELECT table_name, table_type FROM tpch.information_schema.tables LIMIT 1"))
                 .isEqualTo(matchResult("applicable_roles", "BASE TABLE"));
@@ -228,6 +235,7 @@ public class TestGalaxyMetadataOnlyQueries
 
     @Test
     public void testTpchEmptySelect()
+            throws Exception
     {
         assertThat(queryMetadata("""
                 SELECT table_name, table_type
@@ -240,6 +248,7 @@ public class TestGalaxyMetadataOnlyQueries
 
     @Test
     public void testObjectStore()
+            throws Exception
     {
         assertThat(queryMetadata("SHOW TABLES FROM objectstore.default"))
                 .isEqualTo(resultBuilder(getSession())
@@ -258,6 +267,7 @@ public class TestGalaxyMetadataOnlyQueries
 
     @Test
     public void testLateFailure()
+            throws Exception
     {
         assertThatThrownBy(() -> queryMetadata("SELECT fail(format('%s is too many', count(*))) FROM tpch.\"sf0.1\".orders"))
                 .hasMessageMatching("\\QQueryError{message=150000 is too many, sqlState=null, errorCode=0, errorName=GENERIC_USER_ERROR, errorType=USER_ERROR, errorLocation=null, failureInfo=io.trino.client.FailureInfo@\\E\\w+\\Q}");
@@ -265,6 +275,7 @@ public class TestGalaxyMetadataOnlyQueries
 
     @Test
     public void testShowCreateMaterializedView()
+            throws Exception
     {
         queryMetadata("CREATE MATERIALIZED VIEW objectstore.default.metadata_object_store_materialized_view_iceberg AS (SELECT * FROM objectstore.default.metadata_object_store_table_iceberg LIMIT 1)");
         assertThat(queryMetadata("SHOW CREATE MATERIALIZED VIEW objectstore.default.metadata_object_store_materialized_view_iceberg"))
@@ -282,9 +293,11 @@ public class TestGalaxyMetadataOnlyQueries
     }
 
     private MaterializedResult queryMetadata(@Language("SQL") String statement)
+            throws JsonProcessingException
     {
         Request request = buildRequest(statement);
-        return materialized(httpClient.execute(request, createJsonResponseHandler(QUERY_RESULTS_CODEC)));
+        StringResponseHandler.StringResponse response = httpClient.execute(request, createStringResponseHandler());
+        return materialized(QUERY_RESULTS_CODEC.fromJson(response.getBody()));
     }
 
     private Request buildRequest(String statement)
@@ -344,8 +357,11 @@ public class TestGalaxyMetadataOnlyQueries
             return resultBuilder.build();
         }
 
-        for (List<Object> row : queryResults.getData()) {
-            resultBuilder.row(row.toArray());
+        QueryData queryData = queryResults.getData();
+        if (queryData.isPresent()) {
+            for (List<Object> row : queryData.getData()) {
+                resultBuilder.row(row.toArray());
+            }
         }
 
         return resultBuilder.build();

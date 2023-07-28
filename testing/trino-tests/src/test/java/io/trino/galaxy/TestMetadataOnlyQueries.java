@@ -13,6 +13,7 @@
  */
 package io.trino.galaxy;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
@@ -20,6 +21,7 @@ import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.HttpStatus;
 import io.airlift.http.client.Request;
 import io.airlift.http.client.StatusResponseHandler.StatusResponse;
+import io.airlift.http.client.StringResponseHandler;
 import io.airlift.http.client.jetty.JettyHttpClient;
 import io.airlift.json.JsonCodec;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
@@ -30,6 +32,8 @@ import io.starburst.stargate.catalog.QueryCatalog;
 import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.Version;
 import io.starburst.stargate.metadata.StatementRequest;
+import io.trino.client.QueryData;
+import io.trino.client.QueryDataJsonSerializationModule;
 import io.trino.client.QueryResults;
 import io.trino.plugin.hive.NodeVersion;
 import io.trino.plugin.hive.TestingHivePlugin;
@@ -65,10 +69,10 @@ import java.util.UUID;
 import static com.google.common.io.MoreFiles.deleteRecursively;
 import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
 import static io.airlift.http.client.JsonBodyGenerator.jsonBodyGenerator;
-import static io.airlift.http.client.JsonResponseHandler.createJsonResponseHandler;
 import static io.airlift.http.client.Request.Builder.preparePost;
 import static io.airlift.http.client.Request.Builder.preparePut;
 import static io.airlift.http.client.StatusResponseHandler.createStatusResponseHandler;
+import static io.airlift.http.client.StringResponseHandler.createStringResponseHandler;
 import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_FACTORY;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
@@ -89,7 +93,7 @@ public class TestMetadataOnlyQueries
         extends AbstractTestQueryFramework
 {
     private static final JsonCodec<StatementRequest> STATEMENT_REQUEST_CODEC = jsonCodec(StatementRequest.class);
-    private static final JsonCodec<QueryResults> QUERY_RESULTS_CODEC = jsonCodec(QueryResults.class);
+    private static final io.trino.client.JsonCodec<QueryResults> QUERY_RESULTS_CODEC = io.trino.client.JsonCodec.jsonCodec(QueryResults.class, new QueryDataJsonSerializationModule());
 
     private final UUID shutdownKey = UUID.randomUUID();
 
@@ -162,6 +166,7 @@ public class TestMetadataOnlyQueries
 
     @Test
     public void testSimpleSelect()
+            throws Exception
     {
         assertThat(queryMetadata("SELECT '123'"))
                 .isEqualTo(matchResult("123"));
@@ -169,6 +174,7 @@ public class TestMetadataOnlyQueries
 
     @Test
     public void testTpchSelect()
+            throws Exception
     {
         assertThat(queryMetadata("SELECT table_name, table_type FROM tpch.information_schema.tables LIMIT 1"))
                 .isEqualTo(matchResult("applicable_roles", "BASE TABLE"));
@@ -176,6 +182,7 @@ public class TestMetadataOnlyQueries
 
     @Test
     public void testTpchEmptySelect()
+            throws Exception
     {
         assertThat(queryMetadata("""
                 SELECT table_name, table_type
@@ -188,6 +195,7 @@ public class TestMetadataOnlyQueries
 
     @Test
     public void testDdl()
+            throws Exception
     {
         testingAccountClient.setEntityOwnership(testingAccountClient.getAdminRoleId(), testingAccountClient.getAdminRoleId(), hiveCatalogId);
         testingAccountClient.grantFunctionPrivilege(new GrantDetails(Privilege.CREATE_SCHEMA, testingAccountClient.getAdminRoleId(), GrantKind.ALLOW, true, hiveCatalogId));
@@ -233,9 +241,11 @@ public class TestMetadataOnlyQueries
     }
 
     private MaterializedResult queryMetadata(@Language("SQL") String statement)
+            throws JsonProcessingException
     {
         Request request = buildRequest(statement);
-        return materialized(httpClient.execute(request, createJsonResponseHandler(QUERY_RESULTS_CODEC)));
+        StringResponseHandler.StringResponse response = httpClient.execute(request, createStringResponseHandler());
+        return materialized(QUERY_RESULTS_CODEC.fromJson(response.getBody()));
     }
 
     private Request buildRequest(String statement)
@@ -278,8 +288,11 @@ public class TestMetadataOnlyQueries
             return resultBuilder.build();
         }
 
-        for (List<Object> row : queryResults.getData()) {
-            resultBuilder.row(row.toArray());
+        QueryData queryData = queryResults.getData();
+        if (queryData.isPresent()) {
+            for (List<Object> row : queryData.getData()) {
+                resultBuilder.row(row.toArray());
+            }
         }
 
         return resultBuilder.build();
