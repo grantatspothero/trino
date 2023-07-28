@@ -70,7 +70,9 @@ public class IcebergCacheMetadata
                 icebergTableHandle.getTableLocation(),
                 icebergTableHandle.getStorageProperties(),
                 icebergTableHandle.isRecordScannedFiles(),
-                icebergTableHandle.getMaxScannedFileSize());
+                icebergTableHandle.getMaxScannedFileSize(),
+                icebergTableHandle.getConstraintColumns(),
+                icebergTableHandle.getAnalyzeColumns());
 
         IcebergCacheTableId tableId = new IcebergCacheTableId(
                 handle.getCatalog(),

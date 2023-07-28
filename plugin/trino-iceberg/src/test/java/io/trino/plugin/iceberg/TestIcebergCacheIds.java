@@ -15,6 +15,7 @@ package io.trino.plugin.iceberg;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.airlift.json.JsonCodec;
 import io.airlift.json.JsonCodecFactory;
 import io.airlift.json.ObjectMapperProvider;
@@ -334,6 +335,8 @@ public class TestIcebergCacheIds
                 tableLocation,
                 Map.of(),
                 true,
+                Optional.empty(),
+                ImmutableSet.of(),
                 Optional.empty());
     }
 
@@ -363,6 +366,8 @@ public class TestIcebergCacheIds
                 tableLocation,
                 Map.of(),
                 true,
+                Optional.empty(),
+                ImmutableSet.of(),
                 Optional.empty());
     }
 
@@ -394,6 +399,8 @@ public class TestIcebergCacheIds
                 tableLocation,
                 Map.of(),
                 true,
+                Optional.empty(),
+                ImmutableSet.of(),
                 Optional.empty());
     }
 
@@ -419,6 +426,8 @@ public class TestIcebergCacheIds
                 "tableLocation",
                 storageProperties,
                 true,
+                Optional.empty(),
+                ImmutableSet.of(),
                 Optional.empty());
     }
 

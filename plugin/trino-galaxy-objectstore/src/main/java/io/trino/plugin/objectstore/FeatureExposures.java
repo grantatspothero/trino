@@ -142,6 +142,7 @@ public final class FeatureExposures
                 .put(ICEBERG, "parquet_writer_block_size", EXPOSED)
                 .put(ICEBERG, "parquet_writer_page_size", EXPOSED)
                 .put(ICEBERG, "projection_pushdown_enabled", EXPOSED)
+                .put(ICEBERG, "query_partition_filter_required", EXPOSED)
                 .put(ICEBERG, "remove_orphan_files_min_retention", EXPOSED)
                 .put(ICEBERG, "sorted_writing_enabled", EXPOSED)
                 .put(ICEBERG, "statistics_enabled", EXPOSED)

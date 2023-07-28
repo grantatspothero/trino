@@ -95,7 +95,9 @@ public class GalaxyIcebergProxiedConnectorTransformer
                 icebergTableHandle.getTableLocation(),
                 icebergTableHandle.getStorageProperties(),
                 icebergTableHandle.isRecordScannedFiles(),
-                icebergTableHandle.getMaxScannedFileSize()); // don't limit
+                icebergTableHandle.getMaxScannedFileSize(),
+                icebergTableHandle.getConstraintColumns(),
+                icebergTableHandle.getAnalyzeColumns()); // don't limit
     }
 
     @Override
@@ -131,7 +133,9 @@ public class GalaxyIcebergProxiedConnectorTransformer
                 tableHandle.getTableLocation(),
                 tableHandle.getStorageProperties(),
                 tableHandle.isRecordScannedFiles(),
-                tableHandle.getMaxScannedFileSize());  // must be empty to allow mixed query (see isValidForAcceleration())
+                tableHandle.getMaxScannedFileSize(), // must be empty to allow mixed query (see isValidForAcceleration())
+                tableHandle.getConstraintColumns(),
+                tableHandle.getAnalyzeColumns());
     }
 
     @Override
