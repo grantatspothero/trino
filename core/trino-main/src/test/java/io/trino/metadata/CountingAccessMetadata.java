@@ -869,6 +869,12 @@ public class CountingAccessMetadata
     }
 
     @Override
+    public void setMaterializedViewColumnComment(Session session, QualifiedObjectName viewName, String columnName, Optional<String> comment)
+    {
+        delegate.setMaterializedViewColumnComment(session, viewName, columnName, comment);
+    }
+
+    @Override
     public Optional<TableScanRedirectApplicationResult> applyTableScanRedirect(Session session, TableHandle tableHandle)
     {
         return delegate.applyTableScanRedirect(session, tableHandle);
