@@ -287,6 +287,12 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
+    public void testColumnCommentMaterializedView()
+    {
+        skipDuplicateTestCoverage("testColumnCommentMaterializedView");
+    }
+
+    @Override
     public void testColumnName(String arg0)
     {
         skipDuplicateTestCoverage("testColumnName", String.class);

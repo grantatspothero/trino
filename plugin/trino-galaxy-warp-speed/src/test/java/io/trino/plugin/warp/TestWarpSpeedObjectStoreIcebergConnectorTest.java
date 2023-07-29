@@ -17,7 +17,15 @@ import io.trino.plugin.objectstore.TestObjectStoreIcebergConnectorTest;
 import io.trino.spi.Plugin;
 import io.trino.testing.QueryRunner;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.util.Properties;
+
+import static com.google.common.io.Resources.getResource;
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.testng.Assert.assertEquals;
 
 public class TestWarpSpeedObjectStoreIcebergConnectorTest
         extends TestObjectStoreIcebergConnectorTest
@@ -36,5 +44,32 @@ public class TestWarpSpeedObjectStoreIcebergConnectorTest
                 ICEBERG,
                 WarpSpeedConnectorTestUtils.getCoordinatorProperties(),
                 WarpSpeedConnectorTestUtils.getProperties());
+    }
+
+    @Override
+    public void testColumnCommentMaterializedView()
+    {
+        Properties properties = new Properties();
+        try (InputStream inputStream = getResource(getClass(), "test-warpspeed-plugin-versions.properties").openStream()) {
+            properties.load(inputStream);
+        }
+        catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        String galaxyTrinoVersion = properties.getProperty("project.version");
+        String baseTrinoVersion = galaxyTrinoVersion.replaceFirst("-galaxy-1-SNAPSHOT$", "");
+
+        // TODO io.trino.plugin.varada.dispatcher.DispatcherMetadata needs to implement ConnectorMetadata.setMaterializedViewColumnComment
+        //  which should be part of 423 update; ConnectorMetadata.setMaterializedViewColumnComment was added in 423.
+        //  when this assertion fails and we are on 423+, we should remove the whole test override
+        assertEquals(baseTrinoVersion, "422");
+
+        assertThatThrownBy(super::testColumnCommentMaterializedView)
+                .hasMessageStartingWith("""
+
+                        Expecting message to be:
+                          "updateMaterializedViewColumnComment is not supported for Iceberg Galaxy catalogs"
+                        but was:
+                          "This connector does not support setting materialized view column comments\"""");
     }
 }

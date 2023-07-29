@@ -119,6 +119,8 @@ public interface TrinoCatalog
 
     void updateViewColumnComment(ConnectorSession session, SchemaTableName schemaViewName, String columnName, Optional<String> comment);
 
+    void updateMaterializedViewColumnComment(ConnectorSession session, SchemaTableName schemaViewName, String columnName, Optional<String> comment);
+
     String defaultTableLocation(ConnectorSession session, SchemaTableName schemaTableName);
 
     void setTablePrincipal(ConnectorSession session, SchemaTableName schemaTableName, TrinoPrincipal principal);

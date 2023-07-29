@@ -493,6 +493,13 @@ public class ObjectStoreMetadata
     }
 
     @Override
+    public void setMaterializedViewColumnComment(ConnectorSession session, SchemaTableName viewName, String columnName, Optional<String> comment)
+    {
+        icebergMetadata.setMaterializedViewColumnComment(unwrap(ICEBERG, session), viewName, columnName, comment);
+        flushMetadataCache(viewName);
+    }
+
+    @Override
     public ConnectorTableHandle makeCompatiblePartitioning(ConnectorSession session, ConnectorTableHandle tableHandle, ConnectorPartitioningHandle partitioningHandle)
     {
         TableType tableType = tableType(tableHandle);

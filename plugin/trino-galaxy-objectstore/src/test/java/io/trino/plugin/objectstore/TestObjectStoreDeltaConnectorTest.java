@@ -70,6 +70,7 @@ public class TestObjectStoreDeltaConnectorTest
 //            case SUPPORTS_MATERIALIZED_VIEW_FRESHNESS_FROM_BASE_TABLES: TODO currently not supported for Iceberg materialized views based on Delta tables
             case SUPPORTS_RENAME_MATERIALIZED_VIEW:
 //            case SUPPORTS_RENAME_MATERIALIZED_VIEW_ACROSS_SCHEMAS: -- not supported by Iceberg
+            case SUPPORTS_COMMENT_ON_MATERIALIZED_VIEW_COLUMN:
                 // when this fails remove the `case` for given flag
                 verify(!connectorHasBehavior, "Unexpected support for: %s", connectorBehavior);
                 return true;

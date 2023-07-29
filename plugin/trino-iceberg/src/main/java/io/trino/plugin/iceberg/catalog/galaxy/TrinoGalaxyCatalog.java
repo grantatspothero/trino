@@ -90,6 +90,7 @@ import static io.trino.plugin.iceberg.IcebergUtil.loadIcebergTable;
 import static io.trino.plugin.iceberg.IcebergUtil.validateTableCanBeDropped;
 import static io.trino.plugin.iceberg.catalog.AbstractIcebergTableOperations.ICEBERG_METASTORE_STORAGE_FORMAT;
 import static io.trino.spi.StandardErrorCode.ALREADY_EXISTS;
+import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.StandardErrorCode.UNSUPPORTED_TABLE_TYPE;
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.String.format;
@@ -554,6 +555,13 @@ public class TrinoGalaxyCatalog
         }
         // create the view definition
         metastore.createTable(table, PrincipalPrivileges.NO_PRIVILEGES);
+    }
+
+    @Override
+    public void updateMaterializedViewColumnComment(ConnectorSession session, SchemaTableName schemaViewName, String columnName, Optional<String> comment)
+    {
+        // TODO (https://github.com/starburstdata/galaxy-trino/issues/930) implement
+        throw new TrinoException(NOT_SUPPORTED, "updateMaterializedViewColumnComment is not supported for Iceberg Galaxy catalogs");
     }
 
     @Override
