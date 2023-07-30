@@ -121,7 +121,6 @@ public class TestHiveCacheIds
                 hivePartitionManager,
                 new MemoryFileSystemFactory(),
                 new HdfsNamenodeStats(),
-                hdfsEnvironment,
                 executorService,
                 new EmbedVersion("test"),
                 new TestingTypeManager(),
