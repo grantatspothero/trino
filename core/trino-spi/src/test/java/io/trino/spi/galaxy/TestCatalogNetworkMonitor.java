@@ -41,7 +41,7 @@ public class TestCatalogNetworkMonitor
 
                 monitoredInputStream.readNBytes(CHUNK_SIZE);
                 long readBytes = catalogNetworkMonitor.getCrossRegionReadBytes();
-                assertThat(readBytes).isEqualTo(CHUNK_SIZE * (i + 1));
+                assertThat(readBytes).isEqualTo(CHUNK_SIZE * (i + 1L));
             }
         }
 
