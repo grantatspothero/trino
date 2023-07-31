@@ -87,11 +87,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.teradata</groupId>
-            <artifactId>re2j-td</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
         </dependency>
@@ -300,6 +295,11 @@
         <dependency>
             <groupId>io.starburst.stargate</groupId>
             <artifactId>trino-results-cache-client</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>re2j</artifactId>
         </dependency>
 
         <dependency>
