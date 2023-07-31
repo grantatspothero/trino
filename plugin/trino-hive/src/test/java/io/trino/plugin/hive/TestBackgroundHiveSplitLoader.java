@@ -827,7 +827,6 @@ public class TestBackgroundHiveSplitLoader
                 Optional.empty(),
                 DataSize.of(512, MEGABYTE),
                 false,
-                false,
                 Optional.empty());
         BackgroundHiveSplitLoader backgroundHiveSplitLoader = backgroundHiveSplitLoader(
                 files,
@@ -869,7 +868,6 @@ public class TestBackgroundHiveSplitLoader
                 Optional.empty(),
                 Optional.empty(),
                 DataSize.of(512, MEGABYTE),
-                false,
                 false,
                 Optional.empty());
 

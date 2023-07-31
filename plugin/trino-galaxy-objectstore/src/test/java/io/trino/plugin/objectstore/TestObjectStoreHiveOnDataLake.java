@@ -94,7 +94,6 @@ public class TestObjectStoreHiveOnDataLake
                         .put("HUDI__hive.metastore-refresh-interval", "1d")
                         // This is required to enable AWS Athena partition projection
                         .put("HIVE__hive.partition-projection-enabled", "true")
-                        .put("HIVE__hive.s3select-pushdown.experimental-textfile-pushdown-enabled", "true")
                         .buildOrThrow())
                 .build();
     }

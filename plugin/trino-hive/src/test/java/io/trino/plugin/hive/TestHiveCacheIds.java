@@ -298,7 +298,6 @@ public class TestHiveCacheIds
                 new TableToPartitionMapping(Optional.empty(), ImmutableMap.of()),
                 Optional.empty(),
                 Optional.empty(),
-                false,
                 Optional.empty(),
                 SplitWeight.standard());
     }

@@ -337,7 +337,6 @@ public class HiveSplitManager
                 hiveSplit.getTableToPartitionMapping(),
                 hiveSplit.getBucketConversion(),
                 hiveSplit.getBucketValidation(),
-                hiveSplit.isS3SelectPushdownEnabled(),
                 Optional.empty(),
                 // weight does not impact split rows
                 SplitWeight.standard());
@@ -355,7 +354,6 @@ public class HiveSplitManager
                 hiveSplit.getTableToPartitionMapping(),
                 hiveSplit.getBucketConversion(),
                 hiveSplit.getBucketValidation(),
-                hiveSplit.isS3SelectPushdownEnabled(),
                 // order schema keys to canonicalize schema map
                 hiveSplit.getSchema().entrySet().stream()
                         .sorted(comparing(entry -> (entry.getKey().toString())))

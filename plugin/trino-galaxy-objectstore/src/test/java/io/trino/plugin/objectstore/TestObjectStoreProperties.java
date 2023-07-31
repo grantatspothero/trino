@@ -96,7 +96,7 @@ public class TestObjectStoreProperties
                 .containsAll("""
                         VALUES
                           -- ObjectStore single-delegate-specific property (Hive's)
-                            ('objectstore.s3_select_pushdown_enabled', 'false', 'false', 'boolean')
+                            ('objectstore.timestamp_precision', 'MILLISECONDS', 'MILLISECONDS', 'varchar')
                           -- ObjectStore property with common value across delegate connectors
                           , ('objectstore.statistics_enabled', 'true', 'true', 'boolean')
                           , ('objectstore.parquet_writer_batch_size', '10000', '10000', 'integer')

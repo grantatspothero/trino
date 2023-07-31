@@ -86,7 +86,6 @@ public class TestHivePageSourceProvider
             new TableToPartitionMapping(Optional.empty(), ImmutableMap.of()),
             Optional.empty(),
             Optional.empty(),
-            false,
             Optional.empty(),
             SplitWeight.standard());
     private HivePageSourceProvider pageSourceProvider;

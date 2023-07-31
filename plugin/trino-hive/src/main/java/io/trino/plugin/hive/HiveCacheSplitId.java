@@ -38,7 +38,6 @@ public class HiveCacheSplitId
     private final TableToPartitionMapping tableToPartitionMapping;
     private final Optional<BucketConversion> bucketConversion;
     private final Optional<BucketValidation> bucketValidation;
-    private final boolean s3SelectPushdownEnabled;
     private final Map<String, String> schema;
 
     public HiveCacheSplitId(
@@ -54,7 +53,6 @@ public class HiveCacheSplitId
             TableToPartitionMapping tableToPartitionMapping,
             Optional<BucketConversion> bucketConversion,
             Optional<BucketValidation> bucketValidation,
-            boolean s3SelectPushdownEnabled,
             Map<String, String> schema)
     {
         this.path = requireNonNull(path, "path is null");
@@ -69,7 +67,6 @@ public class HiveCacheSplitId
         this.tableToPartitionMapping = requireNonNull(tableToPartitionMapping, "tableToPartitionMapping is null");
         this.bucketConversion = requireNonNull(bucketConversion, "bucketConversion is null");
         this.bucketValidation = requireNonNull(bucketValidation, "bucketValidation is null");
-        this.s3SelectPushdownEnabled = s3SelectPushdownEnabled;
         this.schema = requireNonNull(schema, "schema is null");
     }
 
@@ -143,12 +140,6 @@ public class HiveCacheSplitId
     public Optional<BucketValidation> getBucketValidation()
     {
         return bucketValidation;
-    }
-
-    @JsonProperty
-    public boolean isS3SelectPushdownEnabled()
-    {
-        return s3SelectPushdownEnabled;
     }
 
     @JsonProperty

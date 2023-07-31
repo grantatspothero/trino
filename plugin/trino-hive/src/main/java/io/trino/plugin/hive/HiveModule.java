@@ -59,7 +59,6 @@ import io.trino.plugin.hive.parquet.ParquetPageSourceFactory;
 import io.trino.plugin.hive.parquet.ParquetReaderConfig;
 import io.trino.plugin.hive.parquet.ParquetWriterConfig;
 import io.trino.plugin.hive.rcfile.RcFilePageSourceFactory;
-import io.trino.plugin.hive.s3select.TrinoS3ClientFactory;
 import io.trino.plugin.hive.schemadiscovery.ForSchemaDiscovery;
 import io.trino.plugin.hive.schemadiscovery.SchemaDiscoveryConfig;
 import io.trino.plugin.hive.schemadiscovery.SchemaDiscoverySystemTableProvider;
@@ -103,8 +102,6 @@ public class HiveModule
         binder.bind(HiveAnalyzeProperties.class).in(Scopes.SINGLETON);
         newOptionalBinder(binder, HiveMaterializedViewPropertiesProvider.class)
                 .setDefault().toInstance(ImmutableList::of);
-
-        binder.bind(TrinoS3ClientFactory.class).in(Scopes.SINGLETON);
 
         binder.bind(CachingDirectoryLister.class).in(Scopes.SINGLETON);
         newExporter(binder).export(CachingDirectoryLister.class).withGeneratedName();
