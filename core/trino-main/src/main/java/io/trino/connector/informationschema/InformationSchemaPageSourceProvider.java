@@ -13,6 +13,7 @@
  */
 package io.trino.connector.informationschema;
 
+import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.trino.FullConnectorSession;
 import io.trino.metadata.Metadata;
@@ -38,6 +39,7 @@ public class InformationSchemaPageSourceProvider
     private final Metadata metadata;
     private final AccessControl accessControl;
 
+    @Inject
     public InformationSchemaPageSourceProvider(Metadata metadata, AccessControl accessControl)
     {
         this.metadata = requireNonNull(metadata, "metadata is null");
@@ -59,11 +61,16 @@ public class InformationSchemaPageSourceProvider
                 session.getQueryId(),
                 informationSchemaTableHandle);
 
+        return buildInformationSchemaPageSource((FullConnectorSession) session, (InformationSchemaTableHandle) tableHandle, columns);
+    }
+
+    protected InformationSchemaPageSource buildInformationSchemaPageSource(FullConnectorSession session, InformationSchemaTableHandle tableHandle, List<ColumnHandle> columns)
+    {
         return new InformationSchemaPageSource(
-                ((FullConnectorSession) session).getSession(),
+                session.getSession(),
                 metadata,
                 accessControl,
-                (InformationSchemaTableHandle) tableHandle,
+                tableHandle,
                 columns);
     }
 }

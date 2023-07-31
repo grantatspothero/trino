@@ -21,6 +21,7 @@ import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;
 import io.trino.connector.CatalogManagerConfig.CatalogMangerKind;
 import io.trino.connector.informationschema.InformationSchemaConnector;
+import io.trino.connector.informationschema.InformationSchemaPageSourceProvider;
 import io.trino.connector.system.CoordinatorSystemTablesProvider;
 import io.trino.connector.system.StaticSystemTablesProvider;
 import io.trino.connector.system.SystemConnector;
@@ -29,7 +30,6 @@ import io.trino.execution.scheduler.NodeSchedulerConfig;
 import io.trino.metadata.HandleResolver;
 import io.trino.metadata.InternalNodeManager;
 import io.trino.metadata.Metadata;
-import io.trino.security.AccessControl;
 import io.trino.server.PluginClassLoader;
 import io.trino.spi.PageIndexerFactory;
 import io.trino.spi.PageSorter;
@@ -61,7 +61,6 @@ public class DefaultCatalogFactory
         implements CatalogFactory
 {
     private final Metadata metadata;
-    private final AccessControl accessControl;
     private final HandleResolver handleResolver;
 
     private final InternalNodeManager nodeManager;
@@ -73,6 +72,7 @@ public class DefaultCatalogFactory
     private final TransactionManager transactionManager;
     private final CatalogMangerKind catalogManagerKind;
     private final TypeManager typeManager;
+    private final InformationSchemaPageSourceProvider informationSchemaPageSourceProvider;
 
     private final boolean schedulerIncludeCoordinator;
     private final int maxPrefetchedInformationSchemaPrefixes;
@@ -82,7 +82,6 @@ public class DefaultCatalogFactory
     @Inject
     public DefaultCatalogFactory(
             Metadata metadata,
-            AccessControl accessControl,
             HandleResolver handleResolver,
             InternalNodeManager nodeManager,
             PageSorter pageSorter,
@@ -92,12 +91,12 @@ public class DefaultCatalogFactory
             OpenTelemetry openTelemetry,
             TransactionManager transactionManager,
             CatalogManagerConfig catalogManagerConfig,
+            InformationSchemaPageSourceProvider informationSchemaPageSourceProvider,
             TypeManager typeManager,
             NodeSchedulerConfig nodeSchedulerConfig,
             OptimizerConfig optimizerConfig)
     {
         this.metadata = requireNonNull(metadata, "metadata is null");
-        this.accessControl = requireNonNull(accessControl, "accessControl is null");
         this.handleResolver = requireNonNull(handleResolver, "handleResolver is null");
         this.nodeManager = requireNonNull(nodeManager, "nodeManager is null");
         this.pageSorter = requireNonNull(pageSorter, "pageSorter is null");
@@ -107,6 +106,7 @@ public class DefaultCatalogFactory
         this.openTelemetry = requireNonNull(openTelemetry, "openTelemetry is null");
         this.transactionManager = requireNonNull(transactionManager, "transactionManager is null");
         this.catalogManagerKind = catalogManagerConfig.getCatalogMangerKind();
+        this.informationSchemaPageSourceProvider = requireNonNull(informationSchemaPageSourceProvider, "informationSchemaPageSourceProvider is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.schedulerIncludeCoordinator = nodeSchedulerConfig.isIncludeCoordinator();
         this.maxPrefetchedInformationSchemaPrefixes = optimizerConfig.getMaxPrefetchedInformationSchemaPrefixes();
@@ -179,7 +179,7 @@ public class DefaultCatalogFactory
         ConnectorServices informationSchemaConnector = new ConnectorServices(
                 tracer,
                 createInformationSchemaCatalogHandle(catalogHandle),
-                new InformationSchemaConnector(catalogHandle.getCatalogName(), nodeManager, metadata, accessControl, maxPrefetchedInformationSchemaPrefixes),
+                new InformationSchemaConnector(catalogHandle.getCatalogName(), nodeManager, metadata, maxPrefetchedInformationSchemaPrefixes, informationSchemaPageSourceProvider),
                 () -> {},
                 catalogManagerKind);
 

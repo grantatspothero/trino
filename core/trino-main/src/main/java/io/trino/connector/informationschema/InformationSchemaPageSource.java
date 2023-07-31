@@ -238,7 +238,7 @@ public class InformationSchemaPageSource
         }
     }
 
-    private void addColumnsRecords(QualifiedTablePrefix prefix)
+    protected void addColumnsRecords(QualifiedTablePrefix prefix)
     {
         for (Map.Entry<SchemaTableName, List<ColumnMetadata>> entry : listTableColumns(session, metadata, accessControl, prefix).entrySet()) {
             SchemaTableName tableName = entry.getKey();
@@ -268,7 +268,7 @@ public class InformationSchemaPageSource
         }
     }
 
-    private void addTablesRecords(QualifiedTablePrefix prefix)
+    protected void addTablesRecords(QualifiedTablePrefix prefix)
     {
         Set<SchemaTableName> tables = listTables(session, metadata, accessControl, prefix);
         Set<SchemaTableName> views = listViews(session, metadata, accessControl, prefix);
@@ -289,7 +289,7 @@ public class InformationSchemaPageSource
         }
     }
 
-    private void addViewsRecords(QualifiedTablePrefix prefix)
+    protected void addViewsRecords(QualifiedTablePrefix prefix)
     {
         for (Map.Entry<SchemaTableName, ViewInfo> entry : getViews(session, metadata, accessControl, prefix).entrySet()) {
             addRecord(
@@ -303,7 +303,7 @@ public class InformationSchemaPageSource
         }
     }
 
-    private void addSchemataRecords()
+    protected void addSchemataRecords()
     {
         for (String schema : listSchemas(session, metadata, accessControl, catalogName)) {
             addRecord(catalogName, schema);
@@ -313,7 +313,7 @@ public class InformationSchemaPageSource
         }
     }
 
-    private void addTablePrivilegesRecords(QualifiedTablePrefix prefix)
+    protected void addTablePrivilegesRecords(QualifiedTablePrefix prefix)
     {
         List<GrantInfo> grants = ImmutableList.copyOf(listTablePrivileges(session, metadata, accessControl, prefix));
         for (GrantInfo grant : grants) {
@@ -334,7 +334,7 @@ public class InformationSchemaPageSource
         }
     }
 
-    private void addRolesRecords()
+    protected void addRolesRecords()
     {
         Optional<String> catalogName = metadata.isCatalogManagedSecurity(session, this.catalogName) ? Optional.of(this.catalogName) : Optional.empty();
         try {
@@ -352,7 +352,7 @@ public class InformationSchemaPageSource
         }
     }
 
-    private void addApplicableRolesRecords()
+    protected void addApplicableRolesRecords()
     {
         Optional<String> catalogName = metadata.isCatalogManagedSecurity(session, this.catalogName) ? Optional.of(this.catalogName) : Optional.empty();
         for (RoleGrant grant : metadata.listApplicableRoles(session, new TrinoPrincipal(USER, session.getUser()), catalogName)) {
@@ -367,7 +367,7 @@ public class InformationSchemaPageSource
         }
     }
 
-    private void addEnabledRolesRecords()
+    protected void addEnabledRolesRecords()
     {
         for (String role : metadata.listEnabledRoles(session, catalogName)) {
             addRecord(role);
@@ -377,7 +377,7 @@ public class InformationSchemaPageSource
         }
     }
 
-    private void addRecord(Object... values)
+    protected void addRecord(Object... values)
     {
         pageBuilder.declarePosition();
         for (int i = 0; i < types.size(); i++) {
@@ -387,6 +387,16 @@ public class InformationSchemaPageSource
             flushPageBuilder();
         }
         recordCount++;
+    }
+
+    protected OptionalLong limit()
+    {
+        return limit;
+    }
+
+    protected String catalogName()
+    {
+        return catalogName;
     }
 
     private void flushPageBuilder()
