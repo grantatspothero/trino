@@ -46,7 +46,7 @@ import static java.util.Objects.requireNonNull;
 
 public class ObjectStoreSessionProperties
 {
-    private static final String INFORMATION_SCHEMA_QUERIES_ACCELERATION = "experimental_information_schema_queries_acceleration";
+    public static final String INFORMATION_SCHEMA_QUERIES_ACCELERATION = "experimental_information_schema_queries_acceleration";
 
     private final List<PropertyMetadata<?>> sessionProperties;
     private final Table<String, TableType, Optional<Object>> defaultPropertyValue;

@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
+import io.trino.Session;
 import io.trino.filesystem.TrackingFileSystemFactory;
 import io.trino.filesystem.hdfs.HdfsFileSystemFactory;
 import io.trino.hdfs.TrinoFileSystemCache;
@@ -27,9 +28,11 @@ import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastore;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.plugin.iceberg.IcebergUtil;
+import io.trino.plugin.objectstore.ObjectStoreConfig.InformationSchemaQueriesAcceleration;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.testing.AbstractTestQueryFramework;
+import io.trino.testing.DataProviders;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.GalaxyQueryRunner;
 import io.trino.testing.QueryRunner;
@@ -69,6 +72,8 @@ import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.UPDATE_PARTITION_STATISTICS;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.UPDATE_TABLE_STATISTICS;
 import static io.trino.plugin.hive.util.MultisetAssertions.assertMultisetsEqual;
+import static io.trino.plugin.objectstore.ObjectStoreConfig.InformationSchemaQueriesAcceleration.V2;
+import static io.trino.plugin.objectstore.ObjectStoreSessionProperties.INFORMATION_SCHEMA_QUERIES_ACCELERATION;
 import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.CDF_DATA;
 import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.DATA;
 import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.LAST_CHECKPOINT;
@@ -77,6 +82,7 @@ import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessO
 import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.SNAPSHOT;
 import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.TRANSACTION_LOG_JSON;
 import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.TRINO_EXTENDED_STATS_JSON;
+import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.TableType.HIVE;
 import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.TableType.ICEBERG;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
@@ -85,6 +91,7 @@ import static java.nio.file.Files.createTempDirectory;
 import static java.util.Collections.nCopies;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toCollection;
+import static org.assertj.core.api.Assertions.assertThat;
 
 // TODO Investigate why there are many invocations in some tests
 @Test(singleThreaded = true) // metastore and filesystem invocation counters shares mutable state so can't be run from many threads simultaneously
@@ -477,18 +484,26 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
                 /* TODO add expected file operations */);
     }
 
-    @Test(dataProvider = "tableTypeDataProvider")
-    public void testInformationSchemaColumns(TableType type)
+    @Test(dataProvider = "testInformationSchemaColumnsDataProvider")
+    public void testInformationSchemaColumns(TableType type, InformationSchemaQueriesAcceleration mode)
     {
+        String catalog = getSession().getCatalog().orElseThrow();
+
         for (int i = 0; i < 3; i++) {
             assertUpdate("CREATE TABLE test_select_i_s_columns" + i + "(id VARCHAR, age INT) WITH (type = '" + type + "')");
         }
 
-        assertInvocations("TABLE information_schema.columns",
+        Session session = Session.builder(getSession())
+                .setCatalogSessionProperty(catalog, INFORMATION_SCHEMA_QUERIES_ACCELERATION, mode.toString())
+                .build();
+
+        assertInvocations(
+                session,
+                "TABLE information_schema.columns",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_ALL_DATABASES, 3)
-                        .addCopies(GET_TABLE, 9)
-                        .addCopies(GET_ALL_TABLES_FROM_DATABASE, 3)
+                        .addCopies(GET_ALL_DATABASES, mode == V2 ? 2 : 3)
+                        .addCopies(GET_TABLE, mode == V2 && type == HIVE ? 3 : (mode == V2 ? 6 : 9))
+                        .addCopies(GET_ALL_TABLES_FROM_DATABASE, mode == V2 ? 1 : 3)
                         .addCopies(GET_ALL_VIEWS_FROM_DATABASE, 1)
                         .addCopies(GET_TABLE_WITH_PARAMETER, 1)
                         .build(),
@@ -503,6 +518,22 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM), 3)
                             .build();
                 });
+
+        InformationSchemaQueriesAcceleration defaultMode = new ObjectStoreConfig().getInformationSchemaQueriesAcceleration();
+        if (mode != defaultMode) {
+            // Correctness check (needs to be done after invocations check, otherwise invocations check could report on cached state)
+            assertThat(query(session, "TABLE information_schema.columns"))
+                    .matches(computeActual("TABLE information_schema.columns"));
+        }
+    }
+
+    @DataProvider
+    public Object[][] testInformationSchemaColumnsDataProvider()
+    {
+        return DataProviders.cartesianProduct(
+                tableTypeDataProvider(),
+                Stream.of(InformationSchemaQueriesAcceleration.values())
+                        .collect(toDataProvider()));
     }
 
     @Test
@@ -549,8 +580,13 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
 
     private void assertInvocations(@Language("SQL") String query, Multiset<?> expectedMetastoreInvocations, Multiset<FileOperation> expectedFileAccesses)
     {
+        assertInvocations(getQueryRunner().getDefaultSession(), query, expectedMetastoreInvocations, expectedFileAccesses);
+    }
+
+    private void assertInvocations(Session session, @Language("SQL") String query, Multiset<?> expectedMetastoreInvocations, Multiset<FileOperation> expectedFileAccesses)
+    {
         trackingFileSystemFactory.reset();
-        CountingAccessHiveMetastoreUtil.assertMetastoreInvocations(metastore, getQueryRunner(), getQueryRunner().getDefaultSession(), query, expectedMetastoreInvocations);
+        CountingAccessHiveMetastoreUtil.assertMetastoreInvocations(metastore, getQueryRunner(), session, query, expectedMetastoreInvocations);
         assertMultisetsEqual(getOperations(), expectedFileAccesses);
     }
 
