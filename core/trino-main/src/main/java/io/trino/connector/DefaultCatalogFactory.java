@@ -69,10 +69,10 @@ public class DefaultCatalogFactory
     private final VersionEmbedder versionEmbedder;
     private final OpenTelemetry openTelemetry;
     private final TransactionManager transactionManager;
+    private final CatalogManagerConfig catalogManagerConfig;
     private final TypeManager typeManager;
 
     private final boolean schedulerIncludeCoordinator;
-    private final CatalogManagerConfig catalogManagerConfig;
 
     private final ConcurrentMap<ConnectorName, InternalConnectorFactory> connectorFactories = new ConcurrentHashMap<>();
 
@@ -88,9 +88,9 @@ public class DefaultCatalogFactory
             VersionEmbedder versionEmbedder,
             OpenTelemetry openTelemetry,
             TransactionManager transactionManager,
+            CatalogManagerConfig catalogManagerConfig,
             TypeManager typeManager,
-            NodeSchedulerConfig nodeSchedulerConfig,
-            CatalogManagerConfig catalogManagerConfig)
+            NodeSchedulerConfig nodeSchedulerConfig)
     {
         this.metadata = requireNonNull(metadata, "metadata is null");
         this.accessControl = requireNonNull(accessControl, "accessControl is null");
@@ -102,9 +102,9 @@ public class DefaultCatalogFactory
         this.versionEmbedder = requireNonNull(versionEmbedder, "versionEmbedder is null");
         this.openTelemetry = requireNonNull(openTelemetry, "openTelemetry is null");
         this.transactionManager = requireNonNull(transactionManager, "transactionManager is null");
+        this.catalogManagerConfig = requireNonNull(catalogManagerConfig, "catalogManagerConfig is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.schedulerIncludeCoordinator = nodeSchedulerConfig.isIncludeCoordinator();
-        this.catalogManagerConfig = requireNonNull(catalogManagerConfig, "catalogManagerConfig is null");
     }
 
     @Override

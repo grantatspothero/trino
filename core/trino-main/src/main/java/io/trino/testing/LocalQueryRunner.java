@@ -424,9 +424,9 @@ public class LocalQueryRunner
                 testingVersionEmbedder(),
                 OpenTelemetry.noop(),
                 transactionManager,
+                new CatalogManagerConfig(),
                 typeManager,
-                nodeSchedulerConfig,
-                new CatalogManagerConfig()));
+                nodeSchedulerConfig));
         this.splitManager = new SplitManager(createSplitManagerProvider(catalogManager), tracer, new QueryManagerConfig());
         this.pageSourceManager = new PageSourceManager(createPageSourceProvider(catalogManager));
         this.alternativeChooser = new AlternativeChooser(createAlternativeChooser(catalogManager));
