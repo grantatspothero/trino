@@ -18,8 +18,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import io.trino.filesystem.Location;
-import io.trino.hdfs.HdfsContext;
-import io.trino.hdfs.HdfsEnvironment;
+import io.trino.filesystem.TrinoFileSystem;
+import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.hive.HiveConfig;
 import io.trino.plugin.hive.LocationAccessControl;
 import io.trino.plugin.hive.PartitionStatistics;
@@ -27,7 +27,6 @@ import io.trino.plugin.hive.TransactionalMetadataFactory;
 import io.trino.plugin.hive.metastore.Partition;
 import io.trino.plugin.hive.metastore.SemiTransactionalHiveMetastore;
 import io.trino.plugin.hive.metastore.Table;
-import io.trino.plugin.hive.util.HiveWriteUtils;
 import io.trino.spi.TrinoException;
 import io.trino.spi.classloader.ThreadContextClassLoader;
 import io.trino.spi.connector.ConnectorAccessControl;
@@ -36,13 +35,14 @@ import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TableNotFoundException;
 import io.trino.spi.procedure.Procedure;
 import io.trino.spi.type.ArrayType;
-import org.apache.hadoop.fs.Path;
 
+import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.util.List;
 import java.util.Optional;
 
 import static io.trino.plugin.base.util.Procedures.checkProcedureArgument;
+import static io.trino.plugin.hive.HiveErrorCode.HIVE_FILESYSTEM_ERROR;
 import static io.trino.plugin.hive.HiveMetadata.PRESTO_QUERY_ID_NAME;
 import static io.trino.plugin.hive.procedure.Procedures.checkIsPartitionedTable;
 import static io.trino.plugin.hive.procedure.Procedures.checkPartitionColumns;
@@ -71,15 +71,15 @@ public class RegisterPartitionProcedure
 
     private final boolean allowRegisterPartition;
     private final TransactionalMetadataFactory hiveMetadataFactory;
-    private final HdfsEnvironment hdfsEnvironment;
+    private final TrinoFileSystemFactory fileSystemFactory;
     private final LocationAccessControl locationAccessControl;
 
     @Inject
-    public RegisterPartitionProcedure(HiveConfig hiveConfig, TransactionalMetadataFactory hiveMetadataFactory, HdfsEnvironment hdfsEnvironment, LocationAccessControl locationAccessControl)
+    public RegisterPartitionProcedure(HiveConfig hiveConfig, TransactionalMetadataFactory hiveMetadataFactory, TrinoFileSystemFactory fileSystemFactory, LocationAccessControl locationAccessControl)
     {
         this.allowRegisterPartition = hiveConfig.isAllowRegisterPartition();
         this.hiveMetadataFactory = requireNonNull(hiveMetadataFactory, "hiveMetadataFactory is null");
-        this.hdfsEnvironment = requireNonNull(hdfsEnvironment, "hdfsEnvironment is null");
+        this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.locationAccessControl = requireNonNull(locationAccessControl, "locationAccessControl is null");
     }
 
@@ -118,7 +118,6 @@ public class RegisterPartitionProcedure
 
         SemiTransactionalHiveMetastore metastore = hiveMetadataFactory.create(session.getIdentity(), true).getMetastore();
 
-        HdfsContext hdfsContext = new HdfsContext(session);
         SchemaTableName schemaTableName = new SchemaTableName(schemaName, tableName);
 
         Table table = metastore.getTable(schemaName, tableName)
@@ -135,18 +134,22 @@ public class RegisterPartitionProcedure
             throw new TrinoException(ALREADY_EXISTS, format("Partition [%s] is already registered with location %s", partitionName, partition.get().getStorage().getLocation()));
         }
 
-        Path partitionLocation;
-
-        if (location == null) {
-            partitionLocation = new Path(table.getStorage().getLocation(), makePartName(partitionColumns, partitionValues));
-        }
-        else {
+        if (location != null) {
             locationAccessControl.checkCanUseLocation(session.getIdentity(), location);
-            partitionLocation = new Path(location);
         }
 
-        if (!HiveWriteUtils.pathExists(hdfsContext, hdfsEnvironment, partitionLocation)) {
-            throw new TrinoException(INVALID_PROCEDURE_ARGUMENT, "Partition location does not exist: " + partitionLocation);
+        Location partitionLocation = Optional.ofNullable(location)
+                .map(Location::of)
+                .orElseGet(() -> Location.of(table.getStorage().getLocation()).appendPath(makePartName(partitionColumns, partitionValues)));
+
+        TrinoFileSystem fileSystem = fileSystemFactory.create(session);
+        try {
+            if (!fileSystem.directoryExists(partitionLocation).orElse(true)) {
+                throw new TrinoException(INVALID_PROCEDURE_ARGUMENT, "Partition location does not exist: " + partitionLocation);
+            }
+        }
+        catch (IOException e) {
+            throw new TrinoException(HIVE_FILESYSTEM_ERROR, "Failed checking partition location: " + partitionLocation, e);
         }
 
         metastore.addPartition(
@@ -154,7 +157,7 @@ public class RegisterPartitionProcedure
                 table.getDatabaseName(),
                 table.getTableName(),
                 buildPartitionObject(session, table, partitionValues, partitionLocation),
-                Location.of(partitionLocation.toString()),
+                partitionLocation,
                 Optional.empty(), // no need for failed attempts cleanup
                 PartitionStatistics.empty(),
                 false);
@@ -162,7 +165,7 @@ public class RegisterPartitionProcedure
         metastore.commit();
     }
 
-    private static Partition buildPartitionObject(ConnectorSession session, Table table, List<String> partitionValues, Path location)
+    private static Partition buildPartitionObject(ConnectorSession session, Table table, List<String> partitionValues, Location location)
     {
         return Partition.builder()
                 .setDatabaseName(table.getDatabaseName())
