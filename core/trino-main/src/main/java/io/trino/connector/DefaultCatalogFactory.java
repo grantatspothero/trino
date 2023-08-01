@@ -19,6 +19,7 @@ import com.google.inject.Inject;
 import io.airlift.node.NodeInfo;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;
+import io.trino.connector.CatalogManagerConfig.CatalogMangerKind;
 import io.trino.connector.informationschema.InformationSchemaConnector;
 import io.trino.connector.system.CoordinatorSystemTablesProvider;
 import io.trino.connector.system.StaticSystemTablesProvider;
@@ -69,7 +70,7 @@ public class DefaultCatalogFactory
     private final VersionEmbedder versionEmbedder;
     private final OpenTelemetry openTelemetry;
     private final TransactionManager transactionManager;
-    private final CatalogManagerConfig catalogManagerConfig;
+    private final CatalogMangerKind catalogManagerKind;
     private final TypeManager typeManager;
 
     private final boolean schedulerIncludeCoordinator;
@@ -102,7 +103,7 @@ public class DefaultCatalogFactory
         this.versionEmbedder = requireNonNull(versionEmbedder, "versionEmbedder is null");
         this.openTelemetry = requireNonNull(openTelemetry, "openTelemetry is null");
         this.transactionManager = requireNonNull(transactionManager, "transactionManager is null");
-        this.catalogManagerConfig = requireNonNull(catalogManagerConfig, "catalogManagerConfig is null");
+        this.catalogManagerKind = catalogManagerConfig.getCatalogMangerKind();
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.schedulerIncludeCoordinator = nodeSchedulerConfig.isIncludeCoordinator();
     }
@@ -169,14 +170,14 @@ public class DefaultCatalogFactory
                 catalogHandle,
                 connector,
                 destroy,
-                catalogManagerConfig.getCatalogMangerKind());
+                catalogManagerKind);
 
         ConnectorServices informationSchemaConnector = new ConnectorServices(
                 tracer,
                 createInformationSchemaCatalogHandle(catalogHandle),
                 new InformationSchemaConnector(catalogHandle.getCatalogName(), nodeManager, metadata, accessControl),
                 () -> {},
-                catalogManagerConfig.getCatalogMangerKind());
+                catalogManagerKind);
 
         SystemTablesProvider systemTablesProvider;
         if (nodeManager.getCurrentNode().isCoordinator()) {
@@ -198,7 +199,7 @@ public class DefaultCatalogFactory
                         systemTablesProvider,
                         transactionId -> transactionManager.getConnectorTransaction(transactionId, catalogHandle)),
                 () -> {},
-                catalogManagerConfig.getCatalogMangerKind());
+                catalogManagerKind);
 
         return new CatalogConnector(
                 catalogHandle,
