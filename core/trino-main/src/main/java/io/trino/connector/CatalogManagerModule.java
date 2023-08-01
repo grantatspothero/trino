@@ -16,7 +16,7 @@ package io.trino.connector;
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
-import io.trino.connector.informationschema.InformationSchemaPageSourceProvider;
+import io.trino.connector.informationschema.galaxy.GalaxyCacheModule;
 import io.trino.server.metadataonly.MetadataOnlyCatalogManagerModule;
 
 public class CatalogManagerModule
@@ -25,7 +25,8 @@ public class CatalogManagerModule
     @Override
     protected void setup(Binder binder)
     {
-        binder.bind(InformationSchemaPageSourceProvider.class).in(Scopes.SINGLETON);
+        // not used in Galaxy Trino - instead this is managed by GalaxyCacheModule
+        // binder.bind(InformationSchemaPageSourceProvider.class).in(Scopes.SINGLETON);
         binder.bind(DefaultCatalogFactory.class).in(Scopes.SINGLETON);
         binder.bind(LazyCatalogFactory.class).in(Scopes.SINGLETON);
         binder.bind(CatalogFactory.class).to(LazyCatalogFactory.class).in(Scopes.SINGLETON);
@@ -38,5 +39,7 @@ public class CatalogManagerModule
         }
 
         install(new CatalogServiceProviderModule());
+
+        install(new GalaxyCacheModule());
     }
 }

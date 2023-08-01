@@ -133,6 +133,7 @@ import io.trino.operator.scalar.json.JsonQueryFunction;
 import io.trino.operator.scalar.json.JsonValueFunction;
 import io.trino.operator.table.ExcludeColumns.ExcludeColumnsFunction;
 import io.trino.plugin.base.security.AllowAllSystemAccessControl;
+import io.trino.security.AccessControl;
 import io.trino.security.GroupProviderManager;
 import io.trino.server.PluginManager;
 import io.trino.server.SessionPropertyDefaults;
@@ -147,6 +148,7 @@ import io.trino.spi.PageSorter;
 import io.trino.spi.Plugin;
 import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.ConnectorFactory;
+import io.trino.spi.connector.SystemTable;
 import io.trino.spi.exchange.ExchangeManager;
 import io.trino.spi.session.PropertyMetadata;
 import io.trino.spi.type.TypeManager;
@@ -230,6 +232,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -354,6 +357,8 @@ public class LocalQueryRunner
             int nodeCountForStats,
             Map<String, List<PropertyMetadata<?>>> defaultSessionProperties,
             MetadataProvider metadataProvider,
+            BiFunction<Metadata, AccessControl, InformationSchemaPageSourceProvider> informationSchemaPageSourceFactory,
+            BiFunction<Metadata, AccessControl, SystemTable> tableCommentFactory,
             OperatorFactories operatorFactories,
             Set<SystemSessionPropertiesProvider> extraSessionProperties)
     {
@@ -425,7 +430,7 @@ public class LocalQueryRunner
                 OpenTelemetry.noop(),
                 transactionManager,
                 new CatalogManagerConfig(),
-                new InformationSchemaPageSourceProvider(metadata, accessControl),
+                informationSchemaPageSourceFactory.apply(metadata, accessControl),
                 typeManager,
                 nodeSchedulerConfig,
                 optimizerConfig));
@@ -484,7 +489,7 @@ public class LocalQueryRunner
         GlobalSystemConnector globalSystemConnector = new GlobalSystemConnector(ImmutableSet.of(
                 new NodeSystemTable(nodeManager),
                 new CatalogSystemTable(metadata, accessControl),
-                new TableCommentSystemTable(metadata, accessControl),
+                tableCommentFactory.apply(metadata, accessControl),
                 new MaterializedViewSystemTable(metadata, accessControl),
                 new SchemaPropertiesSystemTable(metadata, accessControl, schemaPropertyManager),
                 new TablePropertiesSystemTable(metadata, accessControl, tablePropertyManager),
@@ -1244,6 +1249,8 @@ public class LocalQueryRunner
         private int nodeCountForStats;
         private MetadataProvider metadataProvider = MetadataManager::new;
         private OperatorFactories operatorFactories = new TrinoOperatorFactories();
+        private BiFunction<Metadata, AccessControl, InformationSchemaPageSourceProvider> informationSchemaPageSourceFactory = InformationSchemaPageSourceProvider::new;
+        private BiFunction<Metadata, AccessControl, SystemTable> tableCommentFactory = TableCommentSystemTable::new;
 
         private Builder(Session defaultSession)
         {
@@ -1315,6 +1322,18 @@ public class LocalQueryRunner
             return this;
         }
 
+        public Builder withInformationSchemaPageSourceFactory(BiFunction<Metadata, AccessControl, InformationSchemaPageSourceProvider> informationSchemaPageSourceFactory)
+        {
+            this.informationSchemaPageSourceFactory = requireNonNull(informationSchemaPageSourceFactory, "informationSchemaPageSourceFactory is null");
+            return this;
+        }
+
+        public Builder withTableCommentFactory(BiFunction<Metadata, AccessControl, SystemTable> tableCommentFactory)
+        {
+            this.tableCommentFactory = requireNonNull(tableCommentFactory, "tableCommentFactory is null");
+            return this;
+        }
+
         public LocalQueryRunner build()
         {
             return new LocalQueryRunner(
@@ -1327,6 +1346,8 @@ public class LocalQueryRunner
                     nodeCountForStats,
                     defaultSessionProperties,
                     metadataProvider,
+                    informationSchemaPageSourceFactory,
+                    tableCommentFactory,
                     operatorFactories,
                     extraSessionProperties);
         }
