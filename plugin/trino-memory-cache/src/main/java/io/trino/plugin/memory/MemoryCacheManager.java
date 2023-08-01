@@ -253,6 +253,8 @@ public class MemoryCacheManager
         }
 
         long freedAllocatedRevocableBytes = 0;
+        long initialRevocableMemoryAllocator = allocatedRevocableBytes;
+
         for (Iterator<Map.Entry<SplitKey, List<Page>>> iterator = splitCache.entrySet().iterator(); iterator.hasNext(); ) {
             if (stopCondition.getAsBoolean()) {
                 break;
@@ -277,8 +279,11 @@ public class MemoryCacheManager
             freedAllocatedRevocableBytes += splitRetainedSizeInBytes;
         }
 
-        checkState(allocatedRevocableBytes >= 0);
-        checkState(revocableMemoryAllocator.trySetBytes(allocatedRevocableBytes));
+        // memory was actually deallocated
+        if (initialRevocableMemoryAllocator != allocatedRevocableBytes) {
+            checkState(allocatedRevocableBytes >= 0);
+            checkState(revocableMemoryAllocator.trySetBytes(allocatedRevocableBytes));
+        }
         return freedAllocatedRevocableBytes;
     }
 
