@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.plugin.iceberg.catalog.hms;
+package io.trino.plugin.iceberg.catalog.galaxy;
 
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
@@ -24,7 +24,7 @@ import io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreModule;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
 import io.trino.plugin.iceberg.catalog.MetastoreValidator;
 import io.trino.plugin.iceberg.catalog.TrinoCatalogFactory;
-import io.trino.plugin.iceberg.catalog.file.GalaxyMetastoreOperationsProvider;
+import io.trino.plugin.iceberg.catalog.hms.TrinoGalaxyCatalogFactory;
 import io.trino.plugin.iceberg.procedure.MigrateProcedure;
 import io.trino.spi.procedure.Procedure;
 

@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.plugin.iceberg.catalog.file;
+package io.trino.plugin.iceberg.catalog.galaxy;
 
 import io.starburst.stargate.metastore.client.BadMetastoreRequestException;
 import io.starburst.stargate.metastore.client.MetastoreConflictException;
