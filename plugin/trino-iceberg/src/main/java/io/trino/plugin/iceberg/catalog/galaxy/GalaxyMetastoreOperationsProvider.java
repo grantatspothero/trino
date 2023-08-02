@@ -15,7 +15,6 @@ package io.trino.plugin.iceberg.catalog.galaxy;
 
 import com.google.inject.Inject;
 import io.trino.filesystem.TrinoFileSystemFactory;
-import io.trino.plugin.iceberg.TrinoGalaxyCatalog;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperations;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
 import io.trino.plugin.iceberg.catalog.TrinoCatalog;

@@ -17,6 +17,7 @@ import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.deltalake.TestingDeltaLakeExtensionsModule;
 import io.trino.plugin.deltalake.metastore.TestingDeltaLakeMetastoreModule;
 import io.trino.plugin.hive.metastore.HiveMetastore;
+import io.trino.plugin.objectstore.catalog.galaxy.TestingIcebergGalaxyMetastoreCatalogModule;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
 import io.trino.spi.connector.ConnectorFactory;
