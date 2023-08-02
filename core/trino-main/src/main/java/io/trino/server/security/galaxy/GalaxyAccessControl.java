@@ -64,6 +64,7 @@ import static io.starburst.stargate.accesscontrol.privilege.Privilege.EXECUTE;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.INSERT;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.SELECT;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.UPDATE;
+import static io.starburst.stargate.accesscontrol.privilege.Privilege.VIEW_ALL_QUERY_HISTORY;
 import static io.trino.execution.PrivilegeUtilities.getPrivilegesForEntityKind;
 import static io.trino.server.security.galaxy.GalaxyIdentity.getRoleId;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
@@ -144,13 +145,13 @@ public class GalaxyAccessControl
     @Override
     public Collection<Identity> filterViewQuery(SystemSecurityContext context, Collection<Identity> queryOwners)
     {
-        return filterIdentitiesByActiveRoleSet(context, queryOwners);
+        return filterIdentitiesByPrivilegesAndRoles(context, queryOwners);
     }
 
     @Override
     public Collection<Identity> filterViewQueryOwnedBy(SystemSecurityContext context, Collection<Identity> queryOwners)
     {
-        return filterIdentitiesByActiveRoleSet(context, queryOwners);
+        return filterIdentitiesByPrivilegesAndRoles(context, queryOwners);
     }
 
     @Override
@@ -730,10 +731,16 @@ public class GalaxyAccessControl
         denier.accept(roleLacksPrivilege(context, privilege, requiresGrantOption, kind, deniedColumns.isEmpty() ? "" : "[%s]".formatted(String.join(", ", deniedColumns))));
     }
 
-    private void checkHasAccountPrivilege(SystemSecurityContext context, Privilege privilege, Consumer<String> denier)
+    private boolean hasAccountPrivilege(SystemSecurityContext context, Privilege privilege)
     {
         AccountId accountId = controllerSupplier.apply(context).getAccountId(context);
-        if (!hasEntityPrivilege(context, Optional.of(accountId), privilege, false)) {
+        return hasEntityPrivilege(context, Optional.of(accountId), privilege, false);
+    }
+
+    private void checkHasAccountPrivilege(SystemSecurityContext context, Privilege privilege, Consumer<String> denier)
+    {
+        if (!hasAccountPrivilege(context, privilege)) {
+            AccountId accountId = controllerSupplier.apply(context).getAccountId(context);
             denier.accept(roleLacksPrivilege(context, privilege, "account", accountId.toString()));
         }
     }
@@ -879,6 +886,15 @@ public class GalaxyAccessControl
             return ignored -> false;
         }
         return controllerSupplier.apply(context).getSchemaVisibility(context, catalogId.get());
+    }
+
+    private List<Identity> filterIdentitiesByPrivilegesAndRoles(SystemSecurityContext context, Collection<Identity> identities)
+    {
+        // VIEW_ALL_QUERY_HISTORY is a special galaxy privilege granting access to all queries
+        if (hasAccountPrivilege(context, VIEW_ALL_QUERY_HISTORY)) {
+            return ImmutableList.copyOf(identities);
+        }
+        return filterIdentitiesByActiveRoleSet(context, identities);
     }
 
     private List<Identity> filterIdentitiesByActiveRoleSet(SystemSecurityContext context, Collection<Identity> identities)

@@ -22,6 +22,7 @@ import io.starburst.stargate.accesscontrol.client.ColumnMaskType;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.client.testing.TestUser;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
+import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient.GrantDetails;
 import io.starburst.stargate.id.ColumnMaskId;
 import io.starburst.stargate.id.EntityKind;
 import io.starburst.stargate.id.PolicyId;
@@ -55,6 +56,8 @@ import java.util.UUID;
 
 import static com.google.common.base.Verify.verifyNotNull;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static io.starburst.stargate.accesscontrol.privilege.GrantKind.ALLOW;
+import static io.starburst.stargate.accesscontrol.privilege.Privilege.VIEW_ALL_QUERY_HISTORY;
 import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.PORTAL;
 import static io.trino.server.security.galaxy.GalaxyIdentity.createIdentity;
 import static io.trino.server.security.galaxy.GalaxyIdentity.toDispatchSession;
@@ -774,13 +777,31 @@ public class TestGalaxyQueries
         // public can not see query
         assertThat(query(publicSession(), findQuerySql)).returnsEmptyResult();
 
+        // create another user/role, they cannot see the query
+        Session anotherUserSession = newUserSession("public");
+        assertThat(query(anotherUserSession, findQuerySql)).returnsEmptyResult();
+
+        // grant public special VIEW_ALL_QUERY_HISTORY account privilege, and both public role sessions can see the query
+        TestingAccountClient accountClient = getTestingAccountClient();
+        GrantDetails queryHistoryGrant = new GrantDetails(VIEW_ALL_QUERY_HISTORY, accountClient.getPublicRoleId(), ALLOW, false, accountClient.getAccountId());
+        accountClient.grantAccountPrivilege(queryHistoryGrant);
+
+        assertThat(query(publicSession(), findQuerySql))
+                .skippingTypesCheck()
+                .matches(varcharColumnResult("found"));
+        assertThat(query(anotherUserSession, findQuerySql))
+                .skippingTypesCheck()
+                .matches(varcharColumnResult("found"));
+
         // user can always kill their own query
         assertQueryFails(newUserSession, "CALL system.runtime.kill_query(query_id => '" + queryId + "', message => 'test')", "Target query is not running.*");
         // admin can kill query because it has my_role active
         assertQueryFails("CALL system.runtime.kill_query(query_id => '" + queryId + "', message => 'test')", "Target query is not running.*");
         // public role can not kill the query
         assertQueryFails(publicSession(), "CALL system.runtime.kill_query(query_id => '" + queryId + "', message => 'test')", "Access Denied: Cannot kill query.*");
+        assertQueryFails(anotherUserSession, "CALL system.runtime.kill_query(query_id => '" + queryId + "', message => 'test')", "Access Denied: Cannot kill query.*");
 
+        accountClient.revokeAccountPrivilege(queryHistoryGrant);
         assertUpdate("DROP ROLE my_role");
     }
 
