@@ -509,10 +509,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
                         .addCopies(GET_TABLE_WITH_PARAMETER, 1)
                         .build(),
                 switch (type) {
-                    case HIVE -> ImmutableMultiset.of();
-                    case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
-                            .addCopies(new FileOperation(METADATA_JSON, "00000.metadata.json", INPUT_FILE_NEW_STREAM), 3)
-                            .build();
+                    case HIVE, ICEBERG -> ImmutableMultiset.of();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
                             .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), 3)
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM), 3)
@@ -557,7 +554,6 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
                         .addCopies(GET_TABLE_WITH_PARAMETER, 1)
                         .build(),
                 ImmutableMultiset.<FileOperation>builder()
-                        .add(new FileOperation(METADATA_JSON, "00000.metadata.json", INPUT_FILE_NEW_STREAM))
                         .add(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM))
                         .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM))
                         .build());

@@ -20,6 +20,7 @@ import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
 import io.trino.plugin.iceberg.catalog.TrinoCatalog;
 import io.trino.plugin.iceberg.fileio.ForwardingFileIo;
 import io.trino.spi.connector.ConnectorSession;
+import io.trino.spi.type.TypeManager;
 
 import java.util.Optional;
 
@@ -29,11 +30,15 @@ public class GalaxyMetastoreOperationsProvider
         implements IcebergTableOperationsProvider
 {
     private final TrinoFileSystemFactory fileSystemFactory;
+    private final TypeManager typeManager;
+    private final boolean cacheTableMetadata;
 
     @Inject
-    public GalaxyMetastoreOperationsProvider(TrinoFileSystemFactory fileSystemFactory)
+    public GalaxyMetastoreOperationsProvider(TrinoFileSystemFactory fileSystemFactory, TypeManager typeManager, IcebergGalaxyCatalogConfig galaxyCatalogConfig)
     {
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
+        this.typeManager = requireNonNull(typeManager, "typeManager is null");
+        this.cacheTableMetadata = galaxyCatalogConfig.isCacheTableMetadata();
     }
 
     @Override
@@ -46,6 +51,8 @@ public class GalaxyMetastoreOperationsProvider
             Optional<String> location)
     {
         return new GalaxyMetastoreTableOperations(
+                typeManager,
+                cacheTableMetadata,
                 new ForwardingFileIo(fileSystemFactory.create(session)),
                 ((TrinoGalaxyCatalog) catalog).getMetastore(),
                 session,

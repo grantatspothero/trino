@@ -29,6 +29,7 @@ import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
 import io.trino.plugin.iceberg.catalog.MetastoreValidator;
 import io.trino.plugin.iceberg.catalog.TrinoCatalogFactory;
 import io.trino.plugin.iceberg.catalog.galaxy.GalaxyMetastoreOperationsProvider;
+import io.trino.plugin.iceberg.catalog.galaxy.IcebergGalaxyCatalogConfig;
 import io.trino.plugin.iceberg.catalog.galaxy.TrinoGalaxyCatalogFactory;
 import io.trino.plugin.iceberg.procedure.MigrateProcedure;
 import io.trino.spi.procedure.Procedure;
@@ -58,6 +59,7 @@ public class TestingIcebergGalaxyMetastoreCatalogModule
         binder.bind(boolean.class).annotatedWith(AllowHiveTableRename.class).toInstance(true);
         httpClientBinder(binder).bindHttpClient("galaxy-metastore", ForGalaxyMetastore.class);
 
+        configBinder(binder).bindConfig(IcebergGalaxyCatalogConfig.class);
         binder.bind(IcebergTableOperationsProvider.class).to(GalaxyMetastoreOperationsProvider.class).in(Scopes.SINGLETON);
         binder.bind(TrinoCatalogFactory.class).to(TrinoGalaxyCatalogFactory.class).in(Scopes.SINGLETON);
         binder.bind(MetastoreValidator.class).asEagerSingleton();

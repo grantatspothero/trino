@@ -39,6 +39,7 @@ public class IcebergGalaxyMetastoreCatalogModule
     protected void setup(Binder binder)
     {
         install(new GalaxyMetastoreModule());
+        configBinder(binder).bindConfig(IcebergGalaxyCatalogConfig.class);
         binder.bind(IcebergTableOperationsProvider.class).to(GalaxyMetastoreOperationsProvider.class).in(Scopes.SINGLETON);
         binder.bind(TrinoCatalogFactory.class).to(TrinoGalaxyCatalogFactory.class).in(Scopes.SINGLETON);
         binder.bind(MetastoreValidator.class).asEagerSingleton();

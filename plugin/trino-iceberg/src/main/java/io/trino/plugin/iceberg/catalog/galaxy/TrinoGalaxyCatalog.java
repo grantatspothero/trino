@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.iceberg.catalog.galaxy;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.airlift.log.Logger;
@@ -39,6 +40,8 @@ import io.trino.spi.connector.SchemaNotFoundException;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TableNotFoundException;
 import io.trino.spi.security.TrinoPrincipal;
+import io.trino.spi.type.Type;
+import io.trino.spi.type.TypeId;
 import io.trino.spi.type.TypeManager;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.iceberg.BaseTable;
@@ -58,6 +61,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Verify.verifyNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_DATABASE_LOCATION_ERROR;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_INVALID_METADATA;
@@ -73,6 +77,9 @@ import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_FILESYSTEM_ERROR;
 import static io.trino.plugin.iceberg.IcebergMaterializedViewAdditionalProperties.STORAGE_SCHEMA;
 import static io.trino.plugin.iceberg.IcebergMaterializedViewDefinition.encodeMaterializedViewData;
 import static io.trino.plugin.iceberg.IcebergMaterializedViewDefinition.fromConnectorMaterializedViewDefinition;
+import static io.trino.plugin.iceberg.IcebergUtil.COLUMN_TRINO_NOT_NULL_PROPERTY;
+import static io.trino.plugin.iceberg.IcebergUtil.COLUMN_TRINO_TYPE_ID_PROPERTY;
+import static io.trino.plugin.iceberg.IcebergUtil.TRINO_TABLE_METADATA_INFO_VALID_FOR;
 import static io.trino.plugin.iceberg.IcebergUtil.getIcebergTableWithMetadata;
 import static io.trino.plugin.iceberg.IcebergUtil.isIcebergTable;
 import static io.trino.plugin.iceberg.IcebergUtil.loadIcebergTable;
@@ -80,6 +87,7 @@ import static io.trino.plugin.iceberg.IcebergUtil.validateTableCanBeDropped;
 import static io.trino.plugin.iceberg.catalog.AbstractIcebergTableOperations.ICEBERG_METASTORE_STORAGE_FORMAT;
 import static io.trino.spi.StandardErrorCode.ALREADY_EXISTS;
 import static io.trino.spi.StandardErrorCode.UNSUPPORTED_TABLE_TYPE;
+import static java.lang.Boolean.parseBoolean;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
@@ -96,9 +104,12 @@ public class TrinoGalaxyCatalog
         extends AbstractTrinoCatalog
 {
     private static final Logger log = Logger.get(TrinoGalaxyCatalog.class);
+
+    private final TypeManager typeManager;
     private final CachingHiveMetastore metastore;
     private final TrinoFileSystemFactory fileSystemFactory;
     private final boolean useUniqueTableLocation;
+    private final boolean cacheTableMetadata;
 
     private final Map<SchemaTableName, TableMetadata> tableMetadataCache = new ConcurrentHashMap<>();
 
@@ -108,12 +119,15 @@ public class TrinoGalaxyCatalog
             CachingHiveMetastore metastore,
             TrinoFileSystemFactory fileSystemFactory,
             IcebergTableOperationsProvider tableOperationsProvider,
-            boolean useUniqueTableLocation)
+            boolean useUniqueTableLocation,
+            boolean cacheTableMetadata)
     {
         super(catalogName, typeManager, tableOperationsProvider, useUniqueTableLocation);
+        this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.metastore = requireNonNull(metastore, "metastore is null");
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.useUniqueTableLocation = useUniqueTableLocation;
+        this.cacheTableMetadata = cacheTableMetadata;
     }
 
     public CachingHiveMetastore getMetastore()
@@ -304,8 +318,76 @@ public class TrinoGalaxyCatalog
     @Override
     public Map<SchemaTableName, List<ColumnMetadata>> tryGetColumnMetadata(ConnectorSession session, List<SchemaTableName> tables)
     {
-        // TODO (https://github.com/starburstdata/galaxy-trino/issues/818) implement
-        return ImmutableMap.of();
+        if (!cacheTableMetadata) {
+            return ImmutableMap.of();
+        }
+
+        ImmutableMap.Builder<SchemaTableName, List<ColumnMetadata>> metadatas = ImmutableMap.builder();
+        for (SchemaTableName tableName : tables) {
+            Optional<List<ColumnMetadata>> columnMetadata;
+            try {
+                columnMetadata = getColumnMetadata(tableName);
+            }
+            catch (TableNotFoundException ignore) {
+                // Table disappeared during listing.
+                continue;
+            }
+            catch (RuntimeException e) {
+                // Handle exceptions gracefully during metadata listing. Log, because we're catching broadly.
+                log.warn(e, "Failed to access get metadata of table %s during bulk retrieval of table columns", tableName);
+                continue;
+            }
+            columnMetadata.ifPresent(columns -> metadatas.put(tableName, columns));
+        }
+        return metadatas.buildOrThrow();
+    }
+
+    private Optional<List<ColumnMetadata>> getColumnMetadata(SchemaTableName tableName)
+    {
+        io.trino.plugin.hive.metastore.Table table = metastore.getTable(tableName.getSchemaName(), tableName.getTableName())
+                .orElse(null);
+        if (table == null || !isIcebergTable(table)) {
+            return Optional.empty();
+        }
+
+        String metadataLocation = table.getParameters().get(METADATA_LOCATION_PROP);
+        String metadataValidForMetadata = table.getParameters().get(TRINO_TABLE_METADATA_INFO_VALID_FOR);
+        if (metadataLocation == null || !metadataLocation.equals(metadataValidForMetadata)) {
+            // Galaxy is currently closed system so we can trust information we have in the metastore. This check is only for the sake of old and new
+            // Galaxy Trino versions being deployed concurrently, which can happen during roll out or when new version is deployed and then rolled back.
+            return Optional.empty();
+        }
+
+        checkState(table.getPartitionColumns().isEmpty(), "Unexpected partitioning columns in Iceberg table: %s", table);
+        if (table.getDataColumns().stream().noneMatch(column -> column.getProperties().containsKey(COLUMN_TRINO_TYPE_ID_PROPERTY))) {
+            // Metastore does not have up-to-date information about the table.
+            return Optional.empty();
+        }
+
+        ImmutableList.Builder<ColumnMetadata> columns = ImmutableList.builderWithExpectedSize(table.getDataColumns().size());
+        table.getDataColumns().stream()
+                .map(metastoreColumn -> fromMetastoreCache(metastoreColumn, typeManager))
+                .forEach(columns::add);
+        return Optional.of(columns.build());
+    }
+
+    /**
+     * Constructs {@link ColumnMetadata} based off information cached in metastore, see {@link GalaxyMetastoreTableOperations#toMetastoreColumn} . It's caller responsibility to ensure
+     * the information is there
+     */
+    @VisibleForTesting
+    static ColumnMetadata fromMetastoreCache(Column metastoreColumn, TypeManager typeManager)
+    {
+        String trinoTypeId = metastoreColumn.getProperties().get(COLUMN_TRINO_TYPE_ID_PROPERTY);
+        verifyNotNull(trinoTypeId, "%s property missing for column %s", COLUMN_TRINO_TYPE_ID_PROPERTY, metastoreColumn);
+        boolean notNull = parseBoolean(metastoreColumn.getProperties().getOrDefault(COLUMN_TRINO_NOT_NULL_PROPERTY, "false"));
+        Type type = typeManager.getType(TypeId.of(trinoTypeId));
+        return ColumnMetadata.builder()
+                .setName(metastoreColumn.getName())
+                .setType(type)
+                .setComment(metastoreColumn.getComment())
+                .setNullable(!notNull)
+                .build();
     }
 
     @Override

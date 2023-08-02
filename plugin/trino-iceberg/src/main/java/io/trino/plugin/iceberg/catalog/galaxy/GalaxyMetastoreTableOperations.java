@@ -13,26 +13,48 @@
  */
 package io.trino.plugin.iceberg.catalog.galaxy;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import io.starburst.stargate.metastore.client.BadMetastoreRequestException;
 import io.starburst.stargate.metastore.client.MetastoreConflictException;
 import io.trino.annotation.NotThreadSafe;
+import io.trino.plugin.hive.metastore.Column;
 import io.trino.plugin.hive.metastore.Table;
 import io.trino.plugin.hive.metastore.cache.CachingHiveMetastore;
+import io.trino.plugin.iceberg.TypeConverter;
 import io.trino.plugin.iceberg.catalog.hms.AbstractMetastoreTableOperations;
+import io.trino.plugin.iceberg.util.HiveSchemaUtil;
 import io.trino.spi.TrinoException;
+import io.trino.spi.connector.ColumnMetadata;
 import io.trino.spi.connector.ConnectorSession;
+import io.trino.spi.type.TypeManager;
 import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.exceptions.CommitFailedException;
 import org.apache.iceberg.exceptions.CommitStateUnknownException;
 import org.apache.iceberg.io.FileIO;
+import org.apache.iceberg.types.Types;
 
+import java.util.List;
 import java.util.Optional;
+
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.trino.plugin.hive.HiveMetadata.TABLE_COMMENT;
+import static io.trino.plugin.hive.HiveType.toHiveType;
+import static io.trino.plugin.iceberg.IcebergUtil.COLUMN_TRINO_NOT_NULL_PROPERTY;
+import static io.trino.plugin.iceberg.IcebergUtil.COLUMN_TRINO_TYPE_ID_PROPERTY;
+import static io.trino.plugin.iceberg.IcebergUtil.TRINO_TABLE_METADATA_INFO_VALID_FOR;
+import static java.util.Objects.requireNonNull;
 
 @NotThreadSafe
 public class GalaxyMetastoreTableOperations
         extends AbstractMetastoreTableOperations
 {
+    private final TypeManager typeManager;
+    private final boolean cacheTableMetadata;
+
     public GalaxyMetastoreTableOperations(
+            TypeManager typeManager,
+            boolean cacheTableMetadata,
             FileIO fileIo,
             CachingHiveMetastore metastore,
             ConnectorSession session,
@@ -42,6 +64,8 @@ public class GalaxyMetastoreTableOperations
             Optional<String> location)
     {
         super(fileIo, metastore, session, database, table, owner, location);
+        this.typeManager = requireNonNull(typeManager, "typeManager is null");
+        this.cacheTableMetadata = cacheTableMetadata;
     }
 
     @Override
@@ -65,5 +89,45 @@ public class GalaxyMetastoreTableOperations
             }
             throw new CommitStateUnknownException(e);
         }
+    }
+
+    @Override
+    protected Table.Builder updateMetastoreTable(Table.Builder builder, TableMetadata metadata, String metadataLocation, Optional<String> previousMetadataLocation)
+    {
+        builder = super.updateMetastoreTable(builder, metadata, metadataLocation, previousMetadataLocation);
+        if (!cacheTableMetadata) {
+            return builder;
+        }
+        return builder
+                .setParameter(TRINO_TABLE_METADATA_INFO_VALID_FOR, metadataLocation)
+                .setParameter(TABLE_COMMENT, Optional.ofNullable(metadata.properties().get(TABLE_COMMENT)))
+                .setDataColumns(metastoreColumns(metadata));
+    }
+
+    private List<Column> metastoreColumns(TableMetadata metadata)
+    {
+        return metadata.schema().columns().stream()
+                .map(icebergColumn -> toMetastoreColumn(icebergColumn, typeManager))
+                .collect(toImmutableList());
+    }
+
+    /**
+     * Converts Iceberg column information to metastore column storing sufficient information to reconstruct {@link ColumnMetadata}
+     * (and thus answer {@code information_schema.columns} queries).
+     */
+    @VisibleForTesting
+    static Column toMetastoreColumn(Types.NestedField icebergColumn, TypeManager typeManager)
+    {
+        ImmutableMap.Builder<String, String> properties = ImmutableMap.builderWithExpectedSize(2);
+        String trinoTypeId = TypeConverter.toTrinoType(icebergColumn.type(), typeManager).getTypeId().getId();
+        properties.put(COLUMN_TRINO_TYPE_ID_PROPERTY, trinoTypeId);
+        if (icebergColumn.isRequired()) {
+            properties.put(COLUMN_TRINO_NOT_NULL_PROPERTY, "true");
+        }
+        return new Column(
+                icebergColumn.name(),
+                toHiveType(HiveSchemaUtil.convert(icebergColumn.type())),
+                Optional.ofNullable(icebergColumn.doc()),
+                properties.buildOrThrow());
     }
 }

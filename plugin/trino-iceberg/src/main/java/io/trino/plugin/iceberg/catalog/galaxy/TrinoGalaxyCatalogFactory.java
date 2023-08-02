@@ -38,6 +38,7 @@ public class TrinoGalaxyCatalogFactory
     private final TrinoFileSystemFactory fileSystemFactory;
     private final IcebergTableOperationsProvider tableOperationsProvider;
     private final boolean isUniqueTableLocation;
+    private final boolean cacheTableMetadata;
 
     @Inject
     public TrinoGalaxyCatalogFactory(
@@ -46,7 +47,8 @@ public class TrinoGalaxyCatalogFactory
             HiveMetastoreFactory metastoreFactory,
             TrinoFileSystemFactory fileSystemFactory,
             IcebergTableOperationsProvider tableOperationsProvider,
-            IcebergConfig config)
+            IcebergConfig config,
+            IcebergGalaxyCatalogConfig galaxyCatalogConfig)
     {
         this.catalogName = requireNonNull(catalogName, "catalogName is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
@@ -54,6 +56,7 @@ public class TrinoGalaxyCatalogFactory
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.tableOperationsProvider = requireNonNull(tableOperationsProvider, "tableOperationProvider is null");
         this.isUniqueTableLocation = config.isUniqueTableLocation();
+        this.cacheTableMetadata = galaxyCatalogConfig.isCacheTableMetadata();
     }
 
     @Override
@@ -65,6 +68,7 @@ public class TrinoGalaxyCatalogFactory
                 memoizeMetastore(metastoreFactory.createMetastore(Optional.empty()), 1000),
                 fileSystemFactory,
                 tableOperationsProvider,
-                isUniqueTableLocation);
+                isUniqueTableLocation,
+                cacheTableMetadata);
     }
 }
