@@ -554,7 +554,7 @@ public final class MetadataManager
 
         // TODO: consider a better way to resolve relation names: https://github.com/trinodb/trino/issues/9400
         try {
-            return Optional.of(getRedirectionAwareTableHandle(session, name).getTableHandle().isPresent());
+            return Optional.of(getRedirectionAwareTableHandle(session, name).tableHandle().isPresent());
         }
         catch (TrinoException e) {
             // ignore redirection errors for consistency with listing
@@ -595,11 +595,11 @@ public final class MetadataManager
                         try {
                             // TODO: redirects are handled inefficiently: we currently throw-away redirect info and redo it later
                             RedirectionAwareTableHandle redirectionAware = getRedirectionAwareTableHandle(session, objectName);
-                            if (redirectionAware.getRedirectedTableName().isPresent()) {
+                            if (redirectionAware.redirectedTableName().isPresent()) {
                                 return Optional.of(RelationColumnsMetadata.forRedirectedTable(schemaTableName));
                             }
-                            if (redirectionAware.getTableHandle().isPresent()) {
-                                return Optional.of(RelationColumnsMetadata.forTable(schemaTableName, getTableMetadata(session, redirectionAware.getTableHandle().get()).getColumns()));
+                            if (redirectionAware.tableHandle().isPresent()) {
+                                return Optional.of(RelationColumnsMetadata.forTable(schemaTableName, getTableMetadata(session, redirectionAware.tableHandle().get()).getColumns()));
                             }
                         }
                         catch (RuntimeException e) {

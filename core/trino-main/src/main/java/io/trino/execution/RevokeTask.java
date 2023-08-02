@@ -107,11 +107,11 @@ public class RevokeTask
         }
         else if (!metadata.isView(session, tableName)) {
             RedirectionAwareTableHandle redirection = metadata.getRedirectionAwareTableHandle(session, tableName);
-            if (redirection.getTableHandle().isEmpty()) {
+            if (redirection.tableHandle().isEmpty()) {
                 throw semanticException(TABLE_NOT_FOUND, statement, "Table '%s' does not exist", tableName);
             }
-            if (redirection.getRedirectedTableName().isPresent()) {
-                throw semanticException(NOT_SUPPORTED, statement, "Table %s is redirected to %s and REVOKE is not supported with table redirections", tableName, redirection.getRedirectedTableName().get());
+            if (redirection.redirectedTableName().isPresent()) {
+                throw semanticException(NOT_SUPPORTED, statement, "Table %s is redirected to %s and REVOKE is not supported with table redirections", tableName, redirection.redirectedTableName().get());
             }
         }
 

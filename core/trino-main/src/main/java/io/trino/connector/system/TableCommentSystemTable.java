@@ -131,7 +131,7 @@ public class TableCommentSystemTable
                         try {
                             // TODO (https://github.com/trinodb/trino/issues/18514) this should consult accessControl on redirected name. Leaving for now as-is.
                             metadata.getRedirectionAwareTableHandle(session, new QualifiedObjectName(catalog, name.getSchemaName(), name.getTableName()))
-                                    .getTableHandle().ifPresent(tableHandle -> {
+                                    .tableHandle().ifPresent(tableHandle -> {
                                         Optional<String> comment = metadata.getTableMetadata(session, tableHandle).getMetadata().getComment();
                                         table.addRow(catalog, name.getSchemaName(), name.getTableName(), comment.orElse(null));
                                     });
@@ -160,9 +160,9 @@ public class TableCommentSystemTable
         }
 
         RedirectionAwareTableHandle redirectionAware = metadata.getRedirectionAwareTableHandle(session, relationName);
-        if (redirectionAware.getTableHandle().isPresent()) {
+        if (redirectionAware.tableHandle().isPresent()) {
             // TODO (https://github.com/trinodb/trino/issues/18514) this should consult accessControl on redirected name. Leaving for now as-is.
-            return new RelationComment(true, metadata.getTableMetadata(session, redirectionAware.getTableHandle().get()).getMetadata().getComment());
+            return new RelationComment(true, metadata.getTableMetadata(session, redirectionAware.tableHandle().get()).getMetadata().getComment());
         }
 
         return new RelationComment(false, Optional.empty());

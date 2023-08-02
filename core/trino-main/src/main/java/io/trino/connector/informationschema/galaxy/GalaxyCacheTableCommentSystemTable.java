@@ -177,7 +177,7 @@ public class GalaxyCacheTableCommentSystemTable
             return viewInfo.getComment();
         }
         QualifiedObjectName tableName = new QualifiedObjectName(prefix.getCatalogName(), name.getSchemaName(), name.getTableName());
-        return metadata.getRedirectionAwareTableHandle(session, tableName).getTableHandle()
+        return metadata.getRedirectionAwareTableHandle(session, tableName).tableHandle()
                 .map(handle -> metadata.getTableMetadata(session, handle))
                 .map(metadata -> metadata.getMetadata().getComment())
                 .orElseGet(() -> {
