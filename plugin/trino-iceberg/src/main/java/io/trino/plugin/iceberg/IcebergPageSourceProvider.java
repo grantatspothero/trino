@@ -142,7 +142,6 @@ import static io.trino.parquet.ParquetTypeUtils.getColumnIO;
 import static io.trino.parquet.ParquetTypeUtils.getDescriptors;
 import static io.trino.parquet.predicate.PredicateUtils.buildPredicate;
 import static io.trino.parquet.predicate.PredicateUtils.predicateMatches;
-import static io.trino.plugin.iceberg.IcebergColumnHandle.TRINO_MERGE_FILE_RECORD_COUNT;
 import static io.trino.plugin.iceberg.IcebergColumnHandle.TRINO_MERGE_PARTITION_DATA;
 import static io.trino.plugin.iceberg.IcebergColumnHandle.TRINO_MERGE_PARTITION_SPEC_ID;
 import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_BAD_DATA;
@@ -276,9 +275,6 @@ public class IcebergPageSourceProvider
                         else if (identity.getId() == ROW_POSITION.fieldId()) {
                             requiredColumns.add(new IcebergColumnHandle(identity, BIGINT, ImmutableList.of(), BIGINT, Optional.empty()));
                         }
-                        else if (identity.getId() == TRINO_MERGE_FILE_RECORD_COUNT) {
-                            requiredColumns.add(new IcebergColumnHandle(identity, BIGINT, ImmutableList.of(), BIGINT, Optional.empty()));
-                        }
                         else if (identity.getId() == TRINO_MERGE_PARTITION_SPEC_ID) {
                             requiredColumns.add(new IcebergColumnHandle(identity, INTEGER, ImmutableList.of(), INTEGER, Optional.empty()));
                         }
@@ -308,7 +304,6 @@ public class IcebergPageSourceProvider
                 inputfile,
                 split.getStart(),
                 split.getLength(),
-                split.getFileRecordCount(),
                 partitionSpec.specId(),
                 split.getPartitionDataJson(),
                 split.getFileFormat(),
@@ -454,7 +449,6 @@ public class IcebergPageSourceProvider
                 fileSystem.newInputFile(Location.of(delete.path()), delete.fileSizeInBytes()),
                 0,
                 delete.fileSizeInBytes(),
-                delete.recordCount(),
                 0,
                 "",
                 IcebergFileFormat.fromIceberg(delete.format()),
@@ -472,7 +466,6 @@ public class IcebergPageSourceProvider
             TrinoInputFile inputFile,
             long start,
             long length,
-            long fileRecordCount,
             int partitionSpecId,
             String partitionData,
             IcebergFileFormat fileFormat,
@@ -488,7 +481,6 @@ public class IcebergPageSourceProvider
                         inputFile,
                         start,
                         length,
-                        fileRecordCount,
                         partitionSpecId,
                         partitionData,
                         dataColumns,
@@ -512,7 +504,6 @@ public class IcebergPageSourceProvider
                         inputFile,
                         start,
                         length,
-                        fileRecordCount,
                         partitionSpecId,
                         partitionData,
                         dataColumns,
@@ -534,7 +525,6 @@ public class IcebergPageSourceProvider
                         inputFile,
                         start,
                         length,
-                        fileRecordCount,
                         partitionSpecId,
                         partitionData,
                         fileSchema,
@@ -549,7 +539,6 @@ public class IcebergPageSourceProvider
             TrinoInputFile inputFile,
             long start,
             long length,
-            long fileRecordCount,
             int partitionSpecId,
             String partitionData,
             List<IcebergColumnHandle> columns,
@@ -620,9 +609,6 @@ public class IcebergPageSourceProvider
                 }
                 else if (column.isRowPositionColumn()) {
                     columnAdaptations.add(ColumnAdaptation.positionColumn());
-                }
-                else if (column.getId() == TRINO_MERGE_FILE_RECORD_COUNT) {
-                    columnAdaptations.add(ColumnAdaptation.constantColumn(nativeValueToBlock(column.getType(), fileRecordCount)));
                 }
                 else if (column.getId() == TRINO_MERGE_PARTITION_SPEC_ID) {
                     columnAdaptations.add(ColumnAdaptation.constantColumn(nativeValueToBlock(column.getType(), (long) partitionSpecId)));
@@ -891,7 +877,6 @@ public class IcebergPageSourceProvider
             TrinoInputFile inputFile,
             long start,
             long length,
-            long fileRecordCount,
             int partitionSpecId,
             String partitionData,
             List<IcebergColumnHandle> regularColumns,
@@ -992,9 +977,6 @@ public class IcebergPageSourceProvider
                 }
                 else if (column.isRowPositionColumn()) {
                     pageSourceBuilder.addRowIndexColumn();
-                }
-                else if (column.getId() == TRINO_MERGE_FILE_RECORD_COUNT) {
-                    pageSourceBuilder.addConstantColumn(nativeValueToBlock(column.getType(), fileRecordCount));
                 }
                 else if (column.getId() == TRINO_MERGE_PARTITION_SPEC_ID) {
                     pageSourceBuilder.addConstantColumn(nativeValueToBlock(column.getType(), (long) partitionSpecId));
@@ -1105,7 +1087,6 @@ public class IcebergPageSourceProvider
             TrinoInputFile inputFile,
             long start,
             long length,
-            long fileRecordCount,
             int partitionSpecId,
             String partitionData,
             Schema fileSchema,
@@ -1165,9 +1146,6 @@ public class IcebergPageSourceProvider
                     columnTypes.add(BIGINT);
                     constantPopulatingPageSourceBuilder.addDelegateColumn(avroSourceChannel);
                     avroSourceChannel++;
-                }
-                else if (column.getId() == TRINO_MERGE_FILE_RECORD_COUNT) {
-                    constantPopulatingPageSourceBuilder.addConstantColumn(nativeValueToBlock(column.getType(), fileRecordCount));
                 }
                 else if (column.getId() == TRINO_MERGE_PARTITION_SPEC_ID) {
                     constantPopulatingPageSourceBuilder.addConstantColumn(nativeValueToBlock(column.getType(), (long) partitionSpecId));
