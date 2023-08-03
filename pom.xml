@@ -194,7 +194,7 @@
         <dep.trino-buffer-service.version>422-trino-buffer-service-583-gb8d02d0</dep.trino-buffer-service.version>
         <!-- released form https://github.com/starburstdata/schema-discovery -->
         <!-- using PR version as schema discovery is on trino 422 already, and we needed to backport bugfix on 421, take version from master once update to 422 happens -->
-        <dep.schema-discovery.version>422.20230718-27c598c</dep.schema-discovery.version>
+        <dep.schema-discovery.version>422.20230731-4095521</dep.schema-discovery.version>
         <!-- released from https://github.com/starburstdata/stargate -->
         <dep.stargate.version>stargate-9856-gb397ad260</dep.stargate.version>
         <!-- released from https://github.com/starburstdata/starburst-trino-plugins -->
