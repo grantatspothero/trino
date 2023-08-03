@@ -221,6 +221,7 @@ public class ObjectStoreSessionProperties
             Object connectorValue = wrappedPropertyValue.value();
             if (connectorValue == null) {
                 @Nullable
+                @SuppressWarnings("NullableOptional")
                 Optional<Object> defaultValue = defaultPropertyValue.get(name, forType);
                 //noinspection OptionalAssignedToNull
                 if (defaultValue != null) {
