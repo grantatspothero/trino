@@ -66,6 +66,9 @@ public class TestObjectStoreIcebergConnectorTest
         boolean connectorHasBehavior = new GetIcebergConnectorTestBehavior().hasBehavior(connectorBehavior);
 
         switch (connectorBehavior) {
+            case SUPPORTS_DROP_SCHEMA_CASCADE:
+                return true;
+
             case SUPPORTS_RENAME_MATERIALIZED_VIEW_ACROSS_SCHEMAS:
                 // TODO when this changes, remove this flag from other BaseObjectStoreConnectorTest subclasses
                 verify(!connectorHasBehavior, "Unexpected support for: %s", connectorBehavior);

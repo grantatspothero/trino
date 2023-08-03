@@ -55,6 +55,9 @@ public class TestObjectStoreDeltaConnectorTest
         boolean connectorHasBehavior = new GetDeltaLakeConnectorTestBehavior().hasBehavior(connectorBehavior);
 
         switch (connectorBehavior) {
+            case SUPPORTS_DROP_SCHEMA_CASCADE:
+                return true;
+
             case SUPPORTS_RENAME_SCHEMA: // ObjectStore supports this via Hive connector
                 // when this fails remove the `case` for given flag
                 verify(!connectorHasBehavior, "Unexpected support for: %s", connectorBehavior);

@@ -353,6 +353,48 @@ public abstract class BaseObjectStoreConnectorTest
     }
 
     @Test
+    public void testDropSchemaCascadeWithAllType()
+    {
+        String schemaName = "test_drop_schema_cascade" + randomNameSuffix();
+        assertUpdate("CREATE SCHEMA " + schemaName);
+        assertThat(computeActual("SHOW SCHEMAS").getOnlyColumnAsSet()).contains(schemaName);
+
+        assertUpdate("CREATE TABLE " + schemaName + ".test_hive(a int) WITH (type = 'HIVE')");
+        assertUpdate("CREATE TABLE " + schemaName + ".test_iceberg(a int) WITH (type = 'ICEBERG')");
+        assertUpdate("CREATE TABLE " + schemaName + ".test_delta(a int) WITH (type = 'DELTA')");
+        assertQueryFails("CREATE TABLE " + schemaName + ".test_hudi(a int) WITH (type = 'HUDI')", "Table creation is not supported for Hudi");
+        assertThat(computeActual("SHOW TABLES IN " + schemaName).getOnlyColumnAsSet())
+                .contains("test_hive", "test_iceberg", "test_delta");
+        assertThat(minio.listObjects(schemaName)).isNotEmpty();
+
+        assertUpdate("DROP SCHEMA " + schemaName + " CASCADE");
+        assertThat(computeActual("SHOW SCHEMAS").getOnlyColumnAsSet()).doesNotContain(schemaName);
+        assertThat(minio.listObjects(schemaName)).isEmpty();
+    }
+
+    @Test
+    public void testDropSchemaCascadeFailure()
+            throws Exception
+    {
+        String schemaName = "test_drop_schema_cascade_failure" + randomNameSuffix();
+        assertUpdate("CREATE SCHEMA " + schemaName);
+        assertThat(computeActual("SHOW SCHEMAS").getOnlyColumnAsSet()).contains(schemaName);
+
+        // Create a table with system table name to cause query failure during dropping schema
+        assertUpdate("CREATE TABLE " + schemaName + ".\"test_system_table$partitions\"(a int) WITH (type = 'HIVE')");
+        assertUpdate("CREATE VIEW " + schemaName + ".test_view AS SELECT 1 a");
+        assertUpdate("CREATE MATERIALIZED VIEW " + schemaName + ".test_materialized_view AS SELECT 1 a");
+
+        assertQueryFails("DROP SCHEMA " + schemaName + " CASCADE", "Unexpected table present( in Hive metastore)?: %s.test_system_table\\$partitions".formatted(schemaName));
+        assertThat(computeActual("SHOW SCHEMAS").getOnlyColumnAsSet()).contains(schemaName);
+        assertThat(computeActual("SHOW TABLES IN " + schemaName).getOnlyColumnAsSet())
+                .contains("test_system_table$partitions");
+
+        metastore.getMetastore().dropTable(schemaName, "test_system_table$partitions");
+        metastore.getMetastore().dropDatabase(schemaName);
+    }
+
+    @Test
     @Override
     public void testShowCreateSchema()
     {

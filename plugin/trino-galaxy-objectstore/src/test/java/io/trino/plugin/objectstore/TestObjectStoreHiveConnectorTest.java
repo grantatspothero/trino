@@ -61,6 +61,9 @@ public class TestObjectStoreHiveConnectorTest
             case SUPPORTS_MERGE:
                 return true;
 
+            case SUPPORTS_DROP_SCHEMA_CASCADE:
+                return true;
+
             // ObjectStore adds support for materialized views using Iceberg
             case SUPPORTS_CREATE_MATERIALIZED_VIEW:
             case SUPPORTS_CREATE_MATERIALIZED_VIEW_GRACE_PERIOD:

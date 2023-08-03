@@ -55,6 +55,9 @@ public class TestObjectStoreHudiConnectorTest
         boolean connectorHasBehavior = new GetHudiConnectorTestBehavior().hasBehavior(connectorBehavior);
 
         switch (connectorBehavior) {
+            case SUPPORTS_DROP_SCHEMA_CASCADE:
+                return true;
+
             // ObjectStore adds support for schemas using Hive
             case SUPPORTS_CREATE_SCHEMA:
             case SUPPORTS_RENAME_SCHEMA:

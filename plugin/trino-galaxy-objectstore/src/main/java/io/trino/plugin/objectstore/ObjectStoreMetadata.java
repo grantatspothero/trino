@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
+import io.airlift.log.Logger;
 import io.airlift.slice.Slice;
 import io.trino.plugin.deltalake.CorruptedDeltaLakeTableHandle;
 import io.trino.plugin.deltalake.DeltaLakeInsertTableHandle;
@@ -74,6 +75,7 @@ import io.trino.spi.connector.Constraint;
 import io.trino.spi.connector.ConstraintApplicationResult;
 import io.trino.spi.connector.LimitApplicationResult;
 import io.trino.spi.connector.MaterializedViewFreshness;
+import io.trino.spi.connector.MaterializedViewNotFoundException;
 import io.trino.spi.connector.ProjectionApplicationResult;
 import io.trino.spi.connector.RetryMode;
 import io.trino.spi.connector.RowChangeParadigm;
@@ -83,7 +85,9 @@ import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SchemaTablePrefix;
 import io.trino.spi.connector.SystemTable;
 import io.trino.spi.connector.TableColumnsMetadata;
+import io.trino.spi.connector.TableNotFoundException;
 import io.trino.spi.connector.TableScanRedirectApplicationResult;
+import io.trino.spi.connector.ViewNotFoundException;
 import io.trino.spi.expression.ConnectorExpression;
 import io.trino.spi.procedure.Procedure;
 import io.trino.spi.security.TrinoPrincipal;
@@ -137,6 +141,8 @@ import static java.util.Objects.requireNonNull;
 public class ObjectStoreMetadata
         implements ConnectorMetadata
 {
+    private static final Logger log = Logger.get(ObjectStoreMetadata.class);
+
     private final TransactionalMetadata hiveMetadata;
     private final ConnectorMetadata icebergMetadata;
     private final ConnectorMetadata deltaMetadata;
@@ -678,7 +684,55 @@ public class ObjectStoreMetadata
     @Override
     public void dropSchema(ConnectorSession session, String schemaName, boolean cascade)
     {
-        hiveMetadata.dropSchema(unwrap(HIVE, session), schemaName, cascade);
+        if (cascade) {
+            // List all objects first because such operations after adding/dropping/altering tables/views in a transaction is disallowed
+            List<SchemaTableName> views = listViews(session, Optional.of(schemaName));
+            Map<SchemaTableName, ConnectorMaterializedViewDefinition> materializedViews = getMaterializedViews(session, Optional.of(schemaName));
+            Set<SchemaTableName> storageTables = materializedViews.values().stream()
+                    .filter(view -> view.getStorageTable().isPresent())
+                    .map(view -> view.getStorageTable().get().getSchemaTableName())
+                    .collect(toImmutableSet());
+            List<SchemaTableName> tables = listTables(session, Optional.of(schemaName)).stream()
+                    .filter(table -> !views.contains(table) && !materializedViews.containsKey(table) && !storageTables.contains(table))
+                    .collect(toImmutableList());
+
+            // Drop views and materialized views first because tables might be used from them
+            for (SchemaTableName viewName : views) {
+                try {
+                    dropView(session, viewName);
+                }
+                catch (ViewNotFoundException e) {
+                    log.debug("View disappeared during DROP SCHEMA CASCADE: %s", viewName);
+                }
+            }
+            for (SchemaTableName materializedViewName : materializedViews.keySet()) {
+                try {
+                    dropMaterializedView(session, materializedViewName);
+                }
+                catch (MaterializedViewNotFoundException e) {
+                    log.debug("Materialized view disappeared during DROP SCHEMA CASCADE: %s", materializedViewName);
+                }
+            }
+            for (SchemaTableName tableName : tables) {
+                try {
+                    ConnectorTableHandle table = getTableHandle(session, tableName);
+                    if (table == null) {
+                        throw new TrinoException(UNSUPPORTED_TABLE_TYPE, "Unexpected table present: " + tableName);
+                    }
+                    dropTable(session, table);
+                }
+                catch (TableNotFoundException e) {
+                    log.debug("Table disappeared during DROP SCHEMA CASCADE: %s", tableName);
+                }
+            }
+            // Commit and then drop database with raw metastore because exclusive operation after dropping object is disallowed in SemiTransactionalHiveMetastore
+            hiveMetadata.commit();
+            boolean deleteData = hiveMetadata.getMetastore().shouldDeleteDatabaseData(session, schemaName);
+            hiveMetadata.getMetastore().unsafeGetRawHiveMetastoreClosure().dropDatabase(schemaName, deleteData);
+        }
+        else {
+            hiveMetadata.dropSchema(session, schemaName, false);
+        }
         flushMetadataCache();
     }
 
