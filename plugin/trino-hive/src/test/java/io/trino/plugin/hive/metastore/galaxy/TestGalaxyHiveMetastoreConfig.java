@@ -35,7 +35,8 @@ public class TestGalaxyHiveMetastoreConfig
                 .setMetastoreId(null)
                 .setSharedSecret(null)
                 .setServerUri(null)
-                .setDefaultDataDirectory(null));
+                .setDefaultDataDirectory(null)
+                .setBatchMetadataFetch(false));
     }
 
     @Test
@@ -46,13 +47,15 @@ public class TestGalaxyHiveMetastoreConfig
                 .put("galaxy.metastore.shared-secret", SHARED_SECRET)
                 .put("galaxy.metastore.server-uri", "https://example.com")
                 .put("galaxy.metastore.default-data-dir", "some path")
+                .put("galaxy.metastore.batch-fetch.enabled", "true")
                 .buildOrThrow();
 
         GalaxyHiveMetastoreConfig expected = new GalaxyHiveMetastoreConfig()
                 .setMetastoreId(new MetastoreId("ms-1234567890"))
                 .setSharedSecret(SHARED_SECRET)
                 .setServerUri(URI.create("https://example.com"))
-                .setDefaultDataDirectory("some path");
+                .setDefaultDataDirectory("some path")
+                .setBatchMetadataFetch(true);
 
         assertFullMapping(properties, expected);
     }

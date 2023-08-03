@@ -27,6 +27,7 @@ public class GalaxyHiveMetastoreConfig
     private String sharedSecret;
     private URI serverUri;
     private String defaultDataDirectory;
+    private boolean batchMetadataFetch;
 
     @NotNull
     public MetastoreId getMetastoreId()
@@ -79,6 +80,18 @@ public class GalaxyHiveMetastoreConfig
     public GalaxyHiveMetastoreConfig setDefaultDataDirectory(String defaultDataDirectory)
     {
         this.defaultDataDirectory = defaultDataDirectory;
+        return this;
+    }
+
+    public boolean isBatchMetadataFetch()
+    {
+        return batchMetadataFetch;
+    }
+
+    @Config("galaxy.metastore.batch-fetch.enabled")
+    public GalaxyHiveMetastoreConfig setBatchMetadataFetch(boolean batchMetadataFetch)
+    {
+        this.batchMetadataFetch = batchMetadataFetch;
         return this;
     }
 }

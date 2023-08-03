@@ -61,7 +61,7 @@ public class TestGalaxyHiveMetastore
     @Override
     protected HiveMetastore createMetastore(File tempDir)
     {
-        return new GalaxyHiveMetastore(testingGalaxyMetastore.getMetastore(), HDFS_ENVIRONMENT, tempDir.getAbsolutePath());
+        return new GalaxyHiveMetastore(testingGalaxyMetastore.getMetastore(), HDFS_ENVIRONMENT, tempDir.getAbsolutePath(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
     }
 
     @Override

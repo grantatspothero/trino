@@ -23,6 +23,7 @@ import io.trino.connector.MockConnectorFactory;
 import io.trino.connector.MockConnectorPlugin;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastore;
+import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastoreConfig;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.hudi.testing.TpchHudiTablesInitializer;
 import io.trino.plugin.iceberg.IcebergPlugin;
@@ -235,7 +236,7 @@ public final class ObjectStoreQueryRunner
     public static void initializeTpchTablesHudi(DistributedQueryRunner queryRunner, List<TpchTable<?>> tables, TestingGalaxyMetastore metastore)
     {
         String dataDir = queryRunner.getCoordinator().getBaseDataDir().resolve("data").toString();
-        HiveMetastore hiveMetastore = new GalaxyHiveMetastore(metastore.getMetastore(), HDFS_ENVIRONMENT, dataDir);
+        HiveMetastore hiveMetastore = new GalaxyHiveMetastore(metastore.getMetastore(), HDFS_ENVIRONMENT, dataDir, new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
         TpchHudiTablesInitializer loader = new TpchHudiTablesInitializer(COPY_ON_WRITE, tables);
         loader.initializeTables(queryRunner, hiveMetastore, TPCH_SCHEMA, dataDir, HDFS_ENVIRONMENT);
         for (TpchTable<?> table : tables) {

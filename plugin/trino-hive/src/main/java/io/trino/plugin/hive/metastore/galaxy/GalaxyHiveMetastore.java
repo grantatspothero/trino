@@ -98,18 +98,20 @@ public class GalaxyHiveMetastore
     private final HdfsEnvironment hdfsEnvironment;
     private final HdfsContext hdfsContext;
     private final String defaultDirectory;
+    private final boolean batchMetadataFetch;
 
     public GalaxyHiveMetastore(GalaxyHiveMetastoreConfig config, HdfsEnvironment hdfsEnvironment, HttpClient httpClient)
     {
-        this(new RestMetastore(config.getMetastoreId(), config.getSharedSecret(), config.getServerUri(), httpClient), hdfsEnvironment, config.getDefaultDataDirectory());
+        this(new RestMetastore(config.getMetastoreId(), config.getSharedSecret(), config.getServerUri(), httpClient), hdfsEnvironment, config.getDefaultDataDirectory(), config.isBatchMetadataFetch());
     }
 
-    public GalaxyHiveMetastore(Metastore metastore, HdfsEnvironment hdfsEnvironment, String defaultDirectory)
+    public GalaxyHiveMetastore(Metastore metastore, HdfsEnvironment hdfsEnvironment, String defaultDirectory, boolean batchMetadataFetch)
     {
         this.metastore = requireNonNull(metastore, "metastore is null");
         this.defaultDirectory = requireNonNull(defaultDirectory, "defaultDirectory is null");
         this.hdfsEnvironment = requireNonNull(hdfsEnvironment, "hdfsEnvironment is null");
         this.hdfsContext = new HdfsContext(ConnectorIdentity.ofUser(DEFAULT_METASTORE_USER));
+        this.batchMetadataFetch = batchMetadataFetch;
     }
 
     @Override
@@ -244,8 +246,17 @@ public class GalaxyHiveMetastore
     @Override
     public Optional<List<SchemaTableName>> getAllTables()
     {
-        // TODO (https://github.com/starburstdata/stargate/issues/10034) implement
-        return Optional.empty();
+        if (!batchMetadataFetch) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(metastore.getAllTableNames().stream()
+                    .map(name -> new SchemaTableName(name.databaseName(), name.tableName()))
+                    .collect(toImmutableList()));
+        }
+        catch (MetastoreException e) {
+            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+        }
     }
 
     @Override
@@ -273,8 +284,17 @@ public class GalaxyHiveMetastore
     @Override
     public Optional<List<SchemaTableName>> getAllViews()
     {
-        // TODO (https://github.com/starburstdata/stargate/issues/10034) implement
-        return Optional.empty();
+        if (!batchMetadataFetch) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(metastore.getAllViewNames().stream()
+                    .map(name -> new SchemaTableName(name.databaseName(), name.tableName()))
+                    .collect(toImmutableList()));
+        }
+        catch (MetastoreException e) {
+            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+        }
     }
 
     @Override
