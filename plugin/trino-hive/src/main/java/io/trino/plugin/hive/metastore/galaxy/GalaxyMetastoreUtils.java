@@ -44,6 +44,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.OptionalLong;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Maps.immutableEntry;
@@ -147,6 +148,7 @@ final class GalaxyMetastoreUtils
 
     public static io.starburst.stargate.metastore.client.Column toGalaxyColumn(Column column)
     {
+        checkArgument(column.getProperties().isEmpty(), "Persisting column properties is not supported: %s", column);
         return new io.starburst.stargate.metastore.client.Column(column.getName(), column.getType().toString(), column.getComment());
     }
 
