@@ -36,6 +36,7 @@ import io.trino.spi.connector.ConnectorMaterializedViewDefinition;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.ConnectorViewDefinition;
 import io.trino.spi.connector.MaterializedViewNotFoundException;
+import io.trino.spi.connector.RelationCommentMetadata;
 import io.trino.spi.connector.SchemaNotFoundException;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TableNotFoundException;
@@ -54,10 +55,14 @@ import org.apache.iceberg.TableOperations;
 import org.apache.iceberg.Transaction;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -296,6 +301,17 @@ public class TrinoGalaxyCatalog
                 .flatMap(schema -> metastore.getAllTables(schema).stream()
                         .map(table -> new SchemaTableName(schema, table)))
                 .collect(toImmutableList());
+    }
+
+    @Override
+    public Optional<Iterator<RelationCommentMetadata>> streamRelationComments(
+            ConnectorSession session,
+            Optional<String> namespace,
+            UnaryOperator<Set<SchemaTableName>> relationFilter,
+            Predicate<SchemaTableName> isRedirected)
+    {
+        // TODO (https://github.com/starburstdata/galaxy-trino/issues/818) implement
+        return Optional.empty();
     }
 
     @Override
