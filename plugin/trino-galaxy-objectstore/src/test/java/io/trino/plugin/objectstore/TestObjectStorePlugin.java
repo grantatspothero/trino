@@ -26,7 +26,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 public class TestObjectStorePlugin
 {
     private static final String TESTING_ACCOUNT_URL = "https://whackadoodle.galaxy.com";
+    private static final String TESTING_GALAXY_METASTORE_URL = "https://whackadoodle.galaxy.com";
+    private static final String TESTING_GALAXY_METASTORE_ID = "ms-1234567890";
+    private static final String TESTING_GALAXY_DEFAULT_DATA_DIR = "/dev/null";
     private static final String TESTING_CATALOG_ID = "c-1234567890";
+    private static final String SHARED_SECRET = "1234567890123456789012345678901234567890123456789012345678901234";
 
     @Test
     public void testCreateConnector()
@@ -81,6 +85,48 @@ public class TestObjectStorePlugin
                                 .put("HUDI__galaxy.account-url", TESTING_ACCOUNT_URL)
                                 .put("HUDI__galaxy.catalog-id", TESTING_CATALOG_ID)
                                 .put("HUDI__hive.metastore", "glue")
+                                .buildOrThrow(),
+                        new TestingConnectorContext())
+                .shutdown();
+    }
+
+    @Test
+    public void testGalaxyMetastore()
+    {
+        ConnectorFactory factory = getConnectorFactory();
+        factory.create(
+                        "test",
+                        ImmutableMap.<String, String>builder()
+                                .put("OBJECTSTORE__galaxy.account-url", TESTING_ACCOUNT_URL)
+                                .put("OBJECTSTORE__galaxy.catalog-id", TESTING_CATALOG_ID)
+                                .put("HIVE__galaxy.account-url", TESTING_ACCOUNT_URL)
+                                .put("HIVE__galaxy.catalog-id", TESTING_CATALOG_ID)
+                                .put("HIVE__hive.metastore", "galaxy")
+                                .put("HIVE__galaxy.metastore.default-data-dir", TESTING_GALAXY_DEFAULT_DATA_DIR)
+                                .put("HIVE__galaxy.metastore.metastore-id", TESTING_GALAXY_METASTORE_ID)
+                                .put("HIVE__galaxy.metastore.shared-secret", SHARED_SECRET)
+                                .put("HIVE__galaxy.metastore.server-uri", TESTING_GALAXY_METASTORE_URL)
+                                .put("ICEBERG__galaxy.account-url", TESTING_ACCOUNT_URL)
+                                .put("ICEBERG__galaxy.catalog-id", TESTING_CATALOG_ID)
+                                .put("ICEBERG__iceberg.catalog.type", "GALAXY_METASTORE")
+                                .put("ICEBERG__galaxy.metastore.default-data-dir", TESTING_GALAXY_DEFAULT_DATA_DIR)
+                                .put("ICEBERG__galaxy.metastore.metastore-id", TESTING_GALAXY_METASTORE_ID)
+                                .put("ICEBERG__galaxy.metastore.shared-secret", SHARED_SECRET)
+                                .put("ICEBERG__galaxy.metastore.server-uri", TESTING_GALAXY_METASTORE_URL)
+                                .put("DELTA__galaxy.account-url", TESTING_ACCOUNT_URL)
+                                .put("DELTA__galaxy.catalog-id", TESTING_CATALOG_ID)
+                                .put("DELTA__hive.metastore", "galaxy")
+                                .put("DELTA__galaxy.metastore.default-data-dir", TESTING_GALAXY_DEFAULT_DATA_DIR)
+                                .put("DELTA__galaxy.metastore.metastore-id", TESTING_GALAXY_METASTORE_ID)
+                                .put("DELTA__galaxy.metastore.shared-secret", SHARED_SECRET)
+                                .put("DELTA__galaxy.metastore.server-uri", TESTING_GALAXY_METASTORE_URL)
+                                .put("HUDI__galaxy.account-url", TESTING_ACCOUNT_URL)
+                                .put("HUDI__galaxy.catalog-id", TESTING_CATALOG_ID)
+                                .put("HUDI__hive.metastore", "galaxy")
+                                .put("HUDI__galaxy.metastore.default-data-dir", TESTING_GALAXY_DEFAULT_DATA_DIR)
+                                .put("HUDI__galaxy.metastore.metastore-id", TESTING_GALAXY_METASTORE_ID)
+                                .put("HUDI__galaxy.metastore.shared-secret", SHARED_SECRET)
+                                .put("HUDI__galaxy.metastore.server-uri", TESTING_GALAXY_METASTORE_URL)
                                 .buildOrThrow(),
                         new TestingConnectorContext())
                 .shutdown();
