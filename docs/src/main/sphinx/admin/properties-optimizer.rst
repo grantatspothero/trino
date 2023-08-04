@@ -48,14 +48,15 @@ create them.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * **Type:** :ref:`prop-type-string`
-* **Allowed values:** ``AUTOMATIC``, ``ALWAYS``, ``NONE``
+* **Allowed values:** ``AUTOMATIC``, ``MARK_DISTINCT``, ``SINGLE_STEP``
 * **Default value:** ``AUTOMATIC``
 
-The mark distinct strategy to use for distinct aggregations. ``NONE`` does not use
-``MarkDistinct`` operator.  ``ALWAYS`` uses ``MarkDistinct`` for multiple distinct
+The strategy to use for distinct aggregations. ``SINGLE_STEP`` computes distinct
+aggregations directly using single hash table.
+``MARK_DISTINCT`` uses ``MarkDistinct`` for multiple distinct
 aggregations or for mix of distinct and non-distinct aggregations.
 ``AUTOMATIC`` limits the use of ``MarkDistinct`` only for cases with limited
-concurrency (global or small cardinality aggregations), where direct distinct
+concurrency (global or small cardinality aggregations), where single-step distinct
 aggregation implementation cannot utilize CPU efficiently.
 The strategy can be specified on a per-query basis using the
 ``distinct_aggregations_strategy`` session property.

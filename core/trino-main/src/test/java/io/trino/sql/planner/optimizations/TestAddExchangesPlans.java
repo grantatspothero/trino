@@ -245,7 +245,7 @@ public class TestAddExchangesPlans
                 query,
                 Session.builder(getQueryRunner().getDefaultSession())
                         .setSystemProperty(IGNORE_DOWNSTREAM_PREFERENCES, "true")
-                        .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "always")
+                        .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "mark_distinct")
                         .build(),
                 anyTree(
                         node(MarkDistinctNode.class,
@@ -265,7 +265,7 @@ public class TestAddExchangesPlans
                 query,
                 Session.builder(getQueryRunner().getDefaultSession())
                         .setSystemProperty(IGNORE_DOWNSTREAM_PREFERENCES, "false")
-                        .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "always")
+                        .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "mark_distinct")
                         .build(),
                 anyTree(
                         node(MarkDistinctNode.class,
