@@ -33,6 +33,7 @@ import io.airlift.log.Logger;
 import io.airlift.units.DataSize;
 import io.trino.Session;
 import io.trino.SystemSessionProperties;
+import io.trino.cache.CacheConfig;
 import io.trino.cache.CacheDataOperator.CacheDataOperatorFactory;
 import io.trino.cache.CacheDriverFactory;
 import io.trino.cache.CacheManagerRegistry;
@@ -457,6 +458,7 @@ public class LocalExecutionPlanner
     private final ExchangeManagerRegistry exchangeManagerRegistry;
     private final PositionsAppenderFactory positionsAppenderFactory;
     private final NodeVersion version;
+    private final CacheConfig cacheConfig;
 
     private final NonEvictableCache<FunctionKey, AccumulatorFactory> accumulatorFactoryCache = buildNonEvictableCache(CacheBuilder.newBuilder()
             .maximumSize(1000)
@@ -489,6 +491,7 @@ public class LocalExecutionPlanner
             OperatorFactories operatorFactories,
             OrderingCompiler orderingCompiler,
             DynamicFilterConfig dynamicFilterConfig,
+            CacheConfig cacheConfig,
             BlockTypeOperators blockTypeOperators,
             TableExecuteContextManager tableExecuteContextManager,
             ExchangeManagerRegistry exchangeManagerRegistry,
@@ -542,6 +545,7 @@ public class LocalExecutionPlanner
         this.cacheManagerRegistry = requireNonNull(cacheManagerRegistry, "cacheManagerRegistry is null");
         this.positionsAppenderFactory = new PositionsAppenderFactory(blockTypeOperators);
         this.version = requireNonNull(version, "version is null");
+        this.cacheConfig = requireNonNull(cacheConfig, "cacheConfig is null");
     }
 
     public LocalExecutionPlan plan(
@@ -2299,7 +2303,7 @@ public class LocalExecutionPlanner
         {
             PhysicalOperation source = node.getSource().accept(this, context);
             return new PhysicalOperation(
-                    new CacheDataOperatorFactory(context.getNextOperatorId(), node.getId()),
+                    new CacheDataOperatorFactory(context.getNextOperatorId(), node.getId(), cacheConfig.getMaximalSplitCacheSubqueriesSize().toBytes()),
                     source.getLayout(),
                     context,
                     source);

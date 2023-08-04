@@ -23,6 +23,7 @@ import io.trino.spi.connector.ConnectorPageSink;
 import io.trino.sql.planner.plan.PlanNodeId;
 import jakarta.annotation.Nullable;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -35,21 +36,25 @@ public class CacheDataOperator
         private final int operatorId;
         private final PlanNodeId planNodeId;
         private boolean closed;
+        private final long maxCacheSizeInBytes;
 
         public CacheDataOperatorFactory(
                 int operatorId,
-                PlanNodeId planNodeId)
+                PlanNodeId planNodeId,
+                long maxCacheSizeInBytes)
         {
             this.operatorId = operatorId;
             this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
+            this.maxCacheSizeInBytes = maxCacheSizeInBytes;
         }
 
         @Override
         public Operator createOperator(DriverContext driverContext)
         {
+            checkArgument(driverContext.getCacheDriverContext().isPresent(), "cacheDriverContext is empty");
             checkState(!closed, "Factory is already closed");
             OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId, CacheDataOperator.class.getSimpleName());
-            return new CacheDataOperator(operatorContext);
+            return new CacheDataOperator(operatorContext, maxCacheSizeInBytes);
         }
 
         @Override
@@ -61,19 +66,21 @@ public class CacheDataOperator
         @Override
         public OperatorFactory duplicate()
         {
-            return new CacheDataOperatorFactory(operatorId, planNodeId);
+            return new CacheDataOperatorFactory(operatorId, planNodeId, maxCacheSizeInBytes);
         }
     }
 
     private final OperatorContext operatorContext;
     private final LocalMemoryContext memoryContext;
+    private final long maxCacheSizeInBytes;
 
     @Nullable
     private ConnectorPageSink pageSink;
     @Nullable
     private Page page;
+    private boolean isCachingAborted;
 
-    private CacheDataOperator(OperatorContext operatorContext)
+    private CacheDataOperator(OperatorContext operatorContext, long maxCacheSizeInBytes)
     {
         this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
         this.memoryContext = operatorContext.newLocalUserMemoryContext(CacheDataOperator.class.getSimpleName());
@@ -82,6 +89,7 @@ public class CacheDataOperator
                 .pageSink()
                 .orElseThrow(() -> new IllegalArgumentException("Cache page sink is not present"));
         memoryContext.setBytes(pageSink.getMemoryUsage());
+        this.maxCacheSizeInBytes = maxCacheSizeInBytes;
     }
 
     @Override
@@ -101,8 +109,19 @@ public class CacheDataOperator
     {
         checkState(needsInput());
         this.page = page;
+
+        if (isCachingAborted) {
+            return;
+        }
+
         checkState(pageSink.appendPage(page).isDone(), "appendPage future must be done");
         memoryContext.setBytes(pageSink.getMemoryUsage());
+
+        // If there is no space for a page in a cache, stop caching this split and abort pageSink
+        if (pageSink.getMemoryUsage() > maxCacheSizeInBytes) {
+            pageSink.abort();
+            isCachingAborted = true;
+        }
     }
 
     @Override
@@ -134,7 +153,9 @@ public class CacheDataOperator
             throws Exception
     {
         if (pageSink != null) {
-            pageSink.abort();
+            if (!isCachingAborted) {
+                pageSink.abort();
+            }
             pageSink = null;
             memoryContext.close();
         }

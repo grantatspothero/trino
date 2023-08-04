@@ -15,6 +15,7 @@ package io.trino.cache;
 
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;
+import io.airlift.units.DataSize;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 
@@ -24,6 +25,7 @@ public class CacheConfig
     private double revokingThreshold = 0.9;
     private double revokingTarget = 0.7;
     private boolean cacheSubqueriesEnabled;
+    private DataSize cacheSubqueriesSize = DataSize.of(256, DataSize.Unit.MEGABYTE);
 
     public boolean isEnabled()
     {
@@ -78,6 +80,18 @@ public class CacheConfig
     public CacheConfig setCacheSubqueriesEnabled(boolean cacheSubqueriesEnabled)
     {
         this.cacheSubqueriesEnabled = cacheSubqueriesEnabled;
+        return this;
+    }
+
+    public DataSize getMaximalSplitCacheSubqueriesSize()
+    {
+        return cacheSubqueriesSize;
+    }
+
+    @Config("cache.subqueries.max-cached-split-size")
+    public CacheConfig setMaximalSplitCacheSubqueriesSize(DataSize cacheSubqueriesSize)
+    {
+        this.cacheSubqueriesSize = cacheSubqueriesSize;
         return this;
     }
 }

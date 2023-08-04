@@ -14,6 +14,7 @@
 package io.trino.cache;
 
 import com.google.common.collect.ImmutableMap;
+import io.airlift.units.DataSize;
 import org.testng.annotations.Test;
 
 import java.util.Map;
@@ -31,7 +32,8 @@ public class TestCacheConfig
                 .setEnabled(false)
                 .setRevokingThreshold(0.9)
                 .setRevokingTarget(0.7)
-                .setCacheSubqueriesEnabled(false));
+                .setCacheSubqueriesEnabled(false)
+                .setMaximalSplitCacheSubqueriesSize(DataSize.of(256, DataSize.Unit.MEGABYTE)));
     }
 
     @Test
@@ -42,13 +44,15 @@ public class TestCacheConfig
                 .put("cache.revoking-threshold", "0.6")
                 .put("cache.revoking-target", "0.5")
                 .put("cache.subqueries.enabled", "true")
+                .put("cache.subqueries.max-cached-split-size", "64MB")
                 .buildOrThrow();
 
         CacheConfig expected = new CacheConfig()
                 .setEnabled(true)
                 .setRevokingThreshold(0.6)
                 .setRevokingTarget(0.5)
-                .setCacheSubqueriesEnabled(true);
+                .setCacheSubqueriesEnabled(true)
+                .setMaximalSplitCacheSubqueriesSize(DataSize.of(64, DataSize.Unit.MEGABYTE));
         assertFullMapping(properties, expected);
     }
 }

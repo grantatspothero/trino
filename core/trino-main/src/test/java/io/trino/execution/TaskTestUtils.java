@@ -182,6 +182,7 @@ public final class TaskTestUtils
                 new TrinoOperatorFactories(),
                 new OrderingCompiler(PLANNER_CONTEXT.getTypeOperators()),
                 new DynamicFilterConfig(),
+                new CacheConfig(),
                 blockTypeOperators,
                 new TableExecuteContextManager(),
                 new ExchangeManagerRegistry(),
