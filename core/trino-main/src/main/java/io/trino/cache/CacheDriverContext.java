@@ -25,16 +25,19 @@ import static java.util.Objects.requireNonNull;
 public record CacheDriverContext(
         Optional<ConnectorPageSource> pageSource,
         Optional<ConnectorPageSink> pageSink,
-        DynamicFilter dynamicFilter)
+        DynamicFilter dynamicFilter,
+        CacheMetrics cacheMetrics)
 {
     public CacheDriverContext(
             Optional<ConnectorPageSource> pageSource,
             Optional<ConnectorPageSink> pageSink,
-            DynamicFilter dynamicFilter)
+            DynamicFilter dynamicFilter,
+            CacheMetrics cacheMetrics)
     {
         this.pageSource = requireNonNull(pageSource, "pageSource is null");
         this.pageSink = requireNonNull(pageSink, "pageSink is null");
         this.dynamicFilter = requireNonNull(dynamicFilter, "dynamicFilter is null");
+        this.cacheMetrics = requireNonNull(cacheMetrics, "cacheMetrics is null");
     }
 
     public static DynamicFilter getDynamicFilter(OperatorContext context, DynamicFilter originalDynamicFilter)

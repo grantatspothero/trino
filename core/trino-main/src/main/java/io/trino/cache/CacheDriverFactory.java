@@ -47,6 +47,9 @@ import static java.util.Objects.requireNonNull;
 
 public class CacheDriverFactory
 {
+    public static final float THRASHING_CACHE_THRESHOLD = 0.7f;
+    public static final int MIN_PROCESSED_SPLITS = 16;
+
     private final Session session;
     private final PageSourceProvider pageSourceProvider;
     private final CacheManagerRegistry cacheManagerRegistry;
@@ -55,6 +58,7 @@ public class CacheDriverFactory
     private final Map<ColumnHandle, CacheColumnId> dynamicFilterColumnMapping;
     private final Supplier<StaticDynamicFilter> dynamicFilterSupplier;
     private final List<DriverFactory> alternatives;
+    private final CacheMetrics cacheMetrics = new CacheMetrics();
 
     @GuardedBy("this")
     @Nullable
@@ -117,14 +121,17 @@ public class CacheDriverFactory
         // load data from cache
         Optional<ConnectorPageSource> pageSource = loadPages(splitId, planSignature, planSignatureComplete);
         if (pageSource.isPresent()) {
-            driverContext.setCacheDriverContext(new CacheDriverContext(pageSource, Optional.empty(), dynamicFilter));
+            driverContext.setCacheDriverContext(new CacheDriverContext(pageSource, Optional.empty(), dynamicFilter, cacheMetrics));
             return alternatives.get(LOAD_PAGES_ALTERNATIVE).createDriver(driverContext);
         }
 
+        int processedSplitCount = cacheMetrics.getSplitNotCachedCount() + cacheMetrics.getSplitCachedCount();
+        float cachingRatio = processedSplitCount > MIN_PROCESSED_SPLITS ? cacheMetrics.getSplitCachedCount() / (float) processedSplitCount : 1.0f;
         // try storing results instead
+        // if cache "thrashing" exceeds threshold do not take "STORE_PAGES_ALTERNATIVE" path
         Optional<ConnectorPageSink> pageSink = storePages(splitId, planSignature, planSignatureComplete);
-        if (pageSink.isPresent()) {
-            driverContext.setCacheDriverContext(new CacheDriverContext(Optional.empty(), pageSink, dynamicFilter));
+        if (pageSink.isPresent() && cachingRatio > THRASHING_CACHE_THRESHOLD) {
+            driverContext.setCacheDriverContext(new CacheDriverContext(Optional.empty(), pageSink, dynamicFilter, cacheMetrics));
             return alternatives.get(STORE_PAGES_ALTERNATIVE).createDriver(driverContext);
         }
 
@@ -183,5 +190,10 @@ public class CacheDriverFactory
         splitCache = cacheManagerRegistry.getCacheManager().getSplitCache(planSignature);
         cachePlanSignature = planSignature;
         cachePlanSignatureComplete = planSignatureComplete;
+    }
+
+    public CacheMetrics getCacheMetrics()
+    {
+        return cacheMetrics;
     }
 }
