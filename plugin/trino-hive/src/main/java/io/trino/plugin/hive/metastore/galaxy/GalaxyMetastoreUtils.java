@@ -44,7 +44,6 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.OptionalLong;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Maps.immutableEntry;
@@ -136,7 +135,7 @@ final class GalaxyMetastoreUtils
 
     public static Column fromGalaxyColumn(io.starburst.stargate.metastore.client.Column column)
     {
-        return new Column(column.name(), HiveType.valueOf(column.type()), column.comment());
+        return new Column(column.name(), HiveType.valueOf(column.type()), column.comment(), column.properties());
     }
 
     private static List<Column> fromGalaxyColumns(List<io.starburst.stargate.metastore.client.Column> columns)
@@ -148,8 +147,7 @@ final class GalaxyMetastoreUtils
 
     public static io.starburst.stargate.metastore.client.Column toGalaxyColumn(Column column)
     {
-        checkArgument(column.getProperties().isEmpty(), "Persisting column properties is not supported: %s", column);
-        return new io.starburst.stargate.metastore.client.Column(column.getName(), column.getType().toString(), column.getComment());
+        return new io.starburst.stargate.metastore.client.Column(column.getName(), column.getType().toString(), column.getComment(), column.getProperties());
     }
 
     private static List<io.starburst.stargate.metastore.client.Column> toGalaxyColumns(List<Column> columns)

@@ -14,6 +14,7 @@
 package io.trino.plugin.hive.metastore.galaxy;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import io.airlift.http.client.HttpClient;
@@ -476,7 +477,7 @@ public class GalaxyHiveMetastore
     public void addColumn(String databaseName, String tableName, String columnName, HiveType columnType, String columnComment)
     {
         try {
-            metastore.addColumn(databaseName, tableName, new Column(columnName, columnType.toString(), Optional.ofNullable(columnComment)));
+            metastore.addColumn(databaseName, tableName, new Column(columnName, columnType.toString(), Optional.ofNullable(columnComment), ImmutableMap.of()));
         }
         catch (EntityNotFoundException e) {
             throw new ColumnNotFoundException(new SchemaTableName(databaseName, tableName), columnName);
