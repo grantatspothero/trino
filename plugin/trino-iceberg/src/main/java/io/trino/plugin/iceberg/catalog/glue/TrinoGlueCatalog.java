@@ -637,7 +637,7 @@ public class TrinoGlueCatalog
 
     private com.amazonaws.services.glue.model.Table dropTableFromMetastore(ConnectorSession session, SchemaTableName schemaTableName)
     {
-        com.amazonaws.services.glue.model.Table table = getTable(session, schemaTableName)
+        com.amazonaws.services.glue.model.Table table = getTableAndCacheMetadata(session, schemaTableName)
                 .orElseThrow(() -> new TableNotFoundException(schemaTableName));
         if (!isIcebergTable(getTableParameters(table))) {
             throw new UnknownTableTypeException(schemaTableName);
@@ -657,7 +657,7 @@ public class TrinoGlueCatalog
     {
         boolean newTableCreated = false;
         try {
-            com.amazonaws.services.glue.model.Table table = getTable(session, from)
+            com.amazonaws.services.glue.model.Table table = getTableAndCacheMetadata(session, from)
                     .orElseThrow(() -> new TableNotFoundException(from));
             Map<String, String> tableParameters = new HashMap<>(getTableParameters(table));
             FileIO io = loadTable(session, from).io();
@@ -696,7 +696,7 @@ public class TrinoGlueCatalog
         }
     }
 
-    private Optional<com.amazonaws.services.glue.model.Table> getTable(ConnectorSession session, SchemaTableName schemaTableName)
+    private Optional<com.amazonaws.services.glue.model.Table> getTableAndCacheMetadata(ConnectorSession session, SchemaTableName schemaTableName)
     {
         try {
             com.amazonaws.services.glue.model.Table table = stats.getGetTable().call(() ->
@@ -835,7 +835,7 @@ public class TrinoGlueCatalog
 
     private void doCreateView(ConnectorSession session, SchemaTableName schemaViewName, TableInput viewTableInput, boolean replace)
     {
-        Optional<com.amazonaws.services.glue.model.Table> existing = getTable(session, schemaViewName);
+        Optional<com.amazonaws.services.glue.model.Table> existing = getTableAndCacheMetadata(session, schemaViewName);
         if (existing.isPresent()) {
             if (!replace || !isPrestoView(getTableParameters(existing.get()))) {
                 // TODO: ViewAlreadyExists is misleading if the name is used by a table https://github.com/trinodb/trino/issues/10037
@@ -865,7 +865,7 @@ public class TrinoGlueCatalog
     {
         boolean newTableCreated = false;
         try {
-            com.amazonaws.services.glue.model.Table existingView = getTable(session, source)
+            com.amazonaws.services.glue.model.Table existingView = getTableAndCacheMetadata(session, source)
                     .orElseThrow(() -> new TableNotFoundException(source));
             viewCache.remove(source);
             TableInput viewTableInput = getViewTableInput(
@@ -961,7 +961,7 @@ public class TrinoGlueCatalog
             return Optional.empty();
         }
 
-        Optional<com.amazonaws.services.glue.model.Table> table = getTable(session, viewName);
+        Optional<com.amazonaws.services.glue.model.Table> table = getTableAndCacheMetadata(session, viewName);
         if (table.isEmpty()) {
             return Optional.empty();
         }
@@ -1068,7 +1068,7 @@ public class TrinoGlueCatalog
             boolean replace,
             boolean ignoreExisting)
     {
-        Optional<com.amazonaws.services.glue.model.Table> existing = getTable(session, viewName);
+        Optional<com.amazonaws.services.glue.model.Table> existing = getTableAndCacheMetadata(session, viewName);
 
         if (existing.isPresent()) {
             if (!isTrinoMaterializedView(getTableType(existing.get()), getTableParameters(existing.get()))) {
@@ -1160,7 +1160,7 @@ public class TrinoGlueCatalog
     @Override
     public void dropMaterializedView(ConnectorSession session, SchemaTableName viewName)
     {
-        com.amazonaws.services.glue.model.Table view = getTable(session, viewName)
+        com.amazonaws.services.glue.model.Table view = getTableAndCacheMetadata(session, viewName)
                 .orElseThrow(() -> new MaterializedViewNotFoundException(viewName));
 
         if (!isTrinoMaterializedView(getTableType(view), getTableParameters(view))) {
@@ -1200,7 +1200,7 @@ public class TrinoGlueCatalog
             return Optional.empty();
         }
 
-        Optional<com.amazonaws.services.glue.model.Table> maybeTable = getTable(session, viewName);
+        Optional<com.amazonaws.services.glue.model.Table> maybeTable = getTableAndCacheMetadata(session, viewName);
         if (maybeTable.isEmpty()) {
             return Optional.empty();
         }
@@ -1254,7 +1254,7 @@ public class TrinoGlueCatalog
     {
         boolean newTableCreated = false;
         try {
-            com.amazonaws.services.glue.model.Table glueTable = getTable(session, source)
+            com.amazonaws.services.glue.model.Table glueTable = getTableAndCacheMetadata(session, source)
                     .orElseThrow(() -> new TableNotFoundException(source));
             materializedViewCache.remove(source);
             Map<String, String> tableParameters = getTableParameters(glueTable);
@@ -1301,7 +1301,7 @@ public class TrinoGlueCatalog
                 tableName.getSchemaName(),
                 tableName.getTableName().substring(0, metadataMarkerIndex));
 
-        Optional<com.amazonaws.services.glue.model.Table> table = getTable(session, new SchemaTableName(tableNameBase.getSchemaName(), tableNameBase.getTableName()));
+        Optional<com.amazonaws.services.glue.model.Table> table = getTableAndCacheMetadata(session, new SchemaTableName(tableNameBase.getSchemaName(), tableNameBase.getTableName()));
 
         if (table.isEmpty() || VIRTUAL_VIEW.name().equals(getTableTypeNullable(table.get()))) {
             return Optional.empty();
