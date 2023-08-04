@@ -1218,8 +1218,7 @@ public class TestGalaxyQueries
         assertThat(query(tableReader, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(maskedTableContents);
 
         // Update the column mask expression
-        // TODO: Uncomment this when https://github.com/starburstdata/stargate/pull/11103 is merged
-        /* client.updateColumnMask(columnMaskId, "UPDATED_MASK", ColumnMaskType.VARCHAR);
+        client.updateColumnMask(columnMaskId, "UPDATED_MASK", "'UPDATED_MASK'", ColumnMaskType.VARCHAR);
         MaterializedResult updatedMaskedTableContents = MaterializedResult.resultBuilder(getSession(), VARCHAR, BOOLEAN)
                 .row("UPDATED_MASK", true)
                 .row("UPDATED_MASK", false)
@@ -1227,7 +1226,7 @@ public class TestGalaxyQueries
 
         // Show that mask_owner and table_reader see new results
         assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(updatedMaskedTableContents);
-        assertThat(query(tableReader, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(updatedMaskedTableContents); */
+        assertThat(query(tableReader, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(updatedMaskedTableContents);
 
         // Delete that policy and mask
         client.deletePolicy(policyId);
