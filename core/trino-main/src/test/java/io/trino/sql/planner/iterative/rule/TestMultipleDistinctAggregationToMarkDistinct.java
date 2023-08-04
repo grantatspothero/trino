@@ -31,7 +31,6 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import static io.trino.SystemSessionProperties.DISTINCT_AGGREGATIONS_STRATEGY;
-import static io.trino.SystemSessionProperties.OPTIMIZE_DISTINCT_AGGREGATIONS;
 import static io.trino.SystemSessionProperties.TASK_CONCURRENCY;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.aggregation;
@@ -201,23 +200,22 @@ public class TestMultipleDistinctAggregationToMarkDistinct
                         .addSymbolStatistics(key, SymbolStatsEstimate.builder().setDistinctValuesCount(Double.NaN).build()).build())
                 .matches(expectedMarkDistinct);
 
-        // medium NDV, optimize_mixed_distinct_aggregations enabled
+        // medium NDV, distinct_aggregations_strategy pre_aggregate
         tester().assertThat(new MultipleDistinctAggregationToMarkDistinct(DISTINCT_AGGREGATION_CONTROLLER))
                 .on(plan)
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
-                .overrideStats(aggregationSourceId.toString(), PlanNodeStatsEstimate.builder()
-                        .addSymbolStatistics(key, SymbolStatsEstimate.builder().setDistinctValuesCount(50 * clusterThreadCount).build()).build())
-                .matches(expectedMarkDistinct);
-
-        // medium NDV, optimize_mixed_distinct_aggregations disabled
-        tester().assertThat(new MultipleDistinctAggregationToMarkDistinct(DISTINCT_AGGREGATION_CONTROLLER))
-                .on(plan)
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "false")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .overrideStats(aggregationSourceId.toString(), PlanNodeStatsEstimate.builder()
                         .addSymbolStatistics(key, SymbolStatsEstimate.builder().setDistinctValuesCount(50 * clusterThreadCount).build()).build())
                 .doesNotFire();
 
-        // medium NDV, optimize_mixed_distinct_aggregations enabled but plan has multiple distinct aggregations
+        // medium NDV
+        tester().assertThat(new MultipleDistinctAggregationToMarkDistinct(DISTINCT_AGGREGATION_CONTROLLER))
+                .on(plan)
+                .overrideStats(aggregationSourceId.toString(), PlanNodeStatsEstimate.builder()
+                        .addSymbolStatistics(key, SymbolStatsEstimate.builder().setDistinctValuesCount(50 * clusterThreadCount).build()).build())
+                .doesNotFire();
+
+        // medium NDV, distinct_aggregations_strategy pre_aggregate, but the plan has multiple distinct aggregations
         tester().assertThat(new MultipleDistinctAggregationToMarkDistinct(DISTINCT_AGGREGATION_CONTROLLER))
                 .on(p -> p.aggregation(builder -> builder
                         .singleGroupingSet(p.symbol(key.getName()))
@@ -225,7 +223,7 @@ public class TestMultipleDistinctAggregationToMarkDistinct
                         .addAggregation(p.symbol("output2"), expression("count(DISTINCT input2)"), ImmutableList.of(BIGINT))
                         .source(
                                 p.values(aggregationSourceId, p.symbol("input1"), p.symbol("input2"), p.symbol("key")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .overrideStats(aggregationSourceId.toString(), PlanNodeStatsEstimate.builder()
                         .addSymbolStatistics(key, SymbolStatsEstimate.builder().setDistinctValuesCount(50 * clusterThreadCount).build()).build())
                 .doesNotFire();

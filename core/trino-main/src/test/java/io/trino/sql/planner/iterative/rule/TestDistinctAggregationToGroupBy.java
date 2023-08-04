@@ -20,7 +20,7 @@ import io.trino.sql.planner.iterative.rule.test.BaseRuleTest;
 import io.trino.sql.planner.iterative.rule.test.PlanBuilder;
 import org.junit.jupiter.api.Test;
 
-import static io.trino.SystemSessionProperties.OPTIMIZE_DISTINCT_AGGREGATIONS;
+import static io.trino.SystemSessionProperties.DISTINCT_AGGREGATIONS_STRATEGY;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.aggregation;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.expression;
@@ -44,7 +44,7 @@ public class TestDistinctAggregationToGroupBy
                         .globalGrouping()
                         .addAggregation(p.symbol("non-distinct"), PlanBuilder.expression("sum(a)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .doesNotFire();
 
         // 1 distinct aggregation
@@ -54,7 +54,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("non-distinct"), PlanBuilder.expression("sum(a)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct"), PlanBuilder.expression("sum(distinct b)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("b")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         globalAggregation(),
                         ImmutableMap.of(
@@ -81,7 +81,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("distinct1"), PlanBuilder.expression("sum(distinct b)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct2"), PlanBuilder.expression("count(distinct c)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("b"), p.symbol("c")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         globalAggregation(),
                         ImmutableMap.of(
@@ -112,7 +112,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("distinct2"), PlanBuilder.expression("count(distinct c)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct3"), PlanBuilder.expression("sum(distinct c)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("b"), p.symbol("c")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         globalAggregation(),
                         ImmutableMap.of(
@@ -144,7 +144,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("distinct1"), PlanBuilder.expression("sum(distinct b)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct2"), PlanBuilder.expression("count(distinct c)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("b"), p.symbol("c"), p.symbol("d")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         globalAggregation(),
                         ImmutableMap.of(
@@ -178,7 +178,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("distinct1"), PlanBuilder.expression("sum(distinct b)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct2"), PlanBuilder.expression("count(distinct c)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("b"), p.symbol("c")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         globalAggregation(),
                         ImmutableMap.of(
@@ -216,7 +216,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("distinct1"), PlanBuilder.expression("sum(distinct a)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct2"), PlanBuilder.expression("count(distinct a)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         globalAggregation(),
                         ImmutableMap.of(
@@ -253,7 +253,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("non-distinct"), PlanBuilder.expression("count(a)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct"), PlanBuilder.expression("sum(distinct b)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("b")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(project(
                         ImmutableMap.of("non-distinct-final", expression("COALESCE(\"non-distinct-expression\", CAST(0 AS bigint))")),
                         aggregation(
@@ -281,7 +281,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("non-distinct"), PlanBuilder.expression("count(a)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct"), PlanBuilder.expression("sum(distinct b)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("b"), p.symbol("groupingKey")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(project(
                         ImmutableMap.of("non-distinct-final", expression("COALESCE(\"non-distinct-expression\", CAST(0 AS bigint))")),
                         aggregation(
@@ -312,7 +312,7 @@ public class TestDistinctAggregationToGroupBy
                         .globalGrouping()
                         .addAggregation(p.symbol("distinct"), PlanBuilder.expression("sum(distinct b)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("b")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .doesNotFire();
 
         // 2 distinct aggregations
@@ -322,7 +322,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("distinct1"), PlanBuilder.expression("sum(distinct b)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct2"), PlanBuilder.expression("count(distinct c)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("b"), p.symbol("c")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         globalAggregation(),
                         ImmutableMap.of(
@@ -349,7 +349,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("distinct2"), PlanBuilder.expression("count(distinct c)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct3"), PlanBuilder.expression("sum(distinct c)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("b"), p.symbol("c")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         globalAggregation(),
                         ImmutableMap.of(
@@ -379,7 +379,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("non-distinct"), PlanBuilder.expression("sum(a)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct"), PlanBuilder.expression("count(distinct nested)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("nested", RowType.anonymousRow(BIGINT, BIGINT))))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         globalAggregation(),
                         ImmutableMap.of(
@@ -409,7 +409,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("non-distinct"), PlanBuilder.expression("count(*)"), ImmutableList.of())
                         .addAggregation(p.symbol("distinct"), PlanBuilder.expression("count(distinct b)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("b")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(project(
                         ImmutableMap.of("non-distinct-final", expression("COALESCE(\"non-distinct-expression\", CAST(0 AS bigint))")),
                         aggregation(
@@ -437,7 +437,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("non-distinct"), PlanBuilder.expression("count(a)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct"), PlanBuilder.expression("count(distinct b)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("b")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(project(
                         ImmutableMap.of(
                                 "count-final", expression("COALESCE(\"count-expression\", CAST(0 AS bigint))"),
@@ -473,7 +473,7 @@ public class TestDistinctAggregationToGroupBy
                         .singleGroupingSet(p.symbol("groupingKey"))
                         .addAggregation(p.symbol("non-distinct"), PlanBuilder.expression("sum(a)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("groupingKey")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .doesNotFire();
 
         // 1 distinct aggregation
@@ -483,7 +483,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("non-distinct"), PlanBuilder.expression("sum(a)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct"), PlanBuilder.expression("sum(distinct b)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("b"), p.symbol("groupingKey")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         singleGroupingSet("groupingKey"),
                         ImmutableMap.of(
@@ -510,7 +510,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("distinct1"), PlanBuilder.expression("sum(distinct b)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct2"), PlanBuilder.expression("count(distinct c)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("b"), p.symbol("c"), p.symbol("groupingKey")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         singleGroupingSet("groupingKey"),
                         ImmutableMap.of(
@@ -541,7 +541,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("distinct2"), PlanBuilder.expression("count(distinct c)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct3"), PlanBuilder.expression("sum(distinct c)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("b"), p.symbol("c"), p.symbol("groupingKey")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         singleGroupingSet("groupingKey"),
                         ImmutableMap.of(
@@ -573,7 +573,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("distinct1"), PlanBuilder.expression("sum(distinct b)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct2"), PlanBuilder.expression("count(distinct c)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("b"), p.symbol("c"), p.symbol("d"), p.symbol("groupingKey")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         singleGroupingSet("groupingKey"),
                         ImmutableMap.of(
@@ -607,7 +607,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("distinct1"), PlanBuilder.expression("sum(distinct b)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct2"), PlanBuilder.expression("count(distinct c)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("b"), p.symbol("c"), p.symbol("groupingKey")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         singleGroupingSet("groupingKey"),
                         ImmutableMap.of(
@@ -642,7 +642,7 @@ public class TestDistinctAggregationToGroupBy
                         .singleGroupingSet(p.symbol("groupingKey"))
                         .addAggregation(p.symbol("distinct"), PlanBuilder.expression("sum(distinct b)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("b"), p.symbol("groupingKey")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .doesNotFire();
 
         // 2 distinct aggregations
@@ -652,7 +652,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("distinct1"), PlanBuilder.expression("sum(distinct b)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct2"), PlanBuilder.expression("count(distinct c)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("b"), p.symbol("c"), p.symbol("groupingKey")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         singleGroupingSet("groupingKey"),
                         ImmutableMap.of(
@@ -679,7 +679,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("distinct2"), PlanBuilder.expression("count(distinct c)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct3"), PlanBuilder.expression("sum(distinct c)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("b"), p.symbol("c"), p.symbol("groupingKey")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         singleGroupingSet("groupingKey"),
                         ImmutableMap.of(
@@ -709,7 +709,7 @@ public class TestDistinctAggregationToGroupBy
                         .singleGroupingSet(p.symbol("groupingKey1"), p.symbol("groupingKey2"))
                         .addAggregation(p.symbol("non-distinct"), PlanBuilder.expression("sum(a)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("groupingKey1"), p.symbol("groupingKey2")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .doesNotFire();
 
         // 1 distinct aggregation
@@ -719,7 +719,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("non-distinct"), PlanBuilder.expression("sum(a)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct"), PlanBuilder.expression("sum(distinct b)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("b"), p.symbol("groupingKey1"), p.symbol("groupingKey2")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         singleGroupingSet("groupingKey1", "groupingKey2"),
                         ImmutableMap.of(
@@ -746,7 +746,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("distinct1"), PlanBuilder.expression("sum(distinct b)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct2"), PlanBuilder.expression("count(distinct c)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("b"), p.symbol("c"), p.symbol("groupingKey1"), p.symbol("groupingKey2")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         singleGroupingSet("groupingKey1", "groupingKey2"),
                         ImmutableMap.of(
@@ -777,7 +777,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("distinct2"), PlanBuilder.expression("count(distinct c)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct3"), PlanBuilder.expression("sum(distinct c)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("b"), p.symbol("c"), p.symbol("groupingKey1"), p.symbol("groupingKey2")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         singleGroupingSet("groupingKey1", "groupingKey2"),
                         ImmutableMap.of(
@@ -809,7 +809,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("distinct1"), PlanBuilder.expression("sum(distinct b)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct2"), PlanBuilder.expression("count(distinct c)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("b"), p.symbol("c"), p.symbol("d"), p.symbol("groupingKey1"), p.symbol("groupingKey2")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         singleGroupingSet("groupingKey1", "groupingKey2"),
                         ImmutableMap.of(
@@ -843,7 +843,7 @@ public class TestDistinctAggregationToGroupBy
                         .addAggregation(p.symbol("distinct1"), PlanBuilder.expression("sum(distinct b)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("distinct2"), PlanBuilder.expression("count(distinct c)"), ImmutableList.of(BIGINT))
                         .source(p.values(p.symbol("a"), p.symbol("b"), p.symbol("c"), p.symbol("groupingKey1"), p.symbol("groupingKey2")))))
-                .setSystemProperty(OPTIMIZE_DISTINCT_AGGREGATIONS, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "pre_aggregate")
                 .matches(aggregation(
                         singleGroupingSet("groupingKey1", "groupingKey2"),
                         ImmutableMap.of(
