@@ -172,7 +172,7 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
     }
 
     @Test(groups = {PROFILE_SPECIFIC_TESTS, S3_BACKWARDS_COMPATIBILITY}, dataProvider = "tableFormats")
-    public void testDropTableRemovesCorruptedFiles(String tableFormat)
+    public void testDropCorruptedTable(String tableFormat)
     {
         String tableName = tableFormat + "_drop_corrupted_table_" + randomNameSuffix();
         String qualifiedTableName = "%s.%s.%s".formatted(tableFormat, schemaName, tableName);
@@ -195,7 +195,10 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
             onTrino().executeQuery("DROP TABLE " + qualifiedTableName);
             Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithDoubleSlash).getObjectSummaries()).isEmpty();
             if (!tableFormat.equals("iceberg")) {
-                Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries()).isEmpty();
+                // The misplaced files do not get removed anymore when dropping the Delta Lake table
+                // because the double slashes in the table location don't get normalized anymore as
+                // it was happening when passing hadoop Path instances for deletion.
+                Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries()).isNotEmpty();
             }
             else {
                 // TODO Iceberg with Glue catalog leaves stats file behind on DROP TABLE.
