@@ -21,12 +21,13 @@ import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
 import io.starburst.stargate.id.RoleId;
 import io.trino.plugin.memory.MemoryPlugin;
 import io.trino.plugin.tpch.TpchPlugin;
-import io.trino.server.security.galaxy.IdeTestingAccountFactory;
+import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.GalaxyQueryRunner;
 import io.trino.tpch.TpchTable;
 
+import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static io.trino.testing.QueryAssertions.copyTpchTables;
 import static java.lang.String.format;
 
@@ -57,8 +58,12 @@ public final class LaunchGalaxyQueryRunner
         long start = System.nanoTime();
         Logging.initialize();
 
+        @SuppressWarnings("resource")
+        GalaxyCockroachContainer cockroachContainer = new GalaxyCockroachContainer();
+
         // There is a docker version available also
-        TestingAccountFactory testingAccountFactory = new IdeTestingAccountFactory();
+        @SuppressWarnings("resource")
+        TestingAccountFactory testingAccountFactory = createTestingAccountFactory(() -> cockroachContainer);
         TestingAccountClient account = testingAccountFactory.createAccountClient();
         DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder("memory", "tiny")
                 .setExtraProperties(ImmutableMap.of("http-server.http.port", "8080"))
