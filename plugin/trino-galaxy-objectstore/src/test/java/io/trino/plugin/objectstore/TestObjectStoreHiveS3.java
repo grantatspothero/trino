@@ -218,19 +218,9 @@ public class TestObjectStoreHiveS3
     {
         String schemaName = "test_create_schema_with_incorrect_location_" + randomNameSuffix();
         String schemaLocation = "s3://%s/galaxy/a#hash/%s".formatted(bucketName, schemaName);
-        String tableName = "test_basic_operations_table_" + randomNameSuffix();
-        String qualifiedTableName = schemaName + "." + tableName;
 
-        assertUpdate("CREATE SCHEMA " + schemaName + " WITH (location = '" + schemaLocation + "')");
-        assertThat(getSchemaLocation(schemaName)).isEqualTo(schemaLocation);
-
-        assertThatThrownBy(() -> assertUpdate("CREATE TABLE " + qualifiedTableName + "(col_str, col_int) AS VALUES ('str1', 1)"))
-                .hasMessageContaining("Fragment is not allowed in a file system location");
-
-        assertThatThrownBy(() -> assertUpdate("CREATE TABLE " + qualifiedTableName + "(col_str varchar, col_int integer)"))
-                .hasMessageContaining("Fragment is not allowed in a file system location");
-
-        assertUpdate("DROP SCHEMA " + schemaName);
+        assertThatThrownBy(() -> assertUpdate("CREATE SCHEMA " + schemaName + " WITH (location = '" + schemaLocation + "')"))
+                .hasStackTraceContaining("Fragment is not allowed in a file system location");
     }
 
     @Test

@@ -7622,7 +7622,7 @@ public abstract class BaseHiveConnectorTest
         File schemaFile = createAvroSchemaFile();
 
         String createTableSql = getAvroCreateTableSql(tableName, schemaFile.getAbsolutePath());
-        String expectedShowCreateTable = getAvroCreateTableSql(tableName, schemaFile.toURI().toString());
+        String expectedShowCreateTable = getAvroCreateTableSql(tableName, schemaFile.getPath());
 
         assertUpdate(createTableSql);
 
