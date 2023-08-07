@@ -21,6 +21,8 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
 import io.airlift.log.Logger;
 import io.airlift.slice.Slice;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
 import io.trino.plugin.deltalake.CorruptedDeltaLakeTableHandle;
 import io.trino.plugin.deltalake.DeltaLakeInsertTableHandle;
 import io.trino.plugin.deltalake.DeltaLakeMergeTableHandle;
@@ -567,12 +569,25 @@ public class ObjectStoreMetadata
 
             case V1 -> {
                 CompletionService<Iterator<TableColumnsMetadata>> completionService = new ExecutorCompletionService<>(parallelInformationSchemaQueryingExecutor);
+                Context context = Context.current();
                 // Hive lists Hive and Hudi tables
-                completionService.submit(() -> hiveMetadata.streamTableColumns(unwrap(HIVE, session), prefix));
+                completionService.submit(() -> {
+                    try (Scope ignore = context.makeCurrent()) {
+                        return hiveMetadata.streamTableColumns(unwrap(HIVE, session), prefix);
+                    }
+                });
                 // Iceberg only lists Iceberg tables
-                completionService.submit(() -> icebergMetadata.streamTableColumns(unwrap(ICEBERG, session), prefix));
+                completionService.submit(() -> {
+                    try (Scope ignore = context.makeCurrent()) {
+                        return icebergMetadata.streamTableColumns(unwrap(ICEBERG, session), prefix);
+                    }
+                });
                 // Delta Lake only lists Delta Lake tables
-                completionService.submit(() -> deltaMetadata.streamTableColumns(unwrap(DELTA, session), prefix));
+                completionService.submit(() -> {
+                    try (Scope ignore = context.makeCurrent()) {
+                        return deltaMetadata.streamTableColumns(unwrap(DELTA, session), prefix);
+                    }
+                });
 
                 yield Iterators.concat(new AbstractIterator<Iterator<TableColumnsMetadata>>()
                 {
