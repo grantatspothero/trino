@@ -247,21 +247,6 @@ public final class ObjectStoreQueryRunner
         }
     }
 
-    private static DistributedQueryRunner buildDefaultQueryRunner(TableType tableType, MinioStorage minio, TestingGalaxyMetastore metastore, TestingLocationSecurityServer locationSecurityServer, TestingAccountClient account)
-            throws Exception
-    {
-        return builder()
-                .withCoordinatorProperties(ImmutableMap.of("http-server.http.port", "8080"))
-                .withTableType(tableType)
-                .withS3Url(minio.getS3Url())
-                .withHiveS3Config(minio.getHiveS3Config())
-                .withMetastore(metastore)
-                .withLocationSecurityServer(locationSecurityServer)
-                .withMockConnectorPlugin(new MockConnectorPlugin(MockConnectorFactory.create()))
-                .withAccountClient(account)
-                .build();
-    }
-
     public static final class ObjectStoreIcebergQueryRunner
     {
         private ObjectStoreIcebergQueryRunner() {}
@@ -269,29 +254,7 @@ public final class ObjectStoreQueryRunner
         public static void main(String[] args)
                 throws Exception
         {
-            Logging.initialize();
-
-            MinioStorage minio = new MinioStorage("test-bucket");
-            GalaxyCockroachContainer cockroach = new GalaxyCockroachContainer();
-            TestingGalaxyMetastore metastore = new TestingGalaxyMetastore(cockroach);
-            TestingLocationSecurityServer locationSecurityServer = new TestingLocationSecurityServer((session, location) -> false);
-            minio.start();
-            @SuppressWarnings("resource")
-            TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(cockroach);
-            TestingAccountClient account = testingAccountFactory.createAccountClient();
-            DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.ICEBERG, minio, metastore, locationSecurityServer, account);
-            initializeTpchTables(queryRunner, TpchTable.getTables());
-
-            Logger log = Logger.get(ObjectStoreIcebergQueryRunner.class);
-            log.info(
-                    "\n\n======== SERVER STARTED ========\n" +
-                            "Admin:\n" +
-                            "  %s\n" +
-                            "Public:\n" +
-                            "  %s\n" +
-                            "====",
-                    createCliCommand(queryRunner, account, account.getAdminRoleId()),
-                    createCliCommand(queryRunner, account, account.getPublicRoleId()));
+            run(TableType.ICEBERG);
         }
     }
 
@@ -302,29 +265,7 @@ public final class ObjectStoreQueryRunner
         public static void main(String[] args)
                 throws Exception
         {
-            Logging.initialize();
-
-            MinioStorage minio = new MinioStorage("test-bucket");
-            GalaxyCockroachContainer cockroach = new GalaxyCockroachContainer();
-            TestingGalaxyMetastore metastore = new TestingGalaxyMetastore(cockroach);
-            TestingLocationSecurityServer locationSecurityServer = new TestingLocationSecurityServer((session, location) -> false);
-            minio.start();
-            @SuppressWarnings("resource")
-            TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(cockroach);
-            TestingAccountClient account = testingAccountFactory.createAccountClient();
-            DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.HIVE, minio, metastore, locationSecurityServer, account);
-            initializeTpchTables(queryRunner, TpchTable.getTables());
-
-            Logger log = Logger.get(ObjectStoreHiveQueryRunner.class);
-            log.info(
-                    "\n\n======== SERVER STARTED ========\n" +
-                            "Admin:\n" +
-                            "  %s\n" +
-                            "Public:\n" +
-                            "  %s\n" +
-                            "====",
-                    createCliCommand(queryRunner, account, account.getAdminRoleId()),
-                    createCliCommand(queryRunner, account, account.getPublicRoleId()));
+            run(TableType.HIVE);
         }
     }
 
@@ -335,29 +276,7 @@ public final class ObjectStoreQueryRunner
         public static void main(String[] args)
                 throws Exception
         {
-            Logging.initialize();
-
-            MinioStorage minio = new MinioStorage("test-bucket");
-            GalaxyCockroachContainer cockroach = new GalaxyCockroachContainer();
-            TestingGalaxyMetastore metastore = new TestingGalaxyMetastore(cockroach);
-            TestingLocationSecurityServer locationSecurityServer = new TestingLocationSecurityServer((session, location) -> false);
-            minio.start();
-            @SuppressWarnings("resource")
-            TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(cockroach);
-            TestingAccountClient account = testingAccountFactory.createAccountClient();
-            DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.DELTA, minio, metastore, locationSecurityServer, account);
-            initializeTpchTables(queryRunner, TpchTable.getTables());
-
-            Logger log = Logger.get(ObjectStoreDeltaLakeQueryRunner.class);
-            log.info(
-                    "\n\n======== SERVER STARTED ========\n" +
-                            "Admin:\n" +
-                            "  %s\n" +
-                            "Public:\n" +
-                            "  %s\n" +
-                            "====",
-                    createCliCommand(queryRunner, account, account.getAdminRoleId()),
-                    createCliCommand(queryRunner, account, account.getPublicRoleId()));
+            run(TableType.DELTA);
         }
     }
 
@@ -368,31 +287,49 @@ public final class ObjectStoreQueryRunner
         public static void main(String[] args)
                 throws Exception
         {
-            Logging.initialize();
-
-            MinioStorage minio = new MinioStorage("test-bucket");
-            GalaxyCockroachContainer cockroach = new GalaxyCockroachContainer();
-            TestingGalaxyMetastore metastore = new TestingGalaxyMetastore(cockroach);
-            TestingLocationSecurityServer locationSecurityServer = new TestingLocationSecurityServer((session, location) -> false);
-            minio.start();
-            @SuppressWarnings("resource")
-            TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(cockroach);
-            TestingAccountClient account = testingAccountFactory.createAccountClient();
-            DistributedQueryRunner queryRunner = buildDefaultQueryRunner(TableType.HUDI, minio, metastore, locationSecurityServer, account);
-
-            initializeTpchTablesHudi(queryRunner, TpchTable.getTables(), metastore);
-
-            Logger log = Logger.get(ObjectStoreHudiQueryRunner.class);
-            log.info(
-                    "\n\n======== SERVER STARTED ========\n" +
-                            "Admin:\n" +
-                            "  %s\n" +
-                            "Public:\n" +
-                            "  %s\n" +
-                            "====",
-                    createCliCommand(queryRunner, account, account.getAdminRoleId()),
-                    createCliCommand(queryRunner, account, account.getPublicRoleId()));
+            run(TableType.HUDI);
         }
+    }
+
+    private static void run(TableType tableType)
+            throws Exception
+    {
+        Logging.initialize();
+
+        MinioStorage minio = new MinioStorage("test-bucket");
+        GalaxyCockroachContainer cockroach = new GalaxyCockroachContainer();
+        TestingGalaxyMetastore metastore = new TestingGalaxyMetastore(cockroach);
+        TestingLocationSecurityServer locationSecurityServer = new TestingLocationSecurityServer((session, location) -> false);
+        minio.start();
+        TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(cockroach);
+        TestingAccountClient account = testingAccountFactory.createAccountClient();
+
+        DistributedQueryRunner queryRunner = builder()
+                .withCoordinatorProperties(ImmutableMap.of("http-server.http.port", "8080"))
+                .withTableType(tableType)
+                .withS3Url(minio.getS3Url())
+                .withHiveS3Config(minio.getHiveS3Config())
+                .withMetastore(metastore)
+                .withLocationSecurityServer(locationSecurityServer)
+                .withMockConnectorPlugin(new MockConnectorPlugin(MockConnectorFactory.create()))
+                .withAccountClient(account)
+                .build();
+
+        switch (tableType) {
+            case HIVE, ICEBERG, DELTA -> initializeTpchTables(queryRunner, TpchTable.getTables());
+            case HUDI -> initializeTpchTablesHudi(queryRunner, TpchTable.getTables(), metastore);
+        }
+
+        Logger log = Logger.get(ObjectStoreQueryRunner.class);
+        log.info(
+                "\n\n======== SERVER STARTED ========\n" +
+                        "Admin:\n" +
+                        "  %s\n" +
+                        "Public:\n" +
+                        "  %s\n" +
+                        "====",
+                createCliCommand(queryRunner, account, account.getAdminRoleId()),
+                createCliCommand(queryRunner, account, account.getPublicRoleId()));
     }
 
     private static String createCliCommand(DistributedQueryRunner queryRunner, TestingAccountClient account, RoleId roleId)
