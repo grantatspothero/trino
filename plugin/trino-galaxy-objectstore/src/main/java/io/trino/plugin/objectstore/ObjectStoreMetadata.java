@@ -191,7 +191,7 @@ public class ObjectStoreMetadata
         this.flushMetadataCache = requireNonNull(flushMetadataCache, "flushMetadataCache is null");
         this.migrateHiveToIcebergProcedure = requireNonNull(migrateHiveToIcebergProcedure, "migrateHiveToIcebergProcedure is null");
         this.hiveRecursiveDirWalkerEnabled = hiveRecursiveDirWalkerEnabled;
-        this.defaultIcebergFileFormat = defaultIcebergFileFormat;
+        this.defaultIcebergFileFormat = requireNonNull(defaultIcebergFileFormat, "defaultIcebergFileFormat is null");
         this.tableTypeCache = requireNonNull(tableTypeCache, "tableTypeCache is null");
         this.parallelInformationSchemaQueryingExecutor = requireNonNull(parallelInformationSchemaQueryingExecutor, "parallelInformationSchemaQueryingExecutor is null");
     }
