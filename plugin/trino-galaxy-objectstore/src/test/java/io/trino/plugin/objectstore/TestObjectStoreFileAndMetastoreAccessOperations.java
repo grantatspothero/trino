@@ -865,8 +865,8 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
         return trackingFileSystemFactory.getOperationCounts()
                 .entrySet().stream()
                 .flatMap(entry -> nCopies(entry.getValue(), FileOperation.create(
-                        entry.getKey().getLocation().path(),
-                        entry.getKey().getOperationType())).stream())
+                        entry.getKey().location().path(),
+                        entry.getKey().operationType())).stream())
                 .collect(toCollection(HashMultiset::create));
     }
 
