@@ -15,6 +15,7 @@ package io.trino.plugin.objectstore;
 
 import com.google.common.base.VerifyException;
 import com.google.common.collect.AbstractIterator;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
@@ -568,24 +569,26 @@ public class ObjectStoreMetadata
                     deltaMetadata.streamTableColumns(unwrap(DELTA, session), prefix));
 
             case V1 -> {
-                CompletionService<Iterator<TableColumnsMetadata>> completionService = new ExecutorCompletionService<>(parallelInformationSchemaQueryingExecutor);
+                // This is called from MetadataManager.listTableColumns which materializes the result eagerly
+                CompletionService<List<TableColumnsMetadata>> completionService = new ExecutorCompletionService<>(parallelInformationSchemaQueryingExecutor);
+
                 Context context = Context.current();
                 // Hive lists Hive and Hudi tables
                 completionService.submit(() -> {
                     try (Scope ignore = context.makeCurrent()) {
-                        return hiveMetadata.streamTableColumns(unwrap(HIVE, session), prefix);
+                        return ImmutableList.copyOf(hiveMetadata.streamTableColumns(unwrap(HIVE, session), prefix));
                     }
                 });
                 // Iceberg only lists Iceberg tables
                 completionService.submit(() -> {
                     try (Scope ignore = context.makeCurrent()) {
-                        return icebergMetadata.streamTableColumns(unwrap(ICEBERG, session), prefix);
+                        return ImmutableList.copyOf(icebergMetadata.streamTableColumns(unwrap(ICEBERG, session), prefix));
                     }
                 });
                 // Delta Lake only lists Delta Lake tables
                 completionService.submit(() -> {
                     try (Scope ignore = context.makeCurrent()) {
-                        return deltaMetadata.streamTableColumns(unwrap(DELTA, session), prefix);
+                        return ImmutableList.copyOf(deltaMetadata.streamTableColumns(unwrap(DELTA, session), prefix));
                     }
                 });
 
@@ -601,7 +604,7 @@ public class ObjectStoreMetadata
                         }
                         try {
                             completedDelegates++;
-                            return completionService.take().get();
+                            return completionService.take().get().iterator();
                         }
                         catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
