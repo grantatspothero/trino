@@ -338,6 +338,8 @@ public final class ObjectStoreQueryRunner
                 "client/trino-cli/target/trino-cli-*-executable.jar" +
                         " --server %s" +
                         " --user=%s" +
+                        " --catalog=objectstore" +
+                        " --schema=tpch" +
                         " --extra-credential=accountId=%s" +
                         " --extra-credential=userId=%s" +
                         " --extra-credential=GalaxyTokenCredential=%s" +
