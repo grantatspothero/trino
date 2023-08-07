@@ -16,7 +16,6 @@ package io.trino.connector.system;
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
-import com.google.inject.multibindings.ProvidesIntoSet;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.connector.system.jdbc.AttributeJdbcTable;
 import io.trino.connector.system.jdbc.CatalogJdbcTable;
@@ -75,7 +74,8 @@ public class SystemConnectorModule
         globalTableBinder.addBinding().to(TableTypeJdbcTable.class).in(Scopes.SINGLETON);
         globalTableBinder.addBinding().to(UdtJdbcTable.class).in(Scopes.SINGLETON);
 
-        Multibinder.newSetBinder(binder, Procedure.class);
+        Multibinder<Procedure> procedures = Multibinder.newSetBinder(binder, Procedure.class);
+        procedures.addBinding().toProvider(KillQueryProcedure.class).in(Scopes.SINGLETON);
 
         binder.bind(KillQueryProcedure.class).in(Scopes.SINGLETON);
 
@@ -91,11 +91,5 @@ public class SystemConnectorModule
 
         tableFunctions.addBinding().toProvider(ExcludeColumns.class).in(Scopes.SINGLETON);
         tableFunctions.addBinding().toProvider(Sequence.class).in(Scopes.SINGLETON);
-    }
-
-    @ProvidesIntoSet
-    public static Procedure getKillQueryProcedure(KillQueryProcedure procedure)
-    {
-        return procedure.getProcedure();
     }
 }
