@@ -124,9 +124,9 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_UNSUPPORTED_FORMAT;
 import static io.trino.plugin.hive.HiveMetadata.MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE;
-import static io.trino.plugin.hive.ViewReaderUtil.isHiveOrPrestoView;
-import static io.trino.plugin.hive.ViewReaderUtil.isPrestoView;
+import static io.trino.plugin.hive.ViewReaderUtil.isHiveView;
 import static io.trino.plugin.hive.ViewReaderUtil.isTrinoMaterializedView;
+import static io.trino.plugin.hive.ViewReaderUtil.isTrinoView;
 import static io.trino.plugin.hive.util.HiveUtil.isDeltaLakeTable;
 import static io.trino.plugin.hive.util.HiveUtil.isHudiTable;
 import static io.trino.plugin.hive.util.HiveUtil.isIcebergTable;
@@ -651,8 +651,8 @@ public class ObjectStoreMetadata
 
                     Table table = metastoreTable.get();
                     boolean trinoMaterializedView = isTrinoMaterializedView(table);
-                    boolean trinoView = !trinoMaterializedView && isPrestoView(table);
-                    boolean hiveView = !trinoMaterializedView && !trinoView && isHiveOrPrestoView(table);
+                    boolean trinoView = isTrinoView(table);
+                    boolean hiveView = isHiveView(table);
 
                     if (trinoView || trinoMaterializedView) {
                         // streamTableColumns does not include views and materialized views.
