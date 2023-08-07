@@ -247,17 +247,6 @@ public final class ObjectStoreQueryRunner
         }
     }
 
-    public static final class ObjectStoreIcebergQueryRunner
-    {
-        private ObjectStoreIcebergQueryRunner() {}
-
-        public static void main(String[] args)
-                throws Exception
-        {
-            run(TableType.ICEBERG);
-        }
-    }
-
     public static final class ObjectStoreHiveQueryRunner
     {
         private ObjectStoreHiveQueryRunner() {}
@@ -266,6 +255,17 @@ public final class ObjectStoreQueryRunner
                 throws Exception
         {
             run(TableType.HIVE);
+        }
+    }
+
+    public static final class ObjectStoreIcebergQueryRunner
+    {
+        private ObjectStoreIcebergQueryRunner() {}
+
+        public static void main(String[] args)
+                throws Exception
+        {
+            run(TableType.ICEBERG);
         }
     }
 
