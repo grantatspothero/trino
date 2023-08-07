@@ -266,6 +266,7 @@ import static io.trino.plugin.hive.TableType.EXTERNAL_TABLE;
 import static io.trino.plugin.hive.TableType.MANAGED_TABLE;
 import static io.trino.plugin.hive.TableType.VIRTUAL_VIEW;
 import static io.trino.plugin.hive.ViewReaderUtil.PRESTO_VIEW_FLAG;
+import static io.trino.plugin.hive.ViewReaderUtil.canDecodeView;
 import static io.trino.plugin.hive.ViewReaderUtil.createViewReader;
 import static io.trino.plugin.hive.ViewReaderUtil.encodeViewData;
 import static io.trino.plugin.hive.ViewReaderUtil.isHiveOrPrestoView;
@@ -2832,8 +2833,11 @@ public class HiveMetadata
     private Optional<ConnectorViewDefinition> toConnectorViewDefinition(ConnectorSession session, SchemaTableName viewName, Optional<Table> table)
     {
         return table
-                .filter(ViewReaderUtil::canDecodeView)
-                .map(view -> {
+                .flatMap(view -> {
+                    if (!canDecodeView(view)) {
+                        return Optional.empty();
+                    }
+
                     if (!translateHiveViews && !isPrestoView(view)) {
                         throw new HiveViewNotSupportedException(viewName);
                     }
@@ -2851,7 +2855,7 @@ public class HiveMetadata
                                 view.getOwner(),
                                 false);
                     }
-                    return definition;
+                    return Optional.of(definition);
                 });
     }
 
