@@ -58,6 +58,7 @@ import io.trino.metadata.CatalogManager;
 import io.trino.security.AccessControlManager;
 import io.trino.security.AccessControlModule;
 import io.trino.security.GroupProviderManager;
+import io.trino.server.dataframe.StarburstDataframeModule;
 import io.trino.server.galaxy.GalaxyConfig;
 import io.trino.server.galaxy.GalaxyCorsModule;
 import io.trino.server.galaxy.GalaxyEnabledConfig;
@@ -134,6 +135,7 @@ public class Server
                 new CatalogManagerModule(),
                 new TransactionManagerModule(),
                 new ServerMainModule(trinoVersion),
+                new StarburstDataframeModule(),
                 conditionalModule(GalaxyEnabledConfig.class, GalaxyEnabledConfig::isGalaxyEnabled, binder -> configBinder(binder).bindConfig(GalaxyConfig.class)),
                 conditionalModule(GalaxyEnabledConfig.class, GalaxyEnabledConfig::isGalaxyCorsEnabled, new GalaxyCorsModule()),
                 conditionalModule(GalaxyEnabledConfig.class, GalaxyEnabledConfig::isGalaxyHeartbeatEnabled, new GalaxyHeartbeatModule()),

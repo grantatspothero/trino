@@ -195,6 +195,8 @@
         <!-- released form https://github.com/starburstdata/schema-discovery -->
         <!-- using PR version as schema discovery is on trino 422 already, and we needed to backport bugfix on 421, take version from master once update to 422 happens -->
         <dep.schema-discovery.version>422.20230731-4095521</dep.schema-discovery.version>
+        <!-- released from https://github.com/starburstdata/starburst-dataframe -->
+        <dep.starburst-dataframe.version>0.5.0.20230804-a2776ed</dep.starburst-dataframe.version>
         <!-- released from https://github.com/starburstdata/stargate -->
         <dep.stargate.version>stargate-10063-gf7ec5a07c</dep.stargate.version>
         <!-- released from https://github.com/starburstdata/starburst-trino-plugins -->
@@ -655,6 +657,12 @@
                 <groupId>com.squareup.wire</groupId>
                 <artifactId>wire-schema-jvm</artifactId>
                 <version>${dep.wire.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.starburstdata.dataframe</groupId>
+                <artifactId>starburst-dataframe-api</artifactId>
+                <version>${dep.starburst-dataframe.version}</version>
             </dependency>
 
             <dependency>

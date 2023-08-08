@@ -81,6 +81,11 @@
         </dependency>
 
         <dependency>
+            <groupId>com.starburstdata.dataframe</groupId>
+            <artifactId>starburst-dataframe-api</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>com.teradata</groupId>
             <artifactId>re2j-td</artifactId>
         </dependency>

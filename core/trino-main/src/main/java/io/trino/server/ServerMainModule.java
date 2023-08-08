@@ -415,7 +415,7 @@ public class ServerMainModule
         binder.install(new HandleJsonModule());
 
         // system connector
-        binder.install(new SystemConnectorModule());
+        install(new SystemConnectorModule());
 
         // slice
         jsonBinder(binder).addSerializerBinding(Slice.class).to(SliceSerializer.class);

@@ -27,6 +27,7 @@ public class ServerConfig
     private boolean coordinator = true;
     private boolean concurrentStartup;
     private boolean includeExceptionInResponse = true;
+    private boolean dataframeApiEnabled;
     private Duration gracePeriod = new Duration(2, MINUTES);
     private boolean queryResultsCompressionEnabled = true;
     private Optional<String> queryInfoUrlTemplate = Optional.empty();
@@ -66,6 +67,18 @@ public class ServerConfig
     {
         this.includeExceptionInResponse = includeExceptionInResponse;
         return this;
+    }
+
+    @Config("dataframe-api-enabled")
+    public ServerConfig setDataframeApiEnabled(boolean value)
+    {
+        this.dataframeApiEnabled = value;
+        return this;
+    }
+
+    public boolean isDataframeApiEnabled()
+    {
+        return dataframeApiEnabled;
     }
 
     public Duration getGracePeriod()
