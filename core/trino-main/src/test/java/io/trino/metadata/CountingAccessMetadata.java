@@ -238,9 +238,9 @@ public class CountingAccessMetadata
     }
 
     @Override
-    public List<TableColumnsMetadata> listTableColumns(Session session, QualifiedTablePrefix prefix)
+    public List<TableColumnsMetadata> listTableColumns(Session session, QualifiedTablePrefix prefix, UnaryOperator<Set<SchemaTableName>> relationFilter)
     {
-        return delegate.listTableColumns(session, prefix);
+        return delegate.listTableColumns(session, prefix, relationFilter);
     }
 
     @Override
