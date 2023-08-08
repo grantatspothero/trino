@@ -668,7 +668,7 @@ jobs:
             - { modules: plugin/trino-sqlserver }
             - { modules: testing/trino-faulttolerant-tests, profile: default }
             - { modules: testing/trino-faulttolerant-tests, profile: test-fault-tolerant-delta }
-            - { modules: testing/trino-faulttolerant-tests, profile: test-fault-tolerant-hive }
+            - { modules: testing/trino-faulttolerant-tests, profile: test-fault-tolerant-hive, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
             - { modules: testing/trino-faulttolerant-tests, profile: test-fault-tolerant-iceberg }
             - { modules: testing/trino-tests }
             - { modules: testing/trino-tests-galaxy-buffer-exchange }
