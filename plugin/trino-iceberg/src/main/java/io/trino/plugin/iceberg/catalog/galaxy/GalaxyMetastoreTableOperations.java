@@ -42,7 +42,6 @@ import static io.trino.plugin.hive.HiveMetadata.TABLE_COMMENT;
 import static io.trino.plugin.hive.HiveType.toHiveType;
 import static io.trino.plugin.iceberg.IcebergUtil.COLUMN_TRINO_NOT_NULL_PROPERTY;
 import static io.trino.plugin.iceberg.IcebergUtil.COLUMN_TRINO_TYPE_ID_PROPERTY;
-import static io.trino.plugin.iceberg.IcebergUtil.TRINO_TABLE_METADATA_INFO_VALID_FOR;
 import static java.util.Objects.requireNonNull;
 
 @NotThreadSafe
@@ -99,7 +98,6 @@ public class GalaxyMetastoreTableOperations
             return builder;
         }
         return builder
-                .setParameter(TRINO_TABLE_METADATA_INFO_VALID_FOR, metadataLocation)
                 .setParameter(TABLE_COMMENT, Optional.ofNullable(metadata.properties().get(TABLE_COMMENT)))
                 .setDataColumns(metastoreColumns(metadata));
     }

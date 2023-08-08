@@ -79,7 +79,6 @@ import static io.trino.plugin.iceberg.IcebergMaterializedViewDefinition.encodeMa
 import static io.trino.plugin.iceberg.IcebergMaterializedViewDefinition.fromConnectorMaterializedViewDefinition;
 import static io.trino.plugin.iceberg.IcebergUtil.COLUMN_TRINO_NOT_NULL_PROPERTY;
 import static io.trino.plugin.iceberg.IcebergUtil.COLUMN_TRINO_TYPE_ID_PROPERTY;
-import static io.trino.plugin.iceberg.IcebergUtil.TRINO_TABLE_METADATA_INFO_VALID_FOR;
 import static io.trino.plugin.iceberg.IcebergUtil.getIcebergTableWithMetadata;
 import static io.trino.plugin.iceberg.IcebergUtil.isIcebergTable;
 import static io.trino.plugin.iceberg.IcebergUtil.loadIcebergTable;
@@ -347,14 +346,6 @@ public class TrinoGalaxyCatalog
         io.trino.plugin.hive.metastore.Table table = metastore.getTable(tableName.getSchemaName(), tableName.getTableName())
                 .orElse(null);
         if (table == null || !isIcebergTable(table)) {
-            return Optional.empty();
-        }
-
-        String metadataLocation = table.getParameters().get(METADATA_LOCATION_PROP);
-        String metadataValidForMetadata = table.getParameters().get(TRINO_TABLE_METADATA_INFO_VALID_FOR);
-        if (metadataLocation == null || !metadataLocation.equals(metadataValidForMetadata)) {
-            // Galaxy is currently closed system so we can trust information we have in the metastore. This check is only for the sake of old and new
-            // Galaxy Trino versions being deployed concurrently, which can happen during roll out or when new version is deployed and then rolled back.
             return Optional.empty();
         }
 
