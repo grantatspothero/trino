@@ -74,6 +74,7 @@ import io.trino.spi.connector.JoinType;
 import io.trino.spi.connector.MaterializedViewFreshness;
 import io.trino.spi.connector.ProjectionApplicationResult;
 import io.trino.spi.connector.RecordPageSource;
+import io.trino.spi.connector.RelationColumnsMetadata;
 import io.trino.spi.connector.RetryMode;
 import io.trino.spi.connector.RowChangeParadigm;
 import io.trino.spi.connector.SchemaTableName;
@@ -113,6 +114,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -137,6 +139,7 @@ public class MockConnector
     private final Function<ConnectorSession, List<String>> listSchemaNames;
     private final BiFunction<ConnectorSession, String, List<String>> listTables;
     private final Optional<BiFunction<ConnectorSession, SchemaTablePrefix, Iterator<TableColumnsMetadata>>> streamTableColumns;
+    private final Optional<MockConnectorFactory.StreamRelationColumns> streamRelationColumns;
     private final BiFunction<ConnectorSession, SchemaTablePrefix, Map<SchemaTableName, ConnectorViewDefinition>> getViews;
     private final Supplier<List<PropertyMetadata<?>>> getMaterializedViewProperties;
     private final BiFunction<ConnectorSession, SchemaTablePrefix, Map<SchemaTableName, ConnectorMaterializedViewDefinition>> getMaterializedViews;
@@ -187,6 +190,7 @@ public class MockConnector
             Function<ConnectorSession, List<String>> listSchemaNames,
             BiFunction<ConnectorSession, String, List<String>> listTables,
             Optional<BiFunction<ConnectorSession, SchemaTablePrefix, Iterator<TableColumnsMetadata>>> streamTableColumns,
+            Optional<MockConnectorFactory.StreamRelationColumns> streamRelationColumns,
             BiFunction<ConnectorSession, SchemaTablePrefix, Map<SchemaTableName, ConnectorViewDefinition>> getViews,
             Supplier<List<PropertyMetadata<?>>> getMaterializedViewProperties,
             BiFunction<ConnectorSession, SchemaTablePrefix, Map<SchemaTableName, ConnectorMaterializedViewDefinition>> getMaterializedViews,
@@ -235,6 +239,7 @@ public class MockConnector
         this.listSchemaNames = requireNonNull(listSchemaNames, "listSchemaNames is null");
         this.listTables = requireNonNull(listTables, "listTables is null");
         this.streamTableColumns = requireNonNull(streamTableColumns, "streamTableColumns is null");
+        this.streamRelationColumns = requireNonNull(streamRelationColumns, "streamRelationColumns is null");
         this.getViews = requireNonNull(getViews, "getViews is null");
         this.getMaterializedViewProperties = requireNonNull(getMaterializedViewProperties, "getMaterializedViewProperties is null");
         this.getMaterializedViews = requireNonNull(getMaterializedViews, "getMaterializedViews is null");
@@ -578,6 +583,15 @@ public class MockConnector
                     .filter(prefix::matches)
                     .map(name -> TableColumnsMetadata.forTable(name, getColumns.apply(name)))
                     .iterator();
+        }
+
+        @Override
+        public Iterator<RelationColumnsMetadata> streamRelationColumns(ConnectorSession session, Optional<String> schemaName, UnaryOperator<Set<SchemaTableName>> relationFilter)
+        {
+            if (streamRelationColumns.isPresent()) {
+                return streamRelationColumns.get().apply(session, schemaName, relationFilter);
+            }
+            return ConnectorMetadata.super.streamRelationColumns(session, schemaName, relationFilter);
         }
 
         @Override

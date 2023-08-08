@@ -44,6 +44,7 @@ import io.trino.spi.connector.JoinApplicationResult;
 import io.trino.spi.connector.JoinCondition;
 import io.trino.spi.connector.JoinType;
 import io.trino.spi.connector.ProjectionApplicationResult;
+import io.trino.spi.connector.RelationColumnsMetadata;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SchemaTablePrefix;
 import io.trino.spi.connector.SortItem;
@@ -77,6 +78,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -95,6 +97,7 @@ public class MockConnectorFactory
     private final Function<ConnectorSession, List<String>> listSchemaNames;
     private final BiFunction<ConnectorSession, String, List<String>> listTables;
     private final Optional<BiFunction<ConnectorSession, SchemaTablePrefix, Iterator<TableColumnsMetadata>>> streamTableColumns;
+    private final Optional<MockConnectorFactory.StreamRelationColumns> streamRelationColumns;
     private final BiFunction<ConnectorSession, SchemaTablePrefix, Map<SchemaTableName, ConnectorViewDefinition>> getViews;
     private final Supplier<List<PropertyMetadata<?>>> getMaterializedViewProperties;
     private final BiFunction<ConnectorSession, SchemaTablePrefix, Map<SchemaTableName, ConnectorMaterializedViewDefinition>> getMaterializedViews;
@@ -147,6 +150,7 @@ public class MockConnectorFactory
             Function<ConnectorSession, List<String>> listSchemaNames,
             BiFunction<ConnectorSession, String, List<String>> listTables,
             Optional<BiFunction<ConnectorSession, SchemaTablePrefix, Iterator<TableColumnsMetadata>>> streamTableColumns,
+            Optional<MockConnectorFactory.StreamRelationColumns> streamRelationColumns,
             BiFunction<ConnectorSession, SchemaTablePrefix, Map<SchemaTableName, ConnectorViewDefinition>> getViews,
             Supplier<List<PropertyMetadata<?>>> getMaterializedViewProperties,
             BiFunction<ConnectorSession, SchemaTablePrefix, Map<SchemaTableName, ConnectorMaterializedViewDefinition>> getMaterializedViews,
@@ -196,6 +200,7 @@ public class MockConnectorFactory
         this.listSchemaNames = requireNonNull(listSchemaNames, "listSchemaNames is null");
         this.listTables = requireNonNull(listTables, "listTables is null");
         this.streamTableColumns = requireNonNull(streamTableColumns, "streamTableColumns is null");
+        this.streamRelationColumns = requireNonNull(streamRelationColumns, "streamRelationColumns is null");
         this.getViews = requireNonNull(getViews, "getViews is null");
         this.getMaterializedViewProperties = requireNonNull(getMaterializedViewProperties, "getMaterializedViewProperties is null");
         this.getMaterializedViews = requireNonNull(getMaterializedViews, "getMaterializedViews is null");
@@ -255,6 +260,7 @@ public class MockConnectorFactory
                 listSchemaNames,
                 listTables,
                 streamTableColumns,
+                streamRelationColumns,
                 getViews,
                 getMaterializedViewProperties,
                 getMaterializedViews,
@@ -312,6 +318,15 @@ public class MockConnectorFactory
     public static Builder builder()
     {
         return new Builder();
+    }
+
+    @FunctionalInterface
+    public interface StreamRelationColumns
+    {
+        Iterator<RelationColumnsMetadata> apply(
+                ConnectorSession session,
+                Optional<String> schemaName,
+                UnaryOperator<Set<SchemaTableName>> tablesFilter);
     }
 
     @FunctionalInterface
@@ -391,6 +406,7 @@ public class MockConnectorFactory
         private Function<ConnectorSession, List<String>> listSchemaNames = defaultListSchemaNames();
         private BiFunction<ConnectorSession, String, List<String>> listTables = defaultListTables();
         private Optional<BiFunction<ConnectorSession, SchemaTablePrefix, Iterator<TableColumnsMetadata>>> streamTableColumns = Optional.empty();
+        private Optional<MockConnectorFactory.StreamRelationColumns> streamRelationColumns = Optional.empty();
         private BiFunction<ConnectorSession, SchemaTablePrefix, Map<SchemaTableName, ConnectorViewDefinition>> getViews = defaultGetViews();
         private Supplier<List<PropertyMetadata<?>>> getMaterializedViewProperties = defaultGetMaterializedViewProperties();
         private BiFunction<ConnectorSession, SchemaTablePrefix, Map<SchemaTableName, ConnectorMaterializedViewDefinition>> getMaterializedViews = defaultGetMaterializedViews();
@@ -483,6 +499,12 @@ public class MockConnectorFactory
         public Builder withStreamTableColumns(BiFunction<ConnectorSession, SchemaTablePrefix, Iterator<TableColumnsMetadata>> streamTableColumns)
         {
             this.streamTableColumns = Optional.of(requireNonNull(streamTableColumns, "streamTableColumns is null"));
+            return this;
+        }
+
+        public Builder withStreamRelationColumns(StreamRelationColumns streamRelationColumns)
+        {
+            this.streamRelationColumns = Optional.of(streamRelationColumns);
             return this;
         }
 
@@ -785,6 +807,7 @@ public class MockConnectorFactory
                     listSchemaNames,
                     listTables,
                     streamTableColumns,
+                    streamRelationColumns,
                     getViews,
                     getMaterializedViewProperties,
                     getMaterializedViews,

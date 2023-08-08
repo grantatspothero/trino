@@ -496,11 +496,11 @@ public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
                         .build());
         assertMetastoreInvocations("SELECT * FROM system.jdbc.columns WHERE table_schem = 'test_schema_0' AND table_name = 'test_table_0'",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, 3)
+                        .addCopies(GET_TABLE, 2)
                         .build());
         assertMetastoreInvocations("SELECT * FROM system.jdbc.columns WHERE table_schem LIKE 'test\\_schema\\_0' ESCAPE '\\' AND table_name LIKE 'test\\_table\\_0' ESCAPE '\\'",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, 3)
+                        .addCopies(GET_TABLE, 2)
                         .build());
         assertMetastoreInvocations("SELECT * FROM system.jdbc.columns WHERE table_schem LIKE 'test_schema_0' ESCAPE '\\' AND table_name LIKE 'test_table_0' ESCAPE '\\'",
                 ImmutableMultiset.builder()

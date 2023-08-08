@@ -568,6 +568,7 @@ public class ObjectStoreMetadata
     }
 
     @Override
+    @SuppressWarnings("deprecation") // TODO (https://github.com/starburstdata/galaxy-trino/issues/818) implement new streamRelationComments
     public Iterator<TableColumnsMetadata> streamTableColumns(ConnectorSession session, SchemaTablePrefix prefix)
     {
         return switch (getInformationSchemaQueriesAcceleration(session)) {
