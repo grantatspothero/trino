@@ -588,12 +588,6 @@ public class GalaxyAccessControl
     }
 
     @Override
-    public void checkCanShowRoleAuthorizationDescriptors(SystemSecurityContext context)
-    {
-        // Showing role grants is safe because galaxy filters the grants to what is visible
-    }
-
-    @Override
     public void checkCanShowCurrentRoles(SystemSecurityContext context)
     {
         // Galaxy does the checking
