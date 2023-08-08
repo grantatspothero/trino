@@ -279,7 +279,7 @@ public class MemoryCacheManager
             freedAllocatedRevocableBytes += splitRetainedSizeInBytes;
         }
 
-        // memory was actually deallocated
+        // freeing memory should always succeed, while any non-negative allocation might return false
         if (initialRevocableMemoryAllocator != allocatedRevocableBytes) {
             checkState(allocatedRevocableBytes >= 0);
             checkState(revocableMemoryAllocator.trySetBytes(allocatedRevocableBytes));
