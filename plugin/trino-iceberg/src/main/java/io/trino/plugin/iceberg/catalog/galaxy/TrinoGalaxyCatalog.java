@@ -36,6 +36,7 @@ import io.trino.spi.connector.ConnectorMaterializedViewDefinition;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.ConnectorViewDefinition;
 import io.trino.spi.connector.MaterializedViewNotFoundException;
+import io.trino.spi.connector.RelationColumnsMetadata;
 import io.trino.spi.connector.RelationCommentMetadata;
 import io.trino.spi.connector.SchemaNotFoundException;
 import io.trino.spi.connector.SchemaTableName;
@@ -302,6 +303,17 @@ public class TrinoGalaxyCatalog
                 .flatMap(schema -> metastore.getAllTables(schema).stream()
                         .map(table -> new SchemaTableName(schema, table)))
                 .collect(toImmutableList());
+    }
+
+    @Override
+    public Optional<Iterator<RelationColumnsMetadata>> streamRelationColumns(
+            ConnectorSession session,
+            Optional<String> namespace,
+            UnaryOperator<Set<SchemaTableName>> relationFilter,
+            Predicate<SchemaTableName> isRedirected)
+    {
+        // TODO (https://github.com/starburstdata/galaxy-trino/issues/818) implement
+        return Optional.empty();
     }
 
     @Override
