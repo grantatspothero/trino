@@ -74,7 +74,9 @@ public class GalaxyIndexerTrinoSecurityApi
     @Override
     public EntityPrivileges getEntityPrivileges(DispatchSession session, RoleId roleId, EntityId entityId)
     {
-        return new EntityPrivileges(new RoleName("indexer"), roleId, false, false, ImmutableSet.of(), ImmutableMap.of(SELECT.name(), ALLOW_ALL), ImmutableList.of(), ImmutableMap.of());
+        // return EntityPrivileges with explicitOwner set to true. This is needed so that any checks for querying/inspecting will pass
+        // Indexer does not do any RBAC checks and, instead, those are done at query time by Portal
+        return new EntityPrivileges(new RoleName("indexer"), roleId, true, false, ImmutableSet.of(), ImmutableMap.of(SELECT.name(), ALLOW_ALL), ImmutableList.of(), ImmutableMap.of());
     }
 
     @Override
