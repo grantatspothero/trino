@@ -211,6 +211,7 @@ public class ObjectStoreMetadata
 
     @Nullable
     @Override
+    @SuppressWarnings("deprecation")
     public ConnectorTableHandle getTableHandle(ConnectorSession session, SchemaTableName tableName)
     {
         ConnectorTableHandle tableHandle = getTableHandleInOrder(session, tableName, tableTypeCache.getTableTypeAffinity(tableName));
@@ -221,6 +222,7 @@ public class ObjectStoreMetadata
     }
 
     @Nullable
+    @SuppressWarnings("deprecation")
     private ConnectorTableHandle getTableHandleInOrder(ConnectorSession session, SchemaTableName tableName, List<TableType> candidateTypes)
     {
         checkArgument(candidateTypes.size() == 4);
