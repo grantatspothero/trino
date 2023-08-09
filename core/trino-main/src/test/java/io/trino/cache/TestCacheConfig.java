@@ -33,7 +33,7 @@ public class TestCacheConfig
                 .setRevokingThreshold(0.9)
                 .setRevokingTarget(0.7)
                 .setCacheSubqueriesEnabled(false)
-                .setMaximalSplitCacheSubqueriesSize(DataSize.of(256, DataSize.Unit.MEGABYTE)));
+                .setMaxSplitSize(DataSize.of(256, DataSize.Unit.MEGABYTE)));
     }
 
     @Test
@@ -44,7 +44,7 @@ public class TestCacheConfig
                 .put("cache.revoking-threshold", "0.6")
                 .put("cache.revoking-target", "0.5")
                 .put("cache.subqueries.enabled", "true")
-                .put("cache.subqueries.max-cached-split-size", "64MB")
+                .put("cache.max-split-size", "64MB")
                 .buildOrThrow();
 
         CacheConfig expected = new CacheConfig()
@@ -52,7 +52,7 @@ public class TestCacheConfig
                 .setRevokingThreshold(0.6)
                 .setRevokingTarget(0.5)
                 .setCacheSubqueriesEnabled(true)
-                .setMaximalSplitCacheSubqueriesSize(DataSize.of(64, DataSize.Unit.MEGABYTE));
+                .setMaxSplitSize(DataSize.of(64, DataSize.Unit.MEGABYTE));
         assertFullMapping(properties, expected);
     }
 }

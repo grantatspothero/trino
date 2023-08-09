@@ -25,7 +25,7 @@ public class CacheConfig
     private double revokingThreshold = 0.9;
     private double revokingTarget = 0.7;
     private boolean cacheSubqueriesEnabled;
-    private DataSize cacheSubqueriesSize = DataSize.of(256, DataSize.Unit.MEGABYTE);
+    private DataSize maxSplitSize = DataSize.of(256, DataSize.Unit.MEGABYTE);
 
     public boolean isEnabled()
     {
@@ -83,15 +83,16 @@ public class CacheConfig
         return this;
     }
 
-    public DataSize getMaximalSplitCacheSubqueriesSize()
+    public DataSize getMaxSplitSize()
     {
-        return cacheSubqueriesSize;
+        return maxSplitSize;
     }
 
-    @Config("cache.subqueries.max-cached-split-size")
-    public CacheConfig setMaximalSplitCacheSubqueriesSize(DataSize cacheSubqueriesSize)
+    @Config("cache.max-split-size")
+    @ConfigDescription("Sets upper bound for size of cached split")
+    public CacheConfig setMaxSplitSize(DataSize cacheSubqueriesSize)
     {
-        this.cacheSubqueriesSize = cacheSubqueriesSize;
+        this.maxSplitSize = cacheSubqueriesSize;
         return this;
     }
 }

@@ -30,13 +30,13 @@ public class CacheMetrics
         return splitCachedCount.get();
     }
 
-    public void addSplitsNotCached(int count)
+    public void incrementSplitsNotCached()
     {
-        splitNotCachedCount.addAndGet(count);
+        splitNotCachedCount.incrementAndGet();
     }
 
-    public void addSplitsCached(int count)
+    public void incrementSplitsCached()
     {
-        splitCachedCount.addAndGet(count);
+        splitCachedCount.incrementAndGet();
     }
 }

@@ -2303,7 +2303,7 @@ public class LocalExecutionPlanner
         {
             PhysicalOperation source = node.getSource().accept(this, context);
             return new PhysicalOperation(
-                    new CacheDataOperatorFactory(context.getNextOperatorId(), node.getId(), cacheConfig.getMaximalSplitCacheSubqueriesSize().toBytes()),
+                    new CacheDataOperatorFactory(context.getNextOperatorId(), node.getId(), cacheConfig.getMaxSplitSize().toBytes()),
                     source.getLayout(),
                     context,
                     source);

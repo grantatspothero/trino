@@ -128,7 +128,7 @@ public class CacheDriverFactory
         int processedSplitCount = cacheMetrics.getSplitNotCachedCount() + cacheMetrics.getSplitCachedCount();
         float cachingRatio = processedSplitCount > MIN_PROCESSED_SPLITS ? cacheMetrics.getSplitCachedCount() / (float) processedSplitCount : 1.0f;
         // try storing results instead
-        // if cache "thrashing" exceeds threshold do not take "STORE_PAGES_ALTERNATIVE" path
+        // if splits are too large to be cached then do not try caching data as it adds extra computational cost
         Optional<ConnectorPageSink> pageSink = storePages(splitId, planSignature, planSignatureComplete);
         if (pageSink.isPresent() && cachingRatio > THRASHING_CACHE_THRESHOLD) {
             driverContext.setCacheDriverContext(new CacheDriverContext(Optional.empty(), pageSink, dynamicFilter, cacheMetrics));

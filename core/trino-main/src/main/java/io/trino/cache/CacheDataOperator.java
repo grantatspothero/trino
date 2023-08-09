@@ -36,16 +36,16 @@ public class CacheDataOperator
         private final int operatorId;
         private final PlanNodeId planNodeId;
         private boolean closed;
-        private final long maxCacheSizeInBytes;
+        private final long maxSplitSizeInBytes;
 
         public CacheDataOperatorFactory(
                 int operatorId,
                 PlanNodeId planNodeId,
-                long maxCacheSizeInBytes)
+                long maxSplitSizeInBytes)
         {
             this.operatorId = operatorId;
             this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
-            this.maxCacheSizeInBytes = maxCacheSizeInBytes;
+            this.maxSplitSizeInBytes = maxSplitSizeInBytes;
         }
 
         @Override
@@ -54,7 +54,7 @@ public class CacheDataOperator
             checkArgument(driverContext.getCacheDriverContext().isPresent(), "cacheDriverContext is empty");
             checkState(!closed, "Factory is already closed");
             OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId, CacheDataOperator.class.getSimpleName());
-            return new CacheDataOperator(operatorContext, maxCacheSizeInBytes, driverContext.getCacheDriverContext().get().cacheMetrics());
+            return new CacheDataOperator(operatorContext, maxSplitSizeInBytes, driverContext.getCacheDriverContext().get().cacheMetrics());
         }
 
         @Override
@@ -66,7 +66,7 @@ public class CacheDataOperator
         @Override
         public OperatorFactory duplicate()
         {
-            return new CacheDataOperatorFactory(operatorId, planNodeId, maxCacheSizeInBytes);
+            return new CacheDataOperatorFactory(operatorId, planNodeId, maxSplitSizeInBytes);
         }
     }
 
@@ -139,11 +139,11 @@ public class CacheDataOperator
     {
         if (pageSink != null) {
             if (isCachingAborted) {
-                cacheMetrics.addSplitsNotCached(1);
+                cacheMetrics.incrementSplitsNotCached();
             }
             else {
                 checkState(pageSink.finish().isDone(), "finish future must be done");
-                cacheMetrics.addSplitsCached(1);
+                cacheMetrics.incrementSplitsCached();
             }
             pageSink = null;
             memoryContext.close();
