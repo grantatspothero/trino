@@ -210,6 +210,7 @@ public final class SystemSessionProperties
     public static final String FAULT_TOLERANT_EXECUTION_FORCE_PREFERRED_WRITE_PARTITIONING_ENABLED = "fault_tolerant_execution_force_preferred_write_partitioning_enabled";
     public static final String CACHE_SUBQUERIES_ENABLED = "cache_subqueries_enabled";
     public static final String PAGE_PARTITIONING_BUFFER_POOL_SIZE = "page_partitioning_buffer_pool_size";
+    public static final String CACHE_MAX_SPLIT_SIZE = "cache_max_split_size";
 
     private final List<PropertyMetadata<?>> sessionProperties;
 
@@ -1074,6 +1075,11 @@ public final class SystemSessionProperties
                         "Enables caching of subqueries when running a single query",
                         cacheConfig.isCacheSubqueriesEnabled(),
                         true),
+                dataSizeProperty(
+                        CACHE_MAX_SPLIT_SIZE,
+                        "Max size of cached split",
+                        cacheConfig.getMaxSplitSize(),
+                        true),
                 integerProperty(PAGE_PARTITIONING_BUFFER_POOL_SIZE,
                         "Maximum number of free buffers in the per task partitioned page buffer pool. Setting this to zero effectively disables the pool",
                         taskManagerConfig.getPagePartitioningBufferPoolSize(),
@@ -1919,6 +1925,11 @@ public final class SystemSessionProperties
     public static boolean isCacheSubqueriesEnabled(Session session)
     {
         return session.getSystemProperty(CACHE_SUBQUERIES_ENABLED, Boolean.class);
+    }
+
+    public static DataSize getCacheMaxSplitSize(Session session)
+    {
+        return session.getSystemProperty(CACHE_MAX_SPLIT_SIZE, DataSize.class);
     }
 
     public static int getPagePartitioningBufferPoolSize(Session session)

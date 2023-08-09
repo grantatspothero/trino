@@ -1030,7 +1030,6 @@ public class LocalQueryRunner
                 operatorFactories,
                 new OrderingCompiler(plannerContext.getTypeOperators()),
                 new DynamicFilterConfig(),
-                cacheConfig,
                 blockTypeOperators,
                 tableExecuteContextManager,
                 exchangeManagerRegistry,
