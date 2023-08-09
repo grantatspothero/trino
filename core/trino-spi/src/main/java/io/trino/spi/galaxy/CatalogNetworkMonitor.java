@@ -17,6 +17,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -32,8 +33,14 @@ public final class CatalogNetworkMonitor
     private static final ConcurrentMap<String, CatalogNetworkMonitor> CATALOG_NETWORK_MONITORS = new ConcurrentHashMap<>();
     private static final NetworkUsageQuotaEnforcer CROSS_REGION_NETWORK_USAGE_ENFORCER = new NetworkUsageQuotaEnforcer();
 
-    public static CatalogNetworkMonitor getCatalogNetworkMonitor(String catalogName, String catalogId, long maxCrossRegionReadBytes, long maxCrossRegionWriteBytes)
+    public static CatalogNetworkMonitor getCatalogNetworkMonitor(String catalogName, String catalogId)
     {
+        return CATALOG_NETWORK_MONITORS.computeIfAbsent(catalogId, id -> new CatalogNetworkMonitor(catalogName, id));
+    }
+
+    public static CatalogNetworkMonitor getCrossRegionCatalogNetworkMonitor(String catalogName, String catalogId, long maxCrossRegionReadBytes, long maxCrossRegionWriteBytes)
+    {
+        CROSS_REGION_NETWORK_USAGE_ENFORCER.checkLimitsAndThrowIfExceeded(maxCrossRegionReadBytes, maxCrossRegionWriteBytes);
         return CATALOG_NETWORK_MONITORS.computeIfAbsent(catalogId, id -> new CatalogNetworkMonitor(catalogName, id, maxCrossRegionReadBytes, maxCrossRegionWriteBytes));
     }
 
@@ -42,21 +49,26 @@ public final class CatalogNetworkMonitor
         return List.copyOf(CATALOG_NETWORK_MONITORS.values());
     }
 
-    public static void checkCrossRegionLimitsAndThrowIfExceeded(long readLimit, long writeLimit)
-    {
-        CROSS_REGION_NETWORK_USAGE_ENFORCER.checkLimitsAndThrowIfExceeded(readLimit, writeLimit);
-    }
-
     private final String catalogName;
     private final String catalogId;
     private final NetworkMonitor intraRegionMonitor = new NetworkMonitor();
-    private final NetworkMonitor crossRegionMonitor;
+    private final Optional<NetworkMonitor> crossRegionMonitor;
+
+    private CatalogNetworkMonitor(String catalogName, String catalogId)
+    {
+        this(catalogName, catalogId, Optional.empty());
+    }
 
     private CatalogNetworkMonitor(String catalogName, String catalogId, long maxCrossRegionReadBytes, long maxCrossRegionWriteBytes)
     {
+        this(catalogName, catalogId, Optional.of(new QuotaEnforcingNetworkMonitor(CROSS_REGION_NETWORK_USAGE_ENFORCER, maxCrossRegionReadBytes, maxCrossRegionWriteBytes)));
+    }
+
+    private CatalogNetworkMonitor(String catalogName, String catalogId, Optional<NetworkMonitor> crossRegionMonitor)
+    {
         this.catalogName = requireNonNull(catalogName, "catalogName is null");
         this.catalogId = requireNonNull(catalogId, "catalogId is null");
-        this.crossRegionMonitor = new QuotaEnforcingNetworkMonitor(CROSS_REGION_NETWORK_USAGE_ENFORCER, maxCrossRegionReadBytes, maxCrossRegionWriteBytes);
+        this.crossRegionMonitor = requireNonNull(crossRegionMonitor, "crossRegionMonitor is null");
     }
 
     public String getCatalogName()
@@ -81,12 +93,12 @@ public final class CatalogNetworkMonitor
 
     public long getCrossRegionReadBytes()
     {
-        return crossRegionMonitor.getReadBytes();
+        return crossRegionMonitor.map(NetworkMonitor::getReadBytes).orElse(0L);
     }
 
     public long getCrossRegionWriteBytes()
     {
-        return crossRegionMonitor.getWriteBytes();
+        return crossRegionMonitor.map(NetworkMonitor::getWriteBytes).orElse(0L);
     }
 
     @Override
@@ -94,18 +106,26 @@ public final class CatalogNetworkMonitor
     {
         return new StringJoiner(", ", CatalogNetworkMonitor.class.getSimpleName() + "[", "]")
                 .add("catalogName=" + catalogName)
-                .add("intraRegion=" + intraRegionMonitor)
-                .add("crossRegion=" + crossRegionMonitor)
+                .add("intraRegionMonitor=" + intraRegionMonitor)
+                .add("crossRegionMonitor=" + crossRegionMonitor)
                 .toString();
     }
 
     public InputStream monitorInputStream(boolean crossRegion, InputStream inputStream)
     {
-        return new MonitoredInputStream(crossRegion ? crossRegionMonitor : intraRegionMonitor, inputStream);
+        return new MonitoredInputStream(
+                crossRegion
+                        ? crossRegionMonitor.orElseThrow(() -> new IllegalArgumentException("Cross-region querying is not allowed for catalog %s".formatted(catalogName)))
+                        : intraRegionMonitor,
+                inputStream);
     }
 
     public OutputStream monitorOutputStream(boolean crossRegion, OutputStream outputStream)
     {
-        return new MonitoredOutputStream(crossRegion ? crossRegionMonitor : intraRegionMonitor, outputStream);
+        return new MonitoredOutputStream(
+                crossRegion
+                        ? crossRegionMonitor.orElseThrow(() -> new IllegalArgumentException("Cross-region querying is not allowed for catalog %s".formatted(catalogName)))
+                        : intraRegionMonitor,
+                outputStream);
     }
 }

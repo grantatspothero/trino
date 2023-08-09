@@ -19,7 +19,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import static io.trino.spi.galaxy.CatalogNetworkMonitor.checkCrossRegionLimitsAndThrowIfExceeded;
+import static io.trino.spi.galaxy.CatalogNetworkMonitor.getCrossRegionCatalogNetworkMonitor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -34,7 +34,7 @@ public class TestCatalogNetworkMonitor
                 throws IOException
     {
         for (int i = 0; i < 2; i++) {
-            CatalogNetworkMonitor catalogNetworkMonitor = CatalogNetworkMonitor.getCatalogNetworkMonitor("foocatalog", "c-1234567890", MAX_CROSS_REGION_BYTES, MAX_CROSS_REGION_BYTES);
+            CatalogNetworkMonitor catalogNetworkMonitor = getCrossRegionCatalogNetworkMonitor("foocatalog", "c-1234567890", MAX_CROSS_REGION_BYTES, MAX_CROSS_REGION_BYTES);
             try (InputStream baseInputStream = new ByteArrayInputStream(new byte[CHUNK_SIZE])) {
                 // create monitored input stream, read a certain amount of bytes, and verify that the amount read is correctly reported
                 InputStream monitoredInputStream = catalogNetworkMonitor.monitorInputStream(true, baseInputStream);
@@ -45,10 +45,10 @@ public class TestCatalogNetworkMonitor
             }
         }
 
-        assertThatCode(() -> checkCrossRegionLimitsAndThrowIfExceeded(MAX_CROSS_REGION_BYTES, MAX_CROSS_REGION_BYTES))
+        assertThatCode(() -> getCrossRegionCatalogNetworkMonitor("foocatalog", "c-1234567890", MAX_CROSS_REGION_BYTES, MAX_CROSS_REGION_BYTES))
                 .doesNotThrowAnyException();
 
-        CatalogNetworkMonitor catalogNetworkMonitor = CatalogNetworkMonitor.getCatalogNetworkMonitor("foocatalog", "c-1234567890", MAX_CROSS_REGION_BYTES, MAX_CROSS_REGION_BYTES);
+        CatalogNetworkMonitor catalogNetworkMonitor = getCrossRegionCatalogNetworkMonitor("foocatalog", "c-1234567890", MAX_CROSS_REGION_BYTES, MAX_CROSS_REGION_BYTES);
         try (InputStream baseInputStream = new ByteArrayInputStream(new byte[CHUNK_SIZE])) {
             // create monitored input stream, read a certain amount of bytes, and verify that the amount read is correctly reported
             InputStream monitoredInputStream = catalogNetworkMonitor.monitorInputStream(true, baseInputStream);
@@ -59,7 +59,7 @@ public class TestCatalogNetworkMonitor
             assertThat(readBytes).isEqualTo(CHUNK_SIZE * 3);
         }
 
-        assertThatThrownBy(() -> checkCrossRegionLimitsAndThrowIfExceeded(MAX_CROSS_REGION_BYTES, MAX_CROSS_REGION_BYTES))
+        assertThatThrownBy(() -> getCrossRegionCatalogNetworkMonitor("foocatalog", "c-1234567890", MAX_CROSS_REGION_BYTES, MAX_CROSS_REGION_BYTES))
                 .hasMessage("Cross-region read data transfer limit of 0GB per worker exceeded. To increase this limit, contact Starburst support.");
     }
 }

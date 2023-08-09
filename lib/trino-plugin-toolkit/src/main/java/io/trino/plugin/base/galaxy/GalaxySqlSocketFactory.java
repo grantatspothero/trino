@@ -35,10 +35,11 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
 import java.util.Properties;
 
+import static com.google.common.base.Verify.verify;
 import static io.trino.plugin.base.galaxy.InetAddresses.asInetSocketAddress;
 import static io.trino.plugin.base.galaxy.InetAddresses.toInetAddresses;
-import static io.trino.spi.galaxy.CatalogNetworkMonitor.checkCrossRegionLimitsAndThrowIfExceeded;
 import static io.trino.spi.galaxy.CatalogNetworkMonitor.getCatalogNetworkMonitor;
+import static io.trino.spi.galaxy.CatalogNetworkMonitor.getCrossRegionCatalogNetworkMonitor;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.getOptionalProperty;
 import static java.util.Objects.requireNonNull;
 
@@ -100,25 +101,25 @@ public class GalaxySqlSocketFactory
         public InputStream getInputStream(InputStream inputStream)
                 throws IOException
         {
-            long crossRegionReadLimitBytes = crossRegionReadLimit.orElseGet(() -> DataSize.ofBytes(0)).toBytes();
-            long crossRegionWriteLimitBytes = crossRegionWriteLimit.orElseGet(() -> DataSize.ofBytes(0)).toBytes();
-
             if (isCrossRegion) {
-                checkCrossRegionLimitsAndThrowIfExceeded(crossRegionReadLimitBytes, crossRegionWriteLimitBytes);
+                verify(crossRegionReadLimit.isPresent(), "Cross-region read limit must be present to query cross-region catalog");
+                verify(crossRegionWriteLimit.isPresent(), "Cross-region write limit must be present to query cross-region catalog");
+
+                return getCrossRegionCatalogNetworkMonitor(catalogName, catalogId, crossRegionReadLimit.get().toBytes(), crossRegionWriteLimit.get().toBytes()).monitorInputStream(isCrossRegion, inputStream);
             }
-            return getCatalogNetworkMonitor(catalogName, catalogId, crossRegionReadLimitBytes, crossRegionWriteLimitBytes).monitorInputStream(isCrossRegion, inputStream);
+            return getCatalogNetworkMonitor(catalogName, catalogId).monitorInputStream(isCrossRegion, inputStream);
         }
 
         public OutputStream getOutputStream(OutputStream outputStream)
                 throws IOException
         {
-            long crossRegionReadLimitBytes = crossRegionReadLimit.orElseGet(() -> DataSize.ofBytes(0)).toBytes();
-            long crossRegionWriteLimitBytes = crossRegionWriteLimit.orElseGet(() -> DataSize.ofBytes(0)).toBytes();
-
             if (isCrossRegion) {
-                checkCrossRegionLimitsAndThrowIfExceeded(crossRegionReadLimitBytes, crossRegionWriteLimitBytes);
+                verify(crossRegionReadLimit.isPresent(), "Cross-region read limit must be present to query cross-region catalog");
+                verify(crossRegionWriteLimit.isPresent(), "Cross-region write limit must be present to query cross-region catalog");
+
+                return getCrossRegionCatalogNetworkMonitor(catalogName, catalogId, crossRegionReadLimit.get().toBytes(), crossRegionWriteLimit.get().toBytes()).monitorOutputStream(isCrossRegion, outputStream);
             }
-            return getCatalogNetworkMonitor(catalogName, catalogId, crossRegionReadLimitBytes, crossRegionWriteLimitBytes).monitorOutputStream(isCrossRegion, outputStream);
+            return getCatalogNetworkMonitor(catalogName, catalogId).monitorOutputStream(isCrossRegion, outputStream);
         }
     }
 
