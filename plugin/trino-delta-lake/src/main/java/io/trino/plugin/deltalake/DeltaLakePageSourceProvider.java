@@ -140,12 +140,19 @@ public class DeltaLakePageSourceProvider
                 .collect(toImmutableList());
 
         Map<String, Optional<String>> partitionKeys = split.getPartitionKeys();
-
+        ColumnMappingMode columnMappingMode = getColumnMappingMode(table.getMetadataEntry());
         Optional<List<String>> partitionValues = Optional.empty();
         if (deltaLakeColumns.stream().anyMatch(column -> column.getBaseColumnName().equals(ROW_ID_COLUMN_NAME))) {
             partitionValues = Optional.of(new ArrayList<>());
             for (DeltaLakeColumnMetadata column : extractSchema(table.getMetadataEntry(), typeManager)) {
-                Optional<String> value = partitionKeys.get(column.getName());
+                Optional<String> value = switch (columnMappingMode) {
+                    case NONE:
+                        yield partitionKeys.get(column.getName());
+                    case ID, NAME:
+                        yield partitionKeys.get(column.getPhysicalName());
+                    default:
+                        throw new IllegalStateException("Unknown column mapping mode");
+                };
                 if (value != null) {
                     partitionValues.get().add(value.orElse(null));
                 }
@@ -189,7 +196,6 @@ public class DeltaLakePageSourceProvider
                 .withNativeSnappyDecompressorEnabled(isParquetNativeSnappyDecompressorEnabled(session))
                 .withVectorizedDecodingEnabled(isParquetVectorizedDecodingEnabled(session));
 
-        ColumnMappingMode columnMappingMode = getColumnMappingMode(table.getMetadataEntry());
         Map<Integer, String> parquetFieldIdToName = columnMappingMode == ColumnMappingMode.ID ? loadParquetIdAndNameMapping(inputFile, options) : ImmutableMap.of();
 
         ImmutableSet.Builder<String> missingColumnNames = ImmutableSet.builder();
