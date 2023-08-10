@@ -17,10 +17,10 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import io.trino.Session;
 import io.trino.matching.Captures;
 import io.trino.matching.Pattern;
 import io.trino.metadata.Metadata;
+import io.trino.sql.planner.OptimizerConfig.DistinctAggregationsStrategy;
 import io.trino.sql.planner.Symbol;
 import io.trino.sql.planner.SymbolAllocator;
 import io.trino.sql.planner.iterative.Rule;
@@ -49,6 +49,7 @@ import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.BooleanType.BOOLEAN;
 import static io.trino.sql.analyzer.TypeSignatureProvider.fromTypes;
 import static io.trino.sql.analyzer.TypeSignatureTranslator.toSqlType;
+import static io.trino.sql.planner.OptimizerConfig.DistinctAggregationsStrategy.AUTOMATIC;
 import static io.trino.sql.planner.OptimizerConfig.DistinctAggregationsStrategy.PRE_AGGREGATE;
 import static io.trino.sql.planner.plan.AggregationNode.Step.SINGLE;
 import static io.trino.sql.planner.plan.AggregationNode.singleGroupingSet;
@@ -131,10 +132,12 @@ public class DistinctAggregationToGroupBy
     }
 
     private final Metadata metadata;
+    private final DistinctAggregationController distinctAggregationController;
 
-    public DistinctAggregationToGroupBy(Metadata metadata)
+    public DistinctAggregationToGroupBy(Metadata metadata, DistinctAggregationController distinctAggregationController)
     {
         this.metadata = requireNonNull(metadata, "metadata is null");
+        this.distinctAggregationController = requireNonNull(distinctAggregationController, "distinctAggregationController is null");
     }
 
     @Override
@@ -144,14 +147,15 @@ public class DistinctAggregationToGroupBy
     }
 
     @Override
-    public boolean isEnabled(Session session)
-    {
-        return distinctAggregationsStrategy(session).equals(PRE_AGGREGATE);
-    }
-
-    @Override
     public Result apply(AggregationNode node, Captures captures, Context context)
     {
+        DistinctAggregationsStrategy distinctAggregationsStrategy = distinctAggregationsStrategy(context.getSession());
+
+        if (!(distinctAggregationsStrategy.equals(PRE_AGGREGATE) ||
+                (distinctAggregationsStrategy.equals(AUTOMATIC) && distinctAggregationController.shouldUsePreAggregate(node, context)))) {
+            return Result.empty();
+        }
+
         SymbolAllocator symbolAllocator = context.getSymbolAllocator();
 
         Set<Symbol> originalDistinctAggregationArguments = node.getAggregations().values()

@@ -895,7 +895,7 @@ public class TestAddExchangesPlans
                         "    GROUP BY\n" +
                         "        orderkey,\n" +
                         "        orderstatus\n",
-                useExactPartitioning(),
+                useExactPartitioningWithMarkDistinct(),
                 anyTree(
                         exchange(REMOTE, REPARTITION,
                                 anyTree(
@@ -1253,6 +1253,17 @@ public class TestAddExchangesPlans
                 .setSystemProperty(JOIN_DISTRIBUTION_TYPE, PARTITIONED.name())
                 .setSystemProperty(ENABLE_DYNAMIC_FILTERING, "false")
                 .setSystemProperty(USE_EXACT_PARTITIONING, "true")
+                .build();
+    }
+
+    private Session useExactPartitioningWithMarkDistinct()
+    {
+        return Session.builder(getQueryRunner().getDefaultSession())
+                .setSystemProperty(JOIN_REORDERING_STRATEGY, ELIMINATE_CROSS_JOINS.name())
+                .setSystemProperty(JOIN_DISTRIBUTION_TYPE, PARTITIONED.name())
+                .setSystemProperty(ENABLE_DYNAMIC_FILTERING, "false")
+                .setSystemProperty(USE_EXACT_PARTITIONING, "true")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "mark_distinct")
                 .build();
     }
 

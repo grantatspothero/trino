@@ -656,7 +656,7 @@ public class PlanOptimizers
                                 new RemoveRedundantIdentityProjections(),
                                 new PushAggregationThroughOuterJoin(),
                                 new ReplaceRedundantJoinWithSource(), // Run this after PredicatePushDown optimizer as it inlines filter constants
-                                new DistinctAggregationToGroupBy(metadata), // Run this after aggregation pushdown so that multiple distinct aggregations can be pushed into a connector
+                                new DistinctAggregationToGroupBy(metadata, distinctAggregationController), // Run this after aggregation pushdown so that multiple distinct aggregations can be pushed into a connector
                                                                             // It also is run before MultipleDistinctAggregationToMarkDistinct to take precedence f enabled
                                 new ImplementFilteredAggregations(metadata), // DistinctAggregationToGroupBy will add filters if fired
                                 new MultipleDistinctAggregationToMarkDistinct(distinctAggregationController))), // Run this after aggregation pushdown so that multiple distinct aggregations can be pushed into a connector

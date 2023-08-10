@@ -80,6 +80,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.MoreCollectors.toOptional;
 import static io.airlift.slice.Slices.utf8Slice;
 import static io.trino.SessionTestUtils.TEST_SESSION;
+import static io.trino.SystemSessionProperties.DISTINCT_AGGREGATIONS_STRATEGY;
 import static io.trino.SystemSessionProperties.DISTRIBUTED_SORT;
 import static io.trino.SystemSessionProperties.FILTERING_SEMI_JOIN_TO_INNER;
 import static io.trino.SystemSessionProperties.JOIN_DISTRIBUTION_TYPE;
@@ -370,6 +371,9 @@ public class TestLogicalPlanner
     public void testDistinctOverConstants()
     {
         assertPlan("SELECT count(*), count(distinct orderstatus) FROM (SELECT * FROM orders WHERE orderstatus = 'F')",
+                Session.builder(this.getQueryRunner().getDefaultSession())
+                        .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "mark_distinct")
+                        .build(),
                 anyTree(
                         markDistinct(
                                 "is_distinct",
@@ -1816,6 +1820,7 @@ public class TestLogicalPlanner
                 "select count(*), count(distinct orderkey), count(distinct partkey), count(distinct suppkey) from lineitem",
                 Session.builder(this.getQueryRunner().getDefaultSession())
                         .setSystemProperty(TASK_CONCURRENCY, "16")
+                        .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "mark_distinct")
                         .build(),
                 output(
                         anyTree(
@@ -1834,6 +1839,9 @@ public class TestLogicalPlanner
     {
         assertDistributedPlan(
                 "SELECT count(distinct(custkey)), count(distinct(nationkey)) FROM ((SELECT custkey, nationkey FROM customer) UNION ALL ( SELECT custkey, custkey FROM customer))",
+                Session.builder(this.getQueryRunner().getDefaultSession())
+                        .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "mark_distinct")
+                        .build(),
                 output(
                         anyTree(
                                 node(MarkDistinctNode.class,
