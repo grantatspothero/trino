@@ -85,7 +85,6 @@ import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessO
 import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.STATS;
 import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.TRANSACTION_LOG_JSON;
 import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.TRINO_EXTENDED_STATS_JSON;
-import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.TableType.HIVE;
 import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.TableType.ICEBERG;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
@@ -101,6 +100,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestObjectStoreFileAndMetastoreAccessOperations
         extends AbstractTestQueryFramework
 {
+    private static final int MAX_PREFIXES_COUNT = 10;
     private static final String CATALOG_NAME = "objectstore";
     private static final String SCHEMA_NAME = "test_schema";
 
@@ -151,6 +151,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
                 .addPlugin(new IcebergPlugin())
                 .addPlugin(new TestingObjectStorePlugin(metastore, trackingFileSystemFactory))
                 .addCatalog(CATALOG_NAME, "galaxy_objectstore", properties)
+                .addCoordinatorProperty("optimizer.experimental-max-prefetched-information-schema-prefixes", Integer.toString(MAX_PREFIXES_COUNT))
                 .build();
         queryRunner.execute("CREATE SCHEMA %s.%s WITH (location = '%s')".formatted(CATALOG_NAME, SCHEMA_NAME, schemaDirectory.toUri().toString()));
         return queryRunner;
@@ -768,34 +769,71 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
     }
 
     @Test(dataProvider = "testInformationSchemaColumnsDataProvider")
-    public void testInformationSchemaColumns(TableType type, InformationSchemaQueriesAcceleration mode)
+    public void testInformationSchemaColumns(TableType type, InformationSchemaQueriesAcceleration mode, int tables)
     {
         String catalog = getSession().getCatalog().orElseThrow();
 
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < tables; i++) {
             assertUpdate("CREATE TABLE test_select_i_s_columns" + i + "(id VARCHAR, age INT) WITH (type = '" + type + "')");
+            // Produce multiple snapshots and metadata files
+            assertUpdate("INSERT INTO test_select_i_s_columns" + i + " VALUES ('abc', 11)", 1);
+            assertUpdate("INSERT INTO test_select_i_s_columns" + i + " VALUES ('xyz', 12)", 1);
+
+            assertUpdate("CREATE TABLE test_other_select_i_s_columns" + i + "(id varchar, age integer)"); // won't match the filter
         }
 
         Session session = Session.builder(getSession())
                 .setCatalogSessionProperty(catalog, INFORMATION_SCHEMA_QUERIES_ACCELERATION, mode.toString())
                 .build();
 
-        assertInvocations(
-                session,
-                "TABLE information_schema.columns",
+        assertInvocations(session, "SELECT * FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA AND table_name LIKE 'test_select_i_s_columns%'",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_ALL_DATABASES, mode == V2 ? 2 : 3)
-                        .addCopies(GET_TABLE, mode == V2 && type == HIVE ? 3 : (mode == V2 ? 6 : 9))
-                        .addCopies(GET_ALL_TABLES_FROM_DATABASE, mode == V2 ? 1 : 3)
                         .addCopies(GET_ALL_VIEWS_FROM_DATABASE, 1)
+                        .addCopies(GET_ALL_TABLES_FROM_DATABASE, mode == V2 ? 1 : 3)
                         .addCopies(GET_TABLE_WITH_PARAMETER, 1)
+                        .addCopies(GET_TABLE, switch (mode) {
+                            case NONE, V1 -> tables * 6;
+                            case V2 -> occurrences(type, tables * 2, tables * 3, tables * 3);
+                        })
                         .build(),
                 switch (type) {
                     case HIVE, ICEBERG -> ImmutableMultiset.of();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
-                            .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), 3)
-                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM), 3)
-                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM), 3)
+                            .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), tables)
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), tables)
+                            .build();
+                });
+
+        assertInvocations(session, "SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name LIKE 'test_select_i_s_columns%'",
+                ImmutableMultiset.builder()
+                        .addCopies(GET_ALL_VIEWS_FROM_DATABASE, 1)
+                        .addCopies(GET_ALL_TABLES_FROM_DATABASE, 1)
+                        .addCopies(GET_TABLE_WITH_PARAMETER, 1)
+                        .addCopies(GET_TABLE, tables * 2)
+                        .build(),
+                switch (type) {
+                    case HIVE -> ImmutableMultiset.of();
+                    case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
+                            .addCopies(new FileOperation(METADATA_JSON, "00004.metadata.json", INPUT_FILE_NEW_STREAM), tables)
+                            .build();
+                    case DELTA -> ImmutableMultiset.<FileOperation>builder()
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), tables)
+                            .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), tables)
+                            .build();
+                });
+
+        assertInvocations(session, "SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name = 'test_select_i_s_columns" + 0 + "'",
+                ImmutableMultiset.builder()
+                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 3))
+                        .build(),
+                switch (type) {
+                    case HIVE -> ImmutableMultiset.of();
+                    case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
+                            .addCopies(new FileOperation(METADATA_JSON, "00004.metadata.json", INPUT_FILE_NEW_STREAM), 1)
+                            .build();
+                    case DELTA -> ImmutableMultiset.<FileOperation>builder()
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), 1)
+                            .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), 1)
                             .build();
                 });
 
@@ -804,6 +842,9 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
             // Correctness check (needs to be done after invocations check, otherwise invocations check could report on cached state)
             assertThat(query(session, "TABLE information_schema.columns"))
                     .matches(computeActual("TABLE information_schema.columns"));
+
+            assertThat(query(session, "SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name LIKE 'test_select_i_s_columns%'"))
+                    .matches(computeActual("SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name LIKE 'test_select_i_s_columns%'"));
         }
     }
 
@@ -813,7 +854,11 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
         return DataProviders.cartesianProduct(
                 tableTypeDataProvider(),
                 Stream.of(InformationSchemaQueriesAcceleration.values())
-                        .collect(toDataProvider()));
+                        .collect(toDataProvider()),
+                new Object[][] {
+                        {3},
+                        {MAX_PREFIXES_COUNT},
+                        {MAX_PREFIXES_COUNT + 3}});
     }
 
     @Test
