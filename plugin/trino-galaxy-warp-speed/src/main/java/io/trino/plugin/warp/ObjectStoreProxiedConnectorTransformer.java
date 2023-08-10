@@ -123,9 +123,9 @@ public class ObjectStoreProxiedConnectorTransformer
     }
 
     @Override
-    public Object getConvertedPartitionValue(RowGroupData rowGroupData, ColumnHandle columnHandle)
+    public Optional<Object> getConvertedPartitionValue(RowGroupData rowGroupData, ColumnHandle columnHandle, Optional<String> nullPartitionValue)
     {
-        return getTransformer(columnHandle).getConvertedPartitionValue(rowGroupData, columnHandle);
+        return getTransformer(columnHandle).getConvertedPartitionValue(rowGroupData, columnHandle, nullPartitionValue);
     }
 
     @Override
