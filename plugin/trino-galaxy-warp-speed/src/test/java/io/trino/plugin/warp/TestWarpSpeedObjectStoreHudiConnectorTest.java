@@ -19,7 +19,7 @@ import io.trino.testing.QueryRunner;
 
 import static io.trino.plugin.objectstore.TableType.HUDI;
 
-public class TestWarpSpeedHudiConnectorTest
+public class TestWarpSpeedObjectStoreHudiConnectorTest
         extends TestObjectStoreHudiConnectorTest
 {
     @Override

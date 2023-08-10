@@ -19,7 +19,7 @@ import io.trino.testing.QueryRunner;
 
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
 
-public class TestWarpSpeedIcebergConnectorTest
+public class TestWarpSpeedObjectStoreIcebergConnectorTest
         extends TestObjectStoreIcebergConnectorTest
 {
     @Override

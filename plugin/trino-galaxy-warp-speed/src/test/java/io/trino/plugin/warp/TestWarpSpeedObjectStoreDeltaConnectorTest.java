@@ -19,7 +19,7 @@ import io.trino.testing.QueryRunner;
 
 import static io.trino.plugin.objectstore.TableType.DELTA;
 
-public class TestWarpSpeedDeltaConnectorTest
+public class TestWarpSpeedObjectStoreDeltaConnectorTest
         extends TestObjectStoreDeltaConnectorTest
 {
     @Override
