@@ -69,7 +69,7 @@ import static io.airlift.http.client.Request.Builder.preparePost;
 import static io.airlift.http.client.Request.Builder.preparePut;
 import static io.airlift.http.client.StatusResponseHandler.createStatusResponseHandler;
 import static io.airlift.json.JsonCodec.jsonCodec;
-import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
+import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_FACTORY;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static io.trino.sql.query.QueryAssertions.QueryAssert.newQueryAssert;
 import static io.trino.testing.MaterializedResult.resultBuilder;
@@ -107,7 +107,7 @@ public class TestMetadataOnlyQueries
 
         metastore = new FileHiveMetastore(
                 new NodeVersion("testversion"),
-                HDFS_ENVIRONMENT,
+                HDFS_FILE_SYSTEM_FACTORY,
                 new HiveMetastoreConfig().isHideDeltaLakeTables(),
                 new FileHiveMetastoreConfig()
                         .setCatalogDirectory(baseDir.toURI().toString())
