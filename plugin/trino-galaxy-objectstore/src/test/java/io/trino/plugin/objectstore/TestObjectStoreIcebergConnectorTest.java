@@ -168,15 +168,6 @@ public class TestObjectStoreIcebergConnectorTest
     }
 
     @Override
-    public void testWrittenDataSize()
-    {
-        // mechanism of reporting written bytes is to be dropped in OSS
-        // disabling test for now as Objectstore reports it cannot report writtenDataSize while connectors it wraps can
-        assertThatThrownBy(super::testWrittenDataSize)
-                .hasMessageContaining("expected:<[0]L> but was:<[1898]L>");
-    }
-
-    @Override
     @Test
     public void testShowCreateTable()
     {
