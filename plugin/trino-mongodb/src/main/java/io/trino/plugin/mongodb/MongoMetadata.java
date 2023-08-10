@@ -150,12 +150,12 @@ public class MongoMetadata
     }
 
     @Override
-    public void dropSchema(ConnectorSession session, String schemaName)
+    public void dropSchema(ConnectorSession session, String schemaName, boolean cascade)
     {
         if (mongoSession.isFederatedDatabase()) {
             throw new TrinoException(NOT_SUPPORTED, "Dropping schemas is not supported on Atlas data federation");
         }
-        mongoSession.dropSchema(schemaName);
+        mongoSession.dropSchema(schemaName, cascade);
     }
 
     @Override
