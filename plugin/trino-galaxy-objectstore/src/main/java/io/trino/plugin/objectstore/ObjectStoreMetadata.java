@@ -92,6 +92,7 @@ import io.trino.spi.connector.TableColumnsMetadata;
 import io.trino.spi.connector.TableNotFoundException;
 import io.trino.spi.connector.TableScanRedirectApplicationResult;
 import io.trino.spi.connector.ViewNotFoundException;
+import io.trino.spi.connector.WriterScalingOptions;
 import io.trino.spi.expression.ConnectorExpression;
 import io.trino.spi.procedure.Procedure;
 import io.trino.spi.security.TrinoPrincipal;
@@ -1276,6 +1277,20 @@ public class ObjectStoreMetadata
         return delegate(tableType(tableHandle)).getCacheColumnId(tableHandle, columnHandle);
     }
 
+    @Override
+    public WriterScalingOptions getNewTableWriterScalingOptions(ConnectorSession session, SchemaTableName tableName, Map<String, Object> tableProperties)
+    {
+        TableType tableType = tableType(tableProperties);
+        return delegate(tableType).getNewTableWriterScalingOptions(unwrap(tableType, session), tableName, unwrap(tableType, tableProperties));
+    }
+
+    @Override
+    public WriterScalingOptions getInsertWriterScalingOptions(ConnectorSession session, ConnectorTableHandle tableHandle)
+    {
+        TableType tableType = tableType(tableHandle);
+        return delegate(tableType).getInsertWriterScalingOptions(unwrap(tableType, session), tableHandle);
+    }
+
     private void flushMetadataCache()
     {
         try {
@@ -1435,7 +1450,12 @@ public class ObjectStoreMetadata
 
     private static TableType tableType(ConnectorTableMetadata tableMetadata)
     {
-        return (TableType) tableMetadata.getProperties().get("type");
+        return tableType(tableMetadata.getProperties());
+    }
+
+    private static TableType tableType(Map<String, Object> tableProperties)
+    {
+        return (TableType) tableProperties.get("type");
     }
 
     private Map<String, Object> wrap(TableType tableType, Map<String, Object> tableProperties)

@@ -53,6 +53,7 @@ import io.trino.spi.connector.TableFunctionApplicationResult;
 import io.trino.spi.connector.TableProcedureMetadata;
 import io.trino.spi.connector.TableScanRedirectApplicationResult;
 import io.trino.spi.connector.TopNApplicationResult;
+import io.trino.spi.connector.WriterScalingOptions;
 import io.trino.spi.eventlistener.EventListener;
 import io.trino.spi.expression.ConnectorExpression;
 import io.trino.spi.function.FunctionProvider;
@@ -143,6 +144,8 @@ public class MockConnectorFactory
     private final BiFunction<ConnectorSession, ConnectorTableExecuteHandle, Optional<ConnectorTableLayout>> getLayoutForTableExecute;
     private final Function<ConnectorTableHandle, ConnectorTableHandle> getCanonicalTableHandle;
 
+    private final WriterScalingOptions writerScalingOptions;
+
     private MockConnectorFactory(
             String name,
             List<PropertyMetadata<?>> sessionProperty,
@@ -192,7 +195,8 @@ public class MockConnectorFactory
             Function<ConnectorTableHandle, Optional<CacheTableId>> getCacheTableId,
             Function<ColumnHandle, Optional<CacheColumnId>> getCacheColumnId,
             Function<ConnectorTableHandle, ConnectorTableHandle> getCanonicalTableHandle,
-            BiFunction<ConnectorSession, ConnectorTableExecuteHandle, Optional<ConnectorTableLayout>> getLayoutForTableExecute)
+            BiFunction<ConnectorSession, ConnectorTableExecuteHandle, Optional<ConnectorTableLayout>> getLayoutForTableExecute,
+            WriterScalingOptions writerScalingOptions)
     {
         this.name = requireNonNull(name, "name is null");
         this.sessionProperty = ImmutableList.copyOf(requireNonNull(sessionProperty, "sessionProperty is null"));
@@ -243,6 +247,7 @@ public class MockConnectorFactory
         this.getCacheColumnId = requireNonNull(getCacheColumnId, "getCacheColumnId is null");
         this.getCanonicalTableHandle = requireNonNull(getCanonicalTableHandle, "getCacheColumnId is null");
         this.getLayoutForTableExecute = requireNonNull(getLayoutForTableExecute, "getLayoutForTableExecute is null");
+        this.writerScalingOptions = requireNonNull(writerScalingOptions, "writerScalingOptions is null");
     }
 
     @Override
@@ -302,7 +307,8 @@ public class MockConnectorFactory
                 getCacheTableId,
                 getCacheColumnId,
                 getCanonicalTableHandle,
-                getLayoutForTableExecute);
+                getLayoutForTableExecute,
+                writerScalingOptions);
     }
 
     public static MockConnectorFactory create()
@@ -455,6 +461,7 @@ public class MockConnectorFactory
         private Function<ColumnHandle, Optional<CacheColumnId>> getCacheColumnId = handle -> Optional.empty();
         private BiFunction<ConnectorSession, ConnectorTableExecuteHandle, Optional<ConnectorTableLayout>> getLayoutForTableExecute = (session, handle) -> Optional.empty();
         private Function<ConnectorTableHandle, ConnectorTableHandle> getCanonicalTableHandle = Function.identity();
+        private WriterScalingOptions writerScalingOptions = WriterScalingOptions.DISABLED;
 
         private Builder() {}
 
@@ -794,6 +801,12 @@ public class MockConnectorFactory
             return this;
         }
 
+        public Builder withWriterScalingOptions(WriterScalingOptions writerScalingOptions)
+        {
+            this.writerScalingOptions = writerScalingOptions;
+            return this;
+        }
+
         public MockConnectorFactory build()
         {
             Optional<ConnectorAccessControl> accessControl = Optional.empty();
@@ -849,7 +862,8 @@ public class MockConnectorFactory
                     getCacheTableId,
                     getCacheColumnId,
                     getCanonicalTableHandle,
-                    getLayoutForTableExecute);
+                    getLayoutForTableExecute,
+                    writerScalingOptions);
         }
 
         public static Function<ConnectorSession, List<String>> defaultListSchemaNames()

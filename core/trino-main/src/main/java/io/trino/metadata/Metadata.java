@@ -49,6 +49,7 @@ import io.trino.spi.connector.TableColumnsMetadata;
 import io.trino.spi.connector.TableFunctionApplicationResult;
 import io.trino.spi.connector.TableScanRedirectApplicationResult;
 import io.trino.spi.connector.TopNApplicationResult;
+import io.trino.spi.connector.WriterScalingOptions;
 import io.trino.spi.expression.ConnectorExpression;
 import io.trino.spi.function.AggregationFunctionMetadata;
 import io.trino.spi.function.FunctionMetadata;
@@ -768,4 +769,14 @@ public interface Metadata
     Optional<CacheColumnId> getCacheColumnId(Session session, TableHandle tableHandle, ColumnHandle columnHandle);
 
     TableHandle getCanonicalTableHandle(Session session, TableHandle handle);
+
+    /**
+     * Returns writer scaling options for the specified table. This method is called when table handle is not available during CTAS.
+     */
+    WriterScalingOptions getNewTableWriterScalingOptions(Session session, QualifiedObjectName tableName, Map<String, Object> tableProperties);
+
+    /**
+     * Returns writer scaling options for the specified table.
+     */
+    WriterScalingOptions getInsertWriterScalingOptions(Session session, TableHandle tableHandle);
 }
