@@ -209,20 +209,14 @@ public class ObjectStoreMetadata
         return hiveMetadata.listSchemaNames(unwrap(HIVE, session));
     }
 
-    @Nullable
     @Override
     @SuppressWarnings("deprecation")
     public ConnectorTableHandle getTableHandle(ConnectorSession session, SchemaTableName tableName)
     {
-        ConnectorTableHandle tableHandle = getTableHandleInOrder(session, tableName, tableTypeCache.getTableTypeAffinity(tableName));
-        if (tableHandle != null) {
-            tableTypeCache.record(tableName, tableType(tableHandle));
-        }
-        return tableHandle;
+        throw new UnsupportedOperationException("This method is not supported because getTableHandle with versions is implemented instead");
     }
 
     @Nullable
-    @SuppressWarnings("deprecation")
     private ConnectorTableHandle getTableHandleInOrder(ConnectorSession session, SchemaTableName tableName, List<TableType> candidateTypes)
     {
         checkArgument(candidateTypes.size() == 4);
@@ -243,7 +237,7 @@ public class ObjectStoreMetadata
 
                 case DELTA -> {
                     try {
-                        return deltaMetadata.getTableHandle(unwrap(DELTA, session), tableName);
+                        return deltaMetadata.getTableHandle(unwrap(DELTA, session), tableName, Optional.empty(), Optional.empty());
                     }
                     catch (TrinoException e) {
                         if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
@@ -255,7 +249,7 @@ public class ObjectStoreMetadata
 
                 case HUDI -> {
                     try {
-                        return hudiMetadata.getTableHandle(unwrap(HUDI, session), tableName);
+                        return hudiMetadata.getTableHandle(unwrap(HUDI, session), tableName, Optional.empty(), Optional.empty());
                     }
                     catch (TrinoException e) {
                         if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
@@ -267,7 +261,7 @@ public class ObjectStoreMetadata
 
                 case HIVE -> {
                     try {
-                        return hiveMetadata.getTableHandle(unwrap(HIVE, session), tableName);
+                        return hiveMetadata.getTableHandle(unwrap(HIVE, session), tableName, Optional.empty(), Optional.empty());
                     }
                     catch (TrinoException e) {
                         if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
@@ -293,7 +287,11 @@ public class ObjectStoreMetadata
             Optional<ConnectorTableVersion> endVersion)
     {
         if (startVersion.isEmpty() && endVersion.isEmpty()) {
-            return getTableHandle(session, tableName);
+            ConnectorTableHandle tableHandle = getTableHandleInOrder(session, tableName, tableTypeCache.getTableTypeAffinity(tableName));
+            if (tableHandle != null) {
+                tableTypeCache.record(tableName, tableType(tableHandle));
+            }
+            return tableHandle;
         }
 
         try {
@@ -747,7 +745,7 @@ public class ObjectStoreMetadata
             }
             for (SchemaTableName tableName : tables) {
                 try {
-                    ConnectorTableHandle table = getTableHandle(session, tableName);
+                    ConnectorTableHandle table = getTableHandle(session, tableName, Optional.empty(), Optional.empty());
                     if (table == null) {
                         throw new TrinoException(UNSUPPORTED_TABLE_TYPE, "Unexpected table present: " + tableName);
                     }
