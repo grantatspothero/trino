@@ -20,7 +20,8 @@ import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
-import com.starburstdata.presto.license.LicenseManager;
+import com.starburstdata.trino.plugins.license.LicenseManager;
+import com.starburstdata.trino.plugins.oracle.PasswordAuthenticationConnectionProvider;
 import com.starburstdata.trino.plugins.oracle.StarburstOracleClientModule;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.plugin.base.CatalogName;
@@ -43,7 +44,7 @@ import java.util.Properties;
 
 import static com.google.common.base.Verify.verify;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
-import static com.starburstdata.trino.plugins.oracle.StarburstOracleClientModule.getConnectionProperties;
+import static com.starburstdata.trino.plugins.oracle.UserPasswordModule.getConnectionProperties;
 import static io.trino.plugin.base.galaxy.RegionVerifier.addCrossRegionAllowed;
 import static io.trino.plugin.base.galaxy.RegionVerifier.addRegionLocalIpAddresses;
 
@@ -98,6 +99,7 @@ public class GalaxyOracleModule
                     config,
                     properties,
                     Optional.of(credentialProvider),
+                    new PasswordAuthenticationConnectionProvider(),
                     oracleConfig);
         }
 

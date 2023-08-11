@@ -14,6 +14,7 @@
 package io.trino.plugin.oracle;
 
 import com.google.common.net.HostAndPort;
+import com.starburstdata.trino.plugins.oracle.OracleConnectionProvider;
 import com.starburstdata.trino.plugins.oracle.OraclePoolingConnectionFactory;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.base.galaxy.RegionVerifier;
@@ -46,9 +47,9 @@ public class GalaxyOraclePoolingConnectionFactory
     private int sshTunnelPort;
     private boolean isUsingLatestSshTunnel;
 
-    public GalaxyOraclePoolingConnectionFactory(CatalogName catalogName, BaseJdbcConfig config, Properties connectionProperties, Optional<CredentialProvider> credentialProvider, OracleConfig oracleConfig)
+    public GalaxyOraclePoolingConnectionFactory(CatalogName catalogName, BaseJdbcConfig config, Properties connectionProperties, Optional<CredentialProvider> credentialProvider, OracleConnectionProvider oracleConnectionProvider, OracleConfig oracleConfig)
     {
-        super(catalogName, config, connectionProperties, credentialProvider, oracleConfig);
+        super(catalogName, config, connectionProperties, credentialProvider, oracleConnectionProvider, oracleConfig);
         this.connectionProperties = connectionProperties;
         this.connectionUrl = config.getConnectionUrl();
         this.tunnelManager =
