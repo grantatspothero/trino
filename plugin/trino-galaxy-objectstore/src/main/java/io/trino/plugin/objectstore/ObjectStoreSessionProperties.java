@@ -24,7 +24,6 @@ import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.security.ConnectorIdentity;
 import io.trino.spi.session.PropertyMetadata;
 import io.trino.spi.type.TimeZoneKey;
-import jakarta.annotation.Nullable;
 
 import java.time.Instant;
 import java.util.List;
@@ -220,13 +219,8 @@ public class ObjectStoreSessionProperties
             WrappedPropertyValue wrappedPropertyValue = baseSession.getProperty(name, WrappedPropertyValue.class);
             Object connectorValue = wrappedPropertyValue.value();
             if (connectorValue == null) {
-                @Nullable
-                @SuppressWarnings("NullableOptional")
-                Optional<Object> defaultValue = defaultPropertyValue.get(name, forType);
-                //noinspection OptionalAssignedToNull
-                if (defaultValue != null) {
-                    connectorValue = defaultValue.orElse(null);
-                }
+                Optional<Object> defaultValue = defaultPropertyValue.row(name).getOrDefault(forType, Optional.empty());
+                connectorValue = defaultValue.orElse(null);
             }
             return type.cast(connectorValue);
         }
