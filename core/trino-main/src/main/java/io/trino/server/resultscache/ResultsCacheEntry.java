@@ -99,6 +99,12 @@ public class ResultsCacheEntry
         }
 
         if (resultsData.isEmpty()) {
+            if (columns == null) {
+                log.warn("Null columns provided for results cache entry: %s for query %s", key, queryId);
+                valid = false;
+                return;
+            }
+
             resultsData = Optional.of(new ResultsData(columns));
         }
         resultsData.get().addRecords(data);
