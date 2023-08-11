@@ -541,6 +541,8 @@ jobs:
             !:trino-mongodb,
             !:trino-mysql,
             !:trino-oracle,
+            !:trino-orc,
+            !:trino-parquet,
             !:trino-phoenix5,
             !:trino-pinot,
             !:trino-postgresql,
@@ -629,6 +631,9 @@ jobs:
                 - plugin/trino-base-jdbc
                 - plugin/trino-memory
                 - plugin/trino-thrift
+            - modules:
+                - lib/trino-orc
+                - lib/trino-parquet
             - { modules: core/trino-main }
             - { modules: lib/trino-filesystem-s3, profile: cloud-tests }
             - { modules: plugin/trino-bigquery }
