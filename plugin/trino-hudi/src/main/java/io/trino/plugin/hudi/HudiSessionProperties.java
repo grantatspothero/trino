@@ -42,8 +42,6 @@ public class HudiSessionProperties
     private static final String COLUMNS_TO_HIDE = "columns_to_hide";
     private static final String METADATA_ENABLED = "metadata_enabled";
     private static final String USE_PARQUET_COLUMN_NAMES = "use_parquet_column_names";
-    private static final String PARQUET_OPTIMIZED_READER_ENABLED = "parquet_optimized_reader_enabled";
-    private static final String PARQUET_OPTIMIZED_NESTED_READER_ENABLED = "parquet_optimized_nested_reader_enabled";
     private static final String PARQUET_NATIVE_ZSTD_DECOMPRESSOR_ENABLED = "parquet_native_zstd_decompressor_enabled";
     private static final String PARQUET_NATIVE_SNAPPY_DECOMPRESSOR_ENABLED = "parquet_native_snappy_decompressor_enabled";
     private static final String PARQUET_VECTORIZED_DECODING_ENABLED = "parquet_vectorized_decoding_enabled";
@@ -80,16 +78,6 @@ public class HudiSessionProperties
                         USE_PARQUET_COLUMN_NAMES,
                         "Access parquet columns using names from the file. If disabled, then columns are accessed using index.",
                         hudiConfig.getUseParquetColumnNames(),
-                        false),
-                booleanProperty(
-                        PARQUET_OPTIMIZED_READER_ENABLED,
-                        "Use optimized Parquet reader",
-                        parquetReaderConfig.isOptimizedReaderEnabled(),
-                        false),
-                booleanProperty(
-                        PARQUET_OPTIMIZED_NESTED_READER_ENABLED,
-                        "Use optimized Parquet reader for nested columns",
-                        parquetReaderConfig.isOptimizedNestedReaderEnabled(),
                         false),
                 booleanProperty(
                         PARQUET_NATIVE_ZSTD_DECOMPRESSOR_ENABLED,
@@ -163,16 +151,6 @@ public class HudiSessionProperties
     public static boolean shouldUseParquetColumnNames(ConnectorSession session)
     {
         return session.getProperty(USE_PARQUET_COLUMN_NAMES, Boolean.class);
-    }
-
-    public static boolean isParquetOptimizedReaderEnabled(ConnectorSession session)
-    {
-        return session.getProperty(PARQUET_OPTIMIZED_READER_ENABLED, Boolean.class);
-    }
-
-    public static boolean isParquetOptimizedNestedReaderEnabled(ConnectorSession session)
-    {
-        return session.getProperty(PARQUET_OPTIMIZED_NESTED_READER_ENABLED, Boolean.class);
     }
 
     public static boolean isParquetNativeZstdDecompressorEnabled(ConnectorSession session)

@@ -106,8 +106,6 @@ public final class HiveSessionProperties
     private static final String PARQUET_USE_BLOOM_FILTER = "parquet_use_bloom_filter";
     private static final String PARQUET_MAX_READ_BLOCK_SIZE = "parquet_max_read_block_size";
     private static final String PARQUET_MAX_READ_BLOCK_ROW_COUNT = "parquet_max_read_block_row_count";
-    private static final String PARQUET_OPTIMIZED_READER_ENABLED = "parquet_optimized_reader_enabled";
-    private static final String PARQUET_OPTIMIZED_NESTED_READER_ENABLED = "parquet_optimized_nested_reader_enabled";
     private static final String PARQUET_NATIVE_ZSTD_DECOMPRESSOR_ENABLED = "parquet_native_zstd_decompressor_enabled";
     private static final String PARQUET_NATIVE_SNAPPY_DECOMPRESSOR_ENABLED = "parquet_native_snappy_decompressor_enabled";
     private static final String PARQUET_VECTORIZED_DECODING_ENABLED = "parquet_vectorized_decoding_enabled";
@@ -434,16 +432,6 @@ public final class HiveSessionProperties
                                         format("%s must be between 128 and 65536: %s", PARQUET_MAX_READ_BLOCK_ROW_COUNT, value));
                             }
                         },
-                        false),
-                booleanProperty(
-                        PARQUET_OPTIMIZED_READER_ENABLED,
-                        "Use optimized Parquet reader",
-                        parquetReaderConfig.isOptimizedReaderEnabled(),
-                        false),
-                booleanProperty(
-                        PARQUET_OPTIMIZED_NESTED_READER_ENABLED,
-                        "Use optimized Parquet reader for nested columns",
-                        parquetReaderConfig.isOptimizedNestedReaderEnabled(),
                         false),
                 booleanProperty(
                         PARQUET_NATIVE_ZSTD_DECOMPRESSOR_ENABLED,
@@ -899,16 +887,6 @@ public final class HiveSessionProperties
     public static int getParquetMaxReadBlockRowCount(ConnectorSession session)
     {
         return session.getProperty(PARQUET_MAX_READ_BLOCK_ROW_COUNT, Integer.class);
-    }
-
-    public static boolean isParquetOptimizedReaderEnabled(ConnectorSession session)
-    {
-        return session.getProperty(PARQUET_OPTIMIZED_READER_ENABLED, Boolean.class);
-    }
-
-    public static boolean isParquetOptimizedNestedReaderEnabled(ConnectorSession session)
-    {
-        return session.getProperty(PARQUET_OPTIMIZED_NESTED_READER_ENABLED, Boolean.class);
     }
 
     public static boolean isParquetNativeZstdDecompressorEnabled(ConnectorSession session)

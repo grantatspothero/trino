@@ -162,8 +162,6 @@ import static io.trino.plugin.iceberg.IcebergSessionProperties.isOrcNativeZstdDe
 import static io.trino.plugin.iceberg.IcebergSessionProperties.isOrcNestedLazy;
 import static io.trino.plugin.iceberg.IcebergSessionProperties.isParquetNativeSnappyDecompressorEnabled;
 import static io.trino.plugin.iceberg.IcebergSessionProperties.isParquetNativeZstdDecompressorEnabled;
-import static io.trino.plugin.iceberg.IcebergSessionProperties.isParquetOptimizedNestedReaderEnabled;
-import static io.trino.plugin.iceberg.IcebergSessionProperties.isParquetOptimizedReaderEnabled;
 import static io.trino.plugin.iceberg.IcebergSessionProperties.isParquetVectorizedDecodingEnabled;
 import static io.trino.plugin.iceberg.IcebergSessionProperties.isUseFileSizeFromMetadata;
 import static io.trino.plugin.iceberg.IcebergSessionProperties.useParquetBloomFilter;
@@ -510,9 +508,7 @@ public class IcebergPageSourceProvider
                         parquetReaderOptions
                                 .withMaxReadBlockSize(getParquetMaxReadBlockSize(session))
                                 .withMaxReadBlockRowCount(getParquetMaxReadBlockRowCount(session))
-                                .withBatchColumnReaders(isParquetOptimizedReaderEnabled(session))
                                 .withBloomFilter(useParquetBloomFilter(session))
-                                .withBatchNestedColumnReaders(isParquetOptimizedNestedReaderEnabled(session))
                                 .withNativeZstdDecompressorEnabled(isParquetNativeZstdDecompressorEnabled(session))
                                 .withNativeSnappyDecompressorEnabled(isParquetNativeSnappyDecompressorEnabled(session))
                                 .withVectorizedDecodingEnabled(isParquetVectorizedDecodingEnabled(session)),

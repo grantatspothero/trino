@@ -93,8 +93,6 @@ import static io.trino.plugin.hive.HiveSessionProperties.getParquetMaxReadBlockS
 import static io.trino.plugin.hive.HiveSessionProperties.isParquetIgnoreStatistics;
 import static io.trino.plugin.hive.HiveSessionProperties.isParquetNativeSnappyDecompressorEnabled;
 import static io.trino.plugin.hive.HiveSessionProperties.isParquetNativeZstdDecompressorEnabled;
-import static io.trino.plugin.hive.HiveSessionProperties.isParquetOptimizedNestedReaderEnabled;
-import static io.trino.plugin.hive.HiveSessionProperties.isParquetOptimizedReaderEnabled;
 import static io.trino.plugin.hive.HiveSessionProperties.isParquetUseColumnIndex;
 import static io.trino.plugin.hive.HiveSessionProperties.isParquetVectorizedDecodingEnabled;
 import static io.trino.plugin.hive.HiveSessionProperties.isUseParquetColumnNames;
@@ -199,8 +197,6 @@ public class ParquetPageSourceFactory
                         .withMaxReadBlockRowCount(getParquetMaxReadBlockRowCount(session))
                         .withUseColumnIndex(isParquetUseColumnIndex(session))
                         .withBloomFilter(useParquetBloomFilter(session))
-                        .withBatchColumnReaders(isParquetOptimizedReaderEnabled(session))
-                        .withBatchNestedColumnReaders(isParquetOptimizedNestedReaderEnabled(session))
                         .withNativeZstdDecompressorEnabled(isParquetNativeZstdDecompressorEnabled(session))
                         .withNativeSnappyDecompressorEnabled(isParquetNativeSnappyDecompressorEnabled(session))
                         .withVectorizedDecodingEnabled(isParquetVectorizedDecodingEnabled(session)),

@@ -76,8 +76,6 @@ import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.getParquetMax
 import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.getParquetMaxReadBlockSize;
 import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.isParquetNativeSnappyDecompressorEnabled;
 import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.isParquetNativeZstdDecompressorEnabled;
-import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.isParquetOptimizedNestedReaderEnabled;
-import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.isParquetOptimizedReaderEnabled;
 import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.isParquetUseColumnIndex;
 import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.isParquetVectorizedDecodingEnabled;
 import static io.trino.plugin.deltalake.transactionlog.DeltaLakeSchemaSupport.extractSchema;
@@ -187,8 +185,6 @@ public class DeltaLakePageSourceProvider
         ParquetReaderOptions options = parquetReaderOptions.withMaxReadBlockSize(getParquetMaxReadBlockSize(session))
                 .withMaxReadBlockRowCount(getParquetMaxReadBlockRowCount(session))
                 .withUseColumnIndex(isParquetUseColumnIndex(session))
-                .withBatchColumnReaders(isParquetOptimizedReaderEnabled(session))
-                .withBatchNestedColumnReaders(isParquetOptimizedNestedReaderEnabled(session))
                 .withNativeZstdDecompressorEnabled(isParquetNativeZstdDecompressorEnabled(session))
                 .withNativeSnappyDecompressorEnabled(isParquetNativeSnappyDecompressorEnabled(session))
                 .withVectorizedDecodingEnabled(isParquetVectorizedDecodingEnabled(session));

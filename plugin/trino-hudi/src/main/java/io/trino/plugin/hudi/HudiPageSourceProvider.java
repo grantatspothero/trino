@@ -89,8 +89,6 @@ import static io.trino.plugin.hudi.HudiErrorCode.HUDI_INVALID_PARTITION_VALUE;
 import static io.trino.plugin.hudi.HudiErrorCode.HUDI_UNSUPPORTED_FILE_FORMAT;
 import static io.trino.plugin.hudi.HudiSessionProperties.isParquetNativeSnappyDecompressorEnabled;
 import static io.trino.plugin.hudi.HudiSessionProperties.isParquetNativeZstdDecompressorEnabled;
-import static io.trino.plugin.hudi.HudiSessionProperties.isParquetOptimizedNestedReaderEnabled;
-import static io.trino.plugin.hudi.HudiSessionProperties.isParquetOptimizedReaderEnabled;
 import static io.trino.plugin.hudi.HudiSessionProperties.isParquetVectorizedDecodingEnabled;
 import static io.trino.plugin.hudi.HudiSessionProperties.shouldUseParquetColumnNames;
 import static io.trino.plugin.hudi.HudiUtil.getHudiFileFormat;
@@ -171,9 +169,7 @@ public class HudiPageSourceProvider
                 split,
                 inputFile,
                 dataSourceStats,
-                options.withBatchColumnReaders(isParquetOptimizedReaderEnabled(session))
-                        .withBatchNestedColumnReaders(isParquetOptimizedNestedReaderEnabled(session))
-                        .withNativeZstdDecompressorEnabled(isParquetNativeZstdDecompressorEnabled(session))
+                options.withNativeZstdDecompressorEnabled(isParquetNativeZstdDecompressorEnabled(session))
                         .withNativeSnappyDecompressorEnabled(isParquetNativeSnappyDecompressorEnabled(session))
                         .withVectorizedDecodingEnabled(isParquetVectorizedDecodingEnabled(session)),
                 timeZone);
