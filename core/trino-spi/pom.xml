@@ -202,6 +202,15 @@
                         <revapi.differences>
                             <ignore>true</ignore>
                             <differences>
+                                <!-- Galaxy internal changes -->
+                                <item>
+                                    <ignore>true</ignore>
+                                    <code>java.method.addedToInterface</code>
+                                    <new>method long io.trino.spi.connector.DynamicFilter::getPreferredDynamicFilterTimeout()</new>
+                                    <justification>Internal change</justification>
+                                </item>
+                                <!-- / Galaxy internal changes -->
+
                                 <!-- Allow adding new annotations (such as @Nullable) -->
                                 <item>
                                     <code>java.annotation.added</code>
@@ -230,12 +239,6 @@
                                 </item>
                                 <!-- Backwards incompatible changes since the previous release -->
                                 <!-- Any exclusions below can be deleted after each release -->
-                                <item>
-                                    <ignore>true</ignore>
-                                    <code>java.method.addedToInterface</code>
-                                    <new>method long io.trino.spi.connector.DynamicFilter::getPreferredDynamicFilterTimeout()</new>
-                                    <justification>Internal change</justification>
-                                </item>
                             </differences>
                         </revapi.differences>
                     </analysisConfiguration>
