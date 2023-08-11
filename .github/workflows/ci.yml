@@ -514,11 +514,12 @@ jobs:
         run: |
           $MAVEN test ${MAVEN_TEST} -pl '
             !:trino-accumulo,
+            !:trino-base-jdbc,
             !:trino-bigquery,
             !:trino-cassandra,
             !:trino-clickhouse,
             !:trino-delta-lake,
-            !:trino-docs,!:trino-server,!:trino-server-rpm,
+            !:trino-docs,
             !:trino-druid,
             !:trino-elasticsearch,
             !:trino-faulttolerant-tests,
@@ -531,11 +532,12 @@ jobs:
             !:trino-hudi,
             !:trino-iceberg,
             !:trino-ignite,
-            !:trino-jdbc,!:trino-base-jdbc,!:trino-thrift,!:trino-memory,
+            !:trino-jdbc,
             !:trino-kafka,
             !:trino-kudu,
             !:trino-main,
             !:trino-mariadb,
+            !:trino-memory,
             !:trino-mongodb,
             !:trino-mysql,
             !:trino-oracle,
@@ -545,11 +547,14 @@ jobs:
             !:trino-raptor-legacy,
             !:trino-redis,
             !:trino-redshift,
+            !:trino-server,
+            !:trino-server-rpm,
             !:trino-singlestore,
             !:trino-sqlserver,
             !:trino-test-jdbc-compatibility-old-server,
             !:trino-tests,
-            !:trino-tests-galaxy-buffer-exchange'
+            !:trino-tests-galaxy-buffer-exchange,
+            !:trino-thrift'
       - name: trino-hdfs isolated JVM tests
         # Isolate HDFS file system cache concurrency test to avoid flakiness
         run: |
@@ -619,7 +624,11 @@ jobs:
           touch gib-impacted.log
           cat <<EOF > .github/test-matrix.yaml
           include:
-            - { modules: [ client/trino-jdbc, plugin/trino-base-jdbc, plugin/trino-thrift, plugin/trino-memory ] }
+            - modules:
+                - client/trino-jdbc
+                - plugin/trino-base-jdbc
+                - plugin/trino-memory
+                - plugin/trino-thrift
             - { modules: core/trino-main }
             - { modules: lib/trino-filesystem-s3, profile: cloud-tests }
             - { modules: plugin/trino-bigquery }
