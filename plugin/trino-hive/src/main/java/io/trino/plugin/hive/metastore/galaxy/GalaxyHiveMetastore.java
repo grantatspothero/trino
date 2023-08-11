@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.hive.metastore.galaxy;
 
+import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -22,6 +23,7 @@ import io.airlift.log.Logger;
 import io.starburst.stargate.metastore.client.Column;
 import io.starburst.stargate.metastore.client.EntityAlreadyExistsException;
 import io.starburst.stargate.metastore.client.EntityNotFoundException;
+import io.starburst.stargate.metastore.client.GetTablesResult;
 import io.starburst.stargate.metastore.client.Metastore;
 import io.starburst.stargate.metastore.client.MetastoreException;
 import io.starburst.stargate.metastore.client.PartitionName;
@@ -49,6 +51,7 @@ import io.trino.plugin.hive.metastore.thrift.ThriftMetastoreUtil;
 import io.trino.plugin.hive.util.HiveWriteUtils;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ColumnNotFoundException;
+import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.SchemaNotFoundException;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TableNotFoundException;
@@ -58,6 +61,7 @@ import io.trino.spi.security.RoleGrant;
 import io.trino.spi.type.Type;
 import org.apache.hadoop.fs.Path;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -68,14 +72,17 @@ import java.util.function.Function;
 import static com.google.common.base.Strings.emptyToNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.Streams.stream;
 import static io.trino.filesystem.Locations.appendPath;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_METASTORE_ERROR;
 import static io.trino.plugin.hive.HivePartitionManager.extractPartitionValues;
 import static io.trino.plugin.hive.TableType.MANAGED_TABLE;
 import static io.trino.plugin.hive.metastore.MetastoreUtil.makePartitionName;
 import static io.trino.plugin.hive.metastore.MetastoreUtil.toPartitionName;
+import static io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreSessionProperties.getMetastoreStreamTablesFetchSize;
 import static io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreUtils.PUBLIC_ROLE_NAME;
 import static io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreUtils.fromGalaxyStatistics;
+import static io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreUtils.fromGalaxyTable;
 import static io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreUtils.toGalaxyDatabase;
 import static io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreUtils.toGalaxyPartitionWithStatistics;
 import static io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreUtils.toGalaxyStatistics;
@@ -103,7 +110,11 @@ public class GalaxyHiveMetastore
 
     public GalaxyHiveMetastore(GalaxyHiveMetastoreConfig config, HdfsEnvironment hdfsEnvironment, HttpClient httpClient)
     {
-        this(new RestMetastore(config.getMetastoreId(), config.getSharedSecret(), config.getServerUri(), httpClient), hdfsEnvironment, config.getDefaultDataDirectory(), config.isBatchMetadataFetch());
+        this(
+                new RestMetastore(config.getMetastoreId(), config.getSharedSecret(), config.getServerUri(), httpClient),
+                hdfsEnvironment,
+                config.getDefaultDataDirectory(),
+                config.isBatchMetadataFetch());
     }
 
     public GalaxyHiveMetastore(Metastore metastore, HdfsEnvironment hdfsEnvironment, String defaultDirectory, boolean batchMetadataFetch)
@@ -296,6 +307,57 @@ public class GalaxyHiveMetastore
         catch (MetastoreException e) {
             throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
         }
+    }
+
+    @Override
+    public Optional<Iterator<Table>> streamTables(ConnectorSession session, String databaseName)
+    {
+        return Optional.of(new AbstractIterator<>()
+        {
+            private Iterator<io.starburst.stargate.metastore.client.Table> delegate;
+
+            @Override
+            protected Table computeNext()
+            {
+                try {
+                    if (delegate == null) {
+                        delegate = stream(paginateGetTables(session, databaseName))
+                                .flatMap(List::stream)
+                                .iterator();
+                    }
+
+                    if (!delegate.hasNext()) {
+                        return endOfData();
+                    }
+                    return fromGalaxyTable(delegate.next());
+                }
+                catch (MetastoreException e) {
+                    throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+                }
+            }
+        });
+    }
+
+    private Iterator<List<io.starburst.stargate.metastore.client.Table>> paginateGetTables(ConnectorSession session, String databaseName)
+    {
+        return new AbstractIterator<>()
+        {
+            private final Optional<Integer> desiredLimit = getMetastoreStreamTablesFetchSize(session);
+            private boolean firstRequest = true;
+            private Optional<String> nextToken = Optional.empty();
+
+            @Override
+            protected List<io.starburst.stargate.metastore.client.Table> computeNext()
+            {
+                if (nextToken.isEmpty() && !firstRequest) {
+                    return endOfData();
+                }
+                GetTablesResult result = metastore.getTables(databaseName, desiredLimit, nextToken);
+                firstRequest = false;
+                nextToken = result.nextToken();
+                return result.tables();
+            }
+        };
     }
 
     @Override

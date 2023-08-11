@@ -245,6 +245,15 @@ public class SemiTransactionalHiveMetastore
         return delegate.getAllTables(databaseName);
     }
 
+    public synchronized Iterator<Table> streamTables(ConnectorSession session, String databaseName)
+    {
+        checkReadable();
+        if (!tableActions.isEmpty()) {
+            throw new UnsupportedOperationException("Streaming all tables after adding/dropping/altering tables/views in a transaction is not supported");
+        }
+        return delegate.streamTables(session, databaseName);
+    }
+
     public synchronized Optional<List<SchemaTableName>> getAllTables()
     {
         checkReadable();

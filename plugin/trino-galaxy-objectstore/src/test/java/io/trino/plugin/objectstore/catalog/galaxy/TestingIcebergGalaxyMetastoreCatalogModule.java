@@ -18,6 +18,7 @@ import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.airlift.units.Duration;
+import io.trino.plugin.base.session.SessionPropertiesProvider;
 import io.trino.plugin.hive.AllowHiveTableRename;
 import io.trino.plugin.hive.metastore.DecoratedHiveMetastoreModule;
 import io.trino.plugin.hive.metastore.HiveMetastore;
@@ -25,6 +26,7 @@ import io.trino.plugin.hive.metastore.HiveMetastoreFactory;
 import io.trino.plugin.hive.metastore.RawHiveMetastoreFactory;
 import io.trino.plugin.hive.metastore.cache.CachingHiveMetastoreConfig;
 import io.trino.plugin.hive.metastore.galaxy.ForGalaxyMetastore;
+import io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreSessionProperties;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
 import io.trino.plugin.iceberg.catalog.MetastoreValidator;
 import io.trino.plugin.iceberg.catalog.TrinoCatalogFactory;
@@ -72,5 +74,8 @@ public class TestingIcebergGalaxyMetastoreCatalogModule
 
         Multibinder<Procedure> procedures = newSetBinder(binder, Procedure.class);
         procedures.addBinding().toProvider(MigrateProcedure.class).in(Scopes.SINGLETON);
+
+        newSetBinder(binder, SessionPropertiesProvider.class)
+                .addBinding().to(GalaxyMetastoreSessionProperties.class).in(Scopes.SINGLETON);
     }
 }

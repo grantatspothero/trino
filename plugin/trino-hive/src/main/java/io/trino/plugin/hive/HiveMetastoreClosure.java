@@ -28,12 +28,14 @@ import io.trino.plugin.hive.metastore.Partition;
 import io.trino.plugin.hive.metastore.PartitionWithStatistics;
 import io.trino.plugin.hive.metastore.PrincipalPrivileges;
 import io.trino.plugin.hive.metastore.Table;
+import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TableNotFoundException;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.security.RoleGrant;
 import io.trino.spi.type.Type;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -160,6 +162,17 @@ public class HiveMetastoreClosure
     public Optional<List<SchemaTableName>> getAllViews()
     {
         return delegate.getAllViews();
+    }
+
+    public Iterator<Table> streamTables(ConnectorSession session, String databaseName)
+    {
+        return delegate.streamTables(session, databaseName)
+                // Default streamTables implementation provided here has the benefit of hitting the caching metastore
+                // (transaction-scoped and global if enabled).
+                .orElseGet(() -> getAllTables(databaseName).stream()
+                        .map(tableName -> getTable(databaseName, tableName))
+                        .flatMap(Optional::stream)
+                        .iterator());
     }
 
     public void createDatabase(Database database)

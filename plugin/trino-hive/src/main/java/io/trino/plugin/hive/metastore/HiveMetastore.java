@@ -23,17 +23,20 @@ import io.trino.plugin.hive.acid.AcidOperation;
 import io.trino.plugin.hive.acid.AcidTransaction;
 import io.trino.plugin.hive.metastore.HivePrivilegeInfo.HivePrivilege;
 import io.trino.spi.TrinoException;
+import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.security.RoleGrant;
 import io.trino.spi.type.Type;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 
@@ -78,6 +81,17 @@ public interface HiveMetastore
      * @return List of views including materialized views names from all schemas or Optional.empty if operation is not supported
      */
     Optional<List<SchemaTableName>> getAllViews();
+
+    /**
+     * Gets tables from a database. Equivalent of {@link #getAllTables} and calling {@link #getTable(String, String)} on each name.
+     * Optional operation. Should be implemented only when the operation is cheaper than calling {@link #getAllTables} and then
+     * {@link #getTable(String, String)} on each name.
+     *
+     * @apiNote This returns {@link Iterator} and not e.g. a {@link Stream} because implementations often need to implement
+     * iteration directly, e.g. for the sake of error-handling. Having Stream return type could lead to less robust implementation
+     * patterns.
+     */
+    Optional<Iterator<Table>> streamTables(ConnectorSession session, String databaseName);
 
     void createDatabase(Database database);
 

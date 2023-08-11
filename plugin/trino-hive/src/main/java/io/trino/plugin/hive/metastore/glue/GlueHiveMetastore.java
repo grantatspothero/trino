@@ -59,6 +59,7 @@ import com.amazonaws.services.glue.model.UpdateTableRequest;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
+import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -105,6 +106,7 @@ import io.trino.plugin.hive.metastore.glue.converter.GlueToTrinoConverter.GluePa
 import io.trino.plugin.hive.util.HiveUtil;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ColumnNotFoundException;
+import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.SchemaNotFoundException;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TableNotFoundException;
@@ -121,6 +123,7 @@ import java.time.Duration;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -476,6 +479,48 @@ public class GlueHiveMetastore
         catch (AmazonServiceException e) {
             throw new TrinoException(HIVE_METASTORE_ERROR, e);
         }
+    }
+
+    @Override
+    public Optional<Iterator<Table>> streamTables(ConnectorSession session, String databaseName)
+    {
+        return Optional.of(new AbstractIterator<>()
+        {
+            private Iterator<com.amazonaws.services.glue.model.Table> delegate;
+
+            @Override
+            protected Table computeNext()
+            {
+                boolean firstCall = false;
+                try {
+                    if (delegate == null) {
+                        firstCall = true;
+                        delegate = getGlueTables(databaseName)
+                                .filter(tableFilter)
+                                .iterator();
+                    }
+
+                    if (!delegate.hasNext()) {
+                        return endOfData();
+                    }
+                    return GlueToTrinoConverter.convertTable(delegate.next(), databaseName);
+                }
+                catch (EntityNotFoundException e) {
+                    // database does not exist or deleted during iteration
+                    return endOfData();
+                }
+                catch (AccessDeniedException e) {
+                    // permission denied may actually mean "does not exist"
+                    if (!firstCall) {
+                        log.warn(e, "Permission denied when getting next batch of tables from database %s", databaseName);
+                    }
+                    return endOfData();
+                }
+                catch (AmazonServiceException e) {
+                    throw new TrinoException(HIVE_METASTORE_ERROR, e);
+                }
+            }
+        });
     }
 
     @Override

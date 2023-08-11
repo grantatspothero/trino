@@ -13,9 +13,13 @@
  */
 package io.trino.plugin.hive.metastore.galaxy;
 
+import com.google.common.collect.ImmutableList;
 import io.trino.plugin.hive.AbstractTestHiveLocal;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
+import io.trino.spi.connector.ConnectorSession;
+import io.trino.spi.session.PropertyMetadata;
+import io.trino.testing.TestingConnectorSession;
 import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -24,6 +28,7 @@ import java.io.File;
 import java.io.IOException;
 
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
+import static io.trino.plugin.hive.HiveTestUtils.getHiveSessionProperties;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestGalaxyHiveMetastore
@@ -56,6 +61,18 @@ public class TestGalaxyHiveMetastore
             cockroach.close();
             cockroach = null;
         }
+    }
+
+    @Override
+    protected ConnectorSession newSession()
+    {
+        return TestingConnectorSession.builder()
+                .setPropertyMetadata(
+                        ImmutableList.<PropertyMetadata<?>>builder()
+                                .addAll(getHiveSessionProperties(getHiveConfig()).getSessionProperties())
+                                .addAll(new GalaxyMetastoreSessionProperties().getSessionProperties())
+                                .build())
+                .build();
     }
 
     @Override

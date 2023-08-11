@@ -1108,6 +1108,18 @@ public abstract class AbstractTestHive
     }
 
     @Test
+    public void testStreamTables()
+    {
+        try (Transaction transaction = newTransaction()) {
+            List<Table> tables = ImmutableList.copyOf(transaction.getMetastore().streamTables(newSession(), database));
+
+            assertThat(tables.stream()
+                    .map(Table::getTableName))
+                    .contains(tablePartitionFormat.getTableName(), tableUnpartitioned.getTableName());
+        }
+    }
+
+    @Test
     public void testGetAllTableColumns()
     {
         try (Transaction transaction = newTransaction()) {

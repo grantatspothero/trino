@@ -16,10 +16,12 @@ package io.trino.plugin.hive.metastore.galaxy;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
+import io.trino.plugin.base.session.SessionPropertiesProvider;
 import io.trino.plugin.hive.AllowHiveTableRename;
 import io.trino.plugin.hive.metastore.HiveMetastoreFactory;
 import io.trino.plugin.hive.metastore.RawHiveMetastoreFactory;
 
+import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.airlift.http.client.HttpClientBinder.httpClientBinder;
 
@@ -33,5 +35,7 @@ public class GalaxyMetastoreModule
         binder.bind(HiveMetastoreFactory.class).annotatedWith(RawHiveMetastoreFactory.class).to(GalaxyHiveMetastoreFactory.class).in(Scopes.SINGLETON);
         binder.bind(boolean.class).annotatedWith(AllowHiveTableRename.class).toInstance(true);
         httpClientBinder(binder).bindHttpClient("galaxy-metastore", ForGalaxyMetastore.class);
+        newSetBinder(binder, SessionPropertiesProvider.class)
+                .addBinding().to(GalaxyMetastoreSessionProperties.class).in(Scopes.SINGLETON);
     }
 }

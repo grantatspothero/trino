@@ -26,6 +26,7 @@ import io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method;
 import io.trino.plugin.hive.metastore.CountingAccessHiveMetastoreUtil;
 import io.trino.plugin.hive.metastore.Table;
 import io.trino.plugin.hive.metastore.UnimplementedHiveMetastore;
+import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.DataProviders;
@@ -35,6 +36,7 @@ import org.intellij.lang.annotations.Language;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -695,6 +697,12 @@ public class TestHiveMetastoreMetadataQueriesAccessOperations
             if (allTablesViewsImplemented) {
                 return Optional.of(ImmutableList.of());
             }
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<Iterator<Table>> streamTables(ConnectorSession session, String databaseName)
+        {
             return Optional.empty();
         }
 
