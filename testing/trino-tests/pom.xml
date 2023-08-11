@@ -357,7 +357,7 @@
         <dependency>
             <groupId>io.trino</groupId>
             <artifactId>trino-teradata-functions</artifactId>
-            <version>${version}</version>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
 
