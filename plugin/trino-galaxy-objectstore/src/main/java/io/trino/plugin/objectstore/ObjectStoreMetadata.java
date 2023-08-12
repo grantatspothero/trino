@@ -786,6 +786,7 @@ public class ObjectStoreMetadata
         }
         tableMetadata = unwrap(tableType, tableMetadata);
         delegate(tableType).createTable(unwrap(tableType, session), tableMetadata, ignoreExisting);
+        tableTypeCache.record(tableMetadata.getTableSchema().getTable(), tableType);
         flushMetadataCache(tableMetadata.getTable());
     }
 
@@ -1038,8 +1039,25 @@ public class ObjectStoreMetadata
     @Override
     public Optional<ConnectorOutputMetadata> finishCreateTable(ConnectorSession session, ConnectorOutputTableHandle outputHandle, Collection<Slice> fragments, Collection<ComputedStatistics> computedStatistics)
     {
-        TableType tableType = tableType(outputHandle);
+        TableType tableType;
+        SchemaTableName schemaTableName;
+        if (outputHandle instanceof HiveOutputTableHandle hiveOutputTableHandle) {
+            tableType = HIVE;
+            schemaTableName = hiveOutputTableHandle.getSchemaTableName();
+        }
+        else if (outputHandle instanceof IcebergWritableTableHandle icebergWritableTableHandle) {
+            tableType = ICEBERG;
+            schemaTableName = icebergWritableTableHandle.getName();
+        }
+        else if (outputHandle instanceof DeltaLakeOutputTableHandle deltaLakeOutputTableHandle) {
+            tableType = DELTA;
+            schemaTableName = new SchemaTableName(deltaLakeOutputTableHandle.getTableName(), deltaLakeOutputTableHandle.getSchemaName());
+        }
+        else {
+            throw new UnsupportedOperationException("Unhandled class: " + outputHandle.getClass().getName());
+        }
         Optional<ConnectorOutputMetadata> outputMetadata = delegate(tableType).finishCreateTable(unwrap(tableType, session), outputHandle, fragments, computedStatistics);
+        tableTypeCache.record(schemaTableName, tableType);
         flushMetadataCache(tableName(outputHandle));
         return outputMetadata;
     }
@@ -1376,20 +1394,6 @@ public class ObjectStoreMetadata
             return ICEBERG;
         }
         if (handle instanceof DeltaLakeInsertTableHandle) {
-            return DELTA;
-        }
-        throw new VerifyException("Unhandled class: " + handle.getClass().getName());
-    }
-
-    private static TableType tableType(ConnectorOutputTableHandle handle)
-    {
-        if (handle instanceof HiveOutputTableHandle) {
-            return HIVE;
-        }
-        if (handle instanceof IcebergWritableTableHandle) {
-            return ICEBERG;
-        }
-        if (handle instanceof DeltaLakeOutputTableHandle) {
             return DELTA;
         }
         throw new VerifyException("Unhandled class: " + handle.getClass().getName());

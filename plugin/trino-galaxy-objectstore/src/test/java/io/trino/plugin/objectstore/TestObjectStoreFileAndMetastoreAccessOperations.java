@@ -248,7 +248,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
 
         assertInvocations("SELECT * FROM test_select_from",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(type, 4, 2, 3))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 3))
                         .build(),
                 switch (type) {
                     case HIVE -> ImmutableMultiset.<FileOperation>builder()
@@ -274,7 +274,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
 
         assertInvocations("SELECT * FROM test_select_partition",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(type, 5, 2, 3))
+                        .addCopies(GET_TABLE, occurrences(type, 3, 2, 3))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
                         .build(),
@@ -355,7 +355,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
 
         assertInvocations("SELECT * FROM test_select_from_where WHERE age = 2",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(type, 4, 2, 3))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 3))
                         .build(),
                 switch (type) {
                     case HIVE -> ImmutableMultiset.<FileOperation>builder()
@@ -439,7 +439,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
 
         assertInvocations("SELECT name, age FROM test_join_t1 JOIN test_join_t2 ON test_join_t2.id = test_join_t1.id",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(type, 8, 4, 6))
+                        .addCopies(GET_TABLE, occurrences(type, 4, 4, 6))
                         .addCopies(GET_TABLE_STATISTICS, occurrences(type, 2, 0, 0))
                         .build(),
                 switch (type) {
@@ -470,7 +470,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
 
         assertInvocations("SELECT child.age, parent.age FROM test_self_join_table child JOIN test_self_join_table parent ON child.parent = parent.id",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(type, 4, 2, 3))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 3))
                         .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .build(),
                 switch (type) {
@@ -501,7 +501,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
 
         assertInvocations("EXPLAIN SELECT * FROM test_explain",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(type, 4, 2, 3))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 3))
                         .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .build(),
                 switch (type) {
@@ -529,7 +529,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
 
         assertInvocations("SHOW STATS FOR test_show_stats",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(type, 4, 2, 3))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 3))
                         .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .build(),
                 switch (type) {
@@ -557,7 +557,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
 
         assertInvocations("SHOW STATS FOR (SELECT * FROM test_show_stats_with_filter where age >= 2)",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(type, 4, 2, 2))
+                        .addCopies(GET_TABLE, 2)
                         .add(GET_TABLE_STATISTICS)
                         .build(),
                 switch (type) {
@@ -574,7 +574,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
 
         assertInvocations("ANALYZE test_analyze",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(type, 4, 4, 3))
+                        .addCopies(GET_TABLE, occurrences(type, 1, 4, 3))
                         .addCopies(UPDATE_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
                         .build(),
@@ -611,7 +611,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
 
         assertInvocations("ANALYZE test_analyze_partition",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_TABLE, occurrences(type, 5, 4, 3))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 4, 3))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
