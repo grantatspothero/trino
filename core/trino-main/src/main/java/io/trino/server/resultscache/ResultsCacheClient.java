@@ -29,6 +29,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.server.security.galaxy.GalaxyIdentity.toDispatchSession;
@@ -104,7 +105,8 @@ public class ResultsCacheClient
             Instant creation)
             throws JsonProcessingException
     {
-        List<List<String>> dataStr = data.stream().map(singleRow -> singleRow.stream().map(ResultsCacheClient::serializeObject).collect(toImmutableList())).collect(toImmutableList());
+        // Using Collectors.toList() because ImmutableList does not support null values
+        List<List<String>> dataStr = data.stream().map(singleRow -> singleRow.stream().map(ResultsCacheClient::serializeObject).collect(Collectors.toList())).collect(toImmutableList());
         return new CacheEntry(
                 cacheKey,
                 queryId.toString(),
@@ -123,6 +125,9 @@ public class ResultsCacheClient
 
     private static String serializeObject(Object object)
     {
+        if (object == null) {
+            return null;
+        }
         try {
             return OBJECT_MAPPER.writeValueAsString(object);
         }
