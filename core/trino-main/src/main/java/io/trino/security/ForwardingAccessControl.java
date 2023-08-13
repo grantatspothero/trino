@@ -52,6 +52,11 @@ public abstract class ForwardingAccessControl
 
     protected abstract AccessControl delegate();
 
+    public AccessControl getDelegate()
+    {
+        return delegate();
+    }
+
     @Override
     public void checkCanImpersonateUser(Identity identity, String userName)
     {
