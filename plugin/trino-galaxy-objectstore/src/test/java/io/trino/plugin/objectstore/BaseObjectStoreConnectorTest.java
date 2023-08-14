@@ -270,7 +270,7 @@ public abstract class BaseObjectStoreConnectorTest
     @Override
     public void testRenameTableToLongTableName()
     {
-        // TODO overridden because it's unknown what table name length would be a problem for ALTER TABLE RENAME TO
+        // TODO (https://github.com/starburstdata/stargate/issues/9925) overridden because it's unknown what table name length would be a problem for ALTER TABLE RENAME TO
         //  currently, the test doesn't test failure when name is too long and this should be fixed
 
         skipTestUnless(hasBehavior(SUPPORTS_RENAME_TABLE));

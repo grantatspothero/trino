@@ -94,22 +94,27 @@ public class TestGalaxyHiveConnectorTest
 
     @Test(enabled = false)
     @Override
+    // TODO (https://github.com/starburstdata/stargate/issues/9925) remove override
     public void testCreateSchemaWithLongName() {}
 
     @Test(enabled = false)
     @Override
+    // TODO (https://github.com/starburstdata/stargate/issues/9925) remove override
     public void testRenameSchemaToLongName() {}
 
     @Test(enabled = false)
     @Override
+    // TODO (https://github.com/starburstdata/stargate/issues/9925) remove override
     public void testCreateTableWithLongTableName() {}
 
     @Test(enabled = false)
     @Override
+    // TODO (https://github.com/starburstdata/stargate/issues/9925) remove override
     public void testRenameTableToLongTableName() {}
 
     @Test(enabled = false)
     @Override
+    // TODO (https://github.com/starburstdata/stargate/issues/9925) remove override
     public void testAlterTableAddLongColumnName() {}
 
     @Test(enabled = false)
