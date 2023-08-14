@@ -47,7 +47,10 @@ import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.lang.String.format;
 
-public class TestObjectStoreIcebergGlueCatalogMaterializedView
+/**
+ * Test ObjectStore connector materialized views with Glue metastore.
+ */
+public class TestObjectStoreGlueMaterializedView
         extends BaseObjectStoreMaterializedViewTest
 {
     private static final String TEST_CATALOG = "iceberg";

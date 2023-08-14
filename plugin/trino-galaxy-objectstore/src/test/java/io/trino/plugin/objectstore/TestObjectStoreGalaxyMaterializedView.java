@@ -41,7 +41,10 @@ import static io.trino.testing.TestingNames.randomNameSuffix;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class TestObjectStoreIcebergConnectorMaterializedView
+/**
+ * Test ObjectStore connector materialized views with Galaxy metastore.
+ */
+public class TestObjectStoreGalaxyMaterializedView
         extends BaseObjectStoreMaterializedViewTest
 {
     private static final String TEST_CATALOG = "iceberg";
