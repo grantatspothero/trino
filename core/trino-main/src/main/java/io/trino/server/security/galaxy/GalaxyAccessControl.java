@@ -66,6 +66,7 @@ import static io.starburst.stargate.accesscontrol.privilege.Privilege.SELECT;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.UPDATE;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.VIEW_ALL_QUERY_HISTORY;
 import static io.trino.execution.PrivilegeUtilities.getPrivilegesForEntityKind;
+import static io.trino.metadata.GlobalFunctionCatalog.BUILTIN_SCHEMA;
 import static io.trino.server.security.galaxy.GalaxyIdentity.getRoleId;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.security.AccessDeniedException.denyAddColumn;
@@ -110,6 +111,10 @@ public class GalaxyAccessControl
 {
     public static final String NAME = "galaxy";
     private static final Pattern DML_OPERATION_MATCHER = Pattern.compile("(select|insert|update|delete|merge|with)[ \\t\\(\\[].*");
+    private static final Set<String> SYSTEM_BUILTIN_FUNCTIONS = ImmutableSet.of(
+            "analyze_logical_plan",
+            "exclude_columns",
+            "sequence");
 
     private final GalaxyAccessControllerSupplier controllerSupplier;
 
@@ -618,6 +623,9 @@ public class GalaxyAccessControl
         if (functionKind != FunctionKind.TABLE) {
             denyExecuteFunction(function.toString(), "Function is of type %s and only TABLE functions are supported".formatted(functionKind));
         }
+        if (isWhitelistedTableFunction(function)) {
+            return;
+        }
         GalaxySystemAccessController controller = controllerSupplier.apply(context);
         Optional<CatalogId> catalogId = controller.getCatalogId(function.getCatalogName());
         if (catalogId.isEmpty()) {
@@ -1001,5 +1009,12 @@ public class GalaxyAccessControl
         if (!getPrivilegesForEntityKind(entityKind).contains(privilege)) {
             throw operationNotAllowed("Privilege %s may not be %s to entity kind %s".formatted(privilege, operation, entityKind));
         }
+    }
+
+    private static boolean isWhitelistedTableFunction(CatalogSchemaRoutineName catalogSchemaRoutineName)
+    {
+        return isSystemCatalog(catalogSchemaRoutineName.getCatalogName()) &&
+                BUILTIN_SCHEMA.equals(catalogSchemaRoutineName.getSchemaName()) &&
+                SYSTEM_BUILTIN_FUNCTIONS.contains(catalogSchemaRoutineName.getRoutineName());
     }
 }

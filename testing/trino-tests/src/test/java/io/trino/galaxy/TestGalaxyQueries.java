@@ -1282,6 +1282,34 @@ public class TestGalaxyQueries
         assertUpdate("DROP schema column_masks");
     }
 
+    @Test
+    public void testSystemBuiltinTableFunctions()
+    {
+        // Test the functions with and without the system.builtin. prefix
+        for (String catalogAndSchema : ImmutableList.of("", "system.builtin.")) {
+            // Test exclude_columns
+            assertThat(query("""
+                SELECT *
+                FROM TABLE(%sexclude_columns(
+                                    input => TABLE(tpch.tiny.region),
+                                    columns => DESCRIPTOR(regionkey, comment)))
+                """.formatted(catalogAndSchema)))
+                    .skippingTypesCheck()
+                    .matches("VALUES ('AFRICA'), ('AMERICA'), ('ASIA'), ('EUROPE'), ('MIDDLE EAST')");
+
+            // Test sequence
+            assertThat(query("""
+                SELECT *
+                FROM TABLE(%ssequence(
+                                start => 1,
+                                stop => 3,
+                                step => 1))
+                """.formatted(catalogAndSchema)))
+                    .skippingTypesCheck()
+                    .matches("VALUES CAST(1 AS BIGINT), CAST(2 AS BIGINT), CAST(3 AS BIGINT)");
+        }
+    }
+
     private MaterializedResult varcharColumnResult(String... values)
     {
         return varcharColumnResult(ImmutableSet.copyOf(values));
