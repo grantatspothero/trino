@@ -1372,7 +1372,7 @@ jobs:
             - suite-subquery-cache
             - suite-sap-hana
             - suite-synapse
-            - suite-snowflake
+            - suite-starburst-snowflake
             - suite-s3-compatibility
             - suite-1
             - suite-2
