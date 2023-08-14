@@ -93,6 +93,7 @@ public class ResultsCacheEntry
         currentSize += logicalSizeInBytes;
 
         if (currentSize > maximumSize) {
+            log.debug("QueryId: %s, results exceeded maximum size of %s bytes, not caching", queryId, maximumSize);
             valid = false;
             resultsData = Optional.empty();
             return;
@@ -100,19 +101,21 @@ public class ResultsCacheEntry
 
         if (resultsData.isEmpty()) {
             if (columns == null) {
-                log.warn("Null columns provided for results cache entry: %s for query %s", key, queryId);
+                log.debug("QueryId: %s, null columns provided for results cache entry %s, not caching", queryId, key);
                 valid = false;
                 return;
             }
 
             resultsData = Optional.of(new ResultsData(columns));
         }
+        log.debug("QueryId: %s, appending to cache entry, %s bytes, %s current total size", queryId, logicalSizeInBytes, currentSize);
         resultsData.get().addRecords(data);
     }
 
     public void done()
     {
         if (valid) {
+            log.debug("QueryId: %s, done called and cache entry is valid, uploading to cache", queryId);
             submitAsyncUpload(
                     executorService,
                     client,
@@ -127,6 +130,9 @@ public class ResultsCacheEntry
                     OffsetDateTime.now().toInstant(),
                     resultsData.orElseThrow());
             resultsData = Optional.empty();
+        }
+        else {
+            log.debug("QueryId: %s, done called and cache entry is invalid", queryId);
         }
         valid = false;
     }
