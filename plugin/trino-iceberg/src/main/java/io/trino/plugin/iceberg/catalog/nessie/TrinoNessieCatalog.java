@@ -326,12 +326,6 @@ public class TrinoNessieCatalog
     }
 
     @Override
-    public void updateMaterializedViewColumnComment(ConnectorSession session, SchemaTableName schemaViewName, String columnName, Optional<String> comment)
-    {
-        throw new TrinoException(NOT_SUPPORTED, "updateMaterializedViewColumnComment is not supported for Iceberg Nessie catalogs");
-    }
-
-    @Override
     public void setViewPrincipal(ConnectorSession session, SchemaTableName schemaViewName, TrinoPrincipal principal)
     {
         throw new TrinoException(NOT_SUPPORTED, "setViewPrincipal is not supported for Iceberg Nessie catalogs");
@@ -376,6 +370,12 @@ public class TrinoNessieCatalog
             boolean ignoreExisting)
     {
         throw new TrinoException(NOT_SUPPORTED, "createMaterializedView is not supported for Iceberg Nessie catalogs");
+    }
+
+    @Override
+    public void updateMaterializedViewColumnComment(ConnectorSession session, SchemaTableName schemaViewName, String columnName, Optional<String> comment)
+    {
+        throw new TrinoException(NOT_SUPPORTED, "updateMaterializedViewColumnComment is not supported for Iceberg Nessie catalogs");
     }
 
     @Override
