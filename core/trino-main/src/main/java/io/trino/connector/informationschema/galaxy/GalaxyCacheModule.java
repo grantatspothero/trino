@@ -17,7 +17,6 @@ import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
-import io.airlift.units.Duration;
 import io.trino.SystemSessionPropertiesProvider;
 import io.trino.connector.informationschema.InformationSchemaPageSourceProvider;
 import io.trino.connector.system.TableCommentSystemTable;
@@ -27,7 +26,6 @@ import io.trino.spi.procedure.Procedure;
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.airlift.http.client.HttpClientBinder.httpClientBinder;
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class GalaxyCacheModule
         extends AbstractConfigurationAwareModule
@@ -41,11 +39,7 @@ public class GalaxyCacheModule
         if (galaxyCacheConfig.getEnabled()) {
             binder.bind(InformationSchemaPageSourceProvider.class).to(GalaxyCacheInformationSchemaPageSourceProvider.class).in(Scopes.SINGLETON);
 
-            httpClientBinder(binder).bindHttpClient("galaxy-cache", ForGalaxyCache.class)
-                    .withConfigDefaults(config -> {
-                        config.setIdleTimeout(new Duration(30, SECONDS));
-                        config.setRequestTimeout(new Duration(10, SECONDS));
-                    });
+            httpClientBinder(binder).bindHttpClient("galaxy-cache", ForGalaxyCache.class);
 
             configBinder(binder).bindConfig(GalaxyCacheConfig.class);
             binder.bind(GalaxyCacheClient.class).in(Scopes.SINGLETON);
