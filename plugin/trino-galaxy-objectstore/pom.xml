@@ -586,12 +586,13 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <excludes>
+                                <!-- except iceberg-delta profile -->
                                 <exclude>**/Test*Iceberg*.java</exclude>
                                 <exclude>**/Test*Delta*.java</exclude>
+                                <!-- except cloud-tests profile -->
                                 <exclude>**/TestReadCorruptedTables.java</exclude>
-                                <exclude>**/TestObjectStoreHiveS3.java</exclude>
-                                <exclude>**/TestObjectStoreHiveS3Glue.java</exclude>
-                                <exclude>**/TestObjectStoreGlueMaterializedView.java</exclude>
+                                <exclude>**/Test*Glue*.java</exclude>
+                                <exclude>**/Test*S3*.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -612,13 +613,9 @@
                                 <include>**/Test*Delta*.java</include>
                             </includes>
                             <excludes>
-                                <exclude>**/TestObjectStoreGlueMaterializedView.java</exclude>
-                                <exclude>**/TestObjectStoreDeltaS3.java</exclude>
-                                <exclude>**/TestObjectStoreIcebergS3.java</exclude>
-                                <exclude>**/TestObjectStoreHiveS3.java</exclude>
-                                <exclude>**/TestObjectStoreDeltaS3Glue.java</exclude>
-                                <exclude>**/TestObjectStoreIcebergS3Glue.java</exclude>
-                                <exclude>**/TestObjectStoreHiveS3Glue.java</exclude>
+                                <!-- except cloud-tests profile -->
+                                <exclude>**/Test*Glue*.java</exclude>
+                                <exclude>**/Test*S3*.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -636,13 +633,8 @@
                         <configuration>
                             <includes>
                                 <include>**/TestReadCorruptedTables.java</include>
-                                <include>**/TestObjectStoreGlueMaterializedView.java</include>
-                                <include>**/TestObjectStoreDeltaS3.java</include>
-                                <include>**/TestObjectStoreIcebergS3.java</include>
-                                <include>**/TestObjectStoreHiveS3.java</include>
-                                <include>**/TestObjectStoreDeltaS3Glue.java</include>
-                                <include>**/TestObjectStoreIcebergS3Glue.java</include>
-                                <include>**/TestObjectStoreHiveS3Glue.java</include>
+                                <include>**/Test*Glue*.java</include>
+                                <include>**/Test*S3*.java</include>
                             </includes>
                         </configuration>
                     </plugin>
