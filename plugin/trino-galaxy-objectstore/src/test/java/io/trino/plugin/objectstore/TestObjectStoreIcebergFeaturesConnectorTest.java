@@ -86,6 +86,8 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
                     .put("HIVE__galaxy.catalog-id", "c-1234567890")
                     // Iceberg
                     .put("ICEBERG__iceberg.catalog.type", "TESTING_FILE_METASTORE")
+                    // Allows testing the sorting writer flushing to the file system with smaller tables
+                    .put("ICEBERG__iceberg.writer-sort-buffer-size", "1MB")
                     .put("ICEBERG__hive.metastore.catalog.dir", metastoreDirectory)
                     .put("ICEBERG__galaxy.location-security.enabled", "false")
                     .put("ICEBERG__galaxy.account-url", "https://localhost:1234")
