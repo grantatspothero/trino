@@ -19,6 +19,7 @@ import com.google.common.collect.Maps;
 import io.jsonwebtoken.impl.DefaultJwtBuilder;
 import io.jsonwebtoken.jackson.io.JacksonSerializer;
 import io.trino.plugin.base.CatalogName;
+import io.trino.plugin.base.util.MaybeLazy;
 import io.trino.plugin.iceberg.ColumnIdentity;
 import io.trino.plugin.iceberg.IcebergSchemaProperties;
 import io.trino.plugin.iceberg.catalog.TrinoCatalog;
@@ -96,6 +97,13 @@ public class TrinoRestCatalog
         this.sessionType = requireNonNull(sessionType, "sessionType is null");
         this.trinoVersion = requireNonNull(trinoVersion, "trinoVersion is null");
         this.useUniqueTableLocation = useUniqueTableLocation;
+    }
+
+    @Override
+    public MaybeLazy<List<ColumnMetadata>> getTableColumnMetadata(ConnectorSession session, io.trino.plugin.hive.metastore.Table metastoreTable)
+    {
+        // Used by ObjectStore only and ObjectStore cannot be used with REST catalog.
+        throw new UnsupportedOperationException();
     }
 
     @Override

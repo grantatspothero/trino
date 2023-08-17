@@ -16,6 +16,7 @@ package io.trino.plugin.objectstore;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.airlift.configuration.Config;
 import io.trino.plugin.iceberg.IcebergFileFormat;
+import io.trino.spi.connector.ConnectorSession;
 import jakarta.validation.constraints.NotNull;
 
 import static io.trino.plugin.iceberg.IcebergFileFormat.PARQUET;
@@ -34,6 +35,12 @@ public class ObjectStoreConfig
          * Query iterating over table listing once.
          */
         V2,
+
+        /**
+         * {@link io.trino.spi.connector.ConnectorMetadata#streamRelationColumns}
+         * with {@link io.trino.plugin.hive.metastore.HiveMetastore#streamTables(ConnectorSession, String)}.
+         */
+        V3,
     }
 
     private TableType tableType = TableType.HIVE;

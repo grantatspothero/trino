@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.iceberg.catalog;
 
+import io.trino.plugin.base.util.MaybeLazy;
 import io.trino.plugin.iceberg.ColumnIdentity;
 import io.trino.plugin.iceberg.UnknownTableTypeException;
 import io.trino.spi.connector.CatalogSchemaTableName;
@@ -56,6 +57,8 @@ import java.util.function.UnaryOperator;
  */
 public interface TrinoCatalog
 {
+    MaybeLazy<List<ColumnMetadata>> getTableColumnMetadata(ConnectorSession session, io.trino.plugin.hive.metastore.Table metastoreTable);
+
     boolean namespaceExists(ConnectorSession session, String namespace);
 
     List<String> listNamespaces(ConnectorSession session);

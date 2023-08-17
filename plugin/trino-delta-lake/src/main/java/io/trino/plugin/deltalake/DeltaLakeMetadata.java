@@ -33,11 +33,13 @@ import io.trino.filesystem.TrinoFileSystem;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.base.classloader.ClassLoaderSafeSystemTable;
 import io.trino.plugin.base.projection.ApplyProjectionUtil;
+import io.trino.plugin.base.util.MaybeLazy;
 import io.trino.plugin.deltalake.DeltaLakeAnalyzeProperties.AnalyzeMode;
 import io.trino.plugin.deltalake.expression.ParsingException;
 import io.trino.plugin.deltalake.expression.SparkExpressionParser;
 import io.trino.plugin.deltalake.metastore.DeltaLakeMetastore;
 import io.trino.plugin.deltalake.metastore.DeltaMetastoreTable;
+import io.trino.plugin.deltalake.metastore.HiveMetastoreBackedDeltaLakeMetastore;
 import io.trino.plugin.deltalake.metastore.NotADeltaLakeTableException;
 import io.trino.plugin.deltalake.procedure.DeltaLakeTableExecuteHandle;
 import io.trino.plugin.deltalake.procedure.DeltaLakeTableProcedureId;
@@ -509,6 +511,18 @@ public class DeltaLakeMetadata
                 Optional.empty(),
                 Optional.empty(),
                 tableSnapshot.getVersion());
+    }
+
+    public MaybeLazy<List<ColumnMetadata>> getTableColumnMetadata(ConnectorSession session, io.trino.plugin.hive.metastore.Table table)
+    {
+        checkArgument(isDeltaLakeTable(table), "Not Delta table: %s", table);
+        String tableLocation = HiveMetastoreBackedDeltaLakeMetastore.getTableLocation(table);
+        SchemaTableName tableName = table.getSchemaTableName();
+        return MaybeLazy.ofLazy(() -> {
+            TableSnapshot tableSnapshot = getSnapshot(tableName, tableLocation, session);
+            MetadataEntry metadataEntry = transactionLogAccess.getMetadataEntry(tableSnapshot, session);
+            return getTableColumnMetadata(metadataEntry);
+        });
     }
 
     @Override

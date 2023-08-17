@@ -140,6 +140,11 @@
         </dependency>
 
         <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-core</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>org.gaul</groupId>
             <artifactId>modernizer-maven-annotations</artifactId>
         </dependency>
@@ -263,12 +268,6 @@
                     <artifactId>*</artifactId>
                 </exclusion>
             </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.iceberg</groupId>
-            <artifactId>iceberg-core</artifactId>
-            <scope>runtime</scope>
         </dependency>
 
         <dependency>
@@ -568,6 +567,18 @@
                         <!-- org.apache.orc:orc-core and org.alluxio:alluxio-shaded-client proto file duplicate -->
                         <ignoredResourcePattern>google/protobuf/.*\.proto$</ignoredResourcePattern>
                     </ignoredResourcePatterns>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <configuration>
+                    <ignoredNonTestScopedDependencies>
+                        <!-- dependency plugin fails to recognize iceberg-core as a compile-time dependency, because
+                             we only explicitly use a class from trino-iceberg, which in turn extends from a class from
+                             iceberg-core -->
+                        <ignoredDependency>org.apache.iceberg:iceberg-core</ignoredDependency>
+                    </ignoredNonTestScopedDependencies>
                 </configuration>
             </plugin>
         </plugins>

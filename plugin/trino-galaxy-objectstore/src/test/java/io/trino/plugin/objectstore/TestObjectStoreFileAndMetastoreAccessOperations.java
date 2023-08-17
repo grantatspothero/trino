@@ -71,6 +71,7 @@ import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_TABLES_WITH_PARAMETER;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_TABLE_STATISTICS;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.REPLACE_TABLE;
+import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.STREAM_TABLES;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.UPDATE_PARTITION_STATISTICS;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.UPDATE_TABLE_STATISTICS;
 import static io.trino.plugin.hive.util.MultisetAssertions.assertMultisetsEqual;
@@ -787,15 +788,27 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
 
         assertInvocations(session, "SELECT * FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA AND table_name LIKE 'test_select_i_s_columns%'",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_ALL_VIEWS_FROM_DATABASE, 1)
+                        .addCopies(GET_ALL_VIEWS_FROM_DATABASE, switch (mode) {
+                            case NONE, V1, V2 -> 1;
+                            case V3 -> 0;
+                        })
                         .addCopies(GET_ALL_TABLES_FROM_DATABASE, switch (mode) {
                             case NONE, V1 -> 3;
                             case V2 -> 1;
+                            case V3 -> 0;
                         })
-                        .addCopies(GET_TABLES_WITH_PARAMETER, 1)
+                        .addCopies(GET_TABLES_WITH_PARAMETER, switch (mode) {
+                            case NONE, V1, V2 -> 1;
+                            case V3 -> 0;
+                        })
+                        .addCopies(STREAM_TABLES, switch (mode) {
+                            case NONE, V1, V2 -> 0;
+                            case V3 -> 1;
+                        })
                         .addCopies(GET_TABLE, switch (mode) {
                             case NONE, V1 -> tables * 6;
                             case V2 -> occurrences(type, tables * 2, tables * 3, tables * 3);
+                            case V3 -> 0; // 🎉
                         })
                         .build(),
                 switch (type) {

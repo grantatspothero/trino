@@ -20,6 +20,7 @@ import io.airlift.log.Logger;
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.base.CatalogName;
+import io.trino.plugin.base.util.MaybeLazy;
 import io.trino.plugin.hive.TableType;
 import io.trino.plugin.hive.metastore.Column;
 import io.trino.plugin.hive.metastore.Database;
@@ -30,6 +31,7 @@ import io.trino.plugin.iceberg.ColumnIdentity;
 import io.trino.plugin.iceberg.UnknownTableTypeException;
 import io.trino.plugin.iceberg.catalog.AbstractTrinoCatalog;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
+import io.trino.plugin.iceberg.fileio.ForwardingFileIo;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogSchemaTableName;
 import io.trino.spi.connector.ColumnMetadata;
@@ -53,6 +55,7 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.TableMetadata;
+import org.apache.iceberg.TableMetadataParser;
 import org.apache.iceberg.TableOperations;
 import org.apache.iceberg.Transaction;
 
@@ -90,6 +93,7 @@ import static io.trino.plugin.iceberg.IcebergMaterializedViewDefinition.encodeMa
 import static io.trino.plugin.iceberg.IcebergMaterializedViewDefinition.fromConnectorMaterializedViewDefinition;
 import static io.trino.plugin.iceberg.IcebergUtil.COLUMN_TRINO_NOT_NULL_PROPERTY;
 import static io.trino.plugin.iceberg.IcebergUtil.COLUMN_TRINO_TYPE_ID_PROPERTY;
+import static io.trino.plugin.iceberg.IcebergUtil.getColumnMetadatas;
 import static io.trino.plugin.iceberg.IcebergUtil.getIcebergTableWithMetadata;
 import static io.trino.plugin.iceberg.IcebergUtil.loadIcebergTable;
 import static io.trino.plugin.iceberg.IcebergUtil.validateTableCanBeDropped;
@@ -380,6 +384,20 @@ public class TrinoGalaxyCatalog
             return Optional.empty();
         }
         return getCachedColumnMetadata(table);
+    }
+
+    @Override
+    public MaybeLazy<List<ColumnMetadata>> getTableColumnMetadata(ConnectorSession session, io.trino.plugin.hive.metastore.Table table)
+    {
+        checkArgument(isIcebergTable(table), "Not Iceberg table: %s", table);
+        String metadataLocation = table.getParameters().get(METADATA_LOCATION_PROP);
+        Optional<List<ColumnMetadata>> columnMetadata = getCachedColumnMetadata(table);
+        return columnMetadata
+                .map(MaybeLazy::ofValue)
+                .orElseGet(() -> MaybeLazy.ofLazy(() -> {
+                    TableMetadata tableMetadata = TableMetadataParser.read(new ForwardingFileIo(fileSystemFactory.create(session)), metadataLocation);
+                    return getColumnMetadatas(tableMetadata.schema(), typeManager);
+                }));
     }
 
     private Optional<List<ColumnMetadata>> getCachedColumnMetadata(io.trino.plugin.hive.metastore.Table table)

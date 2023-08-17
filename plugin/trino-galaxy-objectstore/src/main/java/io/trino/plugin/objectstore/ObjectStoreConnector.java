@@ -41,6 +41,7 @@ import io.trino.spi.function.table.ConnectorTableFunction;
 import io.trino.spi.procedure.Procedure;
 import io.trino.spi.session.PropertyMetadata;
 import io.trino.spi.transaction.IsolationLevel;
+import io.trino.spi.type.TypeManager;
 
 import java.util.HashMap;
 import java.util.List;
@@ -80,6 +81,7 @@ public class ObjectStoreConnector
     private final Connector deltaConnector;
     private final Connector hudiConnector;
     private final LifeCycleManager lifeCycleManager;
+    private final TypeManager typeManager;
     private final ObjectStoreSplitManager splitManager;
     private final ObjectStorePageSourceProvider pageSourceProvider;
     private final ObjectStorePageSinkProvider pageSinkProvider;
@@ -106,6 +108,7 @@ public class ObjectStoreConnector
     public ObjectStoreConnector(
             DelegateConnectors delegates,
             LifeCycleManager lifeCycleManager,
+            TypeManager typeManager,
             ObjectStoreSplitManager splitManager,
             ObjectStorePageSourceProvider pageSourceProvider,
             ObjectStorePageSinkProvider pageSinkProvider,
@@ -123,6 +126,7 @@ public class ObjectStoreConnector
         this.deltaConnector = delegates.deltaConnector();
         this.hudiConnector = delegates.hudiConnector();
         this.lifeCycleManager = requireNonNull(lifeCycleManager, "lifeCycleManager is null");
+        this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.splitManager = requireNonNull(splitManager, "splitManager is null");
         this.pageSourceProvider = requireNonNull(pageSourceProvider, "pageSourceProvider is null");
         this.pageSinkProvider = requireNonNull(pageSinkProvider, "pageSinkProvider is null");
@@ -341,6 +345,7 @@ public class ObjectStoreConnector
 
         return new ClassLoaderSafeConnectorMetadata(
                 new ObjectStoreMetadata(
+                        typeManager,
                         // It's enough to have ClassLoaderSafeConnectorMetadata once (outside of ObjectStoreMetadata). All delegates share same classloader.
                         ((ClassLoaderSafeConnectorMetadata) hiveMetadata).unwrap(),
                         ((ClassLoaderSafeConnectorMetadata) icebergMetadata).unwrap(),

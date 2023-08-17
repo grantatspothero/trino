@@ -263,7 +263,7 @@ public abstract class AbstractIcebergTableOperations
         shouldRefresh = false;
     }
 
-    private static boolean isNotFoundException(Throwable failure)
+    public static boolean isNotFoundException(Throwable failure)
     {
         // qualified name, as this is NOT the io.trino.spi.connector.NotFoundException
         return failure instanceof org.apache.iceberg.exceptions.NotFoundException ||

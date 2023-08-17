@@ -20,6 +20,7 @@ import io.airlift.log.Logger;
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.base.CatalogName;
+import io.trino.plugin.base.util.MaybeLazy;
 import io.trino.plugin.hive.HiveSchemaProperties;
 import io.trino.plugin.hive.TrinoViewHiveMetastore;
 import io.trino.plugin.hive.metastore.Column;
@@ -32,6 +33,7 @@ import io.trino.plugin.hive.util.HiveUtil;
 import io.trino.plugin.iceberg.UnknownTableTypeException;
 import io.trino.plugin.iceberg.catalog.AbstractTrinoCatalog;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
+import io.trino.plugin.iceberg.fileio.ForwardingFileIo;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogSchemaTableName;
 import io.trino.spi.connector.ColumnMetadata;
@@ -53,6 +55,7 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.TableMetadata;
+import org.apache.iceberg.TableMetadataParser;
 import org.apache.iceberg.Transaction;
 
 import java.io.IOException;
@@ -90,6 +93,7 @@ import static io.trino.plugin.iceberg.IcebergMaterializedViewAdditionalPropertie
 import static io.trino.plugin.iceberg.IcebergMaterializedViewDefinition.encodeMaterializedViewData;
 import static io.trino.plugin.iceberg.IcebergMaterializedViewDefinition.fromConnectorMaterializedViewDefinition;
 import static io.trino.plugin.iceberg.IcebergSchemaProperties.LOCATION_PROPERTY;
+import static io.trino.plugin.iceberg.IcebergUtil.getColumnMetadatas;
 import static io.trino.plugin.iceberg.IcebergUtil.getIcebergTableWithMetadata;
 import static io.trino.plugin.iceberg.IcebergUtil.loadIcebergTable;
 import static io.trino.plugin.iceberg.IcebergUtil.validateTableCanBeDropped;
@@ -118,6 +122,7 @@ public class TrinoHiveCatalog
     public static final String TRINO_QUERY_START_TIME = "trino-query-start-time";
 
     private final CachingHiveMetastore metastore;
+    private final TypeManager typeManager;
     private final TrinoViewHiveMetastore trinoViewHiveMetastore;
     private final TrinoFileSystemFactory fileSystemFactory;
     private final boolean isUsingSystemSecurity;
@@ -138,6 +143,7 @@ public class TrinoHiveCatalog
     {
         super(catalogName, typeManager, tableOperationsProvider, useUniqueTableLocation);
         this.metastore = requireNonNull(metastore, "metastore is null");
+        this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.trinoViewHiveMetastore = requireNonNull(trinoViewHiveMetastore, "trinoViewHiveMetastore is null");
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.isUsingSystemSecurity = isUsingSystemSecurity;
@@ -147,6 +153,16 @@ public class TrinoHiveCatalog
     public CachingHiveMetastore getMetastore()
     {
         return metastore;
+    }
+
+    @Override
+    public MaybeLazy<List<ColumnMetadata>> getTableColumnMetadata(ConnectorSession session, io.trino.plugin.hive.metastore.Table metastoreTable)
+    {
+        String metadataLocation = metastoreTable.getParameters().get(METADATA_LOCATION_PROP);
+        return MaybeLazy.ofLazy(() -> {
+            TableMetadata tableMetadata = TableMetadataParser.read(new ForwardingFileIo(fileSystemFactory.create(session)), metadataLocation);
+            return getColumnMetadatas(tableMetadata.schema(), typeManager);
+        });
     }
 
     @Override

@@ -24,9 +24,11 @@ import io.airlift.log.Logger;
 import io.airlift.slice.Slice;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
+import io.trino.plugin.base.util.MaybeLazy;
 import io.trino.plugin.deltalake.CorruptedDeltaLakeTableHandle;
 import io.trino.plugin.deltalake.DeltaLakeInsertTableHandle;
 import io.trino.plugin.deltalake.DeltaLakeMergeTableHandle;
+import io.trino.plugin.deltalake.DeltaLakeMetadata;
 import io.trino.plugin.deltalake.DeltaLakeOutputTableHandle;
 import io.trino.plugin.deltalake.DeltaLakePartitioningHandle;
 import io.trino.plugin.deltalake.DeltaLakeTableHandle;
@@ -36,17 +38,23 @@ import io.trino.plugin.hive.HiveOutputTableHandle;
 import io.trino.plugin.hive.HivePartitioningHandle;
 import io.trino.plugin.hive.HiveTableExecuteHandle;
 import io.trino.plugin.hive.HiveTableHandle;
+import io.trino.plugin.hive.HiveViewNotSupportedException;
 import io.trino.plugin.hive.TransactionalMetadata;
+import io.trino.plugin.hive.ViewReaderUtil;
 import io.trino.plugin.hive.metastore.SemiTransactionalHiveMetastore;
 import io.trino.plugin.hive.metastore.Table;
 import io.trino.plugin.hive.procedure.OptimizeTableProcedure;
+import io.trino.plugin.hive.util.HiveUtil;
 import io.trino.plugin.hudi.HudiTableHandle;
 import io.trino.plugin.iceberg.CorruptedIcebergTableHandle;
 import io.trino.plugin.iceberg.IcebergFileFormat;
+import io.trino.plugin.iceberg.IcebergMaterializedViewDefinition;
 import io.trino.plugin.iceberg.IcebergMergeTableHandle;
+import io.trino.plugin.iceberg.IcebergMetadata;
 import io.trino.plugin.iceberg.IcebergPartitioningHandle;
 import io.trino.plugin.iceberg.IcebergTableHandle;
 import io.trino.plugin.iceberg.IcebergWritableTableHandle;
+import io.trino.plugin.iceberg.catalog.AbstractIcebergTableOperations;
 import io.trino.plugin.iceberg.procedure.IcebergTableExecuteHandle;
 import io.trino.spi.ErrorCodeSupplier;
 import io.trino.spi.TrinoException;
@@ -81,6 +89,7 @@ import io.trino.spi.connector.LimitApplicationResult;
 import io.trino.spi.connector.MaterializedViewFreshness;
 import io.trino.spi.connector.MaterializedViewNotFoundException;
 import io.trino.spi.connector.ProjectionApplicationResult;
+import io.trino.spi.connector.RelationColumnsMetadata;
 import io.trino.spi.connector.RetryMode;
 import io.trino.spi.connector.RowChangeParadigm;
 import io.trino.spi.connector.SampleApplicationResult;
@@ -101,6 +110,7 @@ import io.trino.spi.statistics.ComputedStatistics;
 import io.trino.spi.statistics.TableStatistics;
 import io.trino.spi.statistics.TableStatisticsMetadata;
 import io.trino.spi.type.Type;
+import io.trino.spi.type.TypeManager;
 import jakarta.annotation.Nullable;
 
 import java.util.Collection;
@@ -115,6 +125,8 @@ import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
@@ -131,6 +143,8 @@ import static io.trino.plugin.hive.ViewReaderUtil.isTrinoView;
 import static io.trino.plugin.hive.util.HiveUtil.isDeltaLakeTable;
 import static io.trino.plugin.hive.util.HiveUtil.isHudiTable;
 import static io.trino.plugin.hive.util.HiveUtil.isIcebergTable;
+import static io.trino.plugin.iceberg.IcebergMaterializedViewDefinition.decodeMaterializedViewData;
+import static io.trino.plugin.iceberg.catalog.AbstractTrinoCatalog.toSpiMaterializedViewColumns;
 import static io.trino.plugin.objectstore.ObjectStoreSessionProperties.getInformationSchemaQueriesAcceleration;
 import static io.trino.plugin.objectstore.TableType.DELTA;
 import static io.trino.plugin.objectstore.TableType.HIVE;
@@ -148,9 +162,10 @@ public class ObjectStoreMetadata
 {
     private static final Logger log = Logger.get(ObjectStoreMetadata.class);
 
+    private final TypeManager typeManager;
     private final TransactionalMetadata hiveMetadata;
-    private final ConnectorMetadata icebergMetadata;
-    private final ConnectorMetadata deltaMetadata;
+    private final IcebergMetadata icebergMetadata;
+    private final DeltaLakeMetadata deltaMetadata;
     private final ConnectorMetadata hudiMetadata;
     private final ObjectStoreTableProperties tableProperties;
     private final ObjectStoreMaterializedViewProperties materializedViewProperties;
@@ -166,6 +181,7 @@ public class ObjectStoreMetadata
     private final ExecutorService parallelInformationSchemaQueryingExecutor;
 
     public ObjectStoreMetadata(
+            TypeManager typeManager,
             ConnectorMetadata hiveMetadata,
             ConnectorMetadata icebergMetadata,
             ConnectorMetadata deltaMetadata,
@@ -180,9 +196,10 @@ public class ObjectStoreMetadata
             TableTypeCache tableTypeCache,
             ExecutorService parallelInformationSchemaQueryingExecutor)
     {
+        this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.hiveMetadata = (TransactionalMetadata) requireNonNull(hiveMetadata, "hiveMetadata is null");
-        this.icebergMetadata = requireNonNull(icebergMetadata, "icebergMetadata is null");
-        this.deltaMetadata = requireNonNull(deltaMetadata, "deltaMetadata is null");
+        this.icebergMetadata = (IcebergMetadata) requireNonNull(icebergMetadata, "icebergMetadata is null");
+        this.deltaMetadata = (DeltaLakeMetadata) requireNonNull(deltaMetadata, "deltaMetadata is null");
         this.hudiMetadata = requireNonNull(hudiMetadata, "hudiMetadata is null");
         this.tableProperties = requireNonNull(tableProperties, "tableProperties is null");
         this.materializedViewProperties = requireNonNull(materializedViewProperties, "materializedViewProperties is null");
@@ -653,6 +670,116 @@ public class ObjectStoreMetadata
                 }
 
                 yield tables.values().iterator();
+            }
+
+            case V3 -> throw new UnsupportedOperationException("streamTableColumns should not be called when streamRelationColumns is implemented");
+        };
+    }
+
+    @Override
+    public Iterator<RelationColumnsMetadata> streamRelationColumns(ConnectorSession session, Optional<String> schemaName, UnaryOperator<Set<SchemaTableName>> relationFilter)
+    {
+        return switch (getInformationSchemaQueriesAcceleration(session)) {
+            case NONE, V1, V2 -> ConnectorMetadata.super.streamRelationColumns(session, schemaName, relationFilter);
+            case V3 -> {
+                ConnectorSession hiveSession = unwrap(HIVE, session);
+                ConnectorSession icebergSession = unwrap(ICEBERG, session);
+                ConnectorSession deltaSession = unwrap(DELTA, session);
+
+                ImmutableList.Builder<RelationColumnsMetadata> unfilteredResult = ImmutableList.builder();
+                ImmutableList.Builder<RelationColumnsMetadata> filteredResult = ImmutableList.builder();
+                Map<SchemaTableName, Supplier<List<ColumnMetadata>>> unprocessedTables = new HashMap<>();
+
+                List<String> schemas = schemaName.map(List::of)
+                        // TODO filter schemas: limit to those accessible to the user
+                        .orElseGet(() -> listSchemaNames(session));
+
+                for (String schema : schemas) {
+                    hiveMetadata.getMetastore().streamTables(hiveSession, schema).forEachRemaining(table -> {
+                        SchemaTableName relation = new SchemaTableName(schema, table.getTableName());
+
+                        boolean trinoMaterializedView = isTrinoMaterializedView(table);
+                        boolean trinoView = isTrinoView(table);
+                        boolean hiveView = isHiveView(table);
+
+                        if (trinoView) {
+                            ConnectorViewDefinition viewDefinition = ViewReaderUtil.PrestoViewReader.decodeViewData(table.getViewOriginalText().orElseThrow());
+                            unfilteredResult.add(RelationColumnsMetadata.forView(relation, viewDefinition.getColumns()));
+                            return;
+                        }
+                        if (trinoMaterializedView) {
+                            IcebergMaterializedViewDefinition materializedViewDefinition = decodeMaterializedViewData(table.getViewOriginalText().orElseThrow());
+                            unfilteredResult.add(RelationColumnsMetadata.forMaterializedView(relation, toSpiMaterializedViewColumns(materializedViewDefinition.getColumns())));
+                            return;
+                        }
+                        if (hiveView) {
+                            try {
+                                Optional<ConnectorViewDefinition> viewDefinition = hiveMetadata.getView(hiveSession, relation);
+                                if (viewDefinition.isEmpty()) {
+                                    // Disappeared
+                                    return;
+                                }
+                                unfilteredResult.add(RelationColumnsMetadata.forView(relation, viewDefinition.get().getColumns()));
+                                return;
+                            }
+                            catch (HiveViewNotSupportedException ignore) {
+                                // Hive view translation is not enabled, treat it as if it was a table
+                            }
+                        }
+
+                        boolean icebergTable = isIcebergTable(table);
+                        boolean deltaLakeTable = isDeltaLakeTable(table);
+                        boolean hudiTable = isHudiTable(table);
+                        boolean hiveTable = !(hiveView || icebergTable || deltaLakeTable || hudiTable);
+
+                        MaybeLazy<List<ColumnMetadata>> tableColumnsMetadata;
+                        if (hiveTable || hiveView || hudiTable) {
+                            // TODO: this is probably incorrect for Hudi wrt timestamp precision, but that's what we used to be doing so far.
+                            tableColumnsMetadata = MaybeLazy.ofValue(HiveUtil.getTableColumnMetadata(hiveSession, table, typeManager));
+                        }
+                        else if (icebergTable) {
+                            tableColumnsMetadata = icebergMetadata.getTableColumnMetadata(icebergSession, table);
+                        }
+                        else if (deltaLakeTable) {
+                            tableColumnsMetadata = deltaMetadata.getTableColumnMetadata(deltaSession, table);
+                        }
+                        else {
+                            throw new UnsupportedOperationException("Unreachable");
+                        }
+                        tableColumnsMetadata.value().ifPresentOrElse(
+                                columnMetadata -> unfilteredResult.add(RelationColumnsMetadata.forTable(relation, columnMetadata)),
+                                // lazy computation ties up little memory (basically table/metadata location), so no need for explicit bound on unprocessedTables≥
+                                () -> unprocessedTables.put(relation, tableColumnsMetadata.lazy().orElseThrow()));
+                    });
+                }
+
+                relationFilter.apply(unprocessedTables.keySet()).forEach(tableName -> {
+                    List<ColumnMetadata> columnMetadata;
+                    try {
+                        columnMetadata = unprocessedTables.get(tableName).get();
+                    }
+                    catch (RuntimeException e) {
+                        if (AbstractIcebergTableOperations.isNotFoundException(e)) {
+                            log.debug(e, "Not found when accessing metadata for table %s during streaming table columns for %s", tableName, schemaName);
+                        }
+                        else {
+                            log.warn(e, "Failed to access metadata of table %s during streaming table columns for %s", tableName, schemaName);
+                        }
+                        return;
+                    }
+                    filteredResult.add(RelationColumnsMetadata.forTable(tableName, columnMetadata));
+                });
+
+                List<RelationColumnsMetadata> unfilteredResultList = unfilteredResult.build();
+                Set<SchemaTableName> availableNames = relationFilter.apply(unfilteredResultList.stream()
+                        .map(RelationColumnsMetadata::name)
+                        .collect(toImmutableSet()));
+
+                yield Stream.concat(
+                                unfilteredResultList.stream()
+                                        .filter(commentMetadata -> availableNames.contains(commentMetadata.name())),
+                                filteredResult.build().stream())
+                        .iterator();
             }
         };
     }

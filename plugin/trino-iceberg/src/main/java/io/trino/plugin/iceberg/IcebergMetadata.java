@@ -36,6 +36,7 @@ import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.base.classloader.ClassLoaderSafeSystemTable;
 import io.trino.plugin.base.projection.ApplyProjectionUtil;
 import io.trino.plugin.base.projection.ApplyProjectionUtil.ProjectedColumnRepresentation;
+import io.trino.plugin.base.util.MaybeLazy;
 import io.trino.plugin.hive.HiveWrittenPartitions;
 import io.trino.plugin.hive.LocationAccessControl;
 import io.trino.plugin.iceberg.aggregation.DataSketchStateSerializer;
@@ -328,6 +329,11 @@ public class IcebergMetadata
         this.catalog = requireNonNull(catalog, "catalog is null");
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.tableStatisticsWriter = requireNonNull(tableStatisticsWriter, "tableStatisticsWriter is null");
+    }
+
+    public MaybeLazy<List<ColumnMetadata>> getTableColumnMetadata(ConnectorSession session, io.trino.plugin.hive.metastore.Table metastoreTable)
+    {
+        return catalog.getTableColumnMetadata(session, metastoreTable);
     }
 
     @Override
