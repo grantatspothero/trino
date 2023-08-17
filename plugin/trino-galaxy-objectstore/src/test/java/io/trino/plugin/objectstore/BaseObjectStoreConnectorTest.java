@@ -34,7 +34,6 @@ import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.spi.Plugin;
 import io.trino.testing.BaseConnectorTest;
 import io.trino.testing.DistributedQueryRunner;
-import io.trino.testing.QueryFailedException;
 import io.trino.testing.QueryRunner;
 import io.trino.testing.TestingConnectorBehavior;
 import io.trino.testing.sql.TestTable;
@@ -1026,15 +1025,6 @@ public abstract class BaseObjectStoreConnectorTest
         int testTimeoutSeconds = 260;
 
         testReadMetadataWithRelationsConcurrentModifications(readIterations, testTimeoutSeconds);
-    }
-
-    @Override
-    public void testColumnCommentMaterializedView()
-    {
-        // setting MV column comments is supported by the connector, but TODO (https://github.com/starburstdata/galaxy-trino/issues/930) not when Galaxy metastore is in use
-        assertThatThrownBy(super::testColumnCommentMaterializedView)
-                .isInstanceOf(QueryFailedException.class)
-                .hasMessage("updateMaterializedViewColumnComment is not supported for Iceberg Galaxy catalogs");
     }
 
     protected void assertQueryReturns(@Language("SQL") String sql, String result)

@@ -26,7 +26,6 @@ import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.server.security.galaxy.GalaxyTestHelper;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.GalaxyQueryRunner;
-import io.trino.testing.QueryFailedException;
 import io.trino.testing.QueryRunner;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
@@ -199,14 +198,5 @@ public class TestObjectStoreGalaxyMaterializedView
                 .hasMessageContaining("Access Denied: Cannot create materialized view iceberg.different_storage_schema.%s: Role accountadmin does not have the privilege CREATE_TABLE on the schema iceberg.different_storage_schema".formatted(viewName));
         assertThatThrownBy(() -> query("DESCRIBE " + viewName))
                 .hasMessageContaining(format("'iceberg.%s.%s' does not exist", schemaName, viewName));
-    }
-
-    @Override
-    public void testCommentColumnMaterializedView()
-    {
-        // setting MV column comments is supported by the connector, but TODO (https://github.com/starburstdata/galaxy-trino/issues/930) not when Galaxy metastore is in use
-        assertThatThrownBy(super::testCommentColumnMaterializedView)
-                .isInstanceOf(QueryFailedException.class)
-                .hasMessage("updateMaterializedViewColumnComment is not supported for Iceberg Galaxy catalogs");
     }
 }
