@@ -223,59 +223,18 @@ public class ObjectStoreMetadata
         checkArgument(candidateTypes.size() == 4);
         TrinoException deferredException = null;
         for (TableType candidateType : candidateTypes) {
-            switch (candidateType) {
-                case ICEBERG -> {
-                    try {
-                        return icebergMetadata.getTableHandle(unwrap(ICEBERG, session), tableName, Optional.empty(), Optional.empty());
-                    }
-                    catch (TrinoException e) {
-                        if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
-                            throw e;
-                        }
-                        deferredException = e;
-                    }
+            try {
+                return delegate(candidateType).getTableHandle(unwrap(candidateType, session), tableName, Optional.empty(), Optional.empty());
+            }
+            catch (TrinoException e) {
+                if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
+                    throw e;
                 }
-
-                case DELTA -> {
-                    try {
-                        return deltaMetadata.getTableHandle(unwrap(DELTA, session), tableName, Optional.empty(), Optional.empty());
-                    }
-                    catch (TrinoException e) {
-                        if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
-                            throw e;
-                        }
-                        deferredException = e;
-                    }
-                }
-
-                case HUDI -> {
-                    try {
-                        return hudiMetadata.getTableHandle(unwrap(HUDI, session), tableName, Optional.empty(), Optional.empty());
-                    }
-                    catch (TrinoException e) {
-                        if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
-                            throw e;
-                        }
-                        deferredException = e;
-                    }
-                }
-
-                case HIVE -> {
-                    try {
-                        return hiveMetadata.getTableHandle(unwrap(HIVE, session), tableName, Optional.empty(), Optional.empty());
-                    }
-                    catch (TrinoException e) {
-                        if (!isError(e, UNSUPPORTED_TABLE_TYPE)) {
-                            throw e;
-                        }
-                        deferredException = e;
-                    }
-                }
+                deferredException = e;
             }
         }
 
         // Propagate last exception
-        verify(deferredException != null, "deferredException cannot be null");
         throw deferredException;
     }
 
