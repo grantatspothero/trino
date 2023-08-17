@@ -59,10 +59,13 @@ jobs:
           # we use Trino version as a version prefix as maven assembly plugin does not work well with versions not starting with a number
           trino_version=$(./mvnw -B help:evaluate -Dexpression=dep.trino.version -q -DforceStdout)
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "version=${trino_version}-pr${{ github.event.number }}-$(git describe --tags)" >> $GITHUB_OUTPUT
+            version="${trino_version}-pr${{ github.event.number }}-$(git describe --tags)"
           else
-            echo "version=${trino_version}-$(git describe --tags)" >> $GITHUB_OUTPUT
+            version="${trino_version}-$(git describe --tags)"
           fi
+          echo "Determined project version: ${version}"
+          echo "version=${version}" >> $GITHUB_OUTPUT
+          echo "version: \`${version}\`" >> $GITHUB_STEP_SUMMARY
 
   build:
     runs-on: [ self-hosted, sep-cicd, gha-fleet-medium ]
