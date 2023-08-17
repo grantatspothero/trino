@@ -354,10 +354,10 @@ public class ObjectStoreMetadata
     @Override
     public Optional<SystemTable> getSystemTable(ConnectorSession session, SchemaTableName tableName)
     {
-        return getHiveSystemTable(session, tableName).or(() ->
-                getIcebergSystemTable(session, tableName)).or(() ->
-                getDeltaLakeSystemTable(session, tableName)).or(() ->
-                getHudiSystemTable(session, tableName));
+        return getHiveSystemTable(session, tableName)
+                .or(() -> getIcebergSystemTable(session, tableName))
+                .or(() -> getDeltaLakeSystemTable(session, tableName))
+                .or(() -> getHudiSystemTable(session, tableName));
     }
 
     private Optional<SystemTable> getHiveSystemTable(ConnectorSession session, SchemaTableName tableName)
