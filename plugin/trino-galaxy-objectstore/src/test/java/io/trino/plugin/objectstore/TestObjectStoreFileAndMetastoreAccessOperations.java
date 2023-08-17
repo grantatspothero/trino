@@ -68,8 +68,8 @@ import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_PARTITION_NAMES_BY_FILTER;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_PARTITION_STATISTICS;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_TABLE;
+import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_TABLES_WITH_PARAMETER;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_TABLE_STATISTICS;
-import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_TABLE_WITH_PARAMETER;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.REPLACE_TABLE;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.UPDATE_PARTITION_STATISTICS;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.UPDATE_TABLE_STATISTICS;
@@ -792,7 +792,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
                             case NONE, V1 -> 3;
                             case V2 -> 1;
                         })
-                        .addCopies(GET_TABLE_WITH_PARAMETER, 1)
+                        .addCopies(GET_TABLES_WITH_PARAMETER, 1)
                         .addCopies(GET_TABLE, switch (mode) {
                             case NONE, V1 -> tables * 6;
                             case V2 -> occurrences(type, tables * 2, tables * 3, tables * 3);
@@ -810,7 +810,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
                 ImmutableMultiset.builder()
                         .addCopies(GET_ALL_VIEWS_FROM_DATABASE, 1)
                         .addCopies(GET_ALL_TABLES_FROM_DATABASE, 1)
-                        .addCopies(GET_TABLE_WITH_PARAMETER, 1)
+                        .addCopies(GET_TABLES_WITH_PARAMETER, 1)
                         .addCopies(GET_TABLE, tables * 2)
                         .build(),
                 switch (type) {
@@ -880,7 +880,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
                         .addCopies(GET_TABLE, 9)
                         .addCopies(GET_ALL_TABLES_FROM_DATABASE, 3)
                         .addCopies(GET_ALL_VIEWS_FROM_DATABASE, 1)
-                        .addCopies(GET_TABLE_WITH_PARAMETER, 1)
+                        .addCopies(GET_TABLES_WITH_PARAMETER, 1)
                         .build(),
                 ImmutableMultiset.<FileOperation>builder()
                         .add(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM))
