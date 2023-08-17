@@ -18,7 +18,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
-import io.trino.filesystem.TrackingFileSystemFactory;
 import io.trino.filesystem.hdfs.HdfsFileSystemFactory;
 import io.trino.plugin.hive.metastore.CountingAccessHiveMetastore;
 import io.trino.plugin.hive.metastore.CountingAccessHiveMetastoreUtil;
@@ -63,8 +62,6 @@ public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
 
     private CountingAccessHiveMetastore metastore;
 
-    private TrackingFileSystemFactory trackingFileSystemFactory;
-
     @Override
     protected QueryRunner createQueryRunner()
             throws Exception
@@ -74,7 +71,6 @@ public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
 
         TestingGalaxyMetastore galaxyMetastore = closeAfterClass(new TestingGalaxyMetastore(galaxyCockroachContainer));
         metastore = new CountingAccessHiveMetastore(new GalaxyHiveMetastore(galaxyMetastore.getMetastore(), HDFS_ENVIRONMENT, schemaDirectory.toUri().toString(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch()));
-        trackingFileSystemFactory = new TrackingFileSystemFactory(new HdfsFileSystemFactory(HDFS_ENVIRONMENT, HDFS_FILE_SYSTEM_STATS));
 
         TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> galaxyCockroachContainer));
 
@@ -105,7 +101,7 @@ public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
         DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder(CATALOG_NAME, SCHEMA_NAME)
                 .setAccountClient(testingAccountFactory.createAccountClient())
                 .addPlugin(new IcebergPlugin())
-                .addPlugin(new TestingObjectStorePlugin(metastore, trackingFileSystemFactory))
+                .addPlugin(new TestingObjectStorePlugin(metastore, new HdfsFileSystemFactory(HDFS_ENVIRONMENT, HDFS_FILE_SYSTEM_STATS)))
                 .addCatalog(CATALOG_NAME, "galaxy_objectstore", properties)
                 .build();
         queryRunner.execute("CREATE SCHEMA %s.%s WITH (location = '%s')".formatted(CATALOG_NAME, SCHEMA_NAME, schemaDirectory.toUri().toString()));
