@@ -68,6 +68,7 @@ import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verifyNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -355,7 +356,7 @@ public class TrinoGalaxyCatalog
         for (SchemaTableName tableName : tables) {
             Optional<List<ColumnMetadata>> columnMetadata;
             try {
-                columnMetadata = getColumnMetadata(tableName);
+                columnMetadata = getCachedColumnMetadata(tableName);
             }
             catch (TableNotFoundException ignore) {
                 // Table disappeared during listing.
@@ -371,14 +372,19 @@ public class TrinoGalaxyCatalog
         return metadatas.buildOrThrow();
     }
 
-    private Optional<List<ColumnMetadata>> getColumnMetadata(SchemaTableName tableName)
+    private Optional<List<ColumnMetadata>> getCachedColumnMetadata(SchemaTableName tableName)
     {
         io.trino.plugin.hive.metastore.Table table = metastore.getTable(tableName.getSchemaName(), tableName.getTableName())
                 .orElse(null);
         if (table == null || !isIcebergTable(table)) {
             return Optional.empty();
         }
+        return getCachedColumnMetadata(table);
+    }
 
+    private Optional<List<ColumnMetadata>> getCachedColumnMetadata(io.trino.plugin.hive.metastore.Table table)
+    {
+        checkArgument(isIcebergTable(table), "Not Iceberg table: %s", table);
         checkState(table.getPartitionColumns().isEmpty(), "Unexpected partitioning columns in Iceberg table: %s", table);
         if (table.getDataColumns().stream().noneMatch(column -> column.getProperties().containsKey(COLUMN_TRINO_TYPE_ID_PROPERTY))) {
             // Metastore does not have up-to-date information about the table.
