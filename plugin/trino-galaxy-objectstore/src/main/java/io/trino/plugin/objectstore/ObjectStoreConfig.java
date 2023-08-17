@@ -22,6 +22,7 @@ import static io.trino.plugin.iceberg.IcebergFileFormat.PARQUET;
 
 public class ObjectStoreConfig
 {
+    // TODO: remove: select good implementation and remove all the rest.
     public enum InformationSchemaQueriesAcceleration {
         NONE,
         /**

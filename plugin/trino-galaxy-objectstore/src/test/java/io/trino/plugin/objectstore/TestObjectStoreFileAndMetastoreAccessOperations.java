@@ -74,7 +74,6 @@ import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.UPDATE_PARTITION_STATISTICS;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.UPDATE_TABLE_STATISTICS;
 import static io.trino.plugin.hive.util.MultisetAssertions.assertMultisetsEqual;
-import static io.trino.plugin.objectstore.ObjectStoreConfig.InformationSchemaQueriesAcceleration.V2;
 import static io.trino.plugin.objectstore.ObjectStoreSessionProperties.INFORMATION_SCHEMA_QUERIES_ACCELERATION;
 import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.CDF_DATA;
 import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.DATA;
@@ -789,7 +788,10 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
         assertInvocations(session, "SELECT * FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA AND table_name LIKE 'test_select_i_s_columns%'",
                 ImmutableMultiset.builder()
                         .addCopies(GET_ALL_VIEWS_FROM_DATABASE, 1)
-                        .addCopies(GET_ALL_TABLES_FROM_DATABASE, mode == V2 ? 1 : 3)
+                        .addCopies(GET_ALL_TABLES_FROM_DATABASE, switch (mode) {
+                            case NONE, V1 -> 3;
+                            case V2 -> 1;
+                        })
                         .addCopies(GET_TABLE_WITH_PARAMETER, 1)
                         .addCopies(GET_TABLE, switch (mode) {
                             case NONE, V1 -> tables * 6;
