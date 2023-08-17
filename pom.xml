@@ -194,7 +194,7 @@
         <!-- released from https://github.com/starburstdata/varada -->
         <dep.warp-speed.version>423.2.0-cand</dep.warp-speed.version>
         <!-- released from https://github.com/starburstdata/trino-buffer-service -->
-        <dep.trino-buffer-service.version>422-trino-buffer-service-583-gb8d02d0</dep.trino-buffer-service.version>
+        <dep.trino-buffer-service.version>423-trino-buffer-service-584-geed1419</dep.trino-buffer-service.version>
         <!-- released form https://github.com/starburstdata/schema-discovery -->
         <dep.schema-discovery.version>423.20230811-412a7c7</dep.schema-discovery.version>
         <!-- released from https://github.com/starburstdata/starburst-dataframe -->
