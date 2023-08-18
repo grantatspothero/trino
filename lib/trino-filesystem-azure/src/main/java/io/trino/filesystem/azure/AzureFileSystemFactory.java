@@ -14,12 +14,18 @@
 package io.trino.filesystem.azure;
 
 import com.azure.core.http.HttpClient;
-import com.azure.core.http.okhttp.OkHttpAsyncClientProvider;
+import com.azure.core.util.ConfigurationBuilder;
 import com.azure.core.util.HttpClientOptions;
 import com.google.inject.Inject;
 import io.airlift.units.DataSize;
 import io.trino.filesystem.TrinoFileSystem;
 import io.trino.filesystem.TrinoFileSystemFactory;
+import io.trino.filesystem.azure.galaxy.GalaxyOkHttpAsyncClientProvider;
+import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
+import io.trino.plugin.base.galaxy.RegionVerifierProperties;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.security.ConnectorIdentity;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -36,17 +42,33 @@ public class AzureFileSystemFactory
     private final HttpClient httpClient;
 
     @Inject
-    public AzureFileSystemFactory(AzureAuth azureAuth, AzureFileSystemConfig config)
+    public AzureFileSystemFactory(
+            AzureAuth azureAuth,
+            AzureFileSystemConfig config,
+            CatalogHandle catalogHandle,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig)
     {
         this(
                 azureAuth,
                 config.getReadBlockSize(),
                 config.getWriteBlockSize(),
                 config.getMaxWriteConcurrency(),
-                config.getMaxSingleUploadSize());
+                config.getMaxSingleUploadSize(),
+                catalogHandle,
+                localRegionConfig,
+                crossRegionConfig);
     }
 
-    public AzureFileSystemFactory(AzureAuth azureAuth, DataSize readBlockSize, DataSize writeBlockSize, int maxWriteConcurrency, DataSize maxSingleUploadSize)
+    public AzureFileSystemFactory(
+            AzureAuth azureAuth,
+            DataSize readBlockSize,
+            DataSize writeBlockSize,
+            int maxWriteConcurrency,
+            DataSize maxSingleUploadSize,
+            CatalogHandle catalogHandle,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig)
     {
         this.auth = requireNonNull(azureAuth, "azureAuth is null");
         this.readBlockSize = requireNonNull(readBlockSize, "readBlockSize is null");
@@ -54,7 +76,18 @@ public class AzureFileSystemFactory
         checkArgument(maxWriteConcurrency >= 0, "maxWriteConcurrency is negative");
         this.maxWriteConcurrency = maxWriteConcurrency;
         this.maxSingleUploadSize = requireNonNull(maxSingleUploadSize, "maxSingleUploadSize is null");
-        this.httpClient = HttpClient.createDefault(new HttpClientOptions().setHttpClientProvider(OkHttpAsyncClientProvider.class));
+
+        ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+
+        RegionVerifierProperties.addRegionVerifierProperties(configurationBuilder::putProperty, RegionVerifierProperties.generateFrom(localRegionConfig, crossRegionConfig));
+        CatalogNetworkMonitorProperties catalogNetworkMonitorProperties = CatalogNetworkMonitorProperties.generateFrom(crossRegionConfig, catalogHandle)
+                .withTlsEnabled(true);
+        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(configurationBuilder::putProperty, catalogNetworkMonitorProperties);
+
+        HttpClientOptions httpClientOptions = new HttpClientOptions()
+                .setHttpClientProvider(GalaxyOkHttpAsyncClientProvider.class)
+                .setConfiguration(configurationBuilder.build());
+        this.httpClient = HttpClient.createDefault(httpClientOptions);
     }
 
     @Override

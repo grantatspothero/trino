@@ -25,6 +25,9 @@ import com.azure.storage.file.datalake.options.DataLakePathDeleteOptions;
 import io.trino.filesystem.AbstractTestTrinoFileSystem;
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystem;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.security.ConnectorIdentity;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -84,7 +87,7 @@ public abstract class AbstractTestAzureFileSystem
         // this will fail if the container already exists, which is what we want
         blobContainerClient.create();
 
-        fileSystem = new AzureFileSystemFactory(new AzureAuthAccessKey(accountKey), new AzureFileSystemConfig()).create(ConnectorIdentity.ofUser("test"));
+        fileSystem = new AzureFileSystemFactory(new AzureAuthAccessKey(accountKey), new AzureFileSystemConfig(), CatalogHandle.fromId("catalog:normal:1"), new LocalRegionConfig(), new CrossRegionConfig()).create(ConnectorIdentity.ofUser("test"));
 
         cleanupFiles();
     }

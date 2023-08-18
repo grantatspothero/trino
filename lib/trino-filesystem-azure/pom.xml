@@ -101,6 +101,11 @@
         </dependency>
 
         <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>configuration</artifactId>
         </dependency>
@@ -122,6 +127,11 @@
 
         <dependency>
             <groupId>io.trino</groupId>
+            <artifactId>trino-plugin-toolkit</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
             <artifactId>trino-spi</artifactId>
         </dependency>
 
@@ -132,14 +142,14 @@
 
         <dependency>
             <groupId>io.airlift</groupId>
-            <artifactId>slice</artifactId>
+            <artifactId>log-manager</artifactId>
             <scope>runtime</scope>
         </dependency>
 
         <dependency>
             <groupId>io.airlift</groupId>
-            <artifactId>log-manager</artifactId>
-            <scope>test</scope>
+            <artifactId>slice</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <dependency>
@@ -209,6 +219,7 @@
                                 <exclude>**/TestAzureFileSystemBlob.java</exclude>
                                 <exclude>**/TestAzureFileSystemGen2Flat.java</exclude>
                                 <exclude>**/TestAzureFileSystemGen2Hierarchical.java</exclude>
+                                <exclude>**/TestAzureFileSystemNetworkTracking.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -228,6 +239,7 @@
                                 <include>**/TestAzureFileSystemBlob.java</include>
                                 <include>**/TestAzureFileSystemGen2Flat.java</include>
                                 <include>**/TestAzureFileSystemGen2Hierarchical.java</include>
+                                <include>**/TestAzureFileSystemNetworkTracking.java</include>
                             </includes>
                         </configuration>
                     </plugin>
