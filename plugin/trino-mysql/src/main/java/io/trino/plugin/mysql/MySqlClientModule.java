@@ -19,6 +19,7 @@ import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.mysql.cj.jdbc.Driver;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.opentelemetry.api.OpenTelemetry;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.LocalRegionConfig;
@@ -71,7 +72,8 @@ public class MySqlClientModule
             MySqlConfig mySqlConfig,
             LocalRegionConfig localRegionConfig,
             CrossRegionConfig crossRegionConfig,
-            SshTunnelConfig sshTunnelConfig)
+            SshTunnelConfig sshTunnelConfig,
+            OpenTelemetry openTelemetry)
             throws SQLException
     {
         Properties properties = getConnectionProperties(mySqlConfig);
@@ -83,7 +85,7 @@ public class MySqlClientModule
 
         CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(properties::setProperty, CatalogNetworkMonitorProperties.generateFrom(crossRegionConfig, catalogHandle));
 
-        return new DriverConnectionFactory(new Driver(), config.getConnectionUrl(), properties, credentialProvider);
+        return new DriverConnectionFactory(new Driver(), config.getConnectionUrl(), properties, credentialProvider, openTelemetry);
     }
 
     public static Properties getConnectionProperties(MySqlConfig mySqlConfig)
