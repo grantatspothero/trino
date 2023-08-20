@@ -33,6 +33,8 @@ import com.mongodb.connection.StreamFactory;
 import com.mongodb.internal.connection.PowerOfTwoBufferPool;
 import com.mongodb.internal.connection.SocketStream;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.instrumentation.mongo.v3_1.MongoTelemetry;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
@@ -87,10 +89,11 @@ public class MongoClientModule
 
     @Singleton
     @Provides
-    public static MongoSession createMongoSession(TypeManager typeManager, MongoClientConfig config, Set<MongoClientSettingConfigurator> configurators)
+    public static MongoSession createMongoSession(TypeManager typeManager, MongoClientConfig config, Set<MongoClientSettingConfigurator> configurators, OpenTelemetry openTelemetry)
     {
         MongoClientSettings.Builder options = MongoClientSettings.builder();
         configurators.forEach(configurator -> configurator.configure(options));
+        options.addCommandListener(MongoTelemetry.builder(openTelemetry).build().newCommandListener());
         MongoClient client = MongoClients.create(options.build());
 
         return new MongoSession(

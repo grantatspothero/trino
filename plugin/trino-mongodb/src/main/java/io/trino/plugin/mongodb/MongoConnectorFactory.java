@@ -16,6 +16,7 @@ package io.trino.plugin.mongodb;
 import com.google.inject.Injector;
 import io.airlift.bootstrap.Bootstrap;
 import io.airlift.json.JsonModule;
+import io.opentelemetry.api.OpenTelemetry;
 import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
@@ -56,7 +57,8 @@ public class MongoConnectorFactory
                 binder -> binder.bind(CatalogHandle.class).toInstance(context.getCatalogHandle()),
                 new JsonModule(),
                 new MongoClientModule(),
-                binder -> binder.bind(TypeManager.class).toInstance(context.getTypeManager()));
+                binder -> binder.bind(TypeManager.class).toInstance(context.getTypeManager()),
+                binder -> binder.bind(OpenTelemetry.class).toInstance(context.getOpenTelemetry()));
 
         Injector injector = app.doNotInitializeLogging()
                 .setRequiredConfigurationProperties(config)
