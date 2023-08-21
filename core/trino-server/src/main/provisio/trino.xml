@@ -206,6 +206,12 @@
         </artifact>
     </artifactSet>
 
+    <artifactSet to="plugin/galaxy-salesforce">
+        <artifact id="${project.groupId}:trino-galaxy-salesforce:zip:${project.version}">
+            <unpack />
+        </artifact>
+    </artifactSet>
+
     <artifactSet to="plugin/galaxy-snowflake">
         <artifact id="${project.groupId}:trino-galaxy-snowflake:zip:${project.version}">
             <unpack />

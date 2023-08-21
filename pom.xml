@@ -78,6 +78,7 @@
         <module>plugin/trino-galaxy-objectstore</module>
         <module>plugin/trino-galaxy-oracle</module>
         <module>plugin/trino-galaxy-query-monitor-event-listener</module>
+        <module>plugin/trino-galaxy-salesforce</module>
         <module>plugin/trino-galaxy-snowflake</module>
         <module>plugin/trino-galaxy-synapse</module>
         <module>plugin/trino-galaxy-warp-speed</module>
@@ -207,7 +208,7 @@
         <!-- released from https://github.com/starburstdata/stargate -->
         <dep.stargate.version>stargate-10768-gaa718be58</dep.stargate.version>
         <!-- released from https://github.com/starburstdata/starburst-trino-plugins -->
-        <dep.starburst-trino-plugins.version>425</dep.starburst-trino-plugins.version>
+        <dep.starburst-trino-plugins.version>425.1</dep.starburst-trino-plugins.version>
         <dep.cloudevents.version>2.2.0</dep.cloudevents.version>
 
         <!--
@@ -644,6 +645,12 @@
                 <artifactId>starburst-oracle</artifactId>
                 <version>${dep.starburst-trino-plugins.version}</version>
                 <type>test-jar</type>
+            </dependency>
+
+            <dependency>
+                <groupId>com.starburstdata.trino.plugins</groupId>
+                <artifactId>starburst-salesforce</artifactId>
+                <version>${dep.starburst-trino-plugins.version}</version>
             </dependency>
 
             <dependency>
