@@ -87,6 +87,13 @@
         </dependency>
 
         <dependency>
+            <groupId>com.starburstdata.trino.plugins</groupId>
+            <artifactId>starburst-salesforce</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>io.trino</groupId>
             <artifactId>trino-jmx</artifactId>
             <scope>test</scope>

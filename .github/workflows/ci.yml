@@ -5,6 +5,9 @@ on:
     branches:
       - master
       - galaxy*
+  schedule:
+    # Used to schedule Salesforce tests
+    - cron: "2 0 * * *"
   pull_request:
     paths-ignore:
       - 'docs/**'
@@ -531,6 +534,7 @@ jobs:
             !:trino-galaxy-objectstore,
             !:trino-galaxy-oracle,
             !:trino-galaxy-warp-speed,
+            !:trino-galaxy-salesforce,
             !:trino-galaxy-snowflake,
             !:trino-galaxy-synapse,
             !:trino-hdfs,
@@ -647,6 +651,8 @@ jobs:
             - { modules: lib/trino-filesystem-s3, profile: cloud-tests }
             - { modules: plugin/trino-bigquery }
             - { modules: plugin/trino-bigquery, profile: cloud-tests-arrow }
+            - { modules: plugin/trino-galaxy-salesforce }
+            - { modules: plugin/trino-galaxy-salesforce, profile: jdbc-integration-tests }
             - { modules: plugin/trino-galaxy-snowflake }
             - { modules: plugin/trino-galaxy-snowflake, profile: jdbc-integration-tests }
             - { modules: plugin/trino-galaxy-snowflake, profile: parallel-integration-tests }
@@ -752,6 +758,7 @@ jobs:
         if: >-
           matrix.modules != 'plugin/trino-singlestore'
           && matrix.modules != 'plugin/trino-galaxy-oracle'
+          && matrix.modules != 'plugin/trino-galaxy-salesforce'
           && matrix.modules != 'plugin/trino-galaxy-synapse'
           && matrix.modules != 'plugin/trino-galaxy-snowflake'
           && matrix.modules != 'plugin/trino-mongodb'
@@ -826,6 +833,16 @@ jobs:
         if: matrix.modules == 'plugin/trino-galaxy-oracle'
         run: |
           $MAVEN test ${MAVEN_TEST} -pl ${{ matrix.modules }} ${{ matrix.profile != '' && format('-P {0}', matrix.profile) || '' }}
+      - name: Salesforce Maven Tests
+        if: matrix.modules == 'plugin/trino-galaxy-salesforce' && ((github.event_name == 'schedule') || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'salesforce')) || (github.event_name == 'workflow_dispatch'))
+        env:
+          SALESFORCE_CONFIG: >-
+            -Dsalesforce.test.basic.auth.user=${{ secrets.SALESFORCE_USERNAME }}
+            -Dsalesforce.test.basic.auth.password=${{ secrets.SALESFORCE_PASSWORD }}
+            -Dsalesforce.test.basic.auth.security-token=${{ secrets.SALESFORCE_SECURITY_TOKEN }}
+        run: |
+          export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
+          $MAVEN test ${MAVEN_TEST} -pl ${{ matrix.modules }} ${{ matrix.profile != '' && format('-P {0}', matrix.profile) || '' }} ${SALESFORCE_CONFIG}
       - name: Snowflake Maven Tests
         if: matrix.modules == 'plugin/trino-galaxy-snowflake'
         env:

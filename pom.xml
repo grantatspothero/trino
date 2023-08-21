@@ -655,6 +655,13 @@
 
             <dependency>
                 <groupId>com.starburstdata.trino.plugins</groupId>
+                <artifactId>starburst-salesforce</artifactId>
+                <version>${dep.starburst-trino-plugins.version}</version>
+                <type>test-jar</type>
+            </dependency>
+
+            <dependency>
+                <groupId>com.starburstdata.trino.plugins</groupId>
                 <artifactId>starburst-snowflake</artifactId>
                 <version>${dep.starburst-trino-plugins.version}</version>
             </dependency>
