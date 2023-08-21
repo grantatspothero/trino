@@ -22,7 +22,6 @@ import io.trino.cost.StatsProvider;
 import io.trino.cost.SymbolStatsEstimate;
 import io.trino.cost.TaskCountEstimator;
 import io.trino.execution.warnings.WarningCollector;
-import io.trino.metadata.MetadataManager;
 import io.trino.metadata.TableHandle;
 import io.trino.metadata.TestingFunctionResolution;
 import io.trino.plugin.tpch.TpchConnectorFactory;
@@ -82,8 +81,7 @@ public class TestDistinctAggregationController
     public final void setUp()
     {
         LocalQueryRunner queryRunner = LocalQueryRunner.builder(TEST_SESSION)
-                .withMetadataProvider((systemSecurityMetadata, transactionManager, globalFunctionCatalog, typeManager) -> new DelegatingMetadata(
-                        new MetadataManager(systemSecurityMetadata, transactionManager, globalFunctionCatalog, typeManager))
+                .withMetadataDecorator(metadata -> new DelegatingMetadata(metadata)
                 {
                     @Override
                     public boolean isColumnarTableScan(Session session, TableHandle tableHandle)

@@ -31,7 +31,6 @@ import io.trino.metadata.InsertTableHandle;
 import io.trino.metadata.MaterializedViewDefinition;
 import io.trino.metadata.MergeHandle;
 import io.trino.metadata.Metadata;
-import io.trino.metadata.MetadataManager;
 import io.trino.metadata.OperatorNotFoundException;
 import io.trino.metadata.OutputTableHandle;
 import io.trino.metadata.QualifiedObjectName;
@@ -1146,8 +1145,7 @@ public class TestMultipleDistinctAggregationsToSubqueries
     {
         Session session = testSessionBuilder().build();
         LocalQueryRunner localQueryRunner = LocalQueryRunner.builder(session)
-                .withMetadataProvider((systemSecurityMetadata, transactionManager, globalFunctionCatalog, typeManager) -> new DelegatingMetadata(
-                        new MetadataManager(systemSecurityMetadata, transactionManager, globalFunctionCatalog, typeManager))
+                .withMetadataDecorator(metadata -> new DelegatingMetadata(metadata)
                 {
                     @Override
                     public boolean isColumnarTableScan(Session session, TableHandle tableHandle)

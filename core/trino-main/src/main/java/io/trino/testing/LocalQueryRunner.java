@@ -110,7 +110,6 @@ import io.trino.metadata.SchemaPropertyManager;
 import io.trino.metadata.SessionPropertyManager;
 import io.trino.metadata.Split;
 import io.trino.metadata.SystemFunctionBundle;
-import io.trino.metadata.SystemSecurityMetadata;
 import io.trino.metadata.TableFunctionRegistry;
 import io.trino.metadata.TableHandle;
 import io.trino.metadata.TableProceduresPropertyManager;
@@ -361,10 +360,10 @@ public class LocalQueryRunner
             boolean alwaysRevokeMemory,
             int nodeCountForStats,
             Map<String, List<PropertyMetadata<?>>> defaultSessionProperties,
-            MetadataProvider metadataProvider,
             BiFunction<Metadata, AccessControl, InformationSchemaPageSourceProvider> informationSchemaPageSourceFactory,
             BiFunction<Metadata, AccessControl, SystemTable> tableCommentFactory,
             BiFunction<Metadata, AccessControl, SystemTable> materializedViewFactory,
+            Function<Metadata, Metadata> metadataDecorator,
             Set<SystemSessionPropertiesProvider> extraSessionProperties)
     {
         requireNonNull(defaultSession, "defaultSession is null");
@@ -408,11 +407,11 @@ public class LocalQueryRunner
         this.globalFunctionCatalog = new GlobalFunctionCatalog();
         globalFunctionCatalog.addFunctions(new InternalFunctionBundle(new LiteralFunction(blockEncodingSerde)));
         globalFunctionCatalog.addFunctions(SystemFunctionBundle.create(featuresConfig, typeOperators, blockTypeOperators, nodeManager.getCurrentNode().getNodeVersion()));
-        Metadata metadata = metadataProvider.getMetadata(
+        Metadata metadata = metadataDecorator.apply(new MetadataManager(
                 new DisabledSystemSecurityMetadata(),
                 transactionManager,
                 globalFunctionCatalog,
-                typeManager);
+                typeManager));
         typeRegistry.addType(new JsonPath2016Type(new TypeDeserializer(typeManager), blockEncodingSerde));
         this.joinCompiler = new JoinCompiler(typeOperators);
         PageIndexerFactory pageIndexerFactory = new GroupByHashPageIndexerFactory(joinCompiler);
@@ -1252,15 +1251,6 @@ public class LocalQueryRunner
                 .findAll();
     }
 
-    public interface MetadataProvider
-    {
-        Metadata getMetadata(
-                SystemSecurityMetadata systemSecurityMetadata,
-                TransactionManager transactionManager,
-                GlobalFunctionCatalog globalFunctionCatalog,
-                TypeManager typeManager);
-    }
-
     public static class Builder
     {
         private final Session defaultSession;
@@ -1272,10 +1262,10 @@ public class LocalQueryRunner
         private Map<String, List<PropertyMetadata<?>>> defaultSessionProperties = ImmutableMap.of();
         private Set<SystemSessionPropertiesProvider> extraSessionProperties = ImmutableSet.of();
         private int nodeCountForStats;
-        private MetadataProvider metadataProvider = MetadataManager::new;
         private BiFunction<Metadata, AccessControl, InformationSchemaPageSourceProvider> informationSchemaPageSourceFactory = InformationSchemaPageSourceProvider::new;
         private BiFunction<Metadata, AccessControl, SystemTable> tableCommentFactory = TableCommentSystemTable::new;
         private BiFunction<Metadata, AccessControl, SystemTable> materializedViewFactory = MaterializedViewSystemTable::new;
+        private Function<Metadata, Metadata> metadataDecorator = Function.identity();
 
         private Builder(Session defaultSession)
         {
@@ -1324,9 +1314,9 @@ public class LocalQueryRunner
             return this;
         }
 
-        public Builder withMetadataProvider(MetadataProvider metadataProvider)
+        public Builder withMetadataDecorator(Function<Metadata, Metadata> metadataDecorator)
         {
-            this.metadataProvider = metadataProvider;
+            this.metadataDecorator = requireNonNull(metadataDecorator, "metadataDecorator is null");
             return this;
         }
 
@@ -1370,10 +1360,10 @@ public class LocalQueryRunner
                     alwaysRevokeMemory,
                     nodeCountForStats,
                     defaultSessionProperties,
-                    metadataProvider,
                     informationSchemaPageSourceFactory,
                     tableCommentFactory,
                     materializedViewFactory,
+                    metadataDecorator,
                     extraSessionProperties);
         }
     }
