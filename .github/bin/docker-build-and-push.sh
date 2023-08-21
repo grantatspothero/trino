@@ -79,6 +79,7 @@ galaxy-kafka-event-listener
 galaxy-query-monitor-event-listener
 galaxy-objectstore
 galaxy-oracle
+galaxy-salesforce
 galaxy-snowflake
 galaxy-synapse
 galaxy-warp-speed
