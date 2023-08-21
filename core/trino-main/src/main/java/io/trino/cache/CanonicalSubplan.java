@@ -28,14 +28,15 @@ import io.trino.sql.tree.Expression;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
- * This class represents a scan, filter and project subplan with canonicalized symbol names.
+ * This class represents a scan, filter, project and aggregation subplan with canonicalized symbol names.
  * Canonical symbol names are derived from {@link CacheColumnId} (if symbol represents
- * {@link ColumnHandle}) or from canonical version of project expressions.
+ * {@link ColumnHandle}) or from canonical version of project or aggregation expressions.
  */
 public class CanonicalSubplan
 {
@@ -47,6 +48,15 @@ public class CanonicalSubplan
      * Mapping from {@link CacheColumnId} to original {@link Symbol}.
      */
     private final BiMap<CacheColumnId, Symbol> originalSymbolMapping;
+
+    /**
+     * Group by columns. Symbol names are canonicalized as {@link CacheColumnId}.
+     */
+    private final Optional<List<Expression>> groupByExpressions;
+    /**
+     * Group by hash. Symbol names are canonicalized as {@link CacheColumnId}.
+     */
+    private final Optional<Expression> groupByHash;
     /**
      * Output projections with iteration order matching list of output columns.
      * Symbol names are canonicalized as {@link CacheColumnId}.
@@ -80,6 +90,8 @@ public class CanonicalSubplan
     public CanonicalSubplan(
             PlanNode originalPlanNode,
             BiMap<CacheColumnId, Symbol> originalSymbolMapping,
+            Optional<List<Expression>> groupByExpressions,
+            Optional<Expression> groupByHash,
             Map<CacheColumnId, Expression> assignments,
             List<Expression> conjuncts,
             List<Expression> dynamicConjuncts,
@@ -90,6 +102,8 @@ public class CanonicalSubplan
     {
         this.originalPlanNode = requireNonNull(originalPlanNode, "originalPlanNode is null");
         this.originalSymbolMapping = ImmutableBiMap.copyOf(requireNonNull(originalSymbolMapping, "originalSymbolMapping is null"));
+        this.groupByExpressions = requireNonNull(groupByExpressions, "groupByExpressions is null").map(ImmutableList::copyOf);
+        this.groupByHash = requireNonNull(groupByHash, "groupByHash is null");
         this.assignments = ImmutableMap.copyOf(requireNonNull(assignments, "assignments is null"));
         this.conjuncts = ImmutableList.copyOf(requireNonNull(conjuncts, "conjuncts is null"));
         this.dynamicConjuncts = ImmutableList.copyOf(requireNonNull(dynamicConjuncts, "dynamicConjuncts is null"));
@@ -116,6 +130,16 @@ public class CanonicalSubplan
     public BiMap<CacheColumnId, Symbol> getOriginalSymbolMapping()
     {
         return originalSymbolMapping;
+    }
+
+    public Optional<List<Expression>> getGroupByExpressions()
+    {
+        return groupByExpressions;
+    }
+
+    public Optional<Expression> getGroupByHash()
+    {
+        return groupByHash;
     }
 
     public Map<CacheColumnId, Expression> getAssignments()

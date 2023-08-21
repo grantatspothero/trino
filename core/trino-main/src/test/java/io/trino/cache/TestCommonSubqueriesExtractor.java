@@ -22,8 +22,10 @@ import io.trino.connector.MockConnectorFactory;
 import io.trino.connector.MockConnectorTableHandle;
 import io.trino.cost.PlanNodeStatsEstimate;
 import io.trino.cost.StatsAndCosts;
+import io.trino.execution.warnings.WarningCollector;
 import io.trino.metadata.Metadata;
 import io.trino.metadata.TableHandle;
+import io.trino.plugin.tpch.TpchConnectorFactory;
 import io.trino.spi.block.LongArrayBlockBuilder;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheTableId;
@@ -61,6 +63,7 @@ import io.trino.sql.planner.plan.TableScanNode;
 import io.trino.sql.planner.plan.UnionNode;
 import io.trino.testing.LocalQueryRunner;
 import io.trino.testing.TestingTransactionHandle;
+import org.intellij.lang.annotations.Language;
 import org.testng.annotations.Test;
 
 import java.util.AbstractMap.SimpleEntry;
@@ -70,6 +73,7 @@ import java.util.function.Function;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.cost.StatsCalculator.noopStatsCalculator;
+import static io.trino.execution.querystats.PlanOptimizersStatsCollector.createPlanOptimizersStatsCollector;
 import static io.trino.metadata.FunctionManager.createTestingFunctionManager;
 import static io.trino.spi.block.BlockTestUtils.assertBlockEquals;
 import static io.trino.spi.predicate.Range.greaterThan;
@@ -79,6 +83,7 @@ import static io.trino.sql.DynamicFilters.createDynamicFilterExpression;
 import static io.trino.sql.DynamicFilters.extractDynamicFilters;
 import static io.trino.sql.ExpressionUtils.and;
 import static io.trino.sql.planner.ExpressionExtractor.extractExpressions;
+import static io.trino.sql.planner.LogicalPlanner.Stage.OPTIMIZED_AND_VALIDATED;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.filter;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.strictProject;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.strictTableScan;
@@ -99,6 +104,10 @@ public class TestCommonSubqueriesExtractor
     private static final Session TEST_SESSION = testSessionBuilder()
             .setCatalog(TEST_CATALOG_NAME)
             .setSchema(TEST_SCHEMA)
+            .build();
+    private static final Session TPCH_SESSION = testSessionBuilder()
+            .setCatalog("tpch")
+            .setSchema("tiny")
             .build();
     private static final MockConnectorColumnHandle HANDLE_1 = new MockConnectorColumnHandle("column1", BIGINT);
     private static final MockConnectorColumnHandle HANDLE_2 = new MockConnectorColumnHandle("column2", BIGINT);
@@ -162,11 +171,27 @@ public class TestCommonSubqueriesExtractor
                         })
                         .build(),
                 ImmutableMap.of());
+        queryRunner.createCatalog(TPCH_SESSION.getCatalog().get(),
+                new TpchConnectorFactory(1),
+                ImmutableMap.of());
         testTableHandle = new TableHandle(
                 queryRunner.getCatalogHandle(TEST_CATALOG_NAME),
                 new MockConnectorTableHandle(TABLE_NAME),
                 TestingTransactionHandle.create());
         return queryRunner;
+    }
+
+    @Test
+    public void testAggregations()
+    {
+        Map<PlanNode, CommonPlanAdaptation> planAdaptations = extractTpchCommonSubqueries("""
+                SELECT sum(nationkey) FROM nation
+                UNION ALL
+                SELECT sum(nationkey) FROM nation""");
+        assertThat(planAdaptations).hasSize(2);
+        // aggregations are not supported yet
+        assertThat(planAdaptations).allSatisfy((node, adaptation) ->
+                assertThat(node).isInstanceOf(TableScanNode.class));
     }
 
     @Test
@@ -781,6 +806,24 @@ public class TestCommonSubqueriesExtractor
                         commonSubplan));
 
         assertPlan(symbolAllocator, subqueryB.adaptCommonSubplan(subqueryB.getCommonSubplan(), idAllocator), commonSubplan);
+    }
+
+    private Map<PlanNode, CommonPlanAdaptation> extractTpchCommonSubqueries(@Language("SQL") String query)
+    {
+        LocalQueryRunner queryRunner = getQueryRunner();
+        return queryRunner.inTransaction(TPCH_SESSION, session -> {
+            Plan plan = queryRunner.createPlan(session, query, OPTIMIZED_AND_VALIDATED, true, WarningCollector.NOOP, createPlanOptimizersStatsCollector());
+            // metadata.getCatalogHandle() registers the catalog for the transaction
+            session.getCatalog().ifPresent(catalog -> getQueryRunner().getMetadata().getCatalogHandle(session, catalog));
+            return CommonSubqueriesExtractor.extractCommonSubqueries(
+                    getQueryRunner().getPlannerContext(),
+                    session,
+                    new PlanNodeIdAllocator(),
+                    new SymbolAllocator(plan.getTypes().allTypes()),
+                    new RuleTester(getQueryRunner()).getTypeAnalyzer(),
+                    node -> PlanNodeStatsEstimate.unknown(),
+                    plan.getRoot());
+        });
     }
 
     private Map<PlanNode, CommonPlanAdaptation> extractCommonSubqueries(
