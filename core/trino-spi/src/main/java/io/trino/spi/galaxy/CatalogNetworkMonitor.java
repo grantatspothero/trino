@@ -113,19 +113,29 @@ public final class CatalogNetworkMonitor
 
     public InputStream monitorInputStream(boolean crossRegion, InputStream inputStream)
     {
-        return new MonitoredInputStream(
-                crossRegion
-                        ? crossRegionMonitor.orElseThrow(() -> new IllegalArgumentException("Cross-region querying is not allowed for catalog %s".formatted(catalogName)))
-                        : intraRegionMonitor,
-                inputStream);
+        return new MonitoredInputStream(getNetworkMonitor(crossRegion), inputStream);
     }
 
     public OutputStream monitorOutputStream(boolean crossRegion, OutputStream outputStream)
     {
-        return new MonitoredOutputStream(
-                crossRegion
-                        ? crossRegionMonitor.orElseThrow(() -> new IllegalArgumentException("Cross-region querying is not allowed for catalog %s".formatted(catalogName)))
-                        : intraRegionMonitor,
-                outputStream);
+        return new MonitoredOutputStream(getNetworkMonitor(crossRegion), outputStream);
+    }
+
+    public void recordReadBytes(boolean crossRegion, long bytes)
+    {
+        getNetworkMonitor(crossRegion).recordReadBytes(bytes);
+    }
+
+    public void recordWriteBytes(boolean crossRegion, long bytes)
+    {
+        getNetworkMonitor(crossRegion).recordWriteBytes(bytes);
+    }
+
+    private NetworkMonitor getNetworkMonitor(boolean crossRegion)
+    {
+        return crossRegion
+                ? crossRegionMonitor.orElseThrow(
+                        () -> new IllegalArgumentException("Cross-region querying is not allowed for catalog %s".formatted(catalogName)))
+                : intraRegionMonitor;
     }
 }
