@@ -19,10 +19,13 @@ import dev.failsafe.Failsafe;
 import io.airlift.http.client.FullJsonResponseHandler.JsonResponse;
 import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.HttpStatus;
+import io.airlift.http.client.HttpStatusListener;
 import io.airlift.http.client.HttpUriBuilder;
 import io.airlift.http.client.Request;
 import io.airlift.json.JsonCodec;
 import io.airlift.units.Duration;
+import io.starburst.stargate.http.RetryingHttpClient;
+import io.starburst.stargate.http.RetryingHttpClient.RetryableException;
 import io.trino.Session;
 import io.trino.metadata.QualifiedTablePrefix;
 import io.trino.server.security.galaxy.GalaxyAccessControlConfig;
@@ -64,9 +67,10 @@ class GalaxyCacheClient
     @Inject
     GalaxyCacheClient(@ForGalaxyCache HttpClient httpClient, GalaxyAccessControlConfig accessControlConfig, GalaxyCacheStats stats)
     {
-        this.httpClient = requireNonNull(httpClient, "httpClient is null");
         this.stats = requireNonNull(stats, "stats is null");
         accountUri = accessControlConfig.getAccountUri();
+
+        this.httpClient = new RetryingHttpClient(httpClient).withHttpStatusListener(new InvalidServiceStatusListener());
     }
 
     Iterator<List<Object>> queryResults(Session session, QualifiedTablePrefix prefix, GalaxyCacheEndpoint verb, URI uri)
@@ -127,5 +131,17 @@ class GalaxyCacheClient
     private static String convertAirliftDuration(Duration duration)
     {
         return duration.toJavaTime().toString();
+    }
+
+    private static class InvalidServiceStatusListener
+            implements HttpStatusListener
+    {
+        @Override
+        public void statusReceived(int statusCode)
+        {
+            if ((statusCode == HttpStatus.BAD_GATEWAY.code()) || (statusCode == HttpStatus.GATEWAY_TIMEOUT.code()) || (statusCode == HttpStatus.SERVICE_UNAVAILABLE.code())) {
+                throw new RetryableException("Retryable status received: " + statusCode);
+            }
+        }
     }
 }
