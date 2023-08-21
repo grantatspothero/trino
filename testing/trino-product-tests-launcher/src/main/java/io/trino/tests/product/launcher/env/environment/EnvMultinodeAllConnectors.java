@@ -81,6 +81,7 @@ public final class EnvMultinodeAllConnectors
                         "redis",
                         "redshift",
                         "sqlserver",
+                        "stargate",
                         "trino_thrift",
                         "tpcds") // TODO: Add warp speed connector
                 .forEach(connector -> builder.addConnector(

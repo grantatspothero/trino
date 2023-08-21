@@ -84,6 +84,7 @@ public final class TestGroups
     public static final String OBJECTSTORE = "objectstore";
     public static final String WARP_SPEED = "warp_speed";
     public static final String S3_BACKWARDS_COMPATIBILITY = "s3_backwards_compatibility";
+    public static final String STARGATE = "stargate";
     public static final String PHOENIX = "phoenix";
     public static final String CLICKHOUSE = "clickhouse";
     public static final String KUDU = "kudu";

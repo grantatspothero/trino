@@ -19,6 +19,8 @@ import io.opentelemetry.instrumentation.okhttp.v3_0.OkHttpTelemetry;
 import okhttp3.Call;
 import okhttp3.OkHttpClient;
 
+import javax.net.SocketFactory;
+
 import java.io.Closeable;
 import java.sql.Connection;
 import java.sql.Driver;
@@ -33,11 +35,18 @@ import static io.trino.jdbc.DriverInfo.DRIVER_NAME;
 import static io.trino.jdbc.DriverInfo.DRIVER_VERSION;
 import static io.trino.jdbc.DriverInfo.DRIVER_VERSION_MAJOR;
 import static io.trino.jdbc.DriverInfo.DRIVER_VERSION_MINOR;
+import static java.util.Objects.requireNonNull;
 
 public class NonRegisteringTrinoDriver
         implements Driver, Closeable
 {
     private final OkHttpClient httpClient = newHttpClient();
+    private final SocketFactory socketFactory;
+
+    public NonRegisteringTrinoDriver(SocketFactory socketFactory)
+    {
+        this.socketFactory = requireNonNull(socketFactory, "socketFactory is null");
+    }
 
     @Override
     public void close()
@@ -57,6 +66,7 @@ public class NonRegisteringTrinoDriver
         TrinoDriverUri uri = TrinoDriverUri.create(url, info);
 
         OkHttpClient.Builder builder = httpClient.newBuilder();
+        builder.setSocketFactory$okhttp(socketFactory);
         uri.setupClient(builder);
 
         return new TrinoConnection(uri, instrumentClient(builder.build()));

@@ -536,6 +536,7 @@ jobs:
             !:trino-galaxy-warp-speed,
             !:trino-galaxy-salesforce,
             !:trino-galaxy-snowflake,
+            !:trino-galaxy-stargate,
             !:trino-galaxy-synapse,
             !:trino-hdfs,
             !:trino-hive,
@@ -657,6 +658,7 @@ jobs:
             - { modules: plugin/trino-galaxy-snowflake }
             - { modules: plugin/trino-galaxy-snowflake, profile: jdbc-integration-tests }
             - { modules: plugin/trino-galaxy-snowflake, profile: parallel-integration-tests }
+            - { modules: plugin/trino-galaxy-stargate }
             - { modules: plugin/trino-galaxy-synapse }
             - { modules: plugin/trino-galaxy-synapse, profile: jdbc-integration-tests }
             - { modules: plugin/trino-delta-lake }
@@ -1243,6 +1245,9 @@ jobs:
             # this suite is not meant to be run with different configs
             - config: default
               suite: suite-subquery-cache
+            # this suite is not meant to be run with different configs
+            - config: default
+              suite: suite-stargate
             # this suite is not meant to be run with different configs
           EOF
       - name: Build PT matrix (all)

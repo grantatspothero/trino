@@ -81,6 +81,7 @@ galaxy-objectstore
 galaxy-oracle
 galaxy-salesforce
 galaxy-snowflake
+galaxy-stargate
 galaxy-synapse
 galaxy-warp-speed
 geospatial
