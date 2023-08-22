@@ -22,6 +22,7 @@ import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.testing.QueryRunner;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Test;
 
 import static io.trino.plugin.hive.TestingThriftHiveMetastoreBuilder.testingThriftHiveMetastoreBuilder;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
@@ -98,6 +99,12 @@ public class TestObjectStoreHiveOnDataLake
                 .build();
     }
 
+    @Override
+    protected boolean isObjectStore()
+    {
+        return true;
+    }
+
     @BeforeClass
     public void grantAccessToTestSchema()
     {
@@ -162,5 +169,14 @@ public class TestObjectStoreHiveOnDataLake
                           "Overwriting existing partition in non auto commit context doesn't support DIRECT_TO_TARGET_EXISTING_DIRECTORY write mode"
                         but was:
                           "Catalog only supports writes using autocommit: hive\"""");
+    }
+
+    @Test
+    @Override
+    public void testUnsupportedDropSchemaCascadeWithNonHiveTable()
+    {
+        // objectstore connector allows drop schema cascade with non-hive tables
+        assertThatThrownBy(super::testUnsupportedDropSchemaCascadeWithNonHiveTable)
+                .hasMessageMatching("Expected query to fail: DROP SCHEMA test_unsupported_drop_schema_cascade_.{10} CASCADE .+");
     }
 }

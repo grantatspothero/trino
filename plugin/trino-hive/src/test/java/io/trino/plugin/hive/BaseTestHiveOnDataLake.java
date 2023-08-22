@@ -115,6 +115,11 @@ public abstract class BaseTestHiveOnDataLake
                 .build();
     }
 
+    protected boolean isObjectStore()
+    {
+        return false;
+    }
+
     @BeforeClass
     public void setUp()
     {
@@ -2093,6 +2098,31 @@ public abstract class BaseTestHiveOnDataLake
                             (null, null, null, null, 2.0, null, null)
                         """);
         assertUpdate("DROP TABLE " + getFullyQualifiedTestTableName(tableName));
+    }
+
+    @Test
+    public void testUnsupportedDropSchemaCascadeWithNonHiveTable()
+    {
+        String schemaName = "test_unsupported_drop_schema_cascade_" + randomNameSuffix();
+        String icebergTableName = "test_dummy_iceberg_table" + randomNameSuffix();
+
+        hiveMinioDataLake.getHiveHadoop().runOnHive("CREATE DATABASE %2$s LOCATION 's3a://%1$s/%2$s'".formatted(bucketName, schemaName));
+        // Creating a schema outside of trino requires cache flush and objectstore caches schema listing
+        if (isObjectStore()) {
+            getQueryRunner().execute("CALL system.flush_metadata_cache()");
+        }
+        try {
+            hiveMinioDataLake.getHiveHadoop().runOnHive("CREATE TABLE " + schemaName + "." + icebergTableName + " TBLPROPERTIES ('table_type'='iceberg') AS SELECT 1 a");
+
+            assertQueryFails("DROP SCHEMA " + schemaName + " CASCADE", "\\QCannot query Iceberg table '%s.%s'".formatted(schemaName, icebergTableName));
+
+            assertThat(computeActual("SHOW SCHEMAS").getOnlyColumnAsSet()).contains(schemaName);
+            assertThat(computeActual("SHOW TABLES FROM " + schemaName).getOnlyColumnAsSet()).contains(icebergTableName);
+            assertThat(hiveMinioDataLake.getMinioClient().listObjects(bucketName, schemaName).stream()).isNotEmpty();
+        }
+        finally {
+            hiveMinioDataLake.getHiveHadoop().runOnHive("DROP DATABASE IF EXISTS " + schemaName + " CASCADE");
+        }
     }
 
     private void renamePartitionResourcesOutsideTrino(String tableName, String partitionColumn, String regionKey)
