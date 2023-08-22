@@ -21,7 +21,8 @@ import com.google.inject.Singleton;
 import com.microsoft.sqlserver.jdbc.SQLServerDriver;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
-import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
@@ -83,16 +84,17 @@ public class SqlServerClientModule
             CatalogHandle catalogHandle,
             BaseJdbcConfig config,
             SqlServerConfig sqlServerConfig,
-            RegionEnforcementConfig regionEnforcementConfig,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig,
             SshTunnelConfig sshTunnelConfig,
             CredentialProvider credentialProvider)
     {
         Properties socketArgs = new Properties();
-        RegionVerifierProperties.addRegionVerifierProperties(socketArgs::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
+        RegionVerifierProperties.addRegionVerifierProperties(socketArgs::setProperty, RegionVerifierProperties.generateFrom(localRegionConfig, crossRegionConfig));
         SshTunnelProperties.generateFrom(sshTunnelConfig)
                 .ifPresent(sshTunnelProperties -> addSshTunnelProperties(socketArgs::setProperty, sshTunnelProperties));
 
-        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(socketArgs::setProperty, CatalogNetworkMonitorProperties.generateFrom(regionEnforcementConfig, catalogHandle));
+        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(socketArgs::setProperty, CatalogNetworkMonitorProperties.generateFrom(crossRegionConfig, catalogHandle));
 
         Properties connectionProperties = new Properties();
         connectionProperties.put("socketFactoryClass", GalaxySqlServerSocketFactory.class.getName());

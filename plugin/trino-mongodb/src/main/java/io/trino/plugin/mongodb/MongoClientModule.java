@@ -34,8 +34,9 @@ import com.mongodb.internal.connection.PowerOfTwoBufferPool;
 import com.mongodb.internal.connection.SocketStream;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
-import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.base.session.SessionPropertiesProvider;
 import io.trino.plugin.mongodb.ptf.Query;
@@ -64,7 +65,8 @@ public class MongoClientModule
     public void setup(Binder binder)
     {
         configBinder(binder).bindConfig(SshTunnelConfig.class);
-        configBinder(binder).bindConfig(RegionEnforcementConfig.class);
+        configBinder(binder).bindConfig(LocalRegionConfig.class);
+        configBinder(binder).bindConfig(CrossRegionConfig.class);
 
         binder.bind(MongoConnector.class).in(Scopes.SINGLETON);
         binder.bind(MongoSplitManager.class).in(Scopes.SINGLETON);
@@ -122,12 +124,12 @@ public class MongoClientModule
 
     @ProvidesIntoSet
     @Singleton
-    public MongoClientSettingConfigurator sshTunnelConfigurator(CatalogHandle catalogHandle, RegionEnforcementConfig regionEnforcementConfig, SshTunnelConfig sshConfig)
+    public MongoClientSettingConfigurator sshTunnelConfigurator(CatalogHandle catalogHandle, LocalRegionConfig localRegionConfig, CrossRegionConfig crossRegionConfig, SshTunnelConfig sshConfig)
     {
         Optional<SshTunnelProperties> sshProperties = SshTunnelProperties.generateFrom(sshConfig);
 
         return options -> options.streamFactoryFactory((SocketSettings socketSettings, SslSettings sslSettings) ->
-                new GalaxyStreamFactory(socketSettings, sslSettings, regionEnforcementConfig, sshProperties, catalogHandle));
+                new GalaxyStreamFactory(socketSettings, sslSettings, localRegionConfig, crossRegionConfig, sshProperties, catalogHandle));
     }
 
     private static class GalaxyStreamFactory
@@ -136,20 +138,23 @@ public class MongoClientModule
         private final SocketSettings settings;
         private final SslSettings sslSettings;
         private final BufferProvider bufferProvider = PowerOfTwoBufferPool.DEFAULT;
-        private final RegionEnforcementConfig regionEnforcementConfig;
+        private final LocalRegionConfig localRegionConfig;
+        private final CrossRegionConfig crossRegionConfig;
         private final Optional<SshTunnelProperties> sshTunnelProperties;
         private final CatalogHandle catalogHandle;
 
         public GalaxyStreamFactory(
                 SocketSettings settings,
                 SslSettings sslSettings,
-                RegionEnforcementConfig regionEnforcementConfig,
+                LocalRegionConfig localRegionConfig,
+                CrossRegionConfig crossRegionConfig,
                 Optional<SshTunnelProperties> sshTunnelProperties,
                 CatalogHandle catalogHandle)
         {
             this.settings = requireNonNull(settings, "settings is null");
             this.sslSettings = requireNonNull(sslSettings, "sslSettings is null");
-            this.regionEnforcementConfig = requireNonNull(regionEnforcementConfig, "regionEnforcementConfig is null");
+            this.localRegionConfig = requireNonNull(localRegionConfig, "localRegionConfig is null");
+            this.crossRegionConfig = requireNonNull(crossRegionConfig, "crossRegionConfig is null");
             this.sshTunnelProperties = requireNonNull(sshTunnelProperties, "sshTunnelProperties is null");
             this.catalogHandle = requireNonNull(catalogHandle, "catalogHandle is null");
         }
@@ -162,11 +167,11 @@ public class MongoClientModule
             }
             Properties properties = new Properties();
 
-            verify(!regionEnforcementConfig.getAllowCrossRegionAccess(), "Cross-region access not supported");
-            RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
+            verify(!crossRegionConfig.getAllowCrossRegionAccess(), "Cross-region access not supported");
+            RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(localRegionConfig, crossRegionConfig));
             sshTunnelProperties.ifPresent(sshProps -> addSshTunnelProperties(properties::setProperty, sshProps));
 
-            CatalogNetworkMonitorProperties catalogNetworkMonitorProperties = CatalogNetworkMonitorProperties.generateFrom(regionEnforcementConfig, catalogHandle)
+            CatalogNetworkMonitorProperties catalogNetworkMonitorProperties = CatalogNetworkMonitorProperties.generateFrom(crossRegionConfig, catalogHandle)
                     .withTlsEnabled(sslSettings.isEnabled());
             CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(properties::setProperty, catalogNetworkMonitorProperties);
 

@@ -13,7 +13,6 @@
  */
 package io.trino.plugin.elasticsearch;
 
-import com.google.common.collect.ImmutableList;
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;
 import io.airlift.configuration.ConfigSecuritySensitive;
@@ -55,7 +54,6 @@ public class ElasticsearchConfig
         PASSWORD,
     }
 
-    private List<String> allowedIpAddresses = ImmutableList.of("0.0.0.0/0");
     private List<String> hosts;
     private int port = 9200;
     private String defaultSchema = "default";
@@ -79,19 +77,6 @@ public class ElasticsearchConfig
     private boolean verifyHostnames = true;
 
     private Security security;
-
-    @NotNull
-    public List<String> getAllowedIpAddresses()
-    {
-        return allowedIpAddresses;
-    }
-
-    @Config("galaxy.region-enforcement.allowed-ip-addresses")
-    public ElasticsearchConfig setAllowedIpAddresses(List<String> allowedIpAddresses)
-    {
-        this.allowedIpAddresses = ImmutableList.copyOf(allowedIpAddresses);
-        return this;
-    }
 
     @NotNull
     public List<String> getHosts()

@@ -22,7 +22,8 @@ import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.starburstdata.trino.plugins.synapse.StarburstSynapseModule;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
-import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
 import io.trino.plugin.jdbc.ForBaseJdbc;
@@ -61,10 +62,11 @@ public class SynapseModule
             BaseJdbcConfig config,
             SqlServerConfig sqlServerConfig,
             SshTunnelConfig sshConfig,
-            RegionEnforcementConfig regionConfig,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig,
             CredentialProvider credentials)
     {
-        return SqlServerClientModule.getConnectionFactory(catalogHandle, config, sqlServerConfig, regionConfig, sshConfig, credentials);
+        return SqlServerClientModule.getConnectionFactory(catalogHandle, config, sqlServerConfig, localRegionConfig, crossRegionConfig, sshConfig, credentials);
     }
 
     @Retention(RetentionPolicy.RUNTIME)

@@ -20,8 +20,9 @@ import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
-import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
@@ -79,13 +80,14 @@ public class RedshiftAuthenticationModule
                 CatalogHandle catalogHandle,
                 BaseJdbcConfig config,
                 CredentialProvider credentialProvider,
-                RegionEnforcementConfig regionEnforcementConfig,
+                LocalRegionConfig localRegionConfig,
+                CrossRegionConfig crossRegionConfig,
                 SshTunnelConfig sshTunnelConfig)
         {
             return new DriverConnectionFactory(
                     new Driver(),
                     config.getConnectionUrl(),
-                    getDriverProperties(catalogHandle, regionEnforcementConfig, sshTunnelConfig),
+                    getDriverProperties(catalogHandle, localRegionConfig, crossRegionConfig, sshTunnelConfig),
                     credentialProvider);
         }
     }
@@ -109,20 +111,22 @@ public class RedshiftAuthenticationModule
                 BaseJdbcConfig config,
                 RedshiftAwsCredentialsConfig awsCredentialsConfig,
                 CredentialProvider credentialProvider,
-                RegionEnforcementConfig regionEnforcementConfig,
+                LocalRegionConfig localRegionConfig,
+                CrossRegionConfig crossRegionConfig,
                 SshTunnelConfig sshTunnelConfig)
         {
             return new DriverConnectionFactory(
                     new Driver(),
                     config.getConnectionUrl(),
-                    getConnectionProperties(catalogHandle, awsCredentialsConfig, regionEnforcementConfig, sshTunnelConfig),
+                    getConnectionProperties(catalogHandle, awsCredentialsConfig, localRegionConfig, crossRegionConfig, sshTunnelConfig),
                     credentialProvider);
         }
 
         private static Properties getConnectionProperties(
                 CatalogHandle catalogHandle,
                 RedshiftAwsCredentialsConfig awsCredentialsConfig,
-                RegionEnforcementConfig regionEnforcementConfig,
+                LocalRegionConfig localRegionConfig,
+                CrossRegionConfig crossRegionConfig,
                 SshTunnelConfig sshTunnelConfig)
         {
             requireNonNull(awsCredentialsConfig, "awsCredentialsConfig is null");
@@ -131,25 +135,25 @@ public class RedshiftAuthenticationModule
             properties.put("Region", awsCredentialsConfig.getRegionName());
             properties.put("AccessKeyID", awsCredentialsConfig.getAccessKey());
             properties.put("SecretAccessKey", awsCredentialsConfig.getSecretKey());
-            properties.putAll(getDriverProperties(catalogHandle, regionEnforcementConfig, sshTunnelConfig));
+            properties.putAll(getDriverProperties(catalogHandle, localRegionConfig, crossRegionConfig, sshTunnelConfig));
 
             return properties;
         }
     }
 
-    private static Properties getDriverProperties(CatalogHandle catalogHandle, RegionEnforcementConfig regionEnforcementConfig, SshTunnelConfig sshTunnelConfig)
+    private static Properties getDriverProperties(CatalogHandle catalogHandle, LocalRegionConfig localRegionConfig, CrossRegionConfig crossRegionConfig, SshTunnelConfig sshTunnelConfig)
     {
         Properties properties = new Properties();
         properties.put("reWriteBatchedInserts", "true");
         properties.put("reWriteBatchedInsertsSize", "512");
 
         properties.put("socketFactory", GalaxySqlSocketFactory.class.getName());
-        RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
+        RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(localRegionConfig, crossRegionConfig));
 
         SshTunnelProperties.generateFrom(sshTunnelConfig)
                 .ifPresent(sshTunnelProperties -> addSshTunnelProperties(properties::setProperty, sshTunnelProperties));
 
-        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(properties::setProperty, CatalogNetworkMonitorProperties.generateFrom(regionEnforcementConfig, catalogHandle));
+        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(properties::setProperty, CatalogNetworkMonitorProperties.generateFrom(crossRegionConfig, catalogHandle));
 
         return properties;
     }

@@ -26,8 +26,9 @@ import com.starburstdata.trino.plugins.snowflake.jdbc.SnowflakeJdbcClientModule;
 import com.starburstdata.trino.plugins.snowflake.jdbc.WarehouseAwareDriverConnectionFactory;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
-import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
@@ -63,13 +64,14 @@ public class GalaxySnowflakeJdbcModule
             BaseJdbcConfig config,
             CredentialProvider credentialProvider,
             SnowflakeConfig snowflakeConfig,
-            RegionEnforcementConfig regionEnforcementConfig)
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig)
     {
         Properties properties = SnowflakeJdbcClientModule.getConnectionProperties(snowflakeConfig);
 
         properties.setProperty("socketFactory", GalaxySqlSocketFactory.class.getName());
-        RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
-        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(properties::setProperty, CatalogNetworkMonitorProperties.generateFrom(regionEnforcementConfig, catalogHandle));
+        RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(localRegionConfig, crossRegionConfig));
+        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(properties::setProperty, CatalogNetworkMonitorProperties.generateFrom(crossRegionConfig, catalogHandle));
 
         return new WarehouseAwareDriverConnectionFactory(
                 new SnowflakeDriver(),

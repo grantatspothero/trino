@@ -18,8 +18,9 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
-import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
@@ -49,7 +50,8 @@ public class PostgreSqlConnectionFactoryModule
     public static ConnectionFactory getConnectionFactory(
             CatalogHandle catalogHandle,
             BaseJdbcConfig config,
-            RegionEnforcementConfig regionEnforcementConfig,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig,
             SshTunnelConfig sshTunnelConfig,
             CredentialProvider credentialProvider)
     {
@@ -58,12 +60,12 @@ public class PostgreSqlConnectionFactoryModule
 
         connectionProperties.put("socketFactory", GalaxySqlSocketFactory.class.getName());
         connectionProperties.put("sslfactory", GalaxyPostgreSqlSslSocketFactory.class.getName());
-        RegionVerifierProperties.addRegionVerifierProperties(connectionProperties::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
+        RegionVerifierProperties.addRegionVerifierProperties(connectionProperties::setProperty, RegionVerifierProperties.generateFrom(localRegionConfig, crossRegionConfig));
 
         SshTunnelProperties.generateFrom(sshTunnelConfig)
                 .ifPresent(sshTunnelProperties -> addSshTunnelProperties(connectionProperties::setProperty, sshTunnelProperties));
 
-        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(connectionProperties::setProperty, CatalogNetworkMonitorProperties.generateFrom(regionEnforcementConfig, catalogHandle));
+        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(connectionProperties::setProperty, CatalogNetworkMonitorProperties.generateFrom(crossRegionConfig, catalogHandle));
 
         return new DriverConnectionFactory(new Driver(), config.getConnectionUrl(), connectionProperties, credentialProvider);
     }

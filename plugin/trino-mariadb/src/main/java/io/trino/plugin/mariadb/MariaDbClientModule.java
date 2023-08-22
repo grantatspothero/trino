@@ -19,7 +19,8 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
-import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
@@ -61,18 +62,19 @@ public class MariaDbClientModule
             CatalogHandle catalogHandle,
             BaseJdbcConfig config,
             CredentialProvider credentialProvider,
-            RegionEnforcementConfig regionEnforcementConfig,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig,
             SshTunnelConfig sshTunnelConfig)
     {
         Properties properties = getConnectionProperties();
         properties.setProperty("socketFactory", GalaxyMariaDbSocketFactory.class.getName());
 
-        RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
+        RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(localRegionConfig, crossRegionConfig));
 
         SshTunnelProperties.generateFrom(sshTunnelConfig)
                 .ifPresent(sshTunnelProperties -> SshTunnelPropertiesMapper.addSshTunnelProperties(properties::setProperty, sshTunnelProperties));
 
-        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(properties::setProperty, CatalogNetworkMonitorProperties.generateFrom(regionEnforcementConfig, catalogHandle));
+        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(properties::setProperty, CatalogNetworkMonitorProperties.generateFrom(crossRegionConfig, catalogHandle));
 
         return new DriverConnectionFactory(new Driver(), config.getConnectionUrl(), properties, credentialProvider);
     }

@@ -33,6 +33,7 @@ import io.airlift.json.ObjectMapperProvider;
 import io.airlift.log.Logger;
 import io.airlift.stats.TimeStat;
 import io.airlift.units.Duration;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.elasticsearch.AwsSecurityConfig;
 import io.trino.plugin.elasticsearch.ElasticsearchConfig;
 import io.trino.plugin.elasticsearch.PasswordConfig;
@@ -145,12 +146,13 @@ public class ElasticsearchClient
     @Inject
     public ElasticsearchClient(
             ElasticsearchConfig config,
+            LocalRegionConfig localRegionConfig,
             SshTunnelConfig sshTunnelConfig,
             Optional<AwsSecurityConfig> awsSecurityConfig,
             Optional<PasswordConfig> passwordConfig)
     {
         Optional<SshTunnelProperties> sshTunnelProperties = SshTunnelProperties.generateFrom(sshTunnelConfig);
-        client = createClient(config, sshTunnelProperties, awsSecurityConfig, passwordConfig, backpressureStats);
+        client = createClient(config, localRegionConfig, sshTunnelProperties, awsSecurityConfig, passwordConfig, backpressureStats);
 
         this.ignorePublishAddress = config.isIgnorePublishAddress();
         this.scrollSize = config.getScrollSize();
@@ -206,6 +208,7 @@ public class ElasticsearchClient
 
     private static BackpressureRestHighLevelClient createClient(
             ElasticsearchConfig config,
+            LocalRegionConfig localRegionConfig,
             Optional<SshTunnelProperties> sshTunnelProperties,
             Optional<AwsSecurityConfig> awsSecurityConfig,
             Optional<PasswordConfig> passwordConfig,
@@ -254,9 +257,9 @@ public class ElasticsearchClient
 
             sshTunnelProperties.ifPresentOrElse(tunnelProperties -> clientBuilder
                             .addInterceptorFirst(
-                                    new SshHostRegionEnforcerInterceptor(config.getAllowedIpAddresses(), tunnelProperties.getServer().getHost()))
+                                    new SshHostRegionEnforcerInterceptor(localRegionConfig.getAllowedIpAddresses(), tunnelProperties.getServer().getHost()))
                             .setConnectionManager(getConnectionManager(config, reactorConfig, tunnelProperties)),
-                    () -> clientBuilder.addInterceptorFirst(new RegionEnforcerInterceptor(config.getAllowedIpAddresses())));
+                    () -> clientBuilder.addInterceptorFirst(new RegionEnforcerInterceptor(localRegionConfig.getAllowedIpAddresses())));
 
             passwordConfig.ifPresent(securityConfig -> {
                 CredentialsProvider credentials = new BasicCredentialsProvider();

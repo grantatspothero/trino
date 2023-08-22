@@ -17,7 +17,8 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import io.airlift.bootstrap.Bootstrap;
 import io.trino.plugin.base.CatalogName;
-import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.spi.NodeManager;
 import io.trino.spi.VersionEmbedder;
 import io.trino.spi.connector.CatalogHandle;
@@ -68,7 +69,8 @@ public class JdbcConnectorFactory
                 binder -> binder.bind(CatalogName.class).toInstance(new CatalogName(catalogName)),
                 binder -> binder.bind(CatalogHandle.class).toInstance(context.getCatalogHandle()),
                 new JdbcModule(),
-                binder -> configBinder(binder).bindConfig(RegionEnforcementConfig.class),
+                binder -> configBinder(binder).bindConfig(LocalRegionConfig.class),
+                binder -> configBinder(binder).bindConfig(CrossRegionConfig.class),
                 binder -> configBinder(binder).bindConfig(SshTunnelConfig.class),
                 module);
 

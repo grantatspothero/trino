@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
 import static io.airlift.configuration.testing.ConfigAssertions.assertFullMapping;
@@ -38,7 +37,6 @@ public class TestElasticsearchConfig
     public void testDefaults()
     {
         assertRecordedDefaults(recordDefaults(ElasticsearchConfig.class)
-                .setAllowedIpAddresses(List.of("0.0.0.0/0"))
                 .setHosts(null)
                 .setPort(9200)
                 .setDefaultSchema("default")
@@ -70,7 +68,6 @@ public class TestElasticsearchConfig
         Path truststoreFile = Files.createTempFile(null, null);
 
         Map<String, String> properties = ImmutableMap.<String, String>builder()
-                .put("galaxy.region-enforcement.allowed-ip-addresses", "ipblk1,ipblk2")
                 .put("elasticsearch.host", "example.com")
                 .put("elasticsearch.port", "9999")
                 .put("elasticsearch.default-schema-name", "test")
@@ -95,7 +92,6 @@ public class TestElasticsearchConfig
                 .buildOrThrow();
 
         ElasticsearchConfig expected = new ElasticsearchConfig()
-                .setAllowedIpAddresses(List.of("ipblk1", "ipblk2"))
                 .setHosts(Arrays.asList("example.com"))
                 .setPort(9999)
                 .setDefaultSchema("test")

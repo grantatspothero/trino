@@ -49,13 +49,13 @@ public record CatalogNetworkMonitorProperties(
         return new CatalogNetworkMonitorProperties(catalogName, catalogId, tlsEnabled, crossRegionReadLimit, crossRegionWriteLimit);
     }
 
-    public static CatalogNetworkMonitorProperties generateFrom(RegionEnforcementConfig config, CatalogHandle catalogHandle)
+    public static CatalogNetworkMonitorProperties generateFrom(CrossRegionConfig crossRegionConfig, CatalogHandle catalogHandle)
     {
-        Optional<DataSize> crossRegionReadLimit = config.getAllowCrossRegionAccess()
-                ? Optional.of(config.getCrossRegionReadLimit())
+        Optional<DataSize> crossRegionReadLimit = crossRegionConfig.getAllowCrossRegionAccess()
+                ? Optional.of(crossRegionConfig.getCrossRegionReadLimit())
                 : Optional.empty();
-        Optional<DataSize> crossRegionWriteLimit = config.getAllowCrossRegionAccess()
-                ? Optional.of(config.getCrossRegionWriteLimit())
+        Optional<DataSize> crossRegionWriteLimit = crossRegionConfig.getAllowCrossRegionAccess()
+                ? Optional.of(crossRegionConfig.getCrossRegionWriteLimit())
                 : Optional.empty();
         return new CatalogNetworkMonitorProperties(catalogHandle.getCatalogName(), catalogHandle.getId(), false, crossRegionReadLimit, crossRegionWriteLimit);
     }

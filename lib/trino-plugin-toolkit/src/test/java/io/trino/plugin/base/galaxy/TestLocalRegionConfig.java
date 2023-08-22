@@ -15,8 +15,6 @@ package io.trino.plugin.base.galaxy;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import io.airlift.units.DataSize;
-import io.airlift.units.DataSize.Unit;
 import org.testng.annotations.Test;
 
 import java.util.Map;
@@ -25,15 +23,12 @@ import static io.airlift.configuration.testing.ConfigAssertions.assertFullMappin
 import static io.airlift.configuration.testing.ConfigAssertions.assertRecordedDefaults;
 import static io.airlift.configuration.testing.ConfigAssertions.recordDefaults;
 
-public class TestRegionEnforcementConfig
+public class TestLocalRegionConfig
 {
     @Test
     public void testDefaults()
     {
-        assertRecordedDefaults(recordDefaults(RegionEnforcementConfig.class)
-                .setAllowCrossRegionAccess(false)
-                .setCrossRegionReadLimit(DataSize.of(20, Unit.GIGABYTE))
-                .setCrossRegionWriteLimit(DataSize.of(10, Unit.GIGABYTE))
+        assertRecordedDefaults(recordDefaults(LocalRegionConfig.class)
                 .setAllowedIpAddresses(ImmutableList.of("0.0.0.0/0")));
     }
 
@@ -41,16 +36,10 @@ public class TestRegionEnforcementConfig
     public void testExplicitPropertyMappings()
     {
         Map<String, String> properties = ImmutableMap.<String, String>builder()
-                .put("galaxy.region-enforcement.allow-cross-region-access", "true")
-                .put("galaxy.region-enforcement.cross-region-read-limit", "500TB")
-                .put("galaxy.region-enforcement.cross-region-write-limit", "250MB")
-                .put("galaxy.region-enforcement.allowed-ip-addresses", "1.2.3.4, 5.6.7.8/29")
+                .put("galaxy.local-region.allowed-ip-addresses", "1.2.3.4, 5.6.7.8/29")
                 .buildOrThrow();
 
-        RegionEnforcementConfig expected = new RegionEnforcementConfig()
-                .setAllowCrossRegionAccess(true)
-                .setCrossRegionReadLimit(DataSize.of(500, Unit.TERABYTE))
-                .setCrossRegionWriteLimit(DataSize.of(250, Unit.MEGABYTE))
+        LocalRegionConfig expected = new LocalRegionConfig()
                 .setAllowedIpAddresses(ImmutableList.of("1.2.3.4", "5.6.7.8/29"));
 
         assertFullMapping(properties, expected);

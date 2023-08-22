@@ -13,29 +13,27 @@
  */
 package io.trino.plugin.base.galaxy;
 
-import com.google.common.collect.ImmutableList;
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;
+import io.airlift.configuration.LegacyConfig;
 import io.airlift.units.DataSize;
 import io.airlift.units.DataSize.Unit;
 import jakarta.validation.constraints.NotNull;
 
-import java.util.List;
-
-public class RegionEnforcementConfig
+public class CrossRegionConfig
 {
     private boolean allowCrossRegionAccess;
     private DataSize crossRegionReadLimit = DataSize.of(20, Unit.GIGABYTE);
     private DataSize crossRegionWriteLimit = DataSize.of(10, Unit.GIGABYTE);
-    private List<String> allowedIpAddresses = ImmutableList.of("0.0.0.0/0");
 
     public boolean getAllowCrossRegionAccess()
     {
         return allowCrossRegionAccess;
     }
 
-    @Config("galaxy.region-enforcement.allow-cross-region-access")
-    public RegionEnforcementConfig setAllowCrossRegionAccess(boolean allowCrossRegionAccess)
+    @LegacyConfig("galaxy.region-enforcement.allow-cross-region-access")
+    @Config("galaxy.cross-region.allow-cross-region-access")
+    public CrossRegionConfig setAllowCrossRegionAccess(boolean allowCrossRegionAccess)
     {
         this.allowCrossRegionAccess = allowCrossRegionAccess;
         return this;
@@ -47,9 +45,10 @@ public class RegionEnforcementConfig
         return crossRegionReadLimit;
     }
 
-    @Config("galaxy.region-enforcement.cross-region-read-limit")
+    @LegacyConfig("galaxy.region-enforcement.cross-region-read-limit")
+    @Config("galaxy.cross-region.read-limit")
     @ConfigDescription("The maximum amount of data that can be read across regions per worker")
-    public RegionEnforcementConfig setCrossRegionReadLimit(DataSize crossRegionReadLimit)
+    public CrossRegionConfig setCrossRegionReadLimit(DataSize crossRegionReadLimit)
     {
         this.crossRegionReadLimit = crossRegionReadLimit;
         return this;
@@ -61,24 +60,12 @@ public class RegionEnforcementConfig
         return crossRegionWriteLimit;
     }
 
-    @Config("galaxy.region-enforcement.cross-region-write-limit")
+    @LegacyConfig("galaxy.region-enforcement.cross-region-write-limit")
+    @Config("galaxy.cross-region.write-limit")
     @ConfigDescription("The maximum amount of data that can be written across regions per worker")
-    public RegionEnforcementConfig setCrossRegionWriteLimit(DataSize crossRegionWriteLimit)
+    public CrossRegionConfig setCrossRegionWriteLimit(DataSize crossRegionWriteLimit)
     {
         this.crossRegionWriteLimit = crossRegionWriteLimit;
-        return this;
-    }
-
-    @NotNull
-    public List<String> getAllowedIpAddresses()
-    {
-        return allowedIpAddresses;
-    }
-
-    @Config("galaxy.region-enforcement.allowed-ip-addresses")
-    public RegionEnforcementConfig setAllowedIpAddresses(List<String> allowedIpAddresses)
-    {
-        this.allowedIpAddresses = ImmutableList.copyOf(allowedIpAddresses);
         return this;
     }
 }

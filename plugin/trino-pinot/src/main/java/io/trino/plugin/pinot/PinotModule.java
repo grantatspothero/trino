@@ -23,7 +23,8 @@ import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.airlift.units.DataSize;
 import io.airlift.units.Duration;
-import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.pinot.client.IdentityPinotHostMapper;
 import io.trino.plugin.pinot.client.PinotClient;
 import io.trino.plugin.pinot.client.PinotDataFetcher;
@@ -72,7 +73,8 @@ public class PinotModule
     {
         configBinder(binder).bindConfig(PinotConfig.class);
         configBinder(binder).bindConfig(SshTunnelConfig.class);
-        configBinder(binder).bindConfig(RegionEnforcementConfig.class);
+        configBinder(binder).bindConfig(LocalRegionConfig.class);
+        configBinder(binder).bindConfig(CrossRegionConfig.class);
         binder.bind(PinotConnector.class).in(Scopes.SINGLETON);
         binder.bind(PinotMetadata.class).in(Scopes.SINGLETON);
         binder.bind(PinotSplitManager.class).in(Scopes.SINGLETON);

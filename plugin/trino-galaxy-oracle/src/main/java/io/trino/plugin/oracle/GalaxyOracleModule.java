@@ -25,7 +25,8 @@ import com.starburstdata.trino.plugins.oracle.PasswordAuthenticationConnectionPr
 import com.starburstdata.trino.plugins.oracle.StarburstOracleClientModule;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.plugin.base.CatalogName;
-import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
@@ -79,14 +80,15 @@ public class GalaxyOracleModule
             BaseJdbcConfig config,
             CredentialProvider credentialProvider,
             OracleConfig oracleConfig,
-            RegionEnforcementConfig regionEnforcementConfig,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig,
             SshTunnelConfig sshTunnelConfig)
     {
         Properties properties = getConnectionProperties(oracleConfig);
 
         // TODO: implement the catalog network monitor for cross-region support
-        verify(!regionEnforcementConfig.getAllowCrossRegionAccess(), "Cross-region access not supported");
-        RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
+        verify(!crossRegionConfig.getAllowCrossRegionAccess(), "Cross-region access not supported");
+        RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(localRegionConfig, crossRegionConfig));
         SshTunnelProperties.generateFrom(sshTunnelConfig)
                 .ifPresent(sshTunnelProperties -> SshTunnelPropertiesMapper.addSshTunnelProperties(properties::setProperty, sshTunnelProperties));
 

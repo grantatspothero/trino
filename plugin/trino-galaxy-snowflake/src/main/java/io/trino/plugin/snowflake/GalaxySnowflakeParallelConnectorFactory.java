@@ -19,7 +19,8 @@ import com.starburstdata.trino.plugins.snowflake.parallel.SnowflakeParallelConne
 import com.starburstdata.trino.plugins.snowflake.parallel.SnowflakeParallelModule;
 import io.airlift.bootstrap.Bootstrap;
 import io.trino.plugin.base.CatalogName;
-import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.jdbc.JdbcModule;
 import io.trino.spi.NodeManager;
 import io.trino.spi.VersionEmbedder;
@@ -61,7 +62,10 @@ public class GalaxySnowflakeParallelConnectorFactory
                 new SnowflakeParallelModule(),
                 new SnowflakeJdbcOverrideModule(),
                 new GalaxySnowflakeParallelModule(),
-                binder -> configBinder(binder).bindConfig(RegionEnforcementConfig.class));
+                binder -> {
+                    configBinder(binder).bindConfig(LocalRegionConfig.class);
+                    configBinder(binder).bindConfig(CrossRegionConfig.class);
+                });
 
         Injector injector = app
                 .doNotInitializeLogging()

@@ -17,7 +17,8 @@ import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import io.airlift.http.client.HttpRequestFilter;
 import io.airlift.http.client.Request;
-import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.base.galaxy.RegionVerifier;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.sshtunnel.SshTunnelConfig;
@@ -36,10 +37,10 @@ public class GalaxyFilter
     private final Optional<SshTunnelManager> sshTunnelManager;
 
     @Inject
-    public GalaxyFilter(RegionEnforcementConfig regionEnforcementConfig, SshTunnelConfig sshTunnelConfig)
+    public GalaxyFilter(LocalRegionConfig localRegionConfig, CrossRegionConfig crossRegionConfig, SshTunnelConfig sshTunnelConfig)
     {
-        verify(!regionEnforcementConfig.getAllowCrossRegionAccess(), "Cross-region access not supported");
-        this.regionVerifier = new RegionVerifier(RegionVerifierProperties.generateFrom(regionEnforcementConfig));
+        verify(!crossRegionConfig.getAllowCrossRegionAccess(), "Cross-region access not supported");
+        this.regionVerifier = new RegionVerifier(RegionVerifierProperties.generateFrom(localRegionConfig, crossRegionConfig));
         this.sshTunnelManager = SshTunnelProperties.generateFrom(sshTunnelConfig).map(SshTunnelManager::getCached);
     }
 

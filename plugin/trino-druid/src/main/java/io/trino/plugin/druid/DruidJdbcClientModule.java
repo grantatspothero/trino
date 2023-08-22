@@ -19,7 +19,8 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
-import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
@@ -58,7 +59,8 @@ public class DruidJdbcClientModule
             CatalogHandle catalogHandle,
             BaseJdbcConfig config,
             CredentialProvider credentialProvider,
-            RegionEnforcementConfig regionEnforcementConfig,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig,
             SshTunnelConfig sshTunnelConfig)
     {
         Properties galaxyProperties = new Properties();
@@ -66,9 +68,9 @@ public class DruidJdbcClientModule
         SshTunnelProperties.generateFrom(sshTunnelConfig)
                 .ifPresent(sshTunnelProperties -> addSshTunnelProperties(galaxyProperties::setProperty, sshTunnelProperties));
 
-        RegionVerifierProperties.addRegionVerifierProperties(galaxyProperties::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
+        RegionVerifierProperties.addRegionVerifierProperties(galaxyProperties::setProperty, RegionVerifierProperties.generateFrom(localRegionConfig, crossRegionConfig));
 
-        CatalogNetworkMonitorProperties catalogNetworkMonitorProperties = CatalogNetworkMonitorProperties.generateFrom(regionEnforcementConfig, catalogHandle)
+        CatalogNetworkMonitorProperties catalogNetworkMonitorProperties = CatalogNetworkMonitorProperties.generateFrom(crossRegionConfig, catalogHandle)
                 .withTlsEnabled(config.getConnectionUrl().toLowerCase(ENGLISH).startsWith(CONNECT_STRING_PREFIX + "url=https"));
         CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(galaxyProperties::setProperty, catalogNetworkMonitorProperties);
 

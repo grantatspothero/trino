@@ -36,9 +36,9 @@ public record RegionVerifierProperties(
         requireNonNull(localRegionIpAddresses, "localRegionIpAddresses is null");
     }
 
-    public static RegionVerifierProperties generateFrom(RegionEnforcementConfig config)
+    public static RegionVerifierProperties generateFrom(LocalRegionConfig localRegionConfig, CrossRegionConfig crossRegionConfig)
     {
-        return new RegionVerifierProperties(config.getAllowCrossRegionAccess(), config.getAllowedIpAddresses());
+        return new RegionVerifierProperties(crossRegionConfig.getAllowCrossRegionAccess(), localRegionConfig.getAllowedIpAddresses());
     }
 
     public static void addRegionVerifierProperties(BiConsumer<String, String> propertiesConsumer, RegionVerifierProperties regionVerifierProperties)
