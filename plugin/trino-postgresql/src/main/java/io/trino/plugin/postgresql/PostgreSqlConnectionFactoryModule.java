@@ -20,6 +20,7 @@ import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.airlift.units.DataSize;
 import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
 import io.trino.plugin.jdbc.DriverConnectionFactory;
@@ -37,8 +38,6 @@ import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionReadLimit;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionWriteLimit;
-import static io.trino.plugin.base.galaxy.RegionVerifier.addCrossRegionAllowed;
-import static io.trino.plugin.base.galaxy.RegionVerifier.addRegionLocalIpAddresses;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
 import static org.postgresql.PGProperty.REWRITE_BATCHED_INSERTS;
 
@@ -65,8 +64,7 @@ public class PostgreSqlConnectionFactoryModule
         connectionProperties.put("sslfactory", GalaxyPostgreSqlSslSocketFactory.class.getName());
         addCatalogName(connectionProperties, catalogHandle.getCatalogName());
         addCatalogId(connectionProperties, catalogHandle.getVersion().toString());
-        addCrossRegionAllowed(connectionProperties, regionEnforcementConfig.getAllowCrossRegionAccess());
-        addRegionLocalIpAddresses(connectionProperties, regionEnforcementConfig.getAllowedIpAddresses());
+        RegionVerifierProperties.addRegionVerifierProperties(connectionProperties::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
         if (regionEnforcementConfig.getAllowCrossRegionAccess()) {
             DataSize crossRegionReadLimit = regionEnforcementConfig.getCrossRegionReadLimit();
             addCrossRegionReadLimit(connectionProperties, crossRegionReadLimit);

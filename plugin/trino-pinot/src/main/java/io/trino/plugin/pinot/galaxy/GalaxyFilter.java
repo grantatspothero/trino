@@ -19,6 +19,7 @@ import io.airlift.http.client.HttpRequestFilter;
 import io.airlift.http.client.Request;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
 import io.trino.plugin.base.galaxy.RegionVerifier;
+import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.sshtunnel.SshTunnelConfig;
 import io.trino.sshtunnel.SshTunnelManager;
 import io.trino.sshtunnel.SshTunnelProperties;
@@ -38,7 +39,7 @@ public class GalaxyFilter
     public GalaxyFilter(RegionEnforcementConfig regionEnforcementConfig, SshTunnelConfig sshTunnelConfig)
     {
         verify(!regionEnforcementConfig.getAllowCrossRegionAccess(), "Cross-region access not supported");
-        this.regionVerifier = new RegionVerifier(regionEnforcementConfig.getAllowCrossRegionAccess(), regionEnforcementConfig.getAllowedIpAddresses());
+        this.regionVerifier = new RegionVerifier(RegionVerifierProperties.generateFrom(regionEnforcementConfig));
         this.sshTunnelManager = SshTunnelProperties.generateFrom(sshTunnelConfig).map(SshTunnelManager::getCached);
     }
 

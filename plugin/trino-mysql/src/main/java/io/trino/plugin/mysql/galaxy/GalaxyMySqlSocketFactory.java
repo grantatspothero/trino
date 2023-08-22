@@ -13,17 +13,13 @@
  */
 package io.trino.plugin.mysql.galaxy;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import com.google.common.net.HostAndPort;
 import com.mysql.cj.conf.PropertySet;
 import com.mysql.cj.conf.RuntimeProperty;
 import com.mysql.cj.protocol.StandardSocketFactory;
 import io.airlift.units.DataSize;
-import io.trino.plugin.base.galaxy.IpRangeMatcher;
+import io.trino.plugin.base.galaxy.RegionVerifier;
+import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.sshtunnel.SshTunnelManager;
 import io.trino.sshtunnel.SshTunnelManager.Tunnel;
 import io.trino.sshtunnel.SshTunnelProperties;
@@ -32,44 +28,31 @@ import io.trino.sshtunnel.SshTunnelPropertiesMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
-import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.net.InetAddresses.toAddrString;
-import static io.trino.cache.SafeCaches.buildNonEvictableCache;
 import static io.trino.plugin.base.galaxy.InetAddresses.asInetSocketAddress;
 import static io.trino.plugin.base.galaxy.InetAddresses.toInetAddresses;
 import static io.trino.spi.galaxy.CatalogNetworkMonitor.checkCrossRegionLimitsAndThrowIfExceeded;
 import static io.trino.spi.galaxy.CatalogNetworkMonitor.getCatalogNetworkMonitor;
-import static java.lang.String.format;
 
 public class GalaxyMySqlSocketFactory
         extends StandardSocketFactory
 {
     private static final String CATALOG_NAME_PROPERTY_NAME = "catalogName";
     private static final String CATALOG_ID_PROPERTY_NAME = "catalogId";
-    private static final String CROSS_REGION_ALLOWED_PROPERTY_NAME = "crossRegionAllowed";
-    private static final String REGION_LOCAL_IP_ADDRESSES_PROPERTY_NAME = "regionLocalIpAddresses";
     private static final String CROSS_REGION_READ_LIMIT_PROPERTY_NAME = "crossRegionReadLimit";
     private static final String CROSS_REGION_WRITE_LIMIT_PROPERTY_NAME = "crossRegionWriteLimit";
-
-    // Use static caches to retain state because socket factories are unfortunately recreated for each socket
-    private static final LoadingCache<List<String>, IpRangeMatcher> IP_RANGE_MATCHER_CACHE =
-            buildNonEvictableCache(CacheBuilder.newBuilder(), CacheLoader.from(IpRangeMatcher::create));
 
     @Override
     protected Socket createSocket(PropertySet props)
     {
         String catalogName = getCatalogName(props);
         String catalogId = getCatalogId(props);
-        boolean crossRegionAllowed = isCrossRegionAllowed(props);
-        IpRangeMatcher ipRangeMatcher = IP_RANGE_MATCHER_CACHE.getUnchecked(getRegionLocalIpAddresses(props));
+        RegionVerifier regionVerifier = new RegionVerifier(RegionVerifierProperties.getRegionVerifierProperties(propertyName -> getRequiredProperty(props, propertyName)));
         Optional<DataSize> crossRegionReadLimit = getCrossRegionReadLimit(props);
         Optional<DataSize> crossRegionWriteLimit = getCrossRegionWriteLimit(props);
         Optional<SshTunnelManager> sshTunnelManager = getSshTunnelProperties(props)
@@ -94,7 +77,6 @@ public class GalaxyMySqlSocketFactory
             }
 
             private SocketAddress process(SocketAddress socketAddress)
-                    throws IOException
             {
                 InetSocketAddress inetSocketAddress = asInetSocketAddress(socketAddress);
 
@@ -102,31 +84,12 @@ public class GalaxyMySqlSocketFactory
                     SshTunnelManager tunnelManager = sshTunnelManager.get();
                     Tunnel tunnel = tunnelManager.getOrCreateTunnel(HostAndPort.fromParts(inetSocketAddress.getHostString(), inetSocketAddress.getPort()));
                     // Verify that the SSH server will be in the allowed IP ranges (because it will be our first network hop)
-                    verifyRegionLocalIps("SSH tunnel server", toInetAddresses(tunnelManager.getSshServer().getHost()));
+                    crossRegionAddress = regionVerifier.isCrossRegionAccess("SSH tunnel server", toInetAddresses(tunnelManager.getSshServer().getHost()));
                     return new InetSocketAddress("127.0.0.1", tunnel.getLocalTunnelPort());
                 }
 
-                verifyRegionLocalIp("MySQL server", extractInetAddress(inetSocketAddress));
+                crossRegionAddress = regionVerifier.isCrossRegionAccess("Database server", inetSocketAddress);
                 return inetSocketAddress;
-            }
-
-            private void verifyRegionLocalIps(String serverType, List<InetAddress> addresses)
-                    throws IOException
-            {
-                for (InetAddress inetAddress : addresses) {
-                    verifyRegionLocalIp(serverType, inetAddress);
-                }
-            }
-
-            private void verifyRegionLocalIp(String serverType, InetAddress inetAddress)
-                    throws IOException
-            {
-                if (!ipRangeMatcher.matches(inetAddress)) {
-                    if (!crossRegionAllowed) {
-                        throw new IOException(format("%s %s is not in an allowed region", serverType, toAddrString(inetAddress)));
-                    }
-                    crossRegionAddress = true;
-                }
             }
 
             @Override
@@ -177,26 +140,6 @@ public class GalaxyMySqlSocketFactory
         return getRequiredProperty(properties, CATALOG_ID_PROPERTY_NAME);
     }
 
-    public static void addCrossRegionAllowed(Properties properties, boolean crossRegionAllowed)
-    {
-        properties.setProperty(CROSS_REGION_ALLOWED_PROPERTY_NAME, Boolean.toString(crossRegionAllowed));
-    }
-
-    private static boolean isCrossRegionAllowed(PropertySet properties)
-    {
-        return Boolean.parseBoolean(getRequiredProperty(properties, CROSS_REGION_ALLOWED_PROPERTY_NAME));
-    }
-
-    public static void addRegionLocalIpAddresses(Properties properties, List<String> regionLocalIpAddresses)
-    {
-        properties.setProperty(REGION_LOCAL_IP_ADDRESSES_PROPERTY_NAME, Joiner.on(",").join(regionLocalIpAddresses));
-    }
-
-    private static List<String> getRegionLocalIpAddresses(PropertySet propertySet)
-    {
-        return Splitter.on(',').splitToList(getRequiredProperty(propertySet, REGION_LOCAL_IP_ADDRESSES_PROPERTY_NAME));
-    }
-
     public static void addCrossRegionReadLimit(Properties properties, DataSize crossRegionReadLimit)
     {
         properties.setProperty(CROSS_REGION_READ_LIMIT_PROPERTY_NAME, crossRegionReadLimit.toBytesValueString());
@@ -237,11 +180,5 @@ public class GalaxyMySqlSocketFactory
     {
         return Optional.ofNullable(properties.getStringProperty(propertyName))
                 .map(RuntimeProperty::getStringValue);
-    }
-
-    private static InetAddress extractInetAddress(InetSocketAddress socketAddress)
-    {
-        checkArgument(!socketAddress.isUnresolved(), "StandardSocketFactory should have already resolved the IP address");
-        return socketAddress.getAddress();
     }
 }

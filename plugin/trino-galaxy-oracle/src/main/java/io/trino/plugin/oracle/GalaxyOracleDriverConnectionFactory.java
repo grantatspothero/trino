@@ -15,6 +15,7 @@ package io.trino.plugin.oracle;
 
 import com.google.common.net.HostAndPort;
 import io.trino.plugin.base.galaxy.RegionVerifier;
+import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.jdbc.ConnectionFactory;
 import io.trino.plugin.jdbc.credential.CredentialPropertiesProvider;
 import io.trino.plugin.jdbc.credential.CredentialProvider;
@@ -71,7 +72,8 @@ public class GalaxyOracleDriverConnectionFactory
             databaseHostAndPort = getHostPort(this.connectionUrl);
         }
         if (isNull(regionVerifier)) {
-            regionVerifier = new RegionVerifier(connectionProperties);
+            RegionVerifierProperties regionVerifierProperties = RegionVerifierProperties.getRegionVerifierProperties(connectionProperties::getProperty);
+            regionVerifier = new RegionVerifier(regionVerifierProperties);
         }
         String host = tunnelManager.map(sshTunnelManager -> sshTunnelManager.getSshServer().getHost()).orElseGet(databaseHostAndPort::getHost);
         regionVerifier.verifyLocalRegion(tunnelManager.isPresent() ? "SSH tunnel server" : "Database server", host);

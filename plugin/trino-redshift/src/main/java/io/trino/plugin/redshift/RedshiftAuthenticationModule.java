@@ -21,6 +21,7 @@ import com.google.inject.Singleton;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
 import io.trino.plugin.jdbc.DriverConnectionFactory;
@@ -42,8 +43,6 @@ import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionReadLimit;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionWriteLimit;
-import static io.trino.plugin.base.galaxy.RegionVerifier.addCrossRegionAllowed;
-import static io.trino.plugin.base.galaxy.RegionVerifier.addRegionLocalIpAddresses;
 import static io.trino.plugin.redshift.RedshiftAuthenticationConfig.RedshiftAuthenticationType.AWS;
 import static io.trino.plugin.redshift.RedshiftAuthenticationConfig.RedshiftAuthenticationType.PASSWORD;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
@@ -150,8 +149,7 @@ public class RedshiftAuthenticationModule
         properties.put("socketFactory", GalaxySqlSocketFactory.class.getName());
         addCatalogName(properties, catalogHandle.getCatalogName());
         addCatalogId(properties, catalogHandle.getVersion().toString());
-        addCrossRegionAllowed(properties, regionEnforcementConfig.getAllowCrossRegionAccess());
-        addRegionLocalIpAddresses(properties, regionEnforcementConfig.getAllowedIpAddresses());
+        RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
         if (regionEnforcementConfig.getAllowCrossRegionAccess()) {
             addCrossRegionReadLimit(properties, regionEnforcementConfig.getCrossRegionReadLimit());
             addCrossRegionWriteLimit(properties, regionEnforcementConfig.getCrossRegionWriteLimit());

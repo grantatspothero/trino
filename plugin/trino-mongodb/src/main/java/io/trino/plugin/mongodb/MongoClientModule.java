@@ -35,6 +35,7 @@ import com.mongodb.internal.connection.SocketStream;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.base.session.SessionPropertiesProvider;
 import io.trino.plugin.mongodb.ptf.Query;
 import io.trino.spi.connector.CatalogHandle;
@@ -47,6 +48,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 
+import static com.google.common.base.Verify.verify;
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static io.airlift.configuration.ConditionalModule.conditionalModule;
 import static io.airlift.configuration.ConfigBinder.configBinder;
@@ -55,8 +57,6 @@ import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionReadLimit;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionWriteLimit;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addTlsEnabled;
-import static io.trino.plugin.base.galaxy.RegionVerifier.addCrossRegionAllowed;
-import static io.trino.plugin.base.galaxy.RegionVerifier.addRegionLocalIpAddresses;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -168,8 +168,8 @@ public class MongoClientModule
 
             addCatalogName(properties, catalogHandle.getCatalogName());
             addCatalogId(properties, catalogHandle.getVersion().toString());
-            addCrossRegionAllowed(properties, false);
-            addRegionLocalIpAddresses(properties, regionEnforcementConfig.getAllowedIpAddresses());
+            verify(!regionEnforcementConfig.getAllowCrossRegionAccess(), "Cross-region access not supported");
+            RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
             if (regionEnforcementConfig.getAllowCrossRegionAccess()) {
                 addCrossRegionReadLimit(properties, regionEnforcementConfig.getCrossRegionReadLimit());
                 addCrossRegionWriteLimit(properties, regionEnforcementConfig.getCrossRegionWriteLimit());

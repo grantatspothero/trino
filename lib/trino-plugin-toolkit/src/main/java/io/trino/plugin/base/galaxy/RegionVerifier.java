@@ -13,8 +13,6 @@
  */
 package io.trino.plugin.base.galaxy;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -24,8 +22,6 @@ import java.io.UncheckedIOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.Optional;
-import java.util.Properties;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.net.InetAddresses.toAddrString;
@@ -40,20 +36,14 @@ public class RegionVerifier
     private static final LoadingCache<List<String>, IpRangeMatcher> IP_RANGE_MATCHER_CACHE =
             buildNonEvictableCache(CacheBuilder.newBuilder(), CacheLoader.from(IpRangeMatcher::create));
 
-    public static final String CROSS_REGION_ALLOWED_PROPERTY_NAME = "crossRegionAllowed";
-    public static final String REGION_LOCAL_IP_ADDRESSES_PROPERTY_NAME = "regionLocalIpAddresses";
     private final IpRangeMatcher localIpRangeMatcher;
     private final boolean crossRegionAllowed;
 
-    public RegionVerifier(Properties properties)
+    public RegionVerifier(RegionVerifierProperties properties)
     {
-        this(isCrossRegionAllowed(properties), getRegionLocalIpAddresses(requireNonNull(properties, "properties is null")));
-    }
-
-    public RegionVerifier(boolean crossRegionAllowed, List<String> allowedIpAddresses)
-    {
-        this.localIpRangeMatcher = IP_RANGE_MATCHER_CACHE.getUnchecked(requireNonNull(allowedIpAddresses, "allowedIpAddresses is null"));
-        this.crossRegionAllowed = crossRegionAllowed;
+        requireNonNull(properties, "properties is null");
+        this.crossRegionAllowed = properties.crossRegionAllowed();
+        this.localIpRangeMatcher = IP_RANGE_MATCHER_CACHE.getUnchecked(requireNonNull(properties.localRegionIpAddresses(), "localRegionIpAddresses is null"));
     }
 
     public void verifyLocalRegion(String serverType, String host)
@@ -89,42 +79,9 @@ public class RegionVerifier
         return false;
     }
 
-    private static List<String> getRegionLocalIpAddresses(Properties properties)
-    {
-        return Splitter.on(',').splitToList(
-                requireNonNull(properties.getProperty(REGION_LOCAL_IP_ADDRESSES_PROPERTY_NAME),
-                        "Missing required property: " + REGION_LOCAL_IP_ADDRESSES_PROPERTY_NAME));
-    }
-
-    public static void addRegionLocalIpAddresses(Properties properties, List<String> regionLocalIpAddresses)
-    {
-        properties.setProperty(REGION_LOCAL_IP_ADDRESSES_PROPERTY_NAME, Joiner.on(",").join(regionLocalIpAddresses));
-    }
-
     private static InetAddress extractInetAddress(InetSocketAddress socketAddress)
     {
         checkArgument(!socketAddress.isUnresolved(), "IP address should already be resolved");
         return socketAddress.getAddress();
-    }
-
-    public static void addCrossRegionAllowed(Properties properties, boolean crossRegionAllowed)
-    {
-        properties.setProperty(CROSS_REGION_ALLOWED_PROPERTY_NAME, Boolean.toString(crossRegionAllowed));
-    }
-
-    private static boolean isCrossRegionAllowed(Properties properties)
-    {
-        return Boolean.parseBoolean(getRequiredProperty(properties, CROSS_REGION_ALLOWED_PROPERTY_NAME));
-    }
-
-    private static String getRequiredProperty(Properties properties, String propertyName)
-    {
-        return getOptionalProperty(properties, propertyName)
-                .orElseThrow(() -> new IllegalArgumentException("Missing required property: " + propertyName));
-    }
-
-    private static Optional<String> getOptionalProperty(Properties properties, String propertyName)
-    {
-        return Optional.ofNullable(properties.getProperty(propertyName));
     }
 }

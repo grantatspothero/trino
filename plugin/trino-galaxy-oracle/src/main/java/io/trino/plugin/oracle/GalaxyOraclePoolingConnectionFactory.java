@@ -18,6 +18,7 @@ import com.starburstdata.trino.plugins.oracle.OracleConnectionProvider;
 import com.starburstdata.trino.plugins.oracle.OraclePoolingConnectionFactory;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.base.galaxy.RegionVerifier;
+import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.credential.CredentialProvider;
 import io.trino.spi.connector.ConnectorSession;
@@ -67,7 +68,8 @@ public class GalaxyOraclePoolingConnectionFactory
             sshTunnelPort = this.databaseHostAndPort.getPort();
         }
         if (isNull(regionVerifier)) {
-            regionVerifier = new RegionVerifier(connectionProperties);
+            RegionVerifierProperties regionVerifierProperties = RegionVerifierProperties.getRegionVerifierProperties(connectionProperties::getProperty);
+            regionVerifier = new RegionVerifier(regionVerifierProperties);
         }
         regionVerifier.verifyLocalRegion(
                 tunnelManager.isPresent() ? "SSH tunnel server" : "Database server",

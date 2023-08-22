@@ -19,6 +19,7 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
 import io.trino.plugin.jdbc.DecimalModule;
@@ -43,8 +44,6 @@ import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionReadLimit;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionWriteLimit;
-import static io.trino.plugin.base.galaxy.RegionVerifier.addCrossRegionAllowed;
-import static io.trino.plugin.base.galaxy.RegionVerifier.addRegionLocalIpAddresses;
 
 public class MariaDbClientModule
         implements Module
@@ -73,8 +72,7 @@ public class MariaDbClientModule
 
         addCatalogName(properties, catalogHandle.getCatalogName());
         addCatalogId(properties, catalogHandle.getVersion().toString());
-        addCrossRegionAllowed(properties, regionEnforcementConfig.getAllowCrossRegionAccess());
-        addRegionLocalIpAddresses(properties, regionEnforcementConfig.getAllowedIpAddresses());
+        RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
         if (regionEnforcementConfig.getAllowCrossRegionAccess()) {
             addCrossRegionReadLimit(properties, regionEnforcementConfig.getCrossRegionReadLimit());
             addCrossRegionWriteLimit(properties, regionEnforcementConfig.getCrossRegionWriteLimit());

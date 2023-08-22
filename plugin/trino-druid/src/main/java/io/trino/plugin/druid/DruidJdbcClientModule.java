@@ -20,6 +20,7 @@ import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import io.airlift.units.DataSize;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
+import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
 import io.trino.plugin.jdbc.DriverConnectionFactory;
@@ -41,8 +42,6 @@ import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionReadLimit;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionWriteLimit;
 import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addTlsEnabled;
-import static io.trino.plugin.base.galaxy.RegionVerifier.addCrossRegionAllowed;
-import static io.trino.plugin.base.galaxy.RegionVerifier.addRegionLocalIpAddresses;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
 import static java.util.Locale.ENGLISH;
 import static org.apache.calcite.avatica.remote.GalaxyDruidDriver.CONNECT_STRING_PREFIX;
@@ -71,8 +70,7 @@ public class DruidJdbcClientModule
 
         addCatalogName(galaxyProperties, catalogHandle.getCatalogName());
         addCatalogId(galaxyProperties, catalogHandle.getVersion().toString());
-        addRegionLocalIpAddresses(galaxyProperties, regionEnforcementConfig.getAllowedIpAddresses());
-        addCrossRegionAllowed(galaxyProperties, regionEnforcementConfig.getAllowCrossRegionAccess());
+        RegionVerifierProperties.addRegionVerifierProperties(galaxyProperties::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
         if (regionEnforcementConfig.getAllowCrossRegionAccess()) {
             DataSize crossRegionReadLimit = regionEnforcementConfig.getCrossRegionReadLimit();
             addCrossRegionReadLimit(galaxyProperties, crossRegionReadLimit);

@@ -72,7 +72,7 @@ public class GalaxySqlSocketFactory
         tlsEnabled = getOptionalProperty(properties, TLS_ENABLED_PROPERTY_NAME)
                 .map(Boolean::parseBoolean)
                 .orElse(false);
-        regionVerifier = new RegionVerifier(properties);
+        regionVerifier = new RegionVerifier(RegionVerifierProperties.getRegionVerifierProperties(properties::getProperty));
         crossRegionReadLimit = getOptionalProperty(properties, CROSS_REGION_READ_LIMIT_PROPERTY_NAME).map(DataSize::valueOf);
         crossRegionWriteLimit = getOptionalProperty(properties, CROSS_REGION_WRITE_LIMIT_PROPERTY_NAME).map(DataSize::valueOf);
     }
