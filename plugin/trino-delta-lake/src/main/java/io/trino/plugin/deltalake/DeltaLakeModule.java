@@ -24,6 +24,8 @@ import com.starburstdata.trino.plugins.dynamicfiltering.DynamicRowFilteringModul
 import com.starburstdata.trino.plugins.dynamicfiltering.ForDynamicRowFiltering;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.plugin.base.CatalogName;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.base.security.ConnectorAccessControlModule;
 import io.trino.plugin.base.session.SessionPropertiesProvider;
 import io.trino.plugin.deltalake.functions.tablechanges.TableChangesFunctionProvider;
@@ -131,6 +133,9 @@ public class DeltaLakeModule
 
         newOptionalBinder(binder, DeltaLakeRedirectionsProvider.class)
                 .setDefault().toInstance(DeltaLakeRedirectionsProvider.NOOP);
+
+        configBinder(binder).bindConfig(LocalRegionConfig.class);
+        configBinder(binder).bindConfig(CrossRegionConfig.class);
 
         jsonCodecBinder(binder).bindJsonCodec(DataFileInfo.class);
         jsonCodecBinder(binder).bindJsonCodec(DeltaLakeUpdateResult.class);
