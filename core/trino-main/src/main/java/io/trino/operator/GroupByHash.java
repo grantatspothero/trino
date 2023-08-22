@@ -18,6 +18,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import io.airlift.bytecode.DynamicClassLoader;
 import io.trino.Session;
+import io.trino.annotation.NotThreadSafe;
 import io.trino.cache.NonEvictableLoadingCache;
 import io.trino.spi.Page;
 import io.trino.spi.PageBuilder;
@@ -34,6 +35,7 @@ import static io.trino.SystemSessionProperties.isDictionaryAggregationEnabled;
 import static io.trino.SystemSessionProperties.isFlatGroupByHash;
 import static io.trino.cache.SafeCaches.buildNonEvictableCache;
 
+@NotThreadSafe
 public interface GroupByHash
 {
     NonEvictableLoadingCache<Type, Class<? extends GroupByHash>> specializedGroupByHashClasses = buildNonEvictableCache(
