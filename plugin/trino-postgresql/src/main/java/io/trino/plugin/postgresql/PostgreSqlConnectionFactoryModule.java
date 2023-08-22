@@ -17,7 +17,7 @@ import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
-import io.airlift.units.DataSize;
+import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
@@ -34,10 +34,6 @@ import org.postgresql.Driver;
 
 import java.util.Properties;
 
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionReadLimit;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionWriteLimit;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
 import static org.postgresql.PGProperty.REWRITE_BATCHED_INSERTS;
 
@@ -62,18 +58,12 @@ public class PostgreSqlConnectionFactoryModule
 
         connectionProperties.put("socketFactory", GalaxySqlSocketFactory.class.getName());
         connectionProperties.put("sslfactory", GalaxyPostgreSqlSslSocketFactory.class.getName());
-        addCatalogName(connectionProperties, catalogHandle.getCatalogName());
-        addCatalogId(connectionProperties, catalogHandle.getVersion().toString());
         RegionVerifierProperties.addRegionVerifierProperties(connectionProperties::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
-        if (regionEnforcementConfig.getAllowCrossRegionAccess()) {
-            DataSize crossRegionReadLimit = regionEnforcementConfig.getCrossRegionReadLimit();
-            addCrossRegionReadLimit(connectionProperties, crossRegionReadLimit);
-            DataSize crossRegionWriteLimit = regionEnforcementConfig.getCrossRegionWriteLimit();
-            addCrossRegionWriteLimit(connectionProperties, crossRegionWriteLimit);
-        }
 
         SshTunnelProperties.generateFrom(sshTunnelConfig)
                 .ifPresent(sshTunnelProperties -> addSshTunnelProperties(connectionProperties::setProperty, sshTunnelProperties));
+
+        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(connectionProperties::setProperty, CatalogNetworkMonitorProperties.generateFrom(regionEnforcementConfig, catalogHandle));
 
         return new DriverConnectionFactory(new Driver(), config.getConnectionUrl(), connectionProperties, credentialProvider);
     }

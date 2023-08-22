@@ -18,6 +18,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
+import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
@@ -40,10 +41,6 @@ import java.util.Properties;
 
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionReadLimit;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionWriteLimit;
 
 public class MariaDbClientModule
         implements Module
@@ -70,16 +67,12 @@ public class MariaDbClientModule
         Properties properties = getConnectionProperties();
         properties.setProperty("socketFactory", GalaxyMariaDbSocketFactory.class.getName());
 
-        addCatalogName(properties, catalogHandle.getCatalogName());
-        addCatalogId(properties, catalogHandle.getVersion().toString());
         RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
-        if (regionEnforcementConfig.getAllowCrossRegionAccess()) {
-            addCrossRegionReadLimit(properties, regionEnforcementConfig.getCrossRegionReadLimit());
-            addCrossRegionWriteLimit(properties, regionEnforcementConfig.getCrossRegionWriteLimit());
-        }
 
         SshTunnelProperties.generateFrom(sshTunnelConfig)
                 .ifPresent(sshTunnelProperties -> SshTunnelPropertiesMapper.addSshTunnelProperties(properties::setProperty, sshTunnelProperties));
+
+        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(properties::setProperty, CatalogNetworkMonitorProperties.generateFrom(regionEnforcementConfig, catalogHandle));
 
         return new DriverConnectionFactory(new Driver(), config.getConnectionUrl(), properties, credentialProvider);
     }

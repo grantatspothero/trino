@@ -19,6 +19,7 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
@@ -39,10 +40,6 @@ import java.util.Properties;
 import static com.google.inject.Scopes.SINGLETON;
 import static io.airlift.configuration.ConditionalModule.conditionalModule;
 import static io.airlift.configuration.ConfigBinder.configBinder;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionReadLimit;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionWriteLimit;
 import static io.trino.plugin.redshift.RedshiftAuthenticationConfig.RedshiftAuthenticationType.AWS;
 import static io.trino.plugin.redshift.RedshiftAuthenticationConfig.RedshiftAuthenticationType.PASSWORD;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
@@ -147,16 +144,12 @@ public class RedshiftAuthenticationModule
         properties.put("reWriteBatchedInsertsSize", "512");
 
         properties.put("socketFactory", GalaxySqlSocketFactory.class.getName());
-        addCatalogName(properties, catalogHandle.getCatalogName());
-        addCatalogId(properties, catalogHandle.getVersion().toString());
         RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
-        if (regionEnforcementConfig.getAllowCrossRegionAccess()) {
-            addCrossRegionReadLimit(properties, regionEnforcementConfig.getCrossRegionReadLimit());
-            addCrossRegionWriteLimit(properties, regionEnforcementConfig.getCrossRegionWriteLimit());
-        }
 
         SshTunnelProperties.generateFrom(sshTunnelConfig)
                 .ifPresent(sshTunnelProperties -> addSshTunnelProperties(properties::setProperty, sshTunnelProperties));
+
+        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(properties::setProperty, CatalogNetworkMonitorProperties.generateFrom(regionEnforcementConfig, catalogHandle));
 
         return properties;
     }

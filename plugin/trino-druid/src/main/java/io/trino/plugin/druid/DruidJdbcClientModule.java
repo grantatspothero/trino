@@ -18,7 +18,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
-import io.airlift.units.DataSize;
+import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
@@ -37,11 +37,6 @@ import org.apache.calcite.avatica.remote.GalaxyDruidDriver;
 import java.util.Properties;
 
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionReadLimit;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionWriteLimit;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addTlsEnabled;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
 import static java.util.Locale.ENGLISH;
 import static org.apache.calcite.avatica.remote.GalaxyDruidDriver.CONNECT_STRING_PREFIX;
@@ -68,21 +63,14 @@ public class DruidJdbcClientModule
     {
         Properties galaxyProperties = new Properties();
 
-        addCatalogName(galaxyProperties, catalogHandle.getCatalogName());
-        addCatalogId(galaxyProperties, catalogHandle.getVersion().toString());
-        RegionVerifierProperties.addRegionVerifierProperties(galaxyProperties::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
-        if (regionEnforcementConfig.getAllowCrossRegionAccess()) {
-            DataSize crossRegionReadLimit = regionEnforcementConfig.getCrossRegionReadLimit();
-            addCrossRegionReadLimit(galaxyProperties, crossRegionReadLimit);
-            DataSize crossRegionWriteLimit = regionEnforcementConfig.getCrossRegionWriteLimit();
-            addCrossRegionWriteLimit(galaxyProperties, crossRegionWriteLimit);
-        }
-
-        if (config.getConnectionUrl().toLowerCase(ENGLISH).startsWith(CONNECT_STRING_PREFIX + "url=https")) {
-            addTlsEnabled(galaxyProperties);
-        }
         SshTunnelProperties.generateFrom(sshTunnelConfig)
                 .ifPresent(sshTunnelProperties -> addSshTunnelProperties(galaxyProperties::setProperty, sshTunnelProperties));
+
+        RegionVerifierProperties.addRegionVerifierProperties(galaxyProperties::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
+
+        CatalogNetworkMonitorProperties catalogNetworkMonitorProperties = CatalogNetworkMonitorProperties.generateFrom(regionEnforcementConfig, catalogHandle)
+                .withTlsEnabled(config.getConnectionUrl().toLowerCase(ENGLISH).startsWith(CONNECT_STRING_PREFIX + "url=https"));
+        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(galaxyProperties::setProperty, catalogNetworkMonitorProperties);
 
         return new DriverConnectionFactory(
                 new GalaxyDruidDriver(galaxyProperties),

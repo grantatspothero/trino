@@ -25,6 +25,7 @@ import com.starburstdata.trino.plugins.snowflake.SnowflakeConfig;
 import com.starburstdata.trino.plugins.snowflake.jdbc.SnowflakeJdbcClientModule;
 import com.starburstdata.trino.plugins.snowflake.parallel.ParallelWarehouseAwareDriverConnectionFactory;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
@@ -41,10 +42,6 @@ import java.lang.annotation.Target;
 import java.util.Properties;
 
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionReadLimit;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionWriteLimit;
 
 public class GalaxySnowflakeParallelModule
         extends AbstractConfigurationAwareModule
@@ -71,13 +68,8 @@ public class GalaxySnowflakeParallelModule
         Properties properties = SnowflakeJdbcClientModule.getConnectionProperties(snowflakeConfig);
 
         properties.setProperty("socketFactory", GalaxySqlSocketFactory.class.getName());
-        addCatalogName(properties, catalogHandle.getCatalogName());
-        addCatalogId(properties, catalogHandle.getVersion().toString());
         RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
-        if (regionEnforcementConfig.getAllowCrossRegionAccess()) {
-            addCrossRegionReadLimit(properties, regionEnforcementConfig.getCrossRegionReadLimit());
-            addCrossRegionWriteLimit(properties, regionEnforcementConfig.getCrossRegionWriteLimit());
-        }
+        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(properties::setProperty, CatalogNetworkMonitorProperties.generateFrom(regionEnforcementConfig, catalogHandle));
 
         return new ParallelWarehouseAwareDriverConnectionFactory(
                 new SnowflakeDriver(),

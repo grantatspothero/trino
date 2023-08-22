@@ -33,6 +33,7 @@ import com.mongodb.connection.StreamFactory;
 import com.mongodb.internal.connection.PowerOfTwoBufferPool;
 import com.mongodb.internal.connection.SocketStream;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
@@ -52,11 +53,6 @@ import static com.google.common.base.Verify.verify;
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static io.airlift.configuration.ConditionalModule.conditionalModule;
 import static io.airlift.configuration.ConfigBinder.configBinder;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionReadLimit;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionWriteLimit;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addTlsEnabled;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -166,18 +162,13 @@ public class MongoClientModule
             }
             Properties properties = new Properties();
 
-            addCatalogName(properties, catalogHandle.getCatalogName());
-            addCatalogId(properties, catalogHandle.getVersion().toString());
             verify(!regionEnforcementConfig.getAllowCrossRegionAccess(), "Cross-region access not supported");
             RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
-            if (regionEnforcementConfig.getAllowCrossRegionAccess()) {
-                addCrossRegionReadLimit(properties, regionEnforcementConfig.getCrossRegionReadLimit());
-                addCrossRegionWriteLimit(properties, regionEnforcementConfig.getCrossRegionWriteLimit());
-            }
             sshTunnelProperties.ifPresent(sshProps -> addSshTunnelProperties(properties::setProperty, sshProps));
-            if (sslSettings.isEnabled()) {
-                addTlsEnabled(properties);
-            }
+
+            CatalogNetworkMonitorProperties catalogNetworkMonitorProperties = CatalogNetworkMonitorProperties.generateFrom(regionEnforcementConfig, catalogHandle)
+                    .withTlsEnabled(sslSettings.isEnabled());
+            CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(properties::setProperty, catalogNetworkMonitorProperties);
 
             return new SocketStream(serverAddress, settings, sslSettings, new GalaxySqlSocketFactory(properties), bufferProvider);
         }

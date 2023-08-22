@@ -18,6 +18,7 @@ import com.mysql.cj.conf.PropertySet;
 import com.mysql.cj.conf.RuntimeProperty;
 import com.mysql.cj.protocol.StandardSocketFactory;
 import io.airlift.units.DataSize;
+import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.RegionVerifier;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.sshtunnel.SshTunnelManager;
@@ -42,21 +43,17 @@ import static io.trino.spi.galaxy.CatalogNetworkMonitor.getCatalogNetworkMonitor
 public class GalaxyMySqlSocketFactory
         extends StandardSocketFactory
 {
-    private static final String CATALOG_NAME_PROPERTY_NAME = "catalogName";
-    private static final String CATALOG_ID_PROPERTY_NAME = "catalogId";
-    private static final String CROSS_REGION_READ_LIMIT_PROPERTY_NAME = "crossRegionReadLimit";
-    private static final String CROSS_REGION_WRITE_LIMIT_PROPERTY_NAME = "crossRegionWriteLimit";
-
     @Override
     protected Socket createSocket(PropertySet props)
     {
-        String catalogName = getCatalogName(props);
-        String catalogId = getCatalogId(props);
         RegionVerifier regionVerifier = new RegionVerifier(RegionVerifierProperties.getRegionVerifierProperties(propertyName -> getRequiredProperty(props, propertyName)));
-        Optional<DataSize> crossRegionReadLimit = getCrossRegionReadLimit(props);
-        Optional<DataSize> crossRegionWriteLimit = getCrossRegionWriteLimit(props);
         Optional<SshTunnelManager> sshTunnelManager = getSshTunnelProperties(props)
                 .map(SshTunnelManager::getCached);
+        CatalogNetworkMonitorProperties catalogNetworkMonitorProperties = CatalogNetworkMonitorProperties.getCatalogNetworkMonitorProperties(propertyName -> getOptionalProperty(props, propertyName));
+        String catalogName = catalogNetworkMonitorProperties.catalogName();
+        String catalogId = catalogNetworkMonitorProperties.catalogId();
+        Optional<DataSize> crossRegionReadLimit = catalogNetworkMonitorProperties.crossRegionReadLimit();
+        Optional<DataSize> crossRegionWriteLimit = catalogNetworkMonitorProperties.crossRegionWriteLimit();
 
         return new Socket()
         {
@@ -118,46 +115,6 @@ public class GalaxyMySqlSocketFactory
                 return getCatalogNetworkMonitor(catalogName, catalogId, crossRegionReadLimitBytes, crossRegionWriteLimitBytes).monitorOutputStream(crossRegionAddress, super.getOutputStream());
             }
         };
-    }
-
-    public static void addCatalogName(Properties properties, String catalogName)
-    {
-        properties.setProperty(CATALOG_NAME_PROPERTY_NAME, catalogName);
-    }
-
-    private static String getCatalogName(PropertySet properties)
-    {
-        return getRequiredProperty(properties, CATALOG_NAME_PROPERTY_NAME);
-    }
-
-    public static void addCatalogId(Properties properties, String catalogId)
-    {
-        properties.setProperty(CATALOG_ID_PROPERTY_NAME, catalogId);
-    }
-
-    private static String getCatalogId(PropertySet properties)
-    {
-        return getRequiredProperty(properties, CATALOG_ID_PROPERTY_NAME);
-    }
-
-    public static void addCrossRegionReadLimit(Properties properties, DataSize crossRegionReadLimit)
-    {
-        properties.setProperty(CROSS_REGION_READ_LIMIT_PROPERTY_NAME, crossRegionReadLimit.toBytesValueString());
-    }
-
-    public static void addCrossRegionWriteLimit(Properties properties, DataSize crossRegionWriteLimit)
-    {
-        properties.setProperty(CROSS_REGION_WRITE_LIMIT_PROPERTY_NAME, crossRegionWriteLimit.toBytesValueString());
-    }
-
-    private static Optional<DataSize> getCrossRegionReadLimit(PropertySet propertySet)
-    {
-        return getOptionalProperty(propertySet, CROSS_REGION_READ_LIMIT_PROPERTY_NAME).map(DataSize::valueOf);
-    }
-
-    private static Optional<DataSize> getCrossRegionWriteLimit(PropertySet propertySet)
-    {
-        return getOptionalProperty(propertySet, CROSS_REGION_WRITE_LIMIT_PROPERTY_NAME).map(DataSize::valueOf);
     }
 
     public static void addSshTunnelProperties(Properties properties, SshTunnelProperties sshTunnelProperties)

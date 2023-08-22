@@ -14,6 +14,7 @@
 package io.trino.plugin.druid.galaxy;
 
 import io.airlift.log.Logger;
+import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
 import org.apache.hc.client5.http.socket.ConnectionSocketFactory;
 import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
@@ -25,8 +26,8 @@ import javax.net.ssl.HostnameVerifier;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.CATALOG_ID_PROPERTY_NAME;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.TLS_ENABLED_PROPERTY_NAME;
+import static io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties.CATALOG_ID_PROPERTY_NAME;
+import static io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties.getOptionalProperty;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -68,7 +69,8 @@ public class GalaxyCommonsHttpClientPoolCache
     private static Registry<ConnectionSocketFactory> createConnectionSocketFactoryRegistry(Properties galaxyProperties)
     {
         RegistryBuilder<ConnectionSocketFactory> registryBuilder = RegistryBuilder.create();
-        if (galaxyProperties.containsKey(TLS_ENABLED_PROPERTY_NAME)) {
+        boolean tlsEnabled = CatalogNetworkMonitorProperties.getCatalogNetworkMonitorProperties(propertyName -> getOptionalProperty(galaxyProperties, propertyName)).tlsEnabled();
+        if (tlsEnabled) {
             configureHttpsRegistry(registryBuilder, galaxyProperties);
         }
         else {

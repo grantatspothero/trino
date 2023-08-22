@@ -20,7 +20,7 @@ import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.microsoft.sqlserver.jdbc.SQLServerDriver;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
-import io.airlift.units.DataSize;
+import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.RegionEnforcementConfig;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
@@ -49,10 +49,6 @@ import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.airlift.configuration.ConditionalModule.conditionalModule;
 import static io.airlift.configuration.ConfigBinder.configBinder;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogId;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCatalogName;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionReadLimit;
-import static io.trino.plugin.base.galaxy.GalaxySqlSocketFactory.addCrossRegionWriteLimit;
 import static io.trino.plugin.jdbc.JdbcModule.bindSessionPropertiesProvider;
 import static io.trino.plugin.jdbc.JdbcModule.bindTablePropertiesProvider;
 import static io.trino.plugin.sqlserver.SqlServerClient.SQL_SERVER_MAX_LIST_EXPRESSIONS;
@@ -92,17 +88,11 @@ public class SqlServerClientModule
             CredentialProvider credentialProvider)
     {
         Properties socketArgs = new Properties();
-        addCatalogName(socketArgs, catalogHandle.getCatalogName());
-        addCatalogId(socketArgs, catalogHandle.getVersion().toString());
         RegionVerifierProperties.addRegionVerifierProperties(socketArgs::setProperty, RegionVerifierProperties.generateFrom(regionEnforcementConfig));
-        if (regionEnforcementConfig.getAllowCrossRegionAccess()) {
-            DataSize crossRegionReadLimit = regionEnforcementConfig.getCrossRegionReadLimit();
-            addCrossRegionReadLimit(socketArgs, crossRegionReadLimit);
-            DataSize crossRegionWriteLimit = regionEnforcementConfig.getCrossRegionWriteLimit();
-            addCrossRegionWriteLimit(socketArgs, crossRegionWriteLimit);
-        }
         SshTunnelProperties.generateFrom(sshTunnelConfig)
                 .ifPresent(sshTunnelProperties -> addSshTunnelProperties(socketArgs::setProperty, sshTunnelProperties));
+
+        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(socketArgs::setProperty, CatalogNetworkMonitorProperties.generateFrom(regionEnforcementConfig, catalogHandle));
 
         Properties connectionProperties = new Properties();
         connectionProperties.put("socketFactoryClass", GalaxySqlServerSocketFactory.class.getName());

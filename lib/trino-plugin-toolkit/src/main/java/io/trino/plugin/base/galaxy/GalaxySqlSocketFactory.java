@@ -40,41 +40,31 @@ import static io.trino.plugin.base.galaxy.InetAddresses.toInetAddresses;
 import static io.trino.spi.galaxy.CatalogNetworkMonitor.checkCrossRegionLimitsAndThrowIfExceeded;
 import static io.trino.spi.galaxy.CatalogNetworkMonitor.getCatalogNetworkMonitor;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.getOptionalProperty;
-import static io.trino.sshtunnel.SshTunnelPropertiesMapper.getRequiredProperty;
 import static java.util.Objects.requireNonNull;
 
 public class GalaxySqlSocketFactory
         extends SocketFactory
 {
-    public static final String CATALOG_NAME_PROPERTY_NAME = "catalogName";
-    public static final String CATALOG_ID_PROPERTY_NAME = "catalogId";
-    // tlsEnabled is only needed for the mongo socket factory currently
-    // JDBC drivers wrap the socket in an SSLSocket if necessary
-    public static final String TLS_ENABLED_PROPERTY_NAME = "tlsEnabled";
-    private static final String CROSS_REGION_READ_LIMIT_PROPERTY_NAME = "crossRegionReadLimit";
-    private static final String CROSS_REGION_WRITE_LIMIT_PROPERTY_NAME = "crossRegionWriteLimit";
-
+    private final Optional<SshTunnelManager> sshTunnelManager;
+    private final RegionVerifier regionVerifier;
     private final String catalogName;
     private final String catalogId;
-    private final Optional<SshTunnelManager> sshTunnelManager;
     private final boolean tlsEnabled;
-    private final RegionVerifier regionVerifier;
     private final Optional<DataSize> crossRegionReadLimit;
     private final Optional<DataSize> crossRegionWriteLimit;
 
     public GalaxySqlSocketFactory(Properties properties)
     {
         requireNonNull(properties, "properties is null");
-        catalogName = getCatalogName(properties);
-        catalogId = getCatalogId(properties);
         sshTunnelManager = getSshTunnelProperties(properties)
                 .map(SshTunnelManager::getCached);
-        tlsEnabled = getOptionalProperty(properties, TLS_ENABLED_PROPERTY_NAME)
-                .map(Boolean::parseBoolean)
-                .orElse(false);
         regionVerifier = new RegionVerifier(RegionVerifierProperties.getRegionVerifierProperties(properties::getProperty));
-        crossRegionReadLimit = getOptionalProperty(properties, CROSS_REGION_READ_LIMIT_PROPERTY_NAME).map(DataSize::valueOf);
-        crossRegionWriteLimit = getOptionalProperty(properties, CROSS_REGION_WRITE_LIMIT_PROPERTY_NAME).map(DataSize::valueOf);
+        CatalogNetworkMonitorProperties catalogNetworkMonitorProperties = CatalogNetworkMonitorProperties.getCatalogNetworkMonitorProperties(propertyName -> getOptionalProperty(properties, propertyName));
+        catalogName = catalogNetworkMonitorProperties.catalogName();
+        catalogId = catalogNetworkMonitorProperties.catalogId();
+        tlsEnabled = catalogNetworkMonitorProperties.tlsEnabled();
+        crossRegionReadLimit = catalogNetworkMonitorProperties.crossRegionReadLimit();
+        crossRegionWriteLimit = catalogNetworkMonitorProperties.crossRegionWriteLimit();
     }
 
     private SSLSocket createSSLSocket()
@@ -166,41 +156,6 @@ public class GalaxySqlSocketFactory
     public Socket createSocket(InetAddress address, int port, InetAddress localAddress, int localPort)
     {
         throw new UnsupportedOperationException();
-    }
-
-    public static void addCatalogName(Properties properties, String catalogName)
-    {
-        properties.setProperty(CATALOG_NAME_PROPERTY_NAME, catalogName);
-    }
-
-    private static String getCatalogName(Properties properties)
-    {
-        return getRequiredProperty(properties, CATALOG_NAME_PROPERTY_NAME);
-    }
-
-    public static void addCatalogId(Properties properties, String catalogId)
-    {
-        properties.setProperty(CATALOG_ID_PROPERTY_NAME, catalogId);
-    }
-
-    private static String getCatalogId(Properties properties)
-    {
-        return getRequiredProperty(properties, CATALOG_ID_PROPERTY_NAME);
-    }
-
-    public static void addTlsEnabled(Properties properties)
-    {
-        properties.setProperty(TLS_ENABLED_PROPERTY_NAME, "true");
-    }
-
-    public static void addCrossRegionReadLimit(Properties properties, DataSize crossRegionReadLimit)
-    {
-        properties.setProperty(CROSS_REGION_READ_LIMIT_PROPERTY_NAME, crossRegionReadLimit.toBytesValueString());
-    }
-
-    public static void addCrossRegionWriteLimit(Properties properties, DataSize crossRegionWriteLimit)
-    {
-        properties.setProperty(CROSS_REGION_WRITE_LIMIT_PROPERTY_NAME, crossRegionWriteLimit.toBytesValueString());
     }
 
     private static Optional<SshTunnelProperties> getSshTunnelProperties(Properties properties)
