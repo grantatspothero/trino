@@ -339,35 +339,35 @@ public class TestCommonSubqueriesExtractor
         Symbol subqueryAColumn1 = symbolAllocator.newSymbol("subquery_a_column1", BIGINT);
 
         PlanNode planA = planBuilder.filter(
-                        expression("subquery_a_column1 > BIGINT '150'"),
-                        planBuilder.tableScan(
-                                tableScan -> tableScan
-                                        .setTableHandle(testTableHandle)
-                                        .setSymbols(ImmutableList.of(subqueryAColumn1))
-                                        .setAssignments(ImmutableMap.of(subqueryAColumn1, HANDLE_1))
-                                        .setEnforcedConstraint(TupleDomain.all())
-                                        .setUseConnectorNodePartitioning(Optional.of(false))));
+                expression("subquery_a_column1 > BIGINT '150'"),
+                planBuilder.tableScan(
+                        tableScan -> tableScan
+                                .setTableHandle(testTableHandle)
+                                .setSymbols(ImmutableList.of(subqueryAColumn1))
+                                .setAssignments(ImmutableMap.of(subqueryAColumn1, HANDLE_1))
+                                .setEnforcedConstraint(TupleDomain.all())
+                                .setUseConnectorNodePartitioning(Optional.of(false))));
 
         // subquery B
         Symbol subqueryBColumn1 = symbolAllocator.newSymbol("subquery_b_column1", BIGINT);
         Symbol subqueryBColumn2 = symbolAllocator.newSymbol("subquery_b_column2", BIGINT);
 
         PlanNode planB = planBuilder.filter(
-                        and(
-                                expression("subquery_b_column1 < BIGINT '50'"),
-                                createDynamicFilterExpression(
-                                        TEST_SESSION,
-                                        getQueryRunner().getMetadata(),
-                                        new DynamicFilterId("subquery_b_dynamic_id"),
-                                        BIGINT,
-                                        expression("subquery_b_column2"))),
-                        planBuilder.tableScan(
-                                tableScan -> tableScan
-                                        .setTableHandle(testTableHandle)
-                                        .setSymbols(ImmutableList.of(subqueryBColumn1, subqueryBColumn2))
-                                        .setAssignments(ImmutableMap.of(subqueryBColumn1, HANDLE_1, subqueryBColumn2, HANDLE_2))
-                                        .setEnforcedConstraint(TupleDomain.all())
-                                        .setUseConnectorNodePartitioning(Optional.of(false))));
+                and(
+                        expression("subquery_b_column1 < BIGINT '50'"),
+                        createDynamicFilterExpression(
+                                TEST_SESSION,
+                                getQueryRunner().getMetadata(),
+                                new DynamicFilterId("subquery_b_dynamic_id"),
+                                BIGINT,
+                                expression("subquery_b_column2"))),
+                planBuilder.tableScan(
+                        tableScan -> tableScan
+                                .setTableHandle(testTableHandle)
+                                .setSymbols(ImmutableList.of(subqueryBColumn1, subqueryBColumn2))
+                                .setAssignments(ImmutableMap.of(subqueryBColumn1, HANDLE_1, subqueryBColumn2, HANDLE_2))
+                                .setEnforcedConstraint(TupleDomain.all())
+                                .setUseConnectorNodePartitioning(Optional.of(false))));
 
         // create a plan
         PlanNode root = planBuilder.union(ImmutableListMultimap.of(), ImmutableList.of(planA, planB));
@@ -384,11 +384,11 @@ public class TestCommonSubqueriesExtractor
 
         // There is a FilterNode because of dynamic filters
         PlanMatchPattern commonSubplanB = filter(TRUE_LITERAL, createDynamicFilterExpression(
-                TEST_SESSION,
-                getQueryRunner().getMetadata(),
-                new DynamicFilterId("subquery_b_dynamic_id"),
-                BIGINT,
-                expression("column2")),
+                        TEST_SESSION,
+                        getQueryRunner().getMetadata(),
+                        new DynamicFilterId("subquery_b_dynamic_id"),
+                        BIGINT,
+                        expression("column2")),
                 commonTableScan);
         assertPlan(symbolAllocator, subqueryB.getCommonSubplan(), commonSubplanB);
     }
@@ -488,7 +488,7 @@ public class TestCommonSubqueriesExtractor
         // to common table scan
         PlanMatchPattern commonSubplan = filter("column1 < BIGINT '30' OR column1 > BIGINT '70'",
                 tableScan(TEST_TABLE, ImmutableMap.of("column1", "column1"))
-                .with(TableScanNode.class, tableScan -> ((MockConnectorTableHandle) tableScan.getTable().getConnectorHandle()).getConstraint().equals(CONSTRAINT_3)));
+                        .with(TableScanNode.class, tableScan -> ((MockConnectorTableHandle) tableScan.getTable().getConnectorHandle()).getConstraint().equals(CONSTRAINT_3)));
 
         assertPlan(symbolAllocator, subqueryA.getCommonSubplan(), commonSubplan);
         assertPlan(symbolAllocator, subqueryB.getCommonSubplan(), commonSubplan);
@@ -506,14 +506,14 @@ public class TestCommonSubqueriesExtractor
         Symbol subqueryAColumn1 = symbolAllocator.newSymbol("subquery_a_column1", BIGINT);
 
         PlanNode planA = planBuilder.filter(
-                        expression("subquery_a_column1 > BIGINT '40'"),
-                        planBuilder.tableScan(
-                                tableScan -> tableScan
-                                        .setTableHandle(testTableHandle)
-                                        .setSymbols(ImmutableList.of(subqueryAColumn1))
-                                        .setAssignments(ImmutableMap.of(subqueryAColumn1, HANDLE_1))
-                                        .setEnforcedConstraint(TupleDomain.all())
-                                        .setUseConnectorNodePartitioning(Optional.of(false))));
+                expression("subquery_a_column1 > BIGINT '40'"),
+                planBuilder.tableScan(
+                        tableScan -> tableScan
+                                .setTableHandle(testTableHandle)
+                                .setSymbols(ImmutableList.of(subqueryAColumn1))
+                                .setAssignments(ImmutableMap.of(subqueryAColumn1, HANDLE_1))
+                                .setEnforcedConstraint(TupleDomain.all())
+                                .setUseConnectorNodePartitioning(Optional.of(false))));
 
         // subquery B
         Symbol subqueryBColumn1 = symbolAllocator.newSymbol("subquery_b_column1", BIGINT);
