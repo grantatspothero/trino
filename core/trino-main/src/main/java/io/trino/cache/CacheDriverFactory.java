@@ -13,6 +13,7 @@
  */
 package io.trino.cache;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import io.trino.Session;
@@ -65,6 +66,7 @@ public class CacheDriverFactory
     private SplitCache splitCache;
     @GuardedBy("this")
     @Nullable
+    @VisibleForTesting
     private PlanSignature cachePlanSignature;
     @GuardedBy("this")
     private boolean cachePlanSignatureComplete;
@@ -154,6 +156,12 @@ public class CacheDriverFactory
         }
     }
 
+    @Nullable
+    public PlanSignature getCachePlanSignature()
+    {
+        return cachePlanSignature;
+    }
+
     private synchronized Optional<ConnectorPageSource> loadPages(
             CacheSplitId splitId,
             PlanSignature planSignature,
@@ -172,7 +180,8 @@ public class CacheDriverFactory
         return splitCache.storePages(splitId);
     }
 
-    private synchronized void updateSplitCache(PlanSignature planSignature, boolean planSignatureComplete)
+    @VisibleForTesting
+    synchronized void updateSplitCache(PlanSignature planSignature, boolean planSignatureComplete)
     {
         if (splitCache != null) {
             if (cachePlanSignatureComplete) {

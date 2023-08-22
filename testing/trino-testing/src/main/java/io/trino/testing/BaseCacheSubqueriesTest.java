@@ -33,12 +33,13 @@ import java.util.Set;
 import static io.trino.SystemSessionProperties.CACHE_SUBQUERIES_ENABLED;
 import static io.trino.testing.QueryAssertions.assertEqualsIgnoreOrder;
 import static io.trino.tpch.TpchTable.LINE_ITEM;
+import static io.trino.tpch.TpchTable.ORDERS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public abstract class BaseCacheSubqueriesTest
         extends AbstractTestQueryFramework
 {
-    protected static final Set<TpchTable<?>> REQUIRED_TABLES = ImmutableSet.of(LINE_ITEM);
+    protected static final Set<TpchTable<?>> REQUIRED_TABLES = ImmutableSet.of(LINE_ITEM, ORDERS);
     protected static final Map<String, String> EXTRA_PROPERTIES = ImmutableMap.of("cache.enabled", "true");
 
     @BeforeMethod
@@ -66,27 +67,42 @@ public abstract class BaseCacheSubqueriesTest
                 .isLessThan(getScanOperatorInputPositions(resultWithoutCache.getQueryId()));
     }
 
-    private MaterializedResultWithQueryId executeWithQueryId(Session session, @Language("SQL") String sql)
+    @Test
+    public void testSubsequentQueryReadsFromCache()
+    {
+        @Language("SQL") String selectQuery = "select orderkey from lineitem union all (select orderkey from lineitem union all select orderkey from lineitem)";
+        MaterializedResultWithQueryId resultWithCache = executeWithQueryId(withCacheSubqueriesEnabled(), selectQuery);
+
+        // make sure data was cached
+        assertThat(getCacheDataOperatorInputPositions(resultWithCache.getQueryId())).isPositive();
+
+        resultWithCache = executeWithQueryId(withCacheSubqueriesEnabled(), "select orderkey from lineitem union all select orderkey from lineitem");
+        // make sure data was read from cache as data should be cached across queries
+        assertThat(getLoadCachedDataOperatorInputPositions(resultWithCache.getQueryId())).isPositive();
+        assertThat(getScanOperatorInputPositions(resultWithCache.getQueryId())).isZero();
+    }
+
+    protected MaterializedResultWithQueryId executeWithQueryId(Session session, @Language("SQL") String sql)
     {
         return getDistributedQueryRunner().executeWithQueryId(session, sql);
     }
 
-    private Long getScanOperatorInputPositions(QueryId queryId)
+    protected Long getScanOperatorInputPositions(QueryId queryId)
     {
         return getOperatorInputPositions(queryId, TableScanOperator.class.getSimpleName(), ScanFilterAndProjectOperator.class.getSimpleName());
     }
 
-    private Long getCacheDataOperatorInputPositions(QueryId queryId)
+    protected Long getCacheDataOperatorInputPositions(QueryId queryId)
     {
         return getOperatorInputPositions(queryId, CacheDataOperator.class.getSimpleName());
     }
 
-    private Long getLoadCachedDataOperatorInputPositions(QueryId queryId)
+    protected Long getLoadCachedDataOperatorInputPositions(QueryId queryId)
     {
         return getOperatorInputPositions(queryId, LoadCachedDataOperator.class.getSimpleName());
     }
 
-    private Long getOperatorInputPositions(QueryId queryId, String... operatorType)
+    protected Long getOperatorInputPositions(QueryId queryId, String... operatorType)
     {
         ImmutableSet<String> operatorTypes = ImmutableSet.copyOf(operatorType);
         return getDistributedQueryRunner().getCoordinator()
@@ -101,14 +117,14 @@ public abstract class BaseCacheSubqueriesTest
                 .sum();
     }
 
-    private Session withCacheSubqueriesEnabled()
+    protected Session withCacheSubqueriesEnabled()
     {
         return Session.builder(getSession())
                 .setSystemProperty(CACHE_SUBQUERIES_ENABLED, "true")
                 .build();
     }
 
-    private Session withCacheSubqueriesDisabled()
+    protected Session withCacheSubqueriesDisabled()
     {
         return Session.builder(getSession())
                 .setSystemProperty(CACHE_SUBQUERIES_ENABLED, "false")
