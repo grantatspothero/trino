@@ -39,7 +39,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 import static com.google.common.math.DoubleMath.log2;
-import static io.trino.SessionTestUtils.TEST_SESSION;
 import static io.trino.block.BlockAssertions.createLongSequenceBlock;
 import static io.trino.block.BlockAssertions.createLongsBlock;
 import static io.trino.block.BlockAssertions.createStringSequenceBlock;
@@ -47,7 +46,6 @@ import static io.trino.operator.GroupByHash.createGroupByHash;
 import static io.trino.operator.UpdateMemory.NOOP;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.DateType.DATE;
-import static io.trino.spi.type.DoubleType.DOUBLE;
 import static io.trino.spi.type.IntegerType.INTEGER;
 import static io.trino.spi.type.SmallintType.SMALLINT;
 import static io.trino.spi.type.TinyintType.TINYINT;
@@ -56,7 +54,6 @@ import static io.trino.type.TypeTestUtils.getHashBlock;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertTrue;
 
 public class TestGroupByHash
 {
@@ -142,9 +139,7 @@ public class TestGroupByHash
                     assertEquals(groupByHash.getGroupCount(), tries == 0 ? value + 1 : maxGroupId);
 
                     // add the page again using get group ids and make sure the group count didn't change
-                    Work<int[]> work = groupByHash.getGroupIds(page);
-                    work.process();
-                    int[] groupIds = work.getResult();
+                    int[] groupIds = getGroupIds(groupByHash, page);
                     assertEquals(groupByHash.getGroupCount(), tries == 0 ? value + 1 : maxGroupId);
 
                     // verify the first position
@@ -200,10 +195,7 @@ public class TestGroupByHash
 
         assertEquals(groupByHash.getGroupCount(), 2);
 
-        Work<int[]> work = groupByHash.getGroupIds(page);
-        work.process();
-        int[] groupIds = work.getResult();
-
+        int[] groupIds = getGroupIds(groupByHash, page);
         assertEquals(groupByHash.getGroupCount(), 2);
         assertEquals(groupIds.length, 4);
         assertEquals(groupIds[0], 0);
@@ -220,7 +212,9 @@ public class TestGroupByHash
         Block block = BlockAssertions.createTypedLongsBlock(hashType, 0L, null);
         Block hashBlock = getHashBlock(ImmutableList.of(hashType), block);
         Page page = new Page(block, hashBlock);
-        groupByHash.addPage(page).process();
+        // assign null a groupId (which is one since is it the second value added)
+        assertThat(getGroupIds(groupByHash, page))
+                .containsExactly(0, 1);
 
         // Add enough values to force a rehash
         int rehashThreshold = 132748;
@@ -238,13 +232,9 @@ public class TestGroupByHash
 
         block = BlockAssertions.createTypedLongsBlock(hashType, (Long) null);
         hashBlock = getHashBlock(ImmutableList.of(hashType), block);
-        page = new Page(block, hashBlock);
-        assertFalse(groupByHash.contains(0, page));
-
-        block = BlockAssertions.createTypedLongsBlock(hashType, 0L);
-        hashBlock = getHashBlock(ImmutableList.of(hashType), block);
-        page = new Page(block, hashBlock);
-        assertFalse(groupByHash.contains(0, page));
+        // null groupId will be 0 (as set above)
+        assertThat(getGroupIds(groupByHash, new Page(block, hashBlock)))
+                .containsExactly(1);
     }
 
     @Test(dataProvider = "groupByHashType")
@@ -257,9 +247,7 @@ public class TestGroupByHash
                 Block hashBlock = TypeTestUtils.getHashBlock(ImmutableList.of(hashType), block);
                 Page page = new Page(block, hashBlock);
                 for (int addValuesTries = 0; addValuesTries < 10; addValuesTries++) {
-                    Work<int[]> work = groupByHash.getGroupIds(page);
-                    work.process();
-                    int[] groupIds = work.getResult();
+                    int[] groupIds = getGroupIds(groupByHash, page);
                     assertEquals(groupByHash.getGroupCount(), tries == 0 ? value + 1 : groupByHashType.getMaxGroupId(hashType));
                     assertEquals(groupIds.length, 1);
                     long groupId = groupIds[0];
@@ -276,9 +264,7 @@ public class TestGroupByHash
         Block hashBlock = TypeTestUtils.getHashBlock(ImmutableList.of(hashType), valuesBlock);
         GroupByHash groupByHash = groupByHashType.createGroupByHash(hashType);
 
-        Work<int[]> work = groupByHash.getGroupIds(new Page(valuesBlock, hashBlock));
-        work.process();
-        int[] groupIds = work.getResult();
+        int[] groupIds = getGroupIds(groupByHash, new Page(valuesBlock, hashBlock));
         for (int i = 0; i < valuesBlock.getPositionCount(); i++) {
             assertEquals(groupIds[i], i);
         }
@@ -324,62 +310,6 @@ public class TestGroupByHash
     }
 
     @Test(dataProvider = "groupByHashType")
-    public void testContains(GroupByHashType groupByHashType, Type hashType)
-    {
-        Block valuesBlock = BlockAssertions.createLongSequenceBlock(0, 10);
-        Block hashBlock = TypeTestUtils.getHashBlock(ImmutableList.of(hashType), valuesBlock);
-        GroupByHash groupByHash = groupByHashType.createGroupByHash(hashType);
-        groupByHash.getGroupIds(new Page(valuesBlock, hashBlock)).process();
-
-        Block testBlock = BlockAssertions.createLongsBlock(3);
-        Block testHashBlock = TypeTestUtils.getHashBlock(ImmutableList.of(hashType), testBlock);
-        assertTrue(groupByHash.contains(0, new Page(testBlock, testHashBlock)));
-
-        testBlock = BlockAssertions.createLongsBlock(VARCHAR_EXPECTED_REHASH);
-        testHashBlock = TypeTestUtils.getHashBlock(ImmutableList.of(hashType), testBlock);
-        assertFalse(groupByHash.contains(0, new Page(testBlock, testHashBlock)));
-    }
-
-    @Test
-    public void testContainsMultipleColumns()
-    {
-        Block valuesBlock = BlockAssertions.createDoubleSequenceBlock(0, 10);
-        Block stringValuesBlock = createStringSequenceBlock(0, 10);
-        Block hashBlock = getHashBlock(ImmutableList.of(DOUBLE, VARCHAR), valuesBlock, stringValuesBlock);
-        GroupByHash groupByHash = createGroupByHash(TEST_SESSION, ImmutableList.of(DOUBLE, VARCHAR), true, 100, JOIN_COMPILER, TYPE_OPERATORS, NOOP);
-        groupByHash.getGroupIds(new Page(valuesBlock, stringValuesBlock, hashBlock)).process();
-
-        Block testValuesBlock = BlockAssertions.createDoublesBlock((double) 3);
-        Block testStringValuesBlock = BlockAssertions.createStringsBlock("3");
-        Block testHashBlock = getHashBlock(ImmutableList.of(DOUBLE, VARCHAR), testValuesBlock, testStringValuesBlock);
-        assertTrue(groupByHash.contains(0, new Page(testValuesBlock, testStringValuesBlock), BIGINT.getLong(testHashBlock, 0)));
-        assertTrue(groupByHash.contains(0, new Page(testValuesBlock, testStringValuesBlock)));
-    }
-
-    @Test
-    public void testContainsMultipleVariableColumns()
-    {
-        Block valuesBlockStart = createLongSequenceBlock(0, 10);
-        Block stringValuesBlockA = createStringSequenceBlock(0, 10);
-        Block stringValuesBlockB = createStringSequenceBlock(10, 20);
-        Block stringValuesBlockC = createStringSequenceBlock(20, 30);
-        Block valuesBlockEnd = createLongSequenceBlock(90, 100);
-        Block hashBlock = getHashBlock(ImmutableList.of(BIGINT, VARCHAR, VARCHAR, VARCHAR, BIGINT), valuesBlockStart, stringValuesBlockA, stringValuesBlockB, stringValuesBlockC, valuesBlockEnd);
-        GroupByHash groupByHash = createGroupByHash(TEST_SESSION, ImmutableList.of(BIGINT, VARCHAR, VARCHAR, VARCHAR, BIGINT), true, 100, JOIN_COMPILER, TYPE_OPERATORS, NOOP);
-        Work<int[]> groupIds = groupByHash.getGroupIds(new Page(valuesBlockStart, stringValuesBlockA, stringValuesBlockB, stringValuesBlockC, valuesBlockEnd, hashBlock));
-        assertTrue(groupIds.process());
-
-        Block testValuesBlock = createLongsBlock((long) 3);
-        Block testStringValuesBlockA = BlockAssertions.createStringsBlock("3");
-        Block testStringValuesBlockB = BlockAssertions.createStringsBlock("13");
-        Block testStringValuesBlockC = BlockAssertions.createStringsBlock("23");
-        Block testBlockEnd = createLongsBlock((long) 93);
-        Block testHashBlock = getHashBlock(ImmutableList.of(BIGINT, VARCHAR, VARCHAR, VARCHAR, BIGINT), testValuesBlock, testStringValuesBlockA, testStringValuesBlockB, testStringValuesBlockC, testBlockEnd);
-        assertTrue(groupByHash.contains(0, new Page(testValuesBlock, testStringValuesBlockA, testStringValuesBlockB, testStringValuesBlockC, testBlockEnd), BIGINT.getLong(testHashBlock, 0)));
-        assertTrue(groupByHash.contains(0, new Page(testValuesBlock, testStringValuesBlockA, testStringValuesBlockB, testStringValuesBlockC, testBlockEnd)));
-    }
-
-    @Test(dataProvider = "groupByHashType")
     public void testForceRehash(GroupByHashType groupByHashType, Type hashType)
     {
         // Create a page with positionCount >> expected size of groupByHash
@@ -391,8 +321,9 @@ public class TestGroupByHash
         groupByHash.getGroupIds(new Page(valuesBlock, hashBlock)).process();
 
         // Ensure that all groups are present in GroupByHash
-        for (int i = 0; i < valuesBlock.getPositionCount(); i++) {
-            assertTrue(groupByHash.contains(i, new Page(valuesBlock), BIGINT.getLong(hashBlock, i)));
+        int groupCount = groupByHash.getGroupCount();
+        for (int groupId : getGroupIds(groupByHash, new Page(valuesBlock, hashBlock))) {
+            assertThat(groupId).isLessThan(groupCount);
         }
     }
 
@@ -782,5 +713,13 @@ public class TestGroupByHash
         Work<int[]> work = groupByHash.getGroupIds(page);
         // Compare by name since classes are private
         assertThat(work.getClass().getName()).isEqualTo(clazz.getName());
+    }
+
+    private static int[] getGroupIds(GroupByHash groupByHash, Page page)
+    {
+        Work<int[]> work = groupByHash.getGroupIds(page);
+        work.process();
+        int[] groupIds = work.getResult();
+        return groupIds;
     }
 }
