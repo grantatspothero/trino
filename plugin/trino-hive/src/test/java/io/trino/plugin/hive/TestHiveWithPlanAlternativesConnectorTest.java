@@ -24,6 +24,7 @@ import static io.trino.SystemSessionProperties.USE_TABLE_SCAN_NODE_PARTITIONING;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.util.stream.Collectors.joining;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 public class TestHiveWithPlanAlternativesConnectorTest
         extends BaseHiveConnectorTest
@@ -179,5 +180,32 @@ public class TestHiveWithPlanAlternativesConnectorTest
     public void testTimestampWithTimeZone()
     {
         // There's no clean way to access HiveMetastoreFactory and this test doesn't exercise plan alternatives anyway
+    }
+
+    @Override
+    public void testCoercingVarchar0ToVarchar1()
+    {
+        // TODO (https://github.com/starburstdata/galaxy-trino/issues/1124) Implement getSupportedType for objectstore
+        assertThatThrownBy(super::testCoercingVarchar0ToVarchar1)
+                .hasMessage("invalid varchar length: 0")
+                .hasStackTraceContaining("at io.trino.plugin.hive.type.VarcharTypeInfo.<init>("); // failure inside Hive connector
+    }
+
+    @Override
+    public void testCoercingVarchar0ToVarchar1WithCTAS()
+    {
+        // TODO (https://github.com/starburstdata/galaxy-trino/issues/1124) Implement getSupportedType for objectstore
+        assertThatThrownBy(super::testCoercingVarchar0ToVarchar1WithCTAS)
+                .hasMessage("invalid varchar length: 0")
+                .hasStackTraceContaining("at io.trino.plugin.hive.type.VarcharTypeInfo.<init>("); // failure inside Hive connector
+    }
+
+    @Override
+    public void testCoercingVarchar0ToVarchar1WithCTASNoData()
+    {
+        // TODO (https://github.com/starburstdata/galaxy-trino/issues/1124) Implement getSupportedType for objectstore
+        assertThatThrownBy(super::testCoercingVarchar0ToVarchar1WithCTASNoData)
+                .hasMessage("invalid varchar length: 0")
+                .hasStackTraceContaining("at io.trino.plugin.hive.type.VarcharTypeInfo.<init>("); // failure inside Hive connector
     }
 }
