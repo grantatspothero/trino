@@ -509,7 +509,7 @@ public class TrinoGalaxyCatalog
     @Override
     public void createView(ConnectorSession session, SchemaTableName schemaViewName, ConnectorViewDefinition definition, boolean replace)
     {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("Creating views is not supported");
     }
 
     @Override
