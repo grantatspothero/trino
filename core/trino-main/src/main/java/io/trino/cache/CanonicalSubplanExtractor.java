@@ -226,7 +226,8 @@ public final class CanonicalSubplanExtractor
                     subplan.getColumnHandles(),
                     subplan.getTable(),
                     subplan.getTableId(),
-                    subplan.isUseConnectorNodePartitioning()));
+                    subplan.isUseConnectorNodePartitioning(),
+                    subplan.getTableScanId()));
         }
 
         @Override
@@ -276,7 +277,8 @@ public final class CanonicalSubplanExtractor
                     subplan.getColumnHandles(),
                     subplan.getTable(),
                     subplan.getTableId(),
-                    subplan.isUseConnectorNodePartitioning()));
+                    subplan.isUseConnectorNodePartitioning(),
+                    subplan.getTableScanId()));
         }
 
         @Override
@@ -320,7 +322,8 @@ public final class CanonicalSubplanExtractor
                     subplan.getColumnHandles(),
                     subplan.getTable(),
                     subplan.getTableId(),
-                    subplan.isUseConnectorNodePartitioning()));
+                    subplan.isUseConnectorNodePartitioning(),
+                    subplan.getTableScanId()));
         }
 
         @Override
@@ -380,7 +383,8 @@ public final class CanonicalSubplanExtractor
                     columnHandlesBuilder.buildOrThrow(),
                     canonicalTableHandle,
                     tableId.get(),
-                    node.isUseConnectorNodePartitioning()));
+                    node.isUseConnectorNodePartitioning(),
+                    node.getId()));
         }
 
         private void canonicalizeRecursively(PlanNode node, boolean recursive)

@@ -24,6 +24,7 @@ import io.trino.spi.connector.ColumnHandle;
 import io.trino.sql.planner.Symbol;
 import io.trino.sql.planner.optimizations.SymbolMapper;
 import io.trino.sql.planner.plan.PlanNode;
+import io.trino.sql.planner.plan.PlanNodeId;
 import io.trino.sql.tree.Expression;
 
 import java.util.List;
@@ -86,6 +87,10 @@ public class CanonicalSubplan
      * Whether to use connector provided node partitioning for table scan.
      */
     private final boolean useConnectorNodePartitioning;
+    /**
+     * {@link PlanNodeId} of original table scan that can be used to identify subquery.
+     */
+    private final PlanNodeId tableScanId;
 
     public CanonicalSubplan(
             PlanNode originalPlanNode,
@@ -98,7 +103,8 @@ public class CanonicalSubplan
             Map<CacheColumnId, ColumnHandle> columnHandles,
             TableHandle table,
             CacheTableId tableId,
-            boolean useConnectorNodePartitioning)
+            boolean useConnectorNodePartitioning,
+            PlanNodeId tableScanId)
     {
         this.originalPlanNode = requireNonNull(originalPlanNode, "originalPlanNode is null");
         this.originalSymbolMapping = ImmutableBiMap.copyOf(requireNonNull(originalSymbolMapping, "originalSymbolMapping is null"));
@@ -111,6 +117,7 @@ public class CanonicalSubplan
         this.table = requireNonNull(table, "table is null");
         this.tableId = requireNonNull(tableId, "tableId is null");
         this.useConnectorNodePartitioning = useConnectorNodePartitioning;
+        this.tableScanId = requireNonNull(tableScanId, "tableScanId is null");
     }
 
     public SymbolMapper canonicalSymbolMapper()
@@ -175,5 +182,10 @@ public class CanonicalSubplan
     public boolean isUseConnectorNodePartitioning()
     {
         return useConnectorNodePartitioning;
+    }
+
+    public PlanNodeId getTableScanId()
+    {
+        return tableScanId;
     }
 }

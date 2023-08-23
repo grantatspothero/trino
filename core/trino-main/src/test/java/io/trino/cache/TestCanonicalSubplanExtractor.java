@@ -87,6 +87,7 @@ public class TestCanonicalSubplanExtractor
 {
     private static final Session TEST_SESSION = testSessionBuilder().build();
     private static final CacheTableId CACHE_TABLE_ID = new CacheTableId("cache_table_id");
+    private static final PlanNodeId SCAN_NODE_ID = new PlanNodeId("scan_id");
     private static final String CATALOG_ID = TEST_TABLE_HANDLE.getCatalogHandle().getId();
     private static final CacheTableId CATALOG_CACHE_TABLE_ID = new CacheTableId(CATALOG_ID + ":" + CACHE_TABLE_ID);
     private static final Metadata TEST_METADATA = new TestMetadata();
@@ -278,6 +279,7 @@ public class TestCanonicalSubplanExtractor
                 new SimpleEntry<>(new CacheColumnId("cache_column2"), new TestingColumnHandle("column2")));
         assertThat(subplan.getTableId()).isEqualTo(CATALOG_CACHE_TABLE_ID);
         assertThat(subplan.getTable()).isEqualTo(TEST_TABLE_HANDLE);
+        assertThat(subplan.getTableScanId()).isEqualTo(SCAN_NODE_ID);
     }
 
     @Test
@@ -314,6 +316,7 @@ public class TestCanonicalSubplanExtractor
                 new SimpleEntry<>(new CacheColumnId("cache_column2"), new TestingColumnHandle("column2")));
         assertThat(subplan.getTableId()).isEqualTo(CATALOG_CACHE_TABLE_ID);
         assertThat(subplan.getTable()).isEqualTo(TEST_TABLE_HANDLE);
+        assertThat(subplan.getTableScanId()).isEqualTo(SCAN_NODE_ID);
     }
 
     @Test
@@ -349,6 +352,7 @@ public class TestCanonicalSubplanExtractor
                 new SimpleEntry<>(new CacheColumnId("cache_column2"), new TestingColumnHandle("column2")));
         assertThat(subplan.getTableId()).isEqualTo(CATALOG_CACHE_TABLE_ID);
         assertThat(subplan.getTable()).isEqualTo(TEST_TABLE_HANDLE);
+        assertThat(subplan.getTableScanId()).isEqualTo(SCAN_NODE_ID);
     }
 
     @Test
@@ -390,6 +394,7 @@ public class TestCanonicalSubplanExtractor
                 new SimpleEntry<>(new CacheColumnId("cache_column2"), new TestingColumnHandle("column2")));
         assertThat(subplan.getTableId()).isEqualTo(CATALOG_CACHE_TABLE_ID);
         assertThat(subplan.getTable()).isEqualTo(TEST_TABLE_HANDLE);
+        assertThat(subplan.getTableScanId()).isEqualTo(SCAN_NODE_ID);
     }
 
     @Test
@@ -554,7 +559,7 @@ public class TestCanonicalSubplanExtractor
         TestingColumnHandle handle1 = new TestingColumnHandle("column1");
         TestingColumnHandle handle2 = new TestingColumnHandle("column2");
         return new TableScanNode(
-                new PlanNodeId("scan_id"),
+                SCAN_NODE_ID,
                 TEST_TABLE_HANDLE,
                 ImmutableList.of(symbol1, symbol2),
                 ImmutableMap.of(symbol2, handle2, symbol1, handle1),
