@@ -32,6 +32,7 @@ public class TestGalaxySecurityConfig
         assertRecordedDefaults(recordDefaults(GalaxySecurityConfig.class)
                 .setEnabled(true)
                 .setAccountUri(null)
+                .setAccessControlUri(null)
                 .setCatalogId(null));
     }
 
@@ -41,12 +42,14 @@ public class TestGalaxySecurityConfig
         Map<String, String> properties = ImmutableMap.<String, String>builder()
                 .put("galaxy.location-security.enabled", "false")
                 .put("galaxy.account-url", "https://whackadoodle.galaxy.com")
+                .put("galaxy.access-control-url", "https://whackadoodle.aws-us-east1.accesscontrol.galaxy.com")
                 .put("galaxy.catalog-id", "c-1234567890")
                 .buildOrThrow();
 
         GalaxySecurityConfig expected = new GalaxySecurityConfig()
                 .setEnabled(false)
                 .setAccountUri(URI.create("https://whackadoodle.galaxy.com"))
+                .setAccessControlUri(URI.create("https://whackadoodle.aws-us-east1.accesscontrol.galaxy.com"))
                 .setCatalogId(new CatalogId("c-1234567890"));
 
         assertFullMapping(properties, expected);

@@ -24,6 +24,8 @@ import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.trino.metadata.SystemSecurityMetadata;
 import io.trino.server.galaxy.GalaxyConfig;
 
+import java.net.URI;
+
 import static com.google.inject.Scopes.SINGLETON;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
@@ -65,6 +67,8 @@ public class GalaxySecurityModule
     @Singleton
     public static TrinoSecurityApi createTrinoSecurityApi(@ForGalaxySystemAccessControl HttpClient httpClient, GalaxyAccessControlConfig config)
     {
-        return new HttpTrinoSecurityClient(requireNonNull(config, "config is null").getAccountUri(), httpClient);
+        requireNonNull(config, "config is null");
+        URI uri = config.getAccessControlOverrideUri().orElse(config.getAccountUri());
+        return new HttpTrinoSecurityClient(uri, httpClient);
     }
 }

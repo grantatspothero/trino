@@ -20,11 +20,13 @@ import io.starburst.stargate.id.CatalogId;
 import jakarta.validation.constraints.NotNull;
 
 import java.net.URI;
+import java.util.Optional;
 
 public class GalaxySecurityConfig
 {
     private boolean enabled = true;
     private URI accountUri;
+    private Optional<URI> overrideUri = Optional.empty();
     private CatalogId catalogId;
 
     public boolean isEnabled()
@@ -51,6 +53,19 @@ public class GalaxySecurityConfig
     public GalaxySecurityConfig setAccountUri(URI accountUri)
     {
         this.accountUri = accountUri;
+        return this;
+    }
+
+    @NotNull
+    public Optional<URI> getAccessControlUri()
+    {
+        return overrideUri;
+    }
+
+    @Config("galaxy.access-control-url")
+    public GalaxySecurityConfig setAccessControlUri(URI overrideUri)
+    {
+        this.overrideUri = Optional.ofNullable(overrideUri);
         return this;
     }
 

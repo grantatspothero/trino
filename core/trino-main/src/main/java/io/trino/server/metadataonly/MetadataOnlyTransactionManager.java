@@ -409,7 +409,8 @@ public class MetadataOnlyTransactionManager
             if (!requiredServiceProperty(serviceProperties, "access-control.name").equals(GalaxyAccessControl.NAME)) {
                 throw new IllegalArgumentException("access-control.name must be %s".formatted(GalaxyAccessControl.NAME));
             }
-            URI uri = URI.create(requiredServiceProperty(serviceProperties, "galaxy.account-url"));
+            Optional<URI> accessControlUri = Optional.ofNullable(serviceProperties.get("galaxy.access-control-url")).map(URI::create);
+            URI uri = accessControlUri.orElse(URI.create(requiredServiceProperty(serviceProperties, "galaxy.account-url")));
 
             TrinoSecurityApi securityClient = (getGalaxyIdentityType(identity) == INDEXER) ? INDEXER_CONTROLLER : new HttpTrinoSecurityClient(uri, accessControlClient);
 

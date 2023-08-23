@@ -24,6 +24,7 @@ import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -31,6 +32,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 public class GalaxyAccessControlConfig
 {
     private URI accountUri;
+    private Optional<URI> accessControlOverrideUri = Optional.empty();
     private BiMap<String, CatalogId> catalogNames = ImmutableBiMap.of();
     private Set<String> readOnlyCatalogs = ImmutableSet.of();
 
@@ -44,6 +46,19 @@ public class GalaxyAccessControlConfig
     public GalaxyAccessControlConfig setAccountUri(URI accountUri)
     {
         this.accountUri = accountUri;
+        return this;
+    }
+
+    @NotNull
+    public Optional<URI> getAccessControlOverrideUri()
+    {
+        return accessControlOverrideUri;
+    }
+
+    @Config("galaxy.access-control-url")
+    public GalaxyAccessControlConfig setAccessControlOverrideUri(URI accessControlOverrideUri)
+    {
+        this.accessControlOverrideUri = Optional.ofNullable(accessControlOverrideUri);
         return this;
     }
 
