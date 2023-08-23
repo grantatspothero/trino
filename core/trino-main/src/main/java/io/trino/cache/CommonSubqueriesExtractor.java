@@ -206,7 +206,7 @@ public final class CommonSubqueriesExtractor
                     predicate,
                     TypeProvider.viewOf(commonColumnIds.entrySet().stream()
                             .collect(toImmutableMap(entry -> columnIdToSymbol(entry.getKey()), entry -> typeProvider.get(entry.getValue())))));
-            // Only domains for projected columns can be part of signature
+            // Only domains for projected columns can be part of signature predicate
             Set<CacheColumnId> projectionSet = ImmutableSet.copyOf(projections);
             signaturePredicate = extractionResult.getTupleDomain()
                     .transformKeys(CommonSubqueriesExtractor::canonicalSymbolToColumnId)
