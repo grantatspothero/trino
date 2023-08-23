@@ -107,6 +107,7 @@ public class MockConnectorFactory
     private final BiFunction<ConnectorSession, SchemaTableName, CompletableFuture<?>> refreshMaterializedView;
     private final BiFunction<ConnectorSession, SchemaTableName, ConnectorTableHandle> getTableHandle;
     private final Function<SchemaTableName, List<ColumnMetadata>> getColumns;
+    private final Function<SchemaTableName, Optional<String>> getComment;
     private final Function<SchemaTableName, TableStatistics> getTableStatistics;
     private final Function<SchemaTableName, List<String>> checkConstraints;
     private final ApplyProjection applyProjection;
@@ -163,6 +164,7 @@ public class MockConnectorFactory
             BiFunction<ConnectorSession, SchemaTableName, CompletableFuture<?>> refreshMaterializedView,
             BiFunction<ConnectorSession, SchemaTableName, ConnectorTableHandle> getTableHandle,
             Function<SchemaTableName, List<ColumnMetadata>> getColumns,
+            Function<SchemaTableName, Optional<String>> getComment,
             Function<SchemaTableName, TableStatistics> getTableStatistics,
             Function<SchemaTableName, List<String>> checkConstraints,
             ApplyProjection applyProjection,
@@ -215,6 +217,7 @@ public class MockConnectorFactory
         this.refreshMaterializedView = requireNonNull(refreshMaterializedView, "refreshMaterializedView is null");
         this.getTableHandle = requireNonNull(getTableHandle, "getTableHandle is null");
         this.getColumns = requireNonNull(getColumns, "getColumns is null");
+        this.getComment = requireNonNull(getComment, "getComment is null");
         this.getTableStatistics = requireNonNull(getTableStatistics, "getTableStatistics is null");
         this.checkConstraints = requireNonNull(checkConstraints, "checkConstraints is null");
         this.applyProjection = requireNonNull(applyProjection, "applyProjection is null");
@@ -277,6 +280,7 @@ public class MockConnectorFactory
                 refreshMaterializedView,
                 getTableHandle,
                 getColumns,
+                getComment,
                 getTableStatistics,
                 checkConstraints,
                 applyProjection,
@@ -425,6 +429,7 @@ public class MockConnectorFactory
         private BiFunction<ConnectorSession, SchemaTableName, CompletableFuture<?>> refreshMaterializedView = (session, viewName) -> CompletableFuture.completedFuture(null);
         private BiFunction<ConnectorSession, SchemaTableName, ConnectorTableHandle> getTableHandle = defaultGetTableHandle();
         private Function<SchemaTableName, List<ColumnMetadata>> getColumns = defaultGetColumns();
+        private Function<SchemaTableName, Optional<String>> getComment = schemaTableName -> Optional.empty();
         private Function<SchemaTableName, TableStatistics> getTableStatistics = schemaTableName -> empty();
         private Function<SchemaTableName, List<String>> checkConstraints = (schemaTableName -> ImmutableList.of());
         private ApplyProjection applyProjection = (session, handle, projections, assignments) -> Optional.empty();
@@ -560,6 +565,12 @@ public class MockConnectorFactory
         public Builder withGetColumns(Function<SchemaTableName, List<ColumnMetadata>> getColumns)
         {
             this.getColumns = requireNonNull(getColumns, "getColumns is null");
+            return this;
+        }
+
+        public Builder withGetComment(Function<SchemaTableName, Optional<String>> getComment)
+        {
+            this.getComment = requireNonNull(getComment, "getComment is null");
             return this;
         }
 
@@ -840,6 +851,7 @@ public class MockConnectorFactory
                     refreshMaterializedView,
                     getTableHandle,
                     getColumns,
+                    getComment,
                     getTableStatistics,
                     checkConstraints,
                     applyProjection,
