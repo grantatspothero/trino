@@ -38,6 +38,7 @@ import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static io.trino.testing.TestingNames.randomNameSuffix;
+import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -163,8 +164,8 @@ public class TestObjectStoreGalaxyMaterializedView
         assertUpdate("INSERT INTO " + tableName + " VALUES '45'", 1);
         computeActual("CREATE MATERIALIZED VIEW " + materializedViewName + " AS SELECT * FROM " + tableName);
         assertQuery("SELECT * FROM " + materializedViewName, "VALUES 42, 45");
-        assertQueryFails(galaxyTestHelper.publicSession(), "SELECT * FROM " + String.format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
-        assertQueryFails(galaxyTestHelper.publicSession(), "SELECT 1 FROM " + String.format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
+        assertQueryFails(galaxyTestHelper.publicSession(), "SELECT * FROM " + format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
+        assertQueryFails(galaxyTestHelper.publicSession(), "SELECT 1 FROM " + format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
     }
 
     // TODO move test to BaseObjectStoreMaterializedViewTest
@@ -180,8 +181,8 @@ public class TestObjectStoreGalaxyMaterializedView
         computeActual("CREATE MATERIALIZED VIEW " + materializedViewName + " AS SELECT * FROM " + tableName);
         computeActual("REFRESH MATERIALIZED VIEW " + materializedViewName);
         assertQuery("SELECT * FROM " + materializedViewName, "VALUES 42, 45");
-        assertQueryFails(galaxyTestHelper.publicSession(), "SELECT * FROM " + String.format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
-        assertQueryFails(galaxyTestHelper.publicSession(), "SELECT 1 FROM " + String.format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
+        assertQueryFails(galaxyTestHelper.publicSession(), "SELECT * FROM " + format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
+        assertQueryFails(galaxyTestHelper.publicSession(), "SELECT 1 FROM " + format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
     }
 
     // TODO move test to BaseObjectStoreMaterializedViewTest
@@ -197,7 +198,7 @@ public class TestObjectStoreGalaxyMaterializedView
                         "SELECT * FROM base_table1"))
                 .hasMessageContaining("Access Denied: Cannot create materialized view iceberg.different_storage_schema.%s: Role accountadmin does not have the privilege CREATE_TABLE on the schema iceberg.different_storage_schema".formatted(viewName));
         assertThatThrownBy(() -> query("DESCRIBE " + viewName))
-                .hasMessageContaining(String.format("'iceberg.%s.%s' does not exist", schemaName, viewName));
+                .hasMessageContaining(format("'iceberg.%s.%s' does not exist", schemaName, viewName));
     }
 
     @Override
