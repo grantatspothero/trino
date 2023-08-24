@@ -13,12 +13,17 @@
  */
 package io.trino.plugin.objectstore;
 
+import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
+import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient.GrantDetails;
+import io.starburst.stargate.accesscontrol.privilege.GrantKind;
+import io.starburst.stargate.accesscontrol.privilege.Privilege;
+import io.starburst.stargate.id.CatalogId;
+import io.starburst.stargate.id.FunctionId;
 import io.trino.plugin.deltalake.DeltaLakeQueryRunner;
 import io.trino.plugin.deltalake.TestDeltaLakeConnectorTest;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
-import io.trino.plugin.iceberg.IcebergPlugin;
-import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
+import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.sql.planner.OptimizerConfig;
 import io.trino.testing.BaseConnectorTest;
 import io.trino.testing.DistributedQueryRunner;
@@ -28,12 +33,11 @@ import org.testng.annotations.BeforeMethod;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.Map;
 
 import static io.trino.plugin.base.util.Closables.closeAllSuppress;
 import static io.trino.plugin.objectstore.ObjectStoreQueryRunner.initializeTpchTables;
-import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
-import static io.trino.testing.TestingSession.testSessionBuilder;
+import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
+import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 
 /**
  * Tests ObjectStore connector with Delta backend, exercising all
@@ -57,34 +61,32 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
 
         GalaxyCockroachContainer cockroach = closeAfterClass(new GalaxyCockroachContainer());
         TestingGalaxyMetastore galaxyMetastore = closeAfterClass(new TestingGalaxyMetastore(cockroach));
+        TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> cockroach));
+        TestingAccountClient accountClient = testingAccountFactory.createAccountClient();
+        TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> true));
 
         String catalog = DeltaLakeQueryRunner.DELTA_CATALOG;
         String schema = "test_schema"; // must match TestDeltaLakeConnectorTest.SCHEMA
-        DistributedQueryRunner queryRunner = DistributedQueryRunner.builder(
-                        testSessionBuilder()
-                                .setCatalog(catalog)
-                                .setSchema(schema)
-                                .build())
+
+        DistributedQueryRunner queryRunner = ObjectStoreQueryRunner.builder()
+                .withTableType(TableType.DELTA)
+                .withCatalogName(catalog)
+                .withSchemaName(schema)
+                .withMetastoreType("galaxy")
+                .withAccountClient(accountClient)
+                .withLocationSecurityServer(locationSecurityServer)
+                .withMetastore(galaxyMetastore)
+                .withS3Url(minio.getS3Url())
+                .withHiveS3Config(minio.getHiveS3Config())
                 .build();
         try {
-            queryRunner.installPlugin(new TpchPlugin());
-            queryRunner.createCatalog("tpch", "tpch", Map.of());
+            // Necessary to access system tables such as $history
+            queryRunner.execute("GRANT ALL PRIVILEGES ON \"%s\".\"%s\".\"*\" TO ROLE %s".formatted(catalog, schema, ACCOUNT_ADMIN));
 
-            queryRunner.installPlugin(new IcebergPlugin());
-            queryRunner.installPlugin(new ObjectStorePlugin());
+            CatalogId catalogId = accountClient.getOrCreateCatalog(catalog);
+            FunctionId functionId = new FunctionId(catalogId, "system", "table_changes");
+            accountClient.grantFunctionPrivilege(new GrantDetails(Privilege.EXECUTE, accountClient.getAdminRoleId(), GrantKind.ALLOW, false, functionId));
 
-            queryRunner.createCatalog(catalog, "galaxy_objectstore", createObjectStoreProperties(
-                    TableType.DELTA,
-                    Map.of(
-                            "galaxy.location-security.enabled", "false",
-                            "galaxy.catalog-id", "c-1234567890",
-                            "galaxy.account-url", "https://localhost:1234"),
-                    "galaxy",
-                    galaxyMetastore.getMetastoreConfig(minio.getS3Url()),
-                    minio.getHiveS3Config(),
-                    Map.of()));
-
-            queryRunner.execute("CREATE SCHEMA %s.%s".formatted(catalog, schema));
             initializeTpchTables(queryRunner, REQUIRED_TPCH_TABLES);
 
             return queryRunner;
