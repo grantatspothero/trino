@@ -131,7 +131,7 @@ public class TestCanonicalSubplanExtractor
 
         Expression hashExpression = getHashExpression(
                 new ExpressionWithType("\"name:varchar(25)\"", createVarcharType(25)),
-                new ExpressionWithType("(\"regionkey:bigint\" * BIGINT '2')", BIGINT));
+                new ExpressionWithType(new SymbolReference("(\"regionkey:bigint\" * BIGINT '2')"), BIGINT));
         Expression sum = getSumFunction();
         Expression filteredSum = getSumFunctionBuilder()
                 .setFilter(expression("(\"nationkey:bigint\" > BIGINT '10')"))

@@ -58,6 +58,8 @@ public class CanonicalSubplan
     private final Optional<Set<CacheColumnId>> groupByColumns;
     /**
      * {@link CacheColumnId} of group by hash that is part of {@link CanonicalSubplan#assignments}.
+     * Hash expression symbols are canonicalized as {@link CacheColumnId} from
+     * {@link CanonicalSubplan#groupByColumns}.
      */
     private final Optional<CacheColumnId> groupByHash;
     /**

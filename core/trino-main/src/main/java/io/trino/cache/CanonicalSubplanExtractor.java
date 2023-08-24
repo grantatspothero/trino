@@ -25,7 +25,6 @@ import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.sql.planner.Symbol;
-import io.trino.sql.planner.SymbolsExtractor;
 import io.trino.sql.planner.optimizations.SymbolMapper;
 import io.trino.sql.planner.plan.AggregationNode;
 import io.trino.sql.planner.plan.AggregationNode.Aggregation;
@@ -50,7 +49,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.trino.sql.DynamicFilters.isDynamicFilter;
 import static io.trino.sql.ExpressionFormatter.formatExpression;
 import static io.trino.sql.ExpressionUtils.extractConjuncts;
-import static io.trino.sql.planner.iterative.rule.InlineProjections.inlineProjections;
 import static io.trino.sql.planner.plan.AggregationNode.Step.PARTIAL;
 import static java.util.Objects.requireNonNull;
 
@@ -64,12 +62,12 @@ public final class CanonicalSubplanExtractor
     public static List<CanonicalSubplan> extractCanonicalSubplans(Metadata metadata, Session session, PlanNode root)
     {
         ImmutableList.Builder<CanonicalSubplan> canonicalSubplans = ImmutableList.builder();
-        root.accept(new Visitor(metadata, session, canonicalSubplans), true).ifPresent(canonicalSubplans::add);
+        root.accept(new Visitor(metadata, session, canonicalSubplans), null).ifPresent(canonicalSubplans::add);
         return canonicalSubplans.build();
     }
 
     private static class Visitor
-            extends PlanVisitor<Optional<CanonicalSubplan>, Boolean>
+            extends PlanVisitor<Optional<CanonicalSubplan>, Void>
     {
         private final Metadata metadata;
         private final Session session;
@@ -83,31 +81,25 @@ public final class CanonicalSubplanExtractor
         }
 
         @Override
-        protected Optional<CanonicalSubplan> visitPlan(PlanNode node, Boolean recursive)
+        protected Optional<CanonicalSubplan> visitPlan(PlanNode node, Void context)
         {
-            if (recursive) {
-                node.getSources().forEach(child -> canonicalizeRecursively(child, true));
-            }
+            node.getSources().forEach(this::canonicalizeRecursively);
             return Optional.empty();
         }
 
         @Override
-        public Optional<CanonicalSubplan> visitChooseAlternativeNode(ChooseAlternativeNode node, Boolean recursive)
+        public Optional<CanonicalSubplan> visitChooseAlternativeNode(ChooseAlternativeNode node, Void context)
         {
             // do not canonicalize plans that already contain alternative
             return Optional.empty();
         }
 
         @Override
-        public Optional<CanonicalSubplan> visitAggregation(AggregationNode node, Boolean recursive)
+        public Optional<CanonicalSubplan> visitAggregation(AggregationNode node, Void context)
         {
             PlanNode source = node.getSource();
-
-            // always add non-aggregated canonical subplan so that it can be matched against other
-            // non-aggregated subqueries
-            canonicalizeRecursively(source, recursive);
-
             if (!(source instanceof ProjectNode || source instanceof FilterNode || source instanceof TableScanNode)) {
+                canonicalizeRecursively(source);
                 return Optional.empty();
             }
 
@@ -116,6 +108,7 @@ public final class CanonicalSubplanExtractor
                     && node.getPreGroupedSymbols().isEmpty()
                     && node.getStep() == PARTIAL
                     && node.getGroupIdSymbol().isEmpty())) {
+                canonicalizeRecursively(source);
                 return Optional.empty();
             }
 
@@ -128,26 +121,31 @@ public final class CanonicalSubplanExtractor
                             && aggregation.getOrderingScheme().isEmpty());
 
             if (!allSupportedAggregations) {
+                canonicalizeRecursively(source);
                 return Optional.empty();
             }
 
-            Optional<CanonicalSubplan> subplanOptional = node.getSource().accept(this, false);
-
-            // inline projections used in aggregation
-            Optional<Symbol> hashSymbol = node.getHashSymbol();
-            if (subplanOptional.isEmpty()
-                    && hashSymbol.isPresent()
-                    && source instanceof ProjectNode sourceProjection
-                    && sourceProjection.getSource() instanceof ProjectNode nestedSourceProjection) {
-                subplanOptional = inlineProjections(
-                        sourceProjection,
-                        nestedSourceProjection,
-                        ImmutableSet.<Symbol>builder()
-                                .addAll(SymbolsExtractor.extractUnique(sourceProjection.getAssignments().get(hashSymbol.get())))
-                                // inline identities
-                                .addAll(sourceProjection.getAssignments().getOutputs())
-                                .build())
-                        .flatMap(projection -> projection.accept(this, false));
+            Optional<CanonicalSubplan> subplanOptional;
+            Optional<Expression> originalHashExpression;
+            if (node.getHashSymbol().isPresent()) {
+                // projection that computes hash symbol is expected
+                Symbol hashSymbol = node.getHashSymbol().get();
+                if (source instanceof ProjectNode hashProjection && isHashProjection(hashProjection, hashSymbol)) {
+                    // always add non-aggregated canonical subplan so that it can be matched against other
+                    // non-aggregated subqueries
+                    subplanOptional = canonicalizeRecursively(hashProjection.getSource());
+                    originalHashExpression = Optional.of(hashProjection.getAssignments().get(hashSymbol));
+                }
+                else {
+                    canonicalizeRecursively(source);
+                    return Optional.empty();
+                }
+            }
+            else {
+                // always add non-aggregated canonical subplan so that it can be matched against other
+                // non-aggregated subqueries
+                subplanOptional = canonicalizeRecursively(source);
+                originalHashExpression = Optional.empty();
             }
 
             if (subplanOptional.isEmpty()) {
@@ -173,12 +171,14 @@ public final class CanonicalSubplanExtractor
                 assignmentsBuilder.put(columnId, groupByExpression);
             }
 
-            // canonicalize hash column
+            // canonicalize hash column (in terms of column ids from groupByColumns)
             Optional<CacheColumnId> groupByHash;
-            if (node.getHashSymbol().isPresent()) {
-                CacheColumnId columnId = requireNonNull(subplan.getOriginalSymbolMapping().inverse().get(hashSymbol.get()));
+            if (originalHashExpression.isPresent()) {
+                Expression canonicalHashExpression = subplan.canonicalSymbolMapper().map(originalHashExpression.get());
+                CacheColumnId columnId = new CacheColumnId(formatExpression(canonicalHashExpression));
                 groupByHash = Optional.of(columnId);
-                assignmentsBuilder.put(columnId, requireNonNull(canonicalExpressionMap.get(hashSymbol.get())));
+                assignmentsBuilder.put(columnId, canonicalHashExpression);
+                symbolMappingBuilder.put(columnId, node.getHashSymbol().orElseThrow());
             }
             else {
                 groupByHash = Optional.empty();
@@ -231,15 +231,15 @@ public final class CanonicalSubplanExtractor
         }
 
         @Override
-        public Optional<CanonicalSubplan> visitProject(ProjectNode node, Boolean recursive)
+        public Optional<CanonicalSubplan> visitProject(ProjectNode node, Void context)
         {
             PlanNode source = node.getSource();
             if (!(source instanceof FilterNode || source instanceof TableScanNode)) {
-                canonicalizeRecursively(source, recursive);
+                canonicalizeRecursively(source);
                 return Optional.empty();
             }
 
-            Optional<CanonicalSubplan> subplanOptional = node.getSource().accept(this, recursive);
+            Optional<CanonicalSubplan> subplanOptional = node.getSource().accept(this, null);
             if (subplanOptional.isEmpty()) {
                 return Optional.empty();
             }
@@ -282,16 +282,16 @@ public final class CanonicalSubplanExtractor
         }
 
         @Override
-        public Optional<CanonicalSubplan> visitFilter(FilterNode node, Boolean recursive)
+        public Optional<CanonicalSubplan> visitFilter(FilterNode node, Void context)
         {
             PlanNode source = node.getSource();
             if (!(source instanceof TableScanNode)) {
                 // only scan <- filter <- project or scan <- project plans are supported
-                canonicalizeRecursively(source, recursive);
+                canonicalizeRecursively(source);
                 return Optional.empty();
             }
 
-            Optional<CanonicalSubplan> subplanOptional = source.accept(this, recursive);
+            Optional<CanonicalSubplan> subplanOptional = source.accept(this, null);
             if (subplanOptional.isEmpty()) {
                 return Optional.empty();
             }
@@ -327,7 +327,7 @@ public final class CanonicalSubplanExtractor
         }
 
         @Override
-        public Optional<CanonicalSubplan> visitTableScan(TableScanNode node, Boolean recursive)
+        public Optional<CanonicalSubplan> visitTableScan(TableScanNode node, Void context)
         {
             if (node.isUpdateTarget()) {
                 // inserts are not supported
@@ -387,11 +387,19 @@ public final class CanonicalSubplanExtractor
                     node.getId()));
         }
 
-        private void canonicalizeRecursively(PlanNode node, boolean recursive)
+        private boolean isHashProjection(ProjectNode projection, Symbol hashSymbol)
         {
-            if (recursive) {
-                node.accept(this, true).ifPresent(canonicalSubplans::add);
-            }
+            // all projections except hash calculation should be identities
+            return projection.getAssignments().getSymbols().stream()
+                    .filter(symbol -> !symbol.equals(hashSymbol))
+                    .allMatch(symbol -> projection.getAssignments().isIdentity(symbol));
+        }
+
+        private Optional<CanonicalSubplan> canonicalizeRecursively(PlanNode node)
+        {
+            Optional<CanonicalSubplan> subplan = node.accept(this, null);
+            subplan.ifPresent(canonicalSubplans::add);
+            return subplan;
         }
     }
 }
