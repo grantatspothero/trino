@@ -15,9 +15,7 @@
 package io.trino.server.resultscache;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airlift.http.client.HttpClient;
-import io.airlift.json.ObjectMapperProvider;
 import io.airlift.log.Logger;
 import io.starburst.stargate.resultscache.client.CacheClient;
 import io.starburst.stargate.resultscache.model.CacheEntry;
@@ -29,9 +27,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.server.security.galaxy.GalaxyIdentity.toDispatchSession;
 import static java.util.Objects.requireNonNull;
 
@@ -39,7 +35,6 @@ public class ResultsCacheClient
 {
     private static final Logger log = Logger.get(ResultsCacheClient.class);
     private static final String AUTH_TOKEN_TYPE = "X-Trino-Plane-Token";
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapperProvider().get();
     private final String cacheBaseUri;
     private final CacheClient cacheClient;
     private final boolean galaxyEnabled;
@@ -105,8 +100,6 @@ public class ResultsCacheClient
             Instant creation)
             throws JsonProcessingException
     {
-        // Using Collectors.toList() because ImmutableList does not support null values
-        List<List<String>> dataStr = data.stream().map(singleRow -> singleRow.stream().map(ResultsCacheClient::serializeObject).collect(Collectors.toList())).collect(toImmutableList());
         return new CacheEntry(
                 cacheKey,
                 queryId.toString(),
@@ -119,20 +112,7 @@ public class ResultsCacheClient
                 clusterId,
                 deploymentId,
                 columns,
-                dataStr,
+                data,
                 creation);
-    }
-
-    private static String serializeObject(Object object)
-    {
-        if (object == null) {
-            return null;
-        }
-        try {
-            return OBJECT_MAPPER.writeValueAsString(object);
-        }
-        catch (JsonProcessingException ex) {
-            throw new RuntimeException("Error serializing results to JSON", ex);
-        }
     }
 }
