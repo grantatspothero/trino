@@ -91,19 +91,12 @@ public class InlineProjections
 
     static Optional<ProjectNode> inlineProjections(PlannerContext plannerContext, ProjectNode parent, ProjectNode child, Session session, TypeAnalyzer typeAnalyzer, TypeProvider types)
     {
-        return inlineProjections(
-                parent,
-                child,
-                extractInliningTargets(plannerContext, parent, child, session, typeAnalyzer, types));
-    }
-
-    public static Optional<ProjectNode> inlineProjections(ProjectNode parent, ProjectNode child, Set<Symbol> targets)
-    {
         // squash identity projections
         if (parent.isIdentity() && child.isIdentity()) {
             return Optional.of((ProjectNode) parent.replaceChildren(ImmutableList.of(child.getSource())));
         }
 
+        Set<Symbol> targets = extractInliningTargets(plannerContext, parent, child, session, typeAnalyzer, types);
         if (targets.isEmpty()) {
             return Optional.empty();
         }
