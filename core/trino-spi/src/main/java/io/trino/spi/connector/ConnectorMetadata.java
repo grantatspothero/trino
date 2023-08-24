@@ -1646,6 +1646,14 @@ public interface ConnectorMetadata
         return handle;
     }
 
+    /**
+     * @return whether connector supports reading a single column from the give tableHandle, without reading the entire table.
+     */
+    default boolean isColumnarTableScan(ConnectorSession session, ConnectorTableHandle tableHandle)
+    {
+        return false;
+    }
+
     default WriterScalingOptions getNewTableWriterScalingOptions(ConnectorSession session, SchemaTableName tableName, Map<String, Object> tableProperties)
     {
         return WriterScalingOptions.DISABLED;

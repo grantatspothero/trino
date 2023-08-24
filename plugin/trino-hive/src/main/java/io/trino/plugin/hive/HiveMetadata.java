@@ -3998,4 +3998,12 @@ public class HiveMetadata
     {
         return ((HiveTableHandle) handle).toCanonical();
     }
+
+    @Override
+    public boolean isColumnarTableScan(ConnectorSession session, ConnectorTableHandle tableHandle)
+    {
+        HiveStorageFormat hiveStorageFormat = getHiveStorageFormat(getTableMetadata(session, tableHandle).getProperties());
+
+        return hiveStorageFormat == HiveStorageFormat.ORC || hiveStorageFormat == HiveStorageFormat.PARQUET;
+    }
 }

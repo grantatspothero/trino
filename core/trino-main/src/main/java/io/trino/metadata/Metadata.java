@@ -771,6 +771,11 @@ public interface Metadata
     TableHandle getCanonicalTableHandle(Session session, TableHandle handle);
 
     /**
+     * @return whether connector supports reading a single column from the give tableHandle, without reading the entire table.
+     */
+    boolean isColumnarTableScan(Session session, TableHandle tableHandle);
+
+    /**
      * Returns writer scaling options for the specified table. This method is called when table handle is not available during CTAS.
      */
     WriterScalingOptions getNewTableWriterScalingOptions(Session session, QualifiedObjectName tableName, Map<String, Object> tableProperties);

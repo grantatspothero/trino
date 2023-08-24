@@ -517,4 +517,10 @@ public class MemoryMetadata
                         info.getDataFragments(),
                         info.getComment()));
     }
+
+    @Override
+    public boolean isColumnarTableScan(ConnectorSession session, ConnectorTableHandle tableHandle)
+    {
+        return true;
+    }
 }

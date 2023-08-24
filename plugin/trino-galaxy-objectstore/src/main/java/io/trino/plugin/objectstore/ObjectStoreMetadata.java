@@ -1481,6 +1481,12 @@ public class ObjectStoreMetadata
     }
 
     @Override
+    public boolean isColumnarTableScan(ConnectorSession session, ConnectorTableHandle tableHandle)
+    {
+        return delegate(tableType(tableHandle)).isColumnarTableScan(session, tableHandle);
+    }
+
+    @Override
     public WriterScalingOptions getNewTableWriterScalingOptions(ConnectorSession session, SchemaTableName tableName, Map<String, Object> tableProperties)
     {
         TableType tableType = tableType(tableProperties);

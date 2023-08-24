@@ -2918,6 +2918,15 @@ public class IcebergMetadata
     }
 
     @Override
+    public boolean isColumnarTableScan(ConnectorSession session, ConnectorTableHandle connectorTableHandle)
+    {
+        IcebergTableHandle tableHandle = (IcebergTableHandle) connectorTableHandle;
+        IcebergFileFormat storageFormat = getFileFormat(tableHandle.getStorageProperties());
+
+        return storageFormat == IcebergFileFormat.ORC || storageFormat == IcebergFileFormat.PARQUET;
+    }
+
+    @Override
     public WriterScalingOptions getNewTableWriterScalingOptions(ConnectorSession session, SchemaTableName tableName, Map<String, Object> tableProperties)
     {
         return WriterScalingOptions.ENABLED;
