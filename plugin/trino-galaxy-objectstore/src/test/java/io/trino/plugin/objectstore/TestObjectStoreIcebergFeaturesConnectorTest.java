@@ -1075,6 +1075,12 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
+    public void testRenameColumnWithComment()
+    {
+        skipDuplicateTestCoverage("testRenameColumnWithComment");
+    }
+
+    @Override
     public void testRenameMaterializedView()
     {
         skipDuplicateTestCoverage("testRenameMaterializedView");
