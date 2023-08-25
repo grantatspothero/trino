@@ -50,6 +50,7 @@ import io.trino.plugin.iceberg.IcebergMergeTableHandle;
 import io.trino.plugin.iceberg.IcebergMetadata;
 import io.trino.plugin.iceberg.IcebergPartitioningHandle;
 import io.trino.plugin.iceberg.IcebergTableHandle;
+import io.trino.plugin.iceberg.IcebergTableName;
 import io.trino.plugin.iceberg.IcebergWritableTableHandle;
 import io.trino.plugin.iceberg.catalog.AbstractIcebergTableOperations;
 import io.trino.plugin.iceberg.procedure.IcebergTableExecuteHandle;
@@ -260,6 +261,10 @@ public class ObjectStoreMetadata
             Optional<ConnectorTableVersion> endVersion)
     {
         if (startVersion.isEmpty() && endVersion.isEmpty()) {
+            if (IcebergTableName.isIcebergTableName(tableName.getTableName()) && IcebergTableName.isMaterializedViewStorage(tableName.getTableName())) {
+                return delegate(ICEBERG).getTableHandle(unwrap(ICEBERG, session), tableName, Optional.empty(), Optional.empty());
+            }
+
             // Typically, getTableHandle is called after getMaterializedView and getView, so no point in checking cached RelationCategory
             ConnectorTableHandle tableHandle = getTableHandleInOrder(session, tableName, relationTypeCache.getTableTypeAffinity(tableName));
             if (tableHandle != null) {

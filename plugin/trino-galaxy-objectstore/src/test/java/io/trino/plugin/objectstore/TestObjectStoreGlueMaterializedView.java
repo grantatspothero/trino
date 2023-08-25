@@ -17,20 +17,38 @@ import com.amazonaws.services.glue.AWSGlueAsync;
 import com.amazonaws.services.glue.AWSGlueAsyncClientBuilder;
 import com.amazonaws.services.glue.model.BatchDeleteTableRequest;
 import com.amazonaws.services.glue.model.DeleteDatabaseRequest;
+import com.amazonaws.services.glue.model.GetTableRequest;
 import com.amazonaws.services.glue.model.GetTablesRequest;
 import com.amazonaws.services.glue.model.GetTablesResult;
 import com.amazonaws.services.glue.model.Table;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
 import io.starburst.stargate.accesscontrol.privilege.Privilege;
 import io.starburst.stargate.id.SchemaId;
+import io.trino.filesystem.Location;
+import io.trino.filesystem.TrinoFileSystem;
+import io.trino.filesystem.hdfs.HdfsFileSystemFactory;
+import io.trino.hdfs.ConfigurationInitializer;
+import io.trino.hdfs.DynamicHdfsConfiguration;
+import io.trino.hdfs.HdfsConfig;
+import io.trino.hdfs.HdfsConfiguration;
+import io.trino.hdfs.HdfsConfigurationInitializer;
+import io.trino.hdfs.HdfsEnvironment;
+import io.trino.hdfs.TrinoHdfsFileSystemStats;
+import io.trino.hdfs.authentication.NoHdfsAuthentication;
+import io.trino.hdfs.s3.HiveS3Config;
+import io.trino.hdfs.s3.TrinoS3ConfigurationInitializer;
 import io.trino.plugin.hive.aws.AwsApiCallStats;
 import io.trino.plugin.iceberg.IcebergPlugin;
+import io.trino.plugin.iceberg.fileio.ForwardingFileIo;
 import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.server.security.galaxy.GalaxyTestHelper;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.GalaxyQueryRunner;
 import io.trino.testing.QueryRunner;
+import org.apache.iceberg.TableMetadata;
+import org.apache.iceberg.TableMetadataParser;
 import org.junit.jupiter.api.AfterAll;
 
 import java.util.Collection;
@@ -40,11 +58,14 @@ import java.util.Set;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.starburst.stargate.accesscontrol.privilege.GrantKind.ALLOW;
 import static io.trino.plugin.hive.metastore.glue.AwsSdkUtil.getPaginatedResults;
+import static io.trino.plugin.hive.metastore.glue.converter.GlueToTrinoConverter.getTableParameters;
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
+import static io.trino.testing.TestingConnectorSession.SESSION;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.lang.String.format;
+import static org.apache.iceberg.BaseMetastoreTableOperations.METADATA_LOCATION_PROP;
 
 /**
  * Test ObjectStore connector materialized views with Glue metastore.
@@ -110,11 +131,21 @@ public class TestObjectStoreGlueMaterializedView
         return true;
     }
 
+    @Override
+    protected String getStorageMetadataLocation(String materializedViewName)
+    {
+        AWSGlueAsync glueClient = AWSGlueAsyncClientBuilder.defaultClient();
+        Table table = glueClient.getTable(new GetTableRequest()
+                        .withDatabaseName(schemaName)
+                        .withName(materializedViewName))
+                .getTable();
+        return getTableParameters(table).get(METADATA_LOCATION_PROP);
+    }
+
     @AfterAll
     public void cleanup()
     {
         cleanUpSchema(schemaName);
-        cleanUpSchema(storageSchemaName);
     }
 
     private static void cleanUpSchema(String schema)
@@ -135,5 +166,22 @@ public class TestObjectStoreGlueMaterializedView
                 .withTablesToDelete(tableNames));
         glueClient.deleteDatabase(new DeleteDatabaseRequest()
                 .withName(schema));
+    }
+
+    @Override
+    protected TableMetadata getStorageTableMetadata(String materializedViewName)
+    {
+        Location metadataLocation = Location.of(getStorageMetadataLocation(materializedViewName));
+        TrinoFileSystem fileSystem = getTrinoFileSystem();
+        return TableMetadataParser.read(new ForwardingFileIo(fileSystem), metadataLocation.toString());
+    }
+
+    private TrinoFileSystem getTrinoFileSystem()
+    {
+        ConfigurationInitializer s3Initializer = new TrinoS3ConfigurationInitializer(new HiveS3Config());
+        HdfsConfigurationInitializer initializer = new HdfsConfigurationInitializer(new HdfsConfig(), ImmutableSet.of(s3Initializer));
+        HdfsConfiguration hdfsConfiguration = new DynamicHdfsConfiguration(initializer, ImmutableSet.of());
+        return new HdfsFileSystemFactory(new HdfsEnvironment(hdfsConfiguration, new HdfsConfig(), new NoHdfsAuthentication()), new TrinoHdfsFileSystemStats())
+                .create(SESSION);
     }
 }

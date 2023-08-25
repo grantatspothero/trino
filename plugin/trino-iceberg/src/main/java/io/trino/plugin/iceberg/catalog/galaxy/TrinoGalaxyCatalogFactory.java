@@ -39,6 +39,7 @@ public class TrinoGalaxyCatalogFactory
     private final IcebergTableOperationsProvider tableOperationsProvider;
     private final boolean isUniqueTableLocation;
     private final boolean cacheTableMetadata;
+    private final boolean hideMaterializedViewStorageTable;
 
     @Inject
     public TrinoGalaxyCatalogFactory(
@@ -57,6 +58,7 @@ public class TrinoGalaxyCatalogFactory
         this.tableOperationsProvider = requireNonNull(tableOperationsProvider, "tableOperationProvider is null");
         this.isUniqueTableLocation = config.isUniqueTableLocation();
         this.cacheTableMetadata = galaxyCatalogConfig.isCacheTableMetadata();
+        this.hideMaterializedViewStorageTable = config.isHideMaterializedViewStorageTable();
     }
 
     @Override
@@ -69,6 +71,7 @@ public class TrinoGalaxyCatalogFactory
                 fileSystemFactory,
                 tableOperationsProvider,
                 isUniqueTableLocation,
-                cacheTableMetadata);
+                cacheTableMetadata,
+                hideMaterializedViewStorageTable);
     }
 }

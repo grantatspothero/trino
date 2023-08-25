@@ -85,7 +85,8 @@ public class TestTrinoGalaxyCatalog
                 fileSystemFactory,
                 new GalaxyMetastoreOperationsProvider(fileSystemFactory, typeManager, new IcebergGalaxyCatalogConfig()),
                 useUniqueTableLocations,
-                false);
+                false,
+                true);
     }
 
     @BeforeAll
@@ -133,9 +134,9 @@ public class TestTrinoGalaxyCatalog
         private final CachingHiveMetastore metastore;
         private final TrinoFileSystemFactory fileSystemFactory;
 
-        public TestableTrinoGalaxyCatalog(CatalogName catalogName, TypeManager typeManager, CachingHiveMetastore metastore, TrinoFileSystemFactory fileSystemFactory, IcebergTableOperationsProvider tableOperationsProvider, boolean useUniqueTableLocation, boolean cacheTableMetadata)
+        public TestableTrinoGalaxyCatalog(CatalogName catalogName, TypeManager typeManager, CachingHiveMetastore metastore, TrinoFileSystemFactory fileSystemFactory, IcebergTableOperationsProvider tableOperationsProvider, boolean useUniqueTableLocation, boolean cacheTableMetadata, boolean hideMaterializedViewStorageTable)
         {
-            super(catalogName, typeManager, metastore, fileSystemFactory, tableOperationsProvider, useUniqueTableLocation, cacheTableMetadata);
+            super(catalogName, typeManager, metastore, fileSystemFactory, tableOperationsProvider, useUniqueTableLocation, cacheTableMetadata, hideMaterializedViewStorageTable);
             this.metastore = requireNonNull(metastore, "metastore is null");
             this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         }

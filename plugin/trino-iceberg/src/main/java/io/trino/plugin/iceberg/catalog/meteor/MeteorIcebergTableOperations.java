@@ -74,4 +74,10 @@ public class MeteorIcebergTableOperations
     {
         throw new TrinoException(NOT_SUPPORTED, "commit is not supported for Iceberg Meteor catalog");
     }
+
+    @Override
+    protected void commitMaterializedViewRefresh(TableMetadata base, TableMetadata metadata)
+    {
+        throw new TrinoException(NOT_SUPPORTED, "commit is not supported for Iceberg Meteor catalog");
+    }
 }

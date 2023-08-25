@@ -14,30 +14,49 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableMap;
-import io.minio.ListObjectsArgs;
-import io.minio.MinioClient;
+import com.google.common.collect.ImmutableSet;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
 import io.starburst.stargate.accesscontrol.privilege.Privilege;
 import io.starburst.stargate.id.SchemaId;
+import io.starburst.stargate.metastore.client.Table;
 import io.trino.Session;
+import io.trino.filesystem.Location;
+import io.trino.filesystem.TrinoFileSystem;
+import io.trino.filesystem.hdfs.HdfsFileSystemFactory;
+import io.trino.hdfs.ConfigurationInitializer;
+import io.trino.hdfs.DynamicHdfsConfiguration;
+import io.trino.hdfs.HdfsConfig;
+import io.trino.hdfs.HdfsConfiguration;
+import io.trino.hdfs.HdfsConfigurationInitializer;
+import io.trino.hdfs.HdfsEnvironment;
+import io.trino.hdfs.TrinoHdfsFileSystemStats;
+import io.trino.hdfs.authentication.NoHdfsAuthentication;
+import io.trino.hdfs.s3.HiveS3Config;
+import io.trino.hdfs.s3.TrinoS3ConfigurationInitializer;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.iceberg.IcebergPlugin;
+import io.trino.plugin.iceberg.fileio.ForwardingFileIo;
 import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.server.security.galaxy.GalaxyTestHelper;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.GalaxyQueryRunner;
 import io.trino.testing.QueryRunner;
+import org.apache.iceberg.TableMetadata;
+import org.apache.iceberg.TableMetadataParser;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
 import static io.starburst.stargate.accesscontrol.privilege.GrantKind.ALLOW;
+import static io.trino.plugin.objectstore.MinioStorage.ACCESS_KEY;
+import static io.trino.plugin.objectstore.MinioStorage.SECRET_KEY;
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
+import static io.trino.testing.TestingConnectorSession.SESSION;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.lang.String.format;
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.apache.iceberg.BaseMetastoreTableOperations.METADATA_LOCATION_PROP;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
@@ -50,8 +69,8 @@ public class TestObjectStoreGalaxyMaterializedView
 
     private final String bucketName = "test-bucket-" + randomNameSuffix();
     private GalaxyTestHelper galaxyTestHelper;
+    private TestingGalaxyMetastore metastore;
     private String schemaDirectory;
-    private MinioStorage minio;
 
     @Override
     protected String getSchemaDirectory()
@@ -68,10 +87,10 @@ public class TestObjectStoreGalaxyMaterializedView
 
         TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> false));
 
-        minio = closeAfterClass(new MinioStorage(bucketName));
+        MinioStorage minio = closeAfterClass(new MinioStorage(bucketName));
         minio.start();
-        schemaDirectory = minio.getS3Url() + "/" + storageSchemaName;
-        TestingGalaxyMetastore metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyTestHelper.getCockroach()));
+        schemaDirectory = minio.getS3Url() + "/" + "default";
+        metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyTestHelper.getCockroach()));
 
         Map<String, String> properties = createObjectStoreProperties(
                 ICEBERG,
@@ -110,6 +129,13 @@ public class TestObjectStoreGalaxyMaterializedView
         return true;
     }
 
+    @Override
+    protected String getStorageMetadataLocation(String materializedViewName)
+    {
+        Table table = metastore.getMetastore().getTable("default", materializedViewName).orElseThrow();
+        return table.parameters().get(METADATA_LOCATION_PROP);
+    }
+
     @Test
     public void testDropMaterializedViewData()
     {
@@ -118,27 +144,12 @@ public class TestObjectStoreGalaxyMaterializedView
         getQueryRunner().execute("CREATE TABLE test_drop_mv_data_table(value INT)");
         getQueryRunner().execute("INSERT INTO  test_drop_mv_data_table(value) VALUES 1, 2, 3, 4, 5");
         getQueryRunner().execute("CREATE SCHEMA %s".formatted(schemaForDroppedMaterializedView));
-        getQueryRunner().execute("CREATE MATERIALIZED VIEW test_drop_mv_data_materialized_view "
+        assertQueryFails("CREATE MATERIALIZED VIEW test_drop_mv_data_materialized_view "
                 + " WITH ( storage_schema = '%s' ) ".formatted(schemaForDroppedMaterializedView)
-                + " AS SELECT value as top_two_value FROM test_drop_mv_data_table ORDER BY value DESC LIMIT 2");
+                + " AS SELECT value as top_two_value FROM test_drop_mv_data_table ORDER BY value DESC LIMIT 2",
+                "Materialized view property 'storage_schema' is not supported when hiding materialized view storage tables is enabled");
 
-        getQueryRunner().execute("REFRESH MATERIALIZED VIEW  test_drop_mv_data_materialized_view");
-        MinioClient client = MinioClient.builder()
-                .endpoint(minio.getEndpoint())
-                .credentials(MinioStorage.ACCESS_KEY, MinioStorage.SECRET_KEY)
-                .build();
-        assertThat(client.listObjects(ListObjectsArgs.builder()
-                .recursive(true)
-                .bucket(bucketName)
-                .prefix(schemaForDroppedMaterializedView)
-                .build())).isNotEmpty();
-        getQueryRunner().execute("DROP MATERIALIZED VIEW test_drop_mv_data_materialized_view");
-        assertThat(client.listObjects(ListObjectsArgs.builder()
-                .recursive(true)
-                .bucket(bucketName)
-                .prefix(schemaForDroppedMaterializedView)
-                .build())).isEmpty();
-
+        assertUpdate("DROP TABLE test_drop_mv_data_table");
         getQueryRunner().execute("DROP SCHEMA %s".formatted(schemaForDroppedMaterializedView));
     }
 
@@ -200,5 +211,24 @@ public class TestObjectStoreGalaxyMaterializedView
         return Session.builder(galaxyTestHelper.publicSession())
                 .setQueryCatalogs(getSession().getQueryCatalogs())
                 .build();
+    }
+
+    @Override
+    protected TableMetadata getStorageTableMetadata(String materializedViewName)
+    {
+        Location metadataLocation = Location.of(getStorageMetadataLocation(materializedViewName));
+        TrinoFileSystem fileSystem = getTrinoFileSystem();
+        return TableMetadataParser.read(new ForwardingFileIo(fileSystem), metadataLocation.toString());
+    }
+
+    private TrinoFileSystem getTrinoFileSystem()
+    {
+        ConfigurationInitializer s3Initializer = new TrinoS3ConfigurationInitializer(new HiveS3Config()
+                .setS3AwsAccessKey(ACCESS_KEY)
+                .setS3AwsSecretKey(SECRET_KEY));
+        HdfsConfigurationInitializer initializer = new HdfsConfigurationInitializer(new HdfsConfig(), ImmutableSet.of(s3Initializer));
+        HdfsConfiguration hdfsConfiguration = new DynamicHdfsConfiguration(initializer, ImmutableSet.of());
+        return new HdfsFileSystemFactory(new HdfsEnvironment(hdfsConfiguration, new HdfsConfig(), new NoHdfsAuthentication()), new TrinoHdfsFileSystemStats())
+                .create(SESSION);
     }
 }

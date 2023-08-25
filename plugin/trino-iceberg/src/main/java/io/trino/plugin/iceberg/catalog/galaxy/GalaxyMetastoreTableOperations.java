@@ -36,13 +36,17 @@ import org.apache.iceberg.types.Types;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiFunction;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.plugin.hive.HiveMetadata.TABLE_COMMENT;
 import static io.trino.plugin.hive.HiveType.toHiveType;
+import static io.trino.plugin.iceberg.IcebergTableName.tableNameFrom;
 import static io.trino.plugin.iceberg.IcebergUtil.COLUMN_TRINO_NOT_NULL_PROPERTY;
 import static io.trino.plugin.iceberg.IcebergUtil.COLUMN_TRINO_TYPE_ID_PROPERTY;
 import static java.util.Objects.requireNonNull;
+import static org.apache.iceberg.BaseMetastoreTableOperations.METADATA_LOCATION_PROP;
+import static org.apache.iceberg.BaseMetastoreTableOperations.PREVIOUS_METADATA_LOCATION_PROP;
 
 @NotThreadSafe
 public class GalaxyMetastoreTableOperations
@@ -70,14 +74,30 @@ public class GalaxyMetastoreTableOperations
     @Override
     protected void commitToExistingTable(TableMetadata base, TableMetadata metadata)
     {
+        Table currentTable = getTable();
+        commitTableUpdate(currentTable, metadata, (table, newMetadataLocation) -> Table.builder(table)
+                .apply(builder -> updateMetastoreTable(builder, metadata, newMetadataLocation, Optional.of(currentMetadataLocation)))
+                .build());
+    }
+
+    @Override
+    protected void commitMaterializedViewRefresh(TableMetadata base, TableMetadata metadata)
+    {
+        Table materializedView = getTable(database, tableNameFrom(tableName));
+        commitTableUpdate(materializedView, metadata, (table, newMetadataLocation) -> Table.builder(table)
+                .apply(builder -> builder
+                        .setParameter(METADATA_LOCATION_PROP, newMetadataLocation)
+                        .setParameter(PREVIOUS_METADATA_LOCATION_PROP, currentMetadataLocation))
+                .build());
+    }
+
+    private void commitTableUpdate(Table table, TableMetadata metadata, BiFunction<Table, String, Table> tableUpdateFunction)
+    {
         String newMetadataLocation = writeNewMetadata(metadata, version.orElseThrow() + 1);
 
-        Table table = Table.builder(getTable())
-                .apply(builder -> updateMetastoreTable(builder, metadata, newMetadataLocation, Optional.of(currentMetadataLocation)))
-                .build();
-
         try {
-            metastore.replaceTable(database, tableName, table, null);
+            Table updatedTable = tableUpdateFunction.apply(table, newMetadataLocation);
+            metastore.replaceTable(table.getDatabaseName(), table.getTableName(), updatedTable, null);
         }
         catch (TrinoException e) {
             if (e.getCause() instanceof BadMetastoreRequestException) {

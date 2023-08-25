@@ -302,7 +302,7 @@ public class TestObjectStoreHudiConnectorTest
 
     @Test
     @Override
-    public void testMaterializedViewBaseTableGone(boolean initialized)
+    public void testMaterializedViewBaseTableGone()
     {
         skipTestUnless(hasBehavior(SUPPORTS_CREATE_TABLE));
         super.testMaterializedViewBaseTableGone(initialized);

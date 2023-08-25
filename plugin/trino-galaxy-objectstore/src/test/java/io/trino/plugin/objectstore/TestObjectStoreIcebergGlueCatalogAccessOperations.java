@@ -72,6 +72,7 @@ import static io.trino.plugin.iceberg.TableType.DATA;
 import static io.trino.plugin.iceberg.TableType.FILES;
 import static io.trino.plugin.iceberg.TableType.HISTORY;
 import static io.trino.plugin.iceberg.TableType.MANIFESTS;
+import static io.trino.plugin.iceberg.TableType.MATERIALIZED_VIEW_STORAGE;
 import static io.trino.plugin.iceberg.TableType.PARTITIONS;
 import static io.trino.plugin.iceberg.TableType.PROPERTIES;
 import static io.trino.plugin.iceberg.TableType.REFS;
@@ -349,7 +350,7 @@ public class TestObjectStoreIcebergGlueCatalogAccessOperations
 
             assertGlueMetastoreApiInvocations("SELECT * FROM test_select_mview_view",
                     ImmutableMultiset.builder()
-                            .addCopies(GET_TABLE, 3)
+                            .addCopies(GET_TABLE, 2)
                             .build());
         }
         finally {
@@ -367,7 +368,7 @@ public class TestObjectStoreIcebergGlueCatalogAccessOperations
 
             assertGlueMetastoreApiInvocations("SELECT * FROM test_select_mview_where_view WHERE age = 2",
                     ImmutableMultiset.builder()
-                            .addCopies(GET_TABLE, 3)
+                            .addCopies(GET_TABLE, 2)
                             .build());
         }
         finally {
@@ -385,7 +386,7 @@ public class TestObjectStoreIcebergGlueCatalogAccessOperations
 
             assertGlueMetastoreApiInvocations("REFRESH MATERIALIZED VIEW test_refresh_mview_view",
                     ImmutableMultiset.builder()
-                            .addCopies(GET_TABLE, 5)
+                            .addCopies(GET_TABLE, 4)
                             .add(UPDATE_TABLE)
                             .build());
         }
@@ -531,7 +532,7 @@ public class TestObjectStoreIcebergGlueCatalogAccessOperations
 
                     // This test should get updated if a new system table is added.
                     assertThat(TableType.values())
-                            .containsExactly(DATA, HISTORY, SNAPSHOTS, MANIFESTS, PARTITIONS, FILES, PROPERTIES, REFS);
+                            .containsExactly(DATA, HISTORY, SNAPSHOTS, MANIFESTS, PARTITIONS, FILES, PROPERTIES, REFS, MATERIALIZED_VIEW_STORAGE);
                 }
                 finally {
                     assertQuerySucceeds("REVOKE SELECT ON \"*\" FROM ROLE " + ACCOUNT_ADMIN);

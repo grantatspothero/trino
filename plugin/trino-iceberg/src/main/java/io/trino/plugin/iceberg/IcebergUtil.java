@@ -650,7 +650,7 @@ public final class IcebergUtil
         return catalog.newCreateTableTransaction(session, schemaTableName, schema, partitionSpec, sortOrder, tableLocation, createTableProperties(tableMetadata));
     }
 
-    private static Map<String, String> createTableProperties(ConnectorTableMetadata tableMetadata)
+    public static Map<String, String> createTableProperties(ConnectorTableMetadata tableMetadata)
     {
         ImmutableMap.Builder<String, String> propertiesBuilder = ImmutableMap.builder();
         IcebergFileFormat fileFormat = IcebergTableProperties.getFileFormat(tableMetadata.getProperties());
