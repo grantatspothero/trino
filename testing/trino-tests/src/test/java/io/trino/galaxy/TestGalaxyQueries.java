@@ -119,8 +119,6 @@ public class TestGalaxyQueries
         TestingAccountClient accountClient = getTestingAccountClient();
         accountClient.upsertAccountFeatureFlag("COLUMN_MASKS", true);
         accountClient.upsertAccountFeatureFlag("ROW_FILTERS", true);
-        accountClient.upsertAccountFeatureFlag("ABAC_POLICIES", true);
-        accountClient.upsertAccountFeatureFlag("ABAC_TAGS", true);
     }
 
     @AfterMethod(alwaysRun = true)
