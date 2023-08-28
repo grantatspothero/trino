@@ -211,7 +211,6 @@ public final class SystemSessionProperties
     public static final String USE_COST_BASED_PARTITIONING = "use_cost_based_partitioning";
     public static final String USE_SUB_PLAN_ALTERNATIVES = "use_sub_plan_alternatives";
     public static final String FORCE_SPILLING_JOIN = "force_spilling_join";
-    public static final String FAULT_TOLERANT_EXECUTION_FORCE_PREFERRED_WRITE_PARTITIONING_ENABLED = "fault_tolerant_execution_force_preferred_write_partitioning_enabled";
     public static final String CACHE_SUBQUERIES_ENABLED = "cache_subqueries_enabled";
     public static final String PAGE_PARTITIONING_BUFFER_POOL_SIZE = "page_partitioning_buffer_pool_size";
     public static final String CACHE_MAX_SPLIT_SIZE = "cache_max_split_size";
@@ -1092,11 +1091,6 @@ public final class SystemSessionProperties
                         featuresConfig.isForceSpillingJoin(),
                         false),
                 booleanProperty(
-                        FAULT_TOLERANT_EXECUTION_FORCE_PREFERRED_WRITE_PARTITIONING_ENABLED,
-                        "Force preferred write partitioning for fault tolerant execution",
-                        queryManagerConfig.isFaultTolerantExecutionForcePreferredWritePartitioningEnabled(),
-                        true),
-                booleanProperty(
                         CACHE_SUBQUERIES_ENABLED,
                         "Enables caching of subqueries when running a single query",
                         cacheConfig.isCacheSubqueriesEnabled(),
@@ -1966,11 +1960,6 @@ public final class SystemSessionProperties
     public static boolean isForceSpillingOperator(Session session)
     {
         return session.getSystemProperty(FORCE_SPILLING_JOIN, Boolean.class);
-    }
-
-    public static boolean isFaultTolerantExecutionForcePreferredWritePartitioningEnabled(Session session)
-    {
-        return session.getSystemProperty(FAULT_TOLERANT_EXECUTION_FORCE_PREFERRED_WRITE_PARTITIONING_ENABLED, Boolean.class);
     }
 
     public static boolean isCacheSubqueriesEnabled(Session session)
