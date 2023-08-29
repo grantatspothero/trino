@@ -286,12 +286,6 @@ public class MockPlanAlternativeMetadata
     }
 
     @Override
-    public void dropSchema(ConnectorSession session, String schemaName)
-    {
-        delegate.dropSchema(session, schemaName);
-    }
-
-    @Override
     public void renameSchema(ConnectorSession session, String source, String target)
     {
         delegate.renameSchema(session, source, target);

@@ -406,14 +406,6 @@ public class ClassLoaderSafeConnectorMetadata
     }
 
     @Override
-    public void dropSchema(ConnectorSession session, String schemaName)
-    {
-        try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
-            delegate.dropSchema(session, schemaName);
-        }
-    }
-
-    @Override
     public void renameSchema(ConnectorSession session, String source, String target)
     {
         try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
