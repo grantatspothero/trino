@@ -418,6 +418,8 @@ public class GalaxyHiveMetastore
             throw new TrinoException(HIVE_METASTORE_ERROR, "Replacement table must have same name");
         }
         try {
+            // The server-side metastore implementation has a special check for replaceTable on Iceberg that previous_metadata_location must be equal
+            // to currently stored metadata_location, so it's an atomic compare-or-replace.
             metastore.replaceTable(toGalaxyTable(newTable));
         }
         catch (EntityNotFoundException e) {
