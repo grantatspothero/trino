@@ -2327,8 +2327,11 @@ public class TestDeltaLakeConnectorTest
         try (TestTable table = new TestTable(
                 getQueryRunner()::execute,
                 "test_partition_filter_table_changes",
-                "(x integer, part integer) WITH (partitioned_by = ARRAY['part'], change_data_feed_enabled = true)",
-                ImmutableList.of("(1, 11)", "(2, 22)", "(3, 33)"))) {
+                "(x integer, part integer) WITH (partitioned_by = ARRAY['part'], change_data_feed_enabled = true)")) {
+            assertUpdate("INSERT INTO " + table.getName() + " VALUES (1, 11)", 1);
+            assertUpdate("INSERT INTO " + table.getName() + " VALUES (2, 22)", 1);
+            assertUpdate("INSERT INTO " + table.getName() + " VALUES (3, 33)", 1);
+
             @Language("RegExp")
             String expectedMessageRegExp = "Filter required on test_schema\\." + table.getName() + " for at least one partition column: part";
 
@@ -2373,8 +2376,11 @@ public class TestDeltaLakeConnectorTest
         try (TestTable table = new TestTable(
                 getQueryRunner()::execute,
                 "test_partition_filter_table_changes",
-                "(x integer, part integer) WITH (partitioned_by = ARRAY['part'], change_data_feed_enabled = true)",
-                ImmutableList.of("(1, 11)", "(2, 22)", "(3, 33)"))) {
+                "(x integer, part integer) WITH (partitioned_by = ARRAY['part'], change_data_feed_enabled = true)")) {
+            assertUpdate("INSERT INTO " + table.getName() + " VALUES (1, 11)", 1);
+            assertUpdate("INSERT INTO " + table.getName() + " VALUES (2, 22)", 1);
+            assertUpdate("INSERT INTO " + table.getName() + " VALUES (3, 33)", 1);
+
             @Language("RegExp")
             String expectedMessageRegExp = "Filter required on test_schema\\." + table.getName() + " for at least one partition column: part";
 
