@@ -125,6 +125,7 @@ public class GalaxyTrinoMetadata
                 if (queryBody instanceof QuerySpecification querySpecification) {
                     // First we rewrite any single column unnamed expression
                     String rewrittenQueryString = SqlFormatter.formatSql(new Query(
+                            query.getFunctions(),
                             query.getWith(),
                             new QuerySpecification(
                                     new Select(
@@ -211,6 +212,7 @@ public class GalaxyTrinoMetadata
                     }
 
                     return SqlFormatter.formatSql(new Query(
+                            query.getFunctions(),
                             query.getWith(),
                             new QuerySpecification(
                                     querySpecification.getSelect(),
@@ -229,6 +231,7 @@ public class GalaxyTrinoMetadata
 
                 // rewrite the query with the desired limit and offset
                 return SqlFormatter.formatSql(new Query(
+                        query.getFunctions(),
                         query.getWith(),
                         query.getQueryBody(),
                         query.getOrderBy(),
@@ -251,6 +254,7 @@ public class GalaxyTrinoMetadata
             QueryBody originalQueryBody = originalQuery.getQueryBody();
             if (naiveQueryQueryBody instanceof QuerySpecification naiveQuerySpecification && originalQueryBody instanceof QuerySpecification originalQuerySpecification) {
                 return SqlFormatter.formatSql(new Query(
+                        originalQuery.getFunctions(),
                         originalQuery.getWith(),
                         new QuerySpecification(
                                 originalQuerySpecification.getSelect(),
@@ -268,6 +272,7 @@ public class GalaxyTrinoMetadata
             }
             // rewrite the query with the desired sort
             return SqlFormatter.formatSql(new Query(
+                    originalQuery.getFunctions(),
                     originalQuery.getWith(),
                     originalQuery.getQueryBody(),
                     naiveQuery.getOrderBy(),
