@@ -52,7 +52,7 @@ public class TestDeltaLakeDynamicRowFiltering
 
         REQUIRED_TPCH_TABLES.forEach(table -> {
             String tableName = table.getTableName();
-            hiveMinioDataLake.copyResources("io/trino/plugin/deltalake/testing/resources/databricks/" + tableName, tableName);
+            hiveMinioDataLake.copyResources("io/trino/plugin/deltalake/testing/resources/databricks73/" + tableName, tableName);
             queryRunner.execute(format("CALL %1$s.system.register_table('%2$s', '%3$s', 's3://%4$s/%3$s')",
                     DELTA_CATALOG,
                     "tpch",
