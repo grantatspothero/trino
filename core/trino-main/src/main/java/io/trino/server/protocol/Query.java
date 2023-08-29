@@ -503,9 +503,7 @@ class Query
         lastToken = token;
         lastResult = queryResults;
 
-        if (!(resultRows.isEmpty() && resultRows.getColumns().isPresent())) {
-            resultsCacheEntry.ifPresent(entry -> entry.appendResults(resultRows.getColumns().orElse(null), resultRows, resultRows.countLogicalSizeInBytes()));
-        }
+        resultsCacheEntry.ifPresent(entry -> entry.appendResults(resultRows.getColumns().orElse(null), resultRows));
 
         if (nextResultsUri == null) {
             resultsCacheEntry.ifPresent(ResultsCacheEntry::done);

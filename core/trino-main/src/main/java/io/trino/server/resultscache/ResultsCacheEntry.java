@@ -22,6 +22,7 @@ import io.airlift.concurrent.MoreFutures;
 import io.airlift.log.Logger;
 import io.airlift.units.DataSize;
 import io.trino.client.Column;
+import io.trino.server.protocol.QueryResultRows;
 import io.trino.spi.QueryId;
 import io.trino.spi.security.Identity;
 
@@ -84,12 +85,27 @@ public class ResultsCacheEntry
         this.executorService = requireNonNull(executorService, "executorService is null");
     }
 
-    public void appendResults(List<Column> columns, Iterable<List<Object>> data, long logicalSizeInBytes)
+    public void appendResults(List<Column> columns, QueryResultRows resultRows)
     {
         if (!valid) {
             return;
         }
 
+        if (resultsData.isEmpty()) {
+            if (columns == null && resultRows.isEmpty()) {
+                log.debug("QueryId: %s, received null columns and empty rows for cache entry %s, ignoring", queryId, key);
+                return;
+            }
+            else if (columns == null) {
+                log.debug("QueryId: %s, null columns provided for results cache entry %s, not caching", queryId, key);
+                valid = false;
+                return;
+            }
+
+            resultsData = Optional.of(new ResultsData(columns));
+        }
+
+        long logicalSizeInBytes = resultRows.countLogicalSizeInBytes();
         currentSize += logicalSizeInBytes;
 
         if (currentSize > maximumSize) {
@@ -99,22 +115,13 @@ public class ResultsCacheEntry
             return;
         }
 
-        if (resultsData.isEmpty()) {
-            if (columns == null) {
-                log.debug("QueryId: %s, null columns provided for results cache entry %s, not caching", queryId, key);
-                valid = false;
-                return;
-            }
-
-            resultsData = Optional.of(new ResultsData(columns));
-        }
         log.debug("QueryId: %s, appending to cache entry, %s bytes, %s current total size", queryId, logicalSizeInBytes, currentSize);
-        resultsData.get().addRecords(data);
+        resultsData.get().addRecords(resultRows);
     }
 
     public void done()
     {
-        if (valid) {
+        if (valid && resultsData.isPresent()) {
             log.debug("QueryId: %s, done called and cache entry is valid, uploading to cache", queryId);
             submitAsyncUpload(
                     executorService,
@@ -130,6 +137,9 @@ public class ResultsCacheEntry
                     OffsetDateTime.now().toInstant(),
                     resultsData.orElseThrow());
             resultsData = Optional.empty();
+        }
+        else if (resultsData.isEmpty()) {
+            log.debug("QueryId: %s, done called and cache entry is empty.  Not uploading", queryId);
         }
         else {
             log.debug("QueryId: %s, done called and cache entry is invalid", queryId);
