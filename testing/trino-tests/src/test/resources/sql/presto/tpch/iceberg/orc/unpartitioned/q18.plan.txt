@@ -2,7 +2,7 @@ local exchange (GATHER, SINGLE, [])
     remote exchange (GATHER, SINGLE, [])
         final aggregation over (custkey_0, name, orderdate, orderkey, totalprice)
             local exchange (GATHER, SINGLE, [])
-                partial aggregation over (custkey_0, name, orderdate, orderkey, totalprice)
+                intermediate aggregation over (custkey_0, name, orderdate, orderkey, totalprice)
                     join (INNER, PARTITIONED):
                         remote exchange (REPARTITION, HASH, ["orderkey"])
                             join (INNER, PARTITIONED):
@@ -23,4 +23,5 @@ local exchange (GATHER, SINGLE, [])
                                         scan customer
                         local exchange (GATHER, SINGLE, [])
                             remote exchange (REPARTITION, HASH, ["orderkey_4"])
-                                scan lineitem
+                                partial aggregation over (orderkey_4)
+                                    scan lineitem

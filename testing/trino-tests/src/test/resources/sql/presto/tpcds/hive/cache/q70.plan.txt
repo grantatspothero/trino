@@ -37,23 +37,24 @@ local exchange (GATHER, SINGLE, [])
                                         final aggregation over (s_state_56)
                                             local exchange (GATHER, SINGLE, [])
                                                 remote exchange (REPARTITION, HASH, ["s_state_56"])
-                                                    partial aggregation over (s_state_56)
+                                                    intermediate aggregation over (s_state_56)
                                                         join (INNER, REPLICATED):
-                                                            join (INNER, REPLICATED):
-                                                                alternatives
-                                                                    dynamic filter (await ["ss_sold_date_sk_6", "ss_store_sk_13"])
-                                                                        scan store_sales
-                                                                    cache data
+                                                            partial aggregation over (ss_store_sk_13)
+                                                                join (INNER, REPLICATED):
+                                                                    alternatives
                                                                         dynamic filter (await ["ss_sold_date_sk_6", "ss_store_sk_13"])
                                                                             scan store_sales
-                                                                    load from cache
-                                                                local exchange (GATHER, SINGLE, [])
-                                                                    remote exchange (REPLICATE, BROADCAST, [])
-                                                                        alternatives
-                                                                            scan date_dim
-                                                                            cache data
+                                                                        cache data
+                                                                            dynamic filter (await ["ss_sold_date_sk_6", "ss_store_sk_13"])
+                                                                                scan store_sales
+                                                                        load from cache
+                                                                    local exchange (GATHER, SINGLE, [])
+                                                                        remote exchange (REPLICATE, BROADCAST, [])
+                                                                            alternatives
                                                                                 scan date_dim
-                                                                            load from cache
+                                                                                cache data
+                                                                                    scan date_dim
+                                                                                load from cache
                                                             local exchange (GATHER, SINGLE, [])
                                                                 remote exchange (REPLICATE, BROADCAST, [])
                                                                     alternatives

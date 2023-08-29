@@ -7,23 +7,25 @@ remote exchange (GATHER, SINGLE, [])
                         final aggregation over (d_day_name, d_week_seq)
                             local exchange (GATHER, SINGLE, [])
                                 remote exchange (REPARTITION, HASH, ["d_week_seq"])
-                                    partial aggregation over (d_day_name, d_week_seq)
+                                    intermediate aggregation over (d_day_name, d_week_seq)
                                         join (INNER, REPLICATED):
                                             local exchange (REPARTITION, ROUND_ROBIN, [])
-                                                alternatives
-                                                    dynamic filter (await ["ws_sold_date_sk"])
-                                                        scan web_sales
-                                                    cache data
+                                                partial aggregation over (ws_sold_date_sk)
+                                                    alternatives
                                                         dynamic filter (await ["ws_sold_date_sk"])
                                                             scan web_sales
-                                                    load from cache
-                                                alternatives
-                                                    dynamic filter (await ["cs_sold_date_sk"])
-                                                        scan catalog_sales
-                                                    cache data
+                                                        cache data
+                                                            dynamic filter (await ["ws_sold_date_sk"])
+                                                                scan web_sales
+                                                        load from cache
+                                                partial aggregation over (cs_sold_date_sk)
+                                                    alternatives
                                                         dynamic filter (await ["cs_sold_date_sk"])
                                                             scan catalog_sales
-                                                    load from cache
+                                                        cache data
+                                                            dynamic filter (await ["cs_sold_date_sk"])
+                                                                scan catalog_sales
+                                                        load from cache
                                             local exchange (GATHER, SINGLE, [])
                                                 remote exchange (REPLICATE, BROADCAST, [])
                                                     alternatives
@@ -49,23 +51,25 @@ remote exchange (GATHER, SINGLE, [])
                                 final aggregation over (d_day_name_139, d_week_seq_129)
                                     local exchange (GATHER, SINGLE, [])
                                         remote exchange (REPARTITION, HASH, ["d_week_seq_129"])
-                                            partial aggregation over (d_day_name_139, d_week_seq_129)
+                                            intermediate aggregation over (d_day_name_139, d_week_seq_129)
                                                 join (INNER, REPLICATED):
                                                     local exchange (REPARTITION, ROUND_ROBIN, [])
-                                                        alternatives
-                                                            dynamic filter (await ["ws_sold_date_sk_51"])
-                                                                scan web_sales
-                                                            cache data
+                                                        partial aggregation over (ws_sold_date_sk_51)
+                                                            alternatives
                                                                 dynamic filter (await ["ws_sold_date_sk_51"])
                                                                     scan web_sales
-                                                            load from cache
-                                                        alternatives
-                                                            dynamic filter (await ["cs_sold_date_sk_88"])
-                                                                scan catalog_sales
-                                                            cache data
+                                                                cache data
+                                                                    dynamic filter (await ["ws_sold_date_sk_51"])
+                                                                        scan web_sales
+                                                                load from cache
+                                                        partial aggregation over (cs_sold_date_sk_88)
+                                                            alternatives
                                                                 dynamic filter (await ["cs_sold_date_sk_88"])
                                                                     scan catalog_sales
-                                                            load from cache
+                                                                cache data
+                                                                    dynamic filter (await ["cs_sold_date_sk_88"])
+                                                                        scan catalog_sales
+                                                                load from cache
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])
                                                             alternatives
