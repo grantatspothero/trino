@@ -814,16 +814,16 @@ public class ObjectStoreMetadata
 
                         if (trinoView) {
                             ConnectorViewDefinition viewDefinition = ViewReaderUtil.PrestoViewReader.decodeViewData(table.getViewOriginalText().orElseThrow());
-                            unfilteredResult.add(RelationCommentMetadata.forTable(relation, viewDefinition.getComment()));
+                            unfilteredResult.add(RelationCommentMetadata.forRelation(relation, viewDefinition.getComment()));
                             return;
                         }
                         if (trinoMaterializedView) {
                             IcebergMaterializedViewDefinition materializedViewDefinition = decodeMaterializedViewData(table.getViewOriginalText().orElseThrow());
-                            unfilteredResult.add(RelationCommentMetadata.forTable(relation, materializedViewDefinition.getComment()));
+                            unfilteredResult.add(RelationCommentMetadata.forRelation(relation, materializedViewDefinition.getComment()));
                             return;
                         }
                         if (hiveView) {
-                            unfilteredResult.add(RelationCommentMetadata.forTable(relation, Optional.ofNullable(table.getParameters().get(TABLE_COMMENT))));
+                            unfilteredResult.add(RelationCommentMetadata.forRelation(relation, Optional.ofNullable(table.getParameters().get(TABLE_COMMENT))));
                             return;
                         }
 
@@ -846,7 +846,7 @@ public class ObjectStoreMetadata
                             throw new UnsupportedOperationException("Unreachable");
                         }
                         tableComment.value().ifPresentOrElse(
-                                columnMetadata -> unfilteredResult.add(RelationCommentMetadata.forTable(relation, columnMetadata)),
+                                columnMetadata -> unfilteredResult.add(RelationCommentMetadata.forRelation(relation, columnMetadata)),
                                 // lazy computation ties up little memory (basically table/metadata location), so no need for explicit bound on unprocessedTables≥
                                 () -> unprocessedTables.put(relation, tableComment.lazy().orElseThrow()));
                     });
@@ -866,7 +866,7 @@ public class ObjectStoreMetadata
                         }
                         return;
                     }
-                    filteredResult.add(RelationCommentMetadata.forTable(tableName, comment));
+                    filteredResult.add(RelationCommentMetadata.forRelation(tableName, comment));
                 });
 
                 List<RelationCommentMetadata> unfilteredResultList = unfilteredResult.build();

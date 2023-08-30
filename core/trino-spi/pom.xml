@@ -209,6 +209,13 @@
                                     <new>method long io.trino.spi.connector.DynamicFilter::getPreferredDynamicFilterTimeout()</new>
                                     <justification>Internal change</justification>
                                 </item>
+                                <item>
+                                    <!-- TODO this can be removed after update to 426 -->
+                                    <ignore>true</ignore>
+                                    <code>java.method.removed</code>
+                                    <old>method io.trino.spi.connector.RelationCommentMetadata io.trino.spi.connector.RelationCommentMetadata::forTable(io.trino.spi.connector.SchemaTableName, java.util.Optional&lt;java.lang.String&gt;)</old>
+                                    <justification>cherry picked from future OSS release</justification>
+                                </item>
                                 <!-- / Galaxy internal changes -->
 
                                 <!-- Allow adding new annotations (such as @Nullable) -->
