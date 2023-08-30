@@ -1103,6 +1103,7 @@ jobs:
             - suite-delta-lake-databricks104
             - suite-delta-lake-databricks113
             - suite-delta-lake-databricks122
+            - suite-delta-lake-databricks133
             - suite-gcs
             - suite-clients
             - suite-functions
@@ -1150,6 +1151,11 @@ jobs:
             - suite: suite-delta-lake-databricks122
               config: hdp3
             - suite: suite-delta-lake-databricks122
+              ignore exclusion if: >-
+                ${{ env.CI_SKIP_SECRETS_PRESENCE_CHECKS != '' || secrets.DATABRICKS_TOKEN != '' }}
+            - suite: suite-delta-lake-databricks133
+              config: hdp3
+            - suite: suite-delta-lake-databricks133
               ignore exclusion if: >-
                 ${{ env.CI_SKIP_SECRETS_PRESENCE_CHECKS != '' || secrets.DATABRICKS_TOKEN != '' }}
 
@@ -1263,6 +1269,7 @@ jobs:
           DATABRICKS_104_JDBC_URL:
           DATABRICKS_113_JDBC_URL:
           DATABRICKS_122_JDBC_URL:
+          DATABRICKS_133_JDBC_URL:
           DATABRICKS_LOGIN:
           DATABRICKS_TOKEN:
           DATABRICKS_AWS_REGION:
@@ -1338,6 +1345,7 @@ jobs:
           DATABRICKS_104_JDBC_URL: ${{ secrets.DATABRICKS_104_JDBC_URL }}
           DATABRICKS_113_JDBC_URL: ${{ secrets.DATABRICKS_113_JDBC_URL }}
           DATABRICKS_122_JDBC_URL: ${{ secrets.DATABRICKS_122_JDBC_URL }}
+          DATABRICKS_133_JDBC_URL: ${{ secrets.DATABRICKS_133_JDBC_URL }}
           DATABRICKS_LOGIN: token
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
           GCP_CREDENTIALS_KEY: ${{ secrets.GCP_CREDENTIALS_KEY }}
