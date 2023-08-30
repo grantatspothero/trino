@@ -108,7 +108,8 @@ public class FeaturesConfig
 
     private boolean faultTolerantExecutionExchangeEncryptionEnabled = true;
 
-    private boolean flatGroupByHash = true;
+    // TODO re-enable flatGroupByHash: https://github.com/starburstdata/galaxy-trino/issues/988
+    private boolean flatGroupByHash;
 
     public enum DataIntegrityVerification
     {

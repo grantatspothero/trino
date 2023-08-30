@@ -65,7 +65,7 @@ public class TestFeaturesConfig
                 .setHideInaccessibleColumns(false)
                 .setForceSpillingJoin(false)
                 .setFaultTolerantExecutionExchangeEncryptionEnabled(true)
-                .setFlatGroupByHash(true));
+                .setFlatGroupByHash(false));
     }
 
     @Test
@@ -101,7 +101,7 @@ public class TestFeaturesConfig
                 .put("hide-inaccessible-columns", "true")
                 .put("force-spilling-join-operator", "true")
                 .put("fault-tolerant-execution.exchange-encryption-enabled", "false")
-                .put("legacy.flat-group-by-hash", "false")
+                .put("legacy.flat-group-by-hash", "true")
                 .buildOrThrow();
 
         FeaturesConfig expected = new FeaturesConfig()
@@ -134,7 +134,7 @@ public class TestFeaturesConfig
                 .setHideInaccessibleColumns(true)
                 .setForceSpillingJoin(true)
                 .setFaultTolerantExecutionExchangeEncryptionEnabled(false)
-                .setFlatGroupByHash(false);
+                .setFlatGroupByHash(true);
         assertFullMapping(properties, expected);
     }
 }
