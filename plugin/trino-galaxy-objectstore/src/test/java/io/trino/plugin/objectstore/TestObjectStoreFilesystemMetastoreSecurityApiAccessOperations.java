@@ -87,7 +87,6 @@ import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.STREAM_TABLES;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.UPDATE_PARTITION_STATISTICS;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.UPDATE_TABLE_STATISTICS;
-import static io.trino.plugin.hive.util.MultisetAssertions.assertMultisetsEqual;
 import static io.trino.plugin.objectstore.ObjectStoreSessionProperties.INFORMATION_SCHEMA_QUERIES_ACCELERATION;
 import static io.trino.plugin.objectstore.TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations.FileType.CDF_DATA;
 import static io.trino.plugin.objectstore.TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations.FileType.DATA;
@@ -102,6 +101,7 @@ import static io.trino.plugin.objectstore.TestObjectStoreFilesystemMetastoreSecu
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static io.trino.testing.DataProviders.toDataProvider;
+import static io.trino.testing.MultisetAssertions.assertMultisetsEqual;
 import static java.nio.file.Files.createTempDirectory;
 import static java.util.Collections.nCopies;
 import static java.util.Objects.requireNonNull;
