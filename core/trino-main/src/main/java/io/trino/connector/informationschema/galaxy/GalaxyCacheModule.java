@@ -19,6 +19,7 @@ import com.google.inject.multibindings.Multibinder;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.SystemSessionPropertiesProvider;
 import io.trino.connector.informationschema.InformationSchemaPageSourceProvider;
+import io.trino.connector.system.MaterializedViewSystemTable;
 import io.trino.connector.system.TableCommentSystemTable;
 import io.trino.spi.connector.SystemTable;
 import io.trino.spi.procedure.Procedure;
@@ -45,6 +46,7 @@ public class GalaxyCacheModule
             binder.bind(GalaxyCacheClient.class).in(Scopes.SINGLETON);
             binder.bind(GalaxyCacheStats.class).in(Scopes.SINGLETON);
 
+            globalTableBinder.addBinding().to(GalaxyCacheMaterializedViewSystemTable.class).in(Scopes.SINGLETON);
             globalTableBinder.addBinding().to(GalaxyCacheTableCommentSystemTable.class).in(Scopes.SINGLETON);
             globalTableBinder.addBinding().to(GalaxyCacheStatusSystemTable.class).in(Scopes.SINGLETON);
             globalTableBinder.addBinding().to(GalaxyCacheStatsSystemTable.class).in(Scopes.SINGLETON);
@@ -59,6 +61,7 @@ public class GalaxyCacheModule
         else {
             binder.bind(InformationSchemaPageSourceProvider.class).in(Scopes.SINGLETON);
             globalTableBinder.addBinding().to(TableCommentSystemTable.class).in(Scopes.SINGLETON);
+            globalTableBinder.addBinding().to(MaterializedViewSystemTable.class).in(Scopes.SINGLETON);
         }
     }
 }

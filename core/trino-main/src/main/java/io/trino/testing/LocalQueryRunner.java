@@ -356,6 +356,7 @@ public class LocalQueryRunner
             MetadataProvider metadataProvider,
             BiFunction<Metadata, AccessControl, InformationSchemaPageSourceProvider> informationSchemaPageSourceFactory,
             BiFunction<Metadata, AccessControl, SystemTable> tableCommentFactory,
+            BiFunction<Metadata, AccessControl, SystemTable> materializedViewFactory,
             Set<SystemSessionPropertiesProvider> extraSessionProperties)
     {
         requireNonNull(defaultSession, "defaultSession is null");
@@ -485,7 +486,7 @@ public class LocalQueryRunner
                 new NodeSystemTable(nodeManager),
                 new CatalogSystemTable(metadata, accessControl),
                 tableCommentFactory.apply(metadata, accessControl),
-                new MaterializedViewSystemTable(metadata, accessControl),
+                materializedViewFactory.apply(metadata, accessControl),
                 new SchemaPropertiesSystemTable(metadata, accessControl, schemaPropertyManager),
                 new TablePropertiesSystemTable(metadata, accessControl, tablePropertyManager),
                 new MaterializedViewPropertiesSystemTable(metadata, accessControl, materializedViewPropertyManager),
@@ -1243,6 +1244,7 @@ public class LocalQueryRunner
         private MetadataProvider metadataProvider = MetadataManager::new;
         private BiFunction<Metadata, AccessControl, InformationSchemaPageSourceProvider> informationSchemaPageSourceFactory = InformationSchemaPageSourceProvider::new;
         private BiFunction<Metadata, AccessControl, SystemTable> tableCommentFactory = TableCommentSystemTable::new;
+        private BiFunction<Metadata, AccessControl, SystemTable> materializedViewFactory = MaterializedViewSystemTable::new;
 
         private Builder(Session defaultSession)
         {
@@ -1320,6 +1322,12 @@ public class LocalQueryRunner
             return this;
         }
 
+        public Builder withMaterializedViewFactory(BiFunction<Metadata, AccessControl, SystemTable> materializedViewFactory)
+        {
+            this.materializedViewFactory = requireNonNull(materializedViewFactory, "materializedViewFactory is null");
+            return this;
+        }
+
         public LocalQueryRunner build()
         {
             return new LocalQueryRunner(
@@ -1334,6 +1342,7 @@ public class LocalQueryRunner
                     metadataProvider,
                     informationSchemaPageSourceFactory,
                     tableCommentFactory,
+                    materializedViewFactory,
                     extraSessionProperties);
         }
     }

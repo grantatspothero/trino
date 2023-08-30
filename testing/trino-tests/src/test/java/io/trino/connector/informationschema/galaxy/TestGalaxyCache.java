@@ -86,6 +86,7 @@ public class TestGalaxyCache
         LocalQueryRunner queryRunner = LocalQueryRunner.builder(SESSION)
                 .withInformationSchemaPageSourceFactory((metadata, accessControl) -> new GalaxyCacheInformationSchemaPageSourceProvider(metadata, accessControl, galaxyCacheClient))
                 .withTableCommentFactory((metadata, accessControl) -> new GalaxyCacheTableCommentSystemTable(galaxyCacheClient, metadata, accessControl))
+                .withMaterializedViewFactory((metadata, accessControl) -> new GalaxyCacheMaterializedViewSystemTable(galaxyCacheClient, metadata, accessControl))
                 .withExtraSystemSessionProperties(ImmutableSet.of(new GalaxyCacheSessionProperties(GALAXY_CACHE_CONFIG)))
                 .build();
         MockConnectorFactory mockConnectorFactory = MockConnectorFactory.builder().build();
@@ -163,6 +164,40 @@ public class TestGalaxyCache
                         new RowField(1, 1, "schema 1"),
                         new RowField(1, 2, "table 1"),
                         new RowField(1, 3, "CREATE VIEW blim")));
+
+        assertStat(STAT_CACHE_SUCCESS, 1);
+        assertStat(STAT_CACHE_FAILURE, 0);
+    }
+
+    @Test
+    public void testMaterializedViews()
+    {
+        ImmutableList.Builder<List<Object>> builder = ImmutableList.builder();
+        builder.add(Arrays.asList("test_catalog", "schema 1", "table 1", "storage catalog 1", "storage schema 1", "storage table 1", "STALE", null, "comment 1", "CREATE VIEW blah"));
+        builder.add(Arrays.asList("test_catalog", "schema 2", "table 2", "storage catalog 2", "storage schema 2", "storage table 2", "UNKNOWN", null, "comment 2", "CREATE VIEW blah blah"));
+        setResponse(builder.build());
+
+        assertThat(query("SELECT * FROM system.metadata.materialized_views WHERE catalog_name = 'test_catalog'"))
+                .matches(result -> result.getRowCount() == 2)
+                .matches(assertRowFields(
+                        new RowField(0, 0, "test_catalog"),
+                        new RowField(0, 1, "schema 1"),
+                        new RowField(0, 2, "table 1"),
+                        new RowField(0, 3, "storage catalog 1"),
+                        new RowField(0, 4, "storage schema 1"),
+                        new RowField(0, 5, "storage table 1"),
+                        new RowField(0, 6, "STALE"),
+                        new RowField(0, 8, "comment 1"),
+                        new RowField(0, 9, "CREATE VIEW blah"),
+                        new RowField(1, 0, "test_catalog"),
+                        new RowField(1, 1, "schema 2"),
+                        new RowField(1, 2, "table 2"),
+                        new RowField(1, 3, "storage catalog 2"),
+                        new RowField(1, 4, "storage schema 2"),
+                        new RowField(1, 5, "storage table 2"),
+                        new RowField(1, 6, "UNKNOWN"),
+                        new RowField(1, 8, "comment 2"),
+                        new RowField(1, 9, "CREATE VIEW blah blah")));
 
         assertStat(STAT_CACHE_SUCCESS, 1);
         assertStat(STAT_CACHE_FAILURE, 0);
