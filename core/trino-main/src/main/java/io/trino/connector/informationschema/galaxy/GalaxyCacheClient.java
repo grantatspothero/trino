@@ -73,10 +73,10 @@ class GalaxyCacheClient
         this.httpClient = new RetryingHttpClient(httpClient).withHttpStatusListener(new InvalidServiceStatusListener());
     }
 
-    Iterator<List<Object>> queryResults(Session session, QualifiedTablePrefix prefix, GalaxyCacheEndpoint verb, URI uri)
+    Iterator<List<Object>> queryResults(Session session, QualifiedTablePrefix prefix, GalaxyCacheEndpoint endpoint, URI uri)
     {
         if (!isEnabled(session)) {
-            stats.increment(prefix.getCatalogName(), verb.failureStatName());
+            stats.increment(prefix.getCatalogName(), endpoint.failureStatName());
             throw new NotFoundException(ERROR_CACHE_IS_DISABLED);
         }
 
@@ -91,7 +91,7 @@ class GalaxyCacheClient
         Request request = Request.builder()
                 .setUri(uri)
                 .addHeader(AUTHORIZATION, format("%s %s", AUTH_TOKEN_TYPE, accessToken))
-                .setMethod(verb.httpMethod())
+                .setMethod(endpoint.httpMethod())
                 .build();
 
         return Failsafe.with(createHttpClientRetryPolicy(RETRY_ALL))
@@ -99,17 +99,17 @@ class GalaxyCacheClient
                     JsonResponse<List<List<Object>>> response = httpClient.execute(request, createFullJsonResponseHandler(ROWS_CODEC));
 
                     if (response.getStatusCode() == HttpStatus.NOT_FOUND.code()) {
-                        stats.increment(prefix.getCatalogName(), verb.failureStatName());
+                        stats.increment(prefix.getCatalogName(), endpoint.failureStatName());
                         throw new NotFoundException(ERROR_CACHE_IS_UNAVAILABLE.apply(prefix.getCatalogName()));
                     }
 
                     if (HttpStatus.fromStatusCode(response.getStatusCode()).family() != SUCCESSFUL) {
-                        stats.increment(prefix.getCatalogName(), verb.failureStatName());
+                        stats.increment(prefix.getCatalogName(), endpoint.failureStatName());
                         throw new WebApplicationException(Response.status(response.getStatusCode()).build());
                     }
 
                     List<List<Object>> value = (response.getStatusCode() != HttpStatus.NO_CONTENT.code()) ? response.getValue() : ImmutableList.of();
-                    stats.increment(prefix.getCatalogName(), verb.successStatName());
+                    stats.increment(prefix.getCatalogName(), endpoint.successStatName());
                     return value.iterator();
                 });
     }
