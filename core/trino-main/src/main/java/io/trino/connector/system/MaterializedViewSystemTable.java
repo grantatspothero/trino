@@ -51,7 +51,7 @@ import static java.util.Objects.requireNonNull;
 public class MaterializedViewSystemTable
         implements SystemTable
 {
-    private static final ConnectorTableMetadata TABLE_DEFINITION = tableMetadataBuilder(
+    public static final ConnectorTableMetadata TABLE_DEFINITION = tableMetadataBuilder(
             new SchemaTableName("metadata", "materialized_views"))
             .column("catalog_name", createUnboundedVarcharType())
             .column("schema_name", createUnboundedVarcharType())

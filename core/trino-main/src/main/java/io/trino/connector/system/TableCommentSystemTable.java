@@ -55,7 +55,7 @@ public class TableCommentSystemTable
 
     private static final SchemaTableName COMMENT_TABLE_NAME = new SchemaTableName("metadata", "table_comments");
 
-    private static final ConnectorTableMetadata COMMENT_TABLE = tableMetadataBuilder(COMMENT_TABLE_NAME)
+    public static final ConnectorTableMetadata COMMENT_TABLE = tableMetadataBuilder(COMMENT_TABLE_NAME)
             .column("catalog_name", createUnboundedVarcharType())
             .column("schema_name", createUnboundedVarcharType())
             .column("table_name", createUnboundedVarcharType())
