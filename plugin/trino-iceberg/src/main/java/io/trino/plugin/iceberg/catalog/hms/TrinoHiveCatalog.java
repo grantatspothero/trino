@@ -166,6 +166,16 @@ public class TrinoHiveCatalog
     }
 
     @Override
+    public MaybeLazy<Optional<String>> getTableComment(ConnectorSession session, io.trino.plugin.hive.metastore.Table metastoreTable)
+    {
+        String metadataLocation = metastoreTable.getParameters().get(METADATA_LOCATION_PROP);
+        return MaybeLazy.ofLazy(() -> {
+            TableMetadata tableMetadata = TableMetadataParser.read(new ForwardingFileIo(fileSystemFactory.create(session)), metadataLocation);
+            return Optional.ofNullable(tableMetadata.properties().get(TABLE_COMMENT));
+        });
+    }
+
+    @Override
     public boolean namespaceExists(ConnectorSession session, String namespace)
     {
         if (!namespace.equals(namespace.toLowerCase(ENGLISH))) {

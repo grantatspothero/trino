@@ -108,6 +108,13 @@ public class TrinoJdbcCatalog
     }
 
     @Override
+    public MaybeLazy<Optional<String>> getTableComment(ConnectorSession session, io.trino.plugin.hive.metastore.Table metastoreTable)
+    {
+        // Used by ObjectStore only and ObjectStore cannot be used with JDBC catalog.
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public boolean namespaceExists(ConnectorSession session, String namespace)
     {
         return jdbcCatalog.namespaceExists(Namespace.of(namespace));

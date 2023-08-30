@@ -234,7 +234,6 @@ import static io.trino.plugin.iceberg.IcebergUtil.getFileFormat;
 import static io.trino.plugin.iceberg.IcebergUtil.getIcebergTableProperties;
 import static io.trino.plugin.iceberg.IcebergUtil.getPartitionKeys;
 import static io.trino.plugin.iceberg.IcebergUtil.getSnapshotIdAsOfTime;
-import static io.trino.plugin.iceberg.IcebergUtil.getTableComment;
 import static io.trino.plugin.iceberg.IcebergUtil.newCreateTableTransaction;
 import static io.trino.plugin.iceberg.IcebergUtil.schemaFromMetadata;
 import static io.trino.plugin.iceberg.PartitionFields.parsePartitionFields;
@@ -334,6 +333,16 @@ public class IcebergMetadata
     public MaybeLazy<List<ColumnMetadata>> getTableColumnMetadata(ConnectorSession session, io.trino.plugin.hive.metastore.Table metastoreTable)
     {
         return catalog.getTableColumnMetadata(session, metastoreTable);
+    }
+
+    public MaybeLazy<Optional<String>> getTableComment(ConnectorSession session, io.trino.plugin.hive.metastore.Table metastoreTable)
+    {
+        return catalog.getTableComment(session, metastoreTable);
+    }
+
+    private static Optional<String> getTableComment(Table icebergTable)
+    {
+        return IcebergUtil.getTableComment(icebergTable);
     }
 
     @Override

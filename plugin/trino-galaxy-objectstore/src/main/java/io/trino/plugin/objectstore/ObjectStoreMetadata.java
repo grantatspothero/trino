@@ -90,6 +90,7 @@ import io.trino.spi.connector.MaterializedViewFreshness;
 import io.trino.spi.connector.MaterializedViewNotFoundException;
 import io.trino.spi.connector.ProjectionApplicationResult;
 import io.trino.spi.connector.RelationColumnsMetadata;
+import io.trino.spi.connector.RelationCommentMetadata;
 import io.trino.spi.connector.RetryMode;
 import io.trino.spi.connector.RowChangeParadigm;
 import io.trino.spi.connector.SampleApplicationResult;
@@ -137,6 +138,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_UNSUPPORTED_FORMAT;
 import static io.trino.plugin.hive.HiveMetadata.MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE;
+import static io.trino.plugin.hive.HiveMetadata.TABLE_COMMENT;
 import static io.trino.plugin.hive.ViewReaderUtil.isHiveView;
 import static io.trino.plugin.hive.ViewReaderUtil.isTrinoMaterializedView;
 import static io.trino.plugin.hive.ViewReaderUtil.isTrinoView;
@@ -773,6 +775,103 @@ public class ObjectStoreMetadata
                 List<RelationColumnsMetadata> unfilteredResultList = unfilteredResult.build();
                 Set<SchemaTableName> availableNames = relationFilter.apply(unfilteredResultList.stream()
                         .map(RelationColumnsMetadata::name)
+                        .collect(toImmutableSet()));
+
+                yield Stream.concat(
+                                unfilteredResultList.stream()
+                                        .filter(commentMetadata -> availableNames.contains(commentMetadata.name())),
+                                filteredResult.build().stream())
+                        .iterator();
+            }
+        };
+    }
+
+    @Override
+    public Iterator<RelationCommentMetadata> streamRelationComments(ConnectorSession session, Optional<String> schemaName, UnaryOperator<Set<SchemaTableName>> relationFilter)
+    {
+        return switch (getInformationSchemaQueriesAcceleration(session)) {
+            case NONE, V1, V2 -> ConnectorMetadata.super.streamRelationComments(session, schemaName, relationFilter);
+            case V3 -> {
+                ConnectorSession hiveSession = unwrap(HIVE, session);
+                ConnectorSession icebergSession = unwrap(ICEBERG, session);
+                ConnectorSession deltaSession = unwrap(DELTA, session);
+
+                ImmutableList.Builder<RelationCommentMetadata> unfilteredResult = ImmutableList.builder();
+                ImmutableList.Builder<RelationCommentMetadata> filteredResult = ImmutableList.builder();
+                Map<SchemaTableName, Supplier<Optional<String>>> unprocessedTables = new HashMap<>();
+
+                List<String> schemas = schemaName.map(List::of)
+                        // TODO filter schemas: limit to those accessible to the user
+                        .orElseGet(() -> listSchemaNames(session));
+
+                for (String schema : schemas) {
+                    hiveMetadata.getMetastore().streamTables(hiveSession, schema).forEachRemaining(table -> {
+                        SchemaTableName relation = new SchemaTableName(schema, table.getTableName());
+
+                        boolean trinoMaterializedView = isTrinoMaterializedView(table);
+                        boolean trinoView = isTrinoView(table);
+                        boolean hiveView = isHiveView(table);
+
+                        if (trinoView) {
+                            ConnectorViewDefinition viewDefinition = ViewReaderUtil.PrestoViewReader.decodeViewData(table.getViewOriginalText().orElseThrow());
+                            unfilteredResult.add(RelationCommentMetadata.forTable(relation, viewDefinition.getComment()));
+                            return;
+                        }
+                        if (trinoMaterializedView) {
+                            IcebergMaterializedViewDefinition materializedViewDefinition = decodeMaterializedViewData(table.getViewOriginalText().orElseThrow());
+                            unfilteredResult.add(RelationCommentMetadata.forTable(relation, materializedViewDefinition.getComment()));
+                            return;
+                        }
+                        if (hiveView) {
+                            unfilteredResult.add(RelationCommentMetadata.forTable(relation, Optional.ofNullable(table.getParameters().get(TABLE_COMMENT))));
+                            return;
+                        }
+
+                        boolean icebergTable = isIcebergTable(table);
+                        boolean deltaLakeTable = isDeltaLakeTable(table);
+                        boolean hudiTable = isHudiTable(table);
+                        boolean hiveTable = !(icebergTable || deltaLakeTable || hudiTable);
+
+                        MaybeLazy<Optional<String>> tableComment;
+                        if (hiveTable || hudiTable) {
+                            tableComment = MaybeLazy.ofValue(Optional.ofNullable(table.getParameters().get(TABLE_COMMENT)));
+                        }
+                        else if (icebergTable) {
+                            tableComment = icebergMetadata.getTableComment(icebergSession, table);
+                        }
+                        else if (deltaLakeTable) {
+                            tableComment = deltaMetadata.getTableComment(deltaSession, table);
+                        }
+                        else {
+                            throw new UnsupportedOperationException("Unreachable");
+                        }
+                        tableComment.value().ifPresentOrElse(
+                                columnMetadata -> unfilteredResult.add(RelationCommentMetadata.forTable(relation, columnMetadata)),
+                                // lazy computation ties up little memory (basically table/metadata location), so no need for explicit bound on unprocessedTables≥
+                                () -> unprocessedTables.put(relation, tableComment.lazy().orElseThrow()));
+                    });
+                }
+
+                relationFilter.apply(unprocessedTables.keySet()).forEach(tableName -> {
+                    Optional<String> comment;
+                    try {
+                        comment = unprocessedTables.get(tableName).get();
+                    }
+                    catch (RuntimeException e) {
+                        if (AbstractIcebergTableOperations.isNotFoundException(e)) {
+                            log.debug(e, "Not found when accessing metadata for table %s during streaming table columns for %s", tableName, schemaName);
+                        }
+                        else {
+                            log.warn(e, "Failed to access metadata of table %s during streaming table columns for %s", tableName, schemaName);
+                        }
+                        return;
+                    }
+                    filteredResult.add(RelationCommentMetadata.forTable(tableName, comment));
+                });
+
+                List<RelationCommentMetadata> unfilteredResultList = unfilteredResult.build();
+                Set<SchemaTableName> availableNames = relationFilter.apply(unfilteredResultList.stream()
+                        .map(RelationCommentMetadata::name)
                         .collect(toImmutableSet()));
 
                 yield Stream.concat(

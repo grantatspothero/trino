@@ -51,6 +51,7 @@ import io.trino.plugin.hive.ViewReaderUtil;
 import io.trino.plugin.hive.metastore.glue.GlueMetastoreStats;
 import io.trino.plugin.iceberg.IcebergMaterializedViewDefinition;
 import io.trino.plugin.iceberg.IcebergMetadata;
+import io.trino.plugin.iceberg.IcebergUtil;
 import io.trino.plugin.iceberg.UnknownTableTypeException;
 import io.trino.plugin.iceberg.catalog.AbstractTrinoCatalog;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
@@ -135,7 +136,6 @@ import static io.trino.plugin.iceberg.IcebergUtil.COLUMN_TRINO_TYPE_ID_PROPERTY;
 import static io.trino.plugin.iceberg.IcebergUtil.TRINO_TABLE_METADATA_INFO_VALID_FOR;
 import static io.trino.plugin.iceberg.IcebergUtil.getColumnMetadatas;
 import static io.trino.plugin.iceberg.IcebergUtil.getIcebergTableWithMetadata;
-import static io.trino.plugin.iceberg.IcebergUtil.getTableComment;
 import static io.trino.plugin.iceberg.IcebergUtil.quotedTableName;
 import static io.trino.plugin.iceberg.IcebergUtil.validateTableCanBeDropped;
 import static io.trino.plugin.iceberg.TrinoMetricsReporter.TRINO_METRICS_REPORTER;
@@ -696,6 +696,29 @@ public class TrinoGlueCatalog
                     .build());
         }
         return Optional.of(columns.build());
+    }
+
+    @Override
+    public MaybeLazy<Optional<String>> getTableComment(ConnectorSession session, io.trino.plugin.hive.metastore.Table table)
+    {
+        checkArgument(isIcebergTable(table), "Not Iceberg table: %s", table);
+        Optional<Optional<String>> comment = Optional.empty();
+        Map<String, String> tableParameters = table.getParameters();
+        String metadataLocation = tableParameters.get(METADATA_LOCATION_PROP);
+        if (cacheTableMetadata && metadataLocation.equals(tableParameters.get(TRINO_TABLE_METADATA_INFO_VALID_FOR))) {
+            comment = Optional.of(Optional.ofNullable(tableParameters.get(TABLE_COMMENT)));
+        }
+        return comment
+                .map(MaybeLazy::ofValue)
+                .orElseGet(() -> MaybeLazy.ofLazy(() -> {
+                    TableMetadata tableMetadata = TableMetadataParser.read(new ForwardingFileIo(fileSystemFactory.create(session)), metadataLocation);
+                    return Optional.ofNullable(tableMetadata.properties().get(TABLE_COMMENT));
+                }));
+    }
+
+    private static Optional<String> getTableComment(Table icebergTable)
+    {
+        return IcebergUtil.getTableComment(icebergTable);
     }
 
     @Override

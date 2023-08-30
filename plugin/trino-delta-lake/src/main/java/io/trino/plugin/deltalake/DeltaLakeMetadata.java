@@ -525,6 +525,18 @@ public class DeltaLakeMetadata
         });
     }
 
+    public MaybeLazy<Optional<String>> getTableComment(ConnectorSession session, io.trino.plugin.hive.metastore.Table table)
+    {
+        checkArgument(isDeltaLakeTable(table), "Not Delta table: %s", table);
+        String tableLocation = HiveMetastoreBackedDeltaLakeMetastore.getTableLocation(table);
+        SchemaTableName tableName = table.getSchemaTableName();
+        return MaybeLazy.ofLazy(() -> {
+            TableSnapshot tableSnapshot = getSnapshot(tableName, tableLocation, session);
+            MetadataEntry metadataEntry = transactionLogAccess.getMetadataEntry(tableSnapshot, session);
+            return Optional.ofNullable(metadataEntry.getDescription());
+        });
+    }
+
     @Override
     public ConnectorTableProperties getTableProperties(ConnectorSession session, ConnectorTableHandle tableHandle)
     {

@@ -59,6 +59,8 @@ public interface TrinoCatalog
 {
     MaybeLazy<List<ColumnMetadata>> getTableColumnMetadata(ConnectorSession session, io.trino.plugin.hive.metastore.Table metastoreTable);
 
+    MaybeLazy<Optional<String>> getTableComment(ConnectorSession session, io.trino.plugin.hive.metastore.Table metastoreTable);
+
     boolean namespaceExists(ConnectorSession session, String namespace);
 
     List<String> listNamespaces(ConnectorSession session);

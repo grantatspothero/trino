@@ -821,15 +821,34 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
 
         assertInvocations(session, "SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name LIKE 'test_select_i_s_columns%'",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_ALL_VIEWS_FROM_DATABASE, 1)
-                        .addCopies(GET_ALL_TABLES_FROM_DATABASE, 1)
-                        .addCopies(GET_TABLES_WITH_PARAMETER, 1)
-                        .addCopies(GET_TABLE, tables * 2)
+                        .addCopies(GET_ALL_VIEWS_FROM_DATABASE, switch (mode) {
+                            case NONE, V1, V2 -> 1;
+                            case V3 -> 0;
+                        })
+                        .addCopies(GET_ALL_TABLES_FROM_DATABASE, switch (mode) {
+                            case NONE, V1, V2 -> 1;
+                            case V3 -> 0;
+                        })
+                        .addCopies(GET_TABLES_WITH_PARAMETER, switch (mode) {
+                            case NONE, V1, V2 -> 1;
+                            case V3 -> 0;
+                        })
+                        .addCopies(GET_TABLE, switch (mode) {
+                            case NONE, V1, V2 -> tables * 2;
+                            case V3 -> 0; // 🎉
+                        })
+                        .addCopies(STREAM_TABLES, switch (mode) {
+                            case NONE, V1, V2 -> 0;
+                            case V3 -> 1;
+                        })
                         .build(),
                 switch (type) {
                     case HIVE -> ImmutableMultiset.of();
                     case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
-                            .addCopies(new FileOperation(METADATA_JSON, "00004.metadata.json", INPUT_FILE_NEW_STREAM), tables)
+                            .addCopies(new FileOperation(METADATA_JSON, "00004.metadata.json", INPUT_FILE_NEW_STREAM), switch (mode) {
+                                case NONE, V1, V2 -> tables;
+                                case V3 -> 0; // 🎉
+                            })
                             .build();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), tables)

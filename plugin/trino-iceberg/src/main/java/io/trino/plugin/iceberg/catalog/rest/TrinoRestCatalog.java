@@ -107,6 +107,13 @@ public class TrinoRestCatalog
     }
 
     @Override
+    public MaybeLazy<Optional<String>> getTableComment(ConnectorSession session, io.trino.plugin.hive.metastore.Table metastoreTable)
+    {
+        // Used by ObjectStore only and ObjectStore cannot be used with REST catalog.
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public boolean namespaceExists(ConnectorSession session, String namespace)
     {
         return restSessionCatalog.namespaceExists(convert(session), Namespace.of(namespace));

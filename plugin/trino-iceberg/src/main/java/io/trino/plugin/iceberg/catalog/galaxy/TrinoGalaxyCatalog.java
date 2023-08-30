@@ -416,6 +416,24 @@ public class TrinoGalaxyCatalog
         return Optional.of(columns.build());
     }
 
+    @Override
+    public MaybeLazy<Optional<String>> getTableComment(ConnectorSession session, io.trino.plugin.hive.metastore.Table table)
+    {
+        checkArgument(isIcebergTable(table), "Not Iceberg table: %s", table);
+        Optional<Optional<String>> comment = Optional.empty();
+        Map<String, String> tableParameters = table.getParameters();
+        String metadataLocation = tableParameters.get(METADATA_LOCATION_PROP);
+        if (cacheTableMetadata && table.getDataColumns().stream().anyMatch(column -> column.getProperties().containsKey(COLUMN_TRINO_TYPE_ID_PROPERTY))) {
+            comment = Optional.of(Optional.ofNullable(tableParameters.get(TABLE_COMMENT)));
+        }
+        return comment
+                .map(MaybeLazy::ofValue)
+                .orElseGet(() -> MaybeLazy.ofLazy(() -> {
+                    TableMetadata tableMetadata = TableMetadataParser.read(new ForwardingFileIo(fileSystemFactory.create(session)), metadataLocation);
+                    return Optional.ofNullable(tableMetadata.properties().get(TABLE_COMMENT));
+                }));
+    }
+
     /**
      * Constructs {@link ColumnMetadata} based off information cached in metastore, see {@link GalaxyMetastoreTableOperations#toMetastoreColumn} . It's caller responsibility to ensure
      * the information is there
