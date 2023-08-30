@@ -768,7 +768,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
                 });
     }
 
-    @Test(dataProvider = "testInformationSchemaColumnsDataProvider")
+    @Test(dataProvider = "metadataTestDataProvider")
     public void testInformationSchemaColumns(TableType type, InformationSchemaQueriesAcceleration mode, int tables)
     {
         String catalog = getSession().getCatalog().orElseThrow();
@@ -819,7 +819,33 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
                             .build();
                 });
 
-        assertInvocations(session, "SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name LIKE 'test_select_i_s_columns%'",
+        InformationSchemaQueriesAcceleration defaultMode = new ObjectStoreConfig().getInformationSchemaQueriesAcceleration();
+        if (mode != defaultMode) {
+            // Correctness check (needs to be done after invocations check, otherwise invocations check could report on cached state)
+            assertThat(query(session, "TABLE information_schema.columns"))
+                    .matches(computeActual("TABLE information_schema.columns"));
+        }
+    }
+
+    @Test(dataProvider = "metadataTestDataProvider")
+    public void testSystemMetadataTableComments(TableType type, InformationSchemaQueriesAcceleration mode, int tables)
+    {
+        for (int i = 0; i < tables; i++) {
+            assertUpdate("CREATE TABLE test_select_s_m_t_comments" + i + "(id VARCHAR, age INT) WITH (type = '" + type + "')");
+            // Produce multiple snapshots and metadata files
+            assertUpdate("INSERT INTO test_select_s_m_t_comments" + i + " VALUES ('abc', 11)", 1);
+            assertUpdate("INSERT INTO test_select_s_m_t_comments" + i + " VALUES ('xyz', 12)", 1);
+
+            assertUpdate("CREATE TABLE test_other_select_s_m_t_comments" + i + "(id varchar, age integer)"); // won't match the filter
+        }
+
+        String catalog = getSession().getCatalog().orElseThrow();
+
+        Session session = Session.builder(getSession())
+                .setCatalogSessionProperty(catalog, INFORMATION_SCHEMA_QUERIES_ACCELERATION, mode.toString())
+                .build();
+
+        assertInvocations(session, "SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name LIKE 'test_select_s_m_t_comments%'",
                 ImmutableMultiset.builder()
                         .addCopies(GET_ALL_VIEWS_FROM_DATABASE, switch (mode) {
                             case NONE, V1, V2 -> 1;
@@ -856,7 +882,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
                             .build();
                 });
 
-        assertInvocations(session, "SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name = 'test_select_i_s_columns" + 0 + "'",
+        assertInvocations(session, "SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name = 'test_select_s_m_t_comments" + 0 + "'",
                 ImmutableMultiset.builder()
                         .addCopies(GET_TABLE, occurrences(type, 2, 2, 3))
                         .build(),
@@ -873,17 +899,13 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
 
         InformationSchemaQueriesAcceleration defaultMode = new ObjectStoreConfig().getInformationSchemaQueriesAcceleration();
         if (mode != defaultMode) {
-            // Correctness check (needs to be done after invocations check, otherwise invocations check could report on cached state)
-            assertThat(query(session, "TABLE information_schema.columns"))
-                    .matches(computeActual("TABLE information_schema.columns"));
-
-            assertThat(query(session, "SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name LIKE 'test_select_i_s_columns%'"))
-                    .matches(computeActual("SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name LIKE 'test_select_i_s_columns%'"));
+            assertThat(query(session, "SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name LIKE 'test_select_s_m_t_comments%'"))
+                    .matches(computeActual("SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name LIKE 'test_select_s_m_t_comments%'"));
         }
     }
 
     @DataProvider
-    public Object[][] testInformationSchemaColumnsDataProvider()
+    public Object[][] metadataTestDataProvider()
     {
         return DataProviders.cartesianProduct(
                 tableTypeDataProvider(),
