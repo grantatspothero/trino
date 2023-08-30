@@ -41,6 +41,7 @@ import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogSchemaName;
 import io.trino.spi.connector.CatalogSchemaTableName;
 import io.trino.spi.connector.SchemaTableName;
+import io.trino.spi.function.CatalogSchemaFunctionName;
 import io.trino.spi.security.GrantInfo;
 import io.trino.spi.security.Identity;
 import io.trino.spi.security.Privilege;
@@ -367,6 +368,13 @@ public class GalaxySecurityMetadata
     public void setViewOwner(Session session, CatalogSchemaTableName view, TrinoPrincipal principal)
     {
         setTableOwner(session, view, principal);
+    }
+
+    @Override
+    public Optional<Identity> getFunctionRunAsIdentity(Session session, CatalogSchemaFunctionName functionName)
+    {
+        // TODO(https://github.com/starburstdata/galaxy-trino/issues/1306)
+        return Optional.empty();
     }
 
     @Override

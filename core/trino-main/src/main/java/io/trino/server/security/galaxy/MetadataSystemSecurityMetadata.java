@@ -21,6 +21,7 @@ import io.trino.metadata.SystemSecurityMetadata;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogSchemaName;
 import io.trino.spi.connector.CatalogSchemaTableName;
+import io.trino.spi.function.CatalogSchemaFunctionName;
 import io.trino.spi.security.GrantInfo;
 import io.trino.spi.security.Identity;
 import io.trino.spi.security.Privilege;
@@ -177,6 +178,12 @@ public class MetadataSystemSecurityMetadata
     public void setViewOwner(Session session, CatalogSchemaTableName view, TrinoPrincipal principal)
     {
         throw notSupportedException(view.getCatalogName());
+    }
+
+    @Override
+    public Optional<Identity> getFunctionRunAsIdentity(Session session, CatalogSchemaFunctionName functionName)
+    {
+        return get(session).getFunctionRunAsIdentity(session, functionName);
     }
 
     @Override

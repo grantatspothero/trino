@@ -27,6 +27,8 @@ import io.airlift.slice.Slice;
 import io.trino.FeaturesConfig;
 import io.trino.Session;
 import io.trino.connector.system.GlobalSystemConnector;
+import io.trino.metadata.LanguageFunctionManager.LanguageFunctionLoader;
+import io.trino.metadata.LanguageFunctionManager.RunAsIdentityLoader;
 import io.trino.metadata.ResolvedFunction.ResolvedFunctionDecoder;
 import io.trino.spi.ErrorCode;
 import io.trino.spi.QueryId;
@@ -107,6 +109,7 @@ import io.trino.spi.type.TypeManager;
 import io.trino.spi.type.TypeNotFoundException;
 import io.trino.spi.type.TypeOperators;
 import io.trino.sql.analyzer.TypeSignatureProvider;
+import io.trino.sql.parser.SqlParser;
 import io.trino.sql.planner.ConnectorExpressions;
 import io.trino.sql.planner.PartitioningHandle;
 import io.trino.sql.tree.QualifiedName;
@@ -148,6 +151,7 @@ import static io.trino.metadata.CatalogMetadata.SecurityManagement.CONNECTOR;
 import static io.trino.metadata.CatalogMetadata.SecurityManagement.SYSTEM;
 import static io.trino.metadata.GlobalFunctionCatalog.BUILTIN_SCHEMA;
 import static io.trino.metadata.GlobalFunctionCatalog.isBuiltinFunctionName;
+import static io.trino.metadata.LanguageFunctionManager.isTrinoSqlLanguageFunction;
 import static io.trino.metadata.QualifiedObjectName.convertFromSchemaTableName;
 import static io.trino.metadata.RedirectionAwareTableHandle.noRedirection;
 import static io.trino.metadata.RedirectionAwareTableHandle.withRedirectionTo;
@@ -182,6 +186,7 @@ public final class MetadataManager
     private final BuiltinFunctionResolver functionResolver;
     private final SystemSecurityMetadata systemSecurityMetadata;
     private final TransactionManager transactionManager;
+    private final LanguageFunctionManager languageFunctionManager;
     private final TypeManager typeManager;
     private final TypeCoercion typeCoercion;
 
@@ -194,6 +199,7 @@ public final class MetadataManager
             SystemSecurityMetadata systemSecurityMetadata,
             TransactionManager transactionManager,
             GlobalFunctionCatalog globalFunctionCatalog,
+            LanguageFunctionManager languageFunctionManager,
             TypeManager typeManager)
     {
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
@@ -204,6 +210,7 @@ public final class MetadataManager
 
         this.systemSecurityMetadata = requireNonNull(systemSecurityMetadata, "systemSecurityMetadata is null");
         this.transactionManager = requireNonNull(transactionManager, "transactionManager is null");
+        this.languageFunctionManager = requireNonNull(languageFunctionManager, "languageFunctionManager is null");
     }
 
     @Override
@@ -1028,6 +1035,7 @@ public final class MetadataManager
     @Override
     public void beginQuery(Session session)
     {
+        languageFunctionManager.registerQuery(session);
     }
 
     @Override
@@ -1037,6 +1045,7 @@ public final class MetadataManager
         if (queryCatalogs != null) {
             queryCatalogs.finish();
         }
+        languageFunctionManager.unregisterQuery(session);
     }
 
     @Override
@@ -2354,6 +2363,9 @@ public final class MetadataManager
     @Override
     public FunctionDependencyDeclaration getFunctionDependencies(Session session, CatalogHandle catalogHandle, FunctionId functionId, BoundSignature boundSignature)
     {
+        if (isTrinoSqlLanguageFunction(functionId)) {
+            throw new IllegalArgumentException("Function dependencies for SQL functions must be fetched directly from the language manager");
+        }
         if (catalogHandle.equals(GlobalSystemConnector.CATALOG_HANDLE)) {
             return functions.getFunctionDependencies(functionId, boundSignature);
         }
@@ -2381,11 +2393,33 @@ public final class MetadataManager
                 .collect(toImmutableList());
     }
 
-    private static List<CatalogFunctionMetadata> getFunctions(Session session, ConnectorMetadata metadata, CatalogHandle catalogHandle, SchemaFunctionName name)
+    private List<CatalogFunctionMetadata> getFunctions(Session session, ConnectorMetadata metadata, CatalogHandle catalogHandle, SchemaFunctionName name)
     {
-        return metadata.getFunctions(session.toConnectorSession(catalogHandle), name).stream()
+        ConnectorSession connectorSession = session.toConnectorSession(catalogHandle);
+        ImmutableList.Builder<CatalogFunctionMetadata> functions = ImmutableList.builder();
+
+        metadata.getFunctions(connectorSession, name).stream()
                 .map(function -> new CatalogFunctionMetadata(catalogHandle, name.getSchemaName(), function))
-                .collect(toImmutableList());
+                .forEach(functions::add);
+
+        RunAsIdentityLoader identityLoader = owner -> {
+            CatalogSchemaFunctionName functionName = new CatalogSchemaFunctionName(catalogHandle.getCatalogName(), name);
+
+            Optional<Identity> systemIdentity = Optional.empty();
+            if (getCatalogMetadata(session, catalogHandle).getSecurityManagement() == SYSTEM) {
+                systemIdentity = systemSecurityMetadata.getFunctionRunAsIdentity(session, functionName);
+            }
+
+            return systemIdentity.or(() -> owner.map(Identity::ofUser))
+                    .orElseThrow(() -> new TrinoException(NOT_SUPPORTED, "No identity for SECURITY DEFINER function: " + functionName));
+        };
+
+        LanguageFunctionLoader emptyLoader = (ignoredSession, ignoredName) -> ImmutableList.of();
+        languageFunctionManager.getFunctions(session, catalogHandle, name, emptyLoader, identityLoader).stream()
+                .map(function -> new CatalogFunctionMetadata(catalogHandle, name.getSchemaName(), function))
+                .forEach(functions::add);
+
+        return functions.build();
     }
 
     @Override
@@ -2589,6 +2623,7 @@ public final class MetadataManager
         private TransactionManager transactionManager;
         private TypeManager typeManager = TESTING_TYPE_MANAGER;
         private GlobalFunctionCatalog globalFunctionCatalog;
+        private LanguageFunctionManager languageFunctionManager;
 
         private TestMetadataManagerBuilder() {}
 
@@ -2610,6 +2645,12 @@ public final class MetadataManager
             return this;
         }
 
+        public TestMetadataManagerBuilder withLanguageFunctionManager(LanguageFunctionManager languageFunctionManager)
+        {
+            this.languageFunctionManager = languageFunctionManager;
+            return this;
+        }
+
         public MetadataManager build()
         {
             TransactionManager transactionManager = this.transactionManager;
@@ -2625,10 +2666,15 @@ public final class MetadataManager
                 globalFunctionCatalog.addFunctions(new InternalFunctionBundle(new LiteralFunction(new InternalBlockEncodingSerde(new BlockEncodingManager(), typeManager))));
             }
 
+            if (languageFunctionManager == null) {
+                languageFunctionManager = new LanguageFunctionManager(new SqlParser(), typeManager, user -> ImmutableSet.of());
+            }
+
             return new MetadataManager(
                     new DisabledSystemSecurityMetadata(),
                     transactionManager,
                     globalFunctionCatalog,
+                    languageFunctionManager,
                     typeManager);
         }
     }

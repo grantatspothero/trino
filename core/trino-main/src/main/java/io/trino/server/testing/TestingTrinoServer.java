@@ -67,6 +67,7 @@ import io.trino.metadata.FunctionBundle;
 import io.trino.metadata.FunctionManager;
 import io.trino.metadata.GlobalFunctionCatalog;
 import io.trino.metadata.InternalNodeManager;
+import io.trino.metadata.LanguageFunctionManager;
 import io.trino.metadata.Metadata;
 import io.trino.metadata.ProcedureRegistry;
 import io.trino.metadata.SessionPropertyManager;
@@ -171,6 +172,7 @@ public class TestingTrinoServer
     private final QueryExplainer queryExplainer;
     private final SessionPropertyManager sessionPropertyManager;
     private final FunctionManager functionManager;
+    private final LanguageFunctionManager languageFunctionManager;
     private final GlobalFunctionCatalog globalFunctionCatalog;
     private final StatsCalculator statsCalculator;
     private final ProcedureRegistry procedureRegistry;
@@ -378,6 +380,7 @@ public class TestingTrinoServer
             sessionPropertyDefaults = injector.getInstance(SessionPropertyDefaults.class);
             nodePartitioningManager = injector.getInstance(NodePartitioningManager.class);
             clusterMemoryManager = injector.getInstance(ClusterMemoryManager.class);
+            languageFunctionManager = injector.getInstance(LanguageFunctionManager.class);
             statsCalculator = injector.getInstance(StatsCalculator.class);
             procedureRegistry = injector.getInstance(ProcedureRegistry.class);
             injector.getInstance(CertificateAuthenticatorManager.class).useDefaultAuthenticator();
@@ -390,6 +393,7 @@ public class TestingTrinoServer
             sessionPropertyDefaults = null;
             nodePartitioningManager = null;
             clusterMemoryManager = null;
+            languageFunctionManager = null;
             statsCalculator = null;
             procedureRegistry = null;
         }
@@ -576,6 +580,12 @@ public class TestingTrinoServer
     public FunctionManager getFunctionManager()
     {
         return functionManager;
+    }
+
+    public LanguageFunctionManager getLanguageFunctionManager()
+    {
+        checkState(coordinator, "not a coordinator");
+        return languageFunctionManager;
     }
 
     public void addFunctions(FunctionBundle functionBundle)

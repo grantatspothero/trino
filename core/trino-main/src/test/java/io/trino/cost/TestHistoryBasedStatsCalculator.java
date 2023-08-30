@@ -734,6 +734,7 @@ public class TestHistoryBasedStatsCalculator
                                 new PartitioningScheme(Partitioning.create(SOURCE_DISTRIBUTION, ImmutableList.of()), ImmutableList.of()),
                                 StatsAndCosts.empty(),
                                 ImmutableList.of(),
+                                ImmutableList.of(),
                                 Optional.empty()),
                         false,
                         ImmutableList.of(),

@@ -35,6 +35,7 @@ import io.trino.execution.warnings.WarningCollector;
 import io.trino.metadata.AllNodes;
 import io.trino.metadata.FunctionBundle;
 import io.trino.metadata.FunctionManager;
+import io.trino.metadata.LanguageFunctionManager;
 import io.trino.metadata.Metadata;
 import io.trino.metadata.QualifiedObjectName;
 import io.trino.metadata.SessionPropertyManager;
@@ -382,6 +383,12 @@ public class DistributedQueryRunner
     public FunctionManager getFunctionManager()
     {
         return coordinator.getFunctionManager();
+    }
+
+    @Override
+    public LanguageFunctionManager getLanguageFunctionManager()
+    {
+        return coordinator.getLanguageFunctionManager();
     }
 
     @Override

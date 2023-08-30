@@ -165,6 +165,7 @@ import static io.airlift.units.Duration.succinctNanos;
 import static io.trino.execution.StageInfo.getAllStages;
 import static io.trino.metadata.GlobalFunctionCatalog.builtinFunctionName;
 import static io.trino.metadata.GlobalFunctionCatalog.isBuiltinFunctionName;
+import static io.trino.metadata.LanguageFunctionManager.isInlineFunction;
 import static io.trino.metadata.ResolvedFunction.extractFunctionName;
 import static io.trino.server.DynamicFilterService.DynamicFilterDomainStats;
 import static io.trino.spi.function.table.DescriptorArgument.NULL_DESCRIPTOR;
@@ -679,6 +680,7 @@ public class PlanPrinter
                 ImmutableList.of(plan.getId()),
                 new PartitioningScheme(Partitioning.create(SINGLE_DISTRIBUTION, ImmutableList.of()), plan.getOutputSymbols()),
                 StatsAndCosts.empty(),
+                ImmutableList.of(),
                 ImmutableList.of(),
                 Optional.empty());
         return GraphvizPrinter.printLogical(ImmutableList.of(fragment));
@@ -2286,7 +2288,7 @@ public class PlanPrinter
     private static String formatFunctionName(ResolvedFunction function)
     {
         CatalogSchemaFunctionName name = function.getSignature().getName();
-        if (isBuiltinFunctionName(name)) {
+        if (isInlineFunction(name) || isBuiltinFunctionName(name)) {
             return name.getFunctionName();
         }
         return name.toString();
@@ -2302,7 +2304,7 @@ public class PlanPrinter
                 FunctionCall rewritten = treeRewriter.defaultRewrite(node, context);
                 CatalogSchemaFunctionName name = extractFunctionName(node.getName());
                 QualifiedName qualifiedName;
-                if (isBuiltinFunctionName(name)) {
+                if (isInlineFunction(name) || isBuiltinFunctionName(name)) {
                     qualifiedName = QualifiedName.of(name.getFunctionName());
                 }
                 else {

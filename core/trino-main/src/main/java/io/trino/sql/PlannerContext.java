@@ -19,6 +19,7 @@ import io.trino.cache.CacheMetadata;
 import io.trino.execution.warnings.WarningCollector;
 import io.trino.metadata.FunctionManager;
 import io.trino.metadata.FunctionResolver;
+import io.trino.metadata.LanguageFunctionManager;
 import io.trino.metadata.Metadata;
 import io.trino.metadata.ResolvedFunction.ResolvedFunctionDecoder;
 import io.trino.spi.block.BlockEncodingSerde;
@@ -44,6 +45,7 @@ public class PlannerContext
     private final BlockEncodingSerde blockEncodingSerde;
     private final TypeManager typeManager;
     private final FunctionManager functionManager;
+    private final LanguageFunctionManager languageFunctionManager;
     private final Tracer tracer;
     private final ResolvedFunctionDecoder functionDecoder;
 
@@ -54,6 +56,7 @@ public class PlannerContext
             BlockEncodingSerde blockEncodingSerde,
             TypeManager typeManager,
             FunctionManager functionManager,
+            LanguageFunctionManager languageFunctionManager,
             Tracer tracer)
     {
         this.metadata = requireNonNull(metadata, "metadata is null");
@@ -62,6 +65,7 @@ public class PlannerContext
         this.blockEncodingSerde = requireNonNull(blockEncodingSerde, "blockEncodingSerde is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.functionManager = requireNonNull(functionManager, "functionManager is null");
+        this.languageFunctionManager = requireNonNull(languageFunctionManager, "languageFunctionManager is null");
         // the function decoder contains caches that are critical for planner performance so this must be shared
         this.functionDecoder = new ResolvedFunctionDecoder(typeManager::getType);
         this.tracer = requireNonNull(tracer, "tracer is null");
@@ -109,7 +113,12 @@ public class PlannerContext
 
     public FunctionResolver getFunctionResolver(WarningCollector warningCollector)
     {
-        return new FunctionResolver(metadata, typeManager, functionDecoder, warningCollector);
+        return new FunctionResolver(metadata, typeManager, languageFunctionManager, functionDecoder, warningCollector);
+    }
+
+    public LanguageFunctionManager getLanguageFunctionManager()
+    {
+        return languageFunctionManager;
     }
 
     public Tracer getTracer()
