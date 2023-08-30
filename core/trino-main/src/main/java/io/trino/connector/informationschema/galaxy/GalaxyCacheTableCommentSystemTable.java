@@ -13,24 +13,19 @@
  */
 package io.trino.connector.informationschema.galaxy;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.trino.FullConnectorSession;
 import io.trino.Session;
+import io.trino.connector.system.TableCommentSystemTable;
 import io.trino.metadata.Metadata;
-import io.trino.metadata.QualifiedObjectName;
 import io.trino.metadata.QualifiedTablePrefix;
-import io.trino.metadata.ViewInfo;
 import io.trino.security.AccessControl;
-import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.ConnectorTableMetadata;
 import io.trino.spi.connector.ConnectorTransactionHandle;
 import io.trino.spi.connector.InMemoryRecordSet;
 import io.trino.spi.connector.RecordCursor;
-import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SystemTable;
 import io.trino.spi.predicate.TupleDomain;
 import jakarta.ws.rs.NotFoundException;
@@ -38,22 +33,15 @@ import jakarta.ws.rs.NotFoundException;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
-import java.util.Set;
 
-import static com.google.common.collect.Sets.union;
 import static io.trino.connector.informationschema.galaxy.GalaxyCacheEndpoint.ENDPOINT_TABLES;
+import static io.trino.connector.system.TableCommentSystemTable.COMMENT_TABLE;
 import static io.trino.connector.system.jdbc.FilterUtil.tablePrefix;
 import static io.trino.connector.system.jdbc.FilterUtil.tryGetSingleVarcharValue;
-import static io.trino.metadata.MetadataListing.getMaterializedViews;
-import static io.trino.metadata.MetadataListing.getViews;
 import static io.trino.metadata.MetadataListing.listCatalogNames;
-import static io.trino.metadata.MetadataListing.listTables;
-import static io.trino.metadata.MetadataUtil.TableMetadataBuilder.tableMetadataBuilder;
 import static io.trino.spi.connector.SystemTable.Distribution.SINGLE_COORDINATOR;
-import static io.trino.spi.type.VarcharType.createUnboundedVarcharType;
 import static java.util.Objects.requireNonNull;
 
 public class GalaxyCacheTableCommentSystemTable
@@ -61,18 +49,10 @@ public class GalaxyCacheTableCommentSystemTable
 {
     private static final Logger log = Logger.get(GalaxyCacheTableCommentSystemTable.class);
 
-    private static final SchemaTableName COMMENT_TABLE_NAME = new SchemaTableName("metadata", "table_comments");
-
-    private static final ConnectorTableMetadata COMMENT_TABLE = tableMetadataBuilder(COMMENT_TABLE_NAME)
-            .column("catalog_name", createUnboundedVarcharType())
-            .column("schema_name", createUnboundedVarcharType())
-            .column("table_name", createUnboundedVarcharType())
-            .column("comment", createUnboundedVarcharType())
-            .build();
-
     private final GalaxyCacheClient galaxyCacheClient;
     private final Metadata metadata;
     private final AccessControl accessControl;
+    private final TableCommentSystemTable tableCommentSystemTable;
 
     @Inject
     public GalaxyCacheTableCommentSystemTable(GalaxyCacheClient galaxyCacheClient, Metadata metadata, AccessControl accessControl)
@@ -80,6 +60,7 @@ public class GalaxyCacheTableCommentSystemTable
         this.galaxyCacheClient = requireNonNull(galaxyCacheClient, "galaxyCacheClient is null");
         this.metadata = requireNonNull(metadata, "metadata is null");
         this.accessControl = requireNonNull(accessControl, "accessControl is null");
+        tableCommentSystemTable = new TableCommentSystemTable(metadata, accessControl);
     }
 
     @Override
@@ -116,7 +97,7 @@ public class GalaxyCacheTableCommentSystemTable
                 }
             }
             catch (NotFoundException ignore) {
-                getCatalogComments(schemaFilter, tableFilter, session, table, catalog);
+                tableCommentSystemTable.addTableCommentForCatalog(session, prefix, catalog, table);
             }
             catch (Exception e) {
                 // emulate TableCommentSystemTable and merely log exceptions
@@ -125,65 +106,5 @@ public class GalaxyCacheTableCommentSystemTable
         }
 
         return table.build().cursor();
-    }
-
-    // copied from TableCommentSystemTable - remove once https://github.com/trinodb/trino/pull/18517 is available in Galaxy Trino
-    private void getCatalogComments(Optional<String> schemaFilter, Optional<String> tableFilter, Session session, InMemoryRecordSet.Builder table, String catalog)
-    {
-        QualifiedTablePrefix prefix = tablePrefix(catalog, schemaFilter, tableFilter);
-
-        Set<SchemaTableName> names = ImmutableSet.of();
-        Map<SchemaTableName, ViewInfo> views = ImmutableMap.of();
-        Map<SchemaTableName, ViewInfo> materializedViews = ImmutableMap.of();
-        try {
-            materializedViews = getMaterializedViews(session, metadata, accessControl, prefix);
-            views = getViews(session, metadata, accessControl, prefix);
-            // Some connectors like blackhole, accumulo and raptor don't return views in listTables
-            // Materialized views are consistently returned in listTables by the relevant connectors
-            names = union(listTables(session, metadata, accessControl, prefix), views.keySet());
-        }
-        catch (TrinoException e) {
-            // listTables throws an exception if cannot connect the database
-            log.warn(e, "Failed to get tables for catalog: %s", catalog);
-        }
-
-        for (SchemaTableName name : names) {
-            Optional<String> comment = Optional.empty();
-            try {
-                comment = getComment(session, prefix, name, views, materializedViews);
-            }
-            catch (RuntimeException e) {
-                // getTableHandle may throw an exception (e.g. Cassandra connector doesn't allow case insensitive column names)
-                log.warn(e, "Failed to get metadata for table: %s", name);
-            }
-            table.addRow(prefix.getCatalogName(), name.getSchemaName(), name.getTableName(), comment.orElse(null));
-        }
-    }
-
-    // copied from TableCommentSystemTable - remove once https://github.com/trinodb/trino/pull/18517 is available in Galaxy Trino
-    private Optional<String> getComment(
-            Session session,
-            QualifiedTablePrefix prefix,
-            SchemaTableName name,
-            Map<SchemaTableName, ViewInfo> views,
-            Map<SchemaTableName, ViewInfo> materializedViews)
-    {
-        ViewInfo materializedViewDefinition = materializedViews.get(name);
-        if (materializedViewDefinition != null) {
-            return materializedViewDefinition.getComment();
-        }
-        ViewInfo viewInfo = views.get(name);
-        if (viewInfo != null) {
-            return viewInfo.getComment();
-        }
-        QualifiedObjectName tableName = new QualifiedObjectName(prefix.getCatalogName(), name.getSchemaName(), name.getTableName());
-        return metadata.getRedirectionAwareTableHandle(session, tableName).tableHandle()
-                .map(handle -> metadata.getTableMetadata(session, handle))
-                .map(metadata -> metadata.getMetadata().getComment())
-                .orElseGet(() -> {
-                    // A previously listed table might have been dropped concurrently
-                    log.warn("Failed to get metadata for table: %s", name);
-                    return Optional.empty();
-                });
     }
 }
