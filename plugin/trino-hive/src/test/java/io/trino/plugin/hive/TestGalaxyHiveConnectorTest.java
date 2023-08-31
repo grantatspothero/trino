@@ -194,6 +194,14 @@ public class TestGalaxyHiveConnectorTest
     }
 
     @Override
+    public void testCreateFunction()
+    {
+        // CREATE FUNCTION not supported by Galaxy so far
+        assertThatThrownBy(super::testCreateFunction)
+                .hasMessageContaining("Catalog and schema must be specified when function schema is not configured");
+    }
+
+    @Override
     public void testCreateSchemaWithNonLowercaseOwnerName()
     {
         testCreateSchemaWithNonLowercaseOwnerNameOriginalTest();

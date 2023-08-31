@@ -74,6 +74,9 @@ public class TestObjectStoreIcebergConnectorTest
                 verify(!connectorHasBehavior, "Unexpected support for: %s", connectorBehavior);
                 return false;
 
+            case SUPPORTS_CREATE_FUNCTION:
+                return false;
+
             default:
                 // By default, declare all behaviors/features supported by Iceberg connector
                 return connectorHasBehavior;

@@ -142,6 +142,7 @@ public class TestGalaxyTrinoMetadata
         DataTypeMapper dataTypeMapper = new DataTypeMapper();
         TransactionId transactionId = transactionManager.beginTransaction(true);
         Session session = createSession(transactionId);
+        queryRunner.getLanguageFunctionManager().registerQuery(session);
         galaxyTrinoMetadata = new GalaxyTrinoMetadata(session, analyzerFactory, SQL_PARSER, dataTypeMapper);
     }
 

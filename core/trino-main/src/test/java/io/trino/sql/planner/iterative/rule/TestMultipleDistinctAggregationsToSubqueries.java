@@ -91,6 +91,7 @@ import io.trino.spi.function.CatalogSchemaFunctionName;
 import io.trino.spi.function.FunctionDependencyDeclaration;
 import io.trino.spi.function.FunctionId;
 import io.trino.spi.function.FunctionMetadata;
+import io.trino.spi.function.LanguageFunction;
 import io.trino.spi.function.OperatorType;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.security.GrantInfo;
@@ -1920,6 +1921,24 @@ public class TestMultipleDistinctAggregationsToSubqueries
         public FunctionDependencyDeclaration getFunctionDependencies(Session session, CatalogHandle catalogHandle, FunctionId functionId, BoundSignature boundSignature)
         {
             return metadata.getFunctionDependencies(session, catalogHandle, functionId, boundSignature);
+        }
+
+        @Override
+        public boolean languageFunctionExists(Session session, QualifiedObjectName name, String signatureToken)
+        {
+            return metadata.languageFunctionExists(session, name, signatureToken);
+        }
+
+        @Override
+        public void createLanguageFunction(Session session, QualifiedObjectName name, LanguageFunction function, boolean replace)
+        {
+            metadata.createLanguageFunction(session, name, function, replace);
+        }
+
+        @Override
+        public void dropLanguageFunction(Session session, QualifiedObjectName name, String signatureToken)
+        {
+            metadata.dropLanguageFunction(session, name, signatureToken);
         }
 
         @Override

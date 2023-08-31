@@ -22,6 +22,8 @@ import io.trino.spi.connector.ConnectorMetadata;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SchemaTablePrefix;
+import io.trino.spi.function.LanguageFunction;
+import io.trino.spi.function.SchemaFunctionName;
 import io.trino.spi.security.TrinoPrincipal;
 import org.junit.jupiter.api.Test;
 
@@ -79,6 +81,11 @@ public class TestObjectStoreMetadata
                 .add(ConnectorMetadata.class.getMethod("revokeTablePrivileges", ConnectorSession.class, SchemaTableName.class, Set.class, TrinoPrincipal.class, boolean.class))
                 .add(ConnectorMetadata.class.getMethod("listTablePrivileges", ConnectorSession.class, SchemaTablePrefix.class))
                 .add(ConnectorMetadata.class.getMethod("setViewAuthorization", ConnectorSession.class, SchemaTableName.class, TrinoPrincipal.class))
+                .add(ConnectorMetadata.class.getMethod("listLanguageFunctions", ConnectorSession.class, String.class))
+                .add(ConnectorMetadata.class.getMethod("getLanguageFunctions", ConnectorSession.class, SchemaFunctionName.class))
+                .add(ConnectorMetadata.class.getMethod("languageFunctionExists", ConnectorSession.class, SchemaFunctionName.class, String.class))
+                .add(ConnectorMetadata.class.getMethod("createLanguageFunction", ConnectorSession.class, SchemaFunctionName.class, LanguageFunction.class, boolean.class))
+                .add(ConnectorMetadata.class.getMethod("dropLanguageFunction", ConnectorSession.class, SchemaFunctionName.class, String.class))
                 .build());
     }
 

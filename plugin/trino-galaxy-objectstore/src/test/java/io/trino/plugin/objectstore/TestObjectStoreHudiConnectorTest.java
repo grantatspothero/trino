@@ -85,6 +85,9 @@ public class TestObjectStoreHudiConnectorTest
                 verify(!connectorHasBehavior, "Unexpected support for: %s", connectorBehavior);
                 return true;
 
+            case SUPPORTS_CREATE_FUNCTION:
+                return false;
+
             default:
                 // By default, declare all behaviors/features supported by Hudi connector
                 return connectorHasBehavior;

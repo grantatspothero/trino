@@ -747,6 +747,20 @@ public class GalaxyAccessControl
         return ImmutableSet.of();
     }
 
+    @Override
+    public void checkCanCreateFunction(SystemSecurityContext systemSecurityContext, CatalogSchemaRoutineName functionName)
+    {
+        // todo
+        SystemAccessControl.super.checkCanCreateFunction(systemSecurityContext, functionName);
+    }
+
+    @Override
+    public void checkCanDropFunction(SystemSecurityContext systemSecurityContext, CatalogSchemaRoutineName functionName)
+    {
+        // todo
+        SystemAccessControl.super.checkCanDropFunction(systemSecurityContext, functionName);
+    }
+
     // Helper methods that provide explanations for denied access
 
     private void checkRoleOwnsQuery(Identity identity, Identity queryOwner, Consumer<String> denier)

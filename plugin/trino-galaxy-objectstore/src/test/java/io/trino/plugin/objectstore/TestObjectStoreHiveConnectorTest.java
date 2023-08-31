@@ -76,6 +76,8 @@ public class TestObjectStoreHiveConnectorTest
                 verify(!connectorHasBehavior, "Unexpected support for: %s", connectorBehavior);
                 return true;
 
+            case SUPPORTS_CREATE_FUNCTION:
+                return false;
             default:
                 // By default, declare all behaviors/features supported by Hive connector
                 return connectorHasBehavior;
