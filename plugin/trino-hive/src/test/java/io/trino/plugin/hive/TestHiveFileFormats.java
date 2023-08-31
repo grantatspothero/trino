@@ -83,7 +83,6 @@ import java.util.TimeZone;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.airlift.slice.Slices.utf8Slice;
 import static io.trino.hadoop.ConfigurationInstantiator.newEmptyConfiguration;
@@ -136,8 +135,6 @@ public class TestHiveFileFormats
     private static final TrinoFileSystemFactory FILE_SYSTEM_FACTORY = new HdfsFileSystemFactory(HDFS_ENVIRONMENT, HDFS_FILE_SYSTEM_STATS);
     private static final HivePageSourceFactory PARQUET_PAGE_SOURCE_FACTORY = new ParquetPageSourceFactory(FILE_SYSTEM_FACTORY, STATS, new ParquetReaderConfig(), new HiveConfig());
 
-    private ConnectorSession nativeFormatsEnabled;
-
     @DataProvider(name = "rowCount")
     public static Object[][] rowCountProvider()
     {
@@ -157,31 +154,6 @@ public class TestHiveFileFormats
         assertEquals(TimeZone.getDefault().getID(),
                 "America/Bahia_Banderas",
                 "Timezone not configured correctly. Add -Duser.timezone=America/Bahia_Banderas to your JVM arguments");
-
-        HiveFormatsConfig formatsConfig = new HiveFormatsConfig();
-
-        verify(!formatsConfig.isTextFileNativeReaderEnabled() && !formatsConfig.isTextFileNativeWriterEnabled(), "Native TEXTFILE enabled by default");
-        formatsConfig.setTextFileNativeReaderEnabled(true);
-        formatsConfig.setTextFileNativeWriterEnabled(true);
-
-        verify(!formatsConfig.isCsvNativeReaderEnabled() && !formatsConfig.isCsvNativeWriterEnabled(), "Native CSV enabled by default");
-        formatsConfig.setCsvNativeReaderEnabled(true);
-        formatsConfig.setCsvNativeWriterEnabled(true);
-
-        verify(!formatsConfig.isJsonNativeReaderEnabled() && !formatsConfig.isJsonNativeWriterEnabled(), "Native JSON enabled by default");
-        formatsConfig.setJsonNativeReaderEnabled(true);
-        formatsConfig.setJsonNativeWriterEnabled(true);
-
-        verify(!formatsConfig.isSequenceFileNativeReaderEnabled() && !formatsConfig.isSequenceFileNativeWriterEnabled(), "Native SequenceFile enabled by default");
-        formatsConfig.setSequenceFileNativeReaderEnabled(true);
-        formatsConfig.setSequenceFileNativeWriterEnabled(true);
-
-        verify(!formatsConfig.isAvroFileNativeReaderEnabled() && !formatsConfig.isAvroFileNativeWriterEnabled(), "Native Avro enabled by default");
-        formatsConfig.setAvroFileNativeReaderEnabled(true);
-        formatsConfig.setAvroFileNativeWriterEnabled(true);
-
-        // TODO once nativeFormatsEnabled is same as SESSION, remove the field completely
-        nativeFormatsEnabled = getHiveSession(formatsConfig);
     }
 
     @Test(dataProvider = "validRowAndFileSizePadding")
@@ -194,7 +166,6 @@ public class TestHiveFileFormats
                 .collect(toList());
 
         assertThatFileFormat(TEXTFILE)
-                .withSession(nativeFormatsEnabled)
                 .withColumns(testColumns)
                 .withRowsCount(rowCount)
                 .withFileSizePadding(fileSizePadding)
@@ -213,7 +184,6 @@ public class TestHiveFileFormats
                 .collect(toList());
 
         assertThatFileFormat(SEQUENCEFILE)
-                .withSession(nativeFormatsEnabled)
                 .withColumns(testColumns)
                 .withRowsCount(rowCount)
                 .withFileSizePadding(fileSizePadding)
@@ -234,7 +204,6 @@ public class TestHiveFileFormats
         assertTrue(testColumns.size() > 5);
 
         assertThatFileFormat(CSV)
-                .withSession(nativeFormatsEnabled)
                 .withColumns(testColumns)
                 .withRowsCount(rowCount)
                 .withFileSizePadding(fileSizePadding)
@@ -248,7 +217,6 @@ public class TestHiveFileFormats
             throws Exception
     {
         assertThatFileFormat(CSV)
-                .withSession(nativeFormatsEnabled)
                 .withColumns(ImmutableList.of(
                         new TestColumn("t_null_string", javaStringObjectInspector, null, utf8Slice("")), // null was converted to empty string!
                         new TestColumn("t_string", javaStringObjectInspector, "test", utf8Slice("test"))))
@@ -281,7 +249,6 @@ public class TestHiveFileFormats
                 .collect(toList());
 
         assertThatFileFormat(JSON)
-                .withSession(nativeFormatsEnabled)
                 .withColumns(testColumns)
                 .withRowsCount(rowCount)
                 .withFileSizePadding(fileSizePadding)
@@ -464,7 +431,6 @@ public class TestHiveFileFormats
             throws Exception
     {
         assertThatFileFormat(AVRO)
-                .withSession(nativeFormatsEnabled)
                 .withColumns(getTestColumnsSupportedByAvro())
                 .withRowsCount(rowCount)
                 .withFileSizePadding(fileSizePadding)
@@ -486,7 +452,7 @@ public class TestHiveFileFormats
             splitProperties.setProperty(FILE_INPUT_FORMAT, SymlinkTextInputFormat.class.getName());
             splitProperties.setProperty(SERIALIZATION_LIB, AVRO.getSerde());
             testCursorProvider(createGenericHiveRecordCursorProvider(HDFS_ENVIRONMENT), split, splitProperties, getTestColumnsSupportedByAvro(), SESSION, file.length(), rowCount);
-            testPageSourceFactory(new AvroPageSourceFactory(FILE_SYSTEM_FACTORY), split, AVRO, getTestColumnsSupportedByAvro(), nativeFormatsEnabled, file.length(), rowCount);
+            testPageSourceFactory(new AvroPageSourceFactory(FILE_SYSTEM_FACTORY), split, AVRO, getTestColumnsSupportedByAvro(), SESSION, file.length(), rowCount);
         }
         finally {
             //noinspection ResultOfMethodCallIgnored
@@ -626,7 +592,6 @@ public class TestHiveFileFormats
                 .isReadableByPageSource(PARQUET_PAGE_SOURCE_FACTORY);
 
         assertThatFileFormat(AVRO)
-                .withSession(nativeFormatsEnabled)
                 .withWriteColumns(ImmutableList.of(writeColumn))
                 .withReadColumns(ImmutableList.of(readColumn))
                 .withFileWriterFactory(new AvroFileWriterFactory(FILE_SYSTEM_FACTORY, TESTING_TYPE_MANAGER, new NodeVersion("test_version")))
@@ -634,7 +599,6 @@ public class TestHiveFileFormats
                 .isReadableByPageSource(new AvroPageSourceFactory(FILE_SYSTEM_FACTORY));
 
         assertThatFileFormat(SEQUENCEFILE)
-                .withSession(nativeFormatsEnabled)
                 .withWriteColumns(ImmutableList.of(writeColumn))
                 .withReadColumns(ImmutableList.of(readColumn))
                 .withFileWriterFactory(new SimpleSequenceFileWriterFactory(HDFS_FILE_SYSTEM_FACTORY, TESTING_TYPE_MANAGER, new NodeVersion("test")))
@@ -642,7 +606,6 @@ public class TestHiveFileFormats
                 .isReadableByPageSource(new SimpleSequenceFilePageSourceFactory(HDFS_FILE_SYSTEM_FACTORY, new HiveConfig()));
 
         assertThatFileFormat(TEXTFILE)
-                .withSession(nativeFormatsEnabled)
                 .withWriteColumns(ImmutableList.of(writeColumn))
                 .withReadColumns(ImmutableList.of(readColumn))
                 .withFileWriterFactory(new SimpleTextFileWriterFactory(HDFS_FILE_SYSTEM_FACTORY, TESTING_TYPE_MANAGER))
@@ -667,7 +630,6 @@ public class TestHiveFileFormats
         List<TestColumn> readColumns = readeColumnsBuilder.addAll(partitionColumns).build();
 
         assertThatFileFormat(AVRO)
-                .withSession(nativeFormatsEnabled)
                 .withWriteColumns(writeColumns)
                 .withReadColumns(readColumns)
                 .withRowsCount(rowCount)
@@ -758,7 +720,6 @@ public class TestHiveFileFormats
         List<TestColumn> readColumns = readeColumnsBuilder.addAll(partitionColumns).build();
 
         assertThatFileFormat(SEQUENCEFILE)
-                .withSession(nativeFormatsEnabled)
                 .withWriteColumns(writeColumns)
                 .withReadColumns(readColumns)
                 .withRowsCount(rowCount)
@@ -788,7 +749,6 @@ public class TestHiveFileFormats
         List<TestColumn> readColumns = readeColumnsBuilder.addAll(partitionColumns).build();
 
         assertThatFileFormat(TEXTFILE)
-                .withSession(nativeFormatsEnabled)
                 .withWriteColumns(writeColumns)
                 .withReadColumns(readColumns)
                 .withRowsCount(rowCount)
