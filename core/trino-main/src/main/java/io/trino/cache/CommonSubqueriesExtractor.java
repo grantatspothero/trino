@@ -109,7 +109,7 @@ public final class CommonSubqueriesExtractor
         ImmutableMap.Builder<PlanNode, CommonPlanAdaptation> planAdaptations = ImmutableMap.builder();
         Multimap<CacheTableId, CanonicalSubplan> canonicalSubplans = extractCanonicalSubplans(plannerContext.getMetadata(), session, root).stream()
                 // TODO: implement
-                .filter(subplan -> subplan.getGroupByExpressions().isEmpty())
+                .filter(subplan -> subplan.getGroupByColumns().isEmpty())
                 .collect(toImmutableListMultimap(CanonicalSubplan::getTableId, identity()));
         // extract common subplan adaptations
         for (CacheTableId tableId : canonicalSubplans.keySet()) {

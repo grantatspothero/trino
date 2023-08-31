@@ -165,20 +165,20 @@ public final class CanonicalSubplanExtractor
                     .putAll(subplan.getOriginalSymbolMapping());
 
             // canonicalize grouping columns
-            ImmutableList.Builder<Expression> groupByExpressions = ImmutableList.builder();
+            ImmutableSet.Builder<CacheColumnId> groupByColumns = ImmutableSet.builder();
             for (Symbol groupingKey : node.getGroupingKeys()) {
                 Expression groupByExpression = requireNonNull(canonicalExpressionMap.get(groupingKey));
                 CacheColumnId columnId = requireNonNull(subplan.getOriginalSymbolMapping().inverse().get(groupingKey));
-                groupByExpressions.add(groupByExpression);
+                groupByColumns.add(columnId);
                 assignmentsBuilder.put(columnId, groupByExpression);
             }
 
             // canonicalize hash column
-            Optional<Expression> groupByHash;
+            Optional<CacheColumnId> groupByHash;
             if (node.getHashSymbol().isPresent()) {
                 CacheColumnId columnId = requireNonNull(subplan.getOriginalSymbolMapping().inverse().get(hashSymbol.get()));
-                groupByHash = Optional.of(requireNonNull(canonicalExpressionMap.get(hashSymbol.get())));
-                assignmentsBuilder.put(columnId, groupByHash.get());
+                groupByHash = Optional.of(columnId);
+                assignmentsBuilder.put(columnId, requireNonNull(canonicalExpressionMap.get(hashSymbol.get())));
             }
             else {
                 groupByHash = Optional.empty();
@@ -218,7 +218,7 @@ public final class CanonicalSubplanExtractor
             return Optional.of(new CanonicalSubplan(
                     node,
                     symbolMapping,
-                    Optional.of(groupByExpressions.build()),
+                    Optional.of(groupByColumns.build()),
                     groupByHash,
                     assignments,
                     subplan.getConjuncts(),

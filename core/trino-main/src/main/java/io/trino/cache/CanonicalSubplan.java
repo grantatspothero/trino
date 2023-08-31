@@ -17,6 +17,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.trino.metadata.TableHandle;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheTableId;
@@ -30,6 +31,7 @@ import io.trino.sql.tree.Expression;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -51,13 +53,13 @@ public class CanonicalSubplan
     private final BiMap<CacheColumnId, Symbol> originalSymbolMapping;
 
     /**
-     * Group by columns. Symbol names are canonicalized as {@link CacheColumnId}.
+     * Group by columns that are part of {@link CanonicalSubplan#assignments}.
      */
-    private final Optional<List<Expression>> groupByExpressions;
+    private final Optional<Set<CacheColumnId>> groupByColumns;
     /**
-     * Group by hash. Symbol names are canonicalized as {@link CacheColumnId}.
+     * {@link CacheColumnId} of group by hash that is part of {@link CanonicalSubplan#assignments}.
      */
-    private final Optional<Expression> groupByHash;
+    private final Optional<CacheColumnId> groupByHash;
     /**
      * Output projections with iteration order matching list of output columns.
      * Symbol names are canonicalized as {@link CacheColumnId}.
@@ -95,8 +97,8 @@ public class CanonicalSubplan
     public CanonicalSubplan(
             PlanNode originalPlanNode,
             BiMap<CacheColumnId, Symbol> originalSymbolMapping,
-            Optional<List<Expression>> groupByExpressions,
-            Optional<Expression> groupByHash,
+            Optional<Set<CacheColumnId>> groupByColumns,
+            Optional<CacheColumnId> groupByHash,
             Map<CacheColumnId, Expression> assignments,
             List<Expression> conjuncts,
             List<Expression> dynamicConjuncts,
@@ -108,7 +110,7 @@ public class CanonicalSubplan
     {
         this.originalPlanNode = requireNonNull(originalPlanNode, "originalPlanNode is null");
         this.originalSymbolMapping = ImmutableBiMap.copyOf(requireNonNull(originalSymbolMapping, "originalSymbolMapping is null"));
-        this.groupByExpressions = requireNonNull(groupByExpressions, "groupByExpressions is null").map(ImmutableList::copyOf);
+        this.groupByColumns = requireNonNull(groupByColumns, "groupByColumns is null").map(ImmutableSet::copyOf);
         this.groupByHash = requireNonNull(groupByHash, "groupByHash is null");
         this.assignments = ImmutableMap.copyOf(requireNonNull(assignments, "assignments is null"));
         this.conjuncts = ImmutableList.copyOf(requireNonNull(conjuncts, "conjuncts is null"));
@@ -139,12 +141,12 @@ public class CanonicalSubplan
         return originalSymbolMapping;
     }
 
-    public Optional<List<Expression>> getGroupByExpressions()
+    public Optional<Set<CacheColumnId>> getGroupByColumns()
     {
-        return groupByExpressions;
+        return groupByColumns;
     }
 
-    public Optional<Expression> getGroupByHash()
+    public Optional<CacheColumnId> getGroupByHash()
     {
         return groupByHash;
     }

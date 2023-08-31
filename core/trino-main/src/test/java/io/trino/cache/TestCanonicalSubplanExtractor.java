@@ -17,6 +17,7 @@ import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.trino.Session;
 import io.trino.metadata.AbstractMockMetadata;
 import io.trino.metadata.Metadata;
@@ -66,6 +67,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.trino.SystemSessionProperties.TASK_CONCURRENCY;
 import static io.trino.cache.CanonicalSubplanExtractor.extractCanonicalSubplans;
@@ -80,6 +82,7 @@ import static io.trino.sql.planner.iterative.rule.test.PlanBuilder.expression;
 import static io.trino.testing.TestingHandles.TEST_TABLE_HANDLE;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 import static io.trino.type.TypeUtils.NULL_HASH_CODE;
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestCanonicalSubplanExtractor
@@ -119,7 +122,7 @@ public class TestCanonicalSubplanExtractor
         assertThat(subplans).hasSize(2);
 
         CanonicalSubplan nonAggregatedSubplan = subplans.get(0);
-        assertThat(nonAggregatedSubplan.getGroupByExpressions()).isEmpty();
+        assertThat(nonAggregatedSubplan.getGroupByColumns()).isEmpty();
         assertThat(nonAggregatedSubplan.getAssignments()).containsExactly(
                 new SimpleEntry<>(new CacheColumnId("nationkey:bigint"), new SymbolReference("nationkey:bigint")),
                 new SimpleEntry<>(new CacheColumnId("name:varchar(25)"), new SymbolReference("name:varchar(25)")),
@@ -135,10 +138,10 @@ public class TestCanonicalSubplanExtractor
                 .build();
         CanonicalSubplan aggregatedSubplan = subplans.get(1);
         assertThat(aggregatedSubplan.getOriginalPlanNode()).isInstanceOf(AggregationNode.class);
-        assertThat(aggregatedSubplan.getGroupByExpressions()).contains(ImmutableList.of(
+        assertThat(getGroupByExpressions(aggregatedSubplan)).contains(ImmutableList.of(
                 expression("\"name:varchar(25)\""),
                 expression("(\"regionkey:bigint\" * BIGINT '2')")));
-        assertThat(aggregatedSubplan.getGroupByHash()).contains(hashExpression);
+        assertThat(getHashExpression(aggregatedSubplan)).contains(hashExpression);
         assertThat(aggregatedSubplan.getOriginalSymbolMapping()).containsOnlyKeys(
                 new CacheColumnId("nationkey:bigint"),
                 new CacheColumnId("name:varchar(25)"),
@@ -173,12 +176,12 @@ public class TestCanonicalSubplanExtractor
         assertThat(subplans).hasSize(2);
 
         CanonicalSubplan nonAggregatedSubplan = subplans.get(0);
-        assertThat(nonAggregatedSubplan.getGroupByExpressions()).isEmpty();
+        assertThat(nonAggregatedSubplan.getGroupByColumns()).isEmpty();
 
         Expression sum = getSumFunction();
         CanonicalSubplan aggregatedSubplan = subplans.get(1);
         assertThat(aggregatedSubplan.getOriginalPlanNode()).isInstanceOf(AggregationNode.class);
-        assertThat(aggregatedSubplan.getGroupByExpressions()).contains(ImmutableList.of(expression("\"regionkey:bigint\"")));
+        assertThat(getGroupByExpressions(aggregatedSubplan)).contains(ImmutableList.of(expression("\"regionkey:bigint\"")));
         assertThat(aggregatedSubplan.getGroupByHash()).isEmpty();
         assertThat(aggregatedSubplan.getOriginalSymbolMapping()).containsOnlyKeys(
                 new CacheColumnId("nationkey:bigint"),
@@ -200,12 +203,12 @@ public class TestCanonicalSubplanExtractor
         assertThat(subplans).hasSize(2);
 
         CanonicalSubplan nonAggregatedSubplan = subplans.get(0);
-        assertThat(nonAggregatedSubplan.getGroupByExpressions()).isEmpty();
+        assertThat(nonAggregatedSubplan.getGroupByColumns()).isEmpty();
 
         Expression sum = getSumFunction();
         CanonicalSubplan aggregatedSubplan = subplans.get(1);
         assertThat(aggregatedSubplan.getOriginalPlanNode()).isInstanceOf(AggregationNode.class);
-        assertThat(aggregatedSubplan.getGroupByExpressions()).contains(ImmutableList.of());
+        assertThat(aggregatedSubplan.getGroupByColumns()).contains(ImmutableSet.of());
         assertThat(aggregatedSubplan.getGroupByHash()).isEmpty();
         assertThat(aggregatedSubplan.getOriginalSymbolMapping()).containsOnlyKeys(
                 new CacheColumnId("nationkey:bigint"),
@@ -228,11 +231,11 @@ public class TestCanonicalSubplanExtractor
         assertThat(subplans).hasSize(2);
 
         CanonicalSubplan nonAggregatedSubplan = subplans.get(0);
-        assertThat(nonAggregatedSubplan.getGroupByExpressions()).isEmpty();
+        assertThat(nonAggregatedSubplan.getGroupByColumns()).isEmpty();
 
         CanonicalSubplan aggregatedSubplan = subplans.get(1);
         assertThat(aggregatedSubplan.getOriginalPlanNode()).isInstanceOf(AggregationNode.class);
-        assertThat(aggregatedSubplan.getGroupByExpressions()).contains(ImmutableList.of(
+        assertThat(getGroupByExpressions(aggregatedSubplan)).contains(ImmutableList.of(
                 expression("\"name:varchar(25)\""),
                 expression("\"regionkey:bigint\"")));
     }
@@ -249,7 +252,21 @@ public class TestCanonicalSubplanExtractor
     {
         List<CanonicalSubplan> subplans = extractCanonicalSubplansForQuery(query);
         assertThat(subplans).hasSize(1);
-        assertThat(getOnlyElement(subplans).getGroupByExpressions()).isEmpty();
+        assertThat(getOnlyElement(subplans).getGroupByColumns()).isEmpty();
+    }
+
+    private Optional<List<Expression>> getGroupByExpressions(CanonicalSubplan subplan)
+    {
+        return subplan.getGroupByColumns()
+                .map(columns -> columns.stream()
+                        .map(column -> requireNonNull(subplan.getAssignments().get(column), "No assignment for column: " + column))
+                        .collect(toImmutableList()));
+    }
+
+    private Optional<Expression> getHashExpression(CanonicalSubplan subplan)
+    {
+        return subplan.getGroupByHash()
+                .map(column -> requireNonNull(subplan.getAssignments().get(column), "No assignment for column: " + column));
     }
 
     @Test
