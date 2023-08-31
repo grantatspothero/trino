@@ -683,7 +683,7 @@ jobs:
             - { modules: testing/trino-faulttolerant-tests, profile: test-fault-tolerant-delta }
             - { modules: testing/trino-faulttolerant-tests, profile: test-fault-tolerant-hive, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
             - { modules: testing/trino-faulttolerant-tests, profile: test-fault-tolerant-iceberg }
-            - { modules: testing/trino-tests }
+            - { modules: testing/trino-tests, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
             - { modules: testing/trino-tests-galaxy-buffer-exchange }
           EOF
           ./.github/bin/build-matrix-from-impacted.py -v -i gib-impacted.log -m .github/test-matrix.yaml -o matrix.json
