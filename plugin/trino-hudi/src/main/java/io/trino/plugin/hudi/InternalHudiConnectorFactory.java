@@ -109,6 +109,7 @@ public final class InternalHudiConnectorFactory
             HudiTableProperties hudiTableProperties = injector.getInstance(HudiTableProperties.class);
 
             return new HudiConnector(
+                    injector,
                     lifeCycleManager,
                     transactionManager,
                     new ClassLoaderSafeConnectorSplitManager(splitManager, classLoader),
