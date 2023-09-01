@@ -44,7 +44,7 @@ public class ObjectStoreConfig
     }
 
     private TableType tableType = TableType.HIVE;
-    private InformationSchemaQueriesAcceleration informationSchemaQueriesAcceleration = InformationSchemaQueriesAcceleration.NONE;
+    private InformationSchemaQueriesAcceleration informationSchemaQueriesAcceleration = InformationSchemaQueriesAcceleration.V3; // stargate may configure different default temporarily
     private IcebergFileFormat defaultIcebergFileFormat = PARQUET;
 
     @NotNull

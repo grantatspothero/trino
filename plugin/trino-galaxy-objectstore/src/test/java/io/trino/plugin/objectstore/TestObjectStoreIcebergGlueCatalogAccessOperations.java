@@ -570,13 +570,12 @@ public class TestObjectStoreIcebergGlueCatalogAccessOperations
                             session,
                             "SELECT * FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA AND table_name LIKE 'test_select_i_s_columns%'",
                             ImmutableMultiset.<GlueMetastoreMethod>builder()
-                                    .addCopies(GET_TABLES, 5)
-                                    // TODO In pure Iceberg connector there are no GET_TABLE calls
-                                    .addCopies(GET_TABLE, tables <= MAX_PREFIXES_COUNT
-                                            ? tables * 3 + 4
-                                            : 20 /* TODO what is the exact function? */)
+                                    .add(GET_TABLES)
                                     .build(),
-                            ImmutableMultiset.of());
+                            ImmutableMultiset.<FileOperation>builder()
+                                    // TODO In pure Iceberg connector there are no filesystem accesses
+                                    .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), tables * 2)
+                                    .build());
                 }
 
                 // Pointed lookup
@@ -646,14 +645,9 @@ public class TestObjectStoreIcebergGlueCatalogAccessOperations
                             session,
                             "SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name LIKE 'test_select_s_m_t_comments%'",
                             ImmutableMultiset.<GlueMetastoreMethod>builder()
-                                    .addCopies(GET_TABLES, 3)
-                                    // TODO In pure Iceberg connector there are no GET_TABLE calls
-                                    .addCopies(GET_TABLE, tables * 2)
+                                    .add(GET_TABLES)
                                     .build(),
-                            ImmutableMultiset.<FileOperation>builder()
-                                    // TODO In pure Iceberg connector there are no filesystem accesses
-                                    .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), tables * 2)
-                                    .build());
+                            ImmutableMultiset.of());
                 }
 
                 // Pointed lookup

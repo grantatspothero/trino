@@ -930,11 +930,8 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
 
         assertInvocations("TABLE information_schema.columns",
                 ImmutableMultiset.builder()
-                        .addCopies(GET_ALL_DATABASES, 3)
-                        .addCopies(GET_TABLE, 9)
-                        .addCopies(GET_ALL_TABLES_FROM_DATABASE, 3)
-                        .addCopies(GET_ALL_VIEWS_FROM_DATABASE, 1)
-                        .addCopies(GET_TABLES_WITH_PARAMETER, 1)
+                        .addCopies(GET_ALL_DATABASES, 1)
+                        .addCopies(STREAM_TABLES, 1)
                         .build(),
                 ImmutableMultiset.<FileOperation>builder()
                         .add(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM))
