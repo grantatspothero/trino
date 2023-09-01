@@ -17,6 +17,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
 import io.starburst.stargate.id.EntityId;
@@ -61,6 +62,7 @@ public class GalaxyPermissionsCache
         private final Map<EntityId, EntityPrivileges> entityPrivilegesMap = new HashMap<>();
         private Map<RoleName, RoleId> activeRoles;
         private Map<RoleId, RoleName> allRoles;
+        private ContentsVisibility catalogVisibility;
 
         public GalaxyQueryPermissions(DispatchSession session)
         {
@@ -93,6 +95,15 @@ public class GalaxyPermissionsCache
         public synchronized EntityPrivileges getEntityPrivileges(RoleId roleId, EntityId entity, TrinoSecurityApi trinoSecurityApi)
         {
             return entityPrivilegesMap.computeIfAbsent(entity, ignore -> trinoSecurityApi.getEntityPrivileges(session, roleId, entity));
+        }
+
+        public synchronized ContentsVisibility getCatalogVisibility(TrinoSecurityApi trinoSecurityApi)
+        {
+            if (catalogVisibility != null) {
+                return catalogVisibility;
+            }
+            catalogVisibility = trinoSecurityApi.getCatalogVisibility(session);
+            return catalogVisibility;
         }
     }
 }

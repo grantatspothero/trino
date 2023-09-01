@@ -936,7 +936,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                 .setExpected(ImmutableMultiset.<String>builder()
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/role")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
-                                        .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility", 2)
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility")
                                         .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
                                         .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/table-xxx/privileges/r-xxx", allTables)
                                         .build())
@@ -1207,10 +1207,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                 .setExpected(ImmutableMultiset.<String>builder()
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/role")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
-                                        .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility", switch (mode) {
-                                            case NONE, V1, V2 -> 2;
-                                            case V3 -> 3;
-                                        })
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility")
                                         .addCopies("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility", switch (mode) {
                                             case NONE, V1, V2 -> 1;
                                             case V3 -> 2;

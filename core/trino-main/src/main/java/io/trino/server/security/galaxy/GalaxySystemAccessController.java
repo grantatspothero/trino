@@ -81,11 +81,13 @@ public class GalaxySystemAccessController
 
     public Predicate<String> getCatalogVisibility(SystemSecurityContext context)
     {
-        ContentsVisibility catalogVisibility = accessControlClient.getCatalogVisibility(toDispatchSession(context.getIdentity()));
-        return catalogName -> catalogIds.getCatalogId(catalogName)
-                .map(CatalogId::toString)
-                .map(catalogVisibility::isVisible)
-                .orElse(false);
+        return withGalaxyPermissions(context, permissions -> {
+            ContentsVisibility catalogVisibility = permissions.getCatalogVisibility(accessControlClient);
+            return catalogName -> catalogIds.getCatalogId(catalogName)
+                    .map(CatalogId::toString)
+                    .map(catalogVisibility::isVisible)
+                    .orElse(false);
+        });
     }
 
     public AccountId getAccountId(SystemSecurityContext context)
