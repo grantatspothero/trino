@@ -13,7 +13,6 @@
  */
 package io.trino.plugin.objectstore;
 
-import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Maps;
@@ -47,7 +46,6 @@ import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static java.nio.file.Files.createTempDirectory;
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Similar to {@link io.trino.plugin.hive.metastore.thrift.TestHiveMetastoreMetadataQueriesAccessOperations},
@@ -401,18 +399,10 @@ public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
     @Test
     public void testSelectColumnsFilterByTableName()
     {
-        metastore.resetCounters();
-        computeActual("SELECT * FROM information_schema.columns WHERE table_name = 'test_table_0'");
-        Multiset<CountingAccessHiveMetastore.Method> invocations = metastore.getMethodInvocations();
-
-        assertThat(invocations.count(GET_TABLE)).as("GET_TABLE invocations")
-                .isEqualTo(2);
-        invocations = HashMultiset.create(invocations);
-        invocations.elementSet().remove(GET_TABLE);
-
-        assertThat(invocations).as("invocations except of GET_TABLE")
-                .isEqualTo(ImmutableMultiset.builder()
+        assertMetastoreInvocations("SELECT * FROM information_schema.columns WHERE table_name = 'test_table_0'",
+                ImmutableMultiset.builder()
                         .add(GET_ALL_DATABASES)
+                        .addCopies(GET_TABLE, 2)
                         .build());
 
         assertMetastoreInvocations("SELECT * FROM system.jdbc.columns WHERE table_name = 'test_table_0'",
