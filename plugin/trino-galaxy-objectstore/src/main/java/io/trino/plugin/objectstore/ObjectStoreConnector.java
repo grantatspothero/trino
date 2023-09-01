@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import io.airlift.bootstrap.LifeCycleManager;
 import io.trino.plugin.base.classloader.ClassLoaderSafeConnectorMetadata;
 import io.trino.plugin.hive.HiveConnector;
@@ -76,6 +77,7 @@ import static java.util.stream.Collectors.toSet;
 public class ObjectStoreConnector
         implements Connector
 {
+    private final Injector injector;
     private final Connector hiveConnector;
     private final Connector icebergConnector;
     private final Connector deltaConnector;
@@ -106,6 +108,7 @@ public class ObjectStoreConnector
 
     @Inject
     public ObjectStoreConnector(
+            Injector injector,
             DelegateConnectors delegates,
             LifeCycleManager lifeCycleManager,
             TypeManager typeManager,
@@ -121,6 +124,7 @@ public class ObjectStoreConnector
             FunctionProvider functionProvider,
             ObjectStoreConfig objectStoreConfig)
     {
+        this.injector = requireNonNull(injector, "injector is null");
         this.hiveConnector = delegates.hiveConnector();
         this.icebergConnector = delegates.icebergConnector();
         this.deltaConnector = delegates.deltaConnector();
@@ -154,9 +158,9 @@ public class ObjectStoreConnector
     }
 
     @VisibleForTesting
-    Connector getIcebergConnector()
+    Injector getInjector()
     {
-        return icebergConnector;
+        return injector;
     }
 
     private static List<PropertyMetadata<?>> schemaProperties()

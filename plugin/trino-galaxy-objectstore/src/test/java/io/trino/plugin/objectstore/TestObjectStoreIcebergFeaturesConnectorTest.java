@@ -125,7 +125,7 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     public void initFileSystem()
     {
         ObjectStoreConnector objectStoreConnector = (ObjectStoreConnector) getDistributedQueryRunner().getCoordinator().getConnector(getSession().getCatalog().orElseThrow());
-        fileSystem = ((IcebergConnector) objectStoreConnector.getIcebergConnector()).getInjector().getInstance(TrinoFileSystemFactory.class).create(SESSION);
+        fileSystem = ((IcebergConnector) objectStoreConnector.getInjector().getInstance(DelegateConnectors.class).icebergConnector()).getInjector().getInstance(TrinoFileSystemFactory.class).create(SESSION);
     }
 
     @Override
