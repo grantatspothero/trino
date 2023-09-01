@@ -133,10 +133,14 @@ public final class GlueToTrinoConverter
 
         StorageDescriptor sd = glueTable.getStorageDescriptor();
 
-        if (isIcebergTable(tableParameters) ||
+        if (sd != null && isIcebergTable(tableParameters) && sd.getColumns() != null) {
+            // Iceberg tables do not need to read the StorageDescriptor field except for Galaxy ObjectStore to return information_schema.columns off metastore information.
+            tableBuilder.setDataColumns(convertColumns(table, sd.getColumns(), false));
+            tableBuilder.getStorageBuilder().setStorageFormat(StorageFormat.fromHiveStorageFormat(HiveStorageFormat.PARQUET)); // ignored
+        }
+        else if (isIcebergTable(tableParameters) ||
                 (sd == null && isDeltaLakeTable(tableParameters)) ||
                 (sd == null && isTrinoMaterializedView(tableType, tableParameters))) {
-            // Iceberg tables do not need to read the StorageDescriptor field, but we still need to return dummy properties for compatibility
             // Delta Lake tables only need to provide a dummy properties if a StorageDescriptor was not explicitly configured.
             // Materialized views do not need to read the StorageDescriptor, but we still need to return dummy properties for compatibility
             tableBuilder.setDataColumns(ImmutableList.of(new Column("dummy", HIVE_INT, Optional.empty(), ImmutableMap.of())));

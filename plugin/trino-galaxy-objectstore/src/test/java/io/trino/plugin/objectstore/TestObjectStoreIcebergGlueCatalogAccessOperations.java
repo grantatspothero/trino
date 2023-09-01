@@ -572,10 +572,7 @@ public class TestObjectStoreIcebergGlueCatalogAccessOperations
                             ImmutableMultiset.<GlueMetastoreMethod>builder()
                                     .add(GET_TABLES)
                                     .build(),
-                            ImmutableMultiset.<FileOperation>builder()
-                                    // TODO In pure Iceberg connector there are no filesystem accesses
-                                    .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), tables * 2)
-                                    .build());
+                            ImmutableMultiset.of());
                 }
 
                 // Pointed lookup
