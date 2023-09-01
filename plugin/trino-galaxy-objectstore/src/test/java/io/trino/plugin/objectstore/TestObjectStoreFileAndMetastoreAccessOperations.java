@@ -769,10 +769,8 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
     }
 
     @Test(dataProvider = "metadataTestDataProvider")
-    public void testInformationSchemaColumns(TableType type, InformationSchemaQueriesAcceleration mode, int tables)
+    public void testInformationSchemaColumns(TableType type, int tables)
     {
-        String catalog = getSession().getCatalog().orElseThrow();
-
         for (int i = 0; i < tables; i++) {
             assertUpdate("CREATE TABLE test_select_i_s_columns" + i + "(id VARCHAR, age INT) WITH (type = '" + type + "')");
             // Produce multiple snapshots and metadata files
@@ -782,6 +780,19 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
             assertUpdate("CREATE TABLE test_other_select_i_s_columns" + i + "(id varchar, age integer)"); // won't match the filter
         }
 
+        for (InformationSchemaQueriesAcceleration mode : InformationSchemaQueriesAcceleration.values()) {
+            try {
+                assertInformationSchemaColumns(type, tables, mode);
+            }
+            catch (Throwable e) {
+                throw new AssertionError("Failure with mode: " + mode, e);
+            }
+        }
+    }
+
+    private void assertInformationSchemaColumns(TableType type, int tables, InformationSchemaQueriesAcceleration mode)
+    {
+        String catalog = getSession().getCatalog().orElseThrow();
         Session session = Session.builder(getSession())
                 .setCatalogSessionProperty(catalog, INFORMATION_SCHEMA_QUERIES_ACCELERATION, mode.toString())
                 .build();
@@ -828,7 +839,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
     }
 
     @Test(dataProvider = "metadataTestDataProvider")
-    public void testSystemMetadataTableComments(TableType type, InformationSchemaQueriesAcceleration mode, int tables)
+    public void testSystemMetadataTableComments(TableType type, int tables)
     {
         for (int i = 0; i < tables; i++) {
             assertUpdate("CREATE TABLE test_select_s_m_t_comments" + i + "(id VARCHAR, age INT) WITH (type = '" + type + "')");
@@ -839,8 +850,19 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
             assertUpdate("CREATE TABLE test_other_select_s_m_t_comments" + i + "(id varchar, age integer)"); // won't match the filter
         }
 
-        String catalog = getSession().getCatalog().orElseThrow();
+        for (InformationSchemaQueriesAcceleration mode : InformationSchemaQueriesAcceleration.values()) {
+            try {
+                assertSystemMetadataTableComments(type, tables, mode);
+            }
+            catch (Throwable e) {
+                throw new AssertionError("Failure with mode: " + mode, e);
+            }
+        }
+    }
 
+    private void assertSystemMetadataTableComments(TableType type, int tables, InformationSchemaQueriesAcceleration mode)
+    {
+        String catalog = getSession().getCatalog().orElseThrow();
         Session session = Session.builder(getSession())
                 .setCatalogSessionProperty(catalog, INFORMATION_SCHEMA_QUERIES_ACCELERATION, mode.toString())
                 .build();
@@ -909,8 +931,6 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
     {
         return DataProviders.cartesianProduct(
                 tableTypeDataProvider(),
-                Stream.of(InformationSchemaQueriesAcceleration.values())
-                        .collect(toDataProvider()),
                 new Object[][] {
                         {3},
                         {MAX_PREFIXES_COUNT},
