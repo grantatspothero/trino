@@ -808,6 +808,107 @@ public class TestCommonSubqueriesExtractor
         assertPlan(symbolAllocator, subqueryB.adaptCommonSubplan(subqueryB.getCommonSubplan(), idAllocator), commonSubplan);
     }
 
+    @Test
+    public void testSharedConjunct()
+    {
+        SymbolAllocator symbolAllocator = new SymbolAllocator();
+
+        // subquery A scans column1 and column2
+        Symbol subqueryAColumn1 = symbolAllocator.newSymbol("subquery_a_column1", BIGINT);
+        Symbol subqueryAColumn2 = symbolAllocator.newSymbol("subquery_a_column2", BIGINT);
+        PlanNode scanA = new TableScanNode(
+                new PlanNodeId("scanA"),
+                testTableHandle,
+                ImmutableList.of(subqueryAColumn1, subqueryAColumn2),
+                ImmutableMap.of(subqueryAColumn1, HANDLE_1, subqueryAColumn2, HANDLE_2),
+                TupleDomain.all(),
+                Optional.empty(),
+                false,
+                Optional.of(false));
+        // subquery A has predicate on both columns
+        FilterNode filterA = new FilterNode(
+                new PlanNodeId("filterA"),
+                scanA,
+                expression("subquery_a_column1 < BIGINT '42' AND subquery_a_column2 > BIGINT '24'"));
+        ProjectNode projectA = new ProjectNode(
+                new PlanNodeId("projectA"),
+                filterA,
+                Assignments.of(
+                        subqueryAColumn2, expression("subquery_a_column2")));
+
+        // subquery B scans column1 and column2
+        Symbol subqueryBColumn1 = symbolAllocator.newSymbol("subquery_b_column1", BIGINT);
+        Symbol subqueryBColumn2 = symbolAllocator.newSymbol("subquery_b_column2", BIGINT);
+        PlanNode scanB = new TableScanNode(
+                new PlanNodeId("scanB"),
+                testTableHandle,
+                ImmutableList.of(subqueryBColumn1, subqueryBColumn2),
+                ImmutableMap.of(subqueryBColumn1, HANDLE_1, subqueryBColumn2, HANDLE_2),
+                TupleDomain.all(),
+                Optional.empty(),
+                false,
+                Optional.of(false));
+        // subquery B has predicate on column1 only
+        FilterNode filterB = new FilterNode(
+                new PlanNodeId("filterA"),
+                scanB,
+                expression("subquery_b_column1 < BIGINT '42'"));
+        ProjectNode projectB = new ProjectNode(
+                new PlanNodeId("projectA"),
+                filterB,
+                Assignments.of(subqueryBColumn2, expression("subquery_b_column2")));
+
+        PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
+        Map<PlanNode, CommonPlanAdaptation> planAdaptations = extractCommonSubqueries(
+                idAllocator,
+                symbolAllocator,
+                new UnionNode(
+                        new PlanNodeId("union"),
+                        ImmutableList.of(projectA, projectB),
+                        ImmutableListMultimap.of(),
+                        ImmutableList.of()));
+
+        // there should be a common subquery found for both subplans
+        assertThat(planAdaptations).hasSize(2);
+        assertThat(planAdaptations).containsKey(projectA);
+        assertThat(planAdaptations).containsKey(projectB);
+
+        CommonPlanAdaptation subqueryA = planAdaptations.get(projectA);
+        CommonPlanAdaptation subqueryB = planAdaptations.get(projectB);
+
+        // common subplan should be identical for both subqueries
+        PlanMatchPattern commonSubplanTableScan = strictTableScan(
+                TEST_TABLE,
+                ImmutableMap.of(
+                        "column1", "column1",
+                        "column2", "column2"));
+        PlanMatchPattern commonSubplan = strictProject(
+                ImmutableMap.of(
+                        "column2", PlanMatchPattern.expression("column2")),
+                filter(
+                        expression("column1 < BIGINT '42'"),
+                        commonSubplanTableScan));
+        assertPlan(symbolAllocator, subqueryA.getCommonSubplan(), commonSubplan);
+        assertPlan(symbolAllocator, subqueryB.getCommonSubplan(), commonSubplan);
+
+        // subquery A should have predicate adaptation
+        assertPlan(symbolAllocator, subqueryA.adaptCommonSubplan(subqueryA.getCommonSubplan(), idAllocator),
+                filter("column2 > BIGINT '24'", commonSubplan));
+
+        PlanNode subqueryBCommonSubplan = subqueryB.getCommonSubplan();
+        assertThat(subqueryB.adaptCommonSubplan(subqueryBCommonSubplan, idAllocator)).isEqualTo(subqueryBCommonSubplan);
+
+        // make sure plan signatures are same
+        assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(subqueryB.getCommonSubplanSignature());
+        assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
+                new SignatureKey(testTableHandle.getCatalogHandle().getId() + ":cache_table_id:(\"cache_column1\" < BIGINT '42')"),
+                Optional.empty(),
+                ImmutableList.of(new CacheColumnId("cache_column2")),
+                // predicate domain for "cache_column1 < BIGINT '42'" cannot be derived since cache_column1 is not projected
+                TupleDomain.all(),
+                TupleDomain.all()));
+    }
+
     private Map<PlanNode, CommonPlanAdaptation> extractTpchCommonSubqueries(@Language("SQL") String query)
     {
         LocalQueryRunner queryRunner = getQueryRunner();

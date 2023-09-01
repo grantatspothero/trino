@@ -17,6 +17,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import io.trino.Session;
 import io.trino.cost.StatsProvider;
@@ -134,6 +135,11 @@ public final class CommonSubqueriesExtractor
                                             .collect(toImmutableList()))));
 
             Set<Expression> commonConjuncts = ImmutableSet.copyOf(extractConjuncts(commonPredicate));
+            Set<Expression> intersectingConjuncts = subplans.stream()
+                    .map(subplan -> (Set<Expression>) ImmutableSet.copyOf(subplan.getConjuncts()))
+                    .reduce(Sets::intersection)
+                    .map(ImmutableSet::copyOf)
+                    .orElse(ImmutableSet.of());
             Map<CacheColumnId, Expression> commonProjections = Streams.concat(
                             // Extract common projections. Common subquery must contain projections from all subqueries.
                             // Pruning adaptation projection is then created for each subquery on top of common subquery.
@@ -142,7 +148,9 @@ public final class CommonSubqueriesExtractor
                             // Common subquery must propagate all symbols used in adaptation predicates.
                             subplans.stream()
                                     .filter(subplan -> isAdaptationPredicateNeeded(subplan, commonConjuncts))
-                                    .flatMap(subplan -> SymbolsExtractor.extractAll(and(subplan.getConjuncts())).stream())
+                                    .flatMap(subplan -> subplan.getConjuncts().stream())
+                                    .filter(conjunct -> !intersectingConjuncts.contains(conjunct))
+                                    .flatMap(conjunct -> SymbolsExtractor.extractAll(conjunct).stream())
                                     .map(symbol -> new SimpleEntry<>(canonicalSymbolToColumnId(symbol), symbol.toSymbolReference())))
                     .distinct()
                     .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
@@ -178,6 +186,7 @@ public final class CommonSubqueriesExtractor
                             symbolAllocator,
                             subplan,
                             commonProjections,
+                            intersectingConjuncts,
                             commonPredicate,
                             commonColumnHandles,
                             commonColumnIds,
@@ -239,6 +248,7 @@ public final class CommonSubqueriesExtractor
             SymbolAllocator symbolAllocator,
             CanonicalSubplan subplan,
             Map<CacheColumnId, Expression> commonProjections,
+            Set<Expression> intersectingConjuncts,
             Expression commonPredicate,
             Map<CacheColumnId, ColumnHandle> commonColumnHandles,
             Map<CacheColumnId, Symbol> commonColumnIds,
@@ -338,7 +348,9 @@ public final class CommonSubqueriesExtractor
 
         Optional<Expression> adaptationPredicate = Optional.empty();
         if (isAdaptationPredicateNeeded(subplan, ImmutableSet.copyOf(extractConjuncts(commonPredicate)))) {
-            adaptationPredicate = Optional.of(subquerySymbolMapper.map(and(subplan.getConjuncts())));
+            adaptationPredicate = Optional.of(subquerySymbolMapper.map(and(subplan.getConjuncts().stream()
+                    .filter(conjunct -> !intersectingConjuncts.contains(conjunct))
+                    .collect(toImmutableList()))));
         }
 
         // prune and order common subquery output in order to match original subquery
