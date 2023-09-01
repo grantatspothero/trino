@@ -17,6 +17,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.airlift.configuration.Config;
 import io.trino.plugin.iceberg.IcebergFileFormat;
 import io.trino.spi.connector.ConnectorSession;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
 import static io.trino.plugin.iceberg.IcebergFileFormat.PARQUET;
@@ -45,6 +46,7 @@ public class ObjectStoreConfig
 
     private TableType tableType = TableType.HIVE;
     private InformationSchemaQueriesAcceleration informationSchemaQueriesAcceleration = InformationSchemaQueriesAcceleration.V3; // stargate may configure different default temporarily
+    private int maxMetadataQueriesProcessingThreads = 32; // This is for IO, so default value not based on number of cores.
     private IcebergFileFormat defaultIcebergFileFormat = PARQUET;
 
     @NotNull
@@ -70,6 +72,19 @@ public class ObjectStoreConfig
     public ObjectStoreConfig setInformationSchemaQueriesAcceleration(InformationSchemaQueriesAcceleration informationSchemaQueriesAcceleration)
     {
         this.informationSchemaQueriesAcceleration = informationSchemaQueriesAcceleration;
+        return this;
+    }
+
+    @Min(1)
+    public int getMaxMetadataQueriesProcessingThreads()
+    {
+        return maxMetadataQueriesProcessingThreads;
+    }
+
+    @Config("object-store.information-schema-queries-threads")
+    public ObjectStoreConfig setMaxMetadataQueriesProcessingThreads(int maxMetadataQueriesProcessingThreads)
+    {
+        this.maxMetadataQueriesProcessingThreads = maxMetadataQueriesProcessingThreads;
         return this;
     }
 

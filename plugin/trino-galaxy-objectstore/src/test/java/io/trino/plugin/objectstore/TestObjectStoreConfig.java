@@ -32,6 +32,7 @@ public class TestObjectStoreConfig
         assertRecordedDefaults(recordDefaults(ObjectStoreConfig.class)
                 .setTableType(TableType.HIVE)
                 .setInformationSchemaQueriesAcceleration(InformationSchemaQueriesAcceleration.V3)
+                .setMaxMetadataQueriesProcessingThreads(32)
                 .setDefaultIcebergFileFormat(IcebergFileFormat.PARQUET));
     }
 
@@ -41,12 +42,14 @@ public class TestObjectStoreConfig
         Map<String, String> properties = ImmutableMap.<String, String>builder()
                 .put("object-store.table-type", "ICEBERG")
                 .put("object-store.information-schema-queries-acceleration", "none")
+                .put("object-store.information-schema-queries-threads", "13")
                 .put("object-store.iceberg-default-file-format", "ORC")
                 .buildOrThrow();
 
         ObjectStoreConfig expected = new ObjectStoreConfig()
                 .setTableType(TableType.ICEBERG)
                 .setInformationSchemaQueriesAcceleration(InformationSchemaQueriesAcceleration.NONE)
+                .setMaxMetadataQueriesProcessingThreads(13)
                 .setDefaultIcebergFileFormat(IcebergFileFormat.ORC);
 
         assertFullMapping(properties, expected);

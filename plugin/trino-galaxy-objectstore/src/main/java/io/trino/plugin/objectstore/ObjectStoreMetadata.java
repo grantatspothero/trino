@@ -136,6 +136,7 @@ import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static io.airlift.concurrent.MoreFutures.getFutureValue;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_UNSUPPORTED_FORMAT;
 import static io.trino.plugin.hive.HiveMetadata.MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE;
 import static io.trino.plugin.hive.HiveMetadata.TABLE_COMMENT;
@@ -755,22 +756,27 @@ public class ObjectStoreMetadata
                     });
                 }
 
-                relationFilter.apply(unprocessedTables.keySet()).forEach(tableName -> {
-                    List<ColumnMetadata> columnMetadata;
-                    try {
-                        columnMetadata = unprocessedTables.get(tableName).get();
-                    }
-                    catch (RuntimeException e) {
-                        if (AbstractIcebergTableOperations.isNotFoundException(e)) {
-                            log.debug(e, "Not found when accessing metadata for table %s during streaming table columns for %s", tableName, schemaName);
-                        }
-                        else {
-                            log.warn(e, "Failed to access metadata of table %s during streaming table columns for %s", tableName, schemaName);
-                        }
-                        return;
-                    }
-                    filteredResult.add(RelationColumnsMetadata.forTable(tableName, columnMetadata));
-                });
+                Context context = Context.current();
+                relationFilter.apply(unprocessedTables.keySet()).stream()
+                        .map(tableName -> {
+                            Supplier<List<ColumnMetadata>> metadataSupplier = unprocessedTables.get(tableName);
+                            return parallelInformationSchemaQueryingExecutor.submit(() -> {
+                                try (Scope ignore = context.makeCurrent()) {
+                                    return Optional.of(RelationColumnsMetadata.forTable(tableName, metadataSupplier.get()));
+                                }
+                                catch (Exception e) {
+                                    if (AbstractIcebergTableOperations.isNotFoundException(e)) {
+                                        log.debug(e, "Not found when accessing metadata for table %s during streaming table columns for %s", tableName, schemaName);
+                                    }
+                                    else {
+                                        log.warn(e, "Failed to access metadata of table %s during streaming table columns for %s", tableName, schemaName);
+                                    }
+                                    return Optional.<RelationColumnsMetadata>empty();
+                                }
+                            });
+                        })
+                        .collect(toImmutableList())
+                        .forEach(future -> getFutureValue(future).ifPresent(filteredResult::add));
 
                 List<RelationColumnsMetadata> unfilteredResultList = unfilteredResult.build();
                 Set<SchemaTableName> availableNames = relationFilter.apply(unfilteredResultList.stream()
@@ -852,22 +858,27 @@ public class ObjectStoreMetadata
                     });
                 }
 
-                relationFilter.apply(unprocessedTables.keySet()).forEach(tableName -> {
-                    Optional<String> comment;
-                    try {
-                        comment = unprocessedTables.get(tableName).get();
-                    }
-                    catch (RuntimeException e) {
-                        if (AbstractIcebergTableOperations.isNotFoundException(e)) {
-                            log.debug(e, "Not found when accessing metadata for table %s during streaming table columns for %s", tableName, schemaName);
-                        }
-                        else {
-                            log.warn(e, "Failed to access metadata of table %s during streaming table columns for %s", tableName, schemaName);
-                        }
-                        return;
-                    }
-                    filteredResult.add(RelationCommentMetadata.forRelation(tableName, comment));
-                });
+                Context context = Context.current();
+                relationFilter.apply(unprocessedTables.keySet()).stream()
+                        .map(tableName -> {
+                            Supplier<Optional<String>> commentSupplier = unprocessedTables.get(tableName);
+                            return parallelInformationSchemaQueryingExecutor.submit(() -> {
+                                try (Scope ignore = context.makeCurrent()) {
+                                    return Optional.of(RelationCommentMetadata.forRelation(tableName, commentSupplier.get()));
+                                }
+                                catch (Exception e) {
+                                    if (AbstractIcebergTableOperations.isNotFoundException(e)) {
+                                        log.debug(e, "Not found when accessing metadata for table %s during streaming table columns for %s", tableName, schemaName);
+                                    }
+                                    else {
+                                        log.warn(e, "Failed to access metadata of table %s during streaming table columns for %s", tableName, schemaName);
+                                    }
+                                    return Optional.<RelationCommentMetadata>empty();
+                                }
+                            });
+                        })
+                        .collect(toImmutableList())
+                        .forEach(future -> getFutureValue(future).ifPresent(filteredResult::add));
 
                 List<RelationCommentMetadata> unfilteredResultList = unfilteredResult.build();
                 Set<SchemaTableName> availableNames = relationFilter.apply(unfilteredResultList.stream()

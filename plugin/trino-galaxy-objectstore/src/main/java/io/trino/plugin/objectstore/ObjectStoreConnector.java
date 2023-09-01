@@ -71,7 +71,7 @@ import static io.trino.spi.transaction.IsolationLevel.READ_UNCOMMITTED;
 import static io.trino.spi.transaction.IsolationLevel.checkConnectorSupports;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.Executors.newCachedThreadPool;
+import static java.util.concurrent.Executors.newFixedThreadPool;
 import static java.util.stream.Collectors.toSet;
 
 public class ObjectStoreConnector
@@ -151,7 +151,7 @@ public class ObjectStoreConnector
                 .filter(procedure -> procedure.getName().equals("migrate"))
                 .collect(onlyElement());
         this.hiveRecursiveDirWalkerEnabled = ((HiveConnector) hiveConnector).isRecursiveDirWalkerEnabled();
-        this.parallelInformationSchemaQueryingExecutor = newCachedThreadPool(daemonThreadsNamed("osc-information-schema"));
+        this.parallelInformationSchemaQueryingExecutor = newFixedThreadPool(objectStoreConfig.getMaxMetadataQueriesProcessingThreads(), daemonThreadsNamed("osc-information-schema-%s"));
         this.tableFunctions = ImmutableSet.copyOf(requireNonNull(tableFunctions, "tableFunctions is null"));
         this.functionProvider = requireNonNull(functionProvider, "functionProvider is null");
         this.defaultIcebergFileFormat = objectStoreConfig.getDefaultIcebergFileFormat();
