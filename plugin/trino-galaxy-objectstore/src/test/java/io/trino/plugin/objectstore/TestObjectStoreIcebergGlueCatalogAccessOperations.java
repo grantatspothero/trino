@@ -77,7 +77,6 @@ import static io.trino.plugin.iceberg.TableType.REFS;
 import static io.trino.plugin.iceberg.TableType.SNAPSHOTS;
 import static io.trino.plugin.iceberg.catalog.glue.GlueMetastoreMethod.CREATE_TABLE;
 import static io.trino.plugin.iceberg.catalog.glue.GlueMetastoreMethod.GET_DATABASE;
-import static io.trino.plugin.iceberg.catalog.glue.GlueMetastoreMethod.GET_DATABASES;
 import static io.trino.plugin.iceberg.catalog.glue.GlueMetastoreMethod.GET_TABLE;
 import static io.trino.plugin.iceberg.catalog.glue.GlueMetastoreMethod.GET_TABLES;
 import static io.trino.plugin.iceberg.catalog.glue.GlueMetastoreMethod.UPDATE_TABLE;
@@ -210,8 +209,7 @@ public class TestObjectStoreIcebergGlueCatalogAccessOperations
                 .build();
         assertGlueMetastoreApiInvocations(session, "USE %s.%s".formatted(catalog, schema),
                 ImmutableMultiset.builder()
-                        // TODO In pure Iceberg connector this is 1x GET_DATABASE
-                        .addCopies(GET_DATABASES, 9)
+                        .add(GET_DATABASE)
                         .build());
     }
 
@@ -591,8 +589,7 @@ public class TestObjectStoreIcebergGlueCatalogAccessOperations
                         session,
                         "DESCRIBE test_select_i_s_columns0",
                         ImmutableMultiset.<GlueMetastoreMethod>builder()
-                                // TODO In pure Iceberg connector this is 1x GET_DATABASE (not GET_DATABASE*S*)
-                                .addCopies(GET_DATABASES, 9)
+                                .add(GET_DATABASE)
                                 .add(GET_TABLE)
                                 .build(),
                         ImmutableMultiset.<FileOperation>builder()
