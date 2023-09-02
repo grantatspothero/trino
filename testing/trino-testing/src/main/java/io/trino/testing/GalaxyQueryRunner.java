@@ -17,22 +17,29 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
+import com.google.inject.BindingAnnotation;
 import com.google.inject.Inject;
+import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.TypeLiteral;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.airlift.jaxrs.JaxrsBinder;
-import io.opentelemetry.api.OpenTelemetry;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
 import io.starburst.stargate.id.AccountId;
 import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.UserId;
 import io.starburst.stargate.identity.DispatchSession;
+import io.trino.metadata.InternalNodeManager;
+import io.trino.plugin.base.security.ForwardingSystemAccessControl;
+import io.trino.server.QuerySessionSupplier;
 import io.trino.server.galaxy.GalaxySecurityModule;
 import io.trino.server.security.InternalPrincipal;
-import io.trino.server.security.galaxy.GalaxyTrinoSystemAccessFactory;
+import io.trino.server.security.galaxy.ForGalaxySystemAccessControl;
 import io.trino.spi.Plugin;
 import io.trino.spi.security.Identity;
+import io.trino.spi.security.SystemAccessControl;
+import io.trino.spi.security.SystemAccessControlFactory;
 import jakarta.annotation.Priority;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.ForbiddenException;
@@ -42,10 +49,12 @@ import jakarta.ws.rs.container.ContainerRequestFilter;
 import jakarta.ws.rs.core.Response;
 
 import java.io.IOException;
+import java.lang.annotation.Retention;
 import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -58,6 +67,7 @@ import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.
 import static io.trino.server.security.galaxy.GalaxyIdentity.createIdentity;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 import static jakarta.ws.rs.core.Response.Status.FORBIDDEN;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 
@@ -175,6 +185,8 @@ public final class GalaxyQueryRunner
                     accountClient.getAdminTrinoAccessToken(),
                     PORTAL)));
 
+            // TODO remove SettableSystemAccessControl and QuerySessionSupplier.GetDelegate and switch to https://github.com/trinodb/trino/pull/18928 once available
+            SettableSystemAccessControl settableSystemAccessControl = new SettableSystemAccessControl();
             if (installSecurityModule) {
                 addExtraProperty("galaxy.account-id", accountId.toString());
                 addExtraProperty("galaxy.deployment-id", accountClient.getSampleDeploymentId().toString());
@@ -182,11 +194,7 @@ public final class GalaxyQueryRunner
                 addExtraProperty("galaxy.catalog-names", catalogIdStrings);
                 addExtraProperty("galaxy.cluster-id", accountClient.getSampleClusterId().toString());
 
-                setSystemAccessControl(new GalaxyTrinoSystemAccessFactory(OpenTelemetry.noop())
-                        .create(ImmutableMap.<String, String>builder()
-                                .put("galaxy.account-url", accountUri.toString())
-                                .put("galaxy.catalog-names", catalogIdStrings)
-                                .buildOrThrow()));
+                setSystemAccessControl(settableSystemAccessControl);
             }
 
             super.setAdditionalModule(new AbstractConfigurationAwareModule()
@@ -196,6 +204,16 @@ public final class GalaxyQueryRunner
                 {
                     if (installSecurityModule) {
                         install(new GalaxySecurityModule());
+
+                        // Leveraging DistributedQueryRunner.Builder.setSystemAccessControl renders the implementation without
+                        // access to system's tracer. Wiring tracer is tests is useful e.g. when using TESTS_TRACING_ENABLED to debug traces locally.
+                        binder.bind(SetGalaxyAccessControl.class).asEagerSingleton();
+                        binder.bind(SettableSystemAccessControl.class).toInstance(settableSystemAccessControl);
+                        binder.bind(Key.get(new TypeLiteral<Map<String, String>>() {}, TestingGalaxyAccessControlConfiguration.class))
+                                .toInstance(ImmutableMap.<String, String>builder()
+                                        .put("galaxy.account-url", accountUri.toString())
+                                        .put("galaxy.catalog-names", catalogIdStrings)
+                                        .buildOrThrow());
                     }
                     binder.bind(TestingAccountClient.class).toInstance(accountClient);
                     JaxrsBinder.jaxrsBinder(binder).bind(TestingGalaxyIdentityFilter.class);
@@ -281,6 +299,45 @@ public final class GalaxyQueryRunner
                 throw new ForbiddenException(Response.status(FORBIDDEN).entity("Extra credential missing: " + name).build());
             }
             return value;
+        }
+    }
+
+    @Retention(RUNTIME)
+    @BindingAnnotation
+    public @interface TestingGalaxyAccessControlConfiguration {}
+
+    private static class SetGalaxyAccessControl
+    {
+        @Inject
+        public SetGalaxyAccessControl(
+                InternalNodeManager nodeManager,
+                SettableSystemAccessControl settableSystemAccessControl,
+                @ForGalaxySystemAccessControl SystemAccessControlFactory galaxyAccessControlFactory,
+                @TestingGalaxyAccessControlConfiguration Map<String, String> configuration)
+        {
+            if (nodeManager.getCurrentNode().isCoordinator()) {
+                settableSystemAccessControl.set(galaxyAccessControlFactory.create(configuration));
+            }
+        }
+    }
+
+    private static class SettableSystemAccessControl
+            extends ForwardingSystemAccessControl
+            implements QuerySessionSupplier.GetDelegate
+    {
+        private final AtomicReference<SystemAccessControl> delegate = new AtomicReference<>();
+
+        @Override
+        public SystemAccessControl delegate()
+        {
+            SystemAccessControl delegate = this.delegate.get();
+            checkState(delegate != null, "delegate not yet set");
+            return delegate;
+        }
+
+        void set(SystemAccessControl delegate)
+        {
+            checkState(this.delegate.compareAndSet(null, delegate), "already set");
         }
     }
 }

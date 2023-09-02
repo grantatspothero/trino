@@ -15,10 +15,12 @@ package io.trino.server;
 
 import com.google.errorprone.annotations.ThreadSafe;
 import com.google.inject.Inject;
+import io.airlift.log.Logger;
 import io.opentelemetry.api.trace.Span;
 import io.trino.Session;
 import io.trino.metadata.Metadata;
 import io.trino.metadata.SessionPropertyManager;
+import io.trino.plugin.base.security.ForwardingSystemAccessControl;
 import io.trino.security.AccessControl;
 import io.trino.security.AccessControlManager;
 import io.trino.server.security.galaxy.GalaxyAccessControl;
@@ -35,6 +37,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.trino.Session.SessionBuilder;
 import static io.trino.SystemSessionProperties.TIME_ZONE_ID;
 import static io.trino.server.HttpRequestSessionContextFactory.addEnabledRoles;
@@ -47,6 +50,8 @@ import static java.util.Objects.requireNonNull;
 public class QuerySessionSupplier
         implements SessionSupplier
 {
+    private static final Logger log = Logger.get(QuerySessionSupplier.class);
+
     private final Metadata metadata;
     private final AccessControl accessControl;
     private final AccessControlManager accessControlManager;
@@ -170,7 +175,30 @@ public class QuerySessionSupplier
         if (accessControls.size() != 1) {
             return false;
         }
-        SystemAccessControl accessControl = accessControls.get(0);
-        return accessControl instanceof GalaxyAccessControl;
+        SystemAccessControl accessControl = getOnlyElement(accessControls);
+        return isGalaxyAccessControl(accessControl);
+    }
+
+    private static boolean isGalaxyAccessControl(SystemAccessControl accessControl)
+    {
+        if (accessControl instanceof GalaxyAccessControl) {
+            return true;
+        }
+
+        // Currently needed by tests, see GalaxyQueryRunner's SettableSystemAccessControl
+        if (accessControl instanceof ForwardingSystemAccessControl) {
+            if (accessControl instanceof GetDelegate getDelegate) {
+                return isGalaxyAccessControl(getDelegate.delegate());
+            }
+            log.warn("isGalaxyAccessControl: non-introspectable ForwardingSystemAccessControl found: %s [%s]", accessControl, accessControl.getClass());
+        }
+
+        return false;
+    }
+
+    // Hack for tests. ForwardingSystemAccessControl is not normally used.
+    public interface GetDelegate
+    {
+        SystemAccessControl delegate();
     }
 }
