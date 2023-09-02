@@ -85,7 +85,8 @@ public final class GalaxyQueryRunner
                 String connectorName,
                 Map<String, String> properties)
         {
-            CatalogInit {
+            CatalogInit
+            {
                 requireNonNull(catalogName, "catalogName is null");
                 requireNonNull(connectorName, "connectorName is null");
                 properties = ImmutableMap.copyOf(requireNonNull(properties, "properties is null"));

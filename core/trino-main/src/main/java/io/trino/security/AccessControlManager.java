@@ -605,10 +605,10 @@ public class AccessControlManager
         }
 
         /*
-        * In the Galaxy fork, don't call #filterTables, because that makes unnecessary calls
-        * to SystemAccessControl.getCatalogVisibility() and SystemAccessControl.getTableVisibility.
-        * Those calls are intended as speedups, but result in additional round-trips in Galaxy
-        */
+         * In the Galaxy fork, don't call #filterTables, because that makes unnecessary calls
+         * to SystemAccessControl.getCatalogVisibility() and SystemAccessControl.getTableVisibility.
+         * Those calls are intended as speedups, but result in additional round-trips in Galaxy
+         */
 //        if (filterTables(securityContext, table.getCatalogName(), ImmutableSet.of(table.getSchemaTableName())).isEmpty()) {
 //            return ImmutableSet.of();
 //        }
