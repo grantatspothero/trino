@@ -17,6 +17,7 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.gax.grpc.InstantiatingGrpcChannelProvider;
 import com.google.cloud.bigquery.BigQueryOptions;
 import com.google.cloud.bigquery.storage.v1.BigQueryReadSettings;
+import com.google.cloud.bigquery.storage.v1.BigQueryWriteSettings;
 import com.google.cloud.http.HttpTransportOptions;
 import com.google.inject.Inject;
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
@@ -76,6 +77,22 @@ public class GalaxyTransportChannelProviderConfigurer
      */
     @Override
     public BigQueryReadSettings.Builder configure(BigQueryReadSettings.Builder builder, ConnectorSession session)
+    {
+        builder.setTransportChannelProvider(InstantiatingGrpcChannelProvider.newBuilder()
+                .setMaxInboundMessageSize(Integer.MAX_VALUE)
+                .setChannelConfigurator(channelBuilder -> {
+                    checkState(channelBuilder instanceof NettyChannelBuilder, "Expected ManagedChannelBuilder to be an instance of NettyChannelBuilder");
+                    NettyChannelBuilder nettyChannelBuilder = (NettyChannelBuilder) channelBuilder;
+                    nettyChannelBuilder.channelFactory(new GalaxyForwardingChannelFactory(regionVerifierProperties, catalogNetworkMonitorProperties));
+                    nettyChannelBuilder.eventLoopGroup(new NioEventLoopGroup(0, new DefaultThreadFactory("grpc-nio-worker-ELG", true)));
+                    return nettyChannelBuilder;
+                })
+                .build());
+        return builder;
+    }
+
+    @Override
+    public BigQueryWriteSettings.Builder configure(BigQueryWriteSettings.Builder builder, ConnectorSession session)
     {
         builder.setTransportChannelProvider(InstantiatingGrpcChannelProvider.newBuilder()
                 .setMaxInboundMessageSize(Integer.MAX_VALUE)
