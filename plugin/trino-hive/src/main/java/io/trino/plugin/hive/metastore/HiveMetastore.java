@@ -25,10 +25,12 @@ import io.trino.plugin.hive.metastore.HivePrivilegeInfo.HivePrivilege;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.SchemaTableName;
+import io.trino.spi.function.LanguageFunction;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.security.RoleGrant;
 import io.trino.spi.type.Type;
 
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -252,4 +254,16 @@ public interface HiveMetastore
     {
         throw new UnsupportedOperationException();
     }
+
+    boolean functionExists(String databaseName, String functionName, String signatureToken);
+
+    Collection<LanguageFunction> getFunctions(String databaseName);
+
+    Collection<LanguageFunction> getFunctions(String databaseName, String functionName);
+
+    void createFunction(String databaseName, String functionName, LanguageFunction function);
+
+    void replaceFunction(String databaseName, String functionName, LanguageFunction function);
+
+    void dropFunction(String databaseName, String functionName, String signatureToken);
 }

@@ -55,12 +55,14 @@ import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.SchemaNotFoundException;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TableNotFoundException;
+import io.trino.spi.function.LanguageFunction;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.security.ConnectorIdentity;
 import io.trino.spi.security.RoleGrant;
 import io.trino.spi.type.Type;
 import org.apache.hadoop.fs.Path;
 
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -772,5 +774,47 @@ public class GalaxyHiveMetastore
     {
         // this is required for insert overwrite to work
         return ImmutableSet.of();
+    }
+
+    @Override
+    public boolean functionExists(String databaseName, String functionName, String signatureToken)
+    {
+        // TODO(https://github.com/starburstdata/galaxy-trino/issues/1306)
+        throw new TrinoException(NOT_SUPPORTED, "functionExists is not supported for Galaxy metastore");
+    }
+
+    @Override
+    public Collection<LanguageFunction> getFunctions(String databaseName)
+    {
+        // TODO(https://github.com/starburstdata/galaxy-trino/issues/1306)
+        throw new TrinoException(NOT_SUPPORTED, "getFunctions is not supported for Galaxy metastore");
+    }
+
+    @Override
+    public Collection<LanguageFunction> getFunctions(String databaseName, String functionName)
+    {
+        // TODO(https://github.com/starburstdata/galaxy-trino/issues/1306)
+        throw new TrinoException(NOT_SUPPORTED, "getFunctions is not supported for Galaxy metastore");
+    }
+
+    @Override
+    public void createFunction(String databaseName, String functionName, LanguageFunction function)
+    {
+        // TODO(https://github.com/starburstdata/galaxy-trino/issues/1306)
+        throw new TrinoException(NOT_SUPPORTED, "createFunction is not supported for Galaxy metastore");
+    }
+
+    @Override
+    public void replaceFunction(String databaseName, String functionName, LanguageFunction function)
+    {
+        // TODO(https://github.com/starburstdata/galaxy-trino/issues/1306)
+        throw new TrinoException(NOT_SUPPORTED, "replaceFunction is not supported for Galaxy metastore");
+    }
+
+    @Override
+    public void dropFunction(String databaseName, String functionName, String signatureToken)
+    {
+        // TODO(https://github.com/starburstdata/galaxy-trino/issues/1306)
+        throw new TrinoException(NOT_SUPPORTED, "dropFunction is not supported for Galaxy metastore");
     }
 }
