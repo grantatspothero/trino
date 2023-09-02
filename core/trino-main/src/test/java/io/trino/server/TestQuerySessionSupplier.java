@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
 import io.airlift.jaxrs.testing.GuavaMultivaluedMap;
+import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.trino.Session;
 import io.trino.eventlistener.EventListenerConfig;
@@ -253,7 +254,7 @@ public class TestQuerySessionSupplier
         return new QuerySessionSupplier(
                 metadata,
                 new AllowAllAccessControl(),
-                new AccessControlManager(transactionManager, new EventListenerManager(new EventListenerConfig()), new AccessControlConfig(), "default"),
+                new AccessControlManager(transactionManager, new EventListenerManager(new EventListenerConfig()), new AccessControlConfig(), OpenTelemetry.noop(), "default"),
                 new SessionPropertyManager(),
                 config);
     }

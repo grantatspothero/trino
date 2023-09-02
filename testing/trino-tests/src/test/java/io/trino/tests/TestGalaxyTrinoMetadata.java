@@ -20,6 +20,7 @@ import com.google.common.io.Closer;
 import com.starburstdata.dataframe.expression.Attribute;
 import com.starburstdata.dataframe.type.LongType;
 import com.starburstdata.dataframe.type.StringType;
+import io.opentelemetry.api.OpenTelemetry;
 import io.trino.Session;
 import io.trino.connector.CatalogServiceProvider;
 import io.trino.connector.TestingTableFunctions;
@@ -95,6 +96,7 @@ public class TestGalaxyTrinoMetadata
                 transactionManager,
                 emptyEventListenerManager(),
                 new AccessControlConfig(),
+                OpenTelemetry.noop(),
                 DefaultSystemAccessControl.NAME);
         accessControlManager.setSystemAccessControls(List.of(AllowAllSystemAccessControl.INSTANCE));
         this.accessControl = accessControlManager;
