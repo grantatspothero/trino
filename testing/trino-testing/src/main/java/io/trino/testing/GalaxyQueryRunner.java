@@ -21,6 +21,7 @@ import com.google.inject.Inject;
 import com.google.inject.Module;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.airlift.jaxrs.JaxrsBinder;
+import io.opentelemetry.api.OpenTelemetry;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
 import io.starburst.stargate.id.AccountId;
 import io.starburst.stargate.id.CatalogId;
@@ -181,7 +182,7 @@ public final class GalaxyQueryRunner
                 addExtraProperty("galaxy.catalog-names", catalogIdStrings);
                 addExtraProperty("galaxy.cluster-id", accountClient.getSampleClusterId().toString());
 
-                setSystemAccessControl(new GalaxyTrinoSystemAccessFactory()
+                setSystemAccessControl(new GalaxyTrinoSystemAccessFactory(OpenTelemetry.noop())
                         .create(ImmutableMap.<String, String>builder()
                                 .put("galaxy.account-url", accountUri.toString())
                                 .put("galaxy.catalog-names", catalogIdStrings)
