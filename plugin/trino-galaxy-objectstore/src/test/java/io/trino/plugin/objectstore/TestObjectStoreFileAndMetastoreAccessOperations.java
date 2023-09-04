@@ -801,6 +801,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
                 .setCatalogSessionProperty(catalog, INFORMATION_SCHEMA_QUERIES_ACCELERATION, mode.toString())
                 .build();
 
+        // Bulk retrieval
         assertInvocations(session, "SELECT * FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA AND table_name LIKE 'test_select_i_s_columns%'",
                 ImmutableMultiset.builder()
                         .addCopies(GET_ALL_VIEWS_FROM_DATABASE, switch (mode) {
@@ -831,6 +832,39 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
                             .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), tables)
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), tables)
+                            .build();
+                });
+
+        // Pointed lookup
+        assertInvocations(session, "SELECT * FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA AND table_name = 'test_select_i_s_columns0'",
+                ImmutableMultiset.builder()
+                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 3))
+                        .build(),
+                switch (type) {
+                    case HIVE -> ImmutableMultiset.of();
+                    case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
+                            .add(new FileOperation(METADATA_JSON, "00004.metadata.json", INPUT_FILE_NEW_STREAM))
+                            .build();
+                    case DELTA -> ImmutableMultiset.<FileOperation>builder()
+                            .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), 2)
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), 2)
+                            .build();
+                });
+
+        // Pointed lookup via DESCRIBE (which does some additional things before delegating to information_schema.columns)
+        assertInvocations(session, "DESCRIBE test_select_i_s_columns0",
+                ImmutableMultiset.builder()
+                        .add(GET_DATABASE)
+                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 3))
+                        .build(),
+                switch (type) {
+                    case HIVE -> ImmutableMultiset.of();
+                    case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
+                            .add(new FileOperation(METADATA_JSON, "00004.metadata.json", INPUT_FILE_NEW_STREAM))
+                            .build();
+                    case DELTA -> ImmutableMultiset.<FileOperation>builder()
+                            .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), 3)
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), 3)
                             .build();
                 });
 
