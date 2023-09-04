@@ -189,7 +189,6 @@ public final class CommonSubqueriesExtractor
             Expression commonPredicate,
             Set<Expression> intersectingConjuncts)
     {
-        Set<Expression> commonConjuncts = ImmutableSet.copyOf(extractConjuncts(commonPredicate));
         return Streams.concat(
                         // Extract common projections. Common subquery must contain projections from all subqueries.
                         // Pruning adaptation projection is then created for each subquery on top of common subquery.
@@ -197,7 +196,7 @@ public final class CommonSubqueriesExtractor
                                 .flatMap(subplan -> subplan.getAssignments().entrySet().stream()),
                         // Common subquery must propagate all symbols used in adaptation predicates.
                         subplans.stream()
-                                .filter(subplan -> isAdaptationPredicateNeeded(subplan, commonConjuncts))
+                                .filter(subplan -> isAdaptationPredicateNeeded(subplan, commonPredicate))
                                 .flatMap(subplan -> subplan.getConjuncts().stream())
                                 .filter(conjunct -> !intersectingConjuncts.contains(conjunct))
                                 .flatMap(conjunct -> SymbolsExtractor.extractAll(conjunct).stream())
@@ -301,7 +300,7 @@ public final class CommonSubqueriesExtractor
                 session);
         PlanNode commonSubplan = commonSubplanFilter.subplan();
         commonSubplan = createSubplanProjection(commonSubplan, commonProjections, subqueryColumnIdMapping, subquerySymbolMapper, idAllocator);
-        Optional<Expression> adaptationPredicate = createAdaptationPredicate(subplan, ImmutableSet.copyOf(extractConjuncts(commonPredicate)), intersectingConjuncts, subquerySymbolMapper);
+        Optional<Expression> adaptationPredicate = createAdaptationPredicate(subplan, commonPredicate, intersectingConjuncts, subquerySymbolMapper);
         Optional<Assignments> adaptationAssignments = createAdaptationAssignments(commonSubplan, ImmutableList.copyOf(subplan.getAssignments().keySet()), subqueryColumnIdMapping, subquerySymbolMapper);
         Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping = createDynamicFilterColumnMapping(subplan);
 
@@ -460,19 +459,21 @@ public final class CommonSubqueriesExtractor
         return Optional.of(assignments);
     }
 
-    private static Optional<Expression> createAdaptationPredicate(CanonicalSubplan subplan, Set<Expression> commonConjuncts, Set<Expression> intersectingConjuncts, SymbolMapper subquerySymbolMapper)
+    private static Optional<Expression> createAdaptationPredicate(CanonicalSubplan subplan, Expression commonPredicate, Set<Expression> intersectingConjuncts, SymbolMapper subquerySymbolMapper)
     {
-        if (!isAdaptationPredicateNeeded(subplan, commonConjuncts)) {
+        if (!isAdaptationPredicateNeeded(subplan, commonPredicate)) {
             return Optional.empty();
         }
 
         return Optional.of(subquerySymbolMapper.map(and(subplan.getConjuncts().stream()
+                // use only conjuncts that are not enforced by common predicate
                 .filter(conjunct -> !intersectingConjuncts.contains(conjunct))
                 .collect(toImmutableList()))));
     }
 
-    private static boolean isAdaptationPredicateNeeded(CanonicalSubplan subplan, Set<Expression> commonConjuncts)
+    private static boolean isAdaptationPredicateNeeded(CanonicalSubplan subplan, Expression commonPredicate)
     {
+        Set<Expression> commonConjuncts = ImmutableSet.copyOf(extractConjuncts(commonPredicate));
         return !subplan.getConjuncts().isEmpty() && !ImmutableSet.copyOf(subplan.getConjuncts()).equals(commonConjuncts);
     }
 }
