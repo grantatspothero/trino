@@ -13,7 +13,6 @@
  */
 package io.trino.sql.planner.iterative.rule;
 
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -77,16 +76,18 @@ public class DistinctAggregationToGroupBy
         implements Rule<AggregationNode>
 {
     private static final Pattern<AggregationNode> PATTERN = aggregation()
-            .matching(Predicates.and(
-                    Predicates.or(
-                            // single distinct can be supported in this rule, but it is already supported by SingleDistinctAggregationToGroupBy, which produces simpler plans (without group-id)
-                            DistinctAggregationToGroupBy::hasMultipleDistincts,
-                            DistinctAggregationToGroupBy::hasMixedDistinctAndNonDistincts),
-                    DistinctAggregationToGroupBy::allDistinctAggregationsHaveSingleArgument,
-                    DistinctAggregationToGroupBy::noFilters,
-                    DistinctAggregationToGroupBy::noMasks,
-                    aggregation -> !aggregation.hasOrderings(),
-                    aggregation -> aggregation.getStep().equals(SINGLE)));
+            .matching(DistinctAggregationToGroupBy::canUsePreAggregate);
+
+    public static boolean canUsePreAggregate(AggregationNode aggregationNode)
+    {
+        // single distinct can be supported in this rule, but it is already supported by SingleDistinctAggregationToGroupBy, which produces simpler plans (without group-id)
+        return (hasMultipleDistincts(aggregationNode) || hasMixedDistinctAndNonDistincts(aggregationNode)) &&
+                allDistinctAggregationsHaveSingleArgument(aggregationNode) &&
+                noFilters(aggregationNode) &&
+                noMasks(aggregationNode) &&
+                !aggregationNode.hasOrderings() &&
+                aggregationNode.getStep().equals(SINGLE);
+    }
 
     public static boolean hasMultipleDistincts(AggregationNode aggregationNode)
     {
