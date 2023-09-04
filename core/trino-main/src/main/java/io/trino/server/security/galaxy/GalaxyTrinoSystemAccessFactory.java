@@ -36,15 +36,18 @@ public class GalaxyTrinoSystemAccessFactory
     public static final String NAME = "galaxy";
 
     private final TrinoSecurityApi trinoSecurityApi;
+    private final GalaxyPermissionsCache galaxyPermissionsCache;
     private final OpenTelemetry openTelemetry;
     private final Tracer tracer;
 
     @Inject
     public GalaxyTrinoSystemAccessFactory(
             TrinoSecurityApi trinoSecurityApi,
+            GalaxyPermissionsCache galaxyPermissionsCache,
             OpenTelemetry openTelemetry)
     {
         this.trinoSecurityApi = requireNonNull(trinoSecurityApi, "trinoSecurityApi is null");
+        this.galaxyPermissionsCache = requireNonNull(galaxyPermissionsCache, "galaxyPermissionsCache is null");
         this.openTelemetry = requireNonNull(openTelemetry, "openTelemetry is null");
         this.tracer = openTelemetry.getTracer("trino.system-access-control." + NAME);
     }
@@ -63,7 +66,7 @@ public class GalaxyTrinoSystemAccessFactory
                 binder -> {
                     binder.bind(OpenTelemetry.class).toInstance(openTelemetry);
                     binder.bind(Tracer.class).toInstance(tracer);
-                    binder.bind(GalaxyPermissionsCache.class).in(SINGLETON);
+                    binder.bind(GalaxyPermissionsCache.class).toInstance(galaxyPermissionsCache);
 
                     // TODO GalaxyAccessControlConfig and CatalogIds are bound in main Guice context too, but currently are given different configuration.
                     //  Only here we're provided with `galaxy.read-only-catalogs` values.
