@@ -98,6 +98,12 @@ public abstract class ForwardingSystemAccessControl
     }
 
     @Override
+    public Collection<Identity> filterViewQuery(SystemSecurityContext context, Collection<Identity> queryOwners)
+    {
+        return delegate().filterViewQuery(context, queryOwners);
+    }
+
+    @Override
     public Collection<Identity> filterViewQueryOwnedBy(SystemSecurityContext context, Collection<Identity> queryOwners)
     {
         return delegate().filterViewQueryOwnedBy(context, queryOwners);
