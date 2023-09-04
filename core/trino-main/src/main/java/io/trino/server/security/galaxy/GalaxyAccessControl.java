@@ -148,12 +148,6 @@ public class GalaxyAccessControl
     }
 
     @Override
-    public Collection<Identity> filterViewQuery(SystemSecurityContext context, Collection<Identity> queryOwners)
-    {
-        return filterIdentitiesByPrivilegesAndRoles(context, queryOwners);
-    }
-
-    @Override
     public Collection<Identity> filterViewQueryOwnedBy(SystemSecurityContext context, Collection<Identity> queryOwners)
     {
         return filterIdentitiesByPrivilegesAndRoles(context, queryOwners);

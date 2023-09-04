@@ -133,14 +133,6 @@ public class TestGalaxyAccessControl
     }
 
     @Test
-    public void testFilterViewQuery()
-    {
-        assertThat(accessControl.filterViewQuery(fearlessContext(), fearlessAndLackeyIdentities)).isEqualTo(fearlessAndLackeyIdentities);
-        assertThat(accessControl.filterViewQuery(lackeyContext(), fearlessAndLackeyIdentities)).containsOnly(helper.roleNameToIdentity(LACKEY_FOLLOWER));
-        assertThat(accessControl.filterViewQuery(publicContext(), fearlessAndLackeyIdentities)).isEmpty();
-    }
-
-    @Test
     public void testFilterViewQueryOwnedBy()
     {
         assertThat(accessControl.filterViewQueryOwnedBy(fearlessContext(), fearlessAndLackeyIdentities)).isEqualTo(fearlessAndLackeyIdentities);
