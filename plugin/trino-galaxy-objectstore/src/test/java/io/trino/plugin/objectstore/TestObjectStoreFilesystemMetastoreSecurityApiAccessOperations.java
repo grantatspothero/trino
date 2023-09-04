@@ -14,10 +14,17 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.collect.HashMultiset;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
+import io.opentelemetry.sdk.trace.SpanProcessor;
+import io.opentelemetry.sdk.trace.data.SpanData;
+import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import io.trino.Session;
 import io.trino.filesystem.TrackingFileSystemFactory;
 import io.trino.filesystem.hdfs.HdfsFileSystemFactory;
@@ -42,15 +49,21 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableMultiset.toImmutableMultiset;
 import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.INPUT_FILE_EXISTS;
 import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.INPUT_FILE_GET_LENGTH;
 import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.INPUT_FILE_NEW_STREAM;
@@ -76,16 +89,16 @@ import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.UPDATE_TABLE_STATISTICS;
 import static io.trino.plugin.hive.util.MultisetAssertions.assertMultisetsEqual;
 import static io.trino.plugin.objectstore.ObjectStoreSessionProperties.INFORMATION_SCHEMA_QUERIES_ACCELERATION;
-import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.CDF_DATA;
-import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.DATA;
-import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.LAST_CHECKPOINT;
-import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.MANIFEST;
-import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.METADATA_JSON;
-import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.SNAPSHOT;
-import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.STATS;
-import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.TRANSACTION_LOG_JSON;
-import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.FileType.TRINO_EXTENDED_STATS_JSON;
-import static io.trino.plugin.objectstore.TestObjectStoreFileAndMetastoreAccessOperations.TableType.ICEBERG;
+import static io.trino.plugin.objectstore.TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations.FileType.CDF_DATA;
+import static io.trino.plugin.objectstore.TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations.FileType.DATA;
+import static io.trino.plugin.objectstore.TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations.FileType.LAST_CHECKPOINT;
+import static io.trino.plugin.objectstore.TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations.FileType.MANIFEST;
+import static io.trino.plugin.objectstore.TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations.FileType.METADATA_JSON;
+import static io.trino.plugin.objectstore.TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations.FileType.SNAPSHOT;
+import static io.trino.plugin.objectstore.TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations.FileType.STATS;
+import static io.trino.plugin.objectstore.TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations.FileType.TRANSACTION_LOG_JSON;
+import static io.trino.plugin.objectstore.TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations.FileType.TRINO_EXTENDED_STATS_JSON;
+import static io.trino.plugin.objectstore.TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations.TableType.ICEBERG;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static io.trino.testing.DataProviders.toDataProvider;
@@ -96,18 +109,21 @@ import static java.util.stream.Collectors.toCollection;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
+ * Test filesystem, metastore and portal's security API accesses when accessing data and metadata with ObjectStore connector.
+ *
  * @see TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
  */
 // TODO Investigate why there are many invocations in some tests, for example
 //  more than 2 GET_TABLE calls for simple SELECT (or 3 in case of Delta tables; 1 should be enough)
 @Test(singleThreaded = true) // metastore and filesystem invocation counters shares mutable state so can't be run from many threads simultaneously
-public class TestObjectStoreFileAndMetastoreAccessOperations
+public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         extends AbstractTestQueryFramework
 {
     private static final int MAX_PREFIXES_COUNT = 10;
     private static final String CATALOG_NAME = "objectstore";
     private static final String SCHEMA_NAME = "test_schema";
 
+    private InMemorySpanExporter spanExporter;
     private CountingAccessHiveMetastore metastore;
     private TrackingFileSystemFactory trackingFileSystemFactory;
 
@@ -116,6 +132,10 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
             throws Exception
     {
         closeAfterClass(TrinoFileSystemCache.INSTANCE::closeAll);
+
+        spanExporter = closeAfterClass(InMemorySpanExporter.create());
+        closeAfterClass(() -> spanExporter = null);
+        SpanProcessor spanProcessor = SimpleSpanProcessor.create(spanExporter);
 
         Path schemaDirectory = createTempDirectory(null);
         GalaxyCockroachContainer galaxyCockroachContainer = closeAfterClass(new GalaxyCockroachContainer());
@@ -151,6 +171,7 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
                         !entry.getKey().equals("HUDI__hive.metastore"));
 
         DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder(CATALOG_NAME, SCHEMA_NAME)
+                .setSpanProcessor(spanProcessor)
                 .setAccountClient(testingAccountFactory.createAccountClient())
                 .addPlugin(new IcebergPlugin())
                 .addPlugin(new TestingObjectStorePlugin(metastore, trackingFileSystemFactory))
@@ -833,7 +854,32 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
                             .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), tables)
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), tables)
                             .build();
-                });
+                },
+                ImmutableList.<TracesAssertion>builder()
+                        .add(TracesAssertion.builder()
+                                .filterByAttribute("airlift.http.client_name", "galaxy-access-control")
+                                .formattingName()
+                                .formattingUriAttribute("http.url", uri -> uri.getPath()
+                                        .replaceAll("(/[cr])-\\d+(/|$)", "$1-xxx$2")
+                                        .replaceAll("/(test_select_i_s_columns|test_other_select_i_s_columns)\\d+/", "/$1__/"))
+                                .setExpected(ImmutableMultiset.<String>builder()
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
+                                        .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility", switch (mode) {
+                                            case NONE, V1, V2 -> 1;
+                                            // TODO Why V3 results in more catalog visibility checks, but only for Delta tables?
+                                            case V3 -> occurrences(type, 1, 1, 2);
+                                        })
+                                        .addCopies("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility", switch (mode) {
+                                            case NONE, V1, V2 -> 1;
+                                            // TODO Why V3 results in more catalog visibility checks, but only for Delta tables?
+                                            case V3 -> occurrences(type, 1, 1, 2);
+                                        })
+                                        .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns__/privileges/r-xxx", tables)
+                                        // TODO AccessControl is consulted even for tables filtered out by the query LIKE predicate (test_other_select_i_s_columns...)
+                                        .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_other_select_i_s_columns__/privileges/r-xxx", tables)
+                                        .build())
+                                .build())
+                        .build());
 
         // Pointed lookup
         assertInvocations(session, "SELECT * FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA AND table_name = 'test_select_i_s_columns0'",
@@ -849,7 +895,21 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
                             .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), 2)
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), 2)
                             .build();
-                });
+                },
+                ImmutableList.<TracesAssertion>builder()
+                        .add(TracesAssertion.builder()
+                                .filterByAttribute("airlift.http.client_name", "galaxy-access-control")
+                                .formattingName()
+                                .formattingUriAttribute("http.url", uri -> uri.getPath()
+                                        .replaceAll("(/[cr])-\\d+(/|$)", "$1-xxx$2"))
+                                .setExpected(ImmutableMultiset.<String>builder()
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility")
+                                        .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns0/privileges/r-xxx")
+                                        .build())
+                                .build())
+                        .build());
 
         // Pointed lookup via DESCRIBE (which does some additional things before delegating to information_schema.columns)
         assertInvocations(session, "DESCRIBE test_select_i_s_columns0",
@@ -866,7 +926,22 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
                             .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), 3)
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), 3)
                             .build();
-                });
+                },
+                ImmutableList.<TracesAssertion>builder()
+                        .add(TracesAssertion.builder()
+                                .filterByAttribute("airlift.http.client_name", "galaxy-access-control")
+                                .formattingName()
+                                .formattingUriAttribute("http.url", uri -> uri.getPath()
+                                        .replaceAll("(/[cr])-\\d+(/|$)", "$1-xxx$2"))
+                                .setExpected(ImmutableMultiset.<String>builder()
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/role")
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility")
+                                        .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns0/privileges/r-xxx")
+                                        .build())
+                                .build())
+                        .build());
 
         InformationSchemaQueriesAcceleration defaultMode = new ObjectStoreConfig().getInformationSchemaQueriesAcceleration();
         if (mode != defaultMode) {
@@ -1017,6 +1092,22 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
         assertMultisetsEqual(getOperations(), expectedFileAccesses);
     }
 
+    private void assertInvocations(
+            Session session,
+            @Language("SQL") String query,
+            Multiset<?> expectedMetastoreInvocations,
+            Multiset<FileOperation> expectedFileAccesses,
+            List<TracesAssertion> expectedTraces)
+    {
+        spanExporter.reset();
+        trackingFileSystemFactory.reset();
+        CountingAccessHiveMetastoreUtil.assertMetastoreInvocations(metastore, getQueryRunner(), session, query, expectedMetastoreInvocations);
+        Multiset<FileOperation> fileOperations = getOperations();
+        List<SpanData> finishedSpans = spanExporter.getFinishedSpanItems();
+        assertMultisetsEqual(fileOperations, expectedFileAccesses);
+        expectedTraces.forEach(assertion -> assertion.verify(finishedSpans));
+    }
+
     private Multiset<FileOperation> getOperations()
     {
         return trackingFileSystemFactory.getOperationCounts()
@@ -1122,5 +1213,106 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
         // Delta, Iceberg
         DATA,
         /**/;
+    }
+
+    private static class TracesAssertion
+    {
+        private final Predicate<SpanData> filter;
+        private final Function<SpanData, String> formatter;
+        private final Multiset<String> expected;
+
+        public TracesAssertion(Predicate<SpanData> filter, Function<SpanData, String> formatter, Multiset<String> expected)
+        {
+            this.filter = requireNonNull(filter, "filter is null");
+            this.formatter = requireNonNull(formatter, "formatter is null");
+            this.expected = requireNonNull(expected, "expected is null");
+        }
+
+        public void verify(List<SpanData> spans)
+        {
+            assertMultisetsEqual(
+                    spans.stream()
+                            .filter(filter)
+                            .map(formatter)
+                            .collect(toImmutableMultiset()),
+                    expected);
+        }
+
+        public static Builder builder()
+        {
+            return new Builder();
+        }
+
+        private static class Builder
+        {
+            private Predicate<SpanData> filter = ignore -> true;
+            private ImmutableList.Builder<Function<SpanData, String>> formatters = ImmutableList.builder();
+            private Multiset<String> expected;
+
+            @CanIgnoreReturnValue
+            public Builder filterByAttribute(String key, Object value)
+            {
+                return filter(spanData -> value.equals(spanData.getAttributes().get(AttributeKey.stringKey(key))));
+            }
+
+            private Builder filter(Predicate<SpanData> additionalFilter)
+            {
+                filter = filter.and(additionalFilter);
+                return this;
+            }
+
+            @CanIgnoreReturnValue
+            public Builder formattingName()
+            {
+                formatters.add(SpanData::getName);
+                return this;
+            }
+
+            @CanIgnoreReturnValue
+            public Builder formattingAttribute(String key)
+            {
+                return formattingAttribute(key, Function.identity());
+            }
+
+            @CanIgnoreReturnValue
+            public Builder formattingUriAttribute(String key, Function<URI, String> valueProcessor)
+            {
+                return formattingAttribute(key, (String uri) -> valueProcessor.apply(URI.create(uri)));
+            }
+
+            @CanIgnoreReturnValue
+            public <T> Builder formattingAttribute(String key, Function<T, String> valueProcessor)
+            {
+                AttributeKey<String> attributeKey = AttributeKey.stringKey(key);
+                formatters.add(spanData -> {
+                    Object value = spanData.getAttributes().get(attributeKey);
+                    if (value == null) {
+                        return "null";
+                    }
+                    @SuppressWarnings({"unchecked", "rawtypes"})
+                    Object processed = ((Function) valueProcessor).apply(value);
+                    return String.valueOf(processed);
+                });
+                return this;
+            }
+
+            @CanIgnoreReturnValue
+            public Builder setExpected(Multiset<String> expected)
+            {
+                this.expected = requireNonNull(expected, "expected is null");
+                return this;
+            }
+
+            public TracesAssertion build()
+            {
+                List<Function<SpanData, String>> formatters = this.formatters.build();
+                return new TracesAssertion(
+                        filter,
+                        spanData -> formatters.stream()
+                                .map(format -> format.apply(spanData))
+                                .collect(Collectors.joining(" ")),
+                        expected);
+            }
+        }
     }
 }
