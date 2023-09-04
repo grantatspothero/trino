@@ -98,7 +98,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @see TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
  */
-// TODO Investigate why there are many invocations in some tests
+// TODO Investigate why there are many invocations in some tests, for example
+//  more than 2 GET_TABLE calls for simple SELECT (or 3 in case of Delta tables; 1 should be enough)
 @Test(singleThreaded = true) // metastore and filesystem invocation counters shares mutable state so can't be run from many threads simultaneously
 public class TestObjectStoreFileAndMetastoreAccessOperations
         extends AbstractTestQueryFramework
