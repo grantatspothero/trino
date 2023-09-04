@@ -21,7 +21,6 @@ import io.trino.metadata.Metadata;
 import io.trino.metadata.SessionPropertyManager;
 import io.trino.security.AccessControl;
 import io.trino.security.AccessControlManager;
-import io.trino.security.ForwardingAccessControl;
 import io.trino.server.security.galaxy.GalaxyAccessControl;
 import io.trino.spi.QueryId;
 import io.trino.spi.security.Identity;
@@ -29,7 +28,6 @@ import io.trino.spi.security.SystemAccessControl;
 import io.trino.spi.type.TimeZoneKey;
 import io.trino.sql.SqlEnvironmentConfig;
 import io.trino.sql.SqlPath;
-import io.trino.tracing.TracingAccessControl;
 
 import java.util.List;
 import java.util.Locale;
@@ -169,29 +167,10 @@ public class QuerySessionSupplier
         List<SystemAccessControl> accessControls = accessControlManager.getSystemAccessControls();
 
         // Only consider the first accessControl instance
-        if (accessControls.isEmpty() || accessControls.size() > 1) {
+        if (accessControls.size() != 1) {
             return false;
         }
         SystemAccessControl accessControl = accessControls.get(0);
-
-        // Return true if it is GalaxyAccessControl
-        if (accessControl instanceof GalaxyAccessControl) {
-            return true;
-        }
-
-        // Return true if any of the forwarding implementors of AccessControl
-        // forward to GalaxyAccessControl
-
-        if (accessControl instanceof ForwardingAccessControl forwarder &&
-                forwarder.getDelegate() instanceof GalaxyAccessControl) {
-            return true;
-        }
-
-        if (accessControl instanceof TracingAccessControl tracer &&
-                tracer.getDelegate() instanceof GalaxyAccessControl) {
-            return true;
-        }
-
-        return false;
+        return accessControl instanceof GalaxyAccessControl;
     }
 }
