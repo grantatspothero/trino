@@ -1058,15 +1058,6 @@ public class TracingMetadata
     }
 
     @Override
-    public Set<String> listEnabledRoles(Session session)
-    {
-        Span span = startSpan("listEnabledRoles");
-        try (var ignored = scopedSpan(span)) {
-            return delegate.listEnabledRoles(session);
-        }
-    }
-
-    @Override
     public Set<String> listEnabledRoles(Session session, String catalog)
     {
         Span span = startSpan("listEnabledRoles", catalog);

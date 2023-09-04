@@ -1368,12 +1368,6 @@ public class TestMultipleDistinctAggregationsToSubqueries
         }
 
         @Override
-        public Set<String> listEnabledRoles(Session session)
-        {
-            return metadata.listEnabledRoles(session);
-        }
-
-        @Override
         public Set<String> listEnabledRoles(Session session, String catalog)
         {
             return metadata.listEnabledRoles(session, catalog);
