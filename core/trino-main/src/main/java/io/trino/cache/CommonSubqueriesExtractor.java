@@ -21,6 +21,7 @@ import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import io.trino.Session;
 import io.trino.cost.StatsProvider;
+import io.trino.metadata.Metadata;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheManager;
 import io.trino.spi.cache.CacheTableId;
@@ -123,50 +124,11 @@ public final class CommonSubqueriesExtractor
                 continue;
             }
 
-            // When two similar subqueries have different predicates, e.g: subquery1: col = 1, subquery2: col = 2
-            // then common subquery must have predicate "col = 1 OR col = 2". Narrowing adaptation predicate is then
-            // created for each subquery on top of common subquery.
-            Expression commonPredicate =
-                    normalizeOrExpression(
-                            extractCommonPredicates(
-                                    plannerContext.getMetadata(),
-                                    or(subplans.stream()
-                                            .map(subplan -> and(
-                                                    subplan.getConjuncts()))
-                                            .collect(toImmutableList()))));
-
-            Set<Expression> commonConjuncts = ImmutableSet.copyOf(extractConjuncts(commonPredicate));
-            Set<Expression> intersectingConjuncts = subplans.stream()
-                    .map(subplan -> (Set<Expression>) ImmutableSet.copyOf(subplan.getConjuncts()))
-                    .reduce(Sets::intersection)
-                    .map(ImmutableSet::copyOf)
-                    .orElse(ImmutableSet.of());
-            Map<CacheColumnId, Expression> commonProjections = Streams.concat(
-                            // Extract common projections. Common subquery must contain projections from all subqueries.
-                            // Pruning adaptation projection is then created for each subquery on top of common subquery.
-                            subplans.stream()
-                                    .flatMap(subplan -> subplan.getAssignments().entrySet().stream()),
-                            // Common subquery must propagate all symbols used in adaptation predicates.
-                            subplans.stream()
-                                    .filter(subplan -> isAdaptationPredicateNeeded(subplan, commonConjuncts))
-                                    .flatMap(subplan -> subplan.getConjuncts().stream())
-                                    .filter(conjunct -> !intersectingConjuncts.contains(conjunct))
-                                    .flatMap(conjunct -> SymbolsExtractor.extractAll(conjunct).stream())
-                                    .map(symbol -> new SimpleEntry<>(canonicalSymbolToColumnId(symbol), symbol.toSymbolReference())))
-                    .distinct()
-                    .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
-
-            // Common subquery must select column handles from all subqueries.
-            Map<CacheColumnId, ColumnHandle> commonColumnHandles = subplans.stream()
-                    .flatMap(subplan -> subplan.getColumnHandles().entrySet().stream())
-                    .distinct()
-                    .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
-
-            // Extract CacheColumnIds used in common subquery
-            Map<CacheColumnId, Symbol> commonColumnIds = new LinkedHashMap<>();
-            subplans.stream()
-                    .flatMap(subplan -> subplan.getOriginalSymbolMapping().entrySet().stream())
-                    .forEach(entry -> commonColumnIds.putIfAbsent(entry.getKey(), entry.getValue()));
+            Expression commonPredicate = extractCommonPredicate(subplans, plannerContext.getMetadata());
+            Set<Expression> intersectingConjuncts = extractIntersectingConjuncts(subplans);
+            Map<CacheColumnId, Expression> commonProjections = extractCommonProjections(subplans, commonPredicate, intersectingConjuncts);
+            Map<CacheColumnId, ColumnHandle> commonColumnHandles = extractCommonColumnHandles(subplans);
+            Map<CacheColumnId, Symbol> commonColumnIds = extractCommonColumnIds(subplans);
 
             PlanSignature planSignature = computePlanSignature(
                     plannerContext,
@@ -197,6 +159,69 @@ public final class CommonSubqueriesExtractor
                             planSignature)));
         }
         return planAdaptations.buildOrThrow();
+    }
+
+    private static Expression extractCommonPredicate(Collection<CanonicalSubplan> subplans, Metadata metadata)
+    {
+        // When two similar subqueries have different predicates, e.g: subquery1: col = 1, subquery2: col = 2
+        // then common subquery must have predicate "col = 1 OR col = 2". Narrowing adaptation predicate is then
+        // created for each subquery on top of common subquery.
+        return normalizeOrExpression(
+                extractCommonPredicates(
+                        metadata,
+                        or(subplans.stream()
+                                .map(subplan -> and(
+                                        subplan.getConjuncts()))
+                                .collect(toImmutableList()))));
+    }
+
+    private static Set<Expression> extractIntersectingConjuncts(Collection<CanonicalSubplan> subplans)
+    {
+        return subplans.stream()
+                .map(subplan -> (Set<Expression>) ImmutableSet.copyOf(subplan.getConjuncts()))
+                .reduce(Sets::intersection)
+                .map(ImmutableSet::copyOf)
+                .orElse(ImmutableSet.of());
+    }
+
+    private static Map<CacheColumnId, Expression> extractCommonProjections(
+            Collection<CanonicalSubplan> subplans,
+            Expression commonPredicate,
+            Set<Expression> intersectingConjuncts)
+    {
+        Set<Expression> commonConjuncts = ImmutableSet.copyOf(extractConjuncts(commonPredicate));
+        return Streams.concat(
+                        // Extract common projections. Common subquery must contain projections from all subqueries.
+                        // Pruning adaptation projection is then created for each subquery on top of common subquery.
+                        subplans.stream()
+                                .flatMap(subplan -> subplan.getAssignments().entrySet().stream()),
+                        // Common subquery must propagate all symbols used in adaptation predicates.
+                        subplans.stream()
+                                .filter(subplan -> isAdaptationPredicateNeeded(subplan, commonConjuncts))
+                                .flatMap(subplan -> subplan.getConjuncts().stream())
+                                .filter(conjunct -> !intersectingConjuncts.contains(conjunct))
+                                .flatMap(conjunct -> SymbolsExtractor.extractAll(conjunct).stream())
+                                .map(symbol -> new SimpleEntry<>(canonicalSymbolToColumnId(symbol), symbol.toSymbolReference())))
+                .distinct()
+                .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    private static Map<CacheColumnId, ColumnHandle> extractCommonColumnHandles(Collection<CanonicalSubplan> subplans)
+    {
+        // Common subquery must select column handles from all subqueries.
+        return subplans.stream()
+                .flatMap(subplan -> subplan.getColumnHandles().entrySet().stream())
+                .distinct()
+                .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    private static Map<CacheColumnId, Symbol> extractCommonColumnIds(Collection<CanonicalSubplan> subplans)
+    {
+        Map<CacheColumnId, Symbol> commonColumnIds = new LinkedHashMap<>();
+        subplans.stream()
+                .flatMap(subplan -> subplan.getOriginalSymbolMapping().entrySet().stream())
+                .forEach(entry -> commonColumnIds.putIfAbsent(entry.getKey(), entry.getValue()));
+        return commonColumnIds;
     }
 
     private static PlanSignature computePlanSignature(
@@ -263,17 +288,61 @@ public final class CommonSubqueriesExtractor
         commonColumnIds.forEach((key, value) -> subqueryColumnIdMapping.putIfAbsent(key, symbolAllocator.newSymbol(value)));
         SymbolMapper subquerySymbolMapper = new SymbolMapper(symbol -> requireNonNull(subqueryColumnIdMapping.get(canonicalSymbolToColumnId(symbol))));
 
-        TableScanNode commonSubplanTableScan = new TableScanNode(
+        SubplanFilter commonSubplanFilter = createSubplanFilter(
+                subplan,
+                commonPredicate,
+                createSubplanTableScan(subplan, commonColumnHandles, idAllocator, subqueryColumnIdMapping),
+                subquerySymbolMapper,
+                plannerContext,
+                idAllocator,
+                symbolAllocator,
+                typeAnalyzer,
+                statsProvider,
+                session);
+        PlanNode commonSubplan = commonSubplanFilter.subplan();
+        commonSubplan = createSubplanProjection(commonSubplan, commonProjections, subqueryColumnIdMapping, subquerySymbolMapper, idAllocator);
+        Optional<Expression> adaptationPredicate = createAdaptationPredicate(subplan, ImmutableSet.copyOf(extractConjuncts(commonPredicate)), intersectingConjuncts, subquerySymbolMapper);
+        Optional<Assignments> adaptationAssignments = createAdaptationAssignments(commonSubplan, ImmutableList.copyOf(subplan.getAssignments().keySet()), subqueryColumnIdMapping, subquerySymbolMapper);
+        Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping = createDynamicFilterColumnMapping(subplan);
+
+        return new CommonPlanAdaptation(
+                commonSubplan,
+                new FilteredTableScan(commonSubplanFilter.tableScan(), commonSubplanFilter.predicate()),
+                planSignature,
+                dynamicFilterColumnMapping,
+                adaptationPredicate,
+                adaptationAssignments);
+    }
+
+    private static Map<CacheColumnId, ColumnHandle> createDynamicFilterColumnMapping(CanonicalSubplan subplan)
+    {
+        // Create mapping between dynamic filtering columns and column ids.
+        // All dynamic filtering columns are part of planSignature columns
+        // because joins are not supported yet.
+        return subplan.getDynamicConjuncts().stream()
+                .flatMap(conjunct -> extractDynamicFilters(conjunct).getDynamicConjuncts().stream())
+                .map(filter -> canonicalSymbolToColumnId(extractSourceSymbol(filter)))
+                .distinct()
+                .collect(toImmutableMap(identity(), columnId -> subplan.getColumnHandles().get(columnId)));
+    }
+
+    private static TableScanNode createSubplanTableScan(
+            CanonicalSubplan subplan,
+            Map<CacheColumnId, ColumnHandle> columnHandles,
+            PlanNodeIdAllocator idAllocator,
+            Map<CacheColumnId, Symbol> subqueryColumnIdMapping)
+    {
+        return new TableScanNode(
                 idAllocator.getNextId(),
                 // use original table handle as it contains information about
                 // split enumeration (e.g. enforced partition or bucket filter) for
                 // a given subquery
                 subplan.getTable(),
                 // Remap column ids into specific subquery symbols
-                commonColumnHandles.keySet().stream()
+                columnHandles.keySet().stream()
                         .map(subqueryColumnIdMapping::get)
                         .collect(toImmutableList()),
-                commonColumnHandles.entrySet().stream()
+                columnHandles.entrySet().stream()
                         .collect(toImmutableMap(entry -> subqueryColumnIdMapping.get(entry.getKey()), Map.Entry::getValue)),
                 // Enforced constraint is not important at this stage of planning
                 TupleDomain.all(),
@@ -281,112 +350,125 @@ public final class CommonSubqueriesExtractor
                 Optional.empty(),
                 false,
                 Optional.of(subplan.isUseConnectorNodePartitioning()));
-
-        PlanNode commonSubplan = commonSubplanTableScan;
-        Optional<Expression> commonSubplanPredicate = Optional.empty();
-        if (!commonPredicate.equals(TRUE_LITERAL) || !subplan.getDynamicConjuncts().isEmpty()) {
-            commonSubplanPredicate = Optional.of(
-                    // Subquery specific dynamic filters need to be added back to common subplan.
-                    // Actual dynamic filter domains are accounted for in PlanSignature on worker nodes.
-                    subquerySymbolMapper.map(combineConjuncts(
-                            plannerContext.getMetadata(),
-                            commonPredicate,
-                            and(subplan.getDynamicConjuncts()))));
-            FilterNode filterNode = new FilterNode(
-                    idAllocator.getNextId(),
-                    commonSubplanTableScan,
-                    commonSubplanPredicate.get());
-
-            // Try to push down predicates to table scan
-            Optional<PlanNode> rewritten = pushFilterIntoTableScan(
-                    filterNode,
-                    commonSubplanTableScan,
-                    false,
-                    session,
-                    idAllocator,
-                    symbolAllocator,
-                    plannerContext,
-                    typeAnalyzer,
-                    statsProvider,
-                    new DomainTranslator(plannerContext))
-                    .getMainAlternative();
-
-            // If ValuesNode was returned as a result of pushing down predicates we fall back
-            // to filterNode to avoid introducing significant changes in plan. Changing node from TableScan to ValuesNode
-            // potentially interfere with partitioning - note that this step is executed after planning.
-            rewritten = rewritten.filter(not(ValuesNode.class::isInstance));
-
-            if (rewritten.isPresent()) {
-                PlanNode node = rewritten.get();
-                if (node instanceof FilterNode rewrittenFilterNode) {
-                    commonSubplanPredicate = Optional.of(rewrittenFilterNode.getPredicate());
-                    checkState(rewrittenFilterNode.getSource() instanceof TableScanNode, "Expected filter source to be TableScanNode");
-                    commonSubplanTableScan = (TableScanNode) rewrittenFilterNode.getSource();
-                }
-                else {
-                    checkState(node instanceof TableScanNode, "Expected rewritten node to be TableScanNode");
-                    commonSubplanPredicate = Optional.empty();
-                    commonSubplanTableScan = (TableScanNode) node;
-                }
-                commonSubplan = node;
-            }
-            else {
-                commonSubplan = filterNode;
-            }
-        }
-
-        if (isAdaptationProjectionNeeded(commonColumnHandles.keySet(), commonProjections.keySet())) {
-            commonSubplan = new ProjectNode(
-                    idAllocator.getNextId(),
-                    commonSubplan,
-                    // Remap CacheColumnIds and symbols into specific subquery symbols
-                    Assignments.copyOf(commonProjections.entrySet().stream()
-                            .collect(toImmutableMap(
-                                    entry -> subqueryColumnIdMapping.get(entry.getKey()),
-                                    entry -> subquerySymbolMapper.map(entry.getValue())))));
-        }
-
-        Optional<Expression> adaptationPredicate = Optional.empty();
-        if (isAdaptationPredicateNeeded(subplan, ImmutableSet.copyOf(extractConjuncts(commonPredicate)))) {
-            adaptationPredicate = Optional.of(subquerySymbolMapper.map(and(subplan.getConjuncts().stream()
-                    .filter(conjunct -> !intersectingConjuncts.contains(conjunct))
-                    .collect(toImmutableList()))));
-        }
-
-        // prune and order common subquery output in order to match original subquery
-        Optional<Assignments> adaptationAssignments = Optional.empty();
-        if (isAdaptationProjectionNeeded(commonProjections.keySet(), subplan.getAssignments().keySet())) {
-            adaptationAssignments = Optional.of(Assignments.copyOf(subplan.getAssignments().entrySet().stream()
-                    .collect(toImmutableMap(
-                            entry -> subqueryColumnIdMapping.get(entry.getKey()),
-                            // expression is already evaluated in common subquery, therefore symbol just needs to be passed through
-                            entry -> subqueryColumnIdMapping.get(entry.getKey()).toSymbolReference()))));
-        }
-
-        // Create mapping between dynamic filtering columns and column ids.
-        // All dynamic filtering columns are part of planSignature columns
-        // because joins are not supported yet.
-        Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping = subplan.getDynamicConjuncts().stream()
-                .flatMap(conjunct -> extractDynamicFilters(conjunct).getDynamicConjuncts().stream())
-                .map(filter -> canonicalSymbolToColumnId(extractSourceSymbol(filter)))
-                .distinct()
-                .collect(toImmutableMap(
-                        identity(),
-                        columnId -> subplan.getColumnHandles().get(columnId)));
-
-        return new CommonPlanAdaptation(
-                commonSubplan,
-                new FilteredTableScan(commonSubplanTableScan, commonSubplanPredicate),
-                planSignature,
-                dynamicFilterColumnMapping,
-                adaptationPredicate,
-                adaptationAssignments);
     }
 
-    private static boolean isAdaptationProjectionNeeded(Set<CacheColumnId> actualColumns, Set<CacheColumnId> expectedColumns)
+    private static SubplanFilter createSubplanFilter(
+            CanonicalSubplan subplan,
+            Expression predicate,
+            TableScanNode tableScan,
+            SymbolMapper subquerySymbolMapper,
+            PlannerContext plannerContext,
+            PlanNodeIdAllocator idAllocator,
+            SymbolAllocator symbolAllocator,
+            TypeAnalyzer typeAnalyzer,
+            StatsProvider statsProvider,
+            Session session)
     {
-        // sensitive to elements order in actual and expected sets
-        return !ImmutableList.copyOf(actualColumns).equals(ImmutableList.copyOf(expectedColumns));
+        if (predicate.equals(TRUE_LITERAL) && subplan.getDynamicConjuncts().isEmpty()) {
+            return new SubplanFilter(tableScan, Optional.empty(), tableScan);
+        }
+
+        Expression predicateWithDynamicFilters =
+                // Subquery specific dynamic filters need to be added back to subplan.
+                // Actual dynamic filter domains are accounted for in PlanSignature on worker nodes.
+                subquerySymbolMapper.map(combineConjuncts(
+                        plannerContext.getMetadata(),
+                        predicate,
+                        and(subplan.getDynamicConjuncts())));
+        FilterNode filterNode = new FilterNode(
+                idAllocator.getNextId(),
+                tableScan,
+                predicateWithDynamicFilters);
+
+        // Try to push down predicates to table scan
+        Optional<PlanNode> rewritten = pushFilterIntoTableScan(
+                filterNode,
+                tableScan,
+                false,
+                session,
+                idAllocator,
+                symbolAllocator,
+                plannerContext,
+                typeAnalyzer,
+                statsProvider,
+                new DomainTranslator(plannerContext))
+                .getMainAlternative();
+
+        // If ValuesNode was returned as a result of pushing down predicates we fall back
+        // to filterNode to avoid introducing significant changes in plan. Changing node from TableScan to ValuesNode
+        // potentially interfere with partitioning - note that this step is executed after planning.
+        rewritten = rewritten.filter(not(ValuesNode.class::isInstance));
+
+        if (rewritten.isPresent()) {
+            PlanNode node = rewritten.get();
+            if (node instanceof FilterNode rewrittenFilterNode) {
+                checkState(rewrittenFilterNode.getSource() instanceof TableScanNode, "Expected filter source to be TableScanNode");
+                return new SubplanFilter(node, Optional.of(rewrittenFilterNode.getPredicate()), (TableScanNode) rewrittenFilterNode.getSource());
+            }
+            checkState(node instanceof TableScanNode, "Expected rewritten node to be TableScanNode");
+            return new SubplanFilter(node, Optional.empty(), (TableScanNode) node);
+        }
+
+        return new SubplanFilter(filterNode, Optional.of(predicateWithDynamicFilters), tableScan);
+    }
+
+    private record SubplanFilter(PlanNode subplan, Optional<Expression> predicate, TableScanNode tableScan) {}
+
+    private static PlanNode createSubplanProjection(
+            PlanNode subplan,
+            Map<CacheColumnId, Expression> projections,
+            Map<CacheColumnId, Symbol> subqueryColumnIdMapping,
+            SymbolMapper subquerySymbolMapper,
+            PlanNodeIdAllocator idAllocator)
+    {
+        return createSubplanAssignments(subplan, projections, subqueryColumnIdMapping, subquerySymbolMapper)
+                .map(assignments -> (PlanNode) new ProjectNode(idAllocator.getNextId(), subplan, assignments))
+                .orElse(subplan);
+    }
+
+    private static Optional<Assignments> createAdaptationAssignments(
+            PlanNode subplan,
+            List<CacheColumnId> identities,
+            Map<CacheColumnId, Symbol> subqueryColumnIdMapping,
+            SymbolMapper subquerySymbolMapper)
+    {
+        // prune and order common subquery output in order to match original subquery
+        return createSubplanAssignments(
+                subplan,
+                identities.stream().collect(toImmutableMap(identity(), id -> columnIdToSymbol(id).toSymbolReference())),
+                subqueryColumnIdMapping,
+                subquerySymbolMapper);
+    }
+
+    private static Optional<Assignments> createSubplanAssignments(
+            PlanNode subplan,
+            Map<CacheColumnId, Expression> projections,
+            Map<CacheColumnId, Symbol> subqueryColumnIdMapping,
+            SymbolMapper subquerySymbolMapper)
+    {
+        // Remap CacheColumnIds and symbols into specific subquery symbols
+        Assignments assignments = Assignments.copyOf(projections.entrySet().stream()
+                .collect(toImmutableMap(
+                        entry -> subqueryColumnIdMapping.get(entry.getKey()),
+                        entry -> subquerySymbolMapper.map(entry.getValue()))));
+
+        // projection is sensitive to output symbols order
+        if (subplan.getOutputSymbols().equals(assignments.getOutputs())) {
+            return Optional.empty();
+        }
+
+        return Optional.of(assignments);
+    }
+
+    private static Optional<Expression> createAdaptationPredicate(CanonicalSubplan subplan, Set<Expression> commonConjuncts, Set<Expression> intersectingConjuncts, SymbolMapper subquerySymbolMapper)
+    {
+        if (!isAdaptationPredicateNeeded(subplan, commonConjuncts)) {
+            return Optional.empty();
+        }
+
+        return Optional.of(subquerySymbolMapper.map(and(subplan.getConjuncts().stream()
+                .filter(conjunct -> !intersectingConjuncts.contains(conjunct))
+                .collect(toImmutableList()))));
     }
 
     private static boolean isAdaptationPredicateNeeded(CanonicalSubplan subplan, Set<Expression> commonConjuncts)
