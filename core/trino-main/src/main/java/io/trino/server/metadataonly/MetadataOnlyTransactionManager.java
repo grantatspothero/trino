@@ -419,7 +419,7 @@ public class MetadataOnlyTransactionManager
             CatalogIds catalogIds = new CatalogIds(galaxyAccessControlConfig);
 
             galaxyMetadataAccessControl.addController(transactionId, new GalaxySystemAccessController(securityClient, catalogIds, permissionsCache));
-            securityMetadata.add(transactionId, new GalaxySecurityMetadata(securityClient, catalogIds, permissionsCache));
+            securityMetadata.add(transactionId, new GalaxySecurityMetadata(securityClient, catalogIds));
         }
 
         public void checkOpenTransaction()

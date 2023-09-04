@@ -108,13 +108,6 @@ public class MetadataSystemSecurityMetadata
     }
 
     @Override
-    public Set<String> listEnabledRoles(Session session)
-    {
-        TransactionId transactionId = MetadataAccessControllerSupplier.extractTransactionId(session.getIdentity()).orElseThrow(() -> new IllegalStateException("Transaction ID is not present"));
-        return get(transactionId).listEnabledRoles(session);
-    }
-
-    @Override
     public void grantSchemaPrivileges(Session session, CatalogSchemaName schemaName, Set<Privilege> privileges, TrinoPrincipal grantee, boolean grantOption)
     {
         throw notSupportedException(schemaName.getCatalogName());

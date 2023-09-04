@@ -104,7 +104,7 @@ public class GalaxyTestHelper
         GalaxyPermissionsCache permissionsCache = new GalaxyPermissionsCache();
         accessController = new GalaxySystemAccessController(client, catalogIds, permissionsCache);
         accessControl = new GalaxyAccessControl(ignore -> accessController);
-        metadataApi = new GalaxySecurityMetadata(client, catalogIds, permissionsCache);
+        metadataApi = new GalaxySecurityMetadata(client, catalogIds);
 
         // Make the roles
         metadataApi.createRole(adminSession(), FEARLESS_LEADER, Optional.empty());
