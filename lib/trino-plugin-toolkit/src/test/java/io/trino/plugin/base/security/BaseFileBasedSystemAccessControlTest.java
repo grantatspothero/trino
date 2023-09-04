@@ -132,8 +132,7 @@ public abstract class BaseFileBasedSystemAccessControlTest
     public void testEverythingImplemented()
             throws NoSuchMethodException
     {
-        assertAllMethodsOverridden(SystemAccessControl.class, FileBasedSystemAccessControl.class, ImmutableSet.of(
-                FileBasedSystemAccessControl.class.getMethod("checkCanKillQueryOwnedBy", SystemSecurityContext.class, Identity.class)));
+        assertAllMethodsOverridden(SystemAccessControl.class, FileBasedSystemAccessControl.class);
     }
 
     @Test
