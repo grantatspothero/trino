@@ -95,6 +95,9 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toCollection;
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * @see TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
+ */
 // TODO Investigate why there are many invocations in some tests
 @Test(singleThreaded = true) // metastore and filesystem invocation counters shares mutable state so can't be run from many threads simultaneously
 public class TestObjectStoreFileAndMetastoreAccessOperations

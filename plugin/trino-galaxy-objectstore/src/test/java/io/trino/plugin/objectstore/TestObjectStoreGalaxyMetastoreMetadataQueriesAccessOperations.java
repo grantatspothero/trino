@@ -50,7 +50,11 @@ import static java.nio.file.Files.createTempDirectory;
 
 /**
  * Similar to {@link io.trino.plugin.hive.metastore.thrift.TestHiveMetastoreMetadataQueriesAccessOperations},
- * but it doesn't extend the class because the access count differs
+ * but it doesn't extend the class because the access count differs. TODO this class currently does not set up any test schemas/tables.
+ * <p>
+ * Similar to {@link TestObjectStoreFileAndMetastoreAccessOperations}.
+ *
+ * @see TestObjectStoreFileAndMetastoreAccessOperations
  */
 @Test(singleThreaded = true) // metastore invocation counters shares mutable state so can't be run from many threads simultaneously
 public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
