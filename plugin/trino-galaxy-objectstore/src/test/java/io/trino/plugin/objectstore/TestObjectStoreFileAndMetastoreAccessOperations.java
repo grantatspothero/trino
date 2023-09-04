@@ -938,7 +938,8 @@ public class TestObjectStoreFileAndMetastoreAccessOperations
                 new Object[][] {
                         {3},
                         {MAX_PREFIXES_COUNT},
-                        {MAX_PREFIXES_COUNT + 3}});
+                        {MAX_PREFIXES_COUNT + 3},
+                });
     }
 
     @Test
