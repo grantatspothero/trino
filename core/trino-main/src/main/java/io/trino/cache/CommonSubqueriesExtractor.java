@@ -75,6 +75,7 @@ import static io.trino.sql.planner.iterative.rule.ExtractCommonPredicatesExpress
 import static io.trino.sql.planner.iterative.rule.NormalizeOrExpressionRewriter.normalizeOrExpression;
 import static io.trino.sql.planner.iterative.rule.PushPredicateIntoTableScan.pushFilterIntoTableScan;
 import static io.trino.sql.tree.BooleanLiteral.TRUE_LITERAL;
+import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static java.util.function.Predicate.not;
 
@@ -260,8 +261,7 @@ public final class CommonSubqueriesExtractor
         Map<CacheColumnId, Symbol> subqueryColumnIdMapping = new HashMap<>(subplan.getOriginalSymbolMapping());
         // Create symbol mapping for column ids that were not used in original plan
         commonColumnIds.forEach((key, value) -> subqueryColumnIdMapping.putIfAbsent(key, symbolAllocator.newSymbol(value)));
-        SymbolMapper subquerySymbolMapper = new SymbolMapper(subqueryColumnIdMapping.entrySet().stream()
-                .collect(toImmutableMap(entry -> columnIdToSymbol(entry.getKey()), Map.Entry::getValue))::get);
+        SymbolMapper subquerySymbolMapper = new SymbolMapper(symbol -> requireNonNull(subqueryColumnIdMapping.get(canonicalSymbolToColumnId(symbol))));
 
         TableScanNode commonSubplanTableScan = new TableScanNode(
                 idAllocator.getNextId(),
