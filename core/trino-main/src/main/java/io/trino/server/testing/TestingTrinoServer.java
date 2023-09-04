@@ -38,6 +38,7 @@ import io.airlift.node.testing.TestingNodeModule;
 import io.airlift.openmetrics.JmxOpenMetricsModule;
 import io.airlift.tracetoken.TraceTokenModule;
 import io.airlift.tracing.TracingModule;
+import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.trino.cache.CacheManagerModule;
 import io.trino.cache.CacheManagerRegistry;
 import io.trino.connector.CatalogManagerModule;
@@ -225,6 +226,7 @@ public class TestingTrinoServer
             Optional<URI> discoveryUri,
             Module additionalModule,
             Optional<Path> baseDataDir,
+            Optional<SpanProcessor> spanProcessor,
             List<SystemAccessControl> systemAccessControls,
             List<EventListener> eventListeners)
     {
@@ -280,7 +282,9 @@ public class TestingTrinoServer
                 .add(new JmxOpenMetricsModule())
                 .add(new EventModule())
                 .add(new TraceTokenModule())
-                .add(new TracingModule("trino", VERSION))
+                .add(spanProcessor.isPresent()
+                        ? new TestingTracingModule("trino", spanProcessor.get())
+                        : new TracingModule("trino", VERSION))
                 .add(new ServerSecurityModule())
                 .add(new StarburstDataframeModule())
                 .add(new CatalogManagerModule())
@@ -725,6 +729,7 @@ public class TestingTrinoServer
         private Optional<URI> discoveryUri = Optional.empty();
         private Module additionalModule = EMPTY_MODULE;
         private Optional<Path> baseDataDir = Optional.empty();
+        private Optional<SpanProcessor> spanProcessor = Optional.empty();
         private List<SystemAccessControl> systemAccessControls = ImmutableList.of();
         private List<EventListener> eventListeners = ImmutableList.of();
 
@@ -764,6 +769,12 @@ public class TestingTrinoServer
             return this;
         }
 
+        public Builder setSpanProcessor(Optional<SpanProcessor> spanProcessor)
+        {
+            this.spanProcessor = requireNonNull(spanProcessor, "spanProcessor is null");
+            return this;
+        }
+
         public Builder setSystemAccessControls(List<SystemAccessControl> systemAccessControls)
         {
             this.systemAccessControls = ImmutableList.copyOf(requireNonNull(systemAccessControls, "systemAccessControls is null"));
@@ -785,6 +796,7 @@ public class TestingTrinoServer
                     discoveryUri,
                     additionalModule,
                     baseDataDir,
+                    spanProcessor,
                     systemAccessControls,
                     eventListeners);
         }

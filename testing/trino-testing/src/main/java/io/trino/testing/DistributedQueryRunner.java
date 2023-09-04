@@ -24,6 +24,7 @@ import io.airlift.log.Logger;
 import io.airlift.log.Logging;
 import io.airlift.testing.Assertions;
 import io.airlift.units.Duration;
+import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.trino.FeaturesConfig;
 import io.trino.Session;
 import io.trino.Session.SessionBuilder;
@@ -131,6 +132,7 @@ public class DistributedQueryRunner
             String environment,
             Module additionalModule,
             Optional<Path> baseDataDir,
+            Optional<SpanProcessor> spanProcessor,
             List<SystemAccessControl> systemAccessControls,
             List<EventListener> eventListeners,
             List<AutoCloseable> extraCloseables)
@@ -147,7 +149,7 @@ public class DistributedQueryRunner
             closer.register(() -> extraCloseables.forEach(DistributedQueryRunner::closeUnchecked));
             log.info("Created TestingDiscoveryServer in %s", nanosSince(start).convertToMostSuccinctTimeUnit());
 
-            registerNewWorker = () -> createServer(false, extraProperties, environment, additionalModule, baseDataDir, ImmutableList.of(), ImmutableList.of());
+            registerNewWorker = () -> createServer(false, extraProperties, environment, additionalModule, baseDataDir, spanProcessor, ImmutableList.of(), ImmutableList.of());
 
             int coordinatorCount = backupCoordinatorProperties.isEmpty() ? 1 : 2;
             checkArgument(nodeCount >= coordinatorCount, "nodeCount includes coordinator(s) count, so must be at least %s, got: %s", coordinatorCount, nodeCount);
@@ -166,7 +168,7 @@ public class DistributedQueryRunner
                 extraCoordinatorProperties.put("web-ui.user", "admin");
             }
 
-            coordinator = createServer(true, extraCoordinatorProperties, environment, additionalModule, baseDataDir, systemAccessControls, eventListeners);
+            coordinator = createServer(true, extraCoordinatorProperties, environment, additionalModule, baseDataDir, spanProcessor, systemAccessControls, eventListeners);
             if (backupCoordinatorProperties.isPresent()) {
                 Map<String, String> extraBackupCoordinatorProperties = new HashMap<>();
                 extraBackupCoordinatorProperties.putAll(extraProperties);
@@ -177,6 +179,7 @@ public class DistributedQueryRunner
                         environment,
                         additionalModule,
                         baseDataDir,
+                        spanProcessor,
                         systemAccessControls,
                         eventListeners));
             }
@@ -206,6 +209,7 @@ public class DistributedQueryRunner
             String environment,
             Module additionalModule,
             Optional<Path> baseDataDir,
+            Optional<SpanProcessor> spanProcessor,
             List<SystemAccessControl> systemAccessControls,
             List<EventListener> eventListeners)
     {
@@ -216,6 +220,7 @@ public class DistributedQueryRunner
                 environment,
                 additionalModule,
                 baseDataDir,
+                spanProcessor,
                 systemAccessControls,
                 eventListeners));
         servers.add(server);
@@ -240,6 +245,7 @@ public class DistributedQueryRunner
             String environment,
             Module additionalModule,
             Optional<Path> baseDataDir,
+            Optional<SpanProcessor> spanProcessor,
             List<SystemAccessControl> systemAccessControls,
             List<EventListener> eventListeners)
     {
@@ -273,6 +279,7 @@ public class DistributedQueryRunner
                 .setDiscoveryUri(discoveryUri)
                 .setAdditionalModule(additionalModule)
                 .setBaseDataDir(baseDataDir)
+                .setSpanProcessor(spanProcessor)
                 .setSystemAccessControls(systemAccessControls)
                 .setEventListeners(eventListeners)
                 .build();
@@ -645,6 +652,7 @@ public class DistributedQueryRunner
         private String environment = ENVIRONMENT;
         private Module additionalModule = EMPTY_MODULE;
         private Optional<Path> baseDataDir = Optional.empty();
+        private Optional<SpanProcessor> spanProcessor = Optional.empty();
         private List<SystemAccessControl> systemAccessControls = ImmutableList.of();
         private List<EventListener> eventListeners = ImmutableList.of();
         private List<AutoCloseable> extraCloseables = ImmutableList.of();
@@ -758,6 +766,13 @@ public class DistributedQueryRunner
             return setSystemAccessControls(ImmutableList.of(requireNonNull(systemAccessControl, "systemAccessControl is null")));
         }
 
+        @CanIgnoreReturnValue
+        public SELF setSpanProcessor(SpanProcessor spanProcessor)
+        {
+            this.spanProcessor = Optional.of(spanProcessor);
+            return self();
+        }
+
         @SuppressWarnings("unused")
         @CanIgnoreReturnValue
         public SELF setSystemAccessControls(List<SystemAccessControl> systemAccessControls)
@@ -831,6 +846,7 @@ public class DistributedQueryRunner
                     environment,
                     additionalModule,
                     baseDataDir,
+                     spanProcessor,
                     systemAccessControls,
                     eventListeners,
                     extraCloseables);
