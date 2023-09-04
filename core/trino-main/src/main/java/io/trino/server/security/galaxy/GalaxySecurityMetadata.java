@@ -231,16 +231,6 @@ public class GalaxySecurityMetadata
         addEntityPrivilege(session, toColumnEntity(tableName, columnName), privileges, ALLOW, grantee, grantOption);
     }
 
-    public void denyColumnPrivileges(Session session, QualifiedObjectName tableName, String columnName, Set<Privilege> privileges, TrinoPrincipal grantee)
-    {
-        addEntityPrivilege(session, toColumnEntity(tableName, columnName), privileges, DENY, grantee, false);
-    }
-
-    public void revokeColumnPrivileges(Session session, QualifiedObjectName tableName, String columnName, Set<Privilege> privileges, TrinoPrincipal grantee, boolean grantOption)
-    {
-        revokeEntityPrivileges(session, toColumnEntity(tableName, columnName), privileges, grantee, grantOption);
-    }
-
     private void addEntityPrivilege(Session session, EntityId entityId, Set<Privilege> privileges, GrantKind allow, TrinoPrincipal grantee, boolean grantOption)
     {
         if (grantee.getType() != ROLE) {

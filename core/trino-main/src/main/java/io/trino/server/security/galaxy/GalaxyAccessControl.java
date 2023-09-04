@@ -739,14 +739,6 @@ public class GalaxyAccessControl
         return hasEntityPrivilege(context, Optional.of(accountId), privilege, false);
     }
 
-    private void checkHasAccountPrivilege(SystemSecurityContext context, Privilege privilege, Consumer<String> denier)
-    {
-        if (!hasAccountPrivilege(context, privilege)) {
-            AccountId accountId = controllerSupplier.apply(context).getAccountId(context);
-            denier.accept(roleLacksPrivilege(context, privilege, "account", accountId.toString()));
-        }
-    }
-
     private void checkCatalogWritableAndSchemaOwner(SystemSecurityContext context, CatalogSchemaName schema, Consumer<String> denier)
     {
         checkCatalogIsWritable(controllerSupplier.apply(context), schema.getCatalogName(), denier);

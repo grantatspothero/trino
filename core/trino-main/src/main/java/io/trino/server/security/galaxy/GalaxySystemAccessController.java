@@ -25,7 +25,6 @@ import io.starburst.stargate.id.FunctionId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.RoleName;
 import io.starburst.stargate.id.TableId;
-import io.trino.Session;
 import io.trino.server.galaxy.GalaxyPermissionsCache;
 import io.trino.server.galaxy.GalaxyPermissionsCache.GalaxyQueryPermissions;
 import io.trino.spi.connector.SchemaTableName;
@@ -78,12 +77,6 @@ public class GalaxySystemAccessController
     public Map<RoleName, RoleId> listEnabledRoles(SystemSecurityContext context)
     {
         return withGalaxyPermissions(context, permissions -> permissions.listEnabledRoles(accessControlClient));
-    }
-
-    public Map<RoleName, RoleId> listEnabledRoles(Session session)
-    {
-        return galaxyPermissionsCache.withGalaxyPermissions(toDispatchSession(session), Optional.of(session.getQueryId()), permissions ->
-                permissions.listEnabledRoles(accessControlClient));
     }
 
     public Predicate<String> getCatalogVisibility(SystemSecurityContext context)
