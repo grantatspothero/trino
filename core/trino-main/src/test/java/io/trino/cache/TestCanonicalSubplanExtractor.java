@@ -124,45 +124,45 @@ public class TestCanonicalSubplanExtractor
         CanonicalSubplan nonAggregatedSubplan = subplans.get(0);
         assertThat(nonAggregatedSubplan.getGroupByColumns()).isEmpty();
         assertThat(nonAggregatedSubplan.getAssignments()).containsExactly(
-                new SimpleEntry<>(new CacheColumnId("nationkey:bigint"), new SymbolReference("nationkey:bigint")),
-                new SimpleEntry<>(new CacheColumnId("name:varchar(25)"), new SymbolReference("name:varchar(25)")),
-                new SimpleEntry<>(new CacheColumnId("(\"nationkey:bigint\" > BIGINT '10')"), expression("(\"nationkey:bigint\" > BIGINT '10')")),
-                new SimpleEntry<>(new CacheColumnId("(\"regionkey:bigint\" * BIGINT '2')"), expression("(\"regionkey:bigint\" * BIGINT '2')")));
+                new SimpleEntry<>(new CacheColumnId("[nationkey:bigint]"), new SymbolReference("[nationkey:bigint]")),
+                new SimpleEntry<>(new CacheColumnId("[name:varchar(25)]"), new SymbolReference("[name:varchar(25)]")),
+                new SimpleEntry<>(new CacheColumnId("((\"[nationkey:bigint]\" > BIGINT '10'))"), expression("(\"[nationkey:bigint]\" > BIGINT '10')")),
+                new SimpleEntry<>(new CacheColumnId("((\"[regionkey:bigint]\" * BIGINT '2'))"), expression("(\"[regionkey:bigint]\" * BIGINT '2')")));
 
         Expression hashExpression = getHashExpression(
-                new ExpressionWithType("\"name:varchar(25)\"", createVarcharType(25)),
-                new ExpressionWithType(new SymbolReference("(\"regionkey:bigint\" * BIGINT '2')"), BIGINT));
+                new ExpressionWithType("\"[name:varchar(25)]\"", createVarcharType(25)),
+                new ExpressionWithType(new SymbolReference("((\"[regionkey:bigint]\" * BIGINT '2'))"), BIGINT));
         Expression sum = getSumFunction();
         Expression filteredSum = getSumFunctionBuilder()
-                .setFilter(expression("(\"nationkey:bigint\" > BIGINT '10')"))
+                .setFilter(expression("(\"[nationkey:bigint]\" > BIGINT '10')"))
                 .build();
         CanonicalSubplan aggregatedSubplan = subplans.get(1);
         assertThat(aggregatedSubplan.getOriginalPlanNode()).isInstanceOf(AggregationNode.class);
         assertThat(getGroupByExpressions(aggregatedSubplan)).contains(ImmutableList.of(
-                expression("\"name:varchar(25)\""),
-                expression("(\"regionkey:bigint\" * BIGINT '2')")));
+                expression("\"[name:varchar(25)]\""),
+                expression("(\"[regionkey:bigint]\" * BIGINT '2')")));
         assertThat(getHashExpression(aggregatedSubplan)).contains(hashExpression);
         assertThat(aggregatedSubplan.getOriginalSymbolMapping()).containsOnlyKeys(
-                new CacheColumnId("nationkey:bigint"),
-                new CacheColumnId("name:varchar(25)"),
-                new CacheColumnId("regionkey:bigint"),
-                new CacheColumnId(formatExpression(hashExpression)),
-                new CacheColumnId("(\"nationkey:bigint\" > BIGINT '10')"),
-                new CacheColumnId("(\"regionkey:bigint\" * BIGINT '2')"),
-                new CacheColumnId(formatExpression(filteredSum)),
-                new CacheColumnId(formatExpression(sum)));
+                new CacheColumnId("[nationkey:bigint]"),
+                new CacheColumnId("[name:varchar(25)]"),
+                new CacheColumnId("[regionkey:bigint]"),
+                new CacheColumnId("(" + formatExpression(hashExpression) + ")"),
+                new CacheColumnId("((\"[nationkey:bigint]\" > BIGINT '10'))"),
+                new CacheColumnId("((\"[regionkey:bigint]\" * BIGINT '2'))"),
+                new CacheColumnId("(" + formatExpression(filteredSum) + ")"),
+                new CacheColumnId("(" + formatExpression(sum) + ")"));
         assertThat(aggregatedSubplan.getAssignments()).containsExactly(
-                new SimpleEntry<>(new CacheColumnId("name:varchar(25)"), expression("\"name:varchar(25)\"")),
-                new SimpleEntry<>(new CacheColumnId("(\"regionkey:bigint\" * BIGINT '2')"), expression("(\"regionkey:bigint\" * BIGINT '2')")),
-                new SimpleEntry<>(new CacheColumnId(formatExpression(hashExpression)), hashExpression),
-                new SimpleEntry<>(new CacheColumnId(formatExpression(filteredSum)), filteredSum),
-                new SimpleEntry<>(new CacheColumnId(formatExpression(sum)), sum));
-        assertThat(aggregatedSubplan.getConjuncts()).containsExactly(expression("(\"name:varchar(25)\" = '0123456789012345689012345')"));
+                new SimpleEntry<>(new CacheColumnId("[name:varchar(25)]"), expression("\"[name:varchar(25)]\"")),
+                new SimpleEntry<>(new CacheColumnId("((\"[regionkey:bigint]\" * BIGINT '2'))"), expression("(\"[regionkey:bigint]\" * BIGINT '2')")),
+                new SimpleEntry<>(new CacheColumnId("(" + formatExpression(hashExpression) + ")"), hashExpression),
+                new SimpleEntry<>(new CacheColumnId("(" + formatExpression(filteredSum) + ")"), filteredSum),
+                new SimpleEntry<>(new CacheColumnId("(" + formatExpression(sum) + ")"), sum));
+        assertThat(aggregatedSubplan.getConjuncts()).containsExactly(expression("(\"[name:varchar(25)]\" = '0123456789012345689012345')"));
         assertThat(aggregatedSubplan.getDynamicConjuncts()).isEmpty();
         assertThat(aggregatedSubplan.getColumnHandles()).containsExactly(
-                new SimpleEntry<>(new CacheColumnId("nationkey:bigint"), new TpchColumnHandle("nationkey", BIGINT)),
-                new SimpleEntry<>(new CacheColumnId("name:varchar(25)"), new TpchColumnHandle("name", createVarcharType(25))),
-                new SimpleEntry<>(new CacheColumnId("regionkey:bigint"), new TpchColumnHandle("regionkey", BIGINT)));
+                new SimpleEntry<>(new CacheColumnId("[nationkey:bigint]"), new TpchColumnHandle("nationkey", BIGINT)),
+                new SimpleEntry<>(new CacheColumnId("[name:varchar(25)]"), new TpchColumnHandle("name", createVarcharType(25))),
+                new SimpleEntry<>(new CacheColumnId("[regionkey:bigint]"), new TpchColumnHandle("regionkey", BIGINT)));
         assertThat(aggregatedSubplan.getTableId()).isEqualTo(new CacheTableId(tpchCatalogId + ":tiny:nation:0.01"));
     }
 
@@ -178,21 +178,21 @@ public class TestCanonicalSubplanExtractor
         CanonicalSubplan nonAggregatedSubplan = subplans.get(0);
         assertThat(nonAggregatedSubplan.getGroupByColumns()).isEmpty();
         assertThat(nonAggregatedSubplan.getAssignments()).containsExactly(
-                new SimpleEntry<>(new CacheColumnId("nationkey:bigint"), new SymbolReference("nationkey:bigint")),
-                new SimpleEntry<>(new CacheColumnId("regionkey:bigint"), new SymbolReference("regionkey:bigint")));
+                new SimpleEntry<>(new CacheColumnId("[nationkey:bigint]"), new SymbolReference("[nationkey:bigint]")),
+                new SimpleEntry<>(new CacheColumnId("[regionkey:bigint]"), new SymbolReference("[regionkey:bigint]")));
 
         Expression sum = getSumFunction();
         CanonicalSubplan aggregatedSubplan = subplans.get(1);
         assertThat(aggregatedSubplan.getOriginalPlanNode()).isInstanceOf(AggregationNode.class);
-        assertThat(getGroupByExpressions(aggregatedSubplan)).contains(ImmutableList.of(expression("\"regionkey:bigint\"")));
+        assertThat(getGroupByExpressions(aggregatedSubplan)).contains(ImmutableList.of(expression("\"[regionkey:bigint]\"")));
         assertThat(aggregatedSubplan.getGroupByHash()).isEmpty();
         assertThat(aggregatedSubplan.getOriginalSymbolMapping()).containsOnlyKeys(
-                new CacheColumnId("nationkey:bigint"),
-                new CacheColumnId("regionkey:bigint"),
-                new CacheColumnId(formatExpression(sum)));
+                new CacheColumnId("[nationkey:bigint]"),
+                new CacheColumnId("[regionkey:bigint]"),
+                new CacheColumnId("(" + formatExpression(sum) + ")"));
         assertThat(aggregatedSubplan.getAssignments()).containsExactly(
-                new SimpleEntry<>(new CacheColumnId("regionkey:bigint"), new SymbolReference("regionkey:bigint")),
-                new SimpleEntry<>(new CacheColumnId(formatExpression(sum)), sum));
+                new SimpleEntry<>(new CacheColumnId("[regionkey:bigint]"), new SymbolReference("[regionkey:bigint]")),
+                new SimpleEntry<>(new CacheColumnId("(" + formatExpression(sum) + ")"), sum));
         assertThat(aggregatedSubplan.getConjuncts()).isEmpty();
         assertThat(aggregatedSubplan.getDynamicConjuncts()).isEmpty();
     }
@@ -214,10 +214,10 @@ public class TestCanonicalSubplanExtractor
         assertThat(aggregatedSubplan.getGroupByColumns()).contains(ImmutableSet.of());
         assertThat(aggregatedSubplan.getGroupByHash()).isEmpty();
         assertThat(aggregatedSubplan.getOriginalSymbolMapping()).containsOnlyKeys(
-                new CacheColumnId("nationkey:bigint"),
-                new CacheColumnId(formatExpression(sum)));
+                new CacheColumnId("[nationkey:bigint]"),
+                new CacheColumnId("(" + formatExpression(sum) + ")"));
         assertThat(aggregatedSubplan.getAssignments()).containsExactly(
-                new SimpleEntry<>(new CacheColumnId(formatExpression(sum)), sum));
+                new SimpleEntry<>(new CacheColumnId("(" + formatExpression(sum) + ")"), sum));
         assertThat(aggregatedSubplan.getConjuncts()).isEmpty();
         assertThat(aggregatedSubplan.getDynamicConjuncts()).isEmpty();
     }
@@ -239,8 +239,8 @@ public class TestCanonicalSubplanExtractor
         CanonicalSubplan aggregatedSubplan = subplans.get(1);
         assertThat(aggregatedSubplan.getOriginalPlanNode()).isInstanceOf(AggregationNode.class);
         assertThat(getGroupByExpressions(aggregatedSubplan)).contains(ImmutableList.of(
-                expression("\"name:varchar(25)\""),
-                expression("\"regionkey:bigint\"")));
+                expression("\"[name:varchar(25)]\""),
+                expression("\"[regionkey:bigint]\"")));
     }
 
     @Test
@@ -285,18 +285,18 @@ public class TestCanonicalSubplanExtractor
         CanonicalSubplan subplan = getOnlyElement(subplans);
         assertThat(subplan.getOriginalPlanNode()).isEqualTo(projectNode);
         assertThat(subplan.getOriginalSymbolMapping()).containsExactly(
-                new SimpleEntry<>(new CacheColumnId("cache_column1"), new Symbol("symbol1")),
-                new SimpleEntry<>(new CacheColumnId("cache_column2"), new Symbol("symbol2")),
-                new SimpleEntry<>(new CacheColumnId("(\"cache_column1\" + 1)"), new Symbol("projection1")));
+                new SimpleEntry<>(new CacheColumnId("[cache_column1]"), new Symbol("symbol1")),
+                new SimpleEntry<>(new CacheColumnId("[cache_column2]"), new Symbol("symbol2")),
+                new SimpleEntry<>(new CacheColumnId("((\"[cache_column1]\" + 1))"), new Symbol("projection1")));
         assertThat(subplan.getAssignments()).containsExactly(
-                new SimpleEntry<>(new CacheColumnId("(\"cache_column1\" + 1)"), expression("cache_column1 + 1")),
-                new SimpleEntry<>(new CacheColumnId("cache_column2"), new SymbolReference("cache_column2")));
+                new SimpleEntry<>(new CacheColumnId("((\"[cache_column1]\" + 1))"), expression("\"[cache_column1]\" + 1")),
+                new SimpleEntry<>(new CacheColumnId("[cache_column2]"), new SymbolReference("[cache_column2]")));
 
         assertThat(subplan.getConjuncts()).isEmpty();
         assertThat(subplan.getDynamicConjuncts()).isEmpty();
         assertThat(subplan.getColumnHandles()).containsExactly(
-                new SimpleEntry<>(new CacheColumnId("cache_column1"), new TestingColumnHandle("column1")),
-                new SimpleEntry<>(new CacheColumnId("cache_column2"), new TestingColumnHandle("column2")));
+                new SimpleEntry<>(new CacheColumnId("[cache_column1]"), new TestingColumnHandle("column1")),
+                new SimpleEntry<>(new CacheColumnId("[cache_column2]"), new TestingColumnHandle("column2")));
         assertThat(subplan.getTableId()).isEqualTo(CATALOG_CACHE_TABLE_ID);
         assertThat(subplan.getTable()).isEqualTo(TEST_TABLE_HANDLE);
         assertThat(subplan.getTableScanId()).isEqualTo(SCAN_NODE_ID);
@@ -315,25 +315,25 @@ public class TestCanonicalSubplanExtractor
         CanonicalSubplan subplan = getOnlyElement(subplans);
         assertThat(subplan.getOriginalPlanNode()).isEqualTo(projectNode);
         assertThat(subplan.getOriginalSymbolMapping()).containsExactly(
-                new SimpleEntry<>(new CacheColumnId("cache_column1"), new Symbol("symbol1")),
-                new SimpleEntry<>(new CacheColumnId("cache_column2"), new Symbol("symbol2")),
-                new SimpleEntry<>(new CacheColumnId("(\"cache_column1\" + 1)"), new Symbol("projection1")));
+                new SimpleEntry<>(new CacheColumnId("[cache_column1]"), new Symbol("symbol1")),
+                new SimpleEntry<>(new CacheColumnId("[cache_column2]"), new Symbol("symbol2")),
+                new SimpleEntry<>(new CacheColumnId("((\"[cache_column1]\" + 1))"), new Symbol("projection1")));
         assertThat(subplan.getAssignments()).containsExactly(
-                new SimpleEntry<>(new CacheColumnId("(\"cache_column1\" + 1)"), expression("cache_column1 + 1")),
-                new SimpleEntry<>(new CacheColumnId("cache_column2"), new SymbolReference("cache_column2")));
+                new SimpleEntry<>(new CacheColumnId("((\"[cache_column1]\" + 1))"), expression("\"[cache_column1]\" + 1")),
+                new SimpleEntry<>(new CacheColumnId("[cache_column2]"), new SymbolReference("[cache_column2]")));
 
         assertThat(subplan.getConjuncts()).hasSize(1);
         Expression predicate = getOnlyElement(subplan.getConjuncts());
-        assertThat(predicate).isEqualTo(expression("cache_column1 + cache_column2 > 0"));
+        assertThat(predicate).isEqualTo(expression("\"[cache_column1]\" + \"[cache_column2]\" > 0"));
 
         assertThat(subplan.getDynamicConjuncts()).hasSize(1);
         Expression dynamicFilterExpression = getOnlyElement(subplan.getDynamicConjuncts());
         assertThat(DynamicFilters.getDescriptor(dynamicFilterExpression)).contains(
-                new DynamicFilters.Descriptor(new DynamicFilterId("dynamic_filter_id"), expression("cache_column1")));
+                new DynamicFilters.Descriptor(new DynamicFilterId("dynamic_filter_id"), expression("\"[cache_column1]\"")));
 
         assertThat(subplan.getColumnHandles()).containsExactly(
-                new SimpleEntry<>(new CacheColumnId("cache_column1"), new TestingColumnHandle("column1")),
-                new SimpleEntry<>(new CacheColumnId("cache_column2"), new TestingColumnHandle("column2")));
+                new SimpleEntry<>(new CacheColumnId("[cache_column1]"), new TestingColumnHandle("column1")),
+                new SimpleEntry<>(new CacheColumnId("[cache_column2]"), new TestingColumnHandle("column2")));
         assertThat(subplan.getTableId()).isEqualTo(CATALOG_CACHE_TABLE_ID);
         assertThat(subplan.getTable()).isEqualTo(TEST_TABLE_HANDLE);
         assertThat(subplan.getTableScanId()).isEqualTo(SCAN_NODE_ID);
@@ -352,24 +352,24 @@ public class TestCanonicalSubplanExtractor
         CanonicalSubplan subplan = getOnlyElement(subplans);
         assertThat(subplan.getOriginalPlanNode()).isEqualTo(filterNode);
         assertThat(subplan.getOriginalSymbolMapping()).containsExactly(
-                new SimpleEntry<>(new CacheColumnId("cache_column1"), new Symbol("symbol1")),
-                new SimpleEntry<>(new CacheColumnId("cache_column2"), new Symbol("symbol2")));
+                new SimpleEntry<>(new CacheColumnId("[cache_column1]"), new Symbol("symbol1")),
+                new SimpleEntry<>(new CacheColumnId("[cache_column2]"), new Symbol("symbol2")));
         assertThat(subplan.getAssignments()).containsExactly(
-                new SimpleEntry<>(new CacheColumnId("cache_column1"), new SymbolReference("cache_column1")),
-                new SimpleEntry<>(new CacheColumnId("cache_column2"), new SymbolReference("cache_column2")));
+                new SimpleEntry<>(new CacheColumnId("[cache_column1]"), new SymbolReference("[cache_column1]")),
+                new SimpleEntry<>(new CacheColumnId("[cache_column2]"), new SymbolReference("[cache_column2]")));
 
         assertThat(subplan.getConjuncts()).hasSize(1);
         Expression predicate = getOnlyElement(subplan.getConjuncts());
-        assertThat(predicate).isEqualTo(expression("cache_column1 + cache_column2 > 0"));
+        assertThat(predicate).isEqualTo(expression("\"[cache_column1]\" + \"[cache_column2]\" > 0"));
 
         assertThat(subplan.getDynamicConjuncts()).hasSize(1);
         Expression dynamicFilterExpression = getOnlyElement(subplan.getDynamicConjuncts());
         assertThat(DynamicFilters.getDescriptor(dynamicFilterExpression)).contains(
-                new DynamicFilters.Descriptor(new DynamicFilterId("dynamic_filter_id"), expression("cache_column1")));
+                new DynamicFilters.Descriptor(new DynamicFilterId("dynamic_filter_id"), expression("\"[cache_column1]\"")));
 
         assertThat(subplan.getColumnHandles()).containsExactly(
-                new SimpleEntry<>(new CacheColumnId("cache_column1"), new TestingColumnHandle("column1")),
-                new SimpleEntry<>(new CacheColumnId("cache_column2"), new TestingColumnHandle("column2")));
+                new SimpleEntry<>(new CacheColumnId("[cache_column1]"), new TestingColumnHandle("column1")),
+                new SimpleEntry<>(new CacheColumnId("[cache_column2]"), new TestingColumnHandle("column2")));
         assertThat(subplan.getTableId()).isEqualTo(CATALOG_CACHE_TABLE_ID);
         assertThat(subplan.getTable()).isEqualTo(TEST_TABLE_HANDLE);
         assertThat(subplan.getTableScanId()).isEqualTo(SCAN_NODE_ID);
@@ -402,16 +402,16 @@ public class TestCanonicalSubplanExtractor
         CanonicalSubplan subplan = getOnlyElement(subplans);
         assertThat(subplan.getOriginalPlanNode()).isEqualTo(tableScanNode);
         assertThat(subplan.getOriginalSymbolMapping()).containsExactly(
-                new SimpleEntry<>(new CacheColumnId("cache_column1"), new Symbol("symbol1")),
-                new SimpleEntry<>(new CacheColumnId("cache_column2"), new Symbol("symbol2")));
+                new SimpleEntry<>(new CacheColumnId("[cache_column1]"), new Symbol("symbol1")),
+                new SimpleEntry<>(new CacheColumnId("[cache_column2]"), new Symbol("symbol2")));
         assertThat(subplan.getAssignments()).containsExactly(
-                new SimpleEntry<>(new CacheColumnId("cache_column1"), new SymbolReference("cache_column1")),
-                new SimpleEntry<>(new CacheColumnId("cache_column2"), new SymbolReference("cache_column2")));
+                new SimpleEntry<>(new CacheColumnId("[cache_column1]"), new SymbolReference("[cache_column1]")),
+                new SimpleEntry<>(new CacheColumnId("[cache_column2]"), new SymbolReference("[cache_column2]")));
         assertThat(subplan.getConjuncts()).isEmpty();
         assertThat(subplan.getDynamicConjuncts()).isEmpty();
         assertThat(subplan.getColumnHandles()).containsExactly(
-                new SimpleEntry<>(new CacheColumnId("cache_column1"), new TestingColumnHandle("column1")),
-                new SimpleEntry<>(new CacheColumnId("cache_column2"), new TestingColumnHandle("column2")));
+                new SimpleEntry<>(new CacheColumnId("[cache_column1]"), new TestingColumnHandle("column1")),
+                new SimpleEntry<>(new CacheColumnId("[cache_column2]"), new TestingColumnHandle("column2")));
         assertThat(subplan.getTableId()).isEqualTo(CATALOG_CACHE_TABLE_ID);
         assertThat(subplan.getTable()).isEqualTo(TEST_TABLE_HANDLE);
         assertThat(subplan.getTableScanId()).isEqualTo(SCAN_NODE_ID);
@@ -544,7 +544,7 @@ public class TestCanonicalSubplanExtractor
 
     private FunctionCallBuilder getSumFunctionBuilder()
     {
-        return getFunctionCallBuilder("sum", new ExpressionWithType("\"nationkey:bigint\"", BIGINT));
+        return getFunctionCallBuilder("sum", new ExpressionWithType("\"[nationkey:bigint]\"", BIGINT));
     }
 
     private FunctionCallBuilder getFunctionCallBuilder(String name, ExpressionWithType... arguments)

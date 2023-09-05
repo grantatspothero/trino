@@ -153,7 +153,7 @@ public class TestHiveCacheSubqueriesTest
                 .execute(session, transactionSession -> {
                     Metadata metadata = runner.getMetadata();
                     TableHandle tableHandle = metadata.getTableHandle(transactionSession, table).get();
-                    return metadata.getCacheColumnId(transactionSession, tableHandle, metadata.getColumnHandles(transactionSession, tableHandle).get(columnName)).get();
+                    return new CacheColumnId("[" + metadata.getCacheColumnId(transactionSession, tableHandle, metadata.getColumnHandles(transactionSession, tableHandle).get(columnName)).get() + "]");
                 });
     }
 

@@ -82,7 +82,9 @@ public final class CanonicalSubplanExtractor
             return new CacheColumnId(symbolReference.getName());
         }
 
-        return new CacheColumnId(formatExpression(expression));
+        // Make CacheColumnIds for complex expressions always wrapped in '()' so they are distinguishable from
+        // CacheColumnIds derived from connectors.
+        return new CacheColumnId("(" + formatExpression(expression) + ")");
     }
 
     public static Symbol columnIdToSymbol(CacheColumnId columnId)
@@ -406,10 +408,10 @@ public final class CanonicalSubplanExtractor
             Map<CacheColumnId, ColumnHandle> columnHandles = new LinkedHashMap<>();
             for (Symbol outputSymbol : node.getOutputSymbols()) {
                 ColumnHandle columnHandle = node.getAssignments().get(outputSymbol);
-                Optional<CacheColumnId> columnId = metadata.getCacheColumnId(
-                        session,
-                        node.getTable(),
-                        columnHandle);
+                Optional<CacheColumnId> columnId = metadata.getCacheColumnId(session, node.getTable(), columnHandle)
+                        // Make connector ids always wrapped in '[]' so they are distinguishable from
+                        // CacheColumnIds derived from complex expressions.
+                        .map(id -> new CacheColumnId("[" + id + "]"));
                 if (columnId.isEmpty()) {
                     return Optional.empty();
                 }

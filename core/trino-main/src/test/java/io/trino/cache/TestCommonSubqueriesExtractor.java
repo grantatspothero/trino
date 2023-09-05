@@ -328,7 +328,7 @@ public class TestCommonSubqueriesExtractor
                         new DynamicFilterId("subquery_b_dynamic_id"),
                         expression("subquery_b_column1")));
         assertThat(subqueryB.getDynamicFilterColumnMapping()).containsExactly(
-                new SimpleEntry<>(new CacheColumnId("cache_column1"), HANDLE_1));
+                new SimpleEntry<>(new CacheColumnId("[cache_column1]"), HANDLE_1));
 
         // symbols used in common subplans for both subqueries should be unique
         assertThat(SymbolsExtractor.extractUnique(subqueryA.getCommonSubplan()))
@@ -345,9 +345,9 @@ public class TestCommonSubqueriesExtractor
         // make sure plan signatures are same
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(subqueryB.getCommonSubplanSignature());
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
-                new SignatureKey(testTableHandle.getCatalogHandle().getId() + ":cache_table_id:(((\"cache_column1\" % 4) = BIGINT '0') OR ((\"cache_column2\" % 2) = BIGINT '0'))"),
+                new SignatureKey(testTableHandle.getCatalogHandle().getId() + ":cache_table_id:(((\"[cache_column1]\" % 4) = BIGINT '0') OR ((\"[cache_column2]\" % 2) = BIGINT '0'))"),
                 Optional.empty(),
-                ImmutableList.of(new CacheColumnId("(\"cache_column1\" * 10)"), new CacheColumnId("cache_column1")),
+                ImmutableList.of(new CacheColumnId("((\"[cache_column1]\" * 10))"), new CacheColumnId("[cache_column1]")),
                 TupleDomain.all(),
                 TupleDomain.all()));
     }
@@ -645,12 +645,12 @@ public class TestCommonSubqueriesExtractor
         // make sure plan signatures are same and contain domain
         SortedRangeSet expectedValues = (SortedRangeSet) ValueSet.ofRanges(lessThan(BIGINT, 0L), greaterThan(BIGINT, 42L));
         TupleDomain<CacheColumnId> expectedTupleDomain = TupleDomain.withColumnDomains(ImmutableMap.of(
-                new CacheColumnId("cache_column1"), Domain.create(expectedValues, false)));
+                new CacheColumnId("[cache_column1]"), Domain.create(expectedValues, false)));
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(subqueryB.getCommonSubplanSignature());
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
                 new SignatureKey(testTableHandle.getCatalogHandle().getId() + ":cache_table_id"),
                 Optional.empty(),
-                ImmutableList.of(new CacheColumnId("cache_column1")),
+                ImmutableList.of(new CacheColumnId("[cache_column1]")),
                 expectedTupleDomain,
                 TupleDomain.all()));
 
@@ -659,7 +659,7 @@ public class TestCommonSubqueriesExtractor
                 .getPredicate()
                 .getDomains()
                 .orElseThrow()
-                .get(new CacheColumnId("cache_column1"))
+                .get(new CacheColumnId("[cache_column1]"))
                 .getValues();
         assertBlockEquals(BIGINT, actualValues.getSortedRanges(), expectedValues.getSortedRanges());
         assertThat(actualValues.getSortedRanges()).isInstanceOf(LongArrayBlock.class);
@@ -738,7 +738,7 @@ public class TestCommonSubqueriesExtractor
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
                 new SignatureKey(testTableHandle.getCatalogHandle().getId() + ":cache_table_id"),
                 Optional.empty(),
-                ImmutableList.of(new CacheColumnId("cache_column1"), new CacheColumnId("cache_column2")),
+                ImmutableList.of(new CacheColumnId("[cache_column1]"), new CacheColumnId("[cache_column2]")),
                 TupleDomain.all(),
                 TupleDomain.all()));
     }
@@ -901,9 +901,9 @@ public class TestCommonSubqueriesExtractor
         // make sure plan signatures are same
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(subqueryB.getCommonSubplanSignature());
         assertThat(subqueryA.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
-                new SignatureKey(testTableHandle.getCatalogHandle().getId() + ":cache_table_id:(\"cache_column1\" < BIGINT '42')"),
+                new SignatureKey(testTableHandle.getCatalogHandle().getId() + ":cache_table_id:(\"[cache_column1]\" < BIGINT '42')"),
                 Optional.empty(),
-                ImmutableList.of(new CacheColumnId("cache_column2")),
+                ImmutableList.of(new CacheColumnId("[cache_column2]")),
                 // predicate domain for "cache_column1 < BIGINT '42'" cannot be derived since cache_column1 is not projected
                 TupleDomain.all(),
                 TupleDomain.all()));

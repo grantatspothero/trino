@@ -66,8 +66,8 @@ public class TestCacheCommonSubqueries
             // prevent hash columns from being added
             .setSystemProperty(OPTIMIZE_HASH_GENERATION, "false")
             .build();
-    private static final CacheColumnId NATIONKEY_COLUMN_ID = new CacheColumnId("nationkey:bigint");
-    private static final CacheColumnId REGIONKEY_COLUMN_ID = new CacheColumnId("regionkey:bigint");
+    private static final CacheColumnId NATIONKEY_COLUMN_ID = new CacheColumnId("[nationkey:bigint]");
+    private static final CacheColumnId REGIONKEY_COLUMN_ID = new CacheColumnId("[regionkey:bigint]");
 
     private String testCatalogId;
 
