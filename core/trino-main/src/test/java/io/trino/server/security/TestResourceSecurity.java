@@ -32,7 +32,6 @@ import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.JwtParser;
 import io.trino.plugin.base.security.AllowAllSystemAccessControl;
 import io.trino.security.AccessControl;
-import io.trino.security.AccessControlManager;
 import io.trino.server.HttpRequestSessionContextFactory;
 import io.trino.server.ProtocolConfig;
 import io.trino.server.protocol.PreparedStatementEncoder;
@@ -966,9 +965,9 @@ public class TestResourceSecurity
                         .put("http-server.authentication.password.user-mapping.pattern", ALLOWED_USER_MAPPING_PATTERN)
                         .buildOrThrow())
                 .setAdditionalModule(binder -> jaxrsBinder(binder).bind(TestResource.class))
+                .setSystemAccessControl(TestSystemAccessControl.NO_IMPERSONATION)
                 .build()) {
             server.getInstance(Key.get(PasswordAuthenticatorManager.class)).setAuthenticators(TestResourceSecurity::authenticate);
-            server.getInstance(Key.get(AccessControlManager.class)).setSystemAccessControls(ImmutableList.of(TestSystemAccessControl.NO_IMPERSONATION));
             HttpServerInfo httpServerInfo = server.getInstance(Key.get(HttpServerInfo.class));
 
             // Authenticated user TEST_USER_LOGIN impersonates impersonated-user by passing request header X-Trino-Authorization-User
