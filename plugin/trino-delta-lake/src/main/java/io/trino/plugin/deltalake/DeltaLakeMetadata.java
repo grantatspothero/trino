@@ -2024,7 +2024,7 @@ public class DeltaLakeMetadata
             }
 
             for (String file : oldFiles) {
-                transactionLogWriter.appendRemoveFileEntry(new RemoveFileEntry(file, writeTimestamp, true));
+                transactionLogWriter.appendRemoveFileEntry(new RemoveFileEntry(toUriFormat(file), writeTimestamp, true));
             }
 
             appendAddFileEntries(transactionLogWriter, newFiles, partitionColumns, getExactColumnNames(handle.getMetadataEntry()), true);
@@ -2215,7 +2215,7 @@ public class DeltaLakeMetadata
 
             for (String scannedPath : scannedPaths) {
                 String relativePath = relativePath(tableLocation, scannedPath);
-                transactionLogWriter.appendRemoveFileEntry(new RemoveFileEntry(relativePath, writeTimestamp, false));
+                transactionLogWriter.appendRemoveFileEntry(new RemoveFileEntry(toUriFormat(relativePath), writeTimestamp, false));
             }
 
             // Note: during writes we want to preserve original case of partition columns
@@ -2694,7 +2694,7 @@ public class DeltaLakeMetadata
         String basePathDirectory = basePath.endsWith("/") ? basePath : basePath + "/";
         checkArgument(path.startsWith(basePathDirectory) && (path.length() > basePathDirectory.length()),
                 "path [%s] must be a subdirectory of basePath [%s]", path, basePath);
-        return toUriFormat(path.substring(basePathDirectory.length()));
+        return path.substring(basePathDirectory.length());
     }
 
     public void rollback()
