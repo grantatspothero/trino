@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static io.trino.cache.CanonicalSubplanExtractor.columnIdToSymbol;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
@@ -129,7 +130,7 @@ public class CanonicalSubplan
         return new SymbolMapper(symbol -> {
             CacheColumnId columnId = originalSymbolMapping.inverse().get(symbol);
             requireNonNull(columnId, format("No column id for symbol %s", symbol));
-            return new Symbol(columnId.toString());
+            return columnIdToSymbol(columnId);
         });
     }
 

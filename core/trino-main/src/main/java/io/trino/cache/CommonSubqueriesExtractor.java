@@ -59,6 +59,8 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static io.trino.cache.CanonicalSubplanExtractor.canonicalSymbolToColumnId;
+import static io.trino.cache.CanonicalSubplanExtractor.columnIdToSymbol;
 import static io.trino.cache.CanonicalSubplanExtractor.extractCanonicalSubplans;
 import static io.trino.plugin.base.cache.CacheUtils.normalizeTupleDomain;
 import static io.trino.sql.DynamicFilters.extractDynamicFilters;
@@ -209,7 +211,7 @@ public final class CommonSubqueriesExtractor
             // Only domains for projected columns can be part of signature predicate
             Set<CacheColumnId> projectionSet = ImmutableSet.copyOf(projections);
             signaturePredicate = extractionResult.getTupleDomain()
-                    .transformKeys(CommonSubqueriesExtractor::canonicalSymbolToColumnId)
+                    .transformKeys(CanonicalSubplanExtractor::canonicalSymbolToColumnId)
                     .filter((columnId, domain) -> projectionSet.contains(columnId));
             // Remaining expression and non-projected domains must be part of signature key
             TupleDomain<Symbol> prunedPredicate = extractionResult.getTupleDomain()
@@ -378,15 +380,5 @@ public final class CommonSubqueriesExtractor
     private static boolean isAdaptationPredicateNeeded(CanonicalSubplan subplan, Set<Expression> commonConjuncts)
     {
         return !subplan.getConjuncts().isEmpty() && !ImmutableSet.copyOf(subplan.getConjuncts()).equals(commonConjuncts);
-    }
-
-    private static CacheColumnId canonicalSymbolToColumnId(Symbol symbol)
-    {
-        return new CacheColumnId(symbol.getName());
-    }
-
-    private static Symbol columnIdToSymbol(CacheColumnId columnId)
-    {
-        return new Symbol(columnId.toString());
     }
 }

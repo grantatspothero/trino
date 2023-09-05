@@ -66,6 +66,29 @@ public final class CanonicalSubplanExtractor
         return canonicalSubplans.build();
     }
 
+    public static CacheColumnId canonicalSymbolToColumnId(Symbol symbol)
+    {
+        requireNonNull(symbol, "symbol is null");
+        return canonicalExpressionToColumnId(symbol.toSymbolReference());
+    }
+
+    public static CacheColumnId canonicalExpressionToColumnId(Expression expression)
+    {
+        requireNonNull(expression, "expression is null");
+        if (expression instanceof SymbolReference symbolReference) {
+            // symbol -> column id translation should be reversible via columnIdToSymbol method
+            return new CacheColumnId(symbolReference.getName());
+        }
+
+        return new CacheColumnId(formatExpression(expression));
+    }
+
+    public static Symbol columnIdToSymbol(CacheColumnId columnId)
+    {
+        requireNonNull(columnId, "columnId is null");
+        return new Symbol(columnId.toString());
+    }
+
     private static class Visitor
             extends PlanVisitor<Optional<CanonicalSubplan>, Void>
     {
@@ -175,7 +198,7 @@ public final class CanonicalSubplanExtractor
             Optional<CacheColumnId> groupByHash;
             if (originalHashExpression.isPresent()) {
                 Expression canonicalHashExpression = subplan.canonicalSymbolMapper().map(originalHashExpression.get());
-                CacheColumnId columnId = new CacheColumnId(formatExpression(canonicalHashExpression));
+                CacheColumnId columnId = canonicalExpressionToColumnId(canonicalHashExpression);
                 groupByHash = Optional.of(columnId);
                 assignmentsBuilder.put(columnId, canonicalHashExpression);
                 symbolMappingBuilder.put(columnId, node.getHashSymbol().orElseThrow());
@@ -201,7 +224,7 @@ public final class CanonicalSubplanExtractor
                         aggregation.getArguments().stream()
                                 .map(argument -> canonicalExpressionMap.get(new Symbol(((SymbolReference) argument).getName())))
                                 .collect(toImmutableList()));
-                CacheColumnId columnId = new CacheColumnId(formatExpression(canonicalAggregation));
+                CacheColumnId columnId = canonicalExpressionToColumnId(canonicalAggregation);
                 assignmentsBuilder.put(columnId, canonicalAggregation);
                 symbolMappingBuilder.put(columnId, symbol);
             }
@@ -255,13 +278,13 @@ public final class CanonicalSubplanExtractor
                     // canonicalize identity assignment
                     checkState(subplan.getOriginalSymbolMapping().inverse().containsKey(symbol));
                     CacheColumnId columnId = subplan.getOriginalSymbolMapping().inverse().get(symbol);
-                    assignments.put(columnId, new SymbolReference(columnId.toString()));
+                    assignments.put(columnId, columnIdToSymbol(columnId).toSymbolReference());
                     continue;
                 }
 
                 // use formatted canonical expression as column id for non-identity projections
                 Expression canonicalExpression = subplan.canonicalSymbolMapper().map(assignment.getValue());
-                CacheColumnId columnId = new CacheColumnId(formatExpression(canonicalExpression));
+                CacheColumnId columnId = canonicalExpressionToColumnId(canonicalExpression);
                 assignments.put(columnId, canonicalExpression);
                 symbolMappingBuilder.put(columnId, symbol);
             }
@@ -366,7 +389,7 @@ public final class CanonicalSubplanExtractor
 
             // pass-through canonical output symbols
             Map<CacheColumnId, Expression> assignments = symbolMapping.entrySet().stream()
-                    .collect(toImmutableMap(Map.Entry::getKey, entry -> new SymbolReference(entry.getKey().toString())));
+                    .collect(toImmutableMap(Map.Entry::getKey, entry -> columnIdToSymbol(entry.getKey()).toSymbolReference()));
 
             return Optional.of(new CanonicalSubplan(
                     node,
