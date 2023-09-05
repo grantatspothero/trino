@@ -127,6 +127,7 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.io.MoreFiles.deleteRecursively;
 import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
@@ -227,7 +228,8 @@ public class TestingTrinoServer
             Module additionalModule,
             Optional<Path> baseDataDir,
             Optional<SpanProcessor> spanProcessor,
-            List<SystemAccessControl> systemAccessControls,
+            Optional<FactoryConfiguration> systemAccessControlConfiguration,
+            Optional<List<SystemAccessControl>> systemAccessControls,
             List<EventListener> eventListeners)
     {
         this.coordinator = coordinator;
@@ -399,7 +401,12 @@ public class TestingTrinoServer
         cacheManagerRegistry = injector.getInstance(CacheManagerRegistry.class);
         cacheManagerRegistry.loadCacheManager();
 
-        accessControl.setSystemAccessControls(systemAccessControls);
+        systemAccessControlConfiguration.ifPresentOrElse(
+                configuration -> {
+                    checkArgument(systemAccessControls.isEmpty(), "systemAccessControlConfiguration and systemAccessControls cannot be both present");
+                    accessControl.loadSystemAccessControl(configuration.factoryName(), configuration.configuration());
+                },
+                () -> accessControl.setSystemAccessControls(systemAccessControls.orElseThrow()));
 
         EventListenerManager eventListenerManager = injector.getInstance(EventListenerManager.class);
         eventListeners.forEach(eventListenerManager::addEventListener);
@@ -730,7 +737,8 @@ public class TestingTrinoServer
         private Module additionalModule = EMPTY_MODULE;
         private Optional<Path> baseDataDir = Optional.empty();
         private Optional<SpanProcessor> spanProcessor = Optional.empty();
-        private List<SystemAccessControl> systemAccessControls = ImmutableList.of();
+        private Optional<FactoryConfiguration> systemAccessControlConfiguration = Optional.empty();
+        private Optional<List<SystemAccessControl>> systemAccessControls = Optional.of(ImmutableList.of());
         private List<EventListener> eventListeners = ImmutableList.of();
 
         public Builder setCoordinator(boolean coordinator)
@@ -775,14 +783,20 @@ public class TestingTrinoServer
             return this;
         }
 
-        public Builder setSystemAccessControl(SystemAccessControl systemAccessControl)
+        public Builder setSystemAccessControlConfiguration(Optional<FactoryConfiguration> systemAccessControlConfiguration)
         {
-            return setSystemAccessControls(ImmutableList.of(requireNonNull(systemAccessControl, "systemAccessControl is null")));
+            this.systemAccessControlConfiguration = requireNonNull(systemAccessControlConfiguration, "systemAccessControlConfiguration is null");
+            return this;
         }
 
-        public Builder setSystemAccessControls(List<SystemAccessControl> systemAccessControls)
+        public Builder setSystemAccessControl(SystemAccessControl systemAccessControl)
         {
-            this.systemAccessControls = ImmutableList.copyOf(requireNonNull(systemAccessControls, "systemAccessControls is null"));
+            return setSystemAccessControls(Optional.of(ImmutableList.of(requireNonNull(systemAccessControl, "systemAccessControl is null"))));
+        }
+
+        public Builder setSystemAccessControls(Optional<List<SystemAccessControl>> systemAccessControls)
+        {
+            this.systemAccessControls = systemAccessControls.map(ImmutableList::copyOf);
             return this;
         }
 
@@ -802,6 +816,7 @@ public class TestingTrinoServer
                     additionalModule,
                     baseDataDir,
                     spanProcessor,
+                    systemAccessControlConfiguration,
                     systemAccessControls,
                     eventListeners);
         }

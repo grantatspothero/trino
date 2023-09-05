@@ -41,6 +41,7 @@ import io.trino.metadata.QualifiedObjectName;
 import io.trino.metadata.SessionPropertyManager;
 import io.trino.server.BasicQueryInfo;
 import io.trino.server.SessionPropertyDefaults;
+import io.trino.server.testing.FactoryConfiguration;
 import io.trino.server.testing.TestingTrinoServer;
 import io.trino.spi.ErrorType;
 import io.trino.spi.Plugin;
@@ -133,7 +134,8 @@ public class DistributedQueryRunner
             Module additionalModule,
             Optional<Path> baseDataDir,
             Optional<SpanProcessor> spanProcessor,
-            List<SystemAccessControl> systemAccessControls,
+            Optional<FactoryConfiguration> systemAccessControlConfiguration,
+            Optional<List<SystemAccessControl>> systemAccessControls,
             List<EventListener> eventListeners,
             List<AutoCloseable> extraCloseables)
             throws Exception
@@ -149,7 +151,7 @@ public class DistributedQueryRunner
             closer.register(() -> extraCloseables.forEach(DistributedQueryRunner::closeUnchecked));
             log.info("Created TestingDiscoveryServer in %s", nanosSince(start).convertToMostSuccinctTimeUnit());
 
-            registerNewWorker = () -> createServer(false, extraProperties, environment, additionalModule, baseDataDir, spanProcessor, ImmutableList.of(), ImmutableList.of());
+            registerNewWorker = () -> createServer(false, extraProperties, environment, additionalModule, baseDataDir, spanProcessor, Optional.empty(), Optional.of(ImmutableList.of()), ImmutableList.of());
 
             int coordinatorCount = backupCoordinatorProperties.isEmpty() ? 1 : 2;
             checkArgument(nodeCount >= coordinatorCount, "nodeCount includes coordinator(s) count, so must be at least %s, got: %s", coordinatorCount, nodeCount);
@@ -168,7 +170,7 @@ public class DistributedQueryRunner
                 extraCoordinatorProperties.put("web-ui.user", "admin");
             }
 
-            coordinator = createServer(true, extraCoordinatorProperties, environment, additionalModule, baseDataDir, spanProcessor, systemAccessControls, eventListeners);
+            coordinator = createServer(true, extraCoordinatorProperties, environment, additionalModule, baseDataDir, spanProcessor, systemAccessControlConfiguration, systemAccessControls, eventListeners);
             if (backupCoordinatorProperties.isPresent()) {
                 Map<String, String> extraBackupCoordinatorProperties = new HashMap<>();
                 extraBackupCoordinatorProperties.putAll(extraProperties);
@@ -180,6 +182,7 @@ public class DistributedQueryRunner
                         additionalModule,
                         baseDataDir,
                         spanProcessor,
+                        systemAccessControlConfiguration,
                         systemAccessControls,
                         eventListeners));
             }
@@ -210,7 +213,8 @@ public class DistributedQueryRunner
             Module additionalModule,
             Optional<Path> baseDataDir,
             Optional<SpanProcessor> spanProcessor,
-            List<SystemAccessControl> systemAccessControls,
+            Optional<FactoryConfiguration> systemAccessControlConfiguration,
+            Optional<List<SystemAccessControl>> systemAccessControls,
             List<EventListener> eventListeners)
     {
         TestingTrinoServer server = closer.register(createTestingTrinoServer(
@@ -221,6 +225,7 @@ public class DistributedQueryRunner
                 additionalModule,
                 baseDataDir,
                 spanProcessor,
+                systemAccessControlConfiguration,
                 systemAccessControls,
                 eventListeners));
         servers.add(server);
@@ -246,7 +251,8 @@ public class DistributedQueryRunner
             Module additionalModule,
             Optional<Path> baseDataDir,
             Optional<SpanProcessor> spanProcessor,
-            List<SystemAccessControl> systemAccessControls,
+            Optional<FactoryConfiguration> systemAccessControlConfiguration,
+            Optional<List<SystemAccessControl>> systemAccessControls,
             List<EventListener> eventListeners)
     {
         long start = System.nanoTime();
@@ -280,6 +286,7 @@ public class DistributedQueryRunner
                 .setAdditionalModule(additionalModule)
                 .setBaseDataDir(baseDataDir)
                 .setSpanProcessor(spanProcessor)
+                .setSystemAccessControlConfiguration(systemAccessControlConfiguration)
                 .setSystemAccessControls(systemAccessControls)
                 .setEventListeners(eventListeners)
                 .build();
@@ -653,7 +660,8 @@ public class DistributedQueryRunner
         private Module additionalModule = EMPTY_MODULE;
         private Optional<Path> baseDataDir = Optional.empty();
         private Optional<SpanProcessor> spanProcessor = Optional.empty();
-        private List<SystemAccessControl> systemAccessControls = ImmutableList.of();
+        private Optional<FactoryConfiguration> systemAccessControlConfiguration = Optional.empty();
+        private Optional<List<SystemAccessControl>> systemAccessControls = Optional.empty();
         private List<EventListener> eventListeners = ImmutableList.of();
         private List<AutoCloseable> extraCloseables = ImmutableList.of();
 
@@ -759,6 +767,13 @@ public class DistributedQueryRunner
             return self();
         }
 
+        @CanIgnoreReturnValue
+        public SELF setSystemAccessControl(String name, Map<String, String> configuration)
+        {
+            this.systemAccessControlConfiguration = Optional.of(new FactoryConfiguration(name, configuration));
+            return self();
+        }
+
         @SuppressWarnings("unused")
         @CanIgnoreReturnValue
         public SELF setSystemAccessControl(SystemAccessControl systemAccessControl)
@@ -777,7 +792,7 @@ public class DistributedQueryRunner
         @CanIgnoreReturnValue
         public SELF setSystemAccessControls(List<SystemAccessControl> systemAccessControls)
         {
-            this.systemAccessControls = ImmutableList.copyOf(requireNonNull(systemAccessControls, "systemAccessControls is null"));
+            this.systemAccessControls = Optional.of(ImmutableList.copyOf(requireNonNull(systemAccessControls, "systemAccessControls is null")));
             return self();
         }
 
@@ -837,6 +852,12 @@ public class DistributedQueryRunner
                 withTracing();
             }
 
+            Optional<FactoryConfiguration> systemAccessControlConfiguration = this.systemAccessControlConfiguration;
+            Optional<List<SystemAccessControl>> systemAccessControls = this.systemAccessControls;
+            if (systemAccessControlConfiguration.isEmpty() && systemAccessControls.isEmpty()) {
+                systemAccessControls = Optional.of(ImmutableList.of());
+            }
+
             DistributedQueryRunner queryRunner = new DistributedQueryRunner(
                     defaultSession,
                     nodeCount,
@@ -846,7 +867,8 @@ public class DistributedQueryRunner
                     environment,
                     additionalModule,
                     baseDataDir,
-                     spanProcessor,
+                    spanProcessor,
+                    systemAccessControlConfiguration,
                     systemAccessControls,
                     eventListeners,
                     extraCloseables);
