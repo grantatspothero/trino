@@ -187,18 +187,9 @@ public class QuerySessionSupplier
 
         // Currently needed by tests, see GalaxyQueryRunner's SettableSystemAccessControl
         if (accessControl instanceof ForwardingSystemAccessControl) {
-            if (accessControl instanceof GetDelegate getDelegate) {
-                return isGalaxyAccessControl(getDelegate.delegate());
-            }
             log.warn("isGalaxyAccessControl: non-introspectable ForwardingSystemAccessControl found: %s [%s]", accessControl, accessControl.getClass());
         }
 
         return false;
-    }
-
-    // Hack for tests. ForwardingSystemAccessControl is not normally used.
-    public interface GetDelegate
-    {
-        SystemAccessControl delegate();
     }
 }
