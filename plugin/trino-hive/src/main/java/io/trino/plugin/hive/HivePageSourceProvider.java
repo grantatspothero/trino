@@ -26,6 +26,7 @@ import io.trino.plugin.hive.HiveRecordCursorProvider.ReaderRecordCursorWithProje
 import io.trino.plugin.hive.HiveSplit.BucketConversion;
 import io.trino.plugin.hive.HiveSplit.BucketValidation;
 import io.trino.plugin.hive.acid.AcidTransaction;
+import io.trino.plugin.hive.coercions.CoercionUtils.CoercionContext;
 import io.trino.plugin.hive.type.TypeInfo;
 import io.trino.plugin.hive.util.HiveBucketing.BucketingVersion;
 import io.trino.spi.connector.ColumnHandle;
@@ -276,10 +277,10 @@ public class HivePageSourceProvider
         Optional<BucketAdaptation> bucketAdaptation = createBucketAdaptation(bucketConversion, tableBucketNumber, regularAndInterimColumnMappings);
         Optional<BucketValidator> bucketValidator = createBucketValidator(path, bucketValidation, tableBucketNumber, regularAndInterimColumnMappings);
 
-        HiveTimestampPrecision timestampPrecision = getTimestampPrecision(session);
+        CoercionContext coercionContext = new CoercionContext(getTimestampPrecision(session));
 
         for (HivePageSourceFactory pageSourceFactory : pageSourceFactories) {
-            List<HiveColumnHandle> desiredColumns = toColumnHandles(regularAndInterimColumnMappings, true, typeManager, timestampPrecision);
+            List<HiveColumnHandle> desiredColumns = toColumnHandles(regularAndInterimColumnMappings, true, typeManager, coercionContext);
 
             Optional<ReaderPageSource> readerWithProjections = pageSourceFactory.createPageSource(
                     session,
@@ -310,13 +311,13 @@ public class HivePageSourceProvider
                         bucketValidator,
                         adapter,
                         typeManager,
-                        timestampPrecision,
+                        coercionContext,
                         pageSource));
             }
         }
 
         for (HiveRecordCursorProvider provider : cursorProviders) {
-            List<HiveColumnHandle> desiredColumns = toColumnHandles(regularAndInterimColumnMappings, false, typeManager, timestampPrecision);
+            List<HiveColumnHandle> desiredColumns = toColumnHandles(regularAndInterimColumnMappings, false, typeManager, coercionContext);
             Optional<ReaderRecordCursorWithProjections> readerWithProjections = provider.createRecordCursor(
                     configuration,
                     session,
@@ -610,7 +611,7 @@ public class HivePageSourceProvider
                     .collect(toImmutableList());
         }
 
-        public static List<HiveColumnHandle> toColumnHandles(List<ColumnMapping> regularColumnMappings, boolean doCoercion, TypeManager typeManager, HiveTimestampPrecision timestampPrecision)
+        public static List<HiveColumnHandle> toColumnHandles(List<ColumnMapping> regularColumnMappings, boolean doCoercion, TypeManager typeManager, CoercionContext coercionContext)
         {
             return regularColumnMappings.stream()
                     .map(columnMapping -> {
@@ -626,14 +627,14 @@ public class HivePageSourceProvider
                                     projectedColumn.getDereferenceIndices(),
                                     projectedColumn.getDereferenceNames(),
                                     fromHiveType,
-                                    createTypeFromCoercer(typeManager, fromHiveType, columnHandle.getHiveType(), timestampPrecision));
+                                    createTypeFromCoercer(typeManager, fromHiveType, columnHandle.getHiveType(), coercionContext));
                         });
 
                         return new HiveColumnHandle(
                                 columnHandle.getBaseColumnName(),
                                 columnHandle.getBaseHiveColumnIndex(),
                                 fromHiveTypeBase,
-                                createTypeFromCoercer(typeManager, fromHiveTypeBase, columnHandle.getBaseHiveType(), timestampPrecision),
+                                createTypeFromCoercer(typeManager, fromHiveTypeBase, columnHandle.getBaseHiveType(), coercionContext),
                                 newColumnProjectionInfo,
                                 columnHandle.getColumnType(),
                                 columnHandle.getComment());
