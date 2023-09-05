@@ -491,6 +491,12 @@ public class MemoryMetadata
     }
 
     @Override
+    public boolean isColumnarTableScan(ConnectorSession session, ConnectorTableHandle tableHandle)
+    {
+        return true;
+    }
+
+    @Override
     public synchronized void setTableComment(ConnectorSession session, ConnectorTableHandle tableHandle, Optional<String> comment)
     {
         MemoryTableHandle table = (MemoryTableHandle) tableHandle;
@@ -516,11 +522,5 @@ public class MemoryMetadata
                                 .collect(toImmutableList()),
                         info.getDataFragments(),
                         info.getComment()));
-    }
-
-    @Override
-    public boolean isColumnarTableScan(ConnectorSession session, ConnectorTableHandle tableHandle)
-    {
-        return true;
     }
 }
