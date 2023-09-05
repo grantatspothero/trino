@@ -233,30 +233,36 @@ public final class CommonSubqueriesExtractor
             List<CacheColumnId> projections)
     {
         SignatureKey signatureKey = new SignatureKey(tableId.toString());
-        TupleDomain<CacheColumnId> signaturePredicate = TupleDomain.all();
 
-        if (!predicate.equals(TRUE_LITERAL)) {
-            ExtractionResult extractionResult = DomainTranslator.getExtractionResult(
-                    plannerContext,
-                    session,
-                    predicate,
-                    TypeProvider.viewOf(commonColumnIds.entrySet().stream()
-                            .collect(toImmutableMap(entry -> columnIdToSymbol(entry.getKey()), entry -> typeProvider.get(entry.getValue())))));
-            // Only domains for projected columns can be part of signature predicate
-            Set<CacheColumnId> projectionSet = ImmutableSet.copyOf(projections);
-            signaturePredicate = extractionResult.getTupleDomain()
-                    .transformKeys(CanonicalSubplanExtractor::canonicalSymbolToColumnId)
-                    .filter((columnId, domain) -> projectionSet.contains(columnId));
-            // Remaining expression and non-projected domains must be part of signature key
-            TupleDomain<Symbol> prunedPredicate = extractionResult.getTupleDomain()
-                    .filter((symbol, domain) -> !projectionSet.contains(canonicalSymbolToColumnId(symbol)));
-            if (!prunedPredicate.isAll() || !extractionResult.getRemainingExpression().equals(TRUE_LITERAL)) {
-                signatureKey = new SignatureKey(signatureKey + ":" +
-                        formatExpression(combineConjuncts(
-                                plannerContext.getMetadata(),
-                                new DomainTranslator(plannerContext).toPredicate(session, prunedPredicate),
-                                extractionResult.getRemainingExpression())));
-            }
+        if (predicate.equals(TRUE_LITERAL)) {
+            return new PlanSignature(
+                    signatureKey,
+                    Optional.empty(),
+                    projections,
+                    TupleDomain.all(),
+                    TupleDomain.all());
+        }
+
+        ExtractionResult extractionResult = DomainTranslator.getExtractionResult(
+                plannerContext,
+                session,
+                predicate,
+                TypeProvider.viewOf(commonColumnIds.entrySet().stream()
+                        .collect(toImmutableMap(entry -> columnIdToSymbol(entry.getKey()), entry -> typeProvider.get(entry.getValue())))));
+        // Only domains for projected columns can be part of signature predicate
+        Set<CacheColumnId> projectionSet = ImmutableSet.copyOf(projections);
+        TupleDomain<CacheColumnId> signaturePredicate = extractionResult.getTupleDomain()
+                .transformKeys(CanonicalSubplanExtractor::canonicalSymbolToColumnId)
+                .filter((columnId, domain) -> projectionSet.contains(columnId));
+        // Remaining expression and non-projected domains must be part of signature key
+        TupleDomain<Symbol> prunedPredicate = extractionResult.getTupleDomain()
+                .filter((symbol, domain) -> !projectionSet.contains(canonicalSymbolToColumnId(symbol)));
+        if (!prunedPredicate.isAll() || !extractionResult.getRemainingExpression().equals(TRUE_LITERAL)) {
+            signatureKey = new SignatureKey(signatureKey + ":" +
+                    formatExpression(combineConjuncts(
+                            plannerContext.getMetadata(),
+                            new DomainTranslator(plannerContext).toPredicate(session, prunedPredicate),
+                            extractionResult.getRemainingExpression())));
         }
 
         return new PlanSignature(
