@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.server.galaxy;
+package io.trino.server.security.galaxy;
 
 import com.google.inject.Binder;
 import com.google.inject.Provides;
@@ -22,11 +22,7 @@ import io.airlift.units.Duration;
 import io.starburst.stargate.accesscontrol.client.HttpTrinoSecurityClient;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.trino.metadata.SystemSecurityMetadata;
-import io.trino.server.security.galaxy.CatalogIds;
-import io.trino.server.security.galaxy.ForGalaxySystemAccessControl;
-import io.trino.server.security.galaxy.GalaxyAccessControlConfig;
-import io.trino.server.security.galaxy.GalaxySecurityMetadata;
-import io.trino.server.security.galaxy.GalaxySystemAccessModule;
+import io.trino.server.galaxy.GalaxyConfig;
 
 import static com.google.inject.Scopes.SINGLETON;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;

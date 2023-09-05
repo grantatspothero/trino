@@ -22,7 +22,6 @@ import io.trino.connector.CatalogManagerConfig.CatalogMangerKind;
 import io.trino.security.AccessControlManager;
 import io.trino.security.DefaultSystemAccessControlName;
 import io.trino.server.galaxy.GalaxyPermissionsCache;
-import io.trino.server.galaxy.GalaxySecurityModule;
 import io.trino.spi.security.SystemAccessControlFactory;
 
 import static com.google.inject.Scopes.SINGLETON;
