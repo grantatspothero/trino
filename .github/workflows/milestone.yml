@@ -14,7 +14,7 @@ jobs:
     runs-on: [self-hosted, sep-cicd, gha-fleet-nano]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Get milestone from pom.xml
         run: |
           .github/bin/retry ./mvnw -v
