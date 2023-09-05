@@ -21,8 +21,8 @@ import io.trino.connector.CatalogManagerConfig;
 import io.trino.connector.CatalogManagerConfig.CatalogMangerKind;
 import io.trino.security.AccessControlManager;
 import io.trino.security.DefaultSystemAccessControlName;
-import io.trino.server.galaxy.GalaxyAuthorizationClientModule;
 import io.trino.server.galaxy.GalaxyPermissionsCache;
+import io.trino.server.galaxy.GalaxySecurityModule;
 import io.trino.spi.security.SystemAccessControlFactory;
 
 import static com.google.inject.Scopes.SINGLETON;
@@ -38,7 +38,7 @@ public class GalaxySystemAccessModule
         CatalogManagerConfig catalogManagerConfig = buildConfigObject(CatalogManagerConfig.class);
         if (catalogManagerConfig.getCatalogMangerKind() == CatalogMangerKind.METADATA_ONLY) {
             newOptionalBinder(binder, Key.get(String.class, DefaultSystemAccessControlName.class)).setBinding().toInstance(GalaxyMetadataSystemAccessFactory.NAME);
-            GalaxyAuthorizationClientModule.bindHttpClient(binder);
+            GalaxySecurityModule.bindHttpClient(binder);
 
             MetadataAccessControllerSupplier controllerSupplier = new MetadataAccessControllerSupplier();
             binder.bind(SystemAccessControlFactory.class).annotatedWith(ForGalaxySystemAccessControl.class).to(GalaxyMetadataSystemAccessFactory.class);

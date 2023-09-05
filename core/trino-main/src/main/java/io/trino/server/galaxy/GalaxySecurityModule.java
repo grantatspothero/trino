@@ -14,14 +14,26 @@
 package io.trino.server.galaxy;
 
 import com.google.inject.Binder;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.airlift.http.client.HttpClient;
+import io.airlift.units.Duration;
+import io.starburst.stargate.accesscontrol.client.HttpTrinoSecurityClient;
+import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.trino.metadata.SystemSecurityMetadata;
+import io.trino.server.security.galaxy.CatalogIds;
+import io.trino.server.security.galaxy.ForGalaxySystemAccessControl;
+import io.trino.server.security.galaxy.GalaxyAccessControlConfig;
 import io.trino.server.security.galaxy.GalaxySecurityMetadata;
 import io.trino.server.security.galaxy.GalaxySystemAccessModule;
 
 import static com.google.inject.Scopes.SINGLETON;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
+import static io.airlift.http.client.HttpClientBinder.httpClientBinder;
+import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class GalaxySecurityModule
         extends AbstractConfigurationAwareModule
@@ -32,7 +44,31 @@ public class GalaxySecurityModule
         configBinder(binder).bindConfig(GalaxyConfig.class);
         newOptionalBinder(binder, SystemSecurityMetadata.class).setBinding().to(GalaxySecurityMetadata.class).in(SINGLETON);
         binder.bind(GalaxySecurityMetadata.class).in(SINGLETON);
-        install(new GalaxyAuthorizationClientModule());
+
+        binder.bind(CatalogIds.class).in(SINGLETON);
+        configBinder(binder).bindConfig(GalaxyAccessControlConfig.class);
+
+        bindHttpClient(binder);
+
         install(new GalaxySystemAccessModule());
+    }
+
+    public static void bindHttpClient(Binder binder)
+    {
+        httpClientBinder(binder).bindHttpClient("galaxy-access-control", ForGalaxySystemAccessControl.class)
+                .withConfigDefaults(config -> {
+                    config.setIdleTimeout(new Duration(30, SECONDS));
+                    config.setRequestTimeout(new Duration(20, SECONDS));
+                    // Automatic https is disabled because this client is for external
+                    // communication back to the Galaxy portal.
+                    config.setAutomaticHttpsSharedSecret(null);
+                });
+    }
+
+    @Provides
+    @Singleton
+    public static TrinoSecurityApi createTrinoSecurityApi(@ForGalaxySystemAccessControl HttpClient httpClient, GalaxyAccessControlConfig config)
+    {
+        return new HttpTrinoSecurityClient(requireNonNull(config, "config is null").getAccountUri(), httpClient);
     }
 }
