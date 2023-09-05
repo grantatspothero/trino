@@ -15,7 +15,7 @@ package io.trino.plugin.base.cache;
 
 import com.google.common.collect.ImmutableMap;
 import io.trino.spi.block.DictionaryBlock;
-import io.trino.spi.block.LongArrayBlockBuilder;
+import io.trino.spi.block.LongArrayBlock;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.SortedRangeSet;
@@ -68,7 +68,7 @@ public class TestCacheUtils
         assertThat(normalizedValues).isEqualTo(values);
         assertBlockEquals(BIGINT, normalizedValues.getSortedRanges(), values.getSortedRanges());
         assertThat(values.getSortedRanges()).isInstanceOf(DictionaryBlock.class);
-        assertThat(normalizedValues.getSortedRanges()).isInstanceOf(LongArrayBlockBuilder.class);
+        assertThat(normalizedValues.getSortedRanges()).isInstanceOf(LongArrayBlock.class);
 
         // further normalization shouldn't change SortedRangeSet underlying block
         SortedRangeSet doubleNormalizedValues = (SortedRangeSet) normalizeTupleDomain(withColumnDomains(ImmutableMap.of(
@@ -77,7 +77,7 @@ public class TestCacheUtils
                 .orElseThrow()
                 .get(new CacheColumnId("col1"))
                 .getValues();
-        assertThat(doubleNormalizedValues.getSortedRanges()).isInstanceOf(LongArrayBlockBuilder.class);
+        assertThat(doubleNormalizedValues.getSortedRanges()).isInstanceOf(LongArrayBlock.class);
         assertBlockEquals(BIGINT, doubleNormalizedValues.getSortedRanges(), normalizedValues.getSortedRanges());
     }
 }

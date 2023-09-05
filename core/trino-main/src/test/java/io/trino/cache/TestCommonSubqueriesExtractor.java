@@ -26,7 +26,7 @@ import io.trino.execution.warnings.WarningCollector;
 import io.trino.metadata.Metadata;
 import io.trino.metadata.TableHandle;
 import io.trino.plugin.tpch.TpchConnectorFactory;
-import io.trino.spi.block.LongArrayBlockBuilder;
+import io.trino.spi.block.LongArrayBlock;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.cache.PlanSignature;
@@ -662,7 +662,7 @@ public class TestCommonSubqueriesExtractor
                 .get(new CacheColumnId("cache_column1"))
                 .getValues();
         assertBlockEquals(BIGINT, actualValues.getSortedRanges(), expectedValues.getSortedRanges());
-        assertThat(actualValues.getSortedRanges()).isInstanceOf(LongArrayBlockBuilder.class);
+        assertThat(actualValues.getSortedRanges()).isInstanceOf(LongArrayBlock.class);
     }
 
     @Test
