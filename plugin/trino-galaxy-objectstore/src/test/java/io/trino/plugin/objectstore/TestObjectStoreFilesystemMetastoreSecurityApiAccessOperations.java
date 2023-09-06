@@ -157,10 +157,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 ImmutableMap.of(),
                 ImmutableMap.of(),
                 ImmutableMap.of(
-                        // Disable caching for test method isolation
-                        "HIVE__hive.metastore-cache-ttl", "0s",
-                        "DELTA__hive.metastore-cache-ttl", "0s",
-                        "HUDI__hive.metastore-cache-ttl", "0s",
                         // Enable Delta table creation
                         "DELTA__delta.enable-non-concurrent-writes", "true"));
         properties = Maps.filterEntries(
@@ -343,8 +339,9 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
                             .addCopies(new FileOperation(DATA, "no partition", INPUT_FILE_NEW_STREAM), 2)
                             .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), 2)
-                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM), 2)
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM))
                             .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM))
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM), 2)
                             .build();
                 });
 
@@ -368,6 +365,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             .build();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
                             .add(new FileOperation(DATA, "no partition", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM))
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM), 2)
                             .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), 2)
                             .build();
@@ -423,6 +422,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             .build();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
                             .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), 2)
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM))
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM), 2)
                             .build();
                 });
@@ -452,6 +452,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
                             .add(new FileOperation(DATA, "no partition", INPUT_FILE_NEW_STREAM))
                             .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), 2)
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM))
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM), 2)
                             .build();
                 });
@@ -697,6 +698,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             .add(new FileOperation(TRINO_EXTENDED_STATS_JSON, "extendeded_stats.json", INPUT_FILE_EXISTS))
                             .add(new FileOperation(TRINO_EXTENDED_STATS_JSON, "extended_stats.json", OUTPUT_FILE_CREATE_OR_OVERWRITE))
                             .add(new FileOperation(TRINO_EXTENDED_STATS_JSON, "extended_stats.json", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM))
                             .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM))
                             .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), 2)
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM), 2)
@@ -787,6 +789,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             .build();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
                             .add(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM))
                             .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM))
                             .add(new FileOperation(TRINO_EXTENDED_STATS_JSON, "extended_stats.json", INPUT_FILE_EXISTS))
                             .build();
@@ -854,6 +858,9 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                     case HIVE, ICEBERG -> ImmutableMultiset.of();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
                             .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), tableBatches)
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM), tableBatches)
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM), tableBatches)
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM), tableBatches)
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), tableBatches)
                             .build();
                 },
@@ -895,6 +902,9 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             .build();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
                             .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), 2)
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM))
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), 2)
                             .build();
                 },
@@ -926,6 +936,9 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             .build();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
                             .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), 3)
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM))
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), 3)
                             .build();
                 },
@@ -1017,6 +1030,9 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             })
                             .build();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM), tableBatches)
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM), tableBatches)
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM), tableBatches)
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), tableBatches)
                             .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), tableBatches)
                             .build();
@@ -1033,6 +1049,9 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             .add(new FileOperation(METADATA_JSON, "00004.metadata.json", INPUT_FILE_NEW_STREAM))
                             .build();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM))
                             .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM))
                             .add(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM))
                             .build();
@@ -1075,6 +1094,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                         .build(),
                 ImmutableMultiset.<FileOperation>builder()
                         .add(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM))
+                        .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM))
                         .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM))
                         .build());
     }
@@ -1093,6 +1113,9 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
     private void assertInvocations(Session session, @Language("SQL") String query, Multiset<CountingAccessHiveMetastore.Method> expectedMetastoreInvocations, Multiset<FileOperation> expectedFileAccesses)
     {
+        // Delta depends on metadata and active files caches being present, so tuning them down could have us testing too pessimistic cases. Flush before counting instead.
+        assertUpdate("CALL system.flush_metadata_cache()");
+
         trackingFileSystemFactory.reset();
         CountingAccessHiveMetastoreUtil.assertMetastoreInvocations(metastore, getQueryRunner(), session, query, expectedMetastoreInvocations);
         assertMultisetsEqual(getOperations(), expectedFileAccesses);
@@ -1105,6 +1128,9 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
             Multiset<FileOperation> expectedFileAccesses,
             List<TracesAssertion> expectedTraces)
     {
+        // Delta depends on metadata and active files caches being present, so tuning them down could have us testing too pessimistic cases. Flush before counting instead.
+        assertUpdate("CALL system.flush_metadata_cache()");
+
         spanExporter.reset();
         trackingFileSystemFactory.reset();
         CountingAccessHiveMetastoreUtil.assertMetastoreInvocations(metastore, getQueryRunner(), session, query, expectedMetastoreInvocations);
