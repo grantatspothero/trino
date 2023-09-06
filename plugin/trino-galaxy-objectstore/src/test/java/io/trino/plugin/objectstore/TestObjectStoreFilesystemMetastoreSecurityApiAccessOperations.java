@@ -119,7 +119,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         extends AbstractTestQueryFramework
 {
-    private static final int MAX_PREFIXES_COUNT = 10;
+    private static final int MAX_PREFIXES_COUNT = 5;
     private static final String CATALOG_NAME = "objectstore";
     private static final String SCHEMA_NAME = "test_schema";
 
