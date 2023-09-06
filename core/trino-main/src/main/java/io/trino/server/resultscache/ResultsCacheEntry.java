@@ -175,7 +175,7 @@ public class ResultsCacheEntry
                         resultsData.data,
                         createdTime));
         MoreFutures.addExceptionCallback(submitFuture, throwable ->
-                log.error("Upload to cache failed: %s", throwable));
+                log.error(throwable, "Upload to cache failed"));
     }
 
     private static class ResultsData

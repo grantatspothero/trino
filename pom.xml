@@ -206,7 +206,7 @@
         <!-- released from https://github.com/starburstdata/starburst-dataframe -->
         <dep.starburst-dataframe.version>0.5.0.20230804-a2776ed</dep.starburst-dataframe.version>
         <!-- released from https://github.com/starburstdata/stargate -->
-        <dep.stargate.version>stargate-10768-gaa718be58</dep.stargate.version>
+        <dep.stargate.version>stargate-10856-gd4e8d75c8</dep.stargate.version>
         <!-- released from https://github.com/starburstdata/starburst-trino-plugins -->
         <dep.starburst-trino-plugins.version>425.1</dep.starburst-trino-plugins.version>
         <dep.cloudevents.version>2.2.0</dep.cloudevents.version>
