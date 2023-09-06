@@ -1083,19 +1083,85 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertUpdate("CREATE TABLE test_select_i_s_columns_iceberg (iceberg_id VARCHAR, iceberg_age INT) WITH (type = 'ICEBERG')");
         assertUpdate("CREATE TABLE test_select_i_s_columns_hive (hive_id VARCHAR, hive_age INT) WITH (type = 'HIVE')");
 
+        for (InformationSchemaQueriesAcceleration mode : InformationSchemaQueriesAcceleration.values()) {
+            try {
+                assertInformationSchemaColumnsWithMixedTableTypes(mode);
+            }
+            catch (Throwable e) {
+                throw new AssertionError("Failure with mode: " + mode, e);
+            }
+        }
+    }
+
+    private void assertInformationSchemaColumnsWithMixedTableTypes(InformationSchemaQueriesAcceleration mode)
+    {
+        String catalog = getSession().getCatalog().orElseThrow();
+        Session session = Session.builder(getSession())
+                .setCatalogSessionProperty(catalog, INFORMATION_SCHEMA_QUERIES_ACCELERATION, mode.toString())
+                .build();
+
         assertQuery(
+                session,
                 "SELECT column_name FROM information_schema.columns WHERE table_schema = '" + SCHEMA_NAME + "'",
                 "VALUES 'delta_id', 'delta_age', 'iceberg_id', 'iceberg_age', 'hive_id', 'hive_age'");
 
-        assertInvocations("TABLE information_schema.columns",
+        assertInvocations(session, "TABLE information_schema.columns",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .add(GET_ALL_DATABASES)
-                        .add(STREAM_TABLES)
+                        .addCopies(GET_ALL_DATABASES, switch (mode) {
+                            case NONE, V1 -> 3;
+                            case V2 -> 2;
+                            case V3 -> 1;
+                        })
+                        .addCopies(GET_ALL_TABLES_FROM_DATABASE, switch (mode) {
+                            case NONE, V1 -> 3;
+                            case V2 -> 1;
+                            case V3 -> 0;
+                        })
+                        .addCopies(GET_ALL_VIEWS_FROM_DATABASE, switch (mode) {
+                            case NONE, V1, V2 -> 1;
+                            case V3 -> 0;
+                        })
+                        .addCopies(GET_TABLES_WITH_PARAMETER, switch (mode) {
+                            case NONE, V1, V2 -> 1;
+                            case V3 -> 0;
+                        })
+                        .addCopies(GET_TABLE, switch (mode) {
+                            case NONE, V1 -> 9;
+                            case V2 -> 5;
+                            case V3 -> 0;
+                        })
+                        .addCopies(STREAM_TABLES, switch (mode) {
+                            case NONE, V1, V2 -> 0;
+                            case V3 -> 1;
+                        })
                         .build(),
                 ImmutableMultiset.<FileOperation>builder()
                         .add(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM))
                         .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM))
                         .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM))
+                        .build(),
+                ImmutableList.<TracesAssertion>builder()
+                        .add(TracesAssertion.builder()
+                                .filterByAttribute("airlift.http.client_name", "galaxy-access-control")
+                                .formattingName()
+                                .formattingUriAttribute("http.url", uri -> uri.getPath()
+                                        .replaceAll("(/[cr])-\\d+(/|$)", "$1-xxx$2"))
+                                .setExpected(ImmutableMultiset.<String>builder()
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/role")
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
+                                        .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility", switch (mode) {
+                                            case NONE, V1, V2 -> 2;
+                                            case V3 -> 3;
+                                        })
+                                        .addCopies("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility", switch (mode) {
+                                            case NONE, V1, V2 -> 1;
+                                            case V3 -> 2;
+                                        })
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns_iceberg/privileges/r-xxx")
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns_delta/privileges/r-xxx")
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns_hive/privileges/r-xxx")
+                                        .build())
+                                .build())
                         .build());
     }
 
