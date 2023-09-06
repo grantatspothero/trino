@@ -38,6 +38,7 @@ import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TableNotFoundException;
 import io.trino.spi.eventlistener.EventListener;
 import io.trino.spi.function.FunctionKind;
+import io.trino.spi.function.SchemaFunctionName;
 import io.trino.spi.security.AccessDeniedException;
 import io.trino.spi.security.Identity;
 import io.trino.spi.security.SystemAccessControl;
@@ -717,6 +718,16 @@ public class GalaxyAccessControl
             denyExecuteProcedure(procedure, "Table procedures are not permitted on the system catalog");
         }
         checkIsTableOwner(context, table, explanation -> denyExecuteProcedure(procedure, explanation));
+    }
+
+    @Override
+    public void checkCanShowFunctions(SystemSecurityContext context, CatalogSchemaName schema)
+    {}
+
+    @Override
+    public Set<SchemaFunctionName> filterFunctions(SystemSecurityContext context, String catalogName, Set<SchemaFunctionName> functionNames)
+    {
+        return functionNames;
     }
 
     @Override
