@@ -143,7 +143,6 @@ public class TestObjectStoreDeltaConnectorTest
         if (typeName.equals("time") ||
                 typeName.equals("time(6)") ||
                 typeName.equals("timestamp") ||
-                typeName.equals("timestamp(6)") ||
                 typeName.equals("timestamp(6) with time zone") ||
                 typeName.equals("char(3)")) {
             return Optional.of(dataMappingTestSetup.asUnsupported());
