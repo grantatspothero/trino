@@ -112,9 +112,9 @@ public class TestingFunctionResolution
         return new ColumnarFilterCompiler(plannerContext.getFunctionManager(), expressionCacheSize);
     }
 
-    public Collection<FunctionMetadata> listFunctions()
+    public Collection<FunctionMetadata> listGlobalFunctions()
     {
-        return inTransaction(session -> metadata.listFunctions(session));
+        return inTransaction(metadata::listGlobalFunctions);
     }
 
     public ResolvedFunction resolveOperator(OperatorType operatorType, List<? extends Type> argumentTypes)

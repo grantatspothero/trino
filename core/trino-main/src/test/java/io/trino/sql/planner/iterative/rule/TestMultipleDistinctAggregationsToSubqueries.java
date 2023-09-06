@@ -1849,9 +1849,15 @@ public class TestMultipleDistinctAggregationsToSubqueries
         }
 
         @Override
-        public Collection<FunctionMetadata> listFunctions(Session session)
+        public Collection<FunctionMetadata> listGlobalFunctions(Session session)
         {
-            return metadata.listFunctions(session);
+            return metadata.listGlobalFunctions(session);
+        }
+
+        @Override
+        public Collection<FunctionMetadata> listFunctions(Session session, CatalogSchemaName schema)
+        {
+            return metadata.listFunctions(session, schema);
         }
 
         @Override
