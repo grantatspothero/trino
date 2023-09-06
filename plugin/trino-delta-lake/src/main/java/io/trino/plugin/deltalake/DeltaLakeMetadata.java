@@ -2305,8 +2305,22 @@ public class DeltaLakeMetadata
     @Override
     public Optional<Object> getInfo(ConnectorTableHandle table)
     {
-        boolean isPartitioned = !((DeltaLakeTableHandle) table).getMetadataEntry().getLowercasePartitionColumns().isEmpty();
-        return Optional.of(new DeltaLakeInputInfo(isPartitioned));
+        MetadataEntry metadataEntry = ((DeltaLakeTableHandle) table).getMetadataEntry();
+        boolean isPartitioned = !metadataEntry.getLowercasePartitionColumns().isEmpty();
+        Map<String, String> generatedColumnExpressions = getGeneratedColumnExpressions(metadataEntry);
+        long generatedPartitionColumns = generatedColumnExpressions.keySet().stream()
+                .filter(columnName -> metadataEntry.getLowercasePartitionColumns().contains(columnName.toLowerCase(ENGLISH)))
+                .count();
+
+        Map<String, String> galaxyTraits = ImmutableMap.<String, String>builder()
+                .put("cdfEnabled", Boolean.toString(changeDataFeedEnabled(metadataEntry)))
+                .put("checkConstraints", String.join(",", getCheckConstraints(metadataEntry).values()))
+                .put("columnMappingMode", getColumnMappingMode(metadataEntry).name())
+                .put("numberOfGeneratedColumns", String.valueOf(generatedColumnExpressions.size()))
+                .put("numberOfPartitionGeneratedColumns", String.valueOf(generatedPartitionColumns))
+                .buildOrThrow();
+
+        return Optional.of(new DeltaLakeInputInfo(isPartitioned, galaxyTraits));
     }
 
     @Override
