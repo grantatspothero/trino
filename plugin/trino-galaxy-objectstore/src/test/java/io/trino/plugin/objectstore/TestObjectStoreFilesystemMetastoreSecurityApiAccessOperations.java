@@ -806,7 +806,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
             assertUpdate("INSERT INTO test_select_i_s_columns" + i + " VALUES ('abc', 11)", 1);
             assertUpdate("INSERT INTO test_select_i_s_columns" + i + " VALUES ('xyz', 12)", 1);
 
-            assertUpdate("CREATE TABLE test_other_select_i_s_columns" + i + "(id varchar, age integer)");
+            assertUpdate("CREATE TABLE test_other_select_i_s_columns" + i + "(id varchar, age integer) WITH (type = '" + type + "')");
         }
 
         for (InformationSchemaQueriesAcceleration mode : InformationSchemaQueriesAcceleration.values()) {
@@ -850,16 +850,16 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                         })
                         .addCopies(GET_TABLE, switch (mode) {
                             case NONE, V1 -> allTables * 3;
-                            case V2 -> occurrences(type, allTables, allTables + tableBatches, allTables + tableBatches);
+                            case V2 -> occurrences(type, allTables, allTables * 2, allTables * 2);
                             case V3 -> 0; // 🎉
                         })
                         .build(),
                 switch (type) {
                     case HIVE, ICEBERG -> ImmutableMultiset.of();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
-                            .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), tableBatches)
-                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM), tableBatches)
-                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM), tableBatches)
+                            .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), allTables)
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM), allTables)
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM), allTables)
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM), tableBatches)
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), tableBatches)
                             .build();
@@ -873,16 +873,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                         .replaceAll("/(test_select_i_s_columns|test_other_select_i_s_columns)\\d+/", "/$1__/"))
                                 .setExpected(ImmutableMultiset.<String>builder()
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
-                                        .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility", switch (mode) {
-                                            case NONE, V1, V2 -> 1;
-                                            // TODO Why V3 results in more catalog visibility checks, but only for Delta tables?
-                                            case V3 -> occurrences(type, 1, 1, 2);
-                                        })
-                                        .addCopies("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility", switch (mode) {
-                                            case NONE, V1, V2 -> 1;
-                                            // TODO Why V3 results in more catalog visibility checks, but only for Delta tables?
-                                            case V3 -> occurrences(type, 1, 1, 2);
-                                        })
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility")
+                                        .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
                                         .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns__/privileges/r-xxx", tableBatches)
                                         // TODO AccessControl is consulted even for tables filtered out by the query LIKE predicate (test_other_select_i_s_columns...)
                                         .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_other_select_i_s_columns__/privileges/r-xxx", tableBatches)
@@ -975,7 +967,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
             assertUpdate("INSERT INTO test_select_s_m_t_comments" + i + " VALUES ('abc', 11)", 1);
             assertUpdate("INSERT INTO test_select_s_m_t_comments" + i + " VALUES ('xyz', 12)", 1);
 
-            assertUpdate("CREATE TABLE test_other_select_s_m_t_comments" + i + "(id varchar, age integer)");
+            assertUpdate("CREATE TABLE test_other_select_s_m_t_comments" + i + "(id varchar, age integer) WITH (type = '" + type + "')");
         }
 
         for (InformationSchemaQueriesAcceleration mode : InformationSchemaQueriesAcceleration.values()) {
@@ -1024,17 +1016,22 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 switch (type) {
                     case HIVE -> ImmutableMultiset.of();
                     case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
+                            // 'other' tables (filtered out by the query)
+                            .addCopies(new FileOperation(METADATA_JSON, "00000.metadata.json", INPUT_FILE_NEW_STREAM), switch (mode) {
+                                case NONE, V1, V2 -> tableBatches;
+                                case V3 -> 0; // 🎉
+                            })
                             .addCopies(new FileOperation(METADATA_JSON, "00004.metadata.json", INPUT_FILE_NEW_STREAM), switch (mode) {
                                 case NONE, V1, V2 -> tableBatches;
                                 case V3 -> 0; // 🎉
                             })
                             .build();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
-                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM), tableBatches)
-                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM), tableBatches)
+                            .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), allTables)
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM), allTables)
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM), allTables)
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM), tableBatches)
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), tableBatches)
-                            .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), tableBatches)
                             .build();
                 });
 
@@ -1049,11 +1046,11 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             .add(new FileOperation(METADATA_JSON, "00004.metadata.json", INPUT_FILE_NEW_STREAM))
                             .build();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
+                            .add(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM))
                             .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM))
                             .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM))
                             .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM))
                             .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM))
-                            .add(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM))
                             .build();
                 });
 
