@@ -885,6 +885,64 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                 .build())
                         .build());
 
+        // Bulk retrieval without filters. Including information_schema schema involves InformationSchemaMetadata and may result e.g. in additional access control calls
+        assertInvocations(session, "TABLE information_schema.columns",
+                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                        .addCopies(GET_ALL_DATABASES, switch (mode) {
+                            case NONE, V1 -> 3;
+                            case V2 -> 2;
+                            case V3 -> 1;
+                        })
+                        .addCopies(GET_ALL_VIEWS_FROM_DATABASE, switch (mode) {
+                            case NONE, V1, V2 -> 1;
+                            case V3 -> 0;
+                        })
+                        .addCopies(GET_ALL_TABLES_FROM_DATABASE, switch (mode) {
+                            case NONE, V1 -> 3;
+                            case V2 -> 1;
+                            case V3 -> 0;
+                        })
+                        .addCopies(GET_TABLES_WITH_PARAMETER, switch (mode) {
+                            case NONE, V1, V2 -> 1;
+                            case V3 -> 0;
+                        })
+                        .addCopies(STREAM_TABLES, switch (mode) {
+                            case NONE, V1, V2 -> 0;
+                            case V3 -> 1;
+                        })
+                        .addCopies(GET_TABLE, switch (mode) {
+                            case NONE, V1 -> allTables * 3;
+                            case V2 -> occurrences(type, allTables, allTables * 2, allTables * 2);
+                            case V3 -> 0; // 🎉
+                        })
+                        .build(),
+                switch (type) {
+                    case HIVE, ICEBERG -> ImmutableMultiset.of();
+                    case DELTA -> ImmutableMultiset.<FileOperation>builder()
+                            .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), allTables)
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM), allTables)
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM), allTables)
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM), tableBatches) // 'other' tables have shorter history
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), tableBatches)
+                            .build();
+                },
+                ImmutableList.<TracesAssertion>builder()
+                        .add(TracesAssertion.builder()
+                                .filterByAttribute("airlift.http.client_name", "galaxy-access-control")
+                                .formattingName()
+                                .formattingUriAttribute("http.url", uri -> uri.getPath()
+                                        .replaceAll("(/[cr])-\\d+(/|$)", "$1-xxx$2")
+                                        .replaceAll("/((test_select_i_s_columns|test_other_select_i_s_columns)\\d+|test_yet_another_other_select_i_s_columns)/", "/table-xxx/"))
+                                .setExpected(ImmutableMultiset.<String>builder()
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/role")
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
+                                        .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility", 2)
+                                        .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
+                                        .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/table-xxx/privileges/r-xxx", allTables)
+                                        .build())
+                                .build())
+                        .build());
+
         // Pointed lookup
         assertInvocations(session, "SELECT * FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA AND table_name = 'test_select_i_s_columns0'",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
