@@ -809,6 +809,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
             assertUpdate("CREATE TABLE test_other_select_i_s_columns" + i + "(id varchar, age integer) WITH (type = '" + type + "')");
         }
 
+        assertUpdate("CREATE TABLE test_yet_another_other_select_i_s_columns(id varchar, age integer) WITH (type = '" + type + "')"); // won't match the filter
+
         for (InformationSchemaQueriesAcceleration mode : InformationSchemaQueriesAcceleration.values()) {
             try {
                 assertInformationSchemaColumns(type, tableBatches, mode);
@@ -821,7 +823,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
     private void assertInformationSchemaColumns(TableType type, int tableBatches, InformationSchemaQueriesAcceleration mode)
     {
-        int allTables = tableBatches * 2;
+        int allTables = tableBatches * 2 + 1;
 
         String catalog = getSession().getCatalog().orElseThrow();
         Session session = Session.builder(getSession())
@@ -878,6 +880,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                         .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns__/privileges/r-xxx", tableBatches)
                                         // TODO AccessControl is consulted even for tables filtered out by the query LIKE predicate (test_other_select_i_s_columns...)
                                         .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_other_select_i_s_columns__/privileges/r-xxx", tableBatches)
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_yet_another_other_select_i_s_columns/privileges/r-xxx")
                                         .build())
                                 .build())
                         .build());
