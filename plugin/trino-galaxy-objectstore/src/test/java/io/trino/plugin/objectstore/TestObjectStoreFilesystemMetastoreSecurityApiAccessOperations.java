@@ -794,20 +794,20 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
     }
 
     @Test(dataProvider = "metadataTestDataProvider")
-    public void testInformationSchemaColumns(TableType type, int tables)
+    public void testInformationSchemaColumns(TableType type, int tableBatches)
     {
-        for (int i = 0; i < tables; i++) {
+        for (int i = 0; i < tableBatches; i++) {
             assertUpdate("CREATE TABLE test_select_i_s_columns" + i + "(id VARCHAR, age INT) WITH (type = '" + type + "')");
             // Produce multiple snapshots and metadata files
             assertUpdate("INSERT INTO test_select_i_s_columns" + i + " VALUES ('abc', 11)", 1);
             assertUpdate("INSERT INTO test_select_i_s_columns" + i + " VALUES ('xyz', 12)", 1);
 
-            assertUpdate("CREATE TABLE test_other_select_i_s_columns" + i + "(id varchar, age integer)"); // won't match the filter
+            assertUpdate("CREATE TABLE test_other_select_i_s_columns" + i + "(id varchar, age integer)");
         }
 
         for (InformationSchemaQueriesAcceleration mode : InformationSchemaQueriesAcceleration.values()) {
             try {
-                assertInformationSchemaColumns(type, tables, mode);
+                assertInformationSchemaColumns(type, tableBatches, mode);
             }
             catch (Throwable e) {
                 throw new AssertionError("Failure with mode: " + mode, e);
@@ -815,8 +815,10 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         }
     }
 
-    private void assertInformationSchemaColumns(TableType type, int tables, InformationSchemaQueriesAcceleration mode)
+    private void assertInformationSchemaColumns(TableType type, int tableBatches, InformationSchemaQueriesAcceleration mode)
     {
+        int allTables = tableBatches * 2;
+
         String catalog = getSession().getCatalog().orElseThrow();
         Session session = Session.builder(getSession())
                 .setCatalogSessionProperty(catalog, INFORMATION_SCHEMA_QUERIES_ACCELERATION, mode.toString())
@@ -843,16 +845,16 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             case V3 -> 1;
                         })
                         .addCopies(GET_TABLE, switch (mode) {
-                            case NONE, V1 -> tables * 6;
-                            case V2 -> occurrences(type, tables * 2, tables * 3, tables * 3);
+                            case NONE, V1 -> allTables * 3;
+                            case V2 -> occurrences(type, allTables, allTables + tableBatches, allTables + tableBatches);
                             case V3 -> 0; // 🎉
                         })
                         .build(),
                 switch (type) {
                     case HIVE, ICEBERG -> ImmutableMultiset.of();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
-                            .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), tables)
-                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), tables)
+                            .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), tableBatches)
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), tableBatches)
                             .build();
                 },
                 ImmutableList.<TracesAssertion>builder()
@@ -874,9 +876,9 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                             // TODO Why V3 results in more catalog visibility checks, but only for Delta tables?
                                             case V3 -> occurrences(type, 1, 1, 2);
                                         })
-                                        .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns__/privileges/r-xxx", tables)
+                                        .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns__/privileges/r-xxx", tableBatches)
                                         // TODO AccessControl is consulted even for tables filtered out by the query LIKE predicate (test_other_select_i_s_columns...)
-                                        .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_other_select_i_s_columns__/privileges/r-xxx", tables)
+                                        .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_other_select_i_s_columns__/privileges/r-xxx", tableBatches)
                                         .build())
                                 .build())
                         .build());
@@ -952,20 +954,20 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
     }
 
     @Test(dataProvider = "metadataTestDataProvider")
-    public void testSystemMetadataTableComments(TableType type, int tables)
+    public void testSystemMetadataTableComments(TableType type, int tableBatches)
     {
-        for (int i = 0; i < tables; i++) {
+        for (int i = 0; i < tableBatches; i++) {
             assertUpdate("CREATE TABLE test_select_s_m_t_comments" + i + "(id VARCHAR, age INT) WITH (type = '" + type + "')");
             // Produce multiple snapshots and metadata files
             assertUpdate("INSERT INTO test_select_s_m_t_comments" + i + " VALUES ('abc', 11)", 1);
             assertUpdate("INSERT INTO test_select_s_m_t_comments" + i + " VALUES ('xyz', 12)", 1);
 
-            assertUpdate("CREATE TABLE test_other_select_s_m_t_comments" + i + "(id varchar, age integer)"); // won't match the filter
+            assertUpdate("CREATE TABLE test_other_select_s_m_t_comments" + i + "(id varchar, age integer)");
         }
 
         for (InformationSchemaQueriesAcceleration mode : InformationSchemaQueriesAcceleration.values()) {
             try {
-                assertSystemMetadataTableComments(type, tables, mode);
+                assertSystemMetadataTableComments(type, tableBatches, mode);
             }
             catch (Throwable e) {
                 throw new AssertionError("Failure with mode: " + mode, e);
@@ -973,8 +975,10 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         }
     }
 
-    private void assertSystemMetadataTableComments(TableType type, int tables, InformationSchemaQueriesAcceleration mode)
+    private void assertSystemMetadataTableComments(TableType type, int tableBatches, InformationSchemaQueriesAcceleration mode)
     {
+        int allTables = tableBatches * 2;
+
         String catalog = getSession().getCatalog().orElseThrow();
         Session session = Session.builder(getSession())
                 .setCatalogSessionProperty(catalog, INFORMATION_SCHEMA_QUERIES_ACCELERATION, mode.toString())
@@ -996,7 +1000,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             case V3 -> 0;
                         })
                         .addCopies(GET_TABLE, switch (mode) {
-                            case NONE, V1, V2 -> tables * 2;
+                            case NONE, V1, V2 -> allTables;
                             case V3 -> 0; // 🎉
                         })
                         .addCopies(STREAM_TABLES, switch (mode) {
@@ -1008,13 +1012,13 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                     case HIVE -> ImmutableMultiset.of();
                     case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
                             .addCopies(new FileOperation(METADATA_JSON, "00004.metadata.json", INPUT_FILE_NEW_STREAM), switch (mode) {
-                                case NONE, V1, V2 -> tables;
+                                case NONE, V1, V2 -> tableBatches;
                                 case V3 -> 0; // 🎉
                             })
                             .build();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
-                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), tables)
-                            .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), tables)
+                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), tableBatches)
+                            .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), tableBatches)
                             .build();
                 });
 
