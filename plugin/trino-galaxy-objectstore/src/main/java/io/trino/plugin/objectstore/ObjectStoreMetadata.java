@@ -14,7 +14,6 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.base.VerifyException;
-import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -121,9 +120,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
-import java.util.concurrent.CompletionService;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -561,55 +557,6 @@ public class ObjectStoreMetadata
                     // Delta Lake only lists Delta Lake tables
                     deltaMetadata.streamTableColumns(unwrap(DELTA, session), prefix));
 
-            case V1 -> {
-                // This is called from MetadataManager.listTableColumns which materializes the result eagerly
-                CompletionService<List<TableColumnsMetadata>> completionService = new ExecutorCompletionService<>(parallelInformationSchemaQueryingExecutor);
-
-                Context context = Context.current();
-                // Hive lists Hive and Hudi tables
-                completionService.submit(() -> {
-                    try (Scope ignore = context.makeCurrent()) {
-                        return ImmutableList.copyOf(hiveMetadata.streamTableColumns(unwrap(HIVE, session), prefix));
-                    }
-                });
-                // Iceberg only lists Iceberg tables
-                completionService.submit(() -> {
-                    try (Scope ignore = context.makeCurrent()) {
-                        return ImmutableList.copyOf(icebergMetadata.streamTableColumns(unwrap(ICEBERG, session), prefix));
-                    }
-                });
-                // Delta Lake only lists Delta Lake tables
-                completionService.submit(() -> {
-                    try (Scope ignore = context.makeCurrent()) {
-                        return ImmutableList.copyOf(deltaMetadata.streamTableColumns(unwrap(DELTA, session), prefix));
-                    }
-                });
-
-                yield Iterators.concat(new AbstractIterator<Iterator<TableColumnsMetadata>>()
-                {
-                    private int completedDelegates;
-
-                    @Override
-                    protected Iterator<TableColumnsMetadata> computeNext()
-                    {
-                        if (completedDelegates == 3) {
-                            return endOfData();
-                        }
-                        try {
-                            completedDelegates++;
-                            return completionService.take().get().iterator();
-                        }
-                        catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Interrupted while loading column metadata", e);
-                        }
-                        catch (ExecutionException e) {
-                            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error while loading column metadata", e);
-                        }
-                    }
-                });
-            }
-
             case V3 -> throw new UnsupportedOperationException("streamTableColumns should not be called when streamRelationColumns is implemented");
         };
     }
@@ -618,7 +565,7 @@ public class ObjectStoreMetadata
     public Iterator<RelationColumnsMetadata> streamRelationColumns(ConnectorSession session, Optional<String> schemaName, UnaryOperator<Set<SchemaTableName>> relationFilter)
     {
         return switch (getInformationSchemaQueriesAcceleration(session)) {
-            case NONE, V1 -> ConnectorMetadata.super.streamRelationColumns(session, schemaName, relationFilter);
+            case NONE -> ConnectorMetadata.super.streamRelationColumns(session, schemaName, relationFilter);
             case V3 -> {
                 ConnectorSession hiveSession = unwrap(HIVE, session);
                 ConnectorSession icebergSession = unwrap(ICEBERG, session);
@@ -744,7 +691,7 @@ public class ObjectStoreMetadata
     public Iterator<RelationCommentMetadata> streamRelationComments(ConnectorSession session, Optional<String> schemaName, UnaryOperator<Set<SchemaTableName>> relationFilter)
     {
         return switch (getInformationSchemaQueriesAcceleration(session)) {
-            case NONE, V1 -> ConnectorMetadata.super.streamRelationComments(session, schemaName, relationFilter);
+            case NONE -> ConnectorMetadata.super.streamRelationComments(session, schemaName, relationFilter);
             case V3 -> {
                 ConnectorSession hiveSession = unwrap(HIVE, session);
                 ConnectorSession icebergSession = unwrap(ICEBERG, session);

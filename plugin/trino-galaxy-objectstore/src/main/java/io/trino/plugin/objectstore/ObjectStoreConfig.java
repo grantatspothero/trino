@@ -27,10 +27,6 @@ public class ObjectStoreConfig
     // TODO: remove: select good implementation and remove all the rest.
     public enum InformationSchemaQueriesAcceleration {
         NONE,
-        /**
-         * Query underlying connectors in parallel
-         */
-        V1,
 
         /**
          * {@link io.trino.spi.connector.ConnectorMetadata#streamRelationColumns}
