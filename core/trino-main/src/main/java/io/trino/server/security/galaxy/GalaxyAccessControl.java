@@ -378,6 +378,13 @@ public class GalaxyAccessControl
     }
 
     @Override
+    public Map<SchemaTableName, Set<String>> filterColumns(SystemSecurityContext context, String catalogName, Map<SchemaTableName, Set<String>> tableColumns)
+    {
+        // TODO implement bulk filterColumns more efficiently
+        return SystemAccessControl.super.filterColumns(context, catalogName, tableColumns);
+    }
+
+    @Override
     public void checkCanAddColumn(SystemSecurityContext context, CatalogSchemaTableName table)
     {
         checkCatalogWritableAndTableOwner(context, table, explanation -> denyAddColumn(table.toString(), explanation));
