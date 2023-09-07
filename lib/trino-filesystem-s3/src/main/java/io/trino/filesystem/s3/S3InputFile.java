@@ -28,7 +28,9 @@ import software.amazon.awssdk.services.s3.model.RequestPayer;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Optional;
 
+import static io.trino.filesystem.s3.S3PathUtils.legacyCorruptedKey;
 import static java.util.Objects.requireNonNull;
 
 final class S3InputFile
@@ -37,28 +39,31 @@ final class S3InputFile
     private final S3Client client;
     private final S3Location location;
     private final RequestPayer requestPayer;
+    private final boolean supportLegacyCorruptedPaths;
+
     private Long length;
     private Instant lastModified;
 
-    public S3InputFile(S3Client client, S3Context context, S3Location location, Long length)
+    public S3InputFile(S3Client client, S3Context context, S3Location location, Long length, boolean supportLegacyCorruptedPaths)
     {
         this.client = requireNonNull(client, "client is null");
         this.location = requireNonNull(location, "location is null");
         this.requestPayer = context.requestPayer();
         this.length = length;
+        this.supportLegacyCorruptedPaths = supportLegacyCorruptedPaths;
         location.location().verifyValidFileLocation();
     }
 
     @Override
     public TrinoInput newInput()
     {
-        return new S3Input(location(), client, newGetObjectRequest());
+        return new S3Input(location(), client, newGetObjectRequest(), supportLegacyCorruptedPaths);
     }
 
     @Override
     public TrinoInputStream newStream()
     {
-        return new S3InputStream(location(), client, newGetObjectRequest(), length);
+        return new S3InputStream(location(), client, newGetObjectRequest(), length, supportLegacyCorruptedPaths);
     }
 
     @Override
@@ -106,10 +111,23 @@ final class S3InputFile
     private boolean headObject()
             throws IOException
     {
+        boolean result = headObjectRequest(location.bucket(), location.key());
+        if (!result && supportLegacyCorruptedPaths) {
+            Optional<String> corruptedPath = legacyCorruptedKey(location.key());
+            if (corruptedPath.isPresent()) {
+                return headObjectRequest(location.bucket(), corruptedPath.get());
+            }
+        }
+        return result;
+    }
+
+    private boolean headObjectRequest(String bucket, String key)
+            throws IOException
+    {
         HeadObjectRequest request = HeadObjectRequest.builder()
                 .requestPayer(requestPayer)
-                .bucket(location.bucket())
-                .key(location.key())
+                .bucket(bucket)
+                .key(key)
                 .build();
 
         try {

@@ -16,6 +16,7 @@ package io.trino.tests.product.launcher.suite.suites;
 import com.google.common.collect.ImmutableList;
 import io.trino.tests.product.launcher.env.EnvironmentConfig;
 import io.trino.tests.product.launcher.env.environment.EnvMultinodeTrino415;
+import io.trino.tests.product.launcher.env.environment.EnvMultinodeWithLegacyPathsTrino415;
 import io.trino.tests.product.launcher.suite.Suite;
 import io.trino.tests.product.launcher.suite.SuiteTestRun;
 
@@ -29,6 +30,8 @@ public class SuiteS3Compatibility
     @Override
     public List<SuiteTestRun> getTestRuns(EnvironmentConfig config)
     {
-        return ImmutableList.of(testOnEnvironment(EnvMultinodeTrino415.class).withGroups("s3_backwards_compatibility").build());
+        return ImmutableList.of(
+                testOnEnvironment(EnvMultinodeTrino415.class).withGroups("s3_backwards_compatibility").build(),
+                testOnEnvironment(EnvMultinodeWithLegacyPathsTrino415.class).withGroups("s3_backwards_compatibility").build());
     }
 }

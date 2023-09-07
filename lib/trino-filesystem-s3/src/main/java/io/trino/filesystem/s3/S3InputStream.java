@@ -27,7 +27,9 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.Optional;
 
+import static io.trino.filesystem.s3.S3PathUtils.legacyCorruptedKey;
 import static java.lang.Math.max;
 import static java.util.Objects.requireNonNull;
 
@@ -40,18 +42,20 @@ final class S3InputStream
     private final S3Client client;
     private final GetObjectRequest request;
     private final Long length;
+    private final boolean supportLegacyCorruptedPaths;
 
     private boolean closed;
     private ResponseInputStream<GetObjectResponse> in;
     private long streamPosition;
     private long nextReadPosition;
 
-    public S3InputStream(Location location, S3Client client, GetObjectRequest request, Long length)
+    public S3InputStream(Location location, S3Client client, GetObjectRequest request, Long length, boolean supportLegacyCorruptedPaths)
     {
         this.location = requireNonNull(location, "location is null");
         this.client = requireNonNull(client, "client is null");
         this.request = requireNonNull(request, "request is null");
         this.length = length;
+        this.supportLegacyCorruptedPaths = supportLegacyCorruptedPaths;
     }
 
     @Override
@@ -190,8 +194,34 @@ final class S3InputStream
         closeStream();
 
         try {
-            String range = "bytes=%s-".formatted(nextReadPosition);
-            GetObjectRequest rangeRequest = request.toBuilder().range(range).build();
+            readRange(request.key());
+        }
+        catch (FileNotFoundException notFound) {
+            if (supportLegacyCorruptedPaths) {
+                Optional<String> corruptedPath = legacyCorruptedKey(location.path());
+                if (corruptedPath.isPresent()) {
+                    try {
+                        readRange(corruptedPath.get());
+                        return;
+                    }
+                    catch (IOException | RuntimeException secondException) {
+                        notFound.addSuppressed(secondException);
+                    }
+                }
+            }
+            throw notFound;
+        }
+        catch (SdkException e) {
+            throw new IOException("Failed to open S3 file: " + location, e);
+        }
+    }
+
+    private void readRange(String key)
+            throws IOException
+    {
+        String range = "bytes=%s-".formatted(nextReadPosition);
+        try {
+            GetObjectRequest rangeRequest = request.toBuilder().range(range).key(key).build();
             in = client.getObject(rangeRequest);
             streamPosition = nextReadPosition;
         }

@@ -42,6 +42,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Iterables.partition;
 import static com.google.common.collect.Multimaps.toMultimap;
@@ -52,25 +53,27 @@ final class S3FileSystem
 {
     private final S3Client client;
     private final S3Context context;
+    private final boolean supportLegacyCorruptedPaths;
     private final RequestPayer requestPayer;
 
-    public S3FileSystem(S3Client client, S3Context context)
+    public S3FileSystem(S3Client client, S3Context context, boolean supportLegacyCorruptedPaths)
     {
         this.client = requireNonNull(client, "client is null");
         this.context = requireNonNull(context, "context is null");
+        this.supportLegacyCorruptedPaths = supportLegacyCorruptedPaths;
         this.requestPayer = context.requestPayer();
     }
 
     @Override
     public TrinoInputFile newInputFile(Location location)
     {
-        return new S3InputFile(client, context, new S3Location(location), null);
+        return new S3InputFile(client, context, new S3Location(location), null, supportLegacyCorruptedPaths);
     }
 
     @Override
     public TrinoInputFile newInputFile(Location location, long length)
     {
-        return new S3InputFile(client, context, new S3Location(location), length);
+        return new S3InputFile(client, context, new S3Location(location), length, supportLegacyCorruptedPaths);
     }
 
     @Override
@@ -84,10 +87,20 @@ final class S3FileSystem
             throws IOException
     {
         location.verifyValidFileLocation();
+        PathKeys pathKeys = keysFromPath(location.path());
+        deleteFile(location, pathKeys.correctKey());
+        if (pathKeys.legacyCorruptedKey().isPresent()) {
+            deleteFile(location, pathKeys.legacyCorruptedKey().get());
+        }
+    }
+
+    private void deleteFile(Location location, String key)
+            throws IOException
+    {
         S3Location s3Location = new S3Location(location);
         DeleteObjectRequest request = DeleteObjectRequest.builder()
                 .requestPayer(requestPayer)
-                .key(s3Location.key())
+                .key(key)
                 .bucket(s3Location.bucket())
                 .build();
 
@@ -97,6 +110,11 @@ final class S3FileSystem
         catch (SdkException e) {
             throw new IOException("Failed to delete file: " + location, e);
         }
+    }
+
+    private PathKeys keysFromPath(String key)
+    {
+        return S3PathUtils.keysFromPath(key, supportLegacyCorruptedPaths);
     }
 
     @Override
@@ -127,7 +145,10 @@ final class S3FileSystem
 
         for (Entry<String, Collection<String>> entry : bucketToKeys.asMap().entrySet()) {
             String bucket = entry.getKey();
-            Collection<String> allKeys = entry.getValue();
+            Collection<String> allKeys = entry.getValue().stream()
+                    .map(this::keysFromPath)
+                    .flatMap(PathKeys::stream)
+                    .collect(toImmutableList());
 
             for (List<String> keys : partition(allKeys, 250)) {
                 List<ObjectIdentifier> objects = keys.stream()

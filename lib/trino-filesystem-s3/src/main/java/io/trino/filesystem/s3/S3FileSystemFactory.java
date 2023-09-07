@@ -46,6 +46,7 @@ public final class S3FileSystemFactory
 {
     private final S3Client client;
     private final S3Context context;
+    private final boolean supportLegacyCorruptedPaths;
 
     @Inject
     public S3FileSystemFactory(S3FileSystemConfig config, CatalogHandle catalogHandle, LocalRegionConfig localRegionConfig, CrossRegionConfig crossRegionConfig)
@@ -106,6 +107,7 @@ public final class S3FileSystemFactory
                 config.isRequesterPays(),
                 config.getSseType(),
                 config.getSseKmsKeyId());
+        this.supportLegacyCorruptedPaths = config.isSupportLegacyCorruptedPaths();
     }
 
     @PreDestroy
@@ -117,6 +119,6 @@ public final class S3FileSystemFactory
     @Override
     public TrinoFileSystem create(ConnectorIdentity identity)
     {
-        return new S3FileSystem(client, context);
+        return new S3FileSystem(client, context, supportLegacyCorruptedPaths);
     }
 }

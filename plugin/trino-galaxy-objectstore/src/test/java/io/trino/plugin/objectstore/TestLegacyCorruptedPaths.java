@@ -14,6 +14,7 @@
 package io.trino.plugin.objectstore;
 
 import io.trino.filesystem.Location;
+import io.trino.filesystem.s3.S3PathUtils;
 import io.trino.hdfs.s3.TrinoS3FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.testng.annotations.Test;
@@ -60,6 +61,9 @@ public class TestLegacyCorruptedPaths
     private static void assertLegacyCorruptedKey(String protocol, String correctKey, Optional<String> expected)
     {
         assertThat(legacyCorruptedKeyFromPath(new Path(format("%s://my-bucket/%s", protocol, correctKey)), correctKey, true))
+                .isEqualTo(expected);
+
+        assertThat(S3PathUtils.keysFromPath(correctKey, true).legacyCorruptedKey())
                 .isEqualTo(expected);
     }
 

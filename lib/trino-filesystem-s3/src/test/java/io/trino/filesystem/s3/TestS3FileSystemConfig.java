@@ -48,7 +48,8 @@ public class TestS3FileSystemConfig
                 .setRequesterPays(false)
                 .setMaxConnections(null)
                 .setHttpProxy(null)
-                .setHttpProxySecure(false));
+                .setHttpProxySecure(false)
+                .setSupportLegacyCorruptedPaths(false));
     }
 
     @Test
@@ -72,6 +73,7 @@ public class TestS3FileSystemConfig
                 .put("s3.max-connections", "42")
                 .put("s3.http-proxy", "localhost:8888")
                 .put("s3.http-proxy.secure", "true")
+                .put("hive.s3.support-legacy-corrupted-paths", "true")
                 .buildOrThrow();
 
         S3FileSystemConfig expected = new S3FileSystemConfig()
@@ -91,7 +93,8 @@ public class TestS3FileSystemConfig
                 .setRequesterPays(true)
                 .setMaxConnections(42)
                 .setHttpProxy(HostAndPort.fromParts("localhost", 8888))
-                .setHttpProxySecure(true);
+                .setHttpProxySecure(true)
+                .setSupportLegacyCorruptedPaths(true);
 
         assertFullMapping(properties, expected);
     }

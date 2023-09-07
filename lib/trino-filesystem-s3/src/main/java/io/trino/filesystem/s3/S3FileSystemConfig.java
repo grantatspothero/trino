@@ -37,6 +37,7 @@ public class S3FileSystemConfig
     private String endpoint;
     private String region;
     private boolean pathStyleAccess;
+    private boolean supportLegacyPaths;
     private String iamRole;
     private String roleSessionName = "trino-filesystem";
     private String externalId;
@@ -109,6 +110,18 @@ public class S3FileSystemConfig
     public S3FileSystemConfig setPathStyleAccess(boolean pathStyleAccess)
     {
         this.pathStyleAccess = pathStyleAccess;
+        return this;
+    }
+
+    public boolean isSupportLegacyCorruptedPaths()
+    {
+        return supportLegacyPaths;
+    }
+
+    @Config("hive.s3.support-legacy-corrupted-paths")
+    public S3FileSystemConfig setSupportLegacyCorruptedPaths(boolean supportLegacyPaths)
+    {
+        this.supportLegacyPaths = supportLegacyPaths;
         return this;
     }
 

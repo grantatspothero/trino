@@ -26,7 +26,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
+import java.util.Optional;
 
+import static io.trino.filesystem.s3.S3PathUtils.legacyCorruptedKey;
 import static java.util.Objects.checkFromIndexSize;
 import static java.util.Objects.requireNonNull;
 
@@ -36,13 +38,16 @@ final class S3Input
     private final Location location;
     private final S3Client client;
     private final GetObjectRequest request;
+    private final boolean supportLegacyCorruptedPaths;
+
     private boolean closed;
 
-    public S3Input(Location location, S3Client client, GetObjectRequest request)
+    public S3Input(Location location, S3Client client, GetObjectRequest request, boolean supportLegacyCorruptedPaths)
     {
         this.location = requireNonNull(location, "location is null");
         this.client = requireNonNull(client, "client is null");
         this.request = requireNonNull(request, "request is null");
+        this.supportLegacyCorruptedPaths = supportLegacyCorruptedPaths;
     }
 
     @Override
@@ -102,6 +107,30 @@ final class S3Input
     }
 
     private InputStream getObject(GetObjectRequest request)
+            throws IOException
+    {
+        try {
+            return getObjectRequest(request);
+        }
+        catch (FileNotFoundException notFound) {
+            if (supportLegacyCorruptedPaths) {
+                Optional<String> corruptedKey = legacyCorruptedKey(location.path());
+                if (corruptedKey.isPresent()) {
+                    // Note: theoretically information about using a fallback could be persisted in a field
+                    // and used later but we expect users to migrate all their important tables to the correct paths
+                    try {
+                        return getObjectRequest(request.toBuilder().key(corruptedKey.get()).build());
+                    }
+                    catch (IOException | RuntimeException secondException) {
+                        notFound.addSuppressed(secondException);
+                    }
+                }
+            }
+            throw notFound;
+        }
+    }
+
+    private InputStream getObjectRequest(GetObjectRequest request)
             throws IOException
     {
         try {
