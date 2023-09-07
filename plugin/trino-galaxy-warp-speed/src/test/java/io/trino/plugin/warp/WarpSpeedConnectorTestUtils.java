@@ -19,7 +19,6 @@ import io.trino.plugin.varada.di.CloudVendorStubModule;
 import io.trino.plugin.varada.di.VaradaStubsStorageEngineModule;
 import io.trino.spi.Plugin;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import static io.trino.plugin.warp.WarpSpeedConnectorFactory.WARP_PREFIX;
@@ -37,12 +36,9 @@ public abstract class WarpSpeedConnectorTestUtils
 
     public static Map<String, String> getProperties()
     {
-        Map<String, String> properties = new HashMap<>();
-        properties.put(WARP_PREFIX + GlobalConfiguration.STORE_PATH, "s3://some-bucket/some-folder");
-        properties.put(WARP_PREFIX + "warp-speed.config.device-list", "nvme0n1");
-        properties.put(WARP_PREFIX + ProxiedConnectorConfiguration.PASS_THROUGH_DISPATCHER, "hive,hudi,delta-lake,iceberg");
-
-        return properties;
+        return Map.of(
+                WARP_PREFIX + GlobalConfiguration.STORE_PATH, "s3://some-bucket/some-folder",
+                WARP_PREFIX + ProxiedConnectorConfiguration.PASS_THROUGH_DISPATCHER, "hive,hudi,delta-lake,iceberg");
     }
 
     public static Map<String, String> getCoordinatorProperties()

@@ -22,8 +22,10 @@ import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
 import io.trino.spi.connector.ConnectorFactory;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -48,40 +50,50 @@ public class WarpSpeedConnectorFactory
         return NAME;
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public Connector create(String catalogName, Map<String, String> config, ConnectorContext context)
     {
-        if (config.getOrDefault(ProxiedConnectorConfiguration.PROXIED_CONNECTOR, ObjectStoreProxyConnectorInitializer.CONNECTOR_NAME).equals(ProxiedConnectorConfiguration.ICEBERG_CONNECTOR_NAME)) {
+        Optional<List<Class>> optionalModules = Optional.of(List.of(WarpSpeedObjectStoreModule.class));
+        Map<String, String> extraConfig = Map.of(
+                DispatcherWorkerDALModule.WORKER_DB_CONNECTION_PREFIX, "jdbc:hsqldb:mem:",
+                DispatcherWorkerDALModule.WORKER_DB_CONNECTION_PATH, "workerDB/");
+
+        String proxyConnectorName = config.getOrDefault(ProxiedConnectorConfiguration.PROXIED_CONNECTOR,
+                ObjectStoreProxyConnectorInitializer.CONNECTOR_NAME);
+
+        if (proxyConnectorName.equals(ProxiedConnectorConfiguration.ICEBERG_CONNECTOR_NAME)) {
             // support for Tabular which should act as warp-speed iceberg.
             ImmutableMap.Builder<String, String> strippedConfig = ImmutableMap.builder();
-            strippedConfig.putAll(config)
-                    .put(DispatcherWorkerDALModule.WORKER_DB_CONNECTION_PREFIX, "jdbc:hsqldb:mem:")
-                    .put(DispatcherWorkerDALModule.WORKER_DB_CONNECTION_PATH, "workerDB/");
+            strippedConfig.putAll(config);
+            strippedConfig.putAll(extraConfig);
+
             return dispatcherConnectorFactory.create(
                     catalogName,
                     strippedConfig.buildOrThrow(),
                     context,
-                    Optional.of(new WarpSpeedObjectStoreModule()),
-                    Map.of(ProxiedConnectorConfiguration.ICEBERG_CONNECTOR_NAME, new IcebergProxiedConnectorInitializer()));
+                    optionalModules,
+                    Map.of(ProxiedConnectorConfiguration.ICEBERG_CONNECTOR_NAME,
+                            IcebergProxiedConnectorInitializer.class.getName()),
+                    true);
         }
         else {
-            Map<String, String> strippedConfig = Stream.concat(
-                            config.entrySet().stream(),
-                            Map.of(ProxiedConnectorConfiguration.PROXIED_CONNECTOR, "galaxy_objectstore",
-                                            DispatcherWorkerDALModule.WORKER_DB_CONNECTION_PREFIX, "jdbc:hsqldb:mem:",
-                                            DispatcherWorkerDALModule.WORKER_DB_CONNECTION_PATH, "workerDB/")
-                                    .entrySet()
-                                    .stream())
-                    .collect(toImmutableMap(
-                            entry -> entry.getKey().startsWith(WARP_PREFIX) ? entry.getKey().substring(WARP_PREFIX.length()) : entry.getKey(),
-                            Map.Entry::getValue));
+            Map<String, String> strippedConfig =
+                    Stream.of(config.entrySet(),
+                                    Map.of(ProxiedConnectorConfiguration.PROXIED_CONNECTOR, "galaxy_objectstore").entrySet(),
+                                    extraConfig.entrySet())
+                            .flatMap(Set::stream)
+                            .collect(toImmutableMap(
+                                    entry -> entry.getKey().startsWith(WARP_PREFIX) ? entry.getKey().substring(WARP_PREFIX.length()) : entry.getKey(),
+                                    Map.Entry::getValue));
 
             return dispatcherConnectorFactory.create(
                     catalogName,
                     strippedConfig,
                     context,
-                    Optional.of(new WarpSpeedObjectStoreModule()),
-                    Map.of(ObjectStoreProxyConnectorInitializer.CONNECTOR_NAME, new ObjectStoreProxyConnectorInitializer()));
+                    optionalModules,
+                    Map.of(ObjectStoreProxyConnectorInitializer.CONNECTOR_NAME,
+                            ObjectStoreProxyConnectorInitializer.class.getName()));
         }
     }
 }
