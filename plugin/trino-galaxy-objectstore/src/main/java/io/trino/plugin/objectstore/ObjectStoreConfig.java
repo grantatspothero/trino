@@ -33,11 +33,6 @@ public class ObjectStoreConfig
         V1,
 
         /**
-         * Query iterating over table listing once.
-         */
-        V2,
-
-        /**
          * {@link io.trino.spi.connector.ConnectorMetadata#streamRelationColumns}
          * with {@link io.trino.plugin.hive.metastore.HiveMetastore#streamTables(ConnectorSession, String)}.
          */

@@ -834,25 +834,23 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertInvocations(session, "SELECT * FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA AND table_name LIKE 'test_select_i_s_columns%'",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
                         .addCopies(GET_ALL_VIEWS_FROM_DATABASE, switch (mode) {
-                            case NONE, V1, V2 -> 1;
+                            case NONE, V1 -> 1;
                             case V3 -> 0;
                         })
                         .addCopies(GET_ALL_TABLES_FROM_DATABASE, switch (mode) {
                             case NONE, V1 -> 3;
-                            case V2 -> 1;
                             case V3 -> 0;
                         })
                         .addCopies(GET_TABLES_WITH_PARAMETER, switch (mode) {
-                            case NONE, V1, V2 -> 1;
+                            case NONE, V1 -> 1;
                             case V3 -> 0;
                         })
                         .addCopies(STREAM_TABLES, switch (mode) {
-                            case NONE, V1, V2 -> 0;
+                            case NONE, V1 -> 0;
                             case V3 -> 1;
                         })
                         .addCopies(GET_TABLE, switch (mode) {
                             case NONE, V1 -> allTables * 3;
-                            case V2 -> occurrences(type, allTables, allTables * 2, allTables * 2);
                             case V3 -> 0; // 🎉
                         })
                         .build(),
@@ -890,29 +888,26 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
                         .addCopies(GET_ALL_DATABASES, switch (mode) {
                             case NONE, V1 -> 3;
-                            case V2 -> 2;
                             case V3 -> 1;
                         })
                         .addCopies(GET_ALL_VIEWS_FROM_DATABASE, switch (mode) {
-                            case NONE, V1, V2 -> 1;
+                            case NONE, V1 -> 1;
                             case V3 -> 0;
                         })
                         .addCopies(GET_ALL_TABLES_FROM_DATABASE, switch (mode) {
                             case NONE, V1 -> 3;
-                            case V2 -> 1;
                             case V3 -> 0;
                         })
                         .addCopies(GET_TABLES_WITH_PARAMETER, switch (mode) {
-                            case NONE, V1, V2 -> 1;
+                            case NONE, V1 -> 1;
                             case V3 -> 0;
                         })
                         .addCopies(STREAM_TABLES, switch (mode) {
-                            case NONE, V1, V2 -> 0;
+                            case NONE, V1 -> 0;
                             case V3 -> 1;
                         })
                         .addCopies(GET_TABLE, switch (mode) {
                             case NONE, V1 -> allTables * 3;
-                            case V2 -> occurrences(type, allTables, allTables * 2, allTables * 2);
                             case V3 -> 0; // 🎉
                         })
                         .build(),
@@ -1054,23 +1049,23 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertInvocations(session, "SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name LIKE 'test_select_s_m_t_comments%'",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
                         .addCopies(GET_ALL_VIEWS_FROM_DATABASE, switch (mode) {
-                            case NONE, V1, V2 -> 1;
+                            case NONE, V1 -> 1;
                             case V3 -> 0;
                         })
                         .addCopies(GET_ALL_TABLES_FROM_DATABASE, switch (mode) {
-                            case NONE, V1, V2 -> 1;
+                            case NONE, V1 -> 1;
                             case V3 -> 0;
                         })
                         .addCopies(GET_TABLES_WITH_PARAMETER, switch (mode) {
-                            case NONE, V1, V2 -> 1;
+                            case NONE, V1 -> 1;
                             case V3 -> 0;
                         })
                         .addCopies(GET_TABLE, switch (mode) {
-                            case NONE, V1, V2 -> allTables;
+                            case NONE, V1 -> allTables;
                             case V3 -> 0; // 🎉
                         })
                         .addCopies(STREAM_TABLES, switch (mode) {
-                            case NONE, V1, V2 -> 0;
+                            case NONE, V1 -> 0;
                             case V3 -> 1;
                         })
                         .build(),
@@ -1079,11 +1074,11 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                     case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
                             // 'other' tables (filtered out by the query)
                             .addCopies(new FileOperation(METADATA_JSON, "00000.metadata.json", INPUT_FILE_NEW_STREAM), switch (mode) {
-                                case NONE, V1, V2 -> tableBatches;
+                                case NONE, V1 -> tableBatches;
                                 case V3 -> 0; // 🎉
                             })
                             .addCopies(new FileOperation(METADATA_JSON, "00004.metadata.json", INPUT_FILE_NEW_STREAM), switch (mode) {
-                                case NONE, V1, V2 -> tableBatches;
+                                case NONE, V1 -> tableBatches;
                                 case V3 -> 0; // 🎉
                             })
                             .build();
@@ -1167,29 +1162,26 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
                         .addCopies(GET_ALL_DATABASES, switch (mode) {
                             case NONE, V1 -> 3;
-                            case V2 -> 2;
                             case V3 -> 1;
                         })
                         .addCopies(GET_ALL_TABLES_FROM_DATABASE, switch (mode) {
                             case NONE, V1 -> 3;
-                            case V2 -> 1;
                             case V3 -> 0;
                         })
                         .addCopies(GET_ALL_VIEWS_FROM_DATABASE, switch (mode) {
-                            case NONE, V1, V2 -> 1;
+                            case NONE, V1 -> 1;
                             case V3 -> 0;
                         })
                         .addCopies(GET_TABLES_WITH_PARAMETER, switch (mode) {
-                            case NONE, V1, V2 -> 1;
+                            case NONE, V1 -> 1;
                             case V3 -> 0;
                         })
                         .addCopies(GET_TABLE, switch (mode) {
                             case NONE, V1 -> 9;
-                            case V2 -> 5;
                             case V3 -> 0;
                         })
                         .addCopies(STREAM_TABLES, switch (mode) {
-                            case NONE, V1, V2 -> 0;
+                            case NONE, V1 -> 0;
                             case V3 -> 1;
                         })
                         .build(),
@@ -1209,7 +1201,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility")
                                         .addCopies("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility", switch (mode) {
-                                            case NONE, V1, V2 -> 1;
+                                            case NONE, V1 -> 1;
                                             case V3 -> 2;
                                         })
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns_iceberg/privileges/r-xxx")
