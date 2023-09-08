@@ -22,7 +22,6 @@ import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.starburstdata.trino.plugins.synapse.StarburstSynapseModule;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
-import io.opentelemetry.api.OpenTelemetry;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
@@ -65,10 +64,9 @@ public class SynapseModule
             SshTunnelConfig sshConfig,
             LocalRegionConfig localRegionConfig,
             CrossRegionConfig crossRegionConfig,
-            CredentialProvider credentials,
-            OpenTelemetry openTelemetry)
+            CredentialProvider credentials)
     {
-        return SqlServerClientModule.getConnectionFactory(catalogHandle, config, sqlServerConfig, localRegionConfig, crossRegionConfig, sshConfig, credentials, openTelemetry);
+        return SqlServerClientModule.getConnectionFactory(catalogHandle, config, sqlServerConfig, localRegionConfig, crossRegionConfig, sshConfig, credentials);
     }
 
     @Retention(RetentionPolicy.RUNTIME)

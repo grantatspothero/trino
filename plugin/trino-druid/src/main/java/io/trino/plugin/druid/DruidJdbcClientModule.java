@@ -18,7 +18,6 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
-import io.opentelemetry.api.OpenTelemetry;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.LocalRegionConfig;
@@ -62,8 +61,7 @@ public class DruidJdbcClientModule
             CredentialProvider credentialProvider,
             LocalRegionConfig localRegionConfig,
             CrossRegionConfig crossRegionConfig,
-            SshTunnelConfig sshTunnelConfig,
-            OpenTelemetry openTelemetry)
+            SshTunnelConfig sshTunnelConfig)
     {
         Properties galaxyProperties = new Properties();
 
@@ -80,7 +78,6 @@ public class DruidJdbcClientModule
                 new GalaxyDruidDriver(galaxyProperties),
                 config.getConnectionUrl(),
                 new Properties(),
-                credentialProvider,
-                openTelemetry);
+                credentialProvider);
     }
 }

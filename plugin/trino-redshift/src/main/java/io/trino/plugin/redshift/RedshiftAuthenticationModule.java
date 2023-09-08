@@ -19,7 +19,6 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
-import io.opentelemetry.api.OpenTelemetry;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
@@ -83,15 +82,13 @@ public class RedshiftAuthenticationModule
                 CredentialProvider credentialProvider,
                 LocalRegionConfig localRegionConfig,
                 CrossRegionConfig crossRegionConfig,
-                SshTunnelConfig sshTunnelConfig,
-                OpenTelemetry openTelemetry)
+                SshTunnelConfig sshTunnelConfig)
         {
             return new DriverConnectionFactory(
                     new Driver(),
                     config.getConnectionUrl(),
                     getDriverProperties(catalogHandle, localRegionConfig, crossRegionConfig, sshTunnelConfig),
-                    credentialProvider,
-                    openTelemetry);
+                    credentialProvider);
         }
     }
 
@@ -116,15 +113,13 @@ public class RedshiftAuthenticationModule
                 CredentialProvider credentialProvider,
                 LocalRegionConfig localRegionConfig,
                 CrossRegionConfig crossRegionConfig,
-                SshTunnelConfig sshTunnelConfig,
-                OpenTelemetry openTelemetry)
+                SshTunnelConfig sshTunnelConfig)
         {
             return new DriverConnectionFactory(
                     new Driver(),
                     config.getConnectionUrl(),
                     getConnectionProperties(catalogHandle, awsCredentialsConfig, localRegionConfig, crossRegionConfig, sshTunnelConfig),
-                    credentialProvider,
-                    openTelemetry);
+                    credentialProvider);
         }
 
         private static Properties getConnectionProperties(

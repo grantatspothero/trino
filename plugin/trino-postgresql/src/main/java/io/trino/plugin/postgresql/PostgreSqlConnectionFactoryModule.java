@@ -17,7 +17,6 @@ import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
-import io.opentelemetry.api.OpenTelemetry;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
@@ -54,8 +53,7 @@ public class PostgreSqlConnectionFactoryModule
             LocalRegionConfig localRegionConfig,
             CrossRegionConfig crossRegionConfig,
             SshTunnelConfig sshTunnelConfig,
-            CredentialProvider credentialProvider,
-            OpenTelemetry openTelemetry)
+            CredentialProvider credentialProvider)
     {
         Properties connectionProperties = new Properties();
         connectionProperties.put(REWRITE_BATCHED_INSERTS.getName(), "true");
@@ -69,6 +67,6 @@ public class PostgreSqlConnectionFactoryModule
 
         CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(connectionProperties::setProperty, CatalogNetworkMonitorProperties.generateFrom(crossRegionConfig, catalogHandle));
 
-        return new DriverConnectionFactory(new Driver(), config.getConnectionUrl(), connectionProperties, credentialProvider, openTelemetry);
+        return new DriverConnectionFactory(new Driver(), config.getConnectionUrl(), connectionProperties, credentialProvider);
     }
 }
