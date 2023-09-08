@@ -54,6 +54,7 @@ import io.trino.plugin.iceberg.IcebergTableHandle;
 import io.trino.plugin.iceberg.IcebergWritableTableHandle;
 import io.trino.plugin.iceberg.catalog.AbstractIcebergTableOperations;
 import io.trino.plugin.iceberg.procedure.IcebergTableExecuteHandle;
+import io.trino.spi.ErrorCode;
 import io.trino.spi.ErrorCodeSupplier;
 import io.trino.spi.TrinoException;
 import io.trino.spi.cache.CacheColumnId;
@@ -151,9 +152,11 @@ import static io.trino.plugin.objectstore.TableType.DELTA;
 import static io.trino.plugin.objectstore.TableType.HIVE;
 import static io.trino.plugin.objectstore.TableType.HUDI;
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
+import static io.trino.spi.ErrorType.EXTERNAL;
 import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.trino.spi.StandardErrorCode.INVALID_COLUMN_PROPERTY;
 import static io.trino.spi.StandardErrorCode.INVALID_SESSION_PROPERTY;
+import static io.trino.spi.StandardErrorCode.NOT_FOUND;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.StandardErrorCode.UNSUPPORTED_TABLE_TYPE;
 import static java.util.Objects.requireNonNull;
@@ -697,8 +700,21 @@ public class ObjectStoreMetadata
                                     return Optional.of(RelationColumnsMetadata.forTable(tableName, metadataSupplier.get()));
                                 }
                                 catch (Exception e) {
+                                    boolean silent = false;
                                     if (AbstractIcebergTableOperations.isNotFoundException(e)) {
-                                        log.debug(e, "Not found when accessing metadata for table %s during streaming table columns for %s", tableName, schemaName);
+                                        silent = true;
+                                    }
+                                    else if (e instanceof TrinoException trinoException) {
+                                        ErrorCode errorCode = trinoException.getErrorCode();
+                                        // e.g. table migrated to a different format concurrently
+                                        silent = errorCode.equals(UNSUPPORTED_TABLE_TYPE.toErrorCode()) ||
+                                                // e.g. table deleted concurrently
+                                                errorCode.equals(NOT_FOUND.toErrorCode()) ||
+                                                // e.g. Iceberg/Delta table being deleted concurrently resulting in failure to load metadata from filesystem
+                                                errorCode.getType() == EXTERNAL;
+                                    }
+                                    if (silent) {
+                                        log.debug(e, "Failed to access metadata of table %s during streaming table columns for %s", tableName, schemaName);
                                     }
                                     else {
                                         log.warn(e, "Failed to access metadata of table %s during streaming table columns for %s", tableName, schemaName);
