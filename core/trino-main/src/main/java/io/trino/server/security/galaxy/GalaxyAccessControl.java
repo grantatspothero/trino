@@ -34,6 +34,7 @@ import io.trino.spi.connector.CatalogSchemaRoutineName;
 import io.trino.spi.connector.CatalogSchemaTableName;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TableNotFoundException;
+import io.trino.spi.eventlistener.EventListener;
 import io.trino.spi.function.FunctionKind;
 import io.trino.spi.security.AccessDeniedException;
 import io.trino.spi.security.Identity;
@@ -72,12 +73,14 @@ import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.security.AccessDeniedException.denyAddColumn;
 import static io.trino.spi.security.AccessDeniedException.denyCommentColumn;
 import static io.trino.spi.security.AccessDeniedException.denyCommentTable;
+import static io.trino.spi.security.AccessDeniedException.denyCreateCatalog;
 import static io.trino.spi.security.AccessDeniedException.denyCreateMaterializedView;
 import static io.trino.spi.security.AccessDeniedException.denyCreateSchema;
 import static io.trino.spi.security.AccessDeniedException.denyCreateTable;
 import static io.trino.spi.security.AccessDeniedException.denyCreateView;
 import static io.trino.spi.security.AccessDeniedException.denyCreateViewWithSelect;
 import static io.trino.spi.security.AccessDeniedException.denyDeleteTable;
+import static io.trino.spi.security.AccessDeniedException.denyDropCatalog;
 import static io.trino.spi.security.AccessDeniedException.denyDropColumn;
 import static io.trino.spi.security.AccessDeniedException.denyDropMaterializedView;
 import static io.trino.spi.security.AccessDeniedException.denyDropSchema;
@@ -181,6 +184,20 @@ public class GalaxyAccessControl
     public void checkCanAccessCatalog(SystemSecurityContext context, String catalogName)
     {
         // Allow - the granular check in this class are called after this check
+    }
+
+    @Override
+    public void checkCanCreateCatalog(SystemSecurityContext context, String catalog)
+    {
+        // Galaxy manages catalogs for users so we do not intend to support CREATE CATALOG.
+        denyCreateCatalog(catalog);
+    }
+
+    @Override
+    public void checkCanDropCatalog(SystemSecurityContext context, String catalog)
+    {
+        // Galaxy manages catalogs for users so we do not intend to support DROP CATALOG.
+        denyDropCatalog(catalog);
     }
 
     @Override
@@ -504,6 +521,13 @@ public class GalaxyAccessControl
     }
 
     @Override
+    public void checkCanGrantExecuteFunctionPrivilege(SystemSecurityContext context, FunctionKind functionKind, CatalogSchemaRoutineName functionName, TrinoPrincipal grantee, boolean grantOption)
+    {
+        // TODO (https://github.com/starburstdata/stargate/issues/12361) implement. This is needed for views containing table functions.
+        SystemAccessControl.super.checkCanGrantExecuteFunctionPrivilege(context, functionKind, functionName, grantee, grantOption);
+    }
+
+    @Override
     public void checkCanSetCatalogSessionProperty(SystemSecurityContext context, String catalogName, String propertyName)
     {
         // Allow - all session properties are currently allowed
@@ -653,6 +677,12 @@ public class GalaxyAccessControl
             return Optional.empty();
         }
         return controller.getColumnMask(context, columnName, tableId.get());
+    }
+
+    @Override
+    public Iterable<EventListener> getEventListeners()
+    {
+        return ImmutableSet.of();
     }
 
     // Helper methods that provide explanations for denied access
