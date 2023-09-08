@@ -14,10 +14,15 @@
 package io.trino.tests.product.hive;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.io.Resources;
+import com.google.inject.Inject;
 import io.trino.tempto.ProductTest;
+import io.trino.tempto.hadoop.hdfs.HdfsClient;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -44,6 +49,9 @@ public class TestHiveSparkCompatibility
 {
     // see spark-defaults.conf
     private static final String TRINO_CATALOG = "hive";
+
+    @Inject
+    private HdfsClient hdfsClient;
 
     @Test(groups = {HIVE_SPARK, PROFILE_SPECIFIC_TESTS}, dataProvider = "testReadSparkCreatedTableDataProvider")
     public void testReadSparkCreatedTable(String sparkTableFormat, String expectedTrinoTableFormat)
@@ -565,6 +573,26 @@ public class TestHiveSparkCompatibility
                         row(6, "-0001-01-01")));
 
         onTrino().executeQuery("DROP TABLE " + trinoTableName);
+    }
+
+    @Test(groups = {HIVE_SPARK, PROFILE_SPECIFIC_TESTS})
+    public void testTextInputFormatWithParquetHiveSerDe()
+            throws IOException
+    {
+        String tableName = "test_text_input_format_with_parquet_hive_ser_de" + randomNameSuffix();
+        onHive().executeQuery("" +
+                "CREATE EXTERNAL TABLE " + tableName +
+                "(col INT) " +
+                "ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe' " +
+                "STORED AS INPUTFORMAT 'org.apache.hadoop.mapred.TextInputFormat' " +
+                "OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat' " +
+                "LOCATION '/tmp/" + tableName + "'");
+        try (InputStream inputStream = Resources.asByteSource(Resources.getResource("parquet/example_parquet_col_1.parquet")).openStream()) {
+            hdfsClient.saveFile("/tmp/" + tableName + "/data1.parquet", inputStream);
+        }
+        assertThat(onTrino().executeQuery("SELECT * FROM " + tableName)).containsOnly(row(1));
+        assertThat(onSpark().executeQuery("SELECT * FROM " + tableName)).containsOnly(row(1));
+        onHive().executeQuery("DROP TABLE " + tableName);
     }
 
     @Test(groups = {HIVE_SPARK, PROFILE_SPECIFIC_TESTS}, dataProvider = "unsupportedPartitionDates")
