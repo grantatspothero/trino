@@ -157,8 +157,8 @@ public final class GalaxyIdentity
 
     /**
      * If the user in the identity object starts with "&lt;galaxy:", get
-     * the roleId from the user string.  Otherwise, if the rolwId is
-     * in the extraCredentiols, return that roleId.  If neither of
+     * the roleId from the user string.  Otherwise, if the roleId is
+     * in the extraCredentials, return that roleId.  If neither of
      * these works, get the roleId by splitting the principal string
      */
     public static RoleId getContextRoleId(Identity identity)
