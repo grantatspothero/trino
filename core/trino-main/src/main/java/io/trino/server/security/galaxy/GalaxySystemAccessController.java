@@ -28,6 +28,7 @@ import io.starburst.stargate.id.TableId;
 import io.trino.server.galaxy.GalaxyPermissionsCache;
 import io.trino.server.galaxy.GalaxyPermissionsCache.GalaxyQueryPermissions;
 import io.trino.spi.connector.SchemaTableName;
+import io.trino.spi.security.Identity;
 import io.trino.spi.security.SystemSecurityContext;
 import io.trino.spi.security.ViewExpression;
 
@@ -69,15 +70,28 @@ public class GalaxySystemAccessController
         return catalogIds.isReadOnlyCatalog(catalogName);
     }
 
+    /**
+     * @see #getEntityPrivileges(Identity, EntityId)
+     */
     public EntityPrivileges getEntityPrivileges(SystemSecurityContext context, EntityId entity)
     {
         return withGalaxyPermissions(context, permissions -> permissions.getEntityPrivileges(getContextRoleId(context.getIdentity()), entity));
     }
 
-    public Map<RoleName, RoleId> listEnabledRoles(SystemSecurityContext context)
+    /**
+     * Equivalent of {@link #getEntityPrivileges(SystemSecurityContext, EntityId)} but without caching.
+     * To be used when caching is not possible due to lack of query ID.
+     *
+     * @see #getEntityPrivileges(SystemSecurityContext, EntityId)
+     */
+    public EntityPrivileges getEntityPrivileges(Identity identity, EntityId entity)
     {
-        // TODO this is currently never called with queryId being present in the context, so the cache is not used.
-        return withGalaxyPermissions(context, GalaxyQueryPermissions::listEnabledRoles);
+        return accessControlClient.getEntityPrivileges(toDispatchSession(identity), getContextRoleId(identity), entity);
+    }
+
+    public Map<RoleName, RoleId> listEnabledRoles(Identity identity)
+    {
+        return accessControlClient.listEnabledRoles(toDispatchSession(identity));
     }
 
     public Predicate<String> getCatalogVisibility(SystemSecurityContext context)
@@ -91,9 +105,9 @@ public class GalaxySystemAccessController
         });
     }
 
-    public AccountId getAccountId(SystemSecurityContext context)
+    public AccountId getAccountId(Identity identity)
     {
-        return toDispatchSession(context.getIdentity()).getAccountId();
+        return toDispatchSession(identity).getAccountId();
     }
 
     public Predicate<String> getSchemaVisibility(SystemSecurityContext context, CatalogId catalogId)
@@ -111,9 +125,24 @@ public class GalaxySystemAccessController
         };
     }
 
+    /**
+     * @see #getRoleDisplayName(Identity, RoleId)
+     */
     public String getRoleDisplayName(SystemSecurityContext context, RoleId roleId)
     {
         return withGalaxyPermissions(context, permissions -> permissions.getRoleDisplayName(roleId));
+    }
+
+    /**
+     * Equivalent of {@link #getRoleDisplayName(SystemSecurityContext, RoleId)} but without caching.
+     * To be used when caching is not possible due to lack of query ID.
+     *
+     * @see #getRoleDisplayName(SystemSecurityContext, RoleId)
+     */
+    public String getRoleDisplayName(Identity identity, RoleId roleId)
+    {
+        // TODO simplify code not to instantiate GalaxyQueryPermissions
+        return new GalaxyQueryPermissions(accessControlClient, toDispatchSession(identity)).getRoleDisplayName(roleId);
     }
 
     public boolean canExecuteFunction(SystemSecurityContext context, FunctionId functionId)
@@ -159,6 +188,6 @@ public class GalaxySystemAccessController
 
     private <V> V withGalaxyPermissions(SystemSecurityContext context, Function<GalaxyQueryPermissions, V> permissionsFunction)
     {
-        return galaxyPermissionsCache.withGalaxyPermissions(accessControlClient, toDispatchSession(context.getIdentity()), context.getQueryId(), permissionsFunction);
+        return galaxyPermissionsCache.withGalaxyPermissions(accessControlClient, toDispatchSession(context.getIdentity()), Optional.of(context.getQueryId()), permissionsFunction);
     }
 }

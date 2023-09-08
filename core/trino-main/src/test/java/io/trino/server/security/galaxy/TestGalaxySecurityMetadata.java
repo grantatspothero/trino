@@ -69,7 +69,7 @@ public class TestGalaxySecurityMetadata
         helper.initialize();
         accessControl = helper.getAccessControl();
         metadataApi = helper.getMetadataApi();
-        Map<RoleName, RoleId> roles = helper.getAccessController().listEnabledRoles(helper.adminContext());
+        Map<RoleName, RoleId> roles = helper.getAccessController().listEnabledRoles(helper.adminContext().getIdentity());
         fearlessRoleId = requireNonNull(roles.get(new RoleName(FEARLESS_LEADER)), "Didn't find fearless_leader");
         lackeyRoleId = requireNonNull(roles.get(new RoleName(LACKEY_FOLLOWER)), "Didn't find lackey_follower");
     }

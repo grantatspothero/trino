@@ -148,7 +148,7 @@ public class TestGalaxyMetadataApiSpec
         accessControl = helper.getAccessControl();
         securityApi = helper.getMetadataApi();
         client = helper.getClient();
-        Map<RoleName, RoleId> roles = helper.getAccessController().listEnabledRoles(helper.adminContext());
+        Map<RoleName, RoleId> roles = helper.getAccessController().listEnabledRoles(helper.adminContext().getIdentity());
         fearlessRoleId = requireNonNull(roles.get(new RoleName(FEARLESS_LEADER)), "Didn't find fearless_leader");
         lackeyRoleId = requireNonNull(roles.get(new RoleName(LACKEY_FOLLOWER)), "Didn't find lackey_follower");
         publicCatalogNames = accessControl.filterCatalogs(publicContext(), helper.getAccountClient().getAllCatalogNames());
@@ -1881,7 +1881,7 @@ public class TestGalaxyMetadataApiSpec
         try {
             securityApi.createRole(fromRole(sessionRoleId), roleName, Optional.empty());
             created = true;
-            RoleId roleId = helper.getAccessController().listEnabledRoles(helper.adminContext()).get(new RoleName(roleName));
+            RoleId roleId = helper.getAccessController().listEnabledRoles(helper.adminContext().getIdentity()).get(new RoleName(roleName));
             consumer.accept(roleName, roleId);
         }
         catch (Throwable t) {
@@ -1903,7 +1903,7 @@ public class TestGalaxyMetadataApiSpec
         try {
             securityApi.createRole(fromRole(sessionRoleId), roleName, Optional.empty());
             created = true;
-            RoleId roleId = helper.getAccessController().listEnabledRoles(helper.adminContext()).get(new RoleName(roleName));
+            RoleId roleId = helper.getAccessController().listEnabledRoles(helper.adminContext().getIdentity()).get(new RoleName(roleName));
             consumer.accept(roleName, roleId, principal);
         }
         catch (Throwable t) {
@@ -1931,7 +1931,7 @@ public class TestGalaxyMetadataApiSpec
             try {
                 securityApi.createRole(fromRole(sessionRoleId), roleName, Optional.empty());
                 created = true;
-                RoleId roleId = helper.getAccessController().listEnabledRoles(helper.adminContext()).get(new RoleName(roleName));
+                RoleId roleId = helper.getAccessController().listEnabledRoles(helper.adminContext().getIdentity()).get(new RoleName(roleName));
                 consumer.accept(userId, roleName, roleId, principal);
             }
             catch (Throwable t) {

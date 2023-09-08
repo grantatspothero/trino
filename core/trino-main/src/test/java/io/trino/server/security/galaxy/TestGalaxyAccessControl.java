@@ -105,7 +105,7 @@ public class TestGalaxyAccessControl
         accessControl = helper.getAccessControl();
         securityMetadata = helper.getMetadataApi();
         securityApi = helper.getClient();
-        Map<RoleName, RoleId> roles = helper.getAccessController().listEnabledRoles(adminContext());
+        Map<RoleName, RoleId> roles = helper.getAccessController().listEnabledRoles(adminContext().getIdentity());
         fearlessRoleId = requireNonNull(roles.get(new RoleName(FEARLESS_LEADER)), "Didn't find fearless_leader");
         // Role LACKEY_FOLLOWER is granted to FEARLESS_LEADER
         lackeyRoleId = requireNonNull(roles.get(new RoleName(LACKEY_FOLLOWER)), "Didn't find lackey_follower");
@@ -131,21 +131,21 @@ public class TestGalaxyAccessControl
     @Test
     public void testCheckCanViewQueryOwnedBy()
     {
-        testInActiveRoleSet("Cannot view query.*", (context, roleName) -> accessControl.checkCanViewQueryOwnedBy(context, helper.roleNameToIdentity(roleName)));
+        testInActiveRoleSet("Cannot view query.*", (identity, roleName) -> accessControl.checkCanViewQueryOwnedBy(identity, helper.roleNameToIdentity(roleName)));
     }
 
     @Test
     public void testFilterViewQueryOwnedBy()
     {
-        assertThat(accessControl.filterViewQueryOwnedBy(fearlessContext(), fearlessAndLackeyIdentities)).isEqualTo(fearlessAndLackeyIdentities);
-        assertThat(accessControl.filterViewQueryOwnedBy(lackeyContext(), fearlessAndLackeyIdentities)).containsOnly(helper.roleNameToIdentity(LACKEY_FOLLOWER));
-        assertThat(accessControl.filterViewQueryOwnedBy(publicContext(), fearlessAndLackeyIdentities)).isEmpty();
+        assertThat(accessControl.filterViewQueryOwnedBy(fearlessContext().getIdentity(), fearlessAndLackeyIdentities)).isEqualTo(fearlessAndLackeyIdentities);
+        assertThat(accessControl.filterViewQueryOwnedBy(lackeyContext().getIdentity(), fearlessAndLackeyIdentities)).containsOnly(helper.roleNameToIdentity(LACKEY_FOLLOWER));
+        assertThat(accessControl.filterViewQueryOwnedBy(publicContext().getIdentity(), fearlessAndLackeyIdentities)).isEmpty();
     }
 
     @Test
     public void testCheckCanKillQueryOwnedBy()
     {
-        testInActiveRoleSet("Cannot kill query.*", (context, roleName) -> accessControl.checkCanKillQueryOwnedBy(context, helper.roleNameToIdentity(roleName)));
+        testInActiveRoleSet("Cannot kill query.*", (identity, roleName) -> accessControl.checkCanKillQueryOwnedBy(identity, helper.roleNameToIdentity(roleName)));
     }
 
     @Test
@@ -510,7 +510,6 @@ public class TestGalaxyAccessControl
 
             // Simulate access to view and base table within single query
             SystemSecurityContext sameQueryAdmin = adminContext();
-            assertThat(sameQueryAdmin.getQueryId()).isPresent();
             SystemSecurityContext sameQueryUser = new SystemSecurityContext(lackeyContext().getIdentity(), sameQueryAdmin.getQueryId());
 
             // Note: since admin inherits lackeys role, filterColumns(admin) needs to be invoked before doing DENY below
@@ -752,9 +751,10 @@ public class TestGalaxyAccessControl
     public void testUnsupportedMethods()
     {
         SystemSecurityContext context = adminContext();
-        checkNotSupported("Galaxy does not support user impersonation", () -> accessControl.checkCanImpersonateUser(context, "mickey_mouse@xample.com"));
-        checkNotSupported("Galaxy does not support directly reading Trino cluster system information", () -> accessControl.checkCanReadSystemInformation(context));
-        checkNotSupported("Galaxy does not support directly writing Trino cluster system information", () -> accessControl.checkCanWriteSystemInformation(context));
+        Identity identity = context.getIdentity();
+        checkNotSupported("Galaxy does not support user impersonation", () -> accessControl.checkCanImpersonateUser(identity, "mickey_mouse@xample.com"));
+        checkNotSupported("Galaxy does not support directly reading Trino cluster system information", () -> accessControl.checkCanReadSystemInformation(identity));
+        checkNotSupported("Galaxy does not support directly writing Trino cluster system information", () -> accessControl.checkCanWriteSystemInformation(identity));
         checkNotSupported("Galaxy does not support grants on functions", () -> accessControl.checkCanGrantExecuteFunctionPrivilege(context, "zoomzoom", trinoPrincipal(FEARLESS_LEADER), false));
     }
 
@@ -893,30 +893,30 @@ public class TestGalaxyAccessControl
         helper.checkAccessMatching(message, successfulContexts, failingContexts, consumer);
     }
 
-    private void testInActiveRoleSet(String message, BiConsumer<SystemSecurityContext, String> consumer)
+    private void testInActiveRoleSet(String message, BiConsumer<Identity, String> consumer)
     {
         // The full enumeration of the active role set for each role
         GalaxySystemAccessController controller = helper.getAccessController();
-        Map<RoleName, RoleId> lackeyRoleSet = controller.listEnabledRoles(lackeyContext());
-        Map<RoleName, RoleId> fearlessRoleSet = controller.listEnabledRoles(fearlessContext());
-        Map<RoleName, RoleId> adminRoleSet = controller.listEnabledRoles(adminContext());
+        Map<RoleName, RoleId> lackeyRoleSet = controller.listEnabledRoles(lackeyContext().getIdentity());
+        Map<RoleName, RoleId> fearlessRoleSet = controller.listEnabledRoles(fearlessContext().getIdentity());
+        Map<RoleName, RoleId> adminRoleSet = controller.listEnabledRoles(adminContext().getIdentity());
         assertThat(lackeyRoleSet.keySet()).containsOnly(new RoleName(PUBLIC), new RoleName(LACKEY_FOLLOWER));
         assertThat(fearlessRoleSet.keySet()).containsOnly(new RoleName(PUBLIC), new RoleName(FEARLESS_LEADER), new RoleName(LACKEY_FOLLOWER));
         assertThat(adminRoleSet.keySet()).containsOnly(new RoleName(PUBLIC), new RoleName(ACCOUNT_ADMIN), new RoleName(FEARLESS_LEADER), new RoleName(LACKEY_FOLLOWER));
 
         // Show that the consumer accepts the legal cases
-        consumer.accept(lackeyContext(), LACKEY_FOLLOWER);
-        consumer.accept(lackeyContext(), PUBLIC);
-        consumer.accept(fearlessContext(), FEARLESS_LEADER);
-        consumer.accept(fearlessContext(), LACKEY_FOLLOWER);
-        consumer.accept(fearlessContext(), PUBLIC);
+        consumer.accept(lackeyContext().getIdentity(), LACKEY_FOLLOWER);
+        consumer.accept(lackeyContext().getIdentity(), PUBLIC);
+        consumer.accept(fearlessContext().getIdentity(), FEARLESS_LEADER);
+        consumer.accept(fearlessContext().getIdentity(), LACKEY_FOLLOWER);
+        consumer.accept(fearlessContext().getIdentity(), PUBLIC);
 
         // Show that the consumer issues the right message if the role is not present in the active role set
-        assertThatThrownBy(() -> consumer.accept(lackeyContext(), FEARLESS_LEADER))
+        assertThatThrownBy(() -> consumer.accept(lackeyContext().getIdentity(), FEARLESS_LEADER))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessageMatching("Access Denied: " + message);
 
-        assertThatThrownBy(() -> consumer.accept(lackeyContext(), FEARLESS_LEADER))
+        assertThatThrownBy(() -> consumer.accept(lackeyContext().getIdentity(), FEARLESS_LEADER))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessageMatching("Access Denied: " + message);
     }
@@ -1198,21 +1198,25 @@ public class TestGalaxyAccessControl
         return ImmutableList.of(fearlessContext(), lackeyContext(), publicContext());
     }
 
+    // TODO this is often used with `.getIdentity()` - provide a adminIdentity getter (instead?)
     private SystemSecurityContext adminContext()
     {
         return helper.adminContext();
     }
 
+    // TODO this is often used with `.getIdentity()` - provide a publicIdentity getter (instead?)
     private SystemSecurityContext publicContext()
     {
         return helper.publicContext();
     }
 
+    // TODO this is often used with `.getIdentity()` - provide a fearlessIdentity getter (instead?)
     private SystemSecurityContext fearlessContext()
     {
         return helper.context(fearlessRoleId);
     }
 
+    // TODO this is often used with `.getIdentity()` - provide a lackeyIdentity getter (instead?)
     private SystemSecurityContext lackeyContext()
     {
         return helper.context(lackeyRoleId);

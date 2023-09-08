@@ -127,7 +127,7 @@ public class GalaxyAccessControl
     }
 
     @Override
-    public void checkCanImpersonateUser(SystemSecurityContext context, String userName)
+    public void checkCanImpersonateUser(Identity identity, String userName)
     {
         throw new TrinoException(NOT_SUPPORTED, "Galaxy does not support user impersonation");
     }
@@ -139,43 +139,43 @@ public class GalaxyAccessControl
     }
 
     @Override
-    public void checkCanExecuteQuery(SystemSecurityContext context)
+    public void checkCanExecuteQuery(Identity identity)
     {
         // Allow - cluster access is enforced in the dispatcher
     }
 
     @Override
-    public void checkCanViewQueryOwnedBy(SystemSecurityContext context, Identity queryOwner)
+    public void checkCanViewQueryOwnedBy(Identity identity, Identity queryOwner)
     {
-        checkRoleOwnsQuery(context, queryOwner, AccessDeniedException::denyViewQuery);
+        checkRoleOwnsQuery(identity, queryOwner, AccessDeniedException::denyViewQuery);
     }
 
     @Override
-    public Collection<Identity> filterViewQueryOwnedBy(SystemSecurityContext context, Collection<Identity> queryOwners)
+    public Collection<Identity> filterViewQueryOwnedBy(Identity identity, Collection<Identity> queryOwners)
     {
-        return filterIdentitiesByPrivilegesAndRoles(context, queryOwners);
+        return filterIdentitiesByPrivilegesAndRoles(identity, queryOwners);
     }
 
     @Override
-    public void checkCanKillQueryOwnedBy(SystemSecurityContext context, Identity queryOwner)
+    public void checkCanKillQueryOwnedBy(Identity identity, Identity queryOwner)
     {
-        checkRoleOwnsQuery(context, queryOwner, AccessDeniedException::denyKillQuery);
+        checkRoleOwnsQuery(identity, queryOwner, AccessDeniedException::denyKillQuery);
     }
 
     @Override
-    public void checkCanReadSystemInformation(SystemSecurityContext context)
+    public void checkCanReadSystemInformation(Identity identity)
     {
         throw new TrinoException(NOT_SUPPORTED, "Galaxy does not support directly reading Trino cluster system information");
     }
 
     @Override
-    public void checkCanWriteSystemInformation(SystemSecurityContext context)
+    public void checkCanWriteSystemInformation(Identity identity)
     {
         throw new TrinoException(NOT_SUPPORTED, "Galaxy does not support directly writing Trino cluster system information");
     }
 
     @Override
-    public void checkCanSetSystemSessionProperty(SystemSecurityContext context, String propertyName)
+    public void checkCanSetSystemSessionProperty(Identity identity, String propertyName)
     {
         // Allow - all session properties are currently allowed
     }
@@ -694,10 +694,10 @@ public class GalaxyAccessControl
 
     // Helper methods that provide explanations for denied access
 
-    private void checkRoleOwnsQuery(SystemSecurityContext context, Identity queryOwner, Consumer<String> denier)
+    private void checkRoleOwnsQuery(Identity identity, Identity queryOwner, Consumer<String> denier)
     {
-        if (!getSystemAccessController(context).listEnabledRoles(context).containsValue(getRoleId(queryOwner))) {
-            denier.accept(roleIsNotQueryOwner(context, queryOwner));
+        if (!getSystemAccessController(identity).listEnabledRoles(identity).containsValue(getRoleId(queryOwner))) {
+            denier.accept(roleIsNotQueryOwner(identity, queryOwner));
         }
     }
 
@@ -764,10 +764,12 @@ public class GalaxyAccessControl
         denier.accept(roleLacksPrivilege(context, privilege, requiresGrantOption, kind, deniedColumns.isEmpty() ? "" : "[%s]".formatted(String.join(", ", deniedColumns))));
     }
 
-    private boolean hasAccountPrivilege(SystemSecurityContext context, Privilege privilege)
+    private boolean hasAccountPrivilege(Identity identity, Privilege privilege)
     {
-        AccountId accountId = getSystemAccessController(context).getAccountId(context);
-        return hasEntityPrivilege(context, Optional.of(accountId), privilege, false);
+        GalaxySystemAccessController controller = getSystemAccessController(identity);
+        AccountId accountId = controller.getAccountId(identity);
+        EntityPrivileges entityPrivileges = controller.getEntityPrivileges(identity, accountId);
+        return hasEntityPrivilege(accountId, entityPrivileges, privilege, false);
     }
 
     private void checkCatalogWritableAndSchemaOwner(SystemSecurityContext context, CatalogSchemaName schema, Consumer<String> denier)
@@ -851,12 +853,11 @@ public class GalaxyAccessControl
         return format("%s %s is not visible to the role %s", entityName, description, currentRoleName(context));
     }
 
-    private String roleIsNotQueryOwner(SystemSecurityContext context, Identity queryOwner)
+    private String roleIsNotQueryOwner(Identity identity, Identity queryOwner)
     {
         return format(
-                "Role %s does not own the query%s",
-                getSystemAccessController(context).getRoleDisplayName(context, getRoleId(queryOwner)),
-                context.getQueryId().map(queryId -> " " + queryId).orElse(""));
+                "Role %s does not own the query",
+                getSystemAccessController(identity).getRoleDisplayName(identity, getRoleId(queryOwner)));
     }
 
     private String catalogIsReadOnly(String catalog)
@@ -881,9 +882,13 @@ public class GalaxyAccessControl
         if (entity.isEmpty()) {
             return false;
         }
-
         EntityId entityId = entity.get();
         EntityPrivileges entityPrivileges = getSystemAccessController(context).getEntityPrivileges(context, entityId);
+        return hasEntityPrivilege(entityId, entityPrivileges, privilege, requiresGrantOption);
+    }
+
+    private boolean hasEntityPrivilege(EntityId entityId, EntityPrivileges entityPrivileges, Privilege privilege, boolean requiresGrantOption)
+    {
         boolean privilegeMatch = entityPrivileges.getPrivileges().stream()
                 .filter(privilegeInfo -> privilegeInfo.getPrivilege() == privilege)
                 .anyMatch(privilegeInfo -> !requiresGrantOption || privilegeInfo.isGrantOption());
@@ -913,20 +918,20 @@ public class GalaxyAccessControl
         return getSystemAccessController(context).getSchemaVisibility(context, catalogId.get());
     }
 
-    private List<Identity> filterIdentitiesByPrivilegesAndRoles(SystemSecurityContext context, Collection<Identity> identities)
+    private List<Identity> filterIdentitiesByPrivilegesAndRoles(Identity identity, Collection<Identity> identities)
     {
         // VIEW_ALL_QUERY_HISTORY is a special galaxy privilege granting access to all queries
-        if (hasAccountPrivilege(context, VIEW_ALL_QUERY_HISTORY)) {
+        if (hasAccountPrivilege(identity, VIEW_ALL_QUERY_HISTORY)) {
             return ImmutableList.copyOf(identities);
         }
-        return filterIdentitiesByActiveRoleSet(context, identities);
+        return filterIdentitiesByActiveRoleSet(identity, identities);
     }
 
-    private List<Identity> filterIdentitiesByActiveRoleSet(SystemSecurityContext context, Collection<Identity> identities)
+    private List<Identity> filterIdentitiesByActiveRoleSet(Identity identity, Collection<Identity> identities)
     {
-        Set<RoleId> enabledRoles = ImmutableSet.copyOf(getSystemAccessController(context).listEnabledRoles(context).values());
+        Set<RoleId> enabledRoles = ImmutableSet.copyOf(getSystemAccessController(identity).listEnabledRoles(identity).values());
         return identities.stream()
-                .filter(identity -> enabledRoles.contains(getRoleId(identity)))
+                .filter(otherIdentity -> enabledRoles.contains(getRoleId(otherIdentity)))
                 .collect(toImmutableList());
     }
 
@@ -997,7 +1002,12 @@ public class GalaxyAccessControl
 
     private GalaxySystemAccessController getSystemAccessController(SystemSecurityContext context)
     {
-        return controllerSupplier.apply(context.getIdentity());
+        return getSystemAccessController(context.getIdentity());
+    }
+
+    private GalaxySystemAccessController getSystemAccessController(Identity identity)
+    {
+        return controllerSupplier.apply(identity);
     }
 
     private static boolean isSystemCatalog(String name)

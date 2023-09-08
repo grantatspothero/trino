@@ -172,7 +172,7 @@ public class GalaxyTestHelper
 
     public Map<RoleName, RoleId> getActiveRoles(SystemSecurityContext context)
     {
-        return accessController.listEnabledRoles(withNewQueryId(context));
+        return accessController.listEnabledRoles(context.getIdentity());
     }
 
     public void checkAccess(String message, List<SystemSecurityContext> successfulContexts, List<SystemSecurityContext> failingContexts, Consumer<SystemSecurityContext> consumer)
@@ -290,7 +290,7 @@ public class GalaxyTestHelper
 
     public SystemSecurityContext context(Session session)
     {
-        return new SystemSecurityContext(session.getIdentity(), Optional.of(new QueryId(String.valueOf(queryIds.incrementAndGet()))));
+        return new SystemSecurityContext(session.getIdentity(), new QueryId(String.valueOf(queryIds.incrementAndGet())));
     }
 
     public SystemSecurityContext adminContext()
@@ -313,7 +313,7 @@ public class GalaxyTestHelper
 
     private SystemSecurityContext withNewQueryId(SystemSecurityContext context)
     {
-        return new SystemSecurityContext(context.getIdentity(), Optional.of(new QueryId(String.valueOf(queryIds.incrementAndGet()))));
+        return new SystemSecurityContext(context.getIdentity(), new QueryId(String.valueOf(queryIds.incrementAndGet())));
     }
 
     public String getAnyCatalogName()
