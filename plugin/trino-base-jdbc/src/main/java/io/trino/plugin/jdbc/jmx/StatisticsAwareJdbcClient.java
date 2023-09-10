@@ -487,4 +487,10 @@ public final class StatisticsAwareJdbcClient
     {
         return delegate().getMaxWriteParallelism(session);
     }
+
+    @Override
+    public OptionalInt getMaxColumnNameLength(ConnectorSession session)
+    {
+        return delegate().getMaxColumnNameLength(session);
+    }
 }

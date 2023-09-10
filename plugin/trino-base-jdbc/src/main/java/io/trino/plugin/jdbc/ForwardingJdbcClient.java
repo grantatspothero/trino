@@ -465,4 +465,10 @@ public abstract class ForwardingJdbcClient
     {
         return delegate().getMaxWriteParallelism(session);
     }
+
+    @Override
+    public OptionalInt getMaxColumnNameLength(ConnectorSession session)
+    {
+        return delegate().getMaxColumnNameLength(session);
+    }
 }
