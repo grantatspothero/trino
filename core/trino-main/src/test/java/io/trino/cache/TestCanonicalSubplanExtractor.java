@@ -177,6 +177,9 @@ public class TestCanonicalSubplanExtractor
 
         CanonicalSubplan nonAggregatedSubplan = subplans.get(0);
         assertThat(nonAggregatedSubplan.getGroupByColumns()).isEmpty();
+        assertThat(nonAggregatedSubplan.getAssignments()).containsExactly(
+                new SimpleEntry<>(new CacheColumnId("nationkey:bigint"), new SymbolReference("nationkey:bigint")),
+                new SimpleEntry<>(new CacheColumnId("regionkey:bigint"), new SymbolReference("regionkey:bigint")));
 
         Expression sum = getSumFunction();
         CanonicalSubplan aggregatedSubplan = subplans.get(1);
