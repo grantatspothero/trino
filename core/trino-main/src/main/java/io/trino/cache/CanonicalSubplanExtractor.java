@@ -268,7 +268,7 @@ public final class CanonicalSubplanExtractor
 
             return Optional.of(new CanonicalSubplan(
                     node,
-                    symbolMappingBuilder.build(),
+                    symbolMappingBuilder.buildOrThrow(),
                     Optional.empty(),
                     Optional.empty(),
                     assignments.buildOrThrow(),
