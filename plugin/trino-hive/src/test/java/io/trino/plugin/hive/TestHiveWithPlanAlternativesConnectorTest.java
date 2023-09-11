@@ -116,6 +116,54 @@ public class TestHiveWithPlanAlternativesConnectorTest
     }
 
     @Override
+    public void testMultipleWriters()
+    {
+        // Not applicable with plan alternatives
+    }
+
+    @Override
+    public void testMultipleWritersWithSkewedData()
+    {
+        // Not applicable with plan alternatives
+    }
+
+    @Override
+    public void testMultipleWritersWhenTaskScaleWritersIsEnabled()
+    {
+        // Not applicable with plan alternatives
+    }
+
+    @Override
+    public void testTaskWritersDoesNotScaleWithLargeMinWriterSize()
+    {
+        // Not applicable with plan alternatives
+    }
+
+    @Override
+    public void testWritersAcrossMultipleWorkersWhenScaleWritersIsEnabled()
+    {
+        // Not applicable with plan alternatives
+    }
+
+    @Override
+    public void testWriterTasksCountLimitUnpartitioned(boolean scaleWriters, boolean redistributeWrites, int expectedFilesCount)
+    {
+        // Not applicable with plan alternatives
+    }
+
+    @Override
+    public void testWriterTasksCountLimitPartitionedScaleWritersDisabled()
+    {
+        // Not applicable with plan alternatives
+    }
+
+    @Override
+    public void testWriterTasksCountLimitPartitionedScaleWritersEnabled()
+    {
+        // Not applicable with plan alternatives
+    }
+
+    @Override
     public void testTimestampWithTimeZone()
     {
         // Ignored because there's no access to HiveMetastoreFactory and this test doesn't exercise plan alternatives anyway
