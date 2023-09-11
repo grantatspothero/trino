@@ -172,6 +172,7 @@ public class TestGalaxyQueryMonitorEventListener
                         "originalUser",
                         Optional.empty(),
                         ImmutableSet.of(),
+                        ImmutableSet.of(),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
