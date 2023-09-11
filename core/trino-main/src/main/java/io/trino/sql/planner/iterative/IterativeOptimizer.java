@@ -225,7 +225,7 @@ public class IterativeOptimizer
                 context.getStatsCollector().recordFailure(rule);
                 throw e;
             }
-            stats.record(rule, duration, !result.isEmpty());
+            stats.record(rule, duration, result.getMainAlternative().isPresent());
 
             if (result.getMainAlternative().isPresent()) {
                 return result;
