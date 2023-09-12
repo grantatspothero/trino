@@ -34,6 +34,7 @@ public class TestGalaxyKafkaEventListenerConfig
                 .setDeploymentId(null)
                 .setTrinoPlaneFqdn(null)
                 .setEventKafkaTopic(null)
+                .setLifeCycleEventKafkaTopic(null)
                 .setMaxBufferingCapacity(200));
     }
 
@@ -46,7 +47,8 @@ public class TestGalaxyKafkaEventListenerConfig
                 .put("galaxy.cluster-id", "c-234")
                 .put("galaxy.deployment-id", "dep-345")
                 .put("galaxy.trino-plane-fqdn", "trino.example.com")
-                .put("galaxy.event.kafka.topic", "test")
+                .put("galaxy.event.kafka.topic", "test1")
+                .put("galaxy.lifecycle-event.kafka.topic", "test2")
                 .put("publisher.max-buffering-capacity", "10")
                 .buildOrThrow();
 
@@ -56,7 +58,8 @@ public class TestGalaxyKafkaEventListenerConfig
                 .setClusterId("c-234")
                 .setDeploymentId("dep-345")
                 .setTrinoPlaneFqdn("trino.example.com")
-                .setEventKafkaTopic("test")
+                .setEventKafkaTopic("test1")
+                .setLifeCycleEventKafkaTopic("test2")
                 .setMaxBufferingCapacity(10);
 
         assertFullMapping(properties, expected);

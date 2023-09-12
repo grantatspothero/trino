@@ -15,8 +15,11 @@ package io.trino.plugin.eventlistener.galaxy;
 
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;
+import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Positive;
+
+import java.util.Optional;
 
 public class GalaxyKafkaEventListenerConfig
 {
@@ -26,6 +29,7 @@ public class GalaxyKafkaEventListenerConfig
     private String deploymentId;
     private String trinoPlaneFqdn;
     private String eventKafkaTopic;
+    private Optional<String> lifeCycleEventKafkaTopic = Optional.empty();
     private int maxBufferingCapacity = 200;
 
     @NotEmpty
@@ -105,6 +109,19 @@ public class GalaxyKafkaEventListenerConfig
     public GalaxyKafkaEventListenerConfig setEventKafkaTopic(String eventKafkaTopic)
     {
         this.eventKafkaTopic = eventKafkaTopic;
+        return this;
+    }
+
+    public Optional<String> getLifeCycleEventKafkaTopic()
+    {
+        return lifeCycleEventKafkaTopic;
+    }
+
+    @Config("galaxy.lifecycle-event.kafka.topic")
+    @ConfigDescription("Kafka topic to publish lifecycle events")
+    public GalaxyKafkaEventListenerConfig setLifeCycleEventKafkaTopic(@Nullable String lifeCycleEventKafkaTopic)
+    {
+        this.lifeCycleEventKafkaTopic = Optional.ofNullable(lifeCycleEventKafkaTopic);
         return this;
     }
 

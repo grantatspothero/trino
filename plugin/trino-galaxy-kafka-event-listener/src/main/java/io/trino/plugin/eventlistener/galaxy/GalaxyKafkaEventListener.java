@@ -26,15 +26,21 @@ import io.trino.galaxy.kafka.AsyncKafkaPublisher;
 import io.trino.galaxy.kafka.KafkaPublisherConfig;
 import io.trino.galaxy.kafka.KafkaRecord;
 import io.trino.plugin.eventlistener.galaxy.event.GalaxyQueryCompletedEvent;
+import io.trino.plugin.eventlistener.galaxy.event.GalaxyQueryLifeCycleEvent;
 import io.trino.spi.eventlistener.EventListener;
 import io.trino.spi.eventlistener.QueryCompletedEvent;
+import io.trino.spi.eventlistener.QueryContext;
+import io.trino.spi.eventlistener.QueryCreatedEvent;
+import io.trino.spi.eventlistener.QueryMetadata;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.weakref.jmx.Managed;
 import org.weakref.jmx.Nested;
 
 import java.net.URI;
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
@@ -42,6 +48,7 @@ public class GalaxyKafkaEventListener
         implements EventListener
 {
     private static final String QUERY_COMPLETED_EVENT_TYPE = "trino.query.event.completed";
+    private static final String QUERY_LIFECYCLE_EVENT_TYPE = "trino.query.event.lifecycle";
     private static final EventFormat CLOUD_EVENT_JSON_FORMAT = EventFormatProvider.getInstance().resolveFormat(JsonFormat.CONTENT_TYPE);
 
     private final String accountId;
@@ -49,11 +56,17 @@ public class GalaxyKafkaEventListener
     private final String deploymentId;
     private final URI trinoPlaneFqdn;
     private final String eventKafkaTopic;
-    private final JsonCodec<GalaxyQueryCompletedEvent> eventJsonCodec;
+    private final Optional<String> lifeCycleEventKafkaTopic;
+    private final JsonCodec<GalaxyQueryCompletedEvent> completedEventJsonCodec;
+    private final JsonCodec<GalaxyQueryLifeCycleEvent> lifeCycleEventJsonCodec;
     private final AsyncKafkaPublisher kafkaPublisher;
 
     @Inject
-    public GalaxyKafkaEventListener(GalaxyKafkaEventListenerConfig config, KafkaPublisherConfig publisherConfig, JsonCodec<GalaxyQueryCompletedEvent> eventJsonCodec)
+    public GalaxyKafkaEventListener(
+            GalaxyKafkaEventListenerConfig config,
+            KafkaPublisherConfig publisherConfig,
+            JsonCodec<GalaxyQueryCompletedEvent> completedEventJsonCodec,
+            JsonCodec<GalaxyQueryLifeCycleEvent> lifeCycleEventJsonCodec)
     {
         requireNonNull(config, "config is null");
         accountId = config.getAccountId();
@@ -61,7 +74,9 @@ public class GalaxyKafkaEventListener
         deploymentId = config.getDeploymentId();
         trinoPlaneFqdn = URI.create(config.getTrinoPlaneFqdn());
         eventKafkaTopic = config.getEventKafkaTopic();
-        this.eventJsonCodec = requireNonNull(eventJsonCodec, "eventJsonCodec is null");
+        lifeCycleEventKafkaTopic = config.getLifeCycleEventKafkaTopic();
+        this.completedEventJsonCodec = requireNonNull(completedEventJsonCodec, "completedEventJsonCodec is null");
+        this.lifeCycleEventJsonCodec = requireNonNull(lifeCycleEventJsonCodec, "lifeCycleEventJsonCodec is null");
         kafkaPublisher = new AsyncKafkaPublisher(config.getPluginReportingName(), config.getMaxBufferingCapacity(), publisherConfig);
     }
 
@@ -78,6 +93,13 @@ public class GalaxyKafkaEventListener
     }
 
     @Override
+    public void queryCreated(QueryCreatedEvent event)
+    {
+        // QueryState = QUEUED
+        publishLifeCycleEvent(event.getCreateTime(), event.getMetadata(), event.getContext());
+    }
+
+    @Override
     public void queryCompleted(QueryCompletedEvent event)
     {
         GalaxyQueryCompletedEvent galaxyEvent = new GalaxyQueryCompletedEvent(accountId, clusterId, deploymentId, event);
@@ -90,11 +112,40 @@ public class GalaxyKafkaEventListener
                 .withType(QUERY_COMPLETED_EVENT_TYPE)
                 .withSource(trinoPlaneFqdn)
                 .withTime(OffsetDateTime.now())
-                .withData(eventJsonCodec.toJsonBytes(galaxyEvent))
+                .withData(completedEventJsonCodec.toJsonBytes(galaxyEvent))
                 .build();
         byte[] bytes = CLOUD_EVENT_JSON_FORMAT.serialize(cloudEvent);
 
         kafkaPublisher.submit(new KafkaRecord(eventKafkaTopic, bytes));
+
+        // QueryState = FINISHED or FAILED
+        publishLifeCycleEvent(event.getEndTime(), event.getMetadata(), event.getContext());
+    }
+
+    private void publishLifeCycleEvent(Instant eventTime, QueryMetadata metadata, QueryContext context)
+    {
+        lifeCycleEventKafkaTopic.ifPresent(topic -> {
+            // Use the event type and query ID as the unique message identifier
+            String id = QUERY_LIFECYCLE_EVENT_TYPE + "." + metadata.getQueryId();
+
+            GalaxyQueryLifeCycleEvent lifeCycleEvent = new GalaxyQueryLifeCycleEvent(
+                    accountId,
+                    clusterId,
+                    deploymentId,
+                    metadata.getQueryId(),
+                    metadata.getQueryState(),
+                    eventTime,
+                    metadata.getQuery(),
+                    context.getPrincipal());
+            CloudEvent lifeCycleCloudEvent = new CloudEventBuilder()
+                    .withId(id)
+                    .withType(QUERY_LIFECYCLE_EVENT_TYPE)
+                    .withSource(trinoPlaneFqdn)
+                    .withTime(OffsetDateTime.now())
+                    .withData(lifeCycleEventJsonCodec.toJsonBytes(lifeCycleEvent))
+                    .build();
+            kafkaPublisher.submit(new KafkaRecord(topic, CLOUD_EVENT_JSON_FORMAT.serialize(lifeCycleCloudEvent)));
+        });
     }
 
     @Managed

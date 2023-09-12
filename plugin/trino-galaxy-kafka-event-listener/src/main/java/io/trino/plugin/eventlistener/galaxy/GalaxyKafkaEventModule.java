@@ -18,6 +18,7 @@ import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.galaxy.kafka.KafkaPublisherConfig;
 import io.trino.plugin.eventlistener.galaxy.event.GalaxyQueryCompletedEvent;
+import io.trino.plugin.eventlistener.galaxy.event.GalaxyQueryLifeCycleEvent;
 
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.airlift.json.JsonCodecBinder.jsonCodecBinder;
@@ -32,6 +33,7 @@ public class GalaxyKafkaEventModule
         configBinder(binder).bindConfig(KafkaPublisherConfig.class);
         configBinder(binder).bindConfig(GalaxyKafkaEventListenerConfig.class);
         jsonCodecBinder(binder).bindJsonCodec(GalaxyQueryCompletedEvent.class);
+        jsonCodecBinder(binder).bindJsonCodec(GalaxyQueryLifeCycleEvent.class);
         binder.bind(GalaxyKafkaEventListener.class).in(Scopes.SINGLETON);
         String pluginReportingName = buildConfigObject(GalaxyKafkaEventListenerConfig.class).getPluginReportingName();
         newExporter(binder).export(GalaxyKafkaEventListener.class)
