@@ -148,7 +148,9 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     {
         checkState(format == IcebergFileFormat.PARQUET, "The logic here is appropriate for PARQUET, got %s", format);
         return !(typeName.equalsIgnoreCase("varbinary") ||
+                typeName.equalsIgnoreCase("time") ||
                 typeName.equalsIgnoreCase("time(6)") ||
+                typeName.equalsIgnoreCase("timestamp(3) with time zone") ||
                 typeName.equalsIgnoreCase("timestamp(6) with time zone"));
     }
 
