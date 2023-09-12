@@ -34,7 +34,6 @@ public class HiveHadoop
 {
     private static final Logger log = Logger.get(HiveHadoop.class);
 
-    public static final String DEFAULT_IMAGE = "ghcr.io/trinodb/testing/hdp2.6-hive:" + TestingProperties.getDockerImagesVersion();
     public static final String HIVE3_IMAGE = "ghcr.io/trinodb/testing/hdp3.1-hive:" + TestingProperties.getDockerImagesVersion();
 
     public static final String HOST_NAME = "hadoop-master";
@@ -111,7 +110,7 @@ public class HiveHadoop
     {
         private Builder()
         {
-            this.image = DEFAULT_IMAGE;
+            this.image = HIVE3_IMAGE;
             this.hostName = HOST_NAME;
             this.exposePorts = ImmutableSet.of(HIVE_METASTORE_PORT);
         }

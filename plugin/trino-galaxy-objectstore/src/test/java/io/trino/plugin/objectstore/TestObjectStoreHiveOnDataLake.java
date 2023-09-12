@@ -51,7 +51,7 @@ public class TestObjectStoreHiveOnDataLake
             throws Exception
     {
         bucketName = "test-object-store-on-data-lake-" + randomNameSuffix();
-        hiveMinioDataLake = closeAfterClass(new HiveMinioDataLake(bucketName, HiveHadoop.DEFAULT_IMAGE));
+        hiveMinioDataLake = closeAfterClass(new HiveMinioDataLake(bucketName, HiveHadoop.HIVE3_IMAGE));
         hiveMinioDataLake.start();
         metastoreClient = new BridgingHiveMetastore(
                 testingThriftHiveMetastoreBuilder()
