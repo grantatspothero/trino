@@ -418,6 +418,71 @@ public class TestCanonicalSubplanExtractor
     }
 
     @Test
+    public void testProjectionWithDuplicatedExpressions()
+    {
+        assertThatCanonicalSubplanIsForTableScan(new ProjectNode(
+                new PlanNodeId("project_node"),
+                createTableScan(),
+                Assignments.of(
+                        new Symbol("alias1"),
+                        expression("symbol1 * 2"),
+                        new Symbol("alias2"),
+                        expression("symbol1 * 2"))));
+    }
+
+    @Test
+    public void testAliasingProjection()
+    {
+        assertThatCanonicalSubplanIsForTableScan(new ProjectNode(
+                new PlanNodeId("project_node"),
+                createTableScan(),
+                Assignments.of(
+                        new Symbol("alias"),
+                        expression("symbol1"))));
+        assertThatCanonicalSubplanIsForTableScan(new ProjectNode(
+                new PlanNodeId("project_node"),
+                createTableScan(),
+                Assignments.of(
+                        new Symbol("symbol1"),
+                        expression("symbol1"),
+                        new Symbol("alias"),
+                        expression("symbol1"))));
+        assertThatCanonicalSubplanIsForTableScan(new ProjectNode(
+                new PlanNodeId("project_node"),
+                createTableScan(),
+                Assignments.of(
+                        new Symbol("alias"),
+                        expression("symbol1"),
+                        new Symbol("symbol1"),
+                        expression("symbol1"))));
+    }
+
+    private void assertThatCanonicalSubplanIsForTableScan(PlanNode root)
+    {
+        List<CanonicalSubplan> subplans = extractCanonicalSubplans(TEST_METADATA, TEST_SESSION, root);
+        assertThat(subplans).hasSize(1);
+        assertThat(getOnlyElement(subplans).getOriginalPlanNode()).isInstanceOf(TableScanNode.class);
+    }
+
+    @Test
+    public void testTableScanWithDuplicatedColumnHandle()
+    {
+        Symbol symbol1 = new Symbol("symbol1");
+        Symbol symbol2 = new Symbol("symbol2");
+        TestingColumnHandle columnHandle = new TestingColumnHandle("column1");
+        TableScanNode tableScanNode = new TableScanNode(
+                SCAN_NODE_ID,
+                TEST_TABLE_HANDLE,
+                ImmutableList.of(symbol1, symbol2),
+                ImmutableMap.of(symbol2, columnHandle, symbol1, columnHandle),
+                TupleDomain.all(),
+                Optional.empty(),
+                false,
+                Optional.of(false));
+        assertThat(extractCanonicalSubplans(TEST_METADATA, TEST_SESSION, tableScanNode)).isEmpty();
+    }
+
+    @Test
     public void testTableHandlesCanonization()
     {
         TableHandle tableHandle1 = TestingHandles.createTestTableHandle(SchemaTableName.schemaTableName("schema", "table1"));
