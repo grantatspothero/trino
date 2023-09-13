@@ -25,6 +25,7 @@ import io.opentelemetry.api.trace.Span;
 import io.trino.client.ProtocolHeaders;
 import io.trino.metadata.SessionPropertyManager;
 import io.trino.security.AccessControl;
+import io.trino.security.FullSystemSecurityContext;
 import io.trino.security.SecurityContext;
 import io.trino.spi.QueryId;
 import io.trino.spi.TrinoException;
@@ -32,6 +33,7 @@ import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.security.Identity;
 import io.trino.spi.security.SelectedRole;
+import io.trino.spi.security.SystemSecurityContext;
 import io.trino.spi.session.ResourceEstimates;
 import io.trino.spi.type.TimeZoneKey;
 import io.trino.sql.SqlPath;
@@ -591,7 +593,13 @@ public final class Session
 
     public SecurityContext toSecurityContext()
     {
-        return new SecurityContext(getRequiredTransactionId(), getIdentity(), queryId);
+        return new SecurityContext(getRequiredTransactionId(), getIdentity(), queryId) {
+            @Override
+            public SystemSecurityContext toSystemSecurityContext()
+            {
+                return new FullSystemSecurityContext(Session.this);
+            }
+        };
     }
 
     public static class SessionBuilder

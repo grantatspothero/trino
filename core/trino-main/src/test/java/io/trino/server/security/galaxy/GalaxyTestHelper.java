@@ -103,7 +103,9 @@ public class GalaxyTestHelper
         client = accountClient.getTrinoSecurityApi();
         GalaxyPermissionsCache permissionsCache = new GalaxyPermissionsCache();
         accessController = new GalaxySystemAccessController(client, catalogIds, permissionsCache);
-        accessControl = new GalaxyAccessControl(ignore -> accessController);
+        accessControl = new GalaxyAccessControl(
+                new GalaxySystemAccessControlConfig().getBackgroundProcessingThreads(),
+                ignore -> accessController);
         metadataApi = new GalaxySecurityMetadata(client, catalogIds);
 
         // Make the roles

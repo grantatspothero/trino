@@ -15,6 +15,9 @@ package io.trino.server.security.galaxy;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import io.airlift.log.Logger;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
 import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
 import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
 import io.starburst.stargate.accesscontrol.privilege.GalaxyPrivilegeInfo;
@@ -28,6 +31,8 @@ import io.starburst.stargate.id.FunctionId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.SchemaId;
 import io.starburst.stargate.id.TableId;
+import io.trino.security.FullSystemSecurityContext;
+import io.trino.server.security.galaxy.GalaxySystemAccessControlConfig.FilterColumnsAcceleration;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogSchemaName;
 import io.trino.spi.connector.CatalogSchemaRoutineName;
@@ -45,18 +50,31 @@ import io.trino.spi.security.ViewExpression;
 import io.trino.spi.type.Type;
 
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static io.airlift.concurrent.MoreFutures.getDone;
+import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.starburst.stargate.accesscontrol.client.OperationNotAllowedException.operationNotAllowed;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_SCHEMA;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_TABLE;
@@ -69,6 +87,7 @@ import static io.starburst.stargate.accesscontrol.privilege.Privilege.VIEW_ALL_Q
 import static io.trino.execution.PrivilegeUtilities.getPrivilegesForEntityKind;
 import static io.trino.metadata.GlobalFunctionCatalog.BUILTIN_SCHEMA;
 import static io.trino.server.security.galaxy.GalaxyIdentity.getRoleId;
+import static io.trino.server.security.galaxy.GalaxySecuritySessionProperties.getFilterColumnsAcceleration;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.security.AccessDeniedException.denyAddColumn;
 import static io.trino.spi.security.AccessDeniedException.denyCommentColumn;
@@ -112,7 +131,11 @@ import static java.util.Objects.requireNonNull;
 public class GalaxyAccessControl
         implements SystemAccessControl
 {
+    private static final Logger log = Logger.get(GalaxyAccessControl.class);
+
     public static final String NAME = "galaxy";
+
+    private static final int MAX_OUTSTANDING_BACKGROUND_TASKS = 8192;
     private static final Pattern DML_OPERATION_MATCHER = Pattern.compile("(select|insert|update|delete|merge|with)[ \\t\\(\\[].*");
     private static final Set<String> SYSTEM_BUILTIN_FUNCTIONS = ImmutableSet.of(
             "analyze_logical_plan",
@@ -120,9 +143,19 @@ public class GalaxyAccessControl
             "sequence");
 
     private final GalaxyAccessControllerSupplier controllerSupplier;
+    private final int backgroundProcessingThreads;
+    private final ExecutorService backgroundExecutorService;
 
-    public GalaxyAccessControl(GalaxyAccessControllerSupplier controllerSupplier)
+    public GalaxyAccessControl(int backgroundProcessingThreads, GalaxyAccessControllerSupplier controllerSupplier)
     {
+        this.backgroundProcessingThreads = backgroundProcessingThreads;
+        this.backgroundExecutorService = new ThreadPoolExecutor(
+                backgroundProcessingThreads,
+                backgroundProcessingThreads,
+                0L,
+                TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(MAX_OUTSTANDING_BACKGROUND_TASKS),
+                daemonThreadsNamed("galaxy-access-control-%s"));
         this.controllerSupplier = requireNonNull(controllerSupplier, "controllerSupplier is null");
     }
 
@@ -380,8 +413,67 @@ public class GalaxyAccessControl
     @Override
     public Map<SchemaTableName, Set<String>> filterColumns(SystemSecurityContext context, String catalogName, Map<SchemaTableName, Set<String>> tableColumns)
     {
-        // TODO implement bulk filterColumns more efficiently
-        return SystemAccessControl.super.filterColumns(context, catalogName, tableColumns);
+        FilterColumnsAcceleration mode = getFilterColumnsAcceleration(((FullSystemSecurityContext) context).getSession());
+        return switch (mode) {
+            case NONE -> SystemAccessControl.super.filterColumns(context, catalogName, tableColumns);
+            case FCX2 -> {
+                LinkedBlockingQueue<Entry<SchemaTableName, Set<String>>> taskQueue = new LinkedBlockingQueue<>(tableColumns.entrySet());
+                Map<SchemaTableName, Set<String>> results = new ConcurrentHashMap<>();
+                AtomicInteger runningTasks = new AtomicInteger();
+                Context tracingContext = Context.current();
+                Runnable process = () -> {
+                    try (Scope ignore = tracingContext.makeCurrent()) {
+                        runningTasks.incrementAndGet();
+                        while (true) {
+                            Entry<SchemaTableName, Set<String>> next = taskQueue.poll();
+                            if (next == null) {
+                                break;
+                            }
+                            results.put(next.getKey(), filterColumns(context, new CatalogSchemaTableName(catalogName, next.getKey()), next.getValue()));
+                        }
+                        runningTasks.decrementAndGet();
+                    }
+                };
+                // Do not use background threads when filtering columns of just one table.
+                int jobCount = Math.min(backgroundProcessingThreads, taskQueue.size() - 1);
+                ExecutorCompletionService<Void> completionService = new ExecutorCompletionService<>(backgroundExecutorService);
+                List<Future<?>> allFutures = new ArrayList<>();
+                try {
+                    for (int job = jobCount; job > 0; job--) {
+                        try {
+                            allFutures.add(completionService.submit(process, null));
+                        }
+                        catch (RejectedExecutionException e) {
+                            // When this happens it may affect multiple callers. Do not call full stacktrace to avoid log explosion.
+                            log.warn("filterColumns: background processing thread pool is full: %s", e);
+                            break;
+                        }
+                    }
+                    // Use main thread to ensure the use of background processing threads increases parallelism.
+                    // Otherwise, for larger number of callers of GalaxyAccessControl, the shared pool could be a bottleneck.
+                    process.run();
+
+                    // At this point the taskQueue is empty, and we only need to wait for completion of "last few" tasks already in flight.
+                    // The in-flight tasks are counted by runningTasks. Ignore and orphan those that didn't have a chance to start
+                    // due to thread pool being full.
+                    while (runningTasks.get() > 0) {
+                        try {
+                            // Wait and check for success
+                            getDone(completionService.take());
+                        }
+                        catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            throw new RuntimeException("Interrupted", e);
+                        }
+                    }
+
+                    yield results;
+                }
+                finally {
+                    allFutures.forEach(future -> future.cancel(true));
+                }
+            }
+        };
     }
 
     @Override

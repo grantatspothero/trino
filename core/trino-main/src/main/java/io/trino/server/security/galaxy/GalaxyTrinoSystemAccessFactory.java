@@ -35,6 +35,7 @@ public class GalaxyTrinoSystemAccessFactory
 {
     public static final String NAME = "galaxy";
 
+    private final int backgroundProcessingThreads;
     private final TrinoSecurityApi trinoSecurityApi;
     private final GalaxyPermissionsCache galaxyPermissionsCache;
     private final OpenTelemetry openTelemetry;
@@ -42,10 +43,12 @@ public class GalaxyTrinoSystemAccessFactory
 
     @Inject
     public GalaxyTrinoSystemAccessFactory(
+            GalaxySystemAccessControlConfig systemAccessControlConfig,
             TrinoSecurityApi trinoSecurityApi,
             GalaxyPermissionsCache galaxyPermissionsCache,
             OpenTelemetry openTelemetry)
     {
+        this.backgroundProcessingThreads = systemAccessControlConfig.getBackgroundProcessingThreads();
         this.trinoSecurityApi = requireNonNull(trinoSecurityApi, "trinoSecurityApi is null");
         this.galaxyPermissionsCache = requireNonNull(galaxyPermissionsCache, "galaxyPermissionsCache is null");
         this.openTelemetry = requireNonNull(openTelemetry, "openTelemetry is null");
@@ -83,6 +86,6 @@ public class GalaxyTrinoSystemAccessFactory
                 .initialize();
 
         GalaxySystemAccessController controller = injector.getInstance(GalaxySystemAccessController.class);
-        return new GalaxyAccessControl(ignore -> controller);
+        return new GalaxyAccessControl(backgroundProcessingThreads, ignore -> controller);
     }
 }

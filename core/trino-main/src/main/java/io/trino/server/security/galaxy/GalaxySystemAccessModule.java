@@ -17,6 +17,7 @@ import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.trino.SystemSessionPropertiesProvider;
 import io.trino.connector.CatalogManagerConfig;
 import io.trino.connector.CatalogManagerConfig.CatalogMangerKind;
 import io.trino.security.AccessControlManager;
@@ -25,7 +26,9 @@ import io.trino.server.galaxy.GalaxyPermissionsCache;
 import io.trino.spi.security.SystemAccessControlFactory;
 
 import static com.google.inject.Scopes.SINGLETON;
+import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
+import static io.airlift.configuration.ConfigBinder.configBinder;
 import static java.util.Objects.requireNonNull;
 
 public class GalaxySystemAccessModule
@@ -46,6 +49,8 @@ public class GalaxySystemAccessModule
         else {
             binder.bind(SystemAccessControlFactory.class).annotatedWith(ForGalaxySystemAccessControl.class).to(GalaxyTrinoSystemAccessFactory.class);
         }
+        configBinder(binder).bindConfig(GalaxySystemAccessControlConfig.class);
+        newSetBinder(binder, SystemSessionPropertiesProvider.class).addBinding().to(GalaxySecuritySessionProperties.class);
         binder.bind(GalaxyPermissionsCache.class).in(SINGLETON);
         binder.bind(LazyRegistration.class).asEagerSingleton();
     }

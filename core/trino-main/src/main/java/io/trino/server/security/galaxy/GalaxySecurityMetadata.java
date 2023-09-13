@@ -475,7 +475,7 @@ public class GalaxySecurityMetadata
         return toTableEntity(new CatalogSchemaTableName(table.getCatalogName(), table.getSchemaName(), table.getObjectName()));
     }
 
-    private TableId toTableEntity(CatalogSchemaTableName table)
+    public TableId toTableEntity(CatalogSchemaTableName table)
     {
         return new TableId(translateCatalogNameToId(table.getCatalogName()), table.getSchemaTableName().getSchemaName(), table.getSchemaTableName().getTableName());
     }

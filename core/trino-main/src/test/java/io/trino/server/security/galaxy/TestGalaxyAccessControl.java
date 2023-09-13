@@ -30,7 +30,11 @@ import io.starburst.stargate.id.RoleName;
 import io.starburst.stargate.id.SchemaId;
 import io.starburst.stargate.id.TableId;
 import io.trino.Session;
+import io.trino.connector.CatalogServiceProvider;
 import io.trino.metadata.QualifiedObjectName;
+import io.trino.metadata.SessionPropertyManager;
+import io.trino.security.FullSystemSecurityContext;
+import io.trino.server.security.galaxy.GalaxySystemAccessControlConfig.FilterColumnsAcceleration;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogSchemaName;
 import io.trino.spi.connector.CatalogSchemaRoutineName;
@@ -45,6 +49,7 @@ import io.trino.spi.security.SystemSecurityContext;
 import io.trino.spi.security.TrinoPrincipal;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
@@ -57,6 +62,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.starburst.stargate.accesscontrol.privilege.GrantKind.ALLOW;
@@ -75,6 +81,7 @@ import static io.trino.spi.security.Privilege.DELETE;
 import static io.trino.spi.security.Privilege.INSERT;
 import static io.trino.spi.security.Privilege.SELECT;
 import static io.trino.spi.security.Privilege.UPDATE;
+import static io.trino.testing.DataProviders.toDataProvider;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -525,6 +532,69 @@ public class TestGalaxyAccessControl
                 securityMetadata.revokeEntityPrivileges(adminSession(), columnId, Set.of(SELECT), trinoPrincipal(LACKEY_FOLLOWER), false);
             }
         });
+    }
+
+    @Test(dataProvider = "testFilterColumnsBulkDataProvider")
+    public void testFilterColumnsBulk(FilterColumnsAcceleration mode)
+    {
+        SessionPropertyManager sessionPropertyManager = new SessionPropertyManager(
+                Set.of(new GalaxySecuritySessionProperties(new GalaxySystemAccessControlConfig())),
+                CatalogServiceProvider.fail());
+
+        String catalogName = helper.getAnyCatalogName();
+        CatalogSchemaTableName table1 = new CatalogSchemaTableName(catalogName, new SchemaTableName(newSchemaName(), newTableName()));
+        CatalogSchemaTableName table2 = new CatalogSchemaTableName(catalogName, new SchemaTableName(newSchemaName(), newTableName()));
+        CatalogSchemaTableName table3 = new CatalogSchemaTableName(catalogName, new SchemaTableName(newSchemaName(), newTableName()));
+        CatalogSchemaTableName table4 = new CatalogSchemaTableName(catalogName, new SchemaTableName(newSchemaName(), newTableName()));
+
+        TableId table1Id = securityMetadata.toTableEntity(table1);
+        TableId table2Id = securityMetadata.toTableEntity(table2);
+        TableId table3Id = securityMetadata.toTableEntity(table3);
+        TableId table4Id = securityMetadata.toTableEntity(table4);
+        ColumnId table4ColumnId = securityMetadata.toColumnEntity(table4, "column4-1");
+
+        TrinoPrincipal user = trinoPrincipal(LACKEY_FOLLOWER);
+        SystemSecurityContext userContext = lackeyContext();
+        userContext = new FullSystemSecurityContext(
+                Session.builder(sessionPropertyManager)
+                        .setOriginalIdentity(userContext.getIdentity())
+                        .setIdentity(userContext.getIdentity())
+                        .setQueryId(userContext.getQueryId())
+                        .setSystemProperty(GalaxySecuritySessionProperties.FILTER_COLUMNS_ACCELERATION, mode.name())
+                        .build());
+
+        securityMetadata.addEntityPrivilege(adminSession(), table1Id, Set.of(SELECT), ALLOW, user, false);
+        securityMetadata.addEntityPrivilege(adminSession(), table2Id, Set.of(SELECT), ALLOW, user, false);
+        securityMetadata.addEntityPrivilege(adminSession(), table3Id, Set.of(SELECT), DENY, user, false);
+        securityMetadata.addEntityPrivilege(adminSession(), table4Id, Set.of(SELECT), ALLOW, user, false);
+        securityMetadata.addEntityPrivilege(adminSession(), table4ColumnId, Set.of(SELECT), DENY, user, false);
+
+        assertThat(accessControl.filterColumns(
+                userContext,
+                catalogName,
+                Map.of(
+                        table1.getSchemaTableName(), Set.of("id", "column1-1"),
+                        table2.getSchemaTableName(), Set.of("id", "column2-1", "column2-2"),
+                        table3.getSchemaTableName(), Set.of("id", "column3-1", "column3-2"),
+                        table4.getSchemaTableName(), Set.of("id", "column4-1", "column4-2"))))
+                .isEqualTo(Map.of(
+                        table1.getSchemaTableName(), Set.of("id", "column1-1"),
+                        table2.getSchemaTableName(), Set.of("id", "column2-1", "column2-2"),
+                        table3.getSchemaTableName(), Set.of(), // fully denied
+                        table4.getSchemaTableName(), Set.of("id", "column4-2"))); // one column denied
+
+        securityMetadata.revokeEntityPrivileges(adminSession(), table1Id, Set.of(SELECT), user, false);
+        securityMetadata.revokeEntityPrivileges(adminSession(), table2Id, Set.of(SELECT), user, false);
+        securityMetadata.revokeEntityPrivileges(adminSession(), table3Id, Set.of(SELECT), user, false);
+        securityMetadata.revokeEntityPrivileges(adminSession(), table4Id, Set.of(SELECT), user, false);
+        securityMetadata.revokeEntityPrivileges(adminSession(), table4ColumnId, Set.of(SELECT), user, false);
+    }
+
+    @DataProvider
+    public static Object[][] testFilterColumnsBulkDataProvider()
+    {
+        return Stream.of(FilterColumnsAcceleration.values())
+                .collect(toDataProvider());
     }
 
     @Test

@@ -26,11 +26,15 @@ public class GalaxyMetadataSystemAccessFactory
 {
     public static final String NAME = "galaxy-metadata";
 
+    private final int backgroundProcessingThreads;
     private final MetadataAccessControllerSupplier controllerSupplier;
 
     @Inject
-    public GalaxyMetadataSystemAccessFactory(MetadataAccessControllerSupplier controller)
+    public GalaxyMetadataSystemAccessFactory(
+            GalaxySystemAccessControlConfig systemAccessControlConfig,
+            MetadataAccessControllerSupplier controller)
     {
+        this.backgroundProcessingThreads = systemAccessControlConfig.getBackgroundProcessingThreads();
         this.controllerSupplier = requireNonNull(controller, "controller is null");
     }
 
@@ -43,6 +47,6 @@ public class GalaxyMetadataSystemAccessFactory
     @Override
     public SystemAccessControl create(Map<String, String> ignore)
     {
-        return new GalaxyAccessControl(controllerSupplier);
+        return new GalaxyAccessControl(backgroundProcessingThreads, controllerSupplier);
     }
 }
