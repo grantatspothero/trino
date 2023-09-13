@@ -49,6 +49,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.trino.sql.DynamicFilters.isDynamicFilter;
 import static io.trino.sql.ExpressionFormatter.formatExpression;
 import static io.trino.sql.ExpressionUtils.extractConjuncts;
+import static io.trino.sql.planner.DeterminismEvaluator.isDeterministic;
 import static io.trino.sql.planner.plan.AggregationNode.Step.PARTIAL;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
@@ -142,7 +143,8 @@ public final class CanonicalSubplanExtractor
                     aggregation.getArguments().stream().allMatch(argument -> argument instanceof SymbolReference)
                             && !aggregation.isDistinct()
                             && aggregation.getFilter().isEmpty()
-                            && aggregation.getOrderingScheme().isEmpty());
+                            && aggregation.getOrderingScheme().isEmpty()
+                            && aggregation.getResolvedFunction().isDeterministic());
 
             if (!allSupportedAggregations) {
                 canonicalizeRecursively(source);
@@ -277,6 +279,11 @@ public final class CanonicalSubplanExtractor
                 return Optional.empty();
             }
 
+            if (!node.getAssignments().getExpressions().stream().allMatch(expression -> isDeterministic(expression, metadata))) {
+                canonicalizeRecursively(source);
+                return Optional.empty();
+            }
+
             Optional<CanonicalSubplan> subplanOptional = node.getSource().accept(this, null);
             if (subplanOptional.isEmpty()) {
                 return Optional.empty();
@@ -329,6 +336,11 @@ public final class CanonicalSubplanExtractor
             PlanNode source = node.getSource();
             if (!(source instanceof TableScanNode)) {
                 // only scan <- filter <- project or scan <- project plans are supported
+                canonicalizeRecursively(source);
+                return Optional.empty();
+            }
+
+            if (!isDeterministic(node.getPredicate(), metadata)) {
                 canonicalizeRecursively(source);
                 return Optional.empty();
             }
