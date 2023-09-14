@@ -1001,7 +1001,7 @@ public class GalaxyAccessControl
     private static boolean isSchemaDiscovery(CatalogSchemaTableName table)
     {
         return table.getSchemaTableName().equals(new SchemaTableName("schema_discovery", "discovery")) ||
-               table.getSchemaTableName().equals(new SchemaTableName("schema_discovery", "shallow_discovery"));
+                table.getSchemaTableName().equals(new SchemaTableName("schema_discovery", "shallow_discovery"));
     }
 
     private static boolean isSystemCatalog(CatalogSchemaName name)
