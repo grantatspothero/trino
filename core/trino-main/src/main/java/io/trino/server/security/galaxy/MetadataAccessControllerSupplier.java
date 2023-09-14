@@ -14,7 +14,6 @@
 package io.trino.server.security.galaxy;
 
 import io.trino.spi.security.Identity;
-import io.trino.spi.security.SystemSecurityContext;
 import io.trino.transaction.TransactionId;
 
 import java.util.Map;
@@ -29,9 +28,9 @@ public class MetadataAccessControllerSupplier
     private final Map<TransactionId, GalaxySystemAccessController> controllers = new ConcurrentHashMap<>();
 
     @Override
-    public GalaxySystemAccessController apply(SystemSecurityContext context)
+    public GalaxySystemAccessController apply(Identity identity)
     {
-        return extractTransactionId(context.getIdentity())
+        return extractTransactionId(identity)
                 .map(controllers::get)
                 .orElseThrow(() -> new NullPointerException("controller is null"));
     }

@@ -990,7 +990,7 @@ public class GalaxyAccessControl
 
     private GalaxySystemAccessController getSystemAccessController(SystemSecurityContext context)
     {
-        return controllerSupplier.apply(context);
+        return controllerSupplier.apply(context.getIdentity());
     }
 
     private static boolean isSystemCatalog(String name)

@@ -13,10 +13,10 @@
  */
 package io.trino.server.security.galaxy;
 
-import io.trino.spi.security.SystemSecurityContext;
+import io.trino.spi.security.Identity;
 
 @FunctionalInterface
 public interface GalaxyAccessControllerSupplier
 {
-    GalaxySystemAccessController apply(SystemSecurityContext context);
+    GalaxySystemAccessController apply(Identity identity);
 }
