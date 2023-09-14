@@ -76,6 +76,7 @@ public class GalaxySystemAccessController
 
     public Map<RoleName, RoleId> listEnabledRoles(SystemSecurityContext context)
     {
+        // TODO this is currently never called with queryId being present in the context, so the cache is not used.
         return withGalaxyPermissions(context, permissions -> permissions.listEnabledRoles(accessControlClient));
     }
 
