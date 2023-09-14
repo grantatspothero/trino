@@ -653,7 +653,6 @@ jobs:
             - { modules: lib/trino-filesystem-azure, profile: cloud-tests }
             - { modules: plugin/trino-bigquery }
             - { modules: plugin/trino-bigquery, profile: cloud-tests-arrow }
-            - { modules: plugin/trino-galaxy-salesforce }
             - { modules: plugin/trino-galaxy-snowflake }
             - { modules: plugin/trino-galaxy-snowflake, profile: jdbc-integration-tests }
             - { modules: plugin/trino-galaxy-snowflake, profile: parallel-integration-tests }
@@ -697,6 +696,9 @@ jobs:
             - { modules: testing/trino-tests, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
             - { modules: testing/trino-tests-galaxy-buffer-exchange }
           EOF
+          if [[ ( ${{ github.event_name }} == "schedule" || ( ${{ github.event_name }} == "pull_request" && ${{ contains(github.event.pull_request.labels.*.name, 'salesforce') }} == "true" ) || ( ${{ github.event_name }} == "workflow_dispatch" ) ) ]]; then
+            echo "  - { modules: plugin/trino-galaxy-salesforce }" >> .github/test-matrix.yaml
+          fi
           ./.github/bin/build-matrix-from-impacted.py -v -i gib-impacted.log -m .github/test-matrix.yaml -o matrix.json
           echo "Matrix: $(jq '.' matrix.json)"
           echo "matrix=$(jq -c '.' matrix.json)" >> $GITHUB_OUTPUT
@@ -854,7 +856,7 @@ jobs:
         run: |
           $MAVEN test ${MAVEN_TEST} -pl ${{ matrix.modules }} ${{ matrix.profile != '' && format('-P {0}', matrix.profile) || '' }}
       - name: Salesforce Maven Tests
-        if: matrix.modules == 'plugin/trino-galaxy-salesforce' && ((github.event_name == 'schedule') || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'salesforce')) || (github.event_name == 'workflow_dispatch'))
+        if: matrix.modules == 'plugin/trino-galaxy-salesforce'
         env:
           SALESFORCE_CONFIG: >-
             -Dsalesforce.test.basic.auth.user=${{ secrets.SALESFORCE_USERNAME }}
