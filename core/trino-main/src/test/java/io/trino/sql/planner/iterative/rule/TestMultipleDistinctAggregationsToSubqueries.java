@@ -1867,28 +1867,28 @@ public class TestMultipleDistinctAggregationsToSubqueries
         }
 
         @Override
-        public ResolvedFunction resolveOperator(Session session, OperatorType operatorType, List<? extends Type> argumentTypes)
+        public ResolvedFunction resolveOperator(OperatorType operatorType, List<? extends Type> argumentTypes)
                 throws OperatorNotFoundException
         {
-            return metadata.resolveOperator(session, operatorType, argumentTypes);
+            return metadata.resolveOperator(operatorType, argumentTypes);
         }
 
         @Override
-        public ResolvedFunction getCoercion(Session session, Type fromType, Type toType)
+        public ResolvedFunction getCoercion(Type fromType, Type toType)
         {
-            return metadata.getCoercion(session, fromType, toType);
+            return metadata.getCoercion(fromType, toType);
         }
 
         @Override
-        public ResolvedFunction getCoercion(Session session, OperatorType operatorType, Type fromType, Type toType)
+        public ResolvedFunction getCoercion(OperatorType operatorType, Type fromType, Type toType)
         {
-            return metadata.getCoercion(session, operatorType, fromType, toType);
+            return metadata.getCoercion(operatorType, fromType, toType);
         }
 
         @Override
-        public ResolvedFunction getCoercion(Session session, CatalogSchemaFunctionName name, Type fromType, Type toType)
+        public ResolvedFunction getCoercion(CatalogSchemaFunctionName name, Type fromType, Type toType)
         {
-            return metadata.getCoercion(session, name, fromType, toType);
+            return metadata.getCoercion(name, fromType, toType);
         }
 
         @Override
