@@ -349,7 +349,7 @@ public final class CommonSubqueriesExtractor
             signatureKey = new SignatureKey(signatureKey + ":" +
                     formatExpression(combineConjuncts(
                             plannerContext.getMetadata(),
-                            new DomainTranslator(plannerContext).toPredicate(session, prunedPredicate),
+                            new DomainTranslator(plannerContext).toPredicate(prunedPredicate),
                             extractionResult.getRemainingExpression())));
         }
 

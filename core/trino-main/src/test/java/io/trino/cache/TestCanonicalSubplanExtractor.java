@@ -34,7 +34,7 @@ import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.type.StandardTypes;
 import io.trino.spi.type.Type;
 import io.trino.sql.DynamicFilters;
-import io.trino.sql.planner.FunctionCallBuilder;
+import io.trino.sql.planner.BuiltinFunctionCallBuilder;
 import io.trino.sql.planner.Plan;
 import io.trino.sql.planner.PlanNodeIdAllocator;
 import io.trino.sql.planner.Symbol;
@@ -53,7 +53,6 @@ import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.GenericLiteral;
 import io.trino.sql.tree.LongLiteral;
-import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.SymbolReference;
 import io.trino.testing.LocalQueryRunner;
 import io.trino.testing.TestingHandles;
@@ -597,16 +596,16 @@ public class TestCanonicalSubplanExtractor
         return getSumFunctionBuilder().build();
     }
 
-    private FunctionCallBuilder getSumFunctionBuilder()
+    private BuiltinFunctionCallBuilder getSumFunctionBuilder()
     {
         return getFunctionCallBuilder("sum", new ExpressionWithType("\"[nationkey:bigint]\"", BIGINT));
     }
 
-    private FunctionCallBuilder getFunctionCallBuilder(String name, ExpressionWithType... arguments)
+    private BuiltinFunctionCallBuilder getFunctionCallBuilder(String name, ExpressionWithType... arguments)
     {
         LocalQueryRunner queryRunner = getQueryRunner();
-        FunctionCallBuilder builder = FunctionCallBuilder.resolve(queryRunner.getDefaultSession(), queryRunner.getMetadata())
-                .setName(QualifiedName.of(name));
+        BuiltinFunctionCallBuilder builder = BuiltinFunctionCallBuilder.resolve(queryRunner.getMetadata())
+                .setName(name);
         for (ExpressionWithType argument : arguments) {
             builder.addArgument(argument.type, argument.expression);
         }
@@ -625,13 +624,13 @@ public class TestCanonicalSubplanExtractor
     private Expression getHashFunctionCall(Expression previousHashValue, ExpressionWithType argument)
     {
         LocalQueryRunner queryRunner = getQueryRunner();
-        FunctionCall functionCall = FunctionCallBuilder.resolve(queryRunner.getDefaultSession(), queryRunner.getMetadata())
-                .setName(QualifiedName.of(mangleOperatorName(OperatorType.HASH_CODE)))
+        FunctionCall functionCall = BuiltinFunctionCallBuilder.resolve(queryRunner.getMetadata())
+                .setName(mangleOperatorName(OperatorType.HASH_CODE))
                 .addArgument(argument.type, argument.expression)
                 .build();
 
-        return FunctionCallBuilder.resolve(queryRunner.getDefaultSession(), queryRunner.getMetadata())
-                .setName(QualifiedName.of("combine_hash"))
+        return BuiltinFunctionCallBuilder.resolve(queryRunner.getMetadata())
+                .setName("combine_hash")
                 .addArgument(BIGINT, previousHashValue)
                 .addArgument(BIGINT, orNullHashCode(functionCall))
                 .build();
@@ -685,7 +684,6 @@ public class TestCanonicalSubplanExtractor
                 and(
                         expression("symbol1 + symbol2 > 0"),
                         createDynamicFilterExpression(
-                                TEST_SESSION,
                                 metadataManager,
                                 new DynamicFilterId("dynamic_filter_id"),
                                 BIGINT,

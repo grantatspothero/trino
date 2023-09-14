@@ -26,13 +26,12 @@ import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.predicate.ValueSet;
 import io.trino.spi.type.Type;
 import io.trino.sql.DynamicFilters;
-import io.trino.sql.planner.FunctionCallBuilder;
+import io.trino.sql.planner.BuiltinFunctionCallBuilder;
 import io.trino.sql.planner.assertions.BasePlanTest;
 import io.trino.sql.planner.iterative.rule.test.PlanBuilder;
 import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.tree.Expression;
-import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.SymbolReference;
 import io.trino.testing.LocalQueryRunner;
 import org.intellij.lang.annotations.Language;
@@ -299,11 +298,11 @@ public class TestCacheCommonSubqueries
                                                         loadCachedDataPlanNode(signature, ImmutableMap.of(), "REGIONKEY_B", "MAX_PARTIAL_B", "SUM_PARTIAL_B", "AVG_PARTIAL_B"))))))));
     }
 
-    private FunctionCallBuilder getFunctionCallBuilder(String name, ExpressionWithType... arguments)
+    private BuiltinFunctionCallBuilder getFunctionCallBuilder(String name, ExpressionWithType... arguments)
     {
         LocalQueryRunner queryRunner = getQueryRunner();
-        FunctionCallBuilder builder = FunctionCallBuilder.resolve(queryRunner.getDefaultSession(), queryRunner.getMetadata())
-                .setName(QualifiedName.of(name));
+        BuiltinFunctionCallBuilder builder = BuiltinFunctionCallBuilder.resolve(queryRunner.getMetadata())
+                .setName(name);
         for (ExpressionWithType argument : arguments) {
             builder.addArgument(argument.type, argument.expression);
         }

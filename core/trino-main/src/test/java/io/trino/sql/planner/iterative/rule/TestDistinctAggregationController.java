@@ -38,7 +38,6 @@ import io.trino.sql.planner.plan.AggregationNode.Aggregation;
 import io.trino.sql.planner.plan.PlanNode;
 import io.trino.sql.planner.plan.PlanNodeId;
 import io.trino.sql.planner.plan.TableScanNode;
-import io.trino.sql.tree.QualifiedName;
 import io.trino.testing.LocalQueryRunner;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -351,14 +350,14 @@ public class TestDistinctAggregationController
     private static Map<Symbol, Aggregation> twoDistinctAggregations(SymbolAllocator symbolAllocator)
     {
         return ImmutableMap.of(symbolAllocator.newSymbol("output1", BIGINT), new Aggregation(
-                        functionResolution.resolveFunction(QualifiedName.of("sum"), fromTypes(BIGINT)),
+                        functionResolution.resolveFunction("sum", fromTypes(BIGINT)),
                         ImmutableList.of(symbolAllocator.newSymbol("input1", BIGINT).toSymbolReference()),
                         true,
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty()),
                 symbolAllocator.newSymbol("output2", BIGINT), new Aggregation(
-                        functionResolution.resolveFunction(QualifiedName.of("sum"), fromTypes(BIGINT)),
+                        functionResolution.resolveFunction("sum", fromTypes(BIGINT)),
                         ImmutableList.of(symbolAllocator.newSymbol("input2", BIGINT).toSymbolReference()),
                         true,
                         Optional.empty(),
