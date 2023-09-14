@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableSet;
 import io.trino.matching.Captures;
 import io.trino.matching.Pattern;
 import io.trino.metadata.Metadata;
+import io.trino.spi.function.CatalogSchemaFunctionName;
 import io.trino.sql.planner.OptimizerConfig.DistinctAggregationsStrategy;
 import io.trino.sql.planner.Symbol;
 import io.trino.sql.planner.SymbolAllocator;
@@ -44,6 +45,7 @@ import java.util.Set;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.trino.SystemSessionProperties.distinctAggregationsStrategy;
+import static io.trino.metadata.GlobalFunctionCatalog.builtinFunctionName;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.BooleanType.BOOLEAN;
 import static io.trino.sql.analyzer.TypeSignatureProvider.fromTypes;
@@ -75,6 +77,10 @@ import static java.util.Objects.requireNonNull;
 public class DistinctAggregationToGroupBy
         implements Rule<AggregationNode>
 {
+    private static final CatalogSchemaFunctionName COUNT_NAME = builtinFunctionName("count");
+    private static final CatalogSchemaFunctionName COUNT_IF_NAME = builtinFunctionName("count_if");
+    private static final CatalogSchemaFunctionName APPROX_DISTINCT_NAME = builtinFunctionName("approx_distinct");
+
     private static final Pattern<AggregationNode> PATTERN = aggregation()
             .matching(DistinctAggregationToGroupBy::canUsePreAggregate);
 
@@ -288,8 +294,8 @@ public class DistinctAggregationToGroupBy
                             Optional.empty());
                     Symbol outerAggregationOutputSymbol = origalAggregationOutputSymbol;
                     // handle 0 on empty input aggregations
-                    String signatureName = originalAggregation.getResolvedFunction().getSignature().getName();
-                    if (signatureName.equals("count") || signatureName.equals("count_if") || signatureName.equals("approx_distinct")) {
+                    CatalogSchemaFunctionName name = originalAggregation.getResolvedFunction().getSignature().getName();
+                    if (name.equals(COUNT_NAME) || name.equals(COUNT_IF_NAME) || name.equals(APPROX_DISTINCT_NAME)) {
                         Symbol coalesceSymbol = symbolAllocator.newSymbol("coalesce_expr", symbolAllocator.getTypes().get(origalAggregationOutputSymbol));
                         outerAggregationOutputSymbol = coalesceSymbol;
                         coalesceSymbolsBuilder.put(coalesceSymbol, origalAggregationOutputSymbol);
