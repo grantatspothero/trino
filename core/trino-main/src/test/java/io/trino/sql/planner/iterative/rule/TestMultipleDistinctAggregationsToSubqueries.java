@@ -1867,6 +1867,12 @@ public class TestMultipleDistinctAggregationsToSubqueries
         }
 
         @Override
+        public ResolvedFunction resolveBuiltinFunction(String name, List<TypeSignatureProvider> parameterTypes)
+        {
+            return metadata.resolveBuiltinFunction(name, parameterTypes);
+        }
+
+        @Override
         public ResolvedFunction resolveOperator(OperatorType operatorType, List<? extends Type> argumentTypes)
                 throws OperatorNotFoundException
         {
