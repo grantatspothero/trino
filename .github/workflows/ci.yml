@@ -875,6 +875,8 @@ jobs:
             -Dsnowflake.test.server.role=test_role
             -Dsnowflake.test.warehouse=GALAXY_TEST_WH
             -Dsnowflake.test.account-url=https://${{ secrets.SNOWFLAKE_ACCOUNT_NAME }}.snowflakecomputing.com
+            -Dsnowflake.test.s3.register.table.location=${{ secrets.SNOWFLAKE_S3_REGISTER_TABLE_LOCATION }}
+            -Dsnowflake.test.s3.storage.integration=${{ secrets.SNOWFLAKE_S3_STORAGE_INTEGRATION }}
           SNOWFLAKE_AWS_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT_NAME }}
         run: |
           if [[ -z "$SNOWFLAKE_AWS_ACCOUNT" ]]

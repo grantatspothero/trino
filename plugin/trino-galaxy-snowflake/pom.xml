@@ -23,6 +23,16 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.google.errorprone</groupId>
+            <artifactId>error_prone_annotations</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
         </dependency>
@@ -43,13 +53,49 @@
         </dependency>
 
         <dependency>
+            <groupId>io.airlift</groupId>
+            <artifactId>http-client</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.airlift</groupId>
+            <artifactId>units</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.starburst.stargate</groupId>
+            <artifactId>access-control-client</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.starburst.stargate</groupId>
+            <artifactId>stargate-ids</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>io.trino</groupId>
             <artifactId>trino-base-jdbc</artifactId>
+        </dependency>
+
+        <!-- TODO: Move galaxy security control classes out of objectstore module to remove this depedency -->
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-galaxy-objectstore</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-hive</artifactId>
         </dependency>
 
         <dependency>
             <groupId>io.trino</groupId>
             <artifactId>trino-plugin-toolkit</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
         </dependency>
 
         <dependency>
@@ -95,24 +141,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.trino</groupId>
-            <artifactId>trino-hive</artifactId>
-            <scope>runtime</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.linkedin.calcite</groupId>
-                    <artifactId>calcite-core</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
             <groupId>com.starburstdata.trino.plugins</groupId>
             <artifactId>starburst-snowflake</artifactId>
             <type>test-jar</type>
@@ -134,6 +162,13 @@
 
         <dependency>
             <groupId>io.trino</groupId>
+            <artifactId>trino-galaxy-objectstore</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
             <artifactId>trino-jmx</artifactId>
             <scope>test</scope>
         </dependency>
@@ -146,7 +181,20 @@
 
         <dependency>
             <groupId>io.trino</groupId>
+            <artifactId>trino-main</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
             <artifactId>trino-testing</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-testing-services</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -222,9 +270,44 @@
                                         <artifactId>gcs-connector</artifactId>
                                         <classifier>shaded</classifier>
                                     </dependency>
+                                    <dependency>
+                                        <groupId>org.apache.httpcomponents.client5</groupId>
+                                        <artifactId>httpclient5</artifactId>
+                                    </dependency>
                                 </conflictingDependencies>
                                 <resources>
                                     <resource>mozilla/public-suffix-list.txt</resource>
+                                </resources>
+                            </exception>
+                            <exception>
+                                <conflictingDependencies>
+                                    <dependency>
+                                        <groupId>org.apache.iceberg</groupId>
+                                        <artifactId>iceberg-api</artifactId>
+                                    </dependency>
+                                    <dependency>
+                                        <groupId>org.apache.iceberg</groupId>
+                                        <artifactId>iceberg-common</artifactId>
+                                    </dependency>
+                                    <dependency>
+                                        <groupId>org.apache.iceberg</groupId>
+                                        <artifactId>iceberg-core</artifactId>
+                                    </dependency>
+                                    <dependency>
+                                        <groupId>org.apache.iceberg</groupId>
+                                        <artifactId>iceberg-nessie</artifactId>
+                                    </dependency>
+                                    <dependency>
+                                        <groupId>org.apache.iceberg</groupId>
+                                        <artifactId>iceberg-orc</artifactId>
+                                    </dependency>
+                                    <dependency>
+                                        <groupId>org.apache.iceberg</groupId>
+                                        <artifactId>iceberg-parquet</artifactId>
+                                    </dependency>
+                                </conflictingDependencies>
+                                <resources>
+                                    <resource>iceberg-build.properties</resource>
                                 </resources>
                             </exception>
                         </exceptions>

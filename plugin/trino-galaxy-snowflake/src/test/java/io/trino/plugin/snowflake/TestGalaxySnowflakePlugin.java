@@ -47,7 +47,9 @@ public class TestGalaxySnowflakePlugin
                                 "connection-url", "jdbc:snowflake:test",
                                 "snowflake.role", "test",
                                 "snowflake.database", "test",
-                                "snowflake.warehouse", "test"),
+                                "snowflake.warehouse", "test",
+                                "galaxy.account-url", "https://whackadoodle.galaxy.com",
+                                "snowflake.catalog-id", "c-1234567890"),
                         new TestingConnectorContext())
                 .shutdown();
     }

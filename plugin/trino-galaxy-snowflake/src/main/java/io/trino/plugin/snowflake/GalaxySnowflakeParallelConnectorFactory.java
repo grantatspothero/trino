@@ -63,6 +63,7 @@ public class GalaxySnowflakeParallelConnectorFactory
                 new SnowflakeJdbcOverrideModule(),
                 new GalaxySnowflakeParallelModule(),
                 binder -> {
+                    configBinder(binder).bindConfig(GalaxySnowflakeConfig.class);
                     configBinder(binder).bindConfig(LocalRegionConfig.class);
                     configBinder(binder).bindConfig(CrossRegionConfig.class);
                 });
