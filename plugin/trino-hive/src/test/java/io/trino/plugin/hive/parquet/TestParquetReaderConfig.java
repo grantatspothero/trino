@@ -40,7 +40,8 @@ public class TestParquetReaderConfig
                 .setNativeZstdDecompressorEnabled(true)
                 .setNativeSnappyDecompressorEnabled(true)
                 .setVectorizedDecodingEnabled(true)
-                .setUseBloomFilter(true));
+                .setUseBloomFilter(true)
+                .setSmallFileThreshold(DataSize.of(3, MEGABYTE)));
     }
 
     @Test
@@ -57,6 +58,7 @@ public class TestParquetReaderConfig
                 .put("parquet.native-zstd-decompressor.enabled", "false")
                 .put("parquet.native-snappy-decompressor.enabled", "false")
                 .put("parquet.vectorized-decoding.enabled", "false")
+                .put("parquet.small-file-threshold", "1kB")
                 .buildOrThrow();
 
         ParquetReaderConfig expected = new ParquetReaderConfig()
@@ -69,7 +71,8 @@ public class TestParquetReaderConfig
                 .setUseBloomFilter(false)
                 .setNativeZstdDecompressorEnabled(false)
                 .setNativeSnappyDecompressorEnabled(false)
-                .setVectorizedDecodingEnabled(false);
+                .setVectorizedDecodingEnabled(false)
+                .setSmallFileThreshold(DataSize.of(1, KILOBYTE));
 
         assertFullMapping(properties, expected);
     }
