@@ -47,7 +47,7 @@ public class GalaxySystemAccessModule
             binder.bind(SystemAccessControlFactory.class).annotatedWith(ForGalaxySystemAccessControl.class).to(GalaxyTrinoSystemAccessFactory.class);
         }
         binder.bind(GalaxyPermissionsCache.class).in(SINGLETON);
-        binder.bind(LazyRegistration.class).in(SINGLETON);
+        binder.bind(LazyRegistration.class).asEagerSingleton();
     }
 
     private static class LazyRegistration
