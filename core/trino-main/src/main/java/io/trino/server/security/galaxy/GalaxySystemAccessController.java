@@ -71,7 +71,7 @@ public class GalaxySystemAccessController
 
     public EntityPrivileges getEntityPrivileges(SystemSecurityContext context, EntityId entity)
     {
-        return withGalaxyPermissions(context, permissions -> permissions.getEntityPrivileges(getContextRoleId(context), entity, accessControlClient));
+        return withGalaxyPermissions(context, permissions -> permissions.getEntityPrivileges(getContextRoleId(context.getIdentity()), entity, accessControlClient));
     }
 
     public Map<RoleName, RoleId> listEnabledRoles(SystemSecurityContext context)

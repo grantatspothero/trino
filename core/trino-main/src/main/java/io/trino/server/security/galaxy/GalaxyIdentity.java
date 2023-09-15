@@ -25,7 +25,6 @@ import io.starburst.stargate.identity.DispatchSession;
 import io.trino.Session;
 import io.trino.spi.security.BasicPrincipal;
 import io.trino.spi.security.Identity;
-import io.trino.spi.security.SystemSecurityContext;
 
 import java.util.List;
 import java.util.Map;
@@ -162,17 +161,16 @@ public final class GalaxyIdentity
      * in the extraCredentiols, return that roleId.  If neither of
      * these works, get the roleId by splitting the principal string
      */
-    public static RoleId getContextRoleId(SystemSecurityContext context)
+    public static RoleId getContextRoleId(Identity identity)
     {
-        Identity identity = context.getIdentity();
         String roleIdString;
         if (isIdentityEncodedInTheUserString(identity)) {
             roleIdString = PRINCIPAL_SPLITTER.splitToList(identity.getUser()).get(3);
         }
         else {
-            roleIdString = context.getIdentity().getExtraCredentials().get("roleId");
+            roleIdString = identity.getExtraCredentials().get("roleId");
             if (roleIdString == null) {
-                roleIdString = splitPrincipal(context.getIdentity()).get(3);
+                roleIdString = splitPrincipal(identity).get(3);
             }
         }
         return new RoleId(roleIdString);
