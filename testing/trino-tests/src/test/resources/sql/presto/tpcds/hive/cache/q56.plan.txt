@@ -34,12 +34,13 @@ local exchange (GATHER, SINGLE, [])
                                                                 final aggregation over (i_item_id_13)
                                                                     local exchange (GATHER, SINGLE, [])
                                                                         remote exchange (REPARTITION, HASH, ["i_item_id_13"])
-                                                                            partial aggregation over (i_item_id_13)
-                                                                                alternatives
+                                                                            alternatives
+                                                                                partial aggregation over (i_item_id_13)
                                                                                     scan item
-                                                                                    cache data
+                                                                                cache data
+                                                                                    partial aggregation over (i_item_id_13)
                                                                                         scan item
-                                                                                    load from cache
+                                                                                load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPLICATE, BROADCAST, [])
                                                 alternatives
@@ -80,12 +81,13 @@ local exchange (GATHER, SINGLE, [])
                                                                     final aggregation over (i_item_id_117)
                                                                         local exchange (GATHER, SINGLE, [])
                                                                             remote exchange (REPARTITION, HASH, ["i_item_id_117"])
-                                                                                partial aggregation over (i_item_id_117)
-                                                                                    alternatives
+                                                                                alternatives
+                                                                                    partial aggregation over (i_item_id_117)
                                                                                         scan item
-                                                                                        cache data
+                                                                                    cache data
+                                                                                        partial aggregation over (i_item_id_117)
                                                                                             scan item
-                                                                                        load from cache
+                                                                                    load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPARTITION, HASH, ["ca_address_sk_73"])
                                                 alternatives
@@ -126,12 +128,13 @@ local exchange (GATHER, SINGLE, [])
                                                                     final aggregation over (i_item_id_223)
                                                                         local exchange (GATHER, SINGLE, [])
                                                                             remote exchange (REPARTITION, HASH, ["i_item_id_223"])
-                                                                                partial aggregation over (i_item_id_223)
-                                                                                    alternatives
+                                                                                alternatives
+                                                                                    partial aggregation over (i_item_id_223)
                                                                                         scan item
-                                                                                        cache data
+                                                                                    cache data
+                                                                                        partial aggregation over (i_item_id_223)
                                                                                             scan item
-                                                                                        load from cache
+                                                                                    load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPARTITION, HASH, ["ca_address_sk_179"])
                                                 alternatives

@@ -40,12 +40,13 @@ local exchange (GATHER, SINGLE, [])
                                                                                             final aggregation over (d_week_seq_43)
                                                                                                 local exchange (GATHER, SINGLE, [])
                                                                                                     remote exchange (REPARTITION, HASH, ["d_week_seq_43"])
-                                                                                                        partial aggregation over (d_week_seq_43)
-                                                                                                            alternatives
+                                                                                                        alternatives
+                                                                                                            partial aggregation over (d_week_seq_43)
                                                                                                                 scan date_dim
-                                                                                                                cache data
+                                                                                                            cache data
+                                                                                                                partial aggregation over (d_week_seq_43)
                                                                                                                     scan date_dim
-                                                                                                                load from cache
+                                                                                                            load from cache
                                 local exchange (GATHER, SINGLE, [])
                                     remote exchange (REPARTITION, HASH, ["i_item_sk"])
                                         alternatives
@@ -95,12 +96,13 @@ local exchange (GATHER, SINGLE, [])
                                                                                                 final aggregation over (d_week_seq_173)
                                                                                                     local exchange (GATHER, SINGLE, [])
                                                                                                         remote exchange (REPARTITION, HASH, ["d_week_seq_173"])
-                                                                                                            partial aggregation over (d_week_seq_173)
-                                                                                                                alternatives
+                                                                                                            alternatives
+                                                                                                                partial aggregation over (d_week_seq_173)
                                                                                                                     scan date_dim
-                                                                                                                    cache data
+                                                                                                                cache data
+                                                                                                                    partial aggregation over (d_week_seq_173)
                                                                                                                         scan date_dim
-                                                                                                                    load from cache
+                                                                                                                load from cache
                                     local exchange (GATHER, SINGLE, [])
                                         remote exchange (REPARTITION, HASH, ["i_item_sk_78"])
                                             alternatives
@@ -149,12 +151,13 @@ local exchange (GATHER, SINGLE, [])
                                                                                                 final aggregation over (d_week_seq_305)
                                                                                                     local exchange (GATHER, SINGLE, [])
                                                                                                         remote exchange (REPARTITION, HASH, ["d_week_seq_305"])
-                                                                                                            partial aggregation over (d_week_seq_305)
-                                                                                                                alternatives
+                                                                                                            alternatives
+                                                                                                                partial aggregation over (d_week_seq_305)
                                                                                                                     scan date_dim
-                                                                                                                    cache data
+                                                                                                                cache data
+                                                                                                                    partial aggregation over (d_week_seq_305)
                                                                                                                         scan date_dim
-                                                                                                                    load from cache
+                                                                                                                load from cache
                                     local exchange (GATHER, SINGLE, [])
                                         remote exchange (REPARTITION, HASH, ["i_item_sk_210"])
                                             alternatives

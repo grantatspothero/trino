@@ -10,14 +10,15 @@ local exchange (GATHER, SINGLE, [])
                                     remote exchange (REPARTITION, HASH, ["ss_customer_sk_97"])
                                         intermediate aggregation over (d_year_126, ss_customer_sk_97)
                                             join (INNER, REPLICATED):
-                                                partial aggregation over (ss_customer_sk_97, ss_sold_date_sk_94)
-                                                    alternatives
+                                                alternatives
+                                                    partial aggregation over (ss_customer_sk_97, ss_sold_date_sk_94)
                                                         dynamic filter (["ss_customer_sk_97"], await ["ss_sold_date_sk_94"])
                                                             scan store_sales
-                                                        cache data
+                                                    cache data
+                                                        partial aggregation over (ss_customer_sk_97, ss_sold_date_sk_94)
                                                             dynamic filter (["ss_customer_sk_97"], await ["ss_sold_date_sk_94"])
                                                                 scan store_sales
-                                                        load from cache
+                                                    load from cache
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
                                                         alternatives
@@ -42,14 +43,15 @@ local exchange (GATHER, SINGLE, [])
                                     remote exchange (REPARTITION, HASH, ["ws_bill_customer_sk_367"])
                                         intermediate aggregation over (d_year_406, ws_bill_customer_sk_367)
                                             join (INNER, REPLICATED):
-                                                partial aggregation over (ws_bill_customer_sk_367, ws_sold_date_sk_363)
-                                                    alternatives
+                                                alternatives
+                                                    partial aggregation over (ws_bill_customer_sk_367, ws_sold_date_sk_363)
                                                         dynamic filter (["ws_bill_customer_sk_367"], await ["ws_sold_date_sk_363"])
                                                             scan web_sales
-                                                        cache data
+                                                    cache data
+                                                        partial aggregation over (ws_bill_customer_sk_367, ws_sold_date_sk_363)
                                                             dynamic filter (["ws_bill_customer_sk_367"], await ["ws_sold_date_sk_363"])
                                                                 scan web_sales
-                                                        load from cache
+                                                    load from cache
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
                                                         alternatives
@@ -75,14 +77,15 @@ local exchange (GATHER, SINGLE, [])
                                     remote exchange (REPARTITION, HASH, ["ss_customer_sk"])
                                         intermediate aggregation over (d_year, ss_customer_sk)
                                             join (INNER, REPLICATED):
-                                                partial aggregation over (ss_customer_sk, ss_sold_date_sk)
-                                                    alternatives
+                                                alternatives
+                                                    partial aggregation over (ss_customer_sk, ss_sold_date_sk)
                                                         dynamic filter (["ss_customer_sk"], await ["ss_sold_date_sk"])
                                                             scan store_sales
-                                                        cache data
+                                                    cache data
+                                                        partial aggregation over (ss_customer_sk, ss_sold_date_sk)
                                                             dynamic filter (["ss_customer_sk"], await ["ss_sold_date_sk"])
                                                                 scan store_sales
-                                                        load from cache
+                                                    load from cache
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
                                                         alternatives
@@ -107,14 +110,15 @@ local exchange (GATHER, SINGLE, [])
                                     remote exchange (REPARTITION, HASH, ["ws_bill_customer_sk_552"])
                                         intermediate aggregation over (d_year_591, ws_bill_customer_sk_552)
                                             join (INNER, REPLICATED):
-                                                partial aggregation over (ws_bill_customer_sk_552, ws_sold_date_sk_548)
-                                                    alternatives
+                                                alternatives
+                                                    partial aggregation over (ws_bill_customer_sk_552, ws_sold_date_sk_548)
                                                         dynamic filter (["ws_bill_customer_sk_552"], await ["ws_sold_date_sk_548"])
                                                             scan web_sales
-                                                        cache data
+                                                    cache data
+                                                        partial aggregation over (ws_bill_customer_sk_552, ws_sold_date_sk_548)
                                                             dynamic filter (["ws_bill_customer_sk_552"], await ["ws_sold_date_sk_548"])
                                                                 scan web_sales
-                                                        load from cache
+                                                    load from cache
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
                                                         alternatives

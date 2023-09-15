@@ -9,12 +9,13 @@ remote exchange (GATHER, SINGLE, [])
                     final aggregation over (suppkey_0)
                         local exchange (GATHER, SINGLE, [])
                             remote exchange (REPARTITION, HASH, ["suppkey_0"])
-                                partial aggregation over (suppkey_0)
-                                    alternatives
+                                alternatives
+                                    partial aggregation over (suppkey_0)
                                         scan lineitem
-                                        cache data
+                                    cache data
+                                        partial aggregation over (suppkey_0)
                                             scan lineitem
-                                        load from cache
+                                    load from cache
                 local exchange (GATHER, SINGLE, [])
                     remote exchange (REPLICATE, BROADCAST, [])
                         final aggregation over ()
@@ -24,9 +25,10 @@ remote exchange (GATHER, SINGLE, [])
                                         final aggregation over (suppkey_7)
                                             local exchange (GATHER, SINGLE, [])
                                                 remote exchange (REPARTITION, HASH, ["suppkey_7"])
-                                                    partial aggregation over (suppkey_7)
-                                                        alternatives
+                                                    alternatives
+                                                        partial aggregation over (suppkey_7)
                                                             scan lineitem
-                                                            cache data
+                                                        cache data
+                                                            partial aggregation over (suppkey_7)
                                                                 scan lineitem
-                                                            load from cache
+                                                        load from cache

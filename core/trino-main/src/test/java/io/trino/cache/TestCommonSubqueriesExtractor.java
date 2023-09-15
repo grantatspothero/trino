@@ -16,6 +16,8 @@ package io.trino.cache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import io.trino.Session;
 import io.trino.connector.MockConnectorColumnHandle;
 import io.trino.connector.MockConnectorFactory;
@@ -36,12 +38,16 @@ import io.trino.spi.connector.ColumnMetadata;
 import io.trino.spi.connector.ConnectorTableProperties;
 import io.trino.spi.connector.ConstraintApplicationResult;
 import io.trino.spi.connector.SchemaTableName;
+import io.trino.spi.function.OperatorType;
 import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.Range;
 import io.trino.spi.predicate.SortedRangeSet;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.predicate.ValueSet;
+import io.trino.spi.type.StandardTypes;
+import io.trino.spi.type.Type;
 import io.trino.sql.DynamicFilters;
+import io.trino.sql.planner.FunctionCallBuilder;
 import io.trino.sql.planner.Plan;
 import io.trino.sql.planner.PlanNodeIdAllocator;
 import io.trino.sql.planner.Symbol;
@@ -53,6 +59,8 @@ import io.trino.sql.planner.assertions.PlanMatchPattern;
 import io.trino.sql.planner.iterative.rule.test.PlanBuilder;
 import io.trino.sql.planner.iterative.rule.test.RuleTester;
 import io.trino.sql.planner.optimizations.PlanNodeSearcher;
+import io.trino.sql.planner.plan.AggregationNode;
+import io.trino.sql.planner.plan.AggregationNode.Aggregation;
 import io.trino.sql.planner.plan.Assignments;
 import io.trino.sql.planner.plan.DynamicFilterId;
 import io.trino.sql.planner.plan.FilterNode;
@@ -61,37 +69,59 @@ import io.trino.sql.planner.plan.PlanNodeId;
 import io.trino.sql.planner.plan.ProjectNode;
 import io.trino.sql.planner.plan.TableScanNode;
 import io.trino.sql.planner.plan.UnionNode;
+import io.trino.sql.tree.CoalesceExpression;
+import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.FunctionCall;
+import io.trino.sql.tree.GenericLiteral;
+import io.trino.sql.tree.LongLiteral;
+import io.trino.sql.tree.QualifiedName;
 import io.trino.testing.LocalQueryRunner;
 import io.trino.testing.TestingTransactionHandle;
 import org.intellij.lang.annotations.Language;
 import org.testng.annotations.Test;
 
 import java.util.AbstractMap.SimpleEntry;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static io.trino.cache.CanonicalSubplanExtractor.canonicalExpressionToColumnId;
+import static io.trino.cache.CommonSubqueriesExtractor.toSubplanKey;
 import static io.trino.cost.StatsCalculator.noopStatsCalculator;
 import static io.trino.execution.querystats.PlanOptimizersStatsCollector.createPlanOptimizersStatsCollector;
 import static io.trino.metadata.FunctionManager.createTestingFunctionManager;
+import static io.trino.metadata.OperatorNameUtil.mangleOperatorName;
 import static io.trino.spi.block.BlockTestUtils.assertBlockEquals;
 import static io.trino.spi.predicate.Range.greaterThan;
 import static io.trino.spi.predicate.Range.lessThan;
 import static io.trino.spi.type.BigintType.BIGINT;
+import static io.trino.spi.type.VarcharType.createVarcharType;
 import static io.trino.sql.DynamicFilters.createDynamicFilterExpression;
 import static io.trino.sql.DynamicFilters.extractDynamicFilters;
 import static io.trino.sql.ExpressionUtils.and;
 import static io.trino.sql.planner.ExpressionExtractor.extractExpressions;
 import static io.trino.sql.planner.LogicalPlanner.Stage.OPTIMIZED_AND_VALIDATED;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.aggregation;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.filter;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.functionCall;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.globalAggregation;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.project;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.singleGroupingSet;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.strictProject;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.strictTableScan;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.symbol;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.tableScan;
 import static io.trino.sql.planner.iterative.rule.test.PlanBuilder.expression;
+import static io.trino.sql.planner.plan.AggregationNode.Step.PARTIAL;
 import static io.trino.sql.tree.BooleanLiteral.TRUE_LITERAL;
 import static io.trino.testing.TestingHandles.TEST_CATALOG_NAME;
 import static io.trino.testing.TestingSession.testSessionBuilder;
+import static io.trino.type.TypeUtils.NULL_HASH_CODE;
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -128,8 +158,11 @@ public class TestCommonSubqueriesExtractor
                     Range.lessThan(BIGINT, 30L),
                     Range.greaterThan(BIGINT, 70L)), false)));
     private static final SchemaTableName TABLE_NAME = new SchemaTableName(TEST_SCHEMA, TEST_TABLE);
+    private static final ExpressionWithType REGIONKEY_EXPRESSION = new ExpressionWithType("\"[regionkey:bigint]\"", BIGINT);
+    private static final ExpressionWithType NATIONKEY_EXPRESSION = new ExpressionWithType("\"[nationkey:bigint]\"", BIGINT);
 
     private TableHandle testTableHandle;
+    private String tpchCatalogId;
 
     @Override
     protected LocalQueryRunner createLocalQueryRunner()
@@ -178,20 +211,272 @@ public class TestCommonSubqueriesExtractor
                 queryRunner.getCatalogHandle(TEST_CATALOG_NAME),
                 new MockConnectorTableHandle(TABLE_NAME),
                 TestingTransactionHandle.create());
+        tpchCatalogId = queryRunner.getCatalogHandle(TPCH_SESSION.getCatalog().get()).getId();
         return queryRunner;
     }
 
     @Test
-    public void testAggregations()
+    public void testSimpleAggregation()
     {
-        Map<PlanNode, CommonPlanAdaptation> planAdaptations = extractTpchCommonSubqueries("""
+        CommonSubqueries commonSubqueries = extractTpchCommonSubqueries("""
                 SELECT sum(nationkey) FROM nation
                 UNION ALL
                 SELECT sum(nationkey) FROM nation""");
+        Map<PlanNode, CommonPlanAdaptation> planAdaptations = commonSubqueries.planAdaptations();
         assertThat(planAdaptations).hasSize(2);
-        // aggregations are not supported yet
+        assertThat(planAdaptations).allSatisfy((node, adaptation) ->
+                assertThat(node).isInstanceOf(AggregationNode.class));
+
+        CommonPlanAdaptation aggregationA = Iterables.get(planAdaptations.values(), 0);
+        CommonPlanAdaptation aggregationB = Iterables.get(planAdaptations.values(), 1);
+
+        PlanMatchPattern commonSubplan = aggregation(
+                globalAggregation(),
+                ImmutableMap.of(Optional.of("SUM"), functionCall("sum", false, ImmutableList.of(symbol("NATIONKEY")))),
+                Optional.empty(),
+                PARTIAL,
+                tableScan("nation", ImmutableMap.of("NATIONKEY", "nationkey")));
+
+        SymbolAllocator symbolAllocator = commonSubqueries.symbolAllocator();
+        assertTpchPlan(symbolAllocator, aggregationA.getCommonSubplan(), commonSubplan);
+        assertTpchPlan(symbolAllocator, aggregationB.getCommonSubplan(), commonSubplan);
+
+        PlanNodeIdAllocator idAllocator = commonSubqueries.idAllocator();
+        assertThat(aggregationA.adaptCommonSubplan(aggregationA.getCommonSubplan(), idAllocator)).isEqualTo(aggregationA.getCommonSubplan());
+        assertThat(aggregationB.adaptCommonSubplan(aggregationB.getCommonSubplan(), idAllocator)).isEqualTo(aggregationB.getCommonSubplan());
+
+        // make sure plan signatures are same
+        Expression sum = getFunctionCallBuilder("sum", NATIONKEY_EXPRESSION).build();
+        assertThat(aggregationA.getCommonSubplanSignature()).isEqualTo(aggregationA.getCommonSubplanSignature());
+        assertThat(aggregationB.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
+                new SignatureKey(tpchCatalogId + ":tiny:nation:0.01"),
+                Optional.of(ImmutableList.of()),
+                ImmutableList.of(canonicalExpressionToColumnId(sum)),
+                TupleDomain.all(),
+                TupleDomain.all()));
+    }
+
+    @Test
+    public void testGlobalAggregation()
+    {
+        CommonSubqueries commonSubqueries = extractTpchCommonSubqueries("""
+                SELECT * FROM
+                (SELECT sum(nationkey), max(regionkey) FILTER(WHERE nationkey > 10) FROM nation)
+                CROSS JOIN
+                (SELECT
+                  sum(nationkey),
+                  avg(nationkey * 2) FILTER(WHERE nationkey > 10)
+                FROM nation)""");
+        Map<PlanNode, CommonPlanAdaptation> planAdaptations = commonSubqueries.planAdaptations();
+        assertThat(planAdaptations).hasSize(2);
+        assertThat(planAdaptations).allSatisfy((node, adaptation) ->
+                assertThat(node).isInstanceOf(AggregationNode.class));
+
+        CommonPlanAdaptation aggregationA = Iterables.get(planAdaptations.values(), 0);
+        CommonPlanAdaptation aggregationB = Iterables.get(planAdaptations.values(), 1);
+
+        PlanMatchPattern commonSubplan = aggregation(
+                globalAggregation(),
+                ImmutableMap.of(
+                        Optional.of("MAX_FILTERED"), functionCall("max", false, ImmutableList.of(symbol("REGIONKEY"))),
+                        Optional.of("SUM"), functionCall("sum", false, ImmutableList.of(symbol("NATIONKEY"))),
+                        Optional.of("AVG_FILTERED"), functionCall("avg", false, ImmutableList.of(symbol("MULTIPLICATION")))),
+                ImmutableList.of(),
+                ImmutableList.of("MASK"),
+                Optional.empty(),
+                PARTIAL,
+                project(ImmutableMap.of(
+                                "MULTIPLICATION", PlanMatchPattern.expression("NATIONKEY * BIGINT '2'"),
+                                "MASK", PlanMatchPattern.expression("NATIONKEY > BIGINT '10'")),
+                        tableScan("nation", ImmutableMap.of("NATIONKEY", "nationkey", "REGIONKEY", "regionkey"))));
+
+        SymbolAllocator symbolAllocator = commonSubqueries.symbolAllocator();
+        assertTpchPlan(symbolAllocator, aggregationA.getCommonSubplan(), commonSubplan);
+        assertTpchPlan(symbolAllocator, aggregationB.getCommonSubplan(), commonSubplan);
+        assertAggregationsWithMasks(aggregationA.getCommonSubplan(), 0, 2);
+        assertAggregationsWithMasks(aggregationB.getCommonSubplan(), 0, 2);
+
+        PlanNodeIdAllocator idAllocator = commonSubqueries.idAllocator();
+        assertTpchPlan(symbolAllocator, aggregationA.adaptCommonSubplan(aggregationA.getCommonSubplan(), idAllocator),
+                strictProject(ImmutableMap.of(
+                                "SUM", PlanMatchPattern.expression("SUM"),
+                                "MAX_FILTERED", PlanMatchPattern.expression("MAX_FILTERED")),
+                        commonSubplan));
+        assertTpchPlan(symbolAllocator, aggregationB.adaptCommonSubplan(aggregationB.getCommonSubplan(), idAllocator),
+                strictProject(ImmutableMap.of(
+                                "SUM", PlanMatchPattern.expression("SUM"),
+                                "AVG_FILTERED", PlanMatchPattern.expression("AVG_FILTERED")),
+                        commonSubplan));
+
+        // make sure plan signatures are same
+        Expression max = getFunctionCallBuilder("max", new ExpressionWithType("\"[regionkey:bigint]\"", BIGINT))
+                .setFilter(expression("\"[nationkey:bigint]\" > BIGINT '10'"))
+                .build();
+        Expression sum = getFunctionCallBuilder("sum", NATIONKEY_EXPRESSION).build();
+        Expression avg = getFunctionCallBuilder("avg", new ExpressionWithType("\"[nationkey:bigint]\" * BIGINT '2'", BIGINT))
+                .setFilter(expression("\"[nationkey:bigint]\" > BIGINT '10'"))
+                .build();
+        assertThat(aggregationA.getCommonSubplanSignature()).isEqualTo(aggregationA.getCommonSubplanSignature());
+        assertThat(aggregationB.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
+                new SignatureKey(tpchCatalogId + ":tiny:nation:0.01"),
+                Optional.of(ImmutableList.of()),
+                ImmutableList.of(canonicalExpressionToColumnId(max), canonicalExpressionToColumnId(sum), canonicalExpressionToColumnId(avg)),
+                TupleDomain.all(),
+                TupleDomain.all()));
+    }
+
+    @Test
+    public void testBigintGroupByColumnAggregation()
+    {
+        CommonSubqueries commonSubqueries = extractTpchCommonSubqueries("""
+                SELECT sum(nationkey) FROM nation GROUP BY regionkey * 2
+                UNION ALL
+                SELECT sum(nationkey) FROM nation GROUP BY regionkey * 2
+                UNION ALL
+                SELECT nationkey FROM nation""");
+        Map<PlanNode, CommonPlanAdaptation> planAdaptations = commonSubqueries.planAdaptations();
+        assertThat(planAdaptations).hasSize(2);
+        assertThat(planAdaptations).allSatisfy((node, adaptation) ->
+                assertThat(node).isInstanceOf(AggregationNode.class));
+
+        CommonPlanAdaptation aggregationA = Iterables.get(planAdaptations.values(), 0);
+        CommonPlanAdaptation aggregationB = Iterables.get(planAdaptations.values(), 1);
+
+        PlanMatchPattern commonSubplan = aggregation(
+                singleGroupingSet("MULTIPLICATION"),
+                ImmutableMap.of(Optional.of("SUM"), functionCall("sum", false, ImmutableList.of(symbol("NATIONKEY")))),
+                Optional.empty(),
+                PARTIAL,
+                project(ImmutableMap.of(
+                                "MULTIPLICATION", PlanMatchPattern.expression("REGIONKEY * BIGINT '2'")),
+                        tableScan("nation", ImmutableMap.of("NATIONKEY", "nationkey", "REGIONKEY", "regionkey"))));
+
+        SymbolAllocator symbolAllocator = commonSubqueries.symbolAllocator();
+        assertTpchPlan(symbolAllocator, aggregationA.getCommonSubplan(), commonSubplan);
+        assertTpchPlan(symbolAllocator, aggregationB.getCommonSubplan(), commonSubplan);
+
+        PlanNodeIdAllocator idAllocator = commonSubqueries.idAllocator();
+        assertThat(aggregationA.adaptCommonSubplan(aggregationA.getCommonSubplan(), idAllocator)).isEqualTo(aggregationA.getCommonSubplan());
+        assertThat(aggregationB.adaptCommonSubplan(aggregationB.getCommonSubplan(), idAllocator)).isEqualTo(aggregationB.getCommonSubplan());
+
+        // make sure plan signatures are same
+        CacheColumnId groupByColumn = new CacheColumnId("((\"[regionkey:bigint]\" * BIGINT '2'))");
+        Expression sum = getFunctionCallBuilder("sum", NATIONKEY_EXPRESSION).build();
+        assertThat(aggregationA.getCommonSubplanSignature()).isEqualTo(aggregationA.getCommonSubplanSignature());
+        assertThat(aggregationB.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
+                new SignatureKey(tpchCatalogId + ":tiny:nation:0.01"),
+                Optional.of(ImmutableList.of(groupByColumn)),
+                ImmutableList.of(groupByColumn, canonicalExpressionToColumnId(sum)),
+                TupleDomain.all(),
+                TupleDomain.all()));
+    }
+
+    @Test
+    public void testMultiColumnGroupByAggregation()
+    {
+        CommonSubqueries commonSubqueries = extractTpchCommonSubqueries("""
+                SELECT sum(nationkey) FROM nation
+                WHERE regionkey > 10 AND nationkey > 10
+                GROUP BY regionkey, name
+                UNION ALL
+                SELECT max(nationkey)
+                FROM nation
+                WHERE regionkey < 5 AND nationkey > 10
+                GROUP BY name, regionkey
+                UNION ALL
+                SELECT avg(nationkey) FROM nation
+                WHERE regionkey > 10 AND nationkey > 11
+                GROUP BY regionkey, name""");
+        Map<PlanNode, CommonPlanAdaptation> planAdaptations = commonSubqueries.planAdaptations();
+        assertThat(planAdaptations).hasSize(2);
+        assertThat(planAdaptations).allSatisfy((node, adaptation) ->
+                assertThat(node).isInstanceOf(AggregationNode.class));
+
+        CommonPlanAdaptation aggregationA = Iterables.get(planAdaptations.values(), 0);
+        CommonPlanAdaptation aggregationB = Iterables.get(planAdaptations.values(), 1);
+
+        PlanMatchPattern commonSubplan = aggregation(
+                singleGroupingSet("REGIONKEY", "NAME"),
+                ImmutableMap.of(
+                        Optional.of("SUM"), functionCall("sum", false, ImmutableList.of(symbol("NATIONKEY"))),
+                        Optional.of("MAX"), functionCall("max", false, ImmutableList.of(symbol("NATIONKEY")))),
+                Optional.empty(),
+                PARTIAL,
+                project(ImmutableMap.of(
+                                "HASH", PlanMatchPattern.expression("combine_hash(combine_hash(bigint '0', COALESCE(\"$operator$hash_code\"(REGIONKEY), 0)), COALESCE(\"$operator$hash_code\"(NAME), 0))")),
+                        filter("(NATIONKEY > BIGINT '10') AND ((REGIONKEY > BIGINT '10') OR (REGIONKEY < BIGINT '5'))",
+                                tableScan("nation", ImmutableMap.of("NATIONKEY", "nationkey", "REGIONKEY", "regionkey", "NAME", "name")))));
+
+        SymbolAllocator symbolAllocator = commonSubqueries.symbolAllocator();
+        assertTpchPlan(symbolAllocator, aggregationA.getCommonSubplan(), commonSubplan);
+        assertTpchPlan(symbolAllocator, aggregationB.getCommonSubplan(), commonSubplan);
+
+        // adaptation for aggregationB should contain projection for original hash expression
+        PlanNodeIdAllocator idAllocator = commonSubqueries.idAllocator();
+        assertTpchPlan(symbolAllocator, aggregationA.adaptCommonSubplan(aggregationA.getCommonSubplan(), idAllocator),
+                strictProject(ImmutableMap.of(
+                                "REGIONKEY", PlanMatchPattern.expression("REGIONKEY"),
+                                "NAME", PlanMatchPattern.expression("NAME"),
+                                "HASH", PlanMatchPattern.expression("HASH"),
+                                "SUM", PlanMatchPattern.expression("SUM")),
+                        filter("REGIONKEY > BIGINT '10'", commonSubplan)));
+        assertTpchPlan(symbolAllocator, aggregationB.adaptCommonSubplan(aggregationB.getCommonSubplan(), idAllocator),
+                strictProject(ImmutableMap.of(
+                                "REGIONKEY", PlanMatchPattern.expression("REGIONKEY"),
+                                "NAME", PlanMatchPattern.expression("NAME"),
+                                "SUBQUERY_HASH", PlanMatchPattern.expression("combine_hash(combine_hash(bigint '0', COALESCE(\"$operator$hash_code\"(NAME), 0)), COALESCE(\"$operator$hash_code\"(REGIONKEY), 0))"),
+                                "MAX", PlanMatchPattern.expression("MAX")),
+                        filter("REGIONKEY < BIGINT '5'", commonSubplan)));
+
+        // make sure plan signatures are same
+        CacheColumnId regionkey = new CacheColumnId("[regionkey:bigint]");
+        CacheColumnId name = new CacheColumnId("[name:varchar(25)]");
+        Expression hash = getHashExpression(
+                new ExpressionWithType("\"[regionkey:bigint]\"", BIGINT),
+                new ExpressionWithType("\"[name:varchar(25)]\"", createVarcharType(25)));
+        Expression sum = getFunctionCallBuilder("sum", NATIONKEY_EXPRESSION).build();
+        Expression max = getFunctionCallBuilder("max", NATIONKEY_EXPRESSION).build();
+        assertThat(aggregationA.getCommonSubplanSignature()).isEqualTo(aggregationA.getCommonSubplanSignature());
+        assertThat(aggregationB.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
+                new SignatureKey(tpchCatalogId + ":tiny:nation:0.01:(\"[nationkey:bigint]\" > BIGINT '10')"),
+                Optional.of(ImmutableList.of(regionkey, name)),
+                ImmutableList.of(regionkey, name, canonicalExpressionToColumnId(hash), canonicalExpressionToColumnId(sum), canonicalExpressionToColumnId(max)),
+                TupleDomain.withColumnDomains(ImmutableMap.of(
+                        regionkey, Domain.create(ValueSet.ofRanges(lessThan(BIGINT, 5L), greaterThan(BIGINT, 10L)), false))),
+                TupleDomain.all()));
+    }
+
+    @Test
+    public void testQueryWithAggregatedAndNonAggregatedSubqueries()
+    {
+        // data should be cached on table scan level
+        CommonSubqueries commonSubqueries = extractTpchCommonSubqueries("""
+                SELECT sum(nationkey) FROM nation GROUP BY regionkey
+                UNION ALL
+                SELECT nationkey FROM nation""");
+
+        Map<PlanNode, CommonPlanAdaptation> planAdaptations = commonSubqueries.planAdaptations();
+        assertThat(planAdaptations).hasSize(2);
         assertThat(planAdaptations).allSatisfy((node, adaptation) ->
                 assertThat(node).isInstanceOf(TableScanNode.class));
+
+        CommonPlanAdaptation aggregationA = Iterables.get(planAdaptations.values(), 0);
+        CommonPlanAdaptation aggregationB = Iterables.get(planAdaptations.values(), 1);
+
+        PlanMatchPattern commonSubplan = tableScan("nation", ImmutableMap.of("NATIONKEY", "nationkey", "REGIONKEY", "regionkey"));
+
+        SymbolAllocator symbolAllocator = commonSubqueries.symbolAllocator();
+        assertTpchPlan(symbolAllocator, aggregationA.getCommonSubplan(), commonSubplan);
+        assertTpchPlan(symbolAllocator, aggregationB.getCommonSubplan(), commonSubplan);
+
+        // make sure plan signatures are same
+        assertThat(aggregationA.getCommonSubplanSignature()).isEqualTo(aggregationA.getCommonSubplanSignature());
+        assertThat(aggregationB.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
+                new SignatureKey(tpchCatalogId + ":tiny:nation:0.01"),
+                Optional.empty(),
+                ImmutableList.of(new CacheColumnId("[nationkey:bigint]"), new CacheColumnId("[regionkey:bigint]")),
+                TupleDomain.all(),
+                TupleDomain.all()));
     }
 
     @Test
@@ -909,23 +1194,92 @@ public class TestCommonSubqueriesExtractor
                 TupleDomain.all()));
     }
 
-    private Map<PlanNode, CommonPlanAdaptation> extractTpchCommonSubqueries(@Language("SQL") String query)
+    @Test
+    public void testToSubplanKey()
+    {
+        CacheTableId tableId = new CacheTableId("table_id");
+        Expression predicateA = expression("a > b");
+        Expression predicateB = expression("c");
+        assertThat(toSubplanKey(tableId, Optional.empty(), ImmutableList.of(predicateA, predicateB)))
+                .isEqualTo(new CommonSubqueriesExtractor.SubplanKey(tableId, Optional.empty(), ImmutableSet.of()));
+        assertThat(toSubplanKey(tableId, Optional.of(ImmutableSet.of(new CacheColumnId("b"), new CacheColumnId("c"))), ImmutableList.of(predicateA, predicateB)))
+                .isEqualTo(new CommonSubqueriesExtractor.SubplanKey(tableId, Optional.of(ImmutableSet.of(new CacheColumnId("b"), new CacheColumnId("c"))), ImmutableSet.of(predicateA)));
+    }
+
+    private Expression getHashExpression(ExpressionWithType... expressions)
+    {
+        Expression hashExpression = new GenericLiteral(StandardTypes.BIGINT, Integer.toString(0));
+        for (ExpressionWithType expression : expressions) {
+            hashExpression = getHashFunctionCall(hashExpression, expression);
+        }
+        return hashExpression;
+    }
+
+    private Expression getHashFunctionCall(Expression previousHashValue, ExpressionWithType argument)
+    {
+        LocalQueryRunner queryRunner = getQueryRunner();
+        FunctionCall functionCall = FunctionCallBuilder.resolve(queryRunner.getDefaultSession(), queryRunner.getMetadata())
+                .setName(QualifiedName.of(mangleOperatorName(OperatorType.HASH_CODE)))
+                .addArgument(argument.type, argument.expression)
+                .build();
+
+        return FunctionCallBuilder.resolve(queryRunner.getDefaultSession(), queryRunner.getMetadata())
+                .setName(QualifiedName.of("combine_hash"))
+                .addArgument(BIGINT, previousHashValue)
+                .addArgument(BIGINT, orNullHashCode(functionCall))
+                .build();
+    }
+
+    private static Expression orNullHashCode(Expression expression)
+    {
+        return new CoalesceExpression(expression, new LongLiteral(String.valueOf(NULL_HASH_CODE)));
+    }
+
+    private FunctionCallBuilder getFunctionCallBuilder(String name, ExpressionWithType... arguments)
+    {
+        LocalQueryRunner queryRunner = getQueryRunner();
+        FunctionCallBuilder builder = FunctionCallBuilder.resolve(queryRunner.getDefaultSession(), queryRunner.getMetadata())
+                .setName(QualifiedName.of(name));
+        for (ExpressionWithType argument : arguments) {
+            builder.addArgument(argument.type, argument.expression);
+        }
+        return builder;
+    }
+
+    // workaround for https://github.com/google/error-prone/issues/2713
+    @SuppressWarnings("unused")
+    private record ExpressionWithType(Expression expression, Type type)
+    {
+        public ExpressionWithType(@Language("SQL") String expression, Type type)
+        {
+            this(PlanBuilder.expression(expression), type);
+        }
+    }
+
+    private CommonSubqueries extractTpchCommonSubqueries(@Language("SQL") String query)
     {
         LocalQueryRunner queryRunner = getQueryRunner();
         return queryRunner.inTransaction(TPCH_SESSION, session -> {
             Plan plan = queryRunner.createPlan(session, query, OPTIMIZED_AND_VALIDATED, true, WarningCollector.NOOP, createPlanOptimizersStatsCollector());
             // metadata.getCatalogHandle() registers the catalog for the transaction
             session.getCatalog().ifPresent(catalog -> getQueryRunner().getMetadata().getCatalogHandle(session, catalog));
-            return CommonSubqueriesExtractor.extractCommonSubqueries(
-                    getQueryRunner().getPlannerContext(),
-                    session,
-                    new PlanNodeIdAllocator(),
-                    new SymbolAllocator(plan.getTypes().allTypes()),
-                    new RuleTester(getQueryRunner()).getTypeAnalyzer(),
-                    node -> PlanNodeStatsEstimate.unknown(),
-                    plan.getRoot());
+            SymbolAllocator symbolAllocator = new SymbolAllocator(plan.getTypes().allTypes());
+            PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
+            return new CommonSubqueries(
+                    CommonSubqueriesExtractor.extractCommonSubqueries(
+                            getQueryRunner().getPlannerContext(),
+                            session,
+                            idAllocator,
+                            symbolAllocator,
+                            new RuleTester(getQueryRunner()).getTypeAnalyzer(),
+                            node -> PlanNodeStatsEstimate.unknown(),
+                            plan.getRoot()),
+                    symbolAllocator,
+                    idAllocator);
         });
     }
+
+    record CommonSubqueries(Map<PlanNode, CommonPlanAdaptation> planAdaptations, SymbolAllocator symbolAllocator, PlanNodeIdAllocator idAllocator) {}
 
     private Map<PlanNode, CommonPlanAdaptation> extractCommonSubqueries(
             PlanNodeIdAllocator idAllocator,
@@ -946,9 +1300,36 @@ public class TestCommonSubqueriesExtractor
         });
     }
 
+    private void assertAggregationsWithMasks(PlanNode node, int... indexes)
+    {
+        // assert aggregations at given indexes are masked/unmasked
+        assertThat(node).isInstanceOf(AggregationNode.class);
+        AggregationNode aggregation = (AggregationNode) node;
+        List<Aggregation> aggregations = ImmutableList.copyOf(aggregation.getAggregations().values());
+        Set<Integer> maskedAggregations = Arrays.stream(indexes).boxed().collect(toImmutableSet());
+        for (int i = 0; i < aggregations.size(); ++i) {
+            if (maskedAggregations.contains(i)) {
+                assertThat(aggregations.get(i).getMask()).isPresent();
+            }
+            else {
+                assertThat(aggregations.get(i).getMask()).isEmpty();
+            }
+        }
+    }
+
     private void assertPlan(SymbolAllocator symbolAllocator, PlanNode root, PlanMatchPattern expected)
     {
-        getQueryRunner().inTransaction(TEST_SESSION, session -> {
+        assertPlan(TEST_SESSION, symbolAllocator, root, expected);
+    }
+
+    private void assertTpchPlan(SymbolAllocator symbolAllocator, PlanNode root, PlanMatchPattern expected)
+    {
+        assertPlan(TPCH_SESSION, symbolAllocator, root, expected);
+    }
+
+    private void assertPlan(Session customSession, SymbolAllocator symbolAllocator, PlanNode root, PlanMatchPattern expected)
+    {
+        getQueryRunner().inTransaction(customSession, session -> {
             // metadata.getCatalogHandle() registers the catalog for the transaction
             session.getCatalog().ifPresent(catalog -> getQueryRunner().getMetadata().getCatalogHandle(session, catalog));
             Plan plan = new Plan(root, symbolAllocator.getTypes(), StatsAndCosts.empty());

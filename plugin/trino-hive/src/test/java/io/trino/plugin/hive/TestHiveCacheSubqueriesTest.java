@@ -92,14 +92,14 @@ public class TestHiveCacheSubqueriesTest
     {
         computeActual("create table orders_part with (partitioned_by = ARRAY['orderpriority']) as select orderkey, orderdate, orderpriority from orders");
         @Language("SQL") String filteringQuery = """
-                        select count(orderkey) from orders_part where orderpriority = '3-MEDIUM'
+                        select orderkey from orders_part where orderpriority = '3-MEDIUM'
                         union all
-                        select count(orderkey) from orders_part where orderpriority = '3-MEDIUM'
+                        select orderkey from orders_part where orderpriority = '3-MEDIUM'
                 """;
         @Language("SQL") String notFilteringQuery = """
-                        select count(orderkey) from orders_part
+                        select orderkey from orders_part
                         union all
-                        select count(orderkey) from orders_part
+                        select orderkey from orders_part
                 """;
         MaterializedResultWithQueryId filteringExecutionFirst = executeWithQueryId(withCacheSubqueriesEnabled(), filteringQuery);
         Plan filteringPlanFirst = getDistributedQueryRunner().getQueryPlan(filteringExecutionFirst.getQueryId());
@@ -121,7 +121,7 @@ public class TestHiveCacheSubqueriesTest
                 node(LoadCachedDataPlanNode.class)
                         .with(LoadCachedDataPlanNode.class, node -> node.getPlanSignature().equals(signature)));
 
-        PlanMatchPattern originalPlanPattern = anyTree(chooseAlternativeNode);
+        PlanMatchPattern originalPlanPattern = anyTree(chooseAlternativeNode, chooseAlternativeNode);
 
         // predicate for both original plans were pushed down to tableHandle what means that there is no
         // filter nodes. As a result, there is a same plan signatures for both (actually different) queries
@@ -139,9 +139,9 @@ public class TestHiveCacheSubqueriesTest
         assertThat(getLoadCachedDataOperatorInputPositions(notFilteringExecution.getQueryId())).isPositive();
 
         // validate results
-        long count = (Long) filteringExecutionFirst.getResult().getMaterializedRows().get(0).getField(0);
-        assertThat(count).isEqualTo(filteringExecutionSecond.getResult().getMaterializedRows().get(0).getField(0));
-        assertThat(count).isLessThan((long) notFilteringExecution.getResult().getMaterializedRows().get(0).getField(0));
+        int count = filteringExecutionFirst.getResult().getRowCount();
+        assertThat(count).isEqualTo(filteringExecutionSecond.getResult().getRowCount());
+        assertThat(count).isLessThan(notFilteringExecution.getResult().getRowCount());
         assertUpdate("drop table orders_part");
     }
 

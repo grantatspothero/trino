@@ -68,6 +68,45 @@ public abstract class BaseCacheSubqueriesTest
     }
 
     @Test
+    public void testAggregationQuery()
+    {
+        @Language("SQL") String countQuery = """
+            SELECT * FROM
+                (SELECT count(orderkey), orderkey FROM lineitem GROUP BY orderkey) a
+            JOIN
+                (SELECT count(orderkey), orderkey FROM lineitem GROUP BY orderkey) b
+            ON a.orderkey = b.orderkey""";
+        @Language("SQL") String sumQuery = """
+            SELECT * FROM
+                (SELECT sum(orderkey), orderkey FROM lineitem GROUP BY orderkey) a
+            JOIN
+                (SELECT sum(orderkey), orderkey FROM lineitem GROUP BY orderkey) b
+            ON a.orderkey = b.orderkey""";
+        MaterializedResultWithQueryId countWithCache = executeWithQueryId(withCacheSubqueriesEnabled(), countQuery);
+        MaterializedResultWithQueryId countWithoutCache = executeWithQueryId(withCacheSubqueriesDisabled(), countQuery);
+        assertEqualsIgnoreOrder(countWithCache.getResult(), countWithoutCache.getResult());
+
+        // make sure data was read from cache
+        assertThat(getLoadCachedDataOperatorInputPositions(countWithCache.getQueryId())).isPositive();
+
+        // make sure data was cached
+        assertThat(getCacheDataOperatorInputPositions(countWithCache.getQueryId())).isPositive();
+
+        // make sure less data is read from source when caching is on
+        assertThat(getScanOperatorInputPositions(countWithCache.getQueryId()))
+                .isLessThan(getScanOperatorInputPositions(countWithoutCache.getQueryId()));
+
+        // subsequent count aggregation query should use cached data only
+        countWithCache = executeWithQueryId(withCacheSubqueriesEnabled(), countQuery);
+        assertThat(getLoadCachedDataOperatorInputPositions(countWithCache.getQueryId())).isPositive();
+        assertThat(getScanOperatorInputPositions(countWithCache.getQueryId())).isZero();
+
+        // subsequent sum aggregation query should read from source as it doesn't match count plan signature
+        MaterializedResultWithQueryId sumWithCache = executeWithQueryId(withCacheSubqueriesEnabled(), sumQuery);
+        assertThat(getScanOperatorInputPositions(sumWithCache.getQueryId())).isPositive();
+    }
+
+    @Test
     public void testSubsequentQueryReadsFromCache()
     {
         @Language("SQL") String selectQuery = "select orderkey from lineitem union all (select orderkey from lineitem union all select orderkey from lineitem)";

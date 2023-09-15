@@ -24,12 +24,18 @@ import io.trino.spi.cache.SignatureKey;
 import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.predicate.ValueSet;
+import io.trino.spi.type.Type;
 import io.trino.sql.DynamicFilters;
+import io.trino.sql.planner.FunctionCallBuilder;
 import io.trino.sql.planner.assertions.BasePlanTest;
+import io.trino.sql.planner.iterative.rule.test.PlanBuilder;
 import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.JoinNode;
+import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.SymbolReference;
 import io.trino.testing.LocalQueryRunner;
+import org.intellij.lang.annotations.Language;
 import org.testng.annotations.Test;
 
 import java.util.Optional;
@@ -37,19 +43,26 @@ import java.util.function.Predicate;
 
 import static io.trino.SystemSessionProperties.JOIN_REORDERING_STRATEGY;
 import static io.trino.SystemSessionProperties.OPTIMIZE_HASH_GENERATION;
+import static io.trino.cache.CanonicalSubplanExtractor.canonicalExpressionToColumnId;
 import static io.trino.spi.predicate.Range.greaterThan;
 import static io.trino.spi.predicate.Range.lessThan;
 import static io.trino.spi.type.BigintType.BIGINT;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.aggregation;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.anyTree;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.cacheDataPlanNode;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.chooseAlternativeNode;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.exchange;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.expression;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.filter;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.functionCall;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.loadCachedDataPlanNode;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.node;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.singleGroupingSet;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.strictProject;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.symbol;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.tableScan;
+import static io.trino.sql.planner.plan.AggregationNode.Step.FINAL;
+import static io.trino.sql.planner.plan.AggregationNode.Step.PARTIAL;
 import static io.trino.sql.planner.plan.ExchangeNode.Scope.LOCAL;
 import static io.trino.sql.tree.BooleanLiteral.TRUE_LITERAL;
 import static io.trino.testing.TestingHandles.TEST_CATALOG_NAME;
@@ -187,5 +200,123 @@ public class TestCacheCommonSubqueries
                                         // load data from cache alternative
                                         strictProject(ImmutableMap.of("REGIONKEY", expression("REGIONKEY")),
                                                 loadCachedDataPlanNode(signature, ImmutableMap.of(), "NATIONKEY", "REGIONKEY")))))));
+    }
+
+    @Test
+    public void testAggregationQuery()
+    {
+        ExpressionWithType nationkey = new ExpressionWithType("\"[nationkey:bigint]\"", BIGINT);
+        Expression max = getFunctionCallBuilder("max", nationkey).build();
+        Expression sum = getFunctionCallBuilder("sum", nationkey).build();
+        Expression avg = getFunctionCallBuilder("avg", nationkey).build();
+        PlanSignature signature = new PlanSignature(
+                new SignatureKey(testCatalogId + ":tiny:nation:0.01"),
+                Optional.of(ImmutableList.of(REGIONKEY_COLUMN_ID)),
+                ImmutableList.of(REGIONKEY_COLUMN_ID, canonicalExpressionToColumnId(max), canonicalExpressionToColumnId(sum), canonicalExpressionToColumnId(avg)),
+                TupleDomain.all(),
+                TupleDomain.all());
+        assertPlan("""
+                        SELECT sum(nationkey), max(nationkey) FROM nation GROUP BY regionkey
+                        UNION ALL
+                        SELECT avg(nationkey), sum(nationkey) FROM nation GROUP BY regionkey""",
+                anyTree(anyTree(aggregation(
+                                singleGroupingSet("REGIONKEY_A"),
+                                ImmutableMap.of(
+                                        Optional.of("MAX_A"), functionCall("max", false, ImmutableList.of(symbol("MAX_PARTIAL_A"))),
+                                        Optional.of("SUM_A"), functionCall("sum", false, ImmutableList.of(symbol("SUM_PARTIAL_A")))),
+                                Optional.empty(),
+                                FINAL,
+                                anyTree(
+                                        chooseAlternativeNode(
+                                                // original subplan
+                                                aggregation(
+                                                        singleGroupingSet("REGIONKEY_A"),
+                                                        ImmutableMap.of(
+                                                                Optional.of("MAX_PARTIAL_A"), functionCall("max", false, ImmutableList.of(symbol("NATIONKEY_A"))),
+                                                                Optional.of("SUM_PARTIAL_A"), functionCall("sum", false, ImmutableList.of(symbol("NATIONKEY_A")))),
+                                                        Optional.empty(),
+                                                        PARTIAL,
+                                                        tableScan("nation", ImmutableMap.of("NATIONKEY_A", "nationkey", "REGIONKEY_A", "regionkey"))),
+                                                // store data in cache alternative
+                                                strictProject(ImmutableMap.of(
+                                                                "REGIONKEY_A", expression("REGIONKEY_A"),
+                                                                "MAX_PARTIAL_A", expression("MAX_PARTIAL_A"),
+                                                                "SUM_PARTIAL_A", expression("SUM_PARTIAL_A")),
+                                                        cacheDataPlanNode(
+                                                                aggregation(
+                                                                        singleGroupingSet("REGIONKEY_A"),
+                                                                        ImmutableMap.of(
+                                                                                Optional.of("MAX_PARTIAL_A"), functionCall("max", false, ImmutableList.of(symbol("NATIONKEY_A"))),
+                                                                                Optional.of("SUM_PARTIAL_A"), functionCall("sum", false, ImmutableList.of(symbol("NATIONKEY_A"))),
+                                                                                Optional.of("AVG_PARTIAL_A"), functionCall("avg", false, ImmutableList.of(symbol("NATIONKEY_A")))),
+                                                                        Optional.empty(),
+                                                                        PARTIAL,
+                                                                        tableScan("nation", ImmutableMap.of("NATIONKEY_A", "nationkey", "REGIONKEY_A", "regionkey"))))),
+                                                // load data from cache alternative
+                                                strictProject(ImmutableMap.of(
+                                                                "REGIONKEY_A", expression("REGIONKEY_A"),
+                                                                "MAX_PARTIAL_A", expression("MAX_PARTIAL_A"),
+                                                                "SUM_PARTIAL_A", expression("SUM_PARTIAL_A")),
+                                                        loadCachedDataPlanNode(signature, ImmutableMap.of(), "REGIONKEY_A", "MAX_PARTIAL_A", "SUM_PARTIAL_A", "AVG_PARTIAL_A")))))),
+                        anyTree(aggregation(
+                                singleGroupingSet("REGIONKEY_B"),
+                                ImmutableMap.of(
+                                        Optional.of("AVG_B"), functionCall("avg", false, ImmutableList.of(symbol("AVG_PARTIAL_B"))),
+                                        Optional.of("SUM_B"), functionCall("sum", false, ImmutableList.of(symbol("SUM_PARTIAL_B")))),
+                                Optional.empty(),
+                                FINAL,
+                                anyTree(
+                                        chooseAlternativeNode(
+                                                // original subplan
+                                                aggregation(
+                                                        singleGroupingSet("REGIONKEY_B"),
+                                                        ImmutableMap.of(
+                                                                Optional.of("SUM_PARTIAL_B"), functionCall("sum", false, ImmutableList.of(symbol("NATIONKEY_B"))),
+                                                                Optional.of("AVG_PARTIAL_B"), functionCall("avg", false, ImmutableList.of(symbol("NATIONKEY_B")))),
+                                                        Optional.empty(),
+                                                        PARTIAL,
+                                                        tableScan("nation", ImmutableMap.of("NATIONKEY_B", "nationkey", "REGIONKEY_B", "regionkey"))),
+                                                // store data in cache alternative
+                                                strictProject(ImmutableMap.of(
+                                                                "REGIONKEY_B", expression("REGIONKEY_B"),
+                                                                "SUM_PARTIAL_B", expression("SUM_PARTIAL_B"),
+                                                                "AVG_PARTIAL_B", expression("AVG_PARTIAL_B")),
+                                                        cacheDataPlanNode(
+                                                                aggregation(
+                                                                        singleGroupingSet("REGIONKEY_B"),
+                                                                        ImmutableMap.of(
+                                                                                Optional.of("MAX_PARTIAL_B"), functionCall("max", false, ImmutableList.of(symbol("NATIONKEY_B"))),
+                                                                                Optional.of("SUM_PARTIAL_B"), functionCall("sum", false, ImmutableList.of(symbol("NATIONKEY_B"))),
+                                                                                Optional.of("AVG_PARTIAL_B"), functionCall("avg", false, ImmutableList.of(symbol("NATIONKEY_B")))),
+                                                                        Optional.empty(),
+                                                                        PARTIAL,
+                                                                        tableScan("nation", ImmutableMap.of("NATIONKEY_B", "nationkey", "REGIONKEY_B", "regionkey"))))),
+                                                // load data from cache alternative
+                                                strictProject(ImmutableMap.of(
+                                                                "REGIONKEY_B", expression("REGIONKEY_B"),
+                                                                "SUM_PARTIAL_B", expression("SUM_PARTIAL_B"),
+                                                                "AVG_PARTIAL_B", expression("AVG_PARTIAL_B")),
+                                                        loadCachedDataPlanNode(signature, ImmutableMap.of(), "REGIONKEY_B", "MAX_PARTIAL_B", "SUM_PARTIAL_B", "AVG_PARTIAL_B"))))))));
+    }
+
+    private FunctionCallBuilder getFunctionCallBuilder(String name, ExpressionWithType... arguments)
+    {
+        LocalQueryRunner queryRunner = getQueryRunner();
+        FunctionCallBuilder builder = FunctionCallBuilder.resolve(queryRunner.getDefaultSession(), queryRunner.getMetadata())
+                .setName(QualifiedName.of(name));
+        for (ExpressionWithType argument : arguments) {
+            builder.addArgument(argument.type, argument.expression);
+        }
+        return builder;
+    }
+
+    // workaround for https://github.com/google/error-prone/issues/2713
+    @SuppressWarnings("unused")
+    private record ExpressionWithType(Expression expression, Type type)
+    {
+        public ExpressionWithType(@Language("SQL") String expression, Type type)
+        {
+            this(PlanBuilder.expression(expression), type);
+        }
     }
 }
