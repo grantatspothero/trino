@@ -23,8 +23,6 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
 import static java.util.Objects.requireNonNull;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestS3FileSystemAwsS3
         extends AbstractTestS3FileSystem
@@ -37,8 +35,6 @@ public class TestS3FileSystemAwsS3
     @Override
     protected void initEnvironment()
     {
-        assertThat(System.getenv("EMPTY_S3_BUCKET")).isEqualTo("todo");
-        assumeTrue(false);
         accessKey = environmentVariable("AWS_ACCESS_KEY_ID");
         secretKey = environmentVariable("AWS_SECRET_ACCESS_KEY");
         region = environmentVariable("AWS_REGION");
