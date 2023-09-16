@@ -131,7 +131,8 @@ public class QuerySessionSupplier
                 .setClientCapabilities(context.getClientCapabilities())
                 .setTraceToken(context.getTraceToken())
                 .setResourceEstimates(context.getResourceEstimates())
-                .setProtocolHeaders(context.getProtocolHeaders());
+                .setProtocolHeaders(context.getProtocolHeaders())
+                .setQueryCatalogs(context.getQueryCatalogs());
 
         if (context.getCatalog().isPresent()) {
             sessionBuilder.setCatalog(context.getCatalog());

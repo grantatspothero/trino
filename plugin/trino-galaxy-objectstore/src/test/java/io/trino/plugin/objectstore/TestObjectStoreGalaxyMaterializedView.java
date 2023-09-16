@@ -19,6 +19,7 @@ import io.minio.MinioClient;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
 import io.starburst.stargate.accesscontrol.privilege.Privilege;
 import io.starburst.stargate.id.SchemaId;
+import io.trino.Session;
 import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.iceberg.IcebergPlugin;
@@ -89,9 +90,9 @@ public class TestObjectStoreGalaxyMaterializedView
                 .setAccountClient(galaxyTestHelper.getAccountClient())
                 .addPlugin(new IcebergPlugin())
                 .addPlugin(new ObjectStorePlugin())
-                .addCatalog(TEST_CATALOG, "galaxy_objectstore", properties)
+                .addCatalog(TEST_CATALOG, "galaxy_objectstore", false, properties)
                 .addPlugin(new TpchPlugin())
-                .addCatalog("tpch", "tpch", ImmutableMap.of())
+                .addCatalog("tpch", "tpch", true, ImmutableMap.of())
                 .build();
         queryRunner.execute("CREATE SCHEMA %s.%s".formatted(TEST_CATALOG, queryRunner.getDefaultSession().getSchema().orElseThrow()));
         queryRunner.execute("GRANT SELECT ON tpch.\"*\".\"*\" TO ROLE %s WITH GRANT OPTION".formatted(ACCOUNT_ADMIN));
@@ -163,8 +164,10 @@ public class TestObjectStoreGalaxyMaterializedView
         assertUpdate("INSERT INTO " + tableName + " VALUES '45'", 1);
         computeActual("CREATE MATERIALIZED VIEW " + materializedViewName + " AS SELECT * FROM " + tableName);
         assertQuery("SELECT * FROM " + materializedViewName, "VALUES 42, 45");
-        assertQueryFails(galaxyTestHelper.publicSession(), "SELECT * FROM " + format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
-        assertQueryFails(galaxyTestHelper.publicSession(), "SELECT 1 FROM " + format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
+        assertQueryFails(getPublicRoleSessionWithQueryCatalogs(),
+                "SELECT * FROM " + format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
+        assertQueryFails(getPublicRoleSessionWithQueryCatalogs(),
+                "SELECT 1 FROM " + format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
     }
 
     // TODO move test to BaseObjectStoreMaterializedViewTest
@@ -180,8 +183,10 @@ public class TestObjectStoreGalaxyMaterializedView
         computeActual("CREATE MATERIALIZED VIEW " + materializedViewName + " AS SELECT * FROM " + tableName);
         computeActual("REFRESH MATERIALIZED VIEW " + materializedViewName);
         assertQuery("SELECT * FROM " + materializedViewName, "VALUES 42, 45");
-        assertQueryFails(galaxyTestHelper.publicSession(), "SELECT * FROM " + format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
-        assertQueryFails(galaxyTestHelper.publicSession(), "SELECT 1 FROM " + format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
+        assertQueryFails(getPublicRoleSessionWithQueryCatalogs(),
+                "SELECT * FROM " + format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
+        assertQueryFails(getPublicRoleSessionWithQueryCatalogs(),
+                "SELECT 1 FROM " + format("%s.%s.%s", TEST_CATALOG, "default", materializedViewName), "Access Denied: Cannot select from columns.*");
     }
 
     // TODO move test to BaseObjectStoreMaterializedViewTest
@@ -198,5 +203,12 @@ public class TestObjectStoreGalaxyMaterializedView
                 .hasMessageContaining("Access Denied: Cannot create materialized view iceberg.different_storage_schema.%s: Role accountadmin does not have the privilege CREATE_TABLE on the schema iceberg.different_storage_schema".formatted(viewName));
         assertThatThrownBy(() -> query("DESCRIBE " + viewName))
                 .hasMessageContaining(format("'iceberg.%s.%s' does not exist", schemaName, viewName));
+    }
+
+    private Session getPublicRoleSessionWithQueryCatalogs()
+    {
+        return Session.builder(galaxyTestHelper.publicSession())
+                .setQueryCatalogs(getSession().getQueryCatalogs())
+                .build();
     }
 }

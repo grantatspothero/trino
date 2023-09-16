@@ -354,7 +354,7 @@ public class TestJdbcConnection
                     .buildOrThrow();
             TrinoConnection trinoConnection = connection.unwrap(TrinoConnection.class);
             assertEquals(trinoConnection.getExtraCredentials(), expectedCredentials);
-            assertEquals(listExtraCredentials(connection), expectedCredentials);
+            assertThat(listExtraCredentials(connection)).containsAllEntriesOf(expectedCredentials);
         }
     }
 

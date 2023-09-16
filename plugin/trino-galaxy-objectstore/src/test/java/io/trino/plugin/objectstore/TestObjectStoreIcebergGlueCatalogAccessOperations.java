@@ -43,6 +43,7 @@ import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.GalaxyQueryRunner;
 import io.trino.testing.QueryRunner;
+import io.trino.transaction.TransactionBuilder;
 import org.intellij.lang.annotations.Language;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
@@ -171,14 +172,18 @@ public class TestObjectStoreIcebergGlueCatalogAccessOperations
                         });
                     }
                 })
-                .addCatalog(CATALOG_NAME, "galaxy_objectstore", properties)
+                .addCatalog(CATALOG_NAME, "galaxy_objectstore", false, properties)
                 .addPlugin(new TpchPlugin())
-                .addCatalog("tpch", "tpch", ImmutableMap.of())
+                .addCatalog("tpch", "tpch", true, ImmutableMap.of())
                 .build();
         try {
             queryRunner.execute("CREATE SCHEMA " + testSchema);
 
-            DelegateConnectors connectors = ((ObjectStoreConnector) queryRunner.getCoordinator().getConnector(CATALOG_NAME)).getInjector().getInstance(DelegateConnectors.class);
+            DelegateConnectors connectors = TransactionBuilder.transaction(queryRunner.getTransactionManager(), queryRunner.getMetadata(), queryRunner.getAccessControl())
+                    .readOnly()
+                    .execute(queryRunner.getDefaultSession(), transactionSession -> {
+                        return ((ObjectStoreConnector) queryRunner.getCoordinator().getConnector(transactionSession, CATALOG_NAME)).getInjector().getInstance(DelegateConnectors.class);
+                    });
             glueStats = List.of(
                     ((HiveConnector) connectors.hiveConnector()).getInjector().getInstance(Key.get(GlueMetastoreStats.class, ForGlueHiveMetastore.class)),
                     ((IcebergConnector) connectors.icebergConnector()).getInjector().getInstance(GlueMetastoreStats.class),

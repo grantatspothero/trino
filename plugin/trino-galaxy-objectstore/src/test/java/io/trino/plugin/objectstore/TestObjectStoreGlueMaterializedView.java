@@ -83,9 +83,9 @@ public class TestObjectStoreGlueMaterializedView
                 .setAccountClient(galaxyTestHelper.getAccountClient())
                 .addPlugin(new IcebergPlugin())
                 .addPlugin(new ObjectStorePlugin())
-                .addCatalog(TEST_CATALOG, "galaxy_objectstore", properties)
+                .addCatalog(TEST_CATALOG, "galaxy_objectstore", false, properties)
                 .addPlugin(new TpchPlugin())
-                .addCatalog("tpch", "tpch", ImmutableMap.of())
+                .addCatalog("tpch", "tpch", true, ImmutableMap.of())
                 .build();
         queryRunner.execute("CREATE SCHEMA %s.%s".formatted(TEST_CATALOG, schemaName));
         queryRunner.execute("GRANT SELECT ON tpch.\"*\".\"*\" TO ROLE %s WITH GRANT OPTION".formatted(ACCOUNT_ADMIN));

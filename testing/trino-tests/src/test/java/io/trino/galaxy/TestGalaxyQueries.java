@@ -18,11 +18,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Key;
+import io.airlift.testing.TestingClock;
 import io.starburst.stargate.accesscontrol.client.ColumnMaskType;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.client.testing.TestUser;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient.GrantDetails;
+import io.starburst.stargate.id.CatalogId;
+import io.starburst.stargate.id.CatalogVersion;
 import io.starburst.stargate.id.ColumnMaskId;
 import io.starburst.stargate.id.EntityKind;
 import io.starburst.stargate.id.PolicyId;
@@ -30,10 +33,16 @@ import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.RoleName;
 import io.starburst.stargate.id.RowFilterId;
 import io.starburst.stargate.id.TagId;
+import io.starburst.stargate.id.Version;
 import io.trino.Session;
+import io.trino.connector.CatalogProperties;
+import io.trino.connector.ConnectorName;
 import io.trino.plugin.memory.MemoryPlugin;
 import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
+import io.trino.server.galaxy.catalogs.GalaxyCatalogArgs;
+import io.trino.server.galaxy.catalogs.GalaxyCatalogInfo;
+import io.trino.server.galaxy.catalogs.LiveCatalogsTransactionManager;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.server.testing.TestingTrinoServer;
 import io.trino.spi.connector.SchemaTableName;
@@ -46,18 +55,25 @@ import io.trino.testing.GalaxyQueryRunner;
 import io.trino.testing.MaterializedResult;
 import io.trino.testing.QueryFailedException;
 import io.trino.testing.QueryRunner;
+import io.trino.testing.TestingGalaxyCatalogInfoSupplier;
+import io.trino.transaction.ForTransactionManager;
 import org.intellij.lang.annotations.Language;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.time.Clock;
+import java.util.Arrays;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Verify.verifyNotNull;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.starburst.stargate.accesscontrol.privilege.GrantKind.ALLOW;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.VIEW_ALL_QUERY_HISTORY;
+import static io.trino.server.galaxy.catalogs.CatalogVersioningUtils.toCatalogHandle;
 import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.PORTAL;
 import static io.trino.server.security.galaxy.GalaxyIdentity.createIdentity;
 import static io.trino.server.security.galaxy.GalaxyIdentity.toDispatchSession;
@@ -71,6 +87,7 @@ import static io.trino.spi.type.BooleanType.BOOLEAN;
 import static io.trino.spi.type.VarcharType.VARCHAR;
 import static io.trino.spi.type.VarcharType.createVarcharType;
 import static io.trino.testing.MaterializedResult.resultBuilder;
+import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -95,22 +112,32 @@ public class TestGalaxyQueries
             .map(privilege -> new PrivilegeInfo(privilege, true))
             .collect(toImmutableSet());
 
+    private TestingAccountClient testingAccountClient;
+    private final TestingGalaxyCatalogInfoSupplier testingGalaxyCatalogInfoSupplier = new TestingGalaxyCatalogInfoSupplier();
+
     @Override
     protected QueryRunner createQueryRunner()
             throws Exception
     {
         TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> closeAfterClass(new GalaxyCockroachContainer())));
+        testingAccountClient = testingAccountFactory.createAccountClient();
         QueryRunner queryRunner = GalaxyQueryRunner.builder("memory", "tiny")
-                .setAccountClient(testingAccountFactory.createAccountClient())
+                .setAccountClient(testingAccountClient)
+                .setGalaxyCatalogInfoSupplier(testingGalaxyCatalogInfoSupplier)
                 .addPlugin(new TpchPlugin())
-                .addCatalog("tpch", "tpch", ImmutableMap.of())
+                .addCatalog("tpch", "tpch", true, ImmutableMap.of())
                 .addPlugin(new MemoryPlugin())
-                .addCatalog("memory", "memory", ImmutableMap.of())
+                .addCatalog("memory", "memory", false, ImmutableMap.of())
                 .setNodeCount(1)
                 .build();
-        queryRunner.execute(format("CREATE SCHEMA %s.%s", "memory", "tiny"));
+        initWithQueryRunner(queryRunner);
 
         return queryRunner;
+    }
+
+    private void initWithQueryRunner(QueryRunner queryRunner)
+    {
+        queryRunner.execute(format("CREATE SCHEMA %s.%s", "memory", "tiny"));
     }
 
     @BeforeMethod(alwaysRun = true)
@@ -1306,6 +1333,120 @@ public class TestGalaxyQueries
                     .skippingTypesCheck()
                     .matches("VALUES CAST(1 AS BIGINT), CAST(2 AS BIGINT), CAST(3 AS BIGINT)");
         }
+    }
+
+    @Test
+    public void testLiveCatalogAddDrop()
+    {
+        CatalogVersion tpchCatalogVersion = testingGalaxyCatalogInfoSupplier.getOnlyVersionForCatalogName("tpch");
+        CatalogVersion memeoryCatalogVersion = testingGalaxyCatalogInfoSupplier.getOnlyVersionForCatalogName("memory");
+        assertThat(query(sessionFor(tpchCatalogVersion, memeoryCatalogVersion), "SHOW CATALOGS"))
+                .matches("VALUES 'tpch', 'memory', 'system'");
+        assertThat(query(sessionFor(tpchCatalogVersion), "SHOW CATALOGS"))
+                .matches("VALUES 'tpch', 'system'");
+        assertThat(query(sessionFor(memeoryCatalogVersion), "SHOW CATALOGS"))
+                .matches("VALUES 'memory', 'system'");
+        assertThat(query(sessionFor(), "SHOW CATALOGS"))
+                .matches("VALUES 'system'");
+
+        assertThat(query(sessionFor(tpchCatalogVersion), "SELECT * FROM tpch.tiny.nation")).succeeds();
+        assertQueryFails(sessionFor(memeoryCatalogVersion), "SELECT * FROM tpch.tiny.nation", ".* Catalog 'tpch' does not exist");
+    }
+
+    @Test
+    public void testLiveCatalogLifeCycle()
+    {
+        CatalogVersion tpchCatalogVersion = testingGalaxyCatalogInfoSupplier.getOnlyVersionForCatalogName("tpch");
+        String catalogName = "catalog_" + randomNameSuffix();
+        CatalogId catalogId = testingAccountClient.getOrCreateCatalog(catalogName);
+        // create memory plugin without read only and write a table to it
+        GalaxyCatalogArgs catalogV1 = new GalaxyCatalogArgs(
+                testingAccountClient.getAccountId(),
+                new CatalogVersion(catalogId, new Version(new Random().nextLong(0, Long.MAX_VALUE))));
+        GalaxyCatalogInfo catalogInfoV1 = new GalaxyCatalogInfo(
+                new CatalogProperties(toCatalogHandle(catalogName, catalogV1.catalogVersion()), new ConnectorName("memory"), ImmutableMap.of()),
+                false);
+        testingGalaxyCatalogInfoSupplier.addCatalog(catalogV1, catalogInfoV1);
+        assertThat(query(sessionFor(tpchCatalogVersion, catalogV1.catalogVersion()),
+                """
+                        CREATE SCHEMA %s.test_schema
+                        """.formatted(catalogName))).succeeds();
+        assertThat(query(sessionFor(tpchCatalogVersion, catalogV1.catalogVersion()),
+                """
+                        CREATE TABLE %s.test_schema.testing_table AS
+                        SELECT * FROM tpch.tiny.nation
+                        """.formatted(catalogName))).succeeds();
+        // Create and assert permissions on one version of the catalog
+        assertUpdate(sessionFor(tpchCatalogVersion, catalogV1.catalogVersion()),
+                """
+                        REVOKE CREATE ON SCHEMA %s.test_schema FROM ROLE public
+                        """.formatted(catalogName));
+        assertQueryFails(sessionFor(publicSession(), tpchCatalogVersion, catalogV1.catalogVersion()), "CREATE TABLE %s.test_schema.public_table(dummy int)".formatted(catalogName), ".* Role public does not have the privilege CREATE_TABLE .*");
+
+        // create new version with read only and assert write fails
+        GalaxyCatalogArgs catalogV2 = new GalaxyCatalogArgs(
+                testingAccountClient.getAccountId(),
+                new CatalogVersion(catalogId, new Version(new Random().nextLong(0, Long.MAX_VALUE))));
+        GalaxyCatalogInfo catalogInfoV2 = new GalaxyCatalogInfo(
+                new CatalogProperties(toCatalogHandle(catalogName, catalogV1.catalogVersion()), new ConnectorName("memory"), ImmutableMap.of()),
+                true);
+        testingGalaxyCatalogInfoSupplier.addCatalog(catalogV2, catalogInfoV2);
+        assertQueryFails(sessionFor(tpchCatalogVersion, catalogV2.catalogVersion()),
+                "CREATE SCHEMA %s.test_schema".formatted(catalogName), ".* Catalog " + catalogName + " only allows read-only access");
+        // smoke test assert privileges haven't changed across versions
+        assertQueryFails(sessionFor(publicSession(), tpchCatalogVersion, catalogV1.catalogVersion()), "CREATE TABLE %s.test_schema.public_table(dummy int)".formatted(catalogName), ".* Role public does not have the privilege CREATE_TABLE .*");
+    }
+
+    @Test
+    public void testLiveCatalogGC()
+    {
+        try {
+            LiveCatalogsTransactionManager liveCatalogsTransactionManager = (LiveCatalogsTransactionManager) getQueryRunner().getTransactionManager();
+            TestingClock testingClock = (TestingClock) getDistributedQueryRunner().getCoordinator().getInstance(Key.get(Clock.class, ForTransactionManager.class));
+            String catalogName = "catalog_" + randomNameSuffix();
+            CatalogId catalogId = testingAccountClient.getOrCreateCatalog(catalogName);
+            // create memory plugin without read only and write a table to it
+            GalaxyCatalogArgs catalogV1 = new GalaxyCatalogArgs(testingAccountClient.getAccountId(), new CatalogVersion(catalogId, new Version(1)));
+            GalaxyCatalogArgs catalogV2 = new GalaxyCatalogArgs(testingAccountClient.getAccountId(), new CatalogVersion(catalogId, new Version(2)));
+            GalaxyCatalogInfo catalogInfoV1 = new GalaxyCatalogInfo(
+                    new CatalogProperties(
+                            toCatalogHandle(catalogName, catalogV1.catalogVersion()),
+                            new ConnectorName("memory"),
+                            ImmutableMap.of()),
+                    false);
+            testingGalaxyCatalogInfoSupplier.addCatalog(catalogV1, catalogInfoV1);
+            testingGalaxyCatalogInfoSupplier.addCatalog(catalogV2, catalogInfoV1);
+            // Load in both catalogs
+            assertThat(query(sessionFor(catalogV1.catalogVersion()), "SELECT 1")).succeeds();
+            assertThat(query(sessionFor(catalogV2.catalogVersion()), "SELECT 1")).succeeds();
+            assertThat(liveCatalogsTransactionManager.contains(catalogV1)).isTrue();
+            assertThat(liveCatalogsTransactionManager.contains(catalogV2)).isTrue();
+            // move clock past old version retention and clean up older version
+            testingClock.increment(liveCatalogsTransactionManager.getMaxOldVersionStaleness().toMillis() + 1, TimeUnit.MILLISECONDS);
+            liveCatalogsTransactionManager.cleanUpStaleCatalogs();
+            assertThat(liveCatalogsTransactionManager.contains(catalogV1)).isFalse();
+            assertThat(liveCatalogsTransactionManager.contains(catalogV2)).isTrue();
+            // move clock past all catalog retention and clean up both catalogs
+            testingClock.increment(liveCatalogsTransactionManager.getMaxCatalogStaleness().toMillis() - liveCatalogsTransactionManager.getMaxOldVersionStaleness().toMillis() + 1, TimeUnit.MILLISECONDS);
+            liveCatalogsTransactionManager.cleanUpStaleCatalogs();
+            assertThat(liveCatalogsTransactionManager.contains(catalogV1)).isFalse();
+            assertThat(liveCatalogsTransactionManager.contains(catalogV2)).isFalse();
+        } finally {
+            // memory catalog is a casualty in the test. Recreate schema
+            initWithQueryRunner(getQueryRunner());
+        }
+    }
+
+    private Session sessionFor(CatalogVersion... versions)
+    {
+        return sessionFor(getSession(), versions);
+    }
+
+    private Session sessionFor(Session session, CatalogVersion... versions)
+    {
+        return Session.builder(session)
+                .setQueryCatalogs(Arrays.stream(versions).toList())
+                .build();
     }
 
     private MaterializedResult varcharColumnResult(String... values)

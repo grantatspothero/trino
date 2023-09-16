@@ -68,11 +68,12 @@ public final class LaunchGalaxyQueryRunner
         DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder("memory", "tiny")
                 .setExtraProperties(ImmutableMap.of("http-server.http.port", "8080"))
                 .addPlugin(new TpchPlugin())
-                .addCatalog("tpch", "tpch", ImmutableMap.of())
+                .addCatalog("tpch", "tpch", true, ImmutableMap.of())
                 .addPlugin(new MemoryPlugin())
-                .addCatalog("memory", "memory", ImmutableMap.of())
+                .addCatalog("memory", "memory", false, ImmutableMap.of())
                 .setAccountClient(account)
                 .setNodeCount(1)
+                .setUseLiveCatalogs(true)
                 .build();
         queryRunner.execute(format("CREATE SCHEMA %s.%s", "memory", "tiny"));
         copyTpchTables(queryRunner, "tpch", "tiny", queryRunner.getDefaultSession(), TpchTable.getTables());

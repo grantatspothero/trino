@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.iceberg;
 
+import com.google.inject.Injector;
 import io.airlift.slice.Slice;
 import io.trino.Session;
 import io.trino.filesystem.Location;
@@ -31,6 +32,7 @@ import io.trino.parquet.reader.MetadataReader;
 import io.trino.plugin.hive.FileFormatDataSourceStats;
 import io.trino.plugin.hive.parquet.TrinoParquetDataSource;
 import io.trino.testing.DistributedQueryRunner;
+import io.trino.transaction.TransactionBuilder;
 import org.apache.parquet.hadoop.metadata.BlockMetaData;
 import org.apache.parquet.hadoop.metadata.ColumnChunkMetaData;
 import org.apache.parquet.hadoop.metadata.ParquetMetadata;
@@ -147,9 +149,18 @@ public final class IcebergTestUtils
         return true;
     }
 
+    public static Injector getIcebergConnectorInjector(DistributedQueryRunner queryRunner)
+    {
+        return TransactionBuilder.transaction(queryRunner.getTransactionManager(), queryRunner.getMetadata(), queryRunner.getAccessControl())
+                .readOnly()
+                .execute(queryRunner.getDefaultSession(), transactionSession -> {
+                    return ((IcebergConnector) queryRunner.getCoordinator().getConnector(transactionSession, ICEBERG_CATALOG))
+                            .getInjector();
+                });
+    }
+
     public static TrinoFileSystemFactory getFileSystemFactory(DistributedQueryRunner queryRunner)
     {
-        return ((IcebergConnector) queryRunner.getCoordinator().getConnector(ICEBERG_CATALOG))
-                .getInjector().getInstance(TrinoFileSystemFactory.class);
+        return getIcebergConnectorInjector(queryRunner).getInstance(TrinoFileSystemFactory.class);
     }
 }

@@ -127,7 +127,7 @@ public class GalaxySnowflakeQueryRunner
 
             builder.setNodeCount(1);
             builder.addPlugin(new GalaxySnowflakePlugin());
-            builder.addCatalog(CATALOG, "snowflake_parallel", properties.buildOrThrow());
+            builder.addCatalog(CATALOG, "snowflake_parallel", false, properties.buildOrThrow());
 
             builder.setAccountClient(accountClient);
 

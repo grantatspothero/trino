@@ -44,6 +44,7 @@ import io.trino.sql.planner.plan.ProjectNode;
 import io.trino.sql.planner.plan.TableScanNode;
 import io.trino.testing.sql.TestTable;
 import io.trino.testing.sql.TestView;
+import org.assertj.core.api.AbstractThrowableAssert;
 import org.intellij.lang.annotations.Language;
 import org.testng.SkipException;
 import org.testng.annotations.BeforeClass;
@@ -1185,8 +1186,7 @@ public abstract class BaseConnectorTest
 
         // verify write in transaction
         if (!hasBehavior(SUPPORTS_MULTI_STATEMENT_WRITES)) {
-            assertThatThrownBy(() -> inTransaction(session -> computeActual(session, "REFRESH MATERIALIZED VIEW " + view)))
-                    .hasMessageMatching("Catalog only supports writes using autocommit: \\w+");
+            verifyRefreshMaterializedViewFailureWithoutMultiWriteInTransactionSupport(assertThatThrownBy(() -> inTransaction(session -> computeActual(session, "REFRESH MATERIALIZED VIEW " + view))));
         }
 
         assertUpdate("DROP MATERIALIZED VIEW " + view);
@@ -1197,6 +1197,11 @@ public abstract class BaseConnectorTest
         assertQueryReturnsEmptyResult(listMaterializedViewsSql("name = '" + viewWithComment.getObjectName() + "'"));
 
         assertUpdate("DROP SCHEMA " + otherSchema);
+    }
+
+    protected void verifyRefreshMaterializedViewFailureWithoutMultiWriteInTransactionSupport(AbstractThrowableAssert abstractThrowableAssert)
+    {
+        abstractThrowableAssert.hasMessageMatching("Catalog only supports writes using autocommit: \\w+");
     }
 
     @Test

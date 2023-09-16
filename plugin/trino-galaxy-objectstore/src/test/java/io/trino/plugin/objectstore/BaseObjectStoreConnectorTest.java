@@ -37,6 +37,7 @@ import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import io.trino.testing.TestingConnectorBehavior;
 import io.trino.testing.sql.TestTable;
+import org.assertj.core.api.AbstractThrowableAssert;
 import org.intellij.lang.annotations.Language;
 import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
@@ -1025,6 +1026,19 @@ public abstract class BaseObjectStoreConnectorTest
         int testTimeoutSeconds = 260;
 
         testReadMetadataWithRelationsConcurrentModifications(readIterations, testTimeoutSeconds);
+    }
+
+    @Test
+    @Override
+    public void testSelectInTransaction()
+    {
+        // Select in transaction not supported in galaxy
+    }
+
+    @Override
+    protected void verifyRefreshMaterializedViewFailureWithoutMultiWriteInTransactionSupport(AbstractThrowableAssert abstractThrowableAssert)
+    {
+        abstractThrowableAssert.hasMessageContaining("Catalogs already associated with transaction");
     }
 
     protected void assertQueryReturns(@Language("SQL") String sql, String result)

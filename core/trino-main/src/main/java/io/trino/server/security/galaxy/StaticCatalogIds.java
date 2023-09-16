@@ -18,23 +18,26 @@ import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import io.starburst.stargate.id.CatalogId;
+import io.trino.server.galaxy.catalogs.CatalogIds;
+import io.trino.transaction.TransactionId;
 
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-public class CatalogIds
+public class StaticCatalogIds
+        implements CatalogIds
 {
     private final BiMap<String, CatalogId> catalogNamesToIds;
     private final Set<String> readOnlyCatalogs;
 
     @Inject
-    public CatalogIds(GalaxyAccessControlConfig config)
+    public StaticCatalogIds(GalaxyAccessControlConfig config)
     {
         this(config.getCatalogNames(), config.getReadOnlyCatalogs());
     }
 
-    public CatalogIds(Map<String, CatalogId> catalogNamesToIds, Set<String> readOnlyCatalogs)
+    public StaticCatalogIds(Map<String, CatalogId> catalogNamesToIds, Set<String> readOnlyCatalogs)
     {
         this.catalogNamesToIds = ImmutableBiMap.copyOf(catalogNamesToIds);
         this.readOnlyCatalogs = ImmutableSet.copyOf(readOnlyCatalogs);
@@ -45,17 +48,20 @@ public class CatalogIds
         return catalogNamesToIds.keySet();
     }
 
-    public boolean isReadOnlyCatalog(String catalogName)
+    @Override
+    public boolean isReadOnlyCatalog(Optional<TransactionId> transactionId, String catalogName)
     {
         return readOnlyCatalogs.contains(catalogName);
     }
 
-    public Optional<CatalogId> getCatalogId(String catalogName)
+    @Override
+    public Optional<CatalogId> getCatalogId(Optional<TransactionId> transactionId, String catalogName)
     {
         return Optional.ofNullable(catalogNamesToIds.get(catalogName));
     }
 
-    public Optional<String> getCatalogName(CatalogId catalogId)
+    @Override
+    public Optional<String> getCatalogName(Optional<TransactionId> transactionId, CatalogId catalogId)
     {
         return Optional.ofNullable(catalogNamesToIds.inverse().get(catalogId));
     }

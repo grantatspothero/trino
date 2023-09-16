@@ -91,7 +91,7 @@ public abstract class BaseObjectStoreS3GlueTest
                 .setAccountClient(galaxyTestHelper.getAccountClient())
                 .addPlugin(new IcebergPlugin())
                 .addPlugin(new ObjectStorePlugin())
-                .addCatalog(TEST_CATALOG, "galaxy_objectstore", properties)
+                .addCatalog(TEST_CATALOG, "galaxy_objectstore", false, properties)
                 .build();
         queryRunner.execute("CREATE SCHEMA %s.%s".formatted(TEST_CATALOG, schemaName));
         return queryRunner;

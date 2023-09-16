@@ -107,7 +107,7 @@ public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
                 .setAccountClient(testingAccountFactory.createAccountClient())
                 .addPlugin(new IcebergPlugin())
                 .addPlugin(new TestingObjectStorePlugin(metastore, new HdfsFileSystemFactory(HDFS_ENVIRONMENT, HDFS_FILE_SYSTEM_STATS)))
-                .addCatalog(CATALOG_NAME, "galaxy_objectstore", properties)
+                .addCatalog(CATALOG_NAME, "galaxy_objectstore", false, properties)
                 .build();
         queryRunner.execute("CREATE SCHEMA %s.%s WITH (location = '%s')".formatted(CATALOG_NAME, SCHEMA_NAME, schemaDirectory.toUri().toString()));
         return queryRunner;

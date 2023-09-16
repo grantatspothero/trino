@@ -17,6 +17,7 @@ import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.connector.informationschema.galaxy.GalaxyCacheModule;
+import io.trino.server.galaxy.catalogs.LiveCatalogsModule;
 import io.trino.server.metadataonly.MetadataOnlyCatalogManagerModule;
 
 public class CatalogManagerModule
@@ -36,6 +37,7 @@ public class CatalogManagerModule
             case STATIC -> install(new StaticCatalogManagerModule());
             case DYNAMIC -> install(new DynamicCatalogManagerModule());
             case METADATA_ONLY -> install(new MetadataOnlyCatalogManagerModule());
+            case LIVE -> install(new LiveCatalogsModule());
         }
 
         install(new CatalogServiceProviderModule());

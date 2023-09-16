@@ -20,13 +20,17 @@ import io.trino.connector.CatalogManagerConfig;
 import io.trino.connector.CatalogManagerConfig.CatalogMangerKind;
 import io.trino.server.ServerConfig;
 
+import static io.trino.connector.CatalogManagerConfig.CatalogMangerKind.LIVE;
+import static io.trino.connector.CatalogManagerConfig.CatalogMangerKind.METADATA_ONLY;
+
 public class TransactionManagerModule
         extends AbstractConfigurationAwareModule
 {
     @Override
     protected void setup(Binder binder)
     {
-        if (buildConfigObject(CatalogManagerConfig.class).getCatalogMangerKind() == CatalogMangerKind.METADATA_ONLY) {
+        CatalogMangerKind catalogMangerKind = buildConfigObject(CatalogManagerConfig.class).getCatalogMangerKind();
+        if (catalogMangerKind == METADATA_ONLY || catalogMangerKind == LIVE) {
             return;
         }
 

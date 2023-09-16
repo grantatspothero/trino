@@ -27,10 +27,12 @@ import io.starburst.stargate.id.RoleName;
 import io.starburst.stargate.id.TableId;
 import io.trino.server.galaxy.GalaxyPermissionsCache;
 import io.trino.server.galaxy.GalaxyPermissionsCache.GalaxyQueryPermissions;
+import io.trino.server.galaxy.catalogs.CatalogIds;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.security.Identity;
 import io.trino.spi.security.SystemSecurityContext;
 import io.trino.spi.security.ViewExpression;
+import io.trino.transaction.TransactionId;
 
 import java.util.List;
 import java.util.Map;
@@ -50,25 +52,31 @@ public class GalaxySystemAccessController
 {
     private final TrinoSecurityApi accessControlClient;
     private final CatalogIds catalogIds;
-
     private final GalaxyPermissionsCache galaxyPermissionsCache;
+    private final Optional<TransactionId> transactionId;
 
     @Inject
     public GalaxySystemAccessController(TrinoSecurityApi accessControlClient, CatalogIds catalogIds, GalaxyPermissionsCache galaxyPermissionsCache)
     {
+        this(accessControlClient, catalogIds, galaxyPermissionsCache, Optional.empty());
+    }
+
+    public GalaxySystemAccessController(TrinoSecurityApi accessControlClient, CatalogIds catalogIds, GalaxyPermissionsCache galaxyPermissionsCache, Optional<TransactionId> transactionId)
+    {
         this.accessControlClient = requireNonNull(accessControlClient, "accessControlClient is null");
         this.catalogIds = requireNonNull(catalogIds, "catalogIds is null");
         this.galaxyPermissionsCache = requireNonNull(galaxyPermissionsCache, "galaxyPermissionsCache is null");
+        this.transactionId = requireNonNull(transactionId, "transactionId is null");
     }
 
     public Optional<CatalogId> getCatalogId(String catalogName)
     {
-        return catalogIds.getCatalogId(catalogName);
+        return catalogIds.getCatalogId(transactionId, catalogName);
     }
 
     public boolean isReadOnlyCatalog(String catalogName)
     {
-        return catalogIds.isReadOnlyCatalog(catalogName);
+        return catalogIds.isReadOnlyCatalog(transactionId, catalogName);
     }
 
     /**
@@ -98,12 +106,12 @@ public class GalaxySystemAccessController
     public Predicate<String> getCatalogVisibility(SystemSecurityContext context, Set<String> requestedCatalogs)
     {
         Set<CatalogId> requestedCatalogIds = requestedCatalogs.stream()
-                .flatMap(catalogName -> catalogIds.getCatalogId(catalogName).stream())
+                .flatMap(catalogName -> catalogIds.getCatalogId(transactionId, catalogName).stream())
                 .collect(toImmutableSet());
         Predicate<CatalogId> catalogVisibility = getCache(context).getCatalogVisibility(requestedCatalogIds);
         return catalogName -> {
             checkArgument(requestedCatalogs.contains(catalogName), "Unexpected catalog checked for visibility: %s, expected one of: %s", catalogName, requestedCatalogs);
-            return catalogIds.getCatalogId(catalogName)
+            return catalogIds.getCatalogId(transactionId, catalogName)
                     .map(catalogVisibility::test)
                     .orElse(false);
         };
@@ -177,7 +185,7 @@ public class GalaxySystemAccessController
                     ViewExpression.Builder builder = ViewExpression.builder();
 
                     getRowFilterAndColumnMaskUserString(context.getIdentity(), filter.owningRoleId()).ifPresent(builder::identity);
-                    catalogIds.getCatalogName(tableId.getCatalogId()).ifPresent(builder::catalog);
+                    catalogIds.getCatalogName(transactionId, tableId.getCatalogId()).ifPresent(builder::catalog);
 
                     return builder.schema(tableId.getSchemaName())
                             .expression(filter.expression())
@@ -207,7 +215,7 @@ public class GalaxySystemAccessController
         ViewExpression.Builder builder = ViewExpression.builder();
 
         getRowFilterAndColumnMaskUserString(context.getIdentity(), columnMask.owningRoleId()).ifPresent(builder::identity);
-        catalogIds.getCatalogName(tableId.getCatalogId()).ifPresent(builder::catalog);
+        catalogIds.getCatalogName(transactionId, tableId.getCatalogId()).ifPresent(builder::catalog);
 
         return Optional.of(builder.schema(tableId.getSchemaName())
                 .expression(columnMask.expression())

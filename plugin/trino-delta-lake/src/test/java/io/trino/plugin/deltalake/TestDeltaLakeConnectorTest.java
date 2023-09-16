@@ -41,6 +41,7 @@ import io.trino.testing.sql.TrinoSqlExecutor;
 import org.intellij.lang.annotations.Language;
 import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -148,6 +149,16 @@ public class TestDeltaLakeConnectorTest
     public void tearDown()
     {
         minioClient = null; // closed by closeAfterClass
+    }
+
+    @BeforeClass
+    @Override
+    public void initMockCatalog()
+    {
+        if (!isObjectStore()) {
+            // object store runners must use galaxy and init catalog through runner to get catalog id
+            super.initMockCatalog();
+        }
     }
 
     @Override

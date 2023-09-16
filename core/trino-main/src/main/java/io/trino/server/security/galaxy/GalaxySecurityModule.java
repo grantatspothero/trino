@@ -21,8 +21,11 @@ import io.airlift.http.client.HttpClient;
 import io.airlift.units.Duration;
 import io.starburst.stargate.accesscontrol.client.HttpTrinoSecurityClient;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
+import io.trino.connector.CatalogManagerConfig;
 import io.trino.metadata.SystemSecurityMetadata;
 import io.trino.server.galaxy.GalaxyConfig;
+import io.trino.server.galaxy.catalogs.CatalogIds;
+import io.trino.server.galaxy.catalogs.LiveCatalogsTransactionManager;
 
 import java.net.URI;
 
@@ -30,6 +33,7 @@ import static com.google.inject.Scopes.SINGLETON;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.airlift.http.client.HttpClientBinder.httpClientBinder;
+import static io.trino.connector.CatalogManagerConfig.CatalogMangerKind.LIVE;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -43,7 +47,15 @@ public class GalaxySecurityModule
         newOptionalBinder(binder, SystemSecurityMetadata.class).setBinding().to(GalaxySecurityMetadata.class).in(SINGLETON);
         binder.bind(GalaxySecurityMetadata.class).in(SINGLETON);
 
-        binder.bind(CatalogIds.class).in(SINGLETON);
+        CatalogManagerConfig.CatalogMangerKind kind = buildConfigObject(CatalogManagerConfig.class).getCatalogMangerKind();
+        if (kind == LIVE) {
+            binder.bind(LiveCatalogsTransactionManager.class).in(SINGLETON);
+            binder.bind(CatalogIds.class).to(LiveCatalogsTransactionManager.class).in(SINGLETON);
+        }
+        else {
+            binder.bind(StaticCatalogIds.class).in(SINGLETON);
+            binder.bind(CatalogIds.class).to(StaticCatalogIds.class).in(SINGLETON);
+        }
         configBinder(binder).bindConfig(GalaxyAccessControlConfig.class);
 
         bindHttpClient(binder);

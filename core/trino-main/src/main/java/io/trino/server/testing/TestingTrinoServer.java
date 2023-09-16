@@ -39,6 +39,7 @@ import io.airlift.openmetrics.JmxOpenMetricsModule;
 import io.airlift.tracetoken.TraceTokenModule;
 import io.airlift.tracing.TracingModule;
 import io.opentelemetry.sdk.trace.SpanProcessor;
+import io.trino.Session;
 import io.trino.cache.CacheManagerModule;
 import io.trino.cache.CacheManagerRegistry;
 import io.trino.cache.CacheMetadata;
@@ -669,17 +670,17 @@ public class TestingTrinoServer
         return shutdownAction;
     }
 
-    public Connector getConnector(String catalogName)
+    public Connector getConnector(Session transactionSession, String catalogName)
     {
-        return getConnector(getCatalogHandle(catalogName));
+        return getConnector(getCatalogHandle(transactionSession, catalogName));
     }
 
-    public CatalogHandle getCatalogHandle(String catalogName)
+    public CatalogHandle getCatalogHandle(Session transactionSession, String catalogName)
     {
         checkState(coordinator, "not a coordinator");
-        return catalogManager.orElseThrow().getCatalog(catalogName)
-                .orElseThrow(() -> new IllegalArgumentException("Catalog does not exist: " + catalogName))
-                .getCatalogHandle();
+        return transactionManager
+                .getCatalogHandle(transactionSession.getRequiredTransactionId(), catalogName)
+                .orElseThrow(() -> new IllegalArgumentException("Catalog does not exist: " + catalogName));
     }
 
     public Connector getConnector(CatalogHandle catalogHandle)

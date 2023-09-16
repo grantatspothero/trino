@@ -147,6 +147,7 @@ public class TestMetadataOnlyQueries
                 .addPlugin(new TestingHivePlugin(metastore))
                 .setNodeCount(1)
                 .setInstallSecurityModule(false)
+                .setUseLiveCatalogs(false)
                 .build();
     }
 

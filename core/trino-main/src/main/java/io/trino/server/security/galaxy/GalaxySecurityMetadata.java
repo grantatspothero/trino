@@ -36,6 +36,7 @@ import io.trino.Session;
 import io.trino.metadata.QualifiedObjectName;
 import io.trino.metadata.QualifiedTablePrefix;
 import io.trino.metadata.SystemSecurityMetadata;
+import io.trino.server.galaxy.catalogs.CatalogIds;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogSchemaName;
 import io.trino.spi.connector.CatalogSchemaTableName;
@@ -46,6 +47,7 @@ import io.trino.spi.security.Privilege;
 import io.trino.spi.security.PrivilegeInfo;
 import io.trino.spi.security.RoleGrant;
 import io.trino.spi.security.TrinoPrincipal;
+import io.trino.transaction.TransactionId;
 
 import java.util.Optional;
 import java.util.Set;
@@ -181,44 +183,44 @@ public class GalaxySecurityMetadata
     @Override
     public void grantSchemaPrivileges(Session session, CatalogSchemaName schemaName, Set<Privilege> privileges, TrinoPrincipal grantee, boolean grantOption)
     {
-        addEntityPrivilege(session, toSchemaEntity(schemaName), privileges, ALLOW, grantee, grantOption);
+        addEntityPrivilege(session, toSchemaEntity(session.getTransactionId(), schemaName), privileges, ALLOW, grantee, grantOption);
     }
 
     @Override
     public void denySchemaPrivileges(Session session, CatalogSchemaName schemaName, Set<Privilege> privileges, TrinoPrincipal grantee)
     {
-        addEntityPrivilege(session, toSchemaEntity(schemaName), privileges, DENY, grantee, false);
+        addEntityPrivilege(session, toSchemaEntity(session.getTransactionId(), schemaName), privileges, DENY, grantee, false);
     }
 
     @Override
     public void revokeSchemaPrivileges(Session session, CatalogSchemaName schemaName, Set<Privilege> privileges, TrinoPrincipal grantee, boolean grantOption)
     {
-        revokeEntityPrivileges(session, toSchemaEntity(schemaName), privileges, grantee, grantOption);
+        revokeEntityPrivileges(session, toSchemaEntity(session.getTransactionId(), schemaName), privileges, grantee, grantOption);
     }
 
     @Override
     public void grantTablePrivileges(Session session, QualifiedObjectName tableName, Set<Privilege> privileges, TrinoPrincipal grantee, boolean grantOption)
     {
-        addEntityPrivilege(session, toTableEntity(tableName), privileges, ALLOW, grantee, grantOption);
+        addEntityPrivilege(session, toTableEntity(session.getTransactionId(), tableName), privileges, ALLOW, grantee, grantOption);
     }
 
     @Override
     public void denyTablePrivileges(Session session, QualifiedObjectName tableName, Set<Privilege> privileges, TrinoPrincipal grantee)
     {
-        addEntityPrivilege(session, toTableEntity(tableName), privileges, DENY, grantee, false);
+        addEntityPrivilege(session, toTableEntity(session.getTransactionId(), tableName), privileges, DENY, grantee, false);
     }
 
     @Override
     public void revokeTablePrivileges(Session session, QualifiedObjectName tableName, Set<Privilege> privileges, TrinoPrincipal grantee, boolean grantOption)
     {
-        revokeEntityPrivileges(session, toTableEntity(tableName), privileges, grantee, grantOption);
+        revokeEntityPrivileges(session, toTableEntity(session.getTransactionId(), tableName), privileges, grantee, grantOption);
     }
 
     // TODO: Are these methods candidates for inclusion in SystemSecurityMetatadata?
 
     public void grantColumnPrivileges(Session session, QualifiedObjectName tableName, String columnName, Set<Privilege> privileges, TrinoPrincipal grantee, boolean grantOption)
     {
-        addEntityPrivilege(session, toColumnEntity(tableName, columnName), privileges, ALLOW, grantee, grantOption);
+        addEntityPrivilege(session, toColumnEntity(session.getTransactionId(), tableName, columnName), privileges, ALLOW, grantee, grantOption);
     }
 
     public void addEntityPrivilege(Session session, EntityId entityId, Set<Privilege> privileges, GrantKind allow, TrinoPrincipal grantee, boolean grantOption)
@@ -258,7 +260,7 @@ public class GalaxySecurityMetadata
                     Optional.empty(),
                     Optional.empty()));
         }
-        CatalogId catalogId = translateCatalogNameToId(prefix.getCatalogName());
+        CatalogId catalogId = translateCatalogNameToId(session.getTransactionId(), prefix.getCatalogName());
         EntityId entityId;
         if (prefix.getTableName().isPresent()) {
             entityId = new TableId(catalogId, prefix.getSchemaName().orElseThrow(), prefix.getTableName().get());
@@ -297,7 +299,7 @@ public class GalaxySecurityMetadata
         if (isSystemCatalog(schema.getCatalogName())) {
             return Optional.of(SYSTEM_ROLE);
         }
-        RoleName owner = accessControlClient.getEntityPrivileges(toDispatchSession(session), toSchemaEntity(schema)).getOwner();
+        RoleName owner = accessControlClient.getEntityPrivileges(toDispatchSession(session), toSchemaEntity(session.getTransactionId(), schema)).getOwner();
         return Optional.of(new TrinoPrincipal(ROLE, owner.getName()));
     }
 
@@ -311,7 +313,7 @@ public class GalaxySecurityMetadata
 
         accessControlClient.setEntityOwner(
                 toDispatchSession(session),
-                toSchemaEntity(schema),
+                toSchemaEntity(session.getTransactionId(), schema),
                 new RoleName(owner.getName()));
     }
 
@@ -325,7 +327,7 @@ public class GalaxySecurityMetadata
 
         accessControlClient.setEntityOwner(
                 toDispatchSession(session),
-                toTableEntity(new QualifiedObjectName(table.getCatalogName(), table.getSchemaTableName().getSchemaName(), table.getSchemaTableName().getTableName())),
+                toTableEntity(session.getTransactionId(), new QualifiedObjectName(table.getCatalogName(), table.getSchemaTableName().getSchemaName(), table.getSchemaTableName().getTableName())),
                 new RoleName(owner.getName()));
     }
 
@@ -337,7 +339,7 @@ public class GalaxySecurityMetadata
     public Optional<Identity> getViewRunAsIdentity(Session session, CatalogSchemaTableName viewName)
     {
         DispatchSession dispatchSession = toDispatchSession(session);
-        EntityPrivileges privileges = accessControlClient.getEntityPrivileges(dispatchSession, dispatchSession.getRoleId(), toTableEntity(viewName));
+        EntityPrivileges privileges = accessControlClient.getEntityPrivileges(dispatchSession, dispatchSession.getRoleId(), toTableEntity(session.getTransactionId(), viewName));
         if (!privileges.isExplicitOwner()) {
             throw new TrinoException(INVALID_VIEW,
                     format("View '%s' does not have an explicit owner role, which is not allowed. Please define an explicit owner with an 'ALTER VIEW %s SET AUTHORIZATION ROLE' command. For more information, visit docs.starburst.io/starburst-galaxy/security/privileges.html", viewName, viewName));
@@ -354,7 +356,7 @@ public class GalaxySecurityMetadata
     public Optional<Identity> getMetadataViewRunAsIdentity(Session session, CatalogSchemaTableName viewName)
     {
         DispatchSession dispatchSession = toDispatchSession(session);
-        EntityPrivileges privileges = accessControlClient.getEntityPrivileges(dispatchSession, dispatchSession.getRoleId(), toTableEntity(viewName));
+        EntityPrivileges privileges = accessControlClient.getEntityPrivileges(dispatchSession, dispatchSession.getRoleId(), toTableEntity(session.getTransactionId(), viewName));
         if (!privileges.isExplicitOwner()) {
             return Optional.empty();
         }
@@ -372,7 +374,7 @@ public class GalaxySecurityMetadata
     {
         // this will never happen but be safe
         throwIfSystemCatalog(schema);
-        accessControlClient.entityCreated(toDispatchSession(session), toSchemaEntity(schema));
+        accessControlClient.entityCreated(toDispatchSession(session), toSchemaEntity(session.getTransactionId(), schema));
     }
 
     @Override
@@ -381,7 +383,7 @@ public class GalaxySecurityMetadata
         // this will never happen but be safe
         throwIfSystemCatalog(sourceSchema);
         throwIfSystemCatalog(targetSchema);
-        accessControlClient.entityRenamed(toDispatchSession(session), toSchemaEntity(sourceSchema), toSchemaEntity(targetSchema));
+        accessControlClient.entityRenamed(toDispatchSession(session), toSchemaEntity(session.getTransactionId(), sourceSchema), toSchemaEntity(session.getTransactionId(), targetSchema));
     }
 
     @Override
@@ -389,7 +391,7 @@ public class GalaxySecurityMetadata
     {
         // this will never happen but be safe
         throwIfSystemCatalog(schema);
-        accessControlClient.entityDropped(toDispatchSession(session), toSchemaEntity(schema));
+        accessControlClient.entityDropped(toDispatchSession(session), toSchemaEntity(session.getTransactionId(), schema));
     }
 
     @Override
@@ -397,7 +399,7 @@ public class GalaxySecurityMetadata
     {
         // this will never happen but be safe
         throwIfSystemCatalog(table);
-        accessControlClient.entityCreated(toDispatchSession(session), toTableEntity(table));
+        accessControlClient.entityCreated(toDispatchSession(session), toTableEntity(session.getTransactionId(), table));
     }
 
     @Override
@@ -406,7 +408,7 @@ public class GalaxySecurityMetadata
         // this will never happen but be safe
         throwIfSystemCatalog(sourceTable);
         throwIfSystemCatalog(targetTable);
-        accessControlClient.entityRenamed(toDispatchSession(session), toTableEntity(sourceTable), toTableEntity(targetTable));
+        accessControlClient.entityRenamed(toDispatchSession(session), toTableEntity(session.getTransactionId(), sourceTable), toTableEntity(session.getTransactionId(), targetTable));
     }
 
     @Override
@@ -414,7 +416,7 @@ public class GalaxySecurityMetadata
     {
         // this will never happen but be safe
         throwIfSystemCatalog(table);
-        accessControlClient.entityDropped(toDispatchSession(session), toTableEntity(table));
+        accessControlClient.entityDropped(toDispatchSession(session), toTableEntity(session.getTransactionId(), table));
     }
 
     @Override
@@ -422,7 +424,7 @@ public class GalaxySecurityMetadata
     {
         // this will never happen but be safe
         throwIfSystemCatalog(table);
-        accessControlClient.entityCreated(toDispatchSession(session), toColumnEntity(table, column));
+        accessControlClient.entityCreated(toDispatchSession(session), toColumnEntity(session.getTransactionId(), table, column));
     }
 
     @Override
@@ -430,7 +432,7 @@ public class GalaxySecurityMetadata
     {
         // this will never happen but be safe
         throwIfSystemCatalog(table);
-        accessControlClient.entityRenamed(toDispatchSession(session), toColumnEntity(table, oldName), toColumnEntity(table, newName));
+        accessControlClient.entityRenamed(toDispatchSession(session), toColumnEntity(session.getTransactionId(), table, oldName), toColumnEntity(session.getTransactionId(), table, newName));
     }
 
     @Override
@@ -438,7 +440,7 @@ public class GalaxySecurityMetadata
     {
         // this will never happen but be safe
         throwIfSystemCatalog(table);
-        accessControlClient.entityDropped(toDispatchSession(session), toColumnEntity(table, column));
+        accessControlClient.entityDropped(toDispatchSession(session), toColumnEntity(session.getTransactionId(), table, column));
     }
 
     @Override
@@ -446,7 +448,7 @@ public class GalaxySecurityMetadata
     {
         // this will never happen but be safe
         throwIfSystemCatalog(table);
-        accessControlClient.analyzeTableFinished(toDispatchSession(session), toTableEntity(table));
+        accessControlClient.analyzeTableFinished(toDispatchSession(session), toTableEntity(session.getTransactionId(), table));
     }
 
     // Helper methods
@@ -482,37 +484,37 @@ public class GalaxySecurityMetadata
                 .collect(toImmutableSet());
     }
 
-    private SchemaId toSchemaEntity(CatalogSchemaName schema)
+    private SchemaId toSchemaEntity(Optional<TransactionId> transactionId, CatalogSchemaName schema)
     {
-        return new SchemaId(translateCatalogNameToId(schema.getCatalogName()), schema.getSchemaName());
+        return new SchemaId(translateCatalogNameToId(transactionId, schema.getCatalogName()), schema.getSchemaName());
     }
 
-    private TableId toTableEntity(QualifiedObjectName table)
+    private TableId toTableEntity(Optional<TransactionId> transactionId, QualifiedObjectName table)
     {
-        return toTableEntity(new CatalogSchemaTableName(table.getCatalogName(), table.getSchemaName(), table.getObjectName()));
+        return toTableEntity(transactionId, new CatalogSchemaTableName(table.getCatalogName(), table.getSchemaName(), table.getObjectName()));
     }
 
-    public TableId toTableEntity(CatalogSchemaTableName table)
+    public TableId toTableEntity(Optional<TransactionId> transactionId, CatalogSchemaTableName table)
     {
-        return new TableId(translateCatalogNameToId(table.getCatalogName()), table.getSchemaTableName().getSchemaName(), table.getSchemaTableName().getTableName());
+        return new TableId(translateCatalogNameToId(transactionId, table.getCatalogName()), table.getSchemaTableName().getSchemaName(), table.getSchemaTableName().getTableName());
     }
 
-    private ColumnId toColumnEntity(QualifiedObjectName table, String columnName)
+    private ColumnId toColumnEntity(Optional<TransactionId> transactionId, QualifiedObjectName table, String columnName)
     {
-        return toColumnEntity(new CatalogSchemaTableName(table.getCatalogName(), table.getSchemaName(), table.getObjectName()), columnName);
+        return toColumnEntity(transactionId, new CatalogSchemaTableName(table.getCatalogName(), table.getSchemaName(), table.getObjectName()), columnName);
     }
 
-    public ColumnId toColumnEntity(CatalogSchemaTableName table, String columnName)
+    public ColumnId toColumnEntity(Optional<TransactionId> transactionId, CatalogSchemaTableName table, String columnName)
     {
-        return new ColumnId(translateCatalogNameToId(table.getCatalogName()), table.getSchemaTableName().getSchemaName(), table.getSchemaTableName().getTableName(), columnName);
+        return new ColumnId(translateCatalogNameToId(transactionId, table.getCatalogName()), table.getSchemaTableName().getSchemaName(), table.getSchemaTableName().getTableName(), columnName);
     }
 
-    private CatalogId translateCatalogNameToId(String catalogName)
+    private CatalogId translateCatalogNameToId(Optional<TransactionId> transactionId, String catalogName)
     {
         if (isSystemCatalog(catalogName)) {
             throw new TrinoException(NOT_SUPPORTED, "System catalog is read-only");
         }
-        return catalogIds.getCatalogId(catalogName)
+        return catalogIds.getCatalogId(transactionId, catalogName)
                 .orElseThrow(() -> new TrinoException(CATALOG_NOT_FOUND, format("Catalog '%s' does not exist", catalogName)));
     }
 

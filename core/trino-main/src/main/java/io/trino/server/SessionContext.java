@@ -13,14 +13,17 @@
  */
 package io.trino.server;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.starburst.stargate.id.CatalogVersion;
 import io.trino.client.ProtocolHeaders;
 import io.trino.spi.security.Identity;
 import io.trino.spi.security.SelectedRole;
 import io.trino.spi.session.ResourceEstimates;
 import io.trino.transaction.TransactionId;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -61,6 +64,8 @@ public class SessionContext
     private final boolean clientTransactionSupport;
     private final Optional<String> clientInfo;
 
+    private final List<CatalogVersion> queryCatalogs;
+
     public SessionContext(
             ProtocolHeaders protocolHeaders,
             Optional<String> catalog,
@@ -84,7 +89,8 @@ public class SessionContext
             Map<String, String> preparedStatements,
             Optional<TransactionId> transactionId,
             boolean clientTransactionSupport,
-            Optional<String> clientInfo)
+            Optional<String> clientInfo,
+            List<CatalogVersion> queryCatalogs)
     {
         this.protocolHeaders = requireNonNull(protocolHeaders, "protocolHeaders is null");
         this.catalog = requireNonNull(catalog, "catalog is null");
@@ -111,6 +117,7 @@ public class SessionContext
         this.transactionId = requireNonNull(transactionId, "transactionId is null");
         this.clientTransactionSupport = clientTransactionSupport;
         this.clientInfo = requireNonNull(clientInfo, "clientInfo is null");
+        this.queryCatalogs = ImmutableList.copyOf(requireNonNull(queryCatalogs, "queryCatalogs is null"));
     }
 
     public ProtocolHeaders getProtocolHeaders()
@@ -228,6 +235,11 @@ public class SessionContext
         return traceToken;
     }
 
+    public List<CatalogVersion> getQueryCatalogs()
+    {
+        return queryCatalogs;
+    }
+
     public SessionContext withTransactionId(TransactionId transactionId)
     {
         return new SessionContext(
@@ -253,6 +265,7 @@ public class SessionContext
                 preparedStatements,
                 Optional.of(transactionId),
                 clientTransactionSupport,
-                clientInfo);
+                clientInfo,
+                queryCatalogs);
     }
 }

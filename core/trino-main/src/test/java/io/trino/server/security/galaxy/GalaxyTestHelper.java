@@ -77,7 +77,7 @@ public class GalaxyTestHelper
     private GalaxyAccessControl accessControl;
     private GalaxySecurityMetadata metadataApi;
     private TrinoSecurityApi client;
-    private CatalogIds catalogIds;
+    private StaticCatalogIds catalogIds;
 
     private final AtomicInteger queryIds = new AtomicInteger();
 
@@ -100,7 +100,7 @@ public class GalaxyTestHelper
                 .mapToObj(index -> "catalog" + index)
                 .collect(toImmutableMap(Function.identity(), accountClient::getOrCreateCatalog));
 
-        catalogIds = new CatalogIds(ImmutableBiMap.copyOf(catalogs), ImmutableSet.of());
+        catalogIds = new StaticCatalogIds(ImmutableBiMap.copyOf(catalogs), ImmutableSet.of());
         client = accountClient.getTrinoSecurityApi();
         GalaxyPermissionsCache permissionsCache = new GalaxyPermissionsCache(new GalaxySystemAccessControlConfig());
         accessController = new GalaxySystemAccessController(client, catalogIds, permissionsCache);
@@ -158,14 +158,14 @@ public class GalaxyTestHelper
         return metadataApi;
     }
 
-    public CatalogIds getCatalogIds()
+    public StaticCatalogIds getCatalogIds()
     {
         return catalogIds;
     }
 
     public CatalogId getCatalogId(String catalogName)
     {
-        return catalogIds.getCatalogId(catalogName).orElseThrow(() -> new IllegalArgumentException("Unknown catalog " + catalogName));
+        return catalogIds.getCatalogId(Optional.empty(), catalogName).orElseThrow(() -> new IllegalArgumentException("Unknown catalog " + catalogName));
     }
 
     public SystemSecurityContext context(RoleId roleId)

@@ -378,7 +378,7 @@ public class ConnectorServices
 
         try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(connector.getClass().getClassLoader())) {
             connector.shutdown();
-            if (catalogMangerKind == CatalogMangerKind.METADATA_ONLY) {
+            if (catalogMangerKind == CatalogMangerKind.METADATA_ONLY || catalogMangerKind == CatalogMangerKind.LIVE) {
                 TemporaryMemoryLeakHacks.clearLeaks(connector.getClass().getClassLoader());
             }
         }

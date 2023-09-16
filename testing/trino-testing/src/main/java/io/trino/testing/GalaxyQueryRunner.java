@@ -19,18 +19,33 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
+import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.airlift.jaxrs.JaxrsBinder;
+import io.airlift.testing.TestingClock;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
+import io.starburst.stargate.catalog.DeploymentType;
 import io.starburst.stargate.id.AccountId;
 import io.starburst.stargate.id.CatalogId;
+import io.starburst.stargate.id.CatalogVersion;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.UserId;
+import io.starburst.stargate.id.Version;
 import io.starburst.stargate.identity.DispatchSession;
+import io.trino.connector.CatalogManagerConfig;
+import io.trino.connector.CatalogProperties;
+import io.trino.connector.ConnectorName;
+import io.trino.server.ServerConfig;
+import io.trino.server.galaxy.catalogs.GalaxyCatalogArgs;
+import io.trino.server.galaxy.catalogs.GalaxyCatalogInfo;
+import io.trino.server.galaxy.catalogs.GalaxyCatalogInfoSupplier;
 import io.trino.server.security.InternalPrincipal;
+import io.trino.server.security.galaxy.GalaxyLiveCatalogsSystemAccessFactory;
 import io.trino.server.security.galaxy.GalaxySecurityModule;
+import io.trino.server.security.galaxy.GalaxyTrinoSystemAccessFactory;
 import io.trino.spi.Plugin;
 import io.trino.spi.security.Identity;
+import io.trino.transaction.ForTransactionManager;
 import jakarta.annotation.Priority;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.ForbiddenException;
@@ -41,17 +56,20 @@ import jakarta.ws.rs.core.Response;
 
 import java.io.IOException;
 import java.net.URI;
+import java.time.Clock;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.airlift.testing.Closeables.closeAllSuppress;
 import static io.trino.server.HttpRequestSessionContextFactory.AUTHENTICATED_IDENTITY;
 import static io.trino.server.ServletSecurityUtils.setAuthenticatedIdentity;
+import static io.trino.server.galaxy.catalogs.CatalogVersioningUtils.toCatalogHandle;
 import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.PORTAL;
 import static io.trino.server.security.galaxy.GalaxyIdentity.createIdentity;
 import static io.trino.testing.TestingSession.testSessionBuilder;
@@ -82,6 +100,7 @@ public final class GalaxyQueryRunner
         private record CatalogInit(
                 String catalogName,
                 String connectorName,
+                boolean readOnly,
                 Map<String, String> properties)
         {
             CatalogInit
@@ -97,6 +116,8 @@ public final class GalaxyQueryRunner
         private final ImmutableList.Builder<CatalogInit> catalogs = ImmutableList.builder();
         private String httpAuthenticationType = "galaxy";
         private boolean installSecurityModule = true;
+        private boolean useLiveCatalogs = true;
+        private TestingGalaxyCatalogInfoSupplier galaxyCatalogInfoSupplier = new TestingGalaxyCatalogInfoSupplier();
 
         private Builder(String defaultSessionCatalog, String defaultSessionSchema)
         {
@@ -126,9 +147,9 @@ public final class GalaxyQueryRunner
             return self();
         }
 
-        public Builder addCatalog(String catalogName, String connectorName, Map<String, String> properties)
+        public Builder addCatalog(String catalogName, String connectorName, boolean readOnly, Map<String, String> properties)
         {
-            this.catalogs.add(new CatalogInit(catalogName, connectorName, properties));
+            this.catalogs.add(new CatalogInit(catalogName, connectorName, readOnly, properties));
             return self();
         }
 
@@ -141,6 +162,19 @@ public final class GalaxyQueryRunner
         public Builder setInstallSecurityModule(boolean installSecurityModule)
         {
             this.installSecurityModule = installSecurityModule;
+            return self();
+        }
+
+        public Builder setUseLiveCatalogs(boolean useLiveCatalogs)
+        {
+            this.useLiveCatalogs = useLiveCatalogs;
+            return self();
+        }
+
+        public Builder setGalaxyCatalogInfoSupplier(TestingGalaxyCatalogInfoSupplier galaxyCatalogInfoSupplier)
+        {
+            checkState(useLiveCatalogs, "Must be using live catalogs for this supplier to be used");
+            this.galaxyCatalogInfoSupplier = galaxyCatalogInfoSupplier;
             return self();
         }
 
@@ -177,14 +211,27 @@ public final class GalaxyQueryRunner
             if (installSecurityModule) {
                 addExtraProperty("galaxy.account-id", accountId.toString());
                 addExtraProperty("galaxy.deployment-id", accountClient.getSampleDeploymentId().toString());
-                addExtraProperty("galaxy.account-url", accountUri.toString());
-                addExtraProperty("galaxy.catalog-names", catalogIdStrings);
-                addExtraProperty("galaxy.cluster-id", accountClient.getSampleClusterId().toString());
+                addCoordinatorProperty("galaxy.account-url", accountUri.toString());
+                addCoordinatorProperty("galaxy.cluster-id", accountClient.getSampleClusterId().toString());
+                if (useLiveCatalogs) {
+                    setSystemAccessControl(GalaxyLiveCatalogsSystemAccessFactory.NAME, ImmutableMap.of());
+                }
+                else {
+                    addExtraProperty("galaxy.catalog-names", catalogIdStrings);
+                    setSystemAccessControl(GalaxyTrinoSystemAccessFactory.NAME, ImmutableMap.<String, String>builder()
+                            .put("galaxy.account-url", accountUri.toString())
+                            .put("galaxy.catalog-names", catalogIdStrings)
+                            .buildOrThrow());
+                }
+            }
 
-                setSystemAccessControl("galaxy", ImmutableMap.<String, String>builder()
-                        .put("galaxy.account-url", accountUri.toString())
-                        .put("galaxy.catalog-names", catalogIdStrings)
-                        .buildOrThrow());
+            if (useLiveCatalogs) {
+                addExtraProperty("catalog.management", CatalogManagerConfig.CatalogMangerKind.LIVE.toString());
+                addCoordinatorProperty("galaxy.deployment-type", DeploymentType.DEFAULT.toString());
+                addCoordinatorProperty("galaxy.catalog-configuration-uri", accountUri.toString());
+                addCoordinatorProperty("galaxy.testing.query.runner", "true");
+                amendSession(sessionBuilder ->
+                        sessionBuilder.setQueryCatalogs(catalogIds.values().stream().map(id -> new CatalogVersion(id, new Version(1))).collect(toImmutableList())));
             }
 
             super.setAdditionalModule(new AbstractConfigurationAwareModule()
@@ -192,11 +239,26 @@ public final class GalaxyQueryRunner
                 @Override
                 protected void setup(Binder binder)
                 {
-                    if (installSecurityModule) {
+                    if (installSecurityModule && buildConfigObject(ServerConfig.class).isCoordinator()) {
                         install(new GalaxySecurityModule());
                     }
                     binder.bind(TestingAccountClient.class).toInstance(accountClient);
                     JaxrsBinder.jaxrsBinder(binder).bind(TestingGalaxyIdentityFilter.class);
+                    if (useLiveCatalogs && buildConfigObject(ServerConfig.class).isCoordinator()) {
+                        catalogs.build()
+                                .forEach(catalogInit -> galaxyCatalogInfoSupplier.addCatalog(
+                                        new GalaxyCatalogArgs(accountId, new CatalogVersion(catalogIds.get(catalogInit.catalogName()), new Version(1))),
+                                        new GalaxyCatalogInfo(
+                                                new CatalogProperties(
+                                                        toCatalogHandle(catalogInit.catalogName(), new CatalogVersion(catalogIds.get(catalogInit.catalogName()), new Version(1))),
+                                                        new ConnectorName(catalogInit.connectorName()),
+                                                        catalogInit.properties()),
+                                                catalogInit.readOnly())));
+                        binder.bind(GalaxyCatalogInfoSupplier.class)
+                                .toInstance(galaxyCatalogInfoSupplier);
+                        binder.bind(TestingClock.class).in(Scopes.SINGLETON);
+                        binder.bind(Clock.class).annotatedWith(ForTransactionManager.class).to(TestingClock.class);
+                    }
                 }
             });
 
@@ -206,8 +268,10 @@ public final class GalaxyQueryRunner
                 for (Plugin plugin : plugins.build()) {
                     queryRunner.installPlugin(plugin);
                 }
-                for (CatalogInit catalogInit : catalogs.build()) {
-                    queryRunner.createCatalog(catalogInit.catalogName(), catalogInit.connectorName(), catalogInit.properties());
+                if (!useLiveCatalogs) {
+                    for (CatalogInit catalogInit : catalogs.build()) {
+                        queryRunner.createCatalog(catalogInit.catalogName(), catalogInit.connectorName(), catalogInit.properties());
+                    }
                 }
 
                 return queryRunner;

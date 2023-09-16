@@ -23,12 +23,14 @@ import io.airlift.slice.Slice;
 import io.airlift.units.DataSize;
 import io.airlift.units.Duration;
 import io.opentelemetry.api.trace.Span;
+import io.starburst.stargate.id.CatalogVersion;
 import io.trino.client.ProtocolHeaders;
 import io.trino.connector.system.GlobalSystemConnector;
 import io.trino.metadata.SessionPropertyManager;
 import io.trino.security.AccessControl;
 import io.trino.security.FullSystemSecurityContext;
 import io.trino.security.SecurityContext;
+import io.trino.server.galaxy.catalogs.LiveCatalogsTransactionManager;
 import io.trino.spi.QueryId;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogHandle;
@@ -61,6 +63,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static io.trino.client.ProtocolHeaders.TRINO_HEADERS;
 import static io.trino.metadata.GlobalFunctionCatalog.BUILTIN_SCHEMA;
+import static io.trino.server.security.galaxy.GalaxyIdentity.toDispatchSession;
+import static io.trino.server.security.galaxy.MetadataAccessControllerSupplier.TRANSACTION_ID_KEY;
+import static io.trino.server.security.galaxy.MetadataAccessControllerSupplier.extractTransactionId;
 import static io.trino.spi.StandardErrorCode.NOT_FOUND;
 import static io.trino.sql.SqlPath.EMPTY_PATH;
 import static io.trino.util.Failures.checkCondition;
@@ -95,6 +100,7 @@ public final class Session
     private final Map<String, String> preparedStatements;
     private final ProtocolHeaders protocolHeaders;
     private final Optional<Slice> exchangeEncryptionKey;
+    private final List<CatalogVersion> queryCatalogs;
 
     public Session(
             QueryId queryId,
@@ -122,7 +128,8 @@ public final class Session
             SessionPropertyManager sessionPropertyManager,
             Map<String, String> preparedStatements,
             ProtocolHeaders protocolHeaders,
-            Optional<Slice> exchangeEncryptionKey)
+            Optional<Slice> exchangeEncryptionKey,
+            List<CatalogVersion> queryCatalogs)
     {
         this.queryId = requireNonNull(queryId, "queryId is null");
         this.querySpan = requireNonNull(querySpan, "querySpan is null");
@@ -149,6 +156,7 @@ public final class Session
         this.preparedStatements = requireNonNull(preparedStatements, "preparedStatements is null");
         this.protocolHeaders = requireNonNull(protocolHeaders, "protocolHeaders is null");
         this.exchangeEncryptionKey = requireNonNull(exchangeEncryptionKey, "exchangeEncryptionKey is null");
+        this.queryCatalogs = ImmutableList.copyOf(requireNonNull(queryCatalogs, "queryCatalogs is null"));
 
         requireNonNull(catalogProperties, "catalogProperties is null");
         ImmutableMap.Builder<String, Map<String, String>> catalogPropertiesBuilder = ImmutableMap.builder();
@@ -318,6 +326,11 @@ public final class Session
         return exchangeEncryptionKey;
     }
 
+    public List<CatalogVersion> getQueryCatalogs()
+    {
+        return queryCatalogs;
+    }
+
     public Session beginTransactionId(TransactionId transactionId, TransactionManager transactionManager, AccessControl accessControl)
     {
         requireNonNull(transactionId, "transactionId is null");
@@ -326,6 +339,14 @@ public final class Session
         requireNonNull(accessControl, "accessControl is null");
 
         validateSystemProperties(accessControl, this.systemProperties);
+
+        // Catalogs are set in this method instead of in the QueryStateMachine where beginTransaction is invoked in order
+        // to also cover invocations from TransactionBuilder which are useful for testing purposes (needing to extract connector classes
+        // that are tied to a transaction in Live Catalog Management)
+        if (transactionManager instanceof LiveCatalogsTransactionManager liveCatalogsTransactionManager) {
+            // TODO handle if this method can be called more than once for a transaction
+            liveCatalogsTransactionManager.setCatalogsForTransaction(toDispatchSession(this), transactionId, queryCatalogs);
+        }
 
         // Now that there is a transaction, the catalog name can be resolved to a connector, and the catalog properties can be validated
         ImmutableMap.Builder<String, Map<String, String>> connectorProperties = ImmutableMap.builder();
@@ -361,6 +382,7 @@ public final class Session
                 Optional.of(transactionId),
                 clientTransactionSupport,
                 Identity.from(identity)
+                        .withAdditionalExtraCredentials(ImmutableMap.of(TRANSACTION_ID_KEY, transactionId.toString()))
                         .withConnectorRoles(connectorRoles.buildOrThrow())
                         .build(),
                 originalIdentity,
@@ -383,7 +405,8 @@ public final class Session
                 sessionPropertyManager,
                 preparedStatements,
                 protocolHeaders,
-                exchangeEncryptionKey);
+                exchangeEncryptionKey,
+                queryCatalogs);
     }
 
     public Session withDefaultProperties(Map<String, String> systemPropertyDefaults, Map<String, Map<String, String>> catalogPropertyDefaults, AccessControl accessControl)
@@ -432,7 +455,8 @@ public final class Session
                 sessionPropertyManager,
                 preparedStatements,
                 protocolHeaders,
-                exchangeEncryptionKey);
+                exchangeEncryptionKey,
+                queryCatalogs);
     }
 
     public Session withExchangeEncryption(Slice encryptionKey)
@@ -464,7 +488,8 @@ public final class Session
                 sessionPropertyManager,
                 preparedStatements,
                 protocolHeaders,
-                Optional.of(encryptionKey));
+                Optional.of(encryptionKey),
+                queryCatalogs);
     }
 
     public ConnectorSession toConnectorSession()
@@ -517,7 +542,8 @@ public final class Session
                 catalogProperties,
                 identity.getCatalogRoles(),
                 preparedStatements,
-                protocolHeaders.getProtocolName());
+                protocolHeaders.getProtocolName(),
+                queryCatalogs);
     }
 
     @Override
@@ -599,7 +625,10 @@ public final class Session
         return builder(sessionPropertyManager)
                 .setQueryId(getQueryId())
                 .setTransactionId(getTransactionId().orElse(null))
-                .setIdentity(identity)
+                .setIdentity(Identity.from(identity)
+                        // identity must track the transaction to be able to access query's catalog Id's and preform checks
+                        .withAdditionalExtraCredentials(getTransactionIdExtraCredential())
+                        .build())
                 .setOriginalIdentity(getOriginalIdentity())
                 .setSource(getSource().orElse(null))
                 .setCatalog(catalog)
@@ -612,6 +641,13 @@ public final class Session
                 .setClientInfo(getClientInfo().orElse(null))
                 .setStart(getStart())
                 .build();
+    }
+
+    private Map<String, String> getTransactionIdExtraCredential()
+    {
+        return extractTransactionId(identity)
+                .map(transactionId -> ImmutableMap.of(TRANSACTION_ID_KEY, transactionId.toString()))
+                .orElse(ImmutableMap.of());
     }
 
     public static SessionBuilder builder(SessionPropertyManager sessionPropertyManager)
@@ -663,6 +699,7 @@ public final class Session
         private final SessionPropertyManager sessionPropertyManager;
         private final Map<String, String> preparedStatements = new HashMap<>();
         private ProtocolHeaders protocolHeaders = TRINO_HEADERS;
+        private List<CatalogVersion> queryCatalogs = ImmutableList.of();
 
         private SessionBuilder(SessionPropertyManager sessionPropertyManager)
         {
@@ -697,6 +734,7 @@ public final class Session
                     .forEach((catalog, properties) -> catalogSessionProperties.put(catalog, new HashMap<>(properties)));
             this.preparedStatements.putAll(session.preparedStatements);
             this.protocolHeaders = session.protocolHeaders;
+            this.queryCatalogs = ImmutableList.copyOf(session.queryCatalogs);
         }
 
         @CanIgnoreReturnValue
@@ -938,6 +976,12 @@ public final class Session
             return this;
         }
 
+        public SessionBuilder setQueryCatalogs(List<CatalogVersion> queryCatalogs)
+        {
+            this.queryCatalogs = ImmutableList.copyOf(queryCatalogs);
+            return this;
+        }
+
         public Session build()
         {
             return new Session(
@@ -966,7 +1010,8 @@ public final class Session
                     sessionPropertyManager,
                     preparedStatements,
                     protocolHeaders,
-                    Optional.empty());
+                    Optional.empty(),
+                    queryCatalogs);
         }
     }
 

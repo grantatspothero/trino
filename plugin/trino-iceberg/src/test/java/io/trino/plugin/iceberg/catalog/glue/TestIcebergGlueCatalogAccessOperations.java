@@ -22,7 +22,6 @@ import io.trino.Session;
 import io.trino.filesystem.TrackingFileSystemFactory;
 import io.trino.filesystem.hdfs.HdfsFileSystemFactory;
 import io.trino.plugin.hive.metastore.glue.GlueMetastoreStats;
-import io.trino.plugin.iceberg.IcebergConnector;
 import io.trino.plugin.iceberg.TableType;
 import io.trino.plugin.iceberg.TestingIcebergPlugin;
 import io.trino.testing.AbstractTestQueryFramework;
@@ -48,6 +47,7 @@ import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.INPUT_
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_STATS;
 import static io.trino.plugin.iceberg.IcebergSessionProperties.COLLECT_EXTENDED_STATISTICS_ON_WRITE;
+import static io.trino.plugin.iceberg.IcebergTestUtils.getIcebergConnectorInjector;
 import static io.trino.plugin.iceberg.TableType.DATA;
 import static io.trino.plugin.iceberg.TableType.FILES;
 import static io.trino.plugin.iceberg.TableType.HISTORY;
@@ -113,7 +113,7 @@ public class TestIcebergGlueCatalogAccessOperations
 
         queryRunner.execute("CREATE SCHEMA " + testSchema);
 
-        glueStats = ((IcebergConnector) queryRunner.getCoordinator().getConnector("iceberg")).getInjector().getInstance(GlueMetastoreStats.class);
+        glueStats = getIcebergConnectorInjector(queryRunner).getInstance(GlueMetastoreStats.class);
 
         return queryRunner;
     }

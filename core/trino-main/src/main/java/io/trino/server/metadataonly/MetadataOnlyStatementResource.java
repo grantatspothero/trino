@@ -15,7 +15,6 @@ package io.trino.server.metadataonly;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import io.airlift.concurrent.SetThreadName;
@@ -25,11 +24,8 @@ import io.airlift.units.Duration;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
-import io.starburst.stargate.catalog.EncryptedSecret;
 import io.starburst.stargate.catalog.QueryCatalog;
-import io.starburst.stargate.crypto.SecretEncryptionContext;
 import io.starburst.stargate.crypto.SecretSealer;
-import io.starburst.stargate.crypto.SecretSealer.SealedSecret;
 import io.starburst.stargate.id.AccountId;
 import io.starburst.stargate.id.TrinoPlaneId;
 import io.starburst.stargate.metadata.StatementRequest;
@@ -94,12 +90,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.Maps.transformValues;
 import static io.airlift.concurrent.MoreFutures.whenAnyComplete;
 import static io.trino.SystemSessionProperties.getRetryPolicy;
 import static io.trino.execution.QueryState.FAILED;
 import static io.trino.memory.context.AggregatedMemoryContext.newSimpleAggregatedMemoryContext;
 import static io.trino.server.HttpRequestSessionContextFactory.AUTHENTICATED_IDENTITY;
+import static io.trino.server.galaxy.catalogs.SecretDecryption.decryptCatalog;
 import static io.trino.server.protocol.ProtocolUtil.createColumns;
 import static io.trino.server.protocol.ProtocolUtil.toQueryError;
 import static io.trino.server.protocol.QueryResultRows.queryResultRowsBuilder;
@@ -198,7 +194,7 @@ public class MetadataOnlyStatementResource
         MultivaluedMap<String, String> headers = httpHeaders.getRequestHeaders();
 
         SessionContext sessionContext = sessionContextFactory.createSessionContext(headers, Optional.empty(), remoteAddress, identity);
-        List<QueryCatalog> decryptedCatalogs = request.catalogs().stream().map(queryCatalog -> decryptCatalog(request.accountId(), queryCatalog)).collect(toImmutableList());
+        List<QueryCatalog> decryptedCatalogs = request.catalogs().stream().map(queryCatalog -> decryptCatalog(secretSealer, request.accountId(), trinoPlaneId, queryCatalog)).collect(toImmutableList());
 
         systemState.incrementActiveRequests();
         try {
@@ -410,26 +406,5 @@ public class MetadataOnlyStatementResource
                         .type(TEXT_PLAIN_TYPE)
                         .entity(message)
                         .build());
-    }
-
-    private QueryCatalog decryptCatalog(AccountId accountId, QueryCatalog queryCatalog)
-    {
-        Map<String, String> decryptedProperties = decryptSecrets(accountId, queryCatalog);
-        return new QueryCatalog(queryCatalog.catalogId(), queryCatalog.version(), queryCatalog.catalogName(), queryCatalog.connectorName(), queryCatalog.readOnly(), decryptedProperties, queryCatalog.secretsMap(), queryCatalog.secrets());
-    }
-
-    private Map<String, String> decryptSecrets(AccountId accountId, QueryCatalog queryCatalog)
-    {
-        return ImmutableMap.copyOf(transformValues(queryCatalog.properties(), propertyValue -> {
-            String decryptedPropertyValue = propertyValue;
-            for (EncryptedSecret secret : queryCatalog.secrets().orElseGet(ImmutableSet::of)) {
-                if (decryptedPropertyValue.contains(secret.placeholderText())) {
-                    Map<String, String> metadataEncryptionContext = SecretEncryptionContext.forVerifier(accountId, trinoPlaneId, Optional.of(queryCatalog.catalogName()), secret.secretName());
-                    String decryptedValue = secretSealer.unsealSecret(SealedSecret.fromString(secret.encryptedValue()), metadataEncryptionContext);
-                    decryptedPropertyValue = decryptedPropertyValue.replace(secret.placeholderText(), decryptedValue);
-                }
-            }
-            return decryptedPropertyValue;
-        }));
     }
 }

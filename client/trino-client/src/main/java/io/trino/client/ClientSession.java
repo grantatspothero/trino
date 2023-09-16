@@ -54,6 +54,7 @@ public class ClientSession
     private final String transactionId;
     private final Duration clientRequestTimeout;
     private final boolean compressionDisabled;
+    private final String queryCatalogsHeader;
 
     public static Builder builder()
     {
@@ -93,7 +94,8 @@ public class ClientSession
             Map<String, String> extraCredentials,
             String transactionId,
             Duration clientRequestTimeout,
-            boolean compressionDisabled)
+            boolean compressionDisabled,
+            String queryCatalogsHeader)
     {
         this.server = requireNonNull(server, "server is null");
         this.principal = requireNonNull(principal, "principal is null");
@@ -116,6 +118,7 @@ public class ClientSession
         this.extraCredentials = ImmutableMap.copyOf(requireNonNull(extraCredentials, "extraCredentials is null"));
         this.clientRequestTimeout = clientRequestTimeout;
         this.compressionDisabled = compressionDisabled;
+        this.queryCatalogsHeader = requireNonNull(queryCatalogsHeader, "queryCatalogs is null");
 
         for (String clientTag : clientTags) {
             checkArgument(!clientTag.contains(","), "client tag cannot contain ','");
@@ -259,6 +262,11 @@ public class ClientSession
         return compressionDisabled;
     }
 
+    public String getQueryCatalogsHeader()
+    {
+        return queryCatalogsHeader;
+    }
+
     @Override
     public String toString()
     {
@@ -277,6 +285,7 @@ public class ClientSession
                 .add("locale", locale)
                 .add("properties", properties)
                 .add("transactionId", transactionId)
+                .add("queryCatalogsHeader", queryCatalogsHeader)
                 .omitNullValues()
                 .toString();
     }
@@ -304,6 +313,7 @@ public class ClientSession
         private String transactionId;
         private Duration clientRequestTimeout;
         private boolean compressionDisabled;
+        private String queryCatalogsHeader = "";
 
         private Builder() {}
 
@@ -331,6 +341,7 @@ public class ClientSession
             transactionId = clientSession.getTransactionId();
             clientRequestTimeout = clientSession.getClientRequestTimeout();
             compressionDisabled = clientSession.isCompressionDisabled();
+            queryCatalogsHeader = clientSession.getQueryCatalogsHeader();
         }
 
         public Builder server(URI server)
@@ -459,6 +470,12 @@ public class ClientSession
             return this;
         }
 
+        public Builder setQueryCatalogsHeader(String queryCatalogsHeader)
+        {
+            this.queryCatalogsHeader = queryCatalogsHeader;
+            return this;
+        }
+
         public ClientSession build()
         {
             return new ClientSession(
@@ -482,7 +499,8 @@ public class ClientSession
                     credentials,
                     transactionId,
                     clientRequestTimeout,
-                    compressionDisabled);
+                    compressionDisabled,
+                    queryCatalogsHeader);
         }
     }
 }

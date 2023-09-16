@@ -121,6 +121,11 @@ public final class CatalogHandle
         return rootCatalogHandle;
     }
 
+    public CatalogHandle withVersion(CatalogVersion version)
+    {
+        return new CatalogHandle(catalogName, type, version);
+    }
+
     @Override
     public boolean equals(Object other)
     {

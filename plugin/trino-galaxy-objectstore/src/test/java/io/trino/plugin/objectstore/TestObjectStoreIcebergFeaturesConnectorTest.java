@@ -27,6 +27,7 @@ import io.trino.testing.BaseConnectorTest;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryFailedException;
 import io.trino.testing.QueryRunner;
+import io.trino.transaction.TransactionBuilder;
 import org.junit.jupiter.api.BeforeAll;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -131,7 +132,11 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     @Override
     public void initFileSystem()
     {
-        ObjectStoreConnector objectStoreConnector = (ObjectStoreConnector) getDistributedQueryRunner().getCoordinator().getConnector(getSession().getCatalog().orElseThrow());
+        ObjectStoreConnector objectStoreConnector = TransactionBuilder.transaction(getDistributedQueryRunner().getTransactionManager(), getDistributedQueryRunner().getMetadata(), getDistributedQueryRunner().getAccessControl())
+                .readOnly()
+                .execute(getSession(), transactionSession -> {
+                    return (ObjectStoreConnector) getDistributedQueryRunner().getCoordinator().getConnector(transactionSession, getSession().getCatalog().orElseThrow());
+                });
         fileSystem = ((IcebergConnector) objectStoreConnector.getInjector().getInstance(DelegateConnectors.class).icebergConnector()).getInjector().getInstance(TrinoFileSystemFactory.class).create(SESSION);
     }
 

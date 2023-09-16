@@ -18,6 +18,7 @@ import io.trino.plugin.deltalake.transactionlog.TableSnapshot;
 import io.trino.plugin.deltalake.transactionlog.TransactionLogAccess;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.testing.DistributedQueryRunner;
+import io.trino.transaction.TransactionBuilder;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -35,7 +36,11 @@ public final class TestingDeltaLakeUtils
 
     public static <T> T getConnectorService(DistributedQueryRunner queryRunner, Class<T> clazz)
     {
-        return ((DeltaLakeConnector) queryRunner.getCoordinator().getConnector(DELTA_CATALOG)).getInjector().getInstance(clazz);
+        return TransactionBuilder.transaction(queryRunner.getTransactionManager(), queryRunner.getMetadata(), queryRunner.getAccessControl())
+                .readOnly()
+                .execute(queryRunner.getDefaultSession(), transactionSession -> {
+                    return ((DeltaLakeConnector) queryRunner.getCoordinator().getConnector(transactionSession, DELTA_CATALOG)).getInjector().getInstance(clazz);
+                });
     }
 
     public static List<AddFileEntry> getTableActiveFiles(TransactionLogAccess transactionLogAccess, String tableLocation)

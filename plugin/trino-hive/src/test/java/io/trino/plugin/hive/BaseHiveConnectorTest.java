@@ -287,7 +287,8 @@ public abstract class BaseHiveConnectorTest
 
     protected HiveConnector getHiveConnector(String catalog)
     {
-        return ((HiveConnector) getDistributedQueryRunner().getCoordinator().getConnector(catalog));
+        return transaction(getDistributedQueryRunner().getTransactionManager(), getDistributedQueryRunner().getMetadata(), getDistributedQueryRunner().getAccessControl())
+                .execute(getSession(), transactionSession -> (HiveConnector) getDistributedQueryRunner().getCoordinator().getConnector(transactionSession, catalog));
     }
 
     @Override

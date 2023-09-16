@@ -15,6 +15,7 @@ package io.trino.testing;
 
 import com.google.common.collect.ImmutableMap;
 import io.airlift.units.Duration;
+import io.starburst.stargate.id.CatalogVersion;
 import io.trino.Session;
 import io.trino.client.ClientSelectedRole;
 import io.trino.client.ClientSession;
@@ -177,6 +178,7 @@ public abstract class AbstractTestingTrinoClient<T>
                 .transactionId(session.getTransactionId().map(Object::toString).orElse(null))
                 .clientRequestTimeout(clientRequestTimeout)
                 .compressionDisabled(true)
+                .setQueryCatalogsHeader(CatalogVersion.toHeaderValue(session.getQueryCatalogs()))
                 .build();
     }
 

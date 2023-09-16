@@ -166,10 +166,10 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 .setSpanProcessor(spanProcessor)
                 .setAccountClient(testingAccountFactory.createAccountClient())
                 .addPlugin(new TpchPlugin())
-                .addCatalog("tpch", "tpch", Map.of())
+                .addCatalog("tpch", "tpch", true, Map.of())
                 .addPlugin(new IcebergPlugin())
                 .addPlugin(new TestingObjectStorePlugin(metastore, trackingFileSystemFactory))
-                .addCatalog(CATALOG_NAME, "galaxy_objectstore", properties)
+                .addCatalog(CATALOG_NAME, "galaxy_objectstore", false, properties)
                 .addCoordinatorProperty("optimizer.experimental-max-prefetched-information-schema-prefixes", Integer.toString(MAX_PREFIXES_COUNT))
                 .addCoordinatorProperty("hide-inaccessible-columns", "true") // Galaxy always sets this // TODO set in GalaxyQueryRunner
                 .build();

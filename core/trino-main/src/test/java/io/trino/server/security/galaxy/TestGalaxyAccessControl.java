@@ -55,6 +55,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
@@ -170,7 +171,7 @@ public class TestGalaxyAccessControl
     @Test
     public void testFilterCatalogs()
     {
-        CatalogIds catalogIds = helper.getCatalogIds();
+        StaticCatalogIds catalogIds = helper.getCatalogIds();
         // accountadmin can access all the catalogs
         assertThat(accessControl.filterCatalogs(adminContext(), catalogIds.getCatalogNames())).isEqualTo(catalogIds.getCatalogNames());
 
@@ -185,7 +186,7 @@ public class TestGalaxyAccessControl
 
         for (String catalogName : catalogNamesToShow) {
             usedCatalogNames.add(catalogName);
-            CatalogId catalogId = catalogIds.getCatalogId(catalogName).orElseThrow();
+            CatalogId catalogId = catalogIds.getCatalogId(Optional.empty(), catalogName).orElseThrow();
             securityApi.addEntityPrivileges(toDispatchSession(adminSession()), catalogId, ImmutableSet.of(new CreateEntityPrivilege(CREATE_SCHEMA, ALLOW, new RoleName(FEARLESS_LEADER), false)));
 
             // accoundadmin still sees all catalogs
@@ -202,7 +203,7 @@ public class TestGalaxyAccessControl
 
         // Remove the catalog privilege
         for (String catalogName : catalogNamesToShow) {
-            CatalogId catalogId = catalogIds.getCatalogId(catalogName).orElseThrow();
+            CatalogId catalogId = catalogIds.getCatalogId(Optional.empty(), catalogName).orElseThrow();
             securityApi.revokeEntityPrivileges(toDispatchSession(adminSession()), catalogId, ImmutableSet.of(new RevokeEntityPrivilege(CREATE_SCHEMA, new RoleName(FEARLESS_LEADER), false)));
         }
 
@@ -215,7 +216,7 @@ public class TestGalaxyAccessControl
             usedCatalogNames.add(catalogName);
             CatalogSchemaName newName = new CatalogSchemaName(catalogName, newSchemaName());
             usedSchemaNames.add(newName);
-            SchemaId schemaId = new SchemaId(catalogIds.getCatalogId(catalogName).orElseThrow(), newName.getSchemaName());
+            SchemaId schemaId = new SchemaId(catalogIds.getCatalogId(Optional.empty(), catalogName).orElseThrow(), newName.getSchemaName());
             securityApi.addEntityPrivileges(toDispatchSession(adminSession()), schemaId, ImmutableSet.of(new CreateEntityPrivilege(CREATE_TABLE, ALLOW, new RoleName(FEARLESS_LEADER), false)));
 
             // accoundadmin still sees all catalogs
@@ -232,7 +233,7 @@ public class TestGalaxyAccessControl
 
         // Remove the schema privileges
         for (CatalogSchemaName schemaName : usedSchemaNames) {
-            SchemaId schemaId = new SchemaId(catalogIds.getCatalogId(schemaName.getCatalogName()).orElseThrow(), schemaName.getSchemaName());
+            SchemaId schemaId = new SchemaId(catalogIds.getCatalogId(Optional.empty(), schemaName.getCatalogName()).orElseThrow(), schemaName.getSchemaName());
             securityApi.revokeEntityPrivileges(toDispatchSession(adminSession()), schemaId, ImmutableSet.of(new RevokeEntityPrivilege(CREATE_TABLE, new RoleName(FEARLESS_LEADER), false)));
         }
 
@@ -268,10 +269,10 @@ public class TestGalaxyAccessControl
     @Test
     public void testCheckCanCreateSchema()
     {
-        CatalogIds catalogIds = helper.getCatalogIds();
+        StaticCatalogIds catalogIds = helper.getCatalogIds();
         List<String> catalogNames = ImmutableList.copyOf(catalogIds.getCatalogNames());
         CatalogSchemaName schemaName = new CatalogSchemaName(catalogNames.get(0), newSchemaName());
-        SchemaId schemaId = new SchemaId(catalogIds.getCatalogId(schemaName.getCatalogName()).orElseThrow(), schemaName.getSchemaName());
+        SchemaId schemaId = new SchemaId(catalogIds.getCatalogId(Optional.empty(), schemaName.getCatalogName()).orElseThrow(), schemaName.getSchemaName());
         String message = format("Access Denied: Cannot create schema %s.%s:.*", schemaName.getCatalogName(), schemaName.getSchemaName());
         // Before CREATE_SCHEMA is granted, only account admin role can create schemas
         checkAccessMatching(message,
@@ -525,7 +526,7 @@ public class TestGalaxyAccessControl
             assertThat(accessControl.filterColumns(sameQueryAdmin, table, columns))
                     .isEqualTo(Set.of("column1", "column2", "column3"));
 
-            ColumnId columnId = securityMetadata.toColumnEntity(table, "column2");
+            ColumnId columnId = securityMetadata.toColumnEntity(Optional.empty(), table, "column2");
             securityMetadata.addEntityPrivilege(adminSession(), columnId, Set.of(SELECT), DENY, trinoPrincipal(LACKEY_FOLLOWER), false);
             try {
                 assertThat(accessControl.filterColumns(sameQueryUser, table, columns))
@@ -550,11 +551,11 @@ public class TestGalaxyAccessControl
         CatalogSchemaTableName table3 = new CatalogSchemaTableName(catalogName, new SchemaTableName(newSchemaName(), newTableName()));
         CatalogSchemaTableName table4 = new CatalogSchemaTableName(catalogName, new SchemaTableName(newSchemaName(), newTableName()));
 
-        TableId table1Id = securityMetadata.toTableEntity(table1);
-        TableId table2Id = securityMetadata.toTableEntity(table2);
-        TableId table3Id = securityMetadata.toTableEntity(table3);
-        TableId table4Id = securityMetadata.toTableEntity(table4);
-        ColumnId table4ColumnId = securityMetadata.toColumnEntity(table4, "column4-1");
+        TableId table1Id = securityMetadata.toTableEntity(Optional.empty(), table1);
+        TableId table2Id = securityMetadata.toTableEntity(Optional.empty(), table2);
+        TableId table3Id = securityMetadata.toTableEntity(Optional.empty(), table3);
+        TableId table4Id = securityMetadata.toTableEntity(Optional.empty(), table4);
+        ColumnId table4ColumnId = securityMetadata.toColumnEntity(Optional.empty(), table4, "column4-1");
 
         TrinoPrincipal user = trinoPrincipal(LACKEY_FOLLOWER);
         SystemSecurityContext userContext = lackeyContext();
@@ -1057,9 +1058,9 @@ public class TestGalaxyAccessControl
         finally {
             // Remove table ownership and privileges
             securityApi.revokeEntityPrivileges(toDispatchSession(adminSession()), tableId, PRIVILEGE_TRANSLATIONS.values().stream()
-                            .filter(privilege -> privilege != CREATE_TABLE)
-                            .map(privilege -> new RevokeEntityPrivilege(privilege, new RoleName(LACKEY_FOLLOWER), false))
-                            .collect(Collectors.toSet()));
+                    .filter(privilege -> privilege != CREATE_TABLE)
+                    .map(privilege -> new RevokeEntityPrivilege(privilege, new RoleName(LACKEY_FOLLOWER), false))
+                    .collect(Collectors.toSet()));
             securityMetadata.setTableOwner(adminSession(), name, new TrinoPrincipal(PrincipalType.ROLE, ACCOUNT_ADMIN));
         }
     }
@@ -1111,9 +1112,9 @@ public class TestGalaxyAccessControl
         finally {
             // Move the ownership and remove privileges
             securityApi.revokeEntityPrivileges(toDispatchSession(adminSession()), tableId, PRIVILEGE_TRANSLATIONS.values().stream()
-                            .filter(privilege -> privilege != CREATE_TABLE)
-                            .map(privilege -> new RevokeEntityPrivilege(privilege, new RoleName(LACKEY_FOLLOWER), false))
-                            .collect(Collectors.toSet()));
+                    .filter(privilege -> privilege != CREATE_TABLE)
+                    .map(privilege -> new RevokeEntityPrivilege(privilege, new RoleName(LACKEY_FOLLOWER), false))
+                    .collect(Collectors.toSet()));
             securityMetadata.setTableOwner(adminSession(), name, new TrinoPrincipal(PrincipalType.ROLE, ACCOUNT_ADMIN));
         }
     }

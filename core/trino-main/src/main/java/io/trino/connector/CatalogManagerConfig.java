@@ -20,7 +20,7 @@ public class CatalogManagerConfig
 {
     public enum CatalogMangerKind
     {
-        STATIC, DYNAMIC, METADATA_ONLY
+        STATIC, DYNAMIC, METADATA_ONLY, LIVE
     }
 
     private CatalogMangerKind catalogMangerKind = CatalogMangerKind.STATIC;

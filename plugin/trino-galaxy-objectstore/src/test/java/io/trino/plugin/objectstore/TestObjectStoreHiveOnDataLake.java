@@ -162,12 +162,7 @@ public class TestObjectStoreHiveOnDataLake
     public void testInsertOverwriteInTransaction()
     {
         assertThatThrownBy(super::testInsertOverwriteInTransaction)
-                .hasMessageStartingWith("""
-
-                        Expecting message to be:
-                          "Overwriting existing partition in non auto commit context doesn't support DIRECT_TO_TARGET_EXISTING_DIRECTORY write mode"
-                        but was:
-                          "Catalog only supports writes using autocommit: hive\"""");
+                .hasMessageContaining("Catalogs already associated with transaction");
     }
 
     @Test

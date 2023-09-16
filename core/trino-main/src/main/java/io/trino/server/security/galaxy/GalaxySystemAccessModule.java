@@ -23,6 +23,7 @@ import io.trino.connector.CatalogManagerConfig.CatalogMangerKind;
 import io.trino.security.AccessControlManager;
 import io.trino.security.DefaultSystemAccessControlName;
 import io.trino.server.galaxy.GalaxyPermissionsCache;
+import io.trino.server.galaxy.catalogs.LiveCatalogsGalaxyAccessControllerSupplier;
 import io.trino.spi.security.SystemAccessControlFactory;
 
 import static com.google.inject.Scopes.SINGLETON;
@@ -46,6 +47,10 @@ public class GalaxySystemAccessModule
             MetadataAccessControllerSupplier controllerSupplier = new MetadataAccessControllerSupplier();
             binder.bind(SystemAccessControlFactory.class).annotatedWith(ForGalaxySystemAccessControl.class).to(GalaxyMetadataSystemAccessFactory.class);
             binder.bind(MetadataAccessControllerSupplier.class).toInstance(controllerSupplier);
+        }
+        else if (catalogManagerConfig.getCatalogMangerKind() == CatalogMangerKind.LIVE) {
+            binder.bind(LiveCatalogsGalaxyAccessControllerSupplier.class).in(SINGLETON);
+            binder.bind(SystemAccessControlFactory.class).annotatedWith(ForGalaxySystemAccessControl.class).to(GalaxyLiveCatalogsSystemAccessFactory.class);
         }
         else {
             binder.bind(SystemAccessControlFactory.class).annotatedWith(ForGalaxySystemAccessControl.class).to(GalaxyTrinoSystemAccessFactory.class);

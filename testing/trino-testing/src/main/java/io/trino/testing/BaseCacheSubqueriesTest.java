@@ -399,7 +399,7 @@ public abstract class BaseCacheSubqueriesTest
                     ColumnHandle dataColumn = coordinator.getMetadata().getColumnHandles(transactionSession, handle.get()).get("orderkey");
                     assertThat(dataColumn).isNotNull();
 
-                    ConnectorPageSourceProvider pageSourceProvider = worker.getConnector(coordinator.getCatalogHandle(catalog)).getPageSourceProvider();
+                    ConnectorPageSourceProvider pageSourceProvider = worker.getConnector(coordinator.getCatalogHandle(transactionSession, catalog)).getPageSourceProvider();
                     DynamicRowFilteringPageSourceProvider dynamicRowFilteringPageSourceProvider = new DynamicRowFilteringPageSourceProvider(new DynamicPageFilterCache(new TypeOperators()));
                     VarcharType type = VarcharType.createVarcharType(4);
 

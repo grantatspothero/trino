@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import io.airlift.units.DataSize;
 import io.airlift.units.Duration;
+import io.starburst.stargate.id.CatalogVersion;
 import io.trino.Session.ResourceEstimateBuilder;
 import io.trino.client.ProtocolDetectionException;
 import io.trino.client.ProtocolHeaders;
@@ -58,6 +59,7 @@ import static com.google.common.base.Strings.nullToEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.net.HttpHeaders.USER_AGENT;
+import static io.starburst.stargate.id.CatalogVersion.GALAXY_CATALOGS_HEADER;
 import static io.trino.client.ProtocolHeaders.detectProtocol;
 import static io.trino.spi.security.AccessDeniedException.denySetRole;
 import static java.lang.String.format;
@@ -118,6 +120,10 @@ public class HttpRequestSessionContextFactory
         Set<String> clientTags = parseClientTags(protocolHeaders, headers);
         Set<String> clientCapabilities = parseClientCapabilities(protocolHeaders, headers);
         ResourceEstimates resourceEstimates = parseResourceEstimate(protocolHeaders, headers);
+
+        List<CatalogVersion> queryCatalogs = splitHttpHeader(headers, GALAXY_CATALOGS_HEADER).stream()
+                .map(CatalogVersion::fromString)
+                .collect(toImmutableList());
 
         // parse session properties
         ImmutableMap.Builder<String, String> systemProperties = ImmutableMap.builder();
@@ -180,7 +186,8 @@ public class HttpRequestSessionContextFactory
                 preparedStatements,
                 transactionId,
                 clientTransactionSupport,
-                clientInfo);
+                clientInfo,
+                queryCatalogs);
     }
 
     public Identity extractAuthorizedIdentity(

@@ -72,6 +72,7 @@ class StatementClientV1
             "/" +
             firstNonNull(StatementClientV1.class.getPackage().getImplementationVersion(), "unknown");
     private static final long MAX_MATERIALIZED_JSON_RESPONSE_SIZE = 128 * 1024;
+    private static final String GALAXY_CATALOGS_HEADER = "X-Galaxy-Catalogs";
 
     private final Call.Factory httpCallFactory;
     private final String query;
@@ -193,6 +194,10 @@ class StatementClientV1
         builder.addHeader(TRINO_HEADERS.requestTransactionId(), session.getTransactionId() == null ? "NONE" : session.getTransactionId());
 
         builder.addHeader(TRINO_HEADERS.requestClientCapabilities(), clientCapabilities);
+
+        if (!session.getQueryCatalogsHeader().isEmpty()) {
+            builder.addHeader(GALAXY_CATALOGS_HEADER, session.getQueryCatalogsHeader());
+        }
 
         return builder.build();
     }

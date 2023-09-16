@@ -47,6 +47,7 @@ import static io.trino.plugin.hive.HiveTableProperties.STORAGE_FORMAT_PROPERTY;
 import static io.trino.plugin.objectstore.ObjectStoreQueryRunner.initializeTpchTables;
 import static io.trino.plugin.tpch.ColumnNaming.SIMPLIFIED;
 import static io.trino.testing.TestingSession.testSessionBuilder;
+import static io.trino.transaction.TransactionBuilder.transaction;
 import static java.util.Map.entry;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -193,7 +194,8 @@ public class TestObjectStoreHiveFeaturesConnectorTest
     @Override
     protected HiveConnector getHiveConnector(String catalog)
     {
-        ObjectStoreConnector objectStoreConnector = (ObjectStoreConnector) getDistributedQueryRunner().getCoordinator().getConnector(catalog);
+        ObjectStoreConnector objectStoreConnector = transaction(getDistributedQueryRunner().getTransactionManager(), getDistributedQueryRunner().getMetadata(), getDistributedQueryRunner().getAccessControl())
+                .execute(getSession(), transactionSession -> (ObjectStoreConnector) getDistributedQueryRunner().getCoordinator().getConnector(transactionSession, catalog));
         return (HiveConnector) objectStoreConnector.getInjector().getInstance(DelegateConnectors.class).hiveConnector();
     }
 

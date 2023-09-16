@@ -203,13 +203,13 @@ public final class ObjectStoreQueryRunner
                 builder.setCoordinatorProperties(coordinatorProperties);
                 builder.setExtraProperties(extraProperties);
                 builder.addPlugin(new TpchPlugin());
-                builder.addCatalog(TPCH_SCHEMA, TPCH_SCHEMA, ImmutableMap.of());
+                builder.addCatalog(TPCH_SCHEMA, TPCH_SCHEMA, true, ImmutableMap.of());
                 builder.addPlugin(objectStorePlugin);
-                builder.addCatalog(catalogName, getOnlyElement(objectStorePlugin.getConnectorFactories()).getName(), properties);
+                builder.addCatalog(catalogName, getOnlyElement(objectStorePlugin.getConnectorFactories()).getName(), false, properties);
                 builder.addPlugin(new IcebergPlugin());
                 if (mockConnectorPlugin != null) {
                     builder.addPlugin(mockConnectorPlugin);
-                    builder.addCatalog("mock_dynamic_listing", "mock", Map.of());
+                    builder.addCatalog("mock_dynamic_listing", "mock", false, Map.of());
                 }
                 builder.setAccountClient(accountClient);
                 DistributedQueryRunner queryRunner = builder.build();

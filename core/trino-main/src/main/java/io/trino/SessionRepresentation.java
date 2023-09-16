@@ -15,10 +15,12 @@ package io.trino;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.airlift.slice.Slice;
 import io.opentelemetry.api.trace.Span;
+import io.starburst.stargate.id.CatalogVersion;
 import io.trino.metadata.SessionPropertyManager;
 import io.trino.spi.QueryId;
 import io.trino.spi.security.BasicPrincipal;
@@ -30,6 +32,7 @@ import io.trino.sql.SqlPath;
 import io.trino.transaction.TransactionId;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -71,6 +74,7 @@ public final class SessionRepresentation
     private final Map<String, SelectedRole> catalogRoles;
     private final Map<String, String> preparedStatements;
     private final String protocolName;
+    private final List<CatalogVersion> queryCatalogs;
 
     @JsonCreator
     public SessionRepresentation(
@@ -102,7 +106,8 @@ public final class SessionRepresentation
             @JsonProperty("catalogProperties") Map<String, Map<String, String>> catalogProperties,
             @JsonProperty("catalogRoles") Map<String, SelectedRole> catalogRoles,
             @JsonProperty("preparedStatements") Map<String, String> preparedStatements,
-            @JsonProperty("protocolName") String protocolName)
+            @JsonProperty("protocolName") String protocolName,
+            @JsonProperty("queryCatalogs") List<CatalogVersion> queryCatalogs)
     {
         this.queryId = requireNonNull(queryId, "queryId is null");
         this.querySpan = requireNonNull(querySpan, "querySpan is null");
@@ -132,6 +137,7 @@ public final class SessionRepresentation
         this.catalogRoles = ImmutableMap.copyOf(catalogRoles);
         this.preparedStatements = ImmutableMap.copyOf(preparedStatements);
         this.protocolName = requireNonNull(protocolName, "protocolName is null");
+        this.queryCatalogs = ImmutableList.copyOf(requireNonNull(queryCatalogs, "queryCatalogs is null"));
 
         ImmutableMap.Builder<String, Map<String, String>> catalogPropertiesBuilder = ImmutableMap.builder();
         for (Entry<String, Map<String, String>> entry : catalogProperties.entrySet()) {
@@ -320,6 +326,12 @@ public final class SessionRepresentation
         return timeZoneKey.getId();
     }
 
+    @JsonProperty
+    public List<CatalogVersion> getQueryCatalogs()
+    {
+        return queryCatalogs;
+    }
+
     public Identity toIdentity()
     {
         return toIdentity(emptyMap());
@@ -378,6 +390,7 @@ public final class SessionRepresentation
                 sessionPropertyManager,
                 preparedStatements,
                 createProtocolHeaders(protocolName),
-                exchangeEncryptionKey);
+                exchangeEncryptionKey,
+                queryCatalogs);
     }
 }
