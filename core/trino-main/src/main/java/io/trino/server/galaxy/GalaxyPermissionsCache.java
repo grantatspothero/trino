@@ -47,25 +47,27 @@ public class GalaxyPermissionsCache
     @Inject
     public GalaxyPermissionsCache() {}
 
-    public <V> V withGalaxyPermissions(DispatchSession session, Optional<QueryId> optionalQueryId, Function<GalaxyQueryPermissions, V> permissionsFunction)
+    public <V> V withGalaxyPermissions(TrinoSecurityApi trinoSecurityApi, DispatchSession session, Optional<QueryId> optionalQueryId, Function<GalaxyQueryPermissions, V> permissionsFunction)
     {
         GalaxyQueryPermissions queryPermissions = optionalQueryId
                 .map(queryId -> permissionsCache.getUnchecked(queryId)
-                        .computeIfAbsent(session, GalaxyQueryPermissions::new))
-                .orElseGet(() -> new GalaxyQueryPermissions(session));
+                        .computeIfAbsent(session, ignore -> new GalaxyQueryPermissions(trinoSecurityApi, session)))
+                .orElseGet(() -> new GalaxyQueryPermissions(trinoSecurityApi, session));
         return permissionsFunction.apply(queryPermissions);
     }
 
     public static class GalaxyQueryPermissions
     {
+        private final TrinoSecurityApi trinoSecurityApi;
         private final DispatchSession session;
         private final Map<EntityPrivilegesKey, EntityPrivileges> entityPrivilegesMap = new HashMap<>();
         private Map<RoleName, RoleId> activeRoles;
         private Map<RoleId, RoleName> allRoles;
         private ContentsVisibility catalogVisibility;
 
-        public GalaxyQueryPermissions(DispatchSession session)
+        public GalaxyQueryPermissions(TrinoSecurityApi trinoSecurityApi, DispatchSession session)
         {
+            this.trinoSecurityApi = requireNonNull(trinoSecurityApi, "trinoSecurityApi is null");
             this.session = requireNonNull(session, "session is null");
         }
 
@@ -74,7 +76,7 @@ public class GalaxyPermissionsCache
             return session;
         }
 
-        public synchronized Map<RoleName, RoleId> listEnabledRoles(TrinoSecurityApi trinoSecurityApi)
+        public synchronized Map<RoleName, RoleId> listEnabledRoles()
         {
             if (activeRoles == null) {
                 activeRoles = ImmutableMap.copyOf(trinoSecurityApi.listEnabledRoles(session));
@@ -82,7 +84,7 @@ public class GalaxyPermissionsCache
             return activeRoles;
         }
 
-        public synchronized String getRoleDisplayName(RoleId roleId, TrinoSecurityApi trinoSecurityApi)
+        public synchronized String getRoleDisplayName(RoleId roleId)
         {
             if (allRoles == null) {
                 allRoles = trinoSecurityApi.listRoles(session).entrySet().stream()
@@ -92,12 +94,12 @@ public class GalaxyPermissionsCache
             return roleName != null ? roleName.getName() : roleId.toString() + " (dropped)";
         }
 
-        public synchronized EntityPrivileges getEntityPrivileges(RoleId roleId, EntityId entity, TrinoSecurityApi trinoSecurityApi)
+        public synchronized EntityPrivileges getEntityPrivileges(RoleId roleId, EntityId entity)
         {
             return entityPrivilegesMap.computeIfAbsent(new EntityPrivilegesKey(roleId, entity), ignore -> trinoSecurityApi.getEntityPrivileges(session, roleId, entity));
         }
 
-        public synchronized ContentsVisibility getCatalogVisibility(TrinoSecurityApi trinoSecurityApi)
+        public synchronized ContentsVisibility getCatalogVisibility()
         {
             if (catalogVisibility != null) {
                 return catalogVisibility;

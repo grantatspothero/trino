@@ -71,19 +71,19 @@ public class GalaxySystemAccessController
 
     public EntityPrivileges getEntityPrivileges(SystemSecurityContext context, EntityId entity)
     {
-        return withGalaxyPermissions(context, permissions -> permissions.getEntityPrivileges(getContextRoleId(context.getIdentity()), entity, accessControlClient));
+        return withGalaxyPermissions(context, permissions -> permissions.getEntityPrivileges(getContextRoleId(context.getIdentity()), entity));
     }
 
     public Map<RoleName, RoleId> listEnabledRoles(SystemSecurityContext context)
     {
         // TODO this is currently never called with queryId being present in the context, so the cache is not used.
-        return withGalaxyPermissions(context, permissions -> permissions.listEnabledRoles(accessControlClient));
+        return withGalaxyPermissions(context, GalaxyQueryPermissions::listEnabledRoles);
     }
 
     public Predicate<String> getCatalogVisibility(SystemSecurityContext context)
     {
         return withGalaxyPermissions(context, permissions -> {
-            ContentsVisibility catalogVisibility = permissions.getCatalogVisibility(accessControlClient);
+            ContentsVisibility catalogVisibility = permissions.getCatalogVisibility();
             return catalogName -> catalogIds.getCatalogId(catalogName)
                     .map(CatalogId::toString)
                     .map(catalogVisibility::isVisible)
@@ -118,7 +118,7 @@ public class GalaxySystemAccessController
 
     public String getRoleDisplayName(SystemSecurityContext context, RoleId roleId)
     {
-        return withGalaxyPermissions(context, permissions -> permissions.getRoleDisplayName(roleId, accessControlClient));
+        return withGalaxyPermissions(context, permissions -> permissions.getRoleDisplayName(roleId));
     }
 
     public boolean canExecuteFunction(SystemSecurityContext context, FunctionId functionId)
@@ -164,6 +164,6 @@ public class GalaxySystemAccessController
 
     private <V> V withGalaxyPermissions(SystemSecurityContext context, Function<GalaxyQueryPermissions, V> permissionsFunction)
     {
-        return galaxyPermissionsCache.withGalaxyPermissions(toDispatchSession(context.getIdentity()), context.getQueryId(), permissionsFunction);
+        return galaxyPermissionsCache.withGalaxyPermissions(accessControlClient, toDispatchSession(context.getIdentity()), context.getQueryId(), permissionsFunction);
     }
 }
