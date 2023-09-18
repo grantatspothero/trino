@@ -1063,16 +1063,12 @@ public class TestGalaxyAccessControl
 
     private void withGrantedTablePrivilege(Privilege privilege, String roleName, CatalogSchemaTableName table, boolean grantOption, Runnable runnable)
     {
-        boolean created = false;
+        securityMetadata.grantTablePrivileges(adminSession(), toQualifiedObjectName(table), ImmutableSet.of(privilege), trinoPrincipal(roleName), grantOption);
         try {
-            securityMetadata.grantTablePrivileges(adminSession(), toQualifiedObjectName(table), ImmutableSet.of(privilege), trinoPrincipal(roleName), grantOption);
-            created = true;
             runnable.run();
         }
         finally {
-            if (created) {
-                securityMetadata.revokeTablePrivileges(adminSession(), toQualifiedObjectName(table), ImmutableSet.of(privilege), trinoPrincipal(roleName), false);
-            }
+            securityMetadata.revokeTablePrivileges(adminSession(), toQualifiedObjectName(table), ImmutableSet.of(privilege), trinoPrincipal(roleName), false);
         }
     }
 
