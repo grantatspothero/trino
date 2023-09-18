@@ -98,7 +98,6 @@ import io.trino.spi.function.FunctionDependencyDeclaration;
 import io.trino.spi.function.FunctionId;
 import io.trino.spi.function.FunctionMetadata;
 import io.trino.spi.function.OperatorType;
-import io.trino.spi.function.QualifiedFunctionName;
 import io.trino.spi.function.SchemaFunctionName;
 import io.trino.spi.function.Signature;
 import io.trino.spi.predicate.TupleDomain;
@@ -2316,7 +2315,7 @@ public final class MetadataManager
 
         CatalogFunctionBinding catalogFunctionBinding = functionResolver.resolveFunction(
                 session,
-                toQualifiedFunctionName(name),
+                name,
                 parameterTypes,
                 catalogSchemaFunctionName -> getFunctions(session, catalogSchemaFunctionName));
         return resolve(session, catalogFunctionBinding);
@@ -2350,20 +2349,6 @@ public final class MetadataManager
             }
             throw e;
         }
-    }
-
-    // this is only public for TableFunctionRegistry, which is effectively part of MetadataManager but for some reason is a separate class
-    public static QualifiedFunctionName toQualifiedFunctionName(QualifiedName qualifiedName)
-    {
-        List<String> parts = qualifiedName.getParts();
-        checkArgument(parts.size() <= 3, "Function name can only have 3 parts: " + qualifiedName);
-        if (parts.size() == 3) {
-            return QualifiedFunctionName.of(parts.get(0), parts.get(1), parts.get(2));
-        }
-        if (parts.size() == 2) {
-            return QualifiedFunctionName.of(parts.get(0), parts.get(1));
-        }
-        return QualifiedFunctionName.of(parts.get(0));
     }
 
     @Override
@@ -2567,7 +2552,7 @@ public final class MetadataManager
     {
         return functionDecoder.fromQualifiedName(name)
                 .map(function -> function.getFunctionKind() == AGGREGATE)
-                .orElseGet(() -> functionResolver.isAggregationFunction(session, toQualifiedFunctionName(name), catalogSchemaFunctionName -> getFunctions(session, catalogSchemaFunctionName)));
+                .orElseGet(() -> functionResolver.isAggregationFunction(session, name, catalogSchemaFunctionName -> getFunctions(session, catalogSchemaFunctionName)));
     }
 
     @Override
@@ -2575,7 +2560,7 @@ public final class MetadataManager
     {
         return functionDecoder.fromQualifiedName(name)
                 .map(function -> function.getFunctionKind() == WINDOW)
-                .orElseGet(() -> functionResolver.isWindowFunction(session, toQualifiedFunctionName(name), catalogSchemaFunctionName -> getFunctions(session, catalogSchemaFunctionName)));
+                .orElseGet(() -> functionResolver.isWindowFunction(session, name, catalogSchemaFunctionName -> getFunctions(session, catalogSchemaFunctionName)));
     }
 
     private Collection<CatalogFunctionMetadata> getFunctions(Session session, CatalogSchemaFunctionName name)
