@@ -1200,10 +1200,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/role")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility")
-                                        .addCopies("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility", switch (mode) {
-                                            case NONE -> 1;
-                                            case V3 -> 2;
-                                        })
+                                        .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns_iceberg/privileges/r-xxx")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns_delta/privileges/r-xxx")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns_hive/privileges/r-xxx")

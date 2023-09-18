@@ -104,12 +104,7 @@ public class GalaxySystemAccessController
 
     public Predicate<SchemaTableName> getTableVisibility(SystemSecurityContext context, CatalogId catalogId, Set<String> schemaNames)
     {
-        // This is only called once per query, so no need to cache
-        if (schemaNames.isEmpty()) {
-            return name -> false;
-        }
-
-        Map<String, ContentsVisibility> tableVisibility = accessControlClient.getTableVisibility(toDispatchSession(context.getIdentity()), catalogId, schemaNames);
+        Map<String, ContentsVisibility> tableVisibility = withGalaxyPermissions(context, permissions -> permissions.getTableVisibility(catalogId, schemaNames));
         return name -> {
             ContentsVisibility contentsVisibility = tableVisibility.get(name.getSchemaName());
             return contentsVisibility != null && contentsVisibility.isVisible(name.getTableName());

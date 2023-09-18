@@ -13,6 +13,7 @@
  */
 package io.trino.server.galaxy;
 
+import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
@@ -22,6 +23,7 @@ import com.google.inject.Inject;
 import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
+import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.EntityId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.RoleName;
@@ -30,12 +32,22 @@ import io.trino.cache.EvictableCacheBuilder;
 import io.trino.spi.QueryId;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.common.collect.MoreCollectors.onlyElement;
+import static com.google.common.collect.Streams.stream;
+import static io.trino.cache.SafeCaches.buildNonEvictableCache;
 import static java.util.Objects.requireNonNull;
 
 public class GalaxyPermissionsCache
@@ -72,11 +84,43 @@ public class GalaxyPermissionsCache
         private Map<RoleId, RoleName> allRoles;
         @GuardedBy("this")
         private ContentsVisibility catalogVisibility;
+        // It's a cache only for convenience to use loading cache's bulk loading capability
+        private final LoadingCache<TableVisibilityKey, ContentsVisibility> tableVisibility;
 
         public GalaxyQueryPermissions(TrinoSecurityApi trinoSecurityApi, DispatchSession session)
         {
             this.trinoSecurityApi = requireNonNull(trinoSecurityApi, "trinoSecurityApi is null");
             this.session = requireNonNull(session, "session is null");
+
+            tableVisibility = buildNonEvictableCache(
+                    CacheBuilder.newBuilder(),
+                    new CacheLoader<>()
+                    {
+                        @Override
+                        public ContentsVisibility load(TableVisibilityKey key)
+                        {
+                            // Only loadAll should be used
+                            throw new UnsupportedOperationException();
+                        }
+
+                        @Override
+                        public Map<TableVisibilityKey, ContentsVisibility> loadAll(Iterable<? extends TableVisibilityKey> keys)
+                        {
+                            CatalogId catalogId = stream(keys)
+                                    .map(TableVisibilityKey::catalogId)
+                                    .distinct()
+                                    // The cache is never invoked for different catalogs at once
+                                    .collect(onlyElement());
+
+                            Set<String> schemaNames = stream(keys)
+                                    .map(TableVisibilityKey::schemaName)
+                                    .collect(toImmutableSet());
+
+                            Map<String, ContentsVisibility> visibility = trinoSecurityApi.getTableVisibility(session, catalogId, schemaNames);
+                            return visibility.entrySet().stream()
+                                    .collect(toImmutableMap(entry -> new TableVisibilityKey(catalogId, entry.getKey()), Entry::getValue));
+                        }
+                    });
         }
 
         public synchronized Map<RoleName, RoleId> listEnabledRoles()
@@ -91,7 +135,7 @@ public class GalaxyPermissionsCache
         {
             if (allRoles == null) {
                 allRoles = trinoSecurityApi.listRoles(session).entrySet().stream()
-                        .collect(toImmutableMap(Map.Entry::getValue, Map.Entry::getKey));
+                        .collect(toImmutableMap(Entry::getValue, Entry::getKey));
             }
             RoleName roleName = allRoles.get(roleId);
             return roleName != null ? roleName.getName() : roleId.toString() + " (dropped)";
@@ -111,12 +155,45 @@ public class GalaxyPermissionsCache
             return catalogVisibility;
         }
 
+        public Map<String, ContentsVisibility> getTableVisibility(CatalogId catalogId, Set<String> schemaNames)
+        {
+            if (schemaNames.isEmpty()) {
+                return ImmutableMap.of();
+            }
+            List<TableVisibilityKey> cacheKeys = schemaNames.stream()
+                    .map(schemaName -> new TableVisibilityKey(catalogId, schemaName))
+                    .collect(toImmutableList());
+            Map<TableVisibilityKey, ContentsVisibility> loaded = null;
+            try {
+                loaded = tableVisibility.getAll(cacheKeys);
+            }
+            catch (ExecutionException e) { // Impossible, the cache loader does not currently throw checked exceptions
+                throw new RuntimeException(e);
+            }
+            return loaded.entrySet().stream()
+                    .collect(toImmutableMap(
+                            entry -> {
+                                checkArgument(entry.getKey().catalogId().equals(catalogId), "Unexpected CatalogId returned: %s, expected %s", entry.getKey().catalogId(), catalogId);
+                                return entry.getKey().schemaName();
+                            },
+                            Entry::getValue));
+        }
+
         private record EntityPrivilegesKey(RoleId roleId, EntityId entity)
         {
             EntityPrivilegesKey
             {
                 requireNonNull(roleId, "roleId is null");
                 requireNonNull(entity, "entity is null");
+            }
+        }
+
+        private record TableVisibilityKey(CatalogId catalogId, String schemaName)
+        {
+            TableVisibilityKey
+            {
+                requireNonNull(catalogId, "catalogId is null");
+                requireNonNull(schemaName, "schemaName is null");
             }
         }
     }
