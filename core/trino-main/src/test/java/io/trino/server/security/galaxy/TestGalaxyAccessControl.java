@@ -1068,20 +1068,16 @@ public class TestGalaxyAccessControl
 
     private void withGrantedFunctionPrivilege(SystemSecurityContext context, String roleName, CatalogSchemaRoutineName function, boolean grantOption, Runnable runnable)
     {
-        boolean created = false;
         Map<RoleName, RoleId> roles = helper.getActiveRoles(context);
         RoleId roleId = requireNonNull(roles.get(new RoleName(roleName)), "Could not find role " + roleName);
         FunctionId functionId = new FunctionId(helper.getCatalogId(function.getCatalogName()), function.getSchemaName(), function.getRoutineName());
         GrantDetails grantDetails = new GrantDetails(EXECUTE, roleId, ALLOW, grantOption, functionId);
+        helper.getAccountClient().grantFunctionPrivilege(grantDetails);
         try {
-            helper.getAccountClient().grantFunctionPrivilege(grantDetails);
-            created = true;
             runnable.run();
         }
         finally {
-            if (created) {
-                helper.getAccountClient().revokeFunctionPrivilege(grantDetails);
-            }
+            helper.getAccountClient().revokeFunctionPrivilege(grantDetails);
         }
     }
 
