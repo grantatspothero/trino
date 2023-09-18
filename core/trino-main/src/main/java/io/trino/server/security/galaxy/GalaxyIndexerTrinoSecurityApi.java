@@ -33,6 +33,7 @@ import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.EntityId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.RoleName;
+import io.starburst.stargate.id.TableId;
 import io.starburst.stargate.identity.DispatchSession;
 
 import java.util.List;
@@ -184,5 +185,12 @@ public class GalaxyIndexerTrinoSecurityApi
     public void entityDropped(DispatchSession session, EntityId entityId)
     {
         // Ignore
+    }
+
+    @Override
+    public boolean supportsRoleBasedFilters(DispatchSession session, TableId tableId)
+    {
+        // This method is only used by the `ResultsCacheAnalyzer`
+        throw new UnsupportedOperationException();
     }
 }
