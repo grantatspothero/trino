@@ -59,7 +59,7 @@ public class GalaxyPermissionsCache
     public static class GalaxyQueryPermissions
     {
         private final DispatchSession session;
-        private final Map<EntityId, EntityPrivileges> entityPrivilegesMap = new HashMap<>();
+        private final Map<EntityPrivilegesKey, EntityPrivileges> entityPrivilegesMap = new HashMap<>();
         private Map<RoleName, RoleId> activeRoles;
         private Map<RoleId, RoleName> allRoles;
         private ContentsVisibility catalogVisibility;
@@ -94,7 +94,7 @@ public class GalaxyPermissionsCache
 
         public synchronized EntityPrivileges getEntityPrivileges(RoleId roleId, EntityId entity, TrinoSecurityApi trinoSecurityApi)
         {
-            return entityPrivilegesMap.computeIfAbsent(entity, ignore -> trinoSecurityApi.getEntityPrivileges(session, roleId, entity));
+            return entityPrivilegesMap.computeIfAbsent(new EntityPrivilegesKey(roleId, entity), ignore -> trinoSecurityApi.getEntityPrivileges(session, roleId, entity));
         }
 
         public synchronized ContentsVisibility getCatalogVisibility(TrinoSecurityApi trinoSecurityApi)
@@ -104,6 +104,15 @@ public class GalaxyPermissionsCache
             }
             catalogVisibility = trinoSecurityApi.getCatalogVisibility(session);
             return catalogVisibility;
+        }
+
+        private record EntityPrivilegesKey(RoleId roleId, EntityId entity)
+        {
+            EntityPrivilegesKey
+            {
+                requireNonNull(roleId, "roleId is null");
+                requireNonNull(entity, "entity is null");
+            }
         }
     }
 }
