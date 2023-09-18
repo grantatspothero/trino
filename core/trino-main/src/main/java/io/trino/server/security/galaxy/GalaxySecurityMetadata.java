@@ -221,7 +221,7 @@ public class GalaxySecurityMetadata
         addEntityPrivilege(session, toColumnEntity(tableName, columnName), privileges, ALLOW, grantee, grantOption);
     }
 
-    private void addEntityPrivilege(Session session, EntityId entityId, Set<Privilege> privileges, GrantKind allow, TrinoPrincipal grantee, boolean grantOption)
+    public void addEntityPrivilege(Session session, EntityId entityId, Set<Privilege> privileges, GrantKind allow, TrinoPrincipal grantee, boolean grantOption)
     {
         if (grantee.getType() != ROLE) {
             throw new TrinoException(NOT_SUPPORTED, "Galaxy only supports a ROLE as a grantee");
@@ -234,7 +234,7 @@ public class GalaxySecurityMetadata
         accessControlClient.addEntityPrivileges(toDispatchSession(session), entityId, entityPrivileges);
     }
 
-    private void revokeEntityPrivileges(Session session, EntityId entityId, Set<Privilege> privileges, TrinoPrincipal grantee, boolean grantOption)
+    public void revokeEntityPrivileges(Session session, EntityId entityId, Set<Privilege> privileges, TrinoPrincipal grantee, boolean grantOption)
     {
         if (grantee.getType() != ROLE) {
             throw new TrinoException(NOT_SUPPORTED, "Galaxy only supports a ROLE as a grantee");
@@ -475,7 +475,7 @@ public class GalaxySecurityMetadata
         return new TableId(translateCatalogNameToId(table.getCatalogName()), table.getSchemaName(), table.getObjectName());
     }
 
-    private ColumnId toColumnEntity(QualifiedObjectName table, String columnName)
+    public ColumnId toColumnEntity(QualifiedObjectName table, String columnName)
     {
         return new ColumnId(translateCatalogNameToId(table.getCatalogName()), table.getSchemaName(), table.getObjectName(), columnName);
     }

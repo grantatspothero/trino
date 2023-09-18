@@ -22,6 +22,7 @@ import io.starburst.stargate.accesscontrol.client.RevokeEntityPrivilege;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient.GrantDetails;
 import io.starburst.stargate.id.CatalogId;
+import io.starburst.stargate.id.ColumnId;
 import io.starburst.stargate.id.EntityId;
 import io.starburst.stargate.id.FunctionId;
 import io.starburst.stargate.id.RoleId;
@@ -59,6 +60,7 @@ import java.util.stream.IntStream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.starburst.stargate.accesscontrol.privilege.GrantKind.ALLOW;
+import static io.starburst.stargate.accesscontrol.privilege.GrantKind.DENY;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_SCHEMA;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_TABLE;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.EXECUTE;
@@ -500,9 +502,31 @@ public class TestGalaxyAccessControl
     {
         String catalogName = helper.getAnyCatalogName();
         CatalogSchemaTableName table = new CatalogSchemaTableName(catalogName, new SchemaTableName(newSchemaName(), newTableName()));
+        QualifiedObjectName tableQualifiedName = new QualifiedObjectName(table.getCatalogName(), table.getSchemaTableName().getSchemaName(), table.getSchemaTableName().getTableName());
         Set<String> columns = ImmutableSet.of("column1", "column2", "column3");
-        withGrantedTablePrivilege(SELECT, LACKEY_FOLLOWER, table, false, () ->
-                assertThat(accessControl.filterColumns(lackeyContext(), table, columns)).isEqualTo(columns));
+        withGrantedTablePrivilege(SELECT, LACKEY_FOLLOWER, table, false, () -> {
+            assertThat(accessControl.filterColumns(lackeyContext(), table, columns))
+                    .isEqualTo(columns);
+
+            // Simulate access to view and base table within single query
+            SystemSecurityContext sameQueryAdmin = adminContext();
+            assertThat(sameQueryAdmin.getQueryId()).isPresent();
+            SystemSecurityContext sameQueryUser = new SystemSecurityContext(lackeyContext().getIdentity(), sameQueryAdmin.getQueryId());
+
+            // Note: since admin inherits lackeys role, filterColumns(admin) needs to be invoked before doing DENY below
+            assertThat(accessControl.filterColumns(sameQueryAdmin, table, columns))
+                    .isEqualTo(Set.of("column1", "column2", "column3"));
+
+            ColumnId columnId = securityMetadata.toColumnEntity(tableQualifiedName, "column2");
+            securityMetadata.addEntityPrivilege(adminSession(), columnId, Set.of(SELECT), DENY, trinoPrincipal(LACKEY_FOLLOWER), false);
+            try {
+                assertThat(accessControl.filterColumns(sameQueryUser, table, columns))
+                        .isEqualTo(Set.of("column1", "column3"));
+            }
+            finally {
+                securityMetadata.revokeEntityPrivileges(adminSession(), columnId, Set.of(SELECT), trinoPrincipal(LACKEY_FOLLOWER), false);
+            }
+        });
     }
 
     @Test
