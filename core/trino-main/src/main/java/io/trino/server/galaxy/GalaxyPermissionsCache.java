@@ -71,11 +71,6 @@ public class GalaxyPermissionsCache
             this.session = requireNonNull(session, "session is null");
         }
 
-        public DispatchSession getSession()
-        {
-            return session;
-        }
-
         public synchronized Map<RoleName, RoleId> listEnabledRoles()
         {
             if (activeRoles == null) {
