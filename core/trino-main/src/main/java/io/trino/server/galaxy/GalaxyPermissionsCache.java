@@ -16,6 +16,8 @@ package io.trino.server.galaxy;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
+import com.google.errorprone.annotations.ThreadSafe;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
@@ -56,13 +58,19 @@ public class GalaxyPermissionsCache
         return permissionsFunction.apply(queryPermissions);
     }
 
+    @ThreadSafe
     public static class GalaxyQueryPermissions
     {
         private final TrinoSecurityApi trinoSecurityApi;
         private final DispatchSession session;
+
+        @GuardedBy("this")
         private final Map<EntityPrivilegesKey, EntityPrivileges> entityPrivilegesMap = new HashMap<>();
+        @GuardedBy("this")
         private Map<RoleName, RoleId> activeRoles;
+        @GuardedBy("this")
         private Map<RoleId, RoleName> allRoles;
+        @GuardedBy("this")
         private ContentsVisibility catalogVisibility;
 
         public GalaxyQueryPermissions(TrinoSecurityApi trinoSecurityApi, DispatchSession session)
