@@ -147,9 +147,9 @@ public class ObjectStoreProxiedConnectorTransformer
     }
 
     @Override
-    public ConnectorSplit createProxiedConnectorSplitForMixedQuery(ConnectorSplit connectorSplit)
+    public ConnectorSplit createProxiedConnectorNonFilteredSplit(ConnectorSplit connectorSplit)
     {
-        return getTransformer(connectorSplit).createProxiedConnectorSplitForMixedQuery(connectorSplit);
+        return getTransformer(connectorSplit).createProxiedConnectorNonFilteredSplit(connectorSplit);
     }
 
     @Override

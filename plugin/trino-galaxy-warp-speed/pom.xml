@@ -55,7 +55,16 @@
                 </exclusion>
             </exclusions>
         </dependency>
-
+        <dependency>
+            <groupId>com.starburstdata.presto</groupId>
+            <artifactId>starburst-warp-speed-tools</artifactId>
+            <version>${dep.warp-speed.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.starburstdata.presto</groupId>
+            <artifactId>warp-speed-object-store</artifactId>
+            <version>${dep.warp-speed.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.starburstdata.presto</groupId>
             <artifactId>warp-speed-transformers</artifactId>
@@ -168,6 +177,18 @@
         </dependency>
 
         <dependency>
+            <groupId>com.starburstdata.presto</groupId>
+            <artifactId>warp-speed-cloud-vendor</artifactId>
+            <version>${dep.warp-speed.version}</version>
+            <scope>runtime</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.trino</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>configuration</artifactId>
             <scope>runtime</scope>
@@ -191,7 +212,6 @@
                 </exclusion>
             </exclusions>
         </dependency>
-
         <dependency>
             <groupId>com.starburstdata.presto</groupId>
             <artifactId>starburst-warp-speed-core</artifactId>
@@ -209,7 +229,6 @@
                 </exclusion>
             </exclusions>
         </dependency>
-
         <dependency>
             <groupId>com.starburstdata.presto</groupId>
             <artifactId>starburst-warp-speed-tools</artifactId>
@@ -217,7 +236,19 @@
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
-
+        <dependency>
+            <groupId>com.starburstdata.presto</groupId>
+            <artifactId>warp-speed-cloud-vendor</artifactId>
+            <version>${dep.warp-speed.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.trino</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
         <dependency>
             <groupId>io.trino</groupId>
             <artifactId>trino-delta-lake</artifactId>
@@ -440,6 +471,18 @@
                                     <resource>log4j-surefire.properties</resource>
                                 </resources>
                             </exception>
+                            <exception>
+                                <conflictingDependencies>
+                                    <dependency>
+                                        <groupId>org.apache.lucene</groupId>
+                                        <artifactId>lucene-analyzers-common</artifactId>
+                                    </dependency>
+                                    <dependency>
+                                        <groupId>org.apache.lucene</groupId>
+                                        <artifactId>lucene-core</artifactId>
+                                    </dependency>
+                                </conflictingDependencies>
+                            </exception>
                         </exceptions>
                     </configuration>
                 </plugin>
@@ -462,7 +505,7 @@
                             <artifactItems>
                                 <artifactItem>
                                     <groupId>com.starburstdata.presto</groupId>
-                                    <artifactId>starburst-warp-speed-core</artifactId>
+                                    <artifactId>starburst-warp-speed-native</artifactId>
                                     <version>${dep.warp-speed.version}</version>
                                     <type>zip</type>
                                     <outputDirectory>${project.build.directory}/tmp/</outputDirectory>
@@ -486,7 +529,7 @@
                         <configuration>
                             <target>
                                 <copy todir="${project.build.directory}/${project.build.finalName}">
-                                    <fileset dir="${project.build.directory}/tmp/starburst-warp-speed-core-${dep.warp-speed.version}" excludes="lib/**" includes="**" />
+                                    <fileset dir="${project.build.directory}/tmp/starburst-warp-speed-native-${dep.warp-speed.version}" excludes="lib/**" includes="**" />
                                 </copy>
                             </target>
                         </configuration>

@@ -40,6 +40,7 @@ import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.statistics.ColumnStatistics;
 import io.trino.spi.type.Type;
+import io.varada.tools.util.Pair;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.apache.iceberg.PartitionField;
@@ -49,13 +50,16 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.SchemaParser;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.OptionalLong;
 import java.util.stream.Collectors;
 
+import static java.time.LocalDate.EPOCH;
 import static java.util.Objects.requireNonNull;
 
 @Singleton
@@ -85,7 +89,7 @@ public class GalaxyIcebergProxiedConnectorTransformer
                 icebergTableHandle.getFormatVersion(),
                 TupleDomain.all(),
                 TupleDomain.all(),
-                OptionalLong.empty(),
+                icebergTableHandle.getLimit(),
                 icebergTableHandle.getProjectedColumns(),
                 icebergTableHandle.getNameMappingJson(),
                 icebergTableHandle.getTableLocation(),
@@ -121,7 +125,7 @@ public class GalaxyIcebergProxiedConnectorTransformer
                 tableHandle.getFormatVersion(),
                 TupleDomain.all(),
                 TupleDomain.all(),
-                OptionalLong.empty(),
+                tableHandle.getLimit(),
                 tableHandle.getProjectedColumns(),
                 tableHandle.getNameMappingJson(),
                 tableHandle.getTableLocation(),
@@ -131,7 +135,7 @@ public class GalaxyIcebergProxiedConnectorTransformer
     }
 
     @Override
-    public ConnectorSplit createProxiedConnectorSplitForMixedQuery(ConnectorSplit connectorSplit)
+    public ConnectorSplit createProxiedConnectorNonFilteredSplit(ConnectorSplit connectorSplit)
     {
         IcebergSplit original = (IcebergSplit) connectorSplit;
         return new IcebergSplit(original.getPath(),
@@ -172,7 +176,9 @@ public class GalaxyIcebergProxiedConnectorTransformer
     {
         Schema tableSchema = SchemaParser.fromJson(icebergTableHandle.getTableSchemaJson());
         PartitionSpec partitionSpec = PartitionSpecParser.fromJson(tableSchema, icebergSplit.getPartitionSpecJson());
-        Map<Integer, String> columnNameToColumnID = partitionSpec.fields().stream().filter(partitionField -> partitionField.transform().isIdentity()).collect(Collectors.toMap(PartitionField::sourceId, PartitionField::name));
+        Map<Integer, Pair<String, org.apache.iceberg.types.Type>> columnIdToName = partitionSpec.fields().stream()
+                .filter(partitionField -> partitionField.transform().isIdentity())
+                .collect(Collectors.toMap(PartitionField::sourceId, (partitionField) -> Pair.of(partitionField.name(), partitionField.transform().getResultType(tableSchema.findType(partitionField.sourceId())))));
         org.apache.iceberg.types.Type[] partitionColumnTypes = partitionSpec.fields().stream()
                 .map(field -> field.transform().getResultType(tableSchema.findType(field.sourceId())))
                 .toArray(org.apache.iceberg.types.Type[]::new);
@@ -182,8 +188,15 @@ public class GalaxyIcebergProxiedConnectorTransformer
         List<PartitionKey> result = new ArrayList<>();
         for (Map.Entry<Integer, Optional<String>> entry : partitionKeys.entrySet()) {
             if (entry.getValue().isPresent()) {
-                String columnName = columnNameToColumnID.get(entry.getKey());
-                result.add(new PartitionKey(new RegularColumn(columnName, String.valueOf(entry.getKey())), entry.getValue().get()));
+                Pair<String, org.apache.iceberg.types.Type> nameAndType = columnIdToName.get(entry.getKey());
+                String columnName = nameAndType.getKey();
+                org.apache.iceberg.types.Type partitionType = nameAndType.getValue();
+                String value = entry.getValue().get();
+                if (org.apache.iceberg.types.Type.TypeID.DATE.equals(partitionType.typeId())) {
+                    LocalDate targetDate = EPOCH.plus(Integer.parseInt(value), ChronoUnit.DAYS);
+                    value = targetDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                }
+                result.add(new PartitionKey(new RegularColumn(columnName, String.valueOf(entry.getKey())), value));
             }
         }
         return result;
@@ -244,5 +257,12 @@ public class GalaxyIcebergProxiedConnectorTransformer
             return ((CorruptedIcebergTableHandle) connectorTableHandle).schemaTableName();
         }
         return ((IcebergTableHandle) connectorTableHandle).getSchemaTableName();
+    }
+
+    @Override
+    public Optional<Long> getRowCount(ConnectorSplit connectorSplit)
+    {
+        IcebergSplit icebergSplit = (IcebergSplit) connectorSplit;
+        return Optional.of(icebergSplit.getFileRecordCount());
     }
 }

@@ -14,10 +14,10 @@
 package io.trino.plugin.warp;
 
 import com.google.common.collect.ImmutableMap;
-import io.trino.plugin.varada.configuration.GlobalConfiguration;
 import io.trino.plugin.varada.configuration.ProxiedConnectorConfiguration;
 import io.trino.spi.connector.ConnectorFactory;
 import io.trino.testing.TestingConnectorContext;
+import io.varada.cloudvendors.configuration.CloudVendorConfiguration;
 import org.testng.annotations.Test;
 
 import java.util.Map;
@@ -66,7 +66,7 @@ public class TestWarpSpeedPlugin
         factory.create(
                         "test",
                         Map.of(
-                                GlobalConfiguration.STORE_PATH, "s3://some-bucket/some-folder",
+                                CloudVendorConfiguration.STORE_PATH, "s3://some-bucket/some-folder",
                                 ProxiedConnectorConfiguration.PASS_THROUGH_DISPATCHER, "hive,hudi,delta-lake,iceberg",
                                 ProxiedConnectorConfiguration.PROXIED_CONNECTOR, ProxiedConnectorConfiguration.ICEBERG_CONNECTOR_NAME,
                                 "hive.metastore.uri", "thrift://foo:1234"),

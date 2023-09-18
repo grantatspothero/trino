@@ -13,11 +13,14 @@
  */
 package io.trino.plugin.warp;
 
+import io.opentelemetry.api.OpenTelemetry;
 import io.trino.plugin.varada.configuration.GlobalConfiguration;
 import io.trino.plugin.varada.configuration.ProxiedConnectorConfiguration;
-import io.trino.plugin.varada.di.CloudVendorStubModule;
 import io.trino.plugin.varada.di.VaradaStubsStorageEngineModule;
+import io.trino.plugin.varada.dispatcher.ForWarp;
 import io.trino.spi.Plugin;
+import io.varada.cloudvendors.CloudVendorMockModule;
+import io.varada.cloudvendors.configuration.CloudVendorConfiguration;
 
 import java.util.Map;
 
@@ -28,7 +31,7 @@ public abstract class WarpSpeedConnectorTestUtils
     public static Plugin getPlugin()
     {
         WarpSpeedPlugin warpSpeedPlugin = new WarpSpeedPlugin();
-        warpSpeedPlugin.withAmazonModule(new CloudVendorStubModule());
+        warpSpeedPlugin.withCloudVendorModule(new CloudVendorMockModule(ForWarp.class, Map.of(), OpenTelemetry::noop));
         warpSpeedPlugin.withStorageEngineModule(new VaradaStubsStorageEngineModule());
 
         return warpSpeedPlugin;
@@ -37,7 +40,8 @@ public abstract class WarpSpeedConnectorTestUtils
     public static Map<String, String> getProperties()
     {
         return Map.of(
-                WARP_PREFIX + GlobalConfiguration.STORE_PATH, "s3://some-bucket/some-folder",
+                WARP_PREFIX + CloudVendorConfiguration.STORE_PATH, "s3://some-bucket/some-folder",
+                WARP_PREFIX + GlobalConfiguration.LOCAL_STORE_PATH, "/tmp/",
                 WARP_PREFIX + ProxiedConnectorConfiguration.PASS_THROUGH_DISPATCHER, "hive,hudi,delta-lake,iceberg");
     }
 

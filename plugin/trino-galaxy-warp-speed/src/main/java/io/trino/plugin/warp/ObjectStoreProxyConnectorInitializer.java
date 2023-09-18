@@ -53,7 +53,11 @@ public class ObjectStoreProxyConnectorInitializer
     {
         Map<String, String> objectStoreConfig = config.entrySet()
                 .stream()
-                .filter(e -> !e.getKey().startsWith("warp-speed.") && !e.getKey().startsWith("WARP__"))
+                .filter(entry -> entry.getKey().startsWith("OBJECTSTORE__") ||
+                        entry.getKey().startsWith("HIVE__") ||
+                        entry.getKey().startsWith("ICEBERG__") ||
+                        entry.getKey().startsWith("DELTA__") ||
+                        entry.getKey().startsWith("HUDI__"))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         // Because of native code, Warp Speed does not support multiple catalogs and thus doesn't need classloader duplication.
