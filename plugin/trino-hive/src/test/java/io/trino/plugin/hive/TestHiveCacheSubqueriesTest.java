@@ -35,6 +35,7 @@ import org.intellij.lang.annotations.Language;
 import org.testng.annotations.Test;
 
 import java.util.Optional;
+import java.util.function.Function;
 
 import static io.trino.cost.StatsCalculator.noopStatsCalculator;
 import static io.trino.metadata.FunctionManager.createTestingFunctionManager;
@@ -108,8 +109,14 @@ public class TestHiveCacheSubqueriesTest
         MaterializedResultWithQueryId notFilteringExecution = executeWithQueryId(withCacheSubqueriesEnabled(), notFilteringQuery);
         Plan notFilteringPlan = getDistributedQueryRunner().getQueryPlan(notFilteringExecution.getQueryId());
 
+        String hiveCatalogId = withTransaction(session -> getDistributedQueryRunner().getCoordinator()
+                .getMetadata()
+                .getCatalogHandle(session, session.getCatalog().get())
+                .orElseThrow()
+                .getId());
+
         PlanSignature signature = new PlanSignature(
-                new SignatureKey("hive:normal:ecbc7bd9e9123daf864b27beb2f8fb6340059b079e3cbce035fdf754c0bca1de:{\"schemaName\":\"tpch\",\"tableName\":\"orders_part\",\"compactEffectivePredicate\":{\"columnDomains\":[]}}"),
+                new SignatureKey(hiveCatalogId + ":{\"schemaName\":\"tpch\",\"tableName\":\"orders_part\",\"compactEffectivePredicate\":{\"columnDomains\":[]}}"),
                 Optional.empty(),
                 ImmutableList.of(getCacheColumnId(getSession(), new QualifiedObjectName("hive", "tpch", "orders_part"), "orderkey")),
                 TupleDomain.all(),
@@ -165,5 +172,10 @@ public class TestHiveCacheSubqueriesTest
                 .execute(session, transactionSession -> {
                     PlanAssert.assertPlan(transactionSession, getQueryRunner().getMetadata(), createTestingFunctionManager(), noopStatsCalculator(), plan, pattern);
                 });
+    }
+
+    protected <T> T withTransaction(Function<Session, T> transactionSessionConsumer)
+    {
+        return newTransaction().execute(getSession(), transactionSessionConsumer);
     }
 }
