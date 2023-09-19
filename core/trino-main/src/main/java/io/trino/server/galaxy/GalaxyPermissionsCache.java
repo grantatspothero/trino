@@ -94,33 +94,21 @@ public class GalaxyPermissionsCache
 
             tableVisibility = buildNonEvictableCache(
                     CacheBuilder.newBuilder(),
-                    new CacheLoader<>()
-                    {
-                        @Override
-                        public ContentsVisibility load(TableVisibilityKey key)
-                        {
-                            // Only loadAll should be used
-                            throw new UnsupportedOperationException();
-                        }
+                    BulkOnlyLoader.of(keys -> {
+                        CatalogId catalogId = stream(keys)
+                                .map(TableVisibilityKey::catalogId)
+                                .distinct()
+                                // The cache is never invoked for different catalogs at once
+                                .collect(onlyElement());
 
-                        @Override
-                        public Map<TableVisibilityKey, ContentsVisibility> loadAll(Iterable<? extends TableVisibilityKey> keys)
-                        {
-                            CatalogId catalogId = stream(keys)
-                                    .map(TableVisibilityKey::catalogId)
-                                    .distinct()
-                                    // The cache is never invoked for different catalogs at once
-                                    .collect(onlyElement());
+                        Set<String> schemaNames = stream(keys)
+                                .map(TableVisibilityKey::schemaName)
+                                .collect(toImmutableSet());
 
-                            Set<String> schemaNames = stream(keys)
-                                    .map(TableVisibilityKey::schemaName)
-                                    .collect(toImmutableSet());
-
-                            Map<String, ContentsVisibility> visibility = trinoSecurityApi.getTableVisibility(session, catalogId, schemaNames);
-                            return visibility.entrySet().stream()
-                                    .collect(toImmutableMap(entry -> new TableVisibilityKey(catalogId, entry.getKey()), Entry::getValue));
-                        }
-                    });
+                        Map<String, ContentsVisibility> visibility = trinoSecurityApi.getTableVisibility(session, catalogId, schemaNames);
+                        return visibility.entrySet().stream()
+                                .collect(toImmutableMap(entry -> new TableVisibilityKey(catalogId, entry.getKey()), Entry::getValue));
+                    }));
         }
 
         public synchronized Map<RoleName, RoleId> listEnabledRoles()
