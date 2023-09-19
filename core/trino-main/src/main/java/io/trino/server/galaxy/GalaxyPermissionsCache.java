@@ -136,10 +136,9 @@ public class GalaxyPermissionsCache
 
         public synchronized ContentsVisibility getCatalogVisibility()
         {
-            if (catalogVisibility != null) {
-                return catalogVisibility;
+            if (catalogVisibility == null) {
+                catalogVisibility = trinoSecurityApi.getCatalogVisibility(session);
             }
-            catalogVisibility = trinoSecurityApi.getCatalogVisibility(session);
             return catalogVisibility;
         }
 
