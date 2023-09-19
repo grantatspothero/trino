@@ -27,8 +27,6 @@ import io.starburst.stargate.accesscontrol.client.TrinoLocationApi;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.trino.plugin.hive.LocationAccessControl;
 
-import java.net.URI;
-
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.airlift.http.client.HttpClientBinder.httpClientBinder;
@@ -85,19 +83,14 @@ public class GalaxyLocationSecurityModule
         @Singleton
         public static TrinoLocationApi createTrinoLocationApi(@ForGalaxyLocationSecurity HttpClient httpClient, GalaxySecurityConfig config)
         {
-            return new HttpTrinoLocationClient(getAccessControlUri(config), httpClient);
+            return new HttpTrinoLocationClient(config.getAccountUri(), httpClient);
         }
 
         @Provides
         @Singleton
         public static TrinoSecurityApi createTrinoSecurityApi(@ForGalaxyLocationSecurity HttpClient httpClient, GalaxySecurityConfig config)
         {
-            return new HttpTrinoSecurityClient(getAccessControlUri(config), httpClient);
-        }
-
-        private static URI getAccessControlUri(GalaxySecurityConfig config)
-        {
-            return config.getAccessControlUri().orElse(config.getAccountUri());
+            return new HttpTrinoSecurityClient(config.getAccessControlUri().orElse(config.getAccountUri()), httpClient);
         }
     }
 }

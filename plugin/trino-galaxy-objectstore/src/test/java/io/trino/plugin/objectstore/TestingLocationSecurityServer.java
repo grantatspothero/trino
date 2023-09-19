@@ -26,10 +26,8 @@ import io.airlift.node.testing.TestingNodeModule;
 import io.starburst.stargate.accesscontrol.client.TrinoLocationApi;
 import io.starburst.stargate.identity.DispatchSession;
 import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.Response;
 
@@ -57,11 +55,6 @@ public class TestingLocationSecurityServer
                 binder -> {
                     binder.bind(TrinoLocationApi.class).toInstance(trinoLocationApi);
                     jaxrsBinder(binder).bind(TrinoLocationResource.class);
-                    // TODO: Use actual server environment of GalaxyQueryRunner
-                    // TrinoLocationApi and TrinoSecurityApi share the same 'galaxy.account-url' config property.
-                    // Most tests use dummy server for TrinoLocationApi.
-                    // Accessing to TrinoSecurityApi throws 404 due to lack of api/v1/galaxy/security/trino/entity endpoint in the dummy server.
-                    jaxrsBinder(binder).bind(TrinoSecurityResource.class);
                 });
 
         Injector injector = app
@@ -109,26 +102,5 @@ public class TestingLocationSecurityServer
             }
             return Response.status(NOT_FOUND).build();
         }
-    }
-
-    @Path("api/v1/galaxy/security/trino/entity")
-    public static class TrinoSecurityResource
-    {
-        @POST
-        @Path("/table/{catalogId}/{schema}/{table}/:create")
-        @Consumes(TEXT_PLAIN)
-        public void entityCreated(
-                @PathParam("catalogId") String catalogId,
-                @PathParam("schema") String schema,
-                @PathParam("table") String table,
-                @Context DispatchSession session) {}
-
-        @DELETE
-        @Path("/table/{catalogId}/{schema}/{table}")
-        public void entityDeleted(
-                @PathParam("catalogId") String catalogId,
-                @PathParam("schema") String schema,
-                @PathParam("table") String table,
-                @Context DispatchSession session) {}
     }
 }

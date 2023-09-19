@@ -189,6 +189,7 @@ public final class ObjectStoreQueryRunner
                         ImmutableMap.<String, String>builder()
                                 .putAll(locationSecurityServer.getClientConfig())
                                 .put("galaxy.catalog-id", accountClient.getOrCreateCatalog("objectstore").getCatalogId().toString())
+                                .put("galaxy.access-control-url", accountClient.getBaseUri().toString())
                                 .buildOrThrow(),
                         requireNonNull(metastoreType, "metastoreType not set"),
                         metastore != null
