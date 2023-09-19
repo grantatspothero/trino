@@ -223,6 +223,7 @@ import static io.trino.plugin.deltalake.transactionlog.DeltaLakeSchemaSupport.Co
 import static io.trino.plugin.deltalake.transactionlog.DeltaLakeSchemaSupport.ColumnMappingMode.NAME;
 import static io.trino.plugin.deltalake.transactionlog.DeltaLakeSchemaSupport.ColumnMappingMode.NONE;
 import static io.trino.plugin.deltalake.transactionlog.DeltaLakeSchemaSupport.MAX_COLUMN_ID_CONFIGURATION_KEY;
+import static io.trino.plugin.deltalake.transactionlog.DeltaLakeSchemaSupport.TIMESTAMP_NTZ_FEATURE_NAME;
 import static io.trino.plugin.deltalake.transactionlog.DeltaLakeSchemaSupport.changeDataFeedEnabled;
 import static io.trino.plugin.deltalake.transactionlog.DeltaLakeSchemaSupport.deserializeType;
 import static io.trino.plugin.deltalake.transactionlog.DeltaLakeSchemaSupport.extractPartitionColumns;
@@ -2349,8 +2350,8 @@ public class DeltaLakeMetadata
         if (containsTimestampType) {
             readerVersion = max(readerVersion, TIMESTAMP_NTZ_SUPPORTED_READER_VERSION);
             writerVersion = max(writerVersion, TIMESTAMP_NTZ_SUPPORTED_WRITER_VERSION);
-            readerFeatures.add("timestampNtz");
-            writerFeatures.add("timestampNtz");
+            readerFeatures.add(TIMESTAMP_NTZ_FEATURE_NAME);
+            writerFeatures.add(TIMESTAMP_NTZ_FEATURE_NAME);
         }
         return new ProtocolEntry(
                 readerVersion,
