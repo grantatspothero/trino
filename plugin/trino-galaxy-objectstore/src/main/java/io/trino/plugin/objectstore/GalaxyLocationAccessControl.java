@@ -15,10 +15,15 @@ package io.trino.plugin.objectstore;
 
 import com.google.inject.Inject;
 import io.starburst.stargate.accesscontrol.client.TrinoLocationApi;
+import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
+import io.starburst.stargate.id.RoleId;
+import io.starburst.stargate.id.RoleName;
 import io.starburst.stargate.identity.DispatchSession;
 import io.trino.plugin.hive.LocationAccessControl;
 import io.trino.spi.security.AccessDeniedException;
 import io.trino.spi.security.ConnectorIdentity;
+
+import java.util.Map.Entry;
 
 import static io.trino.plugin.objectstore.GalaxyIdentity.toDispatchSession;
 import static java.util.Objects.requireNonNull;
@@ -27,11 +32,13 @@ public class GalaxyLocationAccessControl
         implements LocationAccessControl
 {
     private final TrinoLocationApi trinoLocationApi;
+    private final TrinoSecurityApi trinoSecurityApi;
 
     @Inject
-    public GalaxyLocationAccessControl(TrinoLocationApi trinoLocationApi)
+    public GalaxyLocationAccessControl(TrinoLocationApi trinoLocationApi, TrinoSecurityApi trinoSecurityApi)
     {
         this.trinoLocationApi = requireNonNull(trinoLocationApi, "trinoLocationApi is null");
+        this.trinoSecurityApi = requireNonNull(trinoSecurityApi, "trinoSecurityApi is null");
     }
 
     @Override
@@ -39,7 +46,14 @@ public class GalaxyLocationAccessControl
     {
         DispatchSession session = toDispatchSession(identity);
         if (!trinoLocationApi.canUseLocation(session, location)) {
-            throw new AccessDeniedException("Role ID %s is not allowed to use location: %s".formatted(session.getRoleId(), location));
+            RoleId roleId = session.getRoleId();
+            String roleName = trinoSecurityApi.listRoles(session).entrySet().stream()
+                    .filter(entry -> roleId.equals(entry.getValue()))
+                    .map(Entry::getKey)
+                    .findFirst()
+                    .map(RoleName::toString)
+                    .orElse(roleId.toString());
+            throw new AccessDeniedException("Role %s is not allowed to use location: %s".formatted(roleName, location));
         }
     }
 }

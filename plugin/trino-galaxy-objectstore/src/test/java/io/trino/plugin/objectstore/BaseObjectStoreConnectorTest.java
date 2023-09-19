@@ -655,7 +655,7 @@ public abstract class BaseObjectStoreConnectorTest
     public void testCreateSchemaWithLocation()
     {
         assertQueryFails("CREATE SCHEMA test_location_create WITH (location = 's3://test-bucket/denied')",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied");
+                "Access Denied: Role accountadmin is not allowed to use location: s3://test-bucket/denied");
     }
 
     @Test
@@ -664,10 +664,10 @@ public abstract class BaseObjectStoreConnectorTest
         skipTestUnless(hasBehavior(SUPPORTS_CREATE_TABLE));
 
         assertQueryFails("CREATE TABLE test_location_create (x int) WITH (location = 's3://test-bucket/denied')",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied");
+                "Access Denied: Role accountadmin is not allowed to use location: s3://test-bucket/denied");
 
         assertQueryFails("CREATE TABLE test_location_create (x int) WITH (location = 's3://test-bucket/denied/test_location_create')",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied/test_location_create");
+                "Access Denied: Role accountadmin is not allowed to use location: s3://test-bucket/denied/test_location_create");
     }
 
     @Test
@@ -676,10 +676,10 @@ public abstract class BaseObjectStoreConnectorTest
         skipTestUnless(hasBehavior(SUPPORTS_CREATE_TABLE));
 
         assertQueryFails("CREATE TABLE test_location_ctas WITH (location = 's3://test-bucket/denied') AS SELECT 123 x",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied");
+                "Access Denied: Role accountadmin is not allowed to use location: s3://test-bucket/denied");
 
         assertQueryFails("CREATE TABLE test_location_ctas WITH (location = 's3://test-bucket/denied/test_location_ctas') AS SELECT 123 x",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied/test_location_ctas");
+                "Access Denied: Role accountadmin is not allowed to use location: s3://test-bucket/denied/test_location_ctas");
     }
 
     @Test
@@ -821,7 +821,7 @@ public abstract class BaseObjectStoreConnectorTest
     {
         String tableName = "test_register_table_" + randomNameSuffix();
         assertQueryFails("CALL system.register_table (CURRENT_SCHEMA, '" + tableName + "', 's3://test-bucket/denied')",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied");
+                "Access Denied: Role accountadmin is not allowed to use location: s3://test-bucket/denied");
     }
 
     @Test

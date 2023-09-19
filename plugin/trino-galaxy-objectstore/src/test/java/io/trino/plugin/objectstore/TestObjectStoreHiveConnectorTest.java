@@ -131,10 +131,10 @@ public class TestObjectStoreHiveConnectorTest
                 .hasStackTraceContaining("Table property 'location' not supported for Hive tables");
 
         assertQueryFails("CREATE TABLE test_location_create (x int) WITH (external_location = 's3://test-bucket/denied')",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied");
+                "Access Denied: Role accountadmin is not allowed to use location: s3://test-bucket/denied");
 
         assertQueryFails("CREATE TABLE test_location_create (x int) WITH (external_location = 's3://test-bucket/denied/test_location_create')",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied/test_location_create");
+                "Access Denied: Role accountadmin is not allowed to use location: s3://test-bucket/denied/test_location_create");
     }
 
     @Override
@@ -144,10 +144,10 @@ public class TestObjectStoreHiveConnectorTest
                 .hasStackTraceContaining("Table property 'location' not supported for Hive tables");
 
         assertQueryFails("CREATE TABLE test_location_ctas WITH (external_location = 's3://test-bucket/denied') AS SELECT 123 x",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied");
+                "Access Denied: Role accountadmin is not allowed to use location: s3://test-bucket/denied");
 
         assertQueryFails("CREATE TABLE test_location_ctas WITH (external_location = 's3://test-bucket/denied/test_location_ctas') AS SELECT 123 x",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied/test_location_ctas");
+                "Access Denied: Role accountadmin is not allowed to use location: s3://test-bucket/denied/test_location_ctas");
     }
 
     @Test
@@ -163,7 +163,7 @@ public class TestObjectStoreHiveConnectorTest
                 ")");
 
         assertQueryFails("CALL system.register_partition('tpch', '" + tableName + "', ARRAY['part'], ARRAY['first'], 's3://test-bucket/denied')",
-                "Access Denied: Role ID r-\\d{10} is not allowed to use location: s3://test-bucket/denied");
+                "Access Denied: Role accountadmin is not allowed to use location: s3://test-bucket/denied");
 
         assertUpdate("DROP TABLE " + tableName);
     }
