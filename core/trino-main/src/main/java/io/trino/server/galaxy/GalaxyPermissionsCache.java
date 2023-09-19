@@ -151,7 +151,7 @@ public class GalaxyPermissionsCache
             List<TableVisibilityKey> cacheKeys = schemaNames.stream()
                     .map(schemaName -> new TableVisibilityKey(catalogId, schemaName))
                     .collect(toImmutableList());
-            Map<TableVisibilityKey, ContentsVisibility> loaded = null;
+            Map<TableVisibilityKey, ContentsVisibility> loaded;
             try {
                 loaded = tableVisibility.getAll(cacheKeys);
             }
