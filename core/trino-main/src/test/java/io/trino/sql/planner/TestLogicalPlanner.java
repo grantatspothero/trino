@@ -80,6 +80,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.MoreCollectors.toOptional;
 import static io.airlift.slice.Slices.utf8Slice;
 import static io.trino.SessionTestUtils.TEST_SESSION;
+import static io.trino.SystemSessionProperties.COST_ESTIMATION_WORKER_COUNT;
 import static io.trino.SystemSessionProperties.DISTINCT_AGGREGATIONS_STRATEGY;
 import static io.trino.SystemSessionProperties.DISTRIBUTED_SORT;
 import static io.trino.SystemSessionProperties.FILTERING_SEMI_JOIN_TO_INNER;
@@ -115,6 +116,7 @@ import static io.trino.sql.planner.assertions.PlanMatchPattern.exchange;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.expression;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.filter;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.functionCall;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.groupId;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.identityProject;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.join;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.limit;
@@ -131,6 +133,7 @@ import static io.trino.sql.planner.assertions.PlanMatchPattern.specification;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.strictConstrainedTableScan;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.strictProject;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.strictTableScan;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.symbol;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.tableScan;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.topN;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.topNRanking;
@@ -382,6 +385,104 @@ public class TestLogicalPlanner
                                 anyTree(
                                         project(ImmutableMap.of("hash", expression("combine_hash(bigint '0', coalesce(\"$operator$hash_code\"(orderstatus), 0))")),
                                                 tableScan("orders", ImmutableMap.of("orderstatus", "orderstatus")))))));
+    }
+
+    @Test
+    public void testSingleDistinct()
+    {
+        assertPlan("SELECT custkey, orderstatus, COUNT(DISTINCT orderkey) FROM orders GROUP BY custkey, orderstatus",
+                anyTree(
+                        aggregation(
+                                singleGroupingSet("custkey", "orderstatus"),
+                                ImmutableMap.of("count", functionCall("count", ImmutableList.of("orderkey"))),
+                                project(aggregation(
+                                        singleGroupingSet("custkey", "orderstatus", "orderkey"),
+                                        ImmutableMap.of(),
+                                        Optional.empty(),
+                                        FINAL,
+                                        exchange(aggregation(
+                                                singleGroupingSet("custkey", "orderstatus", "orderkey"),
+                                                ImmutableMap.of(),
+                                                Optional.empty(),
+                                                PARTIAL,
+                                                project(tableScan(
+                                                        "orders",
+                                                        ImmutableMap.of("orderstatus", "orderstatus", "custkey", "custkey", "orderkey", "orderkey"))))))))));
+    }
+
+    @Test
+    public void testPreAggregateDistinct()
+    {
+        assertPlan("SELECT COUNT(DISTINCT orderkey), COUNT(DISTINCT custkey) FROM orders",
+                anyTree(
+                        aggregation(
+                                singleGroupingSet(),
+                                ImmutableMap.of(Optional.of("count1"), functionCall("count", false, ImmutableList.of(symbol("orderkey"))),
+                                        Optional.of("count2"), functionCall("count", false, ImmutableList.of(symbol("custkey")))),
+                                ImmutableList.of(),
+                                ImmutableList.of("gid-filter-0", "gid-filter-1"),
+                                Optional.empty(),
+                                SINGLE,
+                                project(
+                                        ImmutableMap.of(
+                                                "gid-filter-0", expression("\"groupId\" = BIGINT '0'"),
+                                                "gid-filter-1", expression("\"groupId\" = BIGINT '1'")),
+                                        aggregation(
+                                                singleGroupingSet("custkey", "orderkey", "groupId"),
+                                                ImmutableMap.of(),
+                                                Optional.empty(),
+                                                FINAL,
+                                                exchange(aggregation(
+                                                        singleGroupingSet("orderkey", "custkey", "groupId"),
+                                                        ImmutableMap.of(),
+                                                        Optional.empty(),
+                                                        PARTIAL,
+                                                        project(filter(
+                                                                "\"groupId\" IN (BIGINT '0', BIGINT '1')",
+                                                                groupId(
+                                                                        ImmutableList.of(ImmutableList.of("orderkey"), ImmutableList.of("custkey")),
+                                                                        "groupId",
+                                                                        tableScan(
+                                                                                "orders",
+                                                                                ImmutableMap.of("custkey", "custkey", "orderkey", "orderkey"))))))))))));
+    }
+
+    @Test
+    public void testMultipleDistinctUsingMarkDistinct()
+    {
+        assertPlan("SELECT orderstatus, orderstatus || '1', orderstatus || '2', COUNT(DISTINCT orderkey), COUNT(DISTINCT custkey) FROM orders GROUP BY 1, 2, 3",
+                Session.builder(this.getQueryRunner().getDefaultSession())
+                        .setSystemProperty(COST_ESTIMATION_WORKER_COUNT, "6")
+                        .build(),
+                anyTree(
+                        aggregation(
+                                singleGroupingSet("orderstatus", "orderstatus1", "orderstatus2"),
+                                ImmutableMap.of(Optional.of("count1"), functionCall("count", false, ImmutableList.of(symbol("custkey"))),
+                                        Optional.of("count2"), functionCall("count", false, ImmutableList.of(symbol("orderkey")))),
+                                ImmutableList.of(),
+                                ImmutableList.of("custkey_mask", "orderkey_mask"),
+                                Optional.empty(),
+                                SINGLE,
+                                markDistinct(
+                                        "custkey_mask",
+                                        ImmutableList.of("orderstatus", "orderstatus1", "orderstatus2", "custkey"),
+                                        "hash-custkey",
+                                        markDistinct(
+                                                "orderkey_mask",
+                                                ImmutableList.of("orderstatus", "orderstatus1", "orderstatus2", "orderkey"),
+                                                "hash-orderkey",
+                                                exchange(
+                                                        project(
+                                                                ImmutableMap.of(
+                                                                        "hash-custkey", expression("combine_hash(combine_hash(combine_hash(combine_hash(bigint '0', COALESCE(\"$operator$hash_code\"(\"orderstatus\"), 0)), COALESCE(\"$operator$hash_code\"(\"orderstatus1\"), 0)), COALESCE(\"$operator$hash_code\"(\"orderstatus2\"), 0)), COALESCE(\"$operator$hash_code\"(\"custkey\"), 0))"),
+                                                                        "hash-orderkey", expression("combine_hash(combine_hash(combine_hash(combine_hash(bigint '0', COALESCE(\"$operator$hash_code\"(\"orderstatus\"), 0)), COALESCE(\"$operator$hash_code\"(\"orderstatus1\"), 0)), COALESCE(\"$operator$hash_code\"(\"orderstatus2\"), 0)), COALESCE(\"$operator$hash_code\"(\"orderkey\"), 0))")),
+                                                                project(
+                                                                        ImmutableMap.of(
+                                                                                "orderstatus1", expression("concat(CAST(\"orderstatus\" AS varchar), VARCHAR '1')"),
+                                                                                "orderstatus2", expression("concat(CAST(\"orderstatus\" AS varchar), VARCHAR '2')")),
+                                                                        tableScan(
+                                                                                "orders",
+                                                                                ImmutableMap.of("custkey", "custkey", "orderkey", "orderkey", "orderstatus", "orderstatus"))))))))));
     }
 
     @Test
