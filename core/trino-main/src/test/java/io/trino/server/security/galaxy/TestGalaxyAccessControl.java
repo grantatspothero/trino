@@ -502,7 +502,6 @@ public class TestGalaxyAccessControl
     {
         String catalogName = helper.getAnyCatalogName();
         CatalogSchemaTableName table = new CatalogSchemaTableName(catalogName, new SchemaTableName(newSchemaName(), newTableName()));
-        QualifiedObjectName tableQualifiedName = new QualifiedObjectName(table.getCatalogName(), table.getSchemaTableName().getSchemaName(), table.getSchemaTableName().getTableName());
         Set<String> columns = ImmutableSet.of("column1", "column2", "column3");
         withGrantedTablePrivilege(SELECT, LACKEY_FOLLOWER, table, false, () -> {
             assertThat(accessControl.filterColumns(lackeyContext(), table, columns))
@@ -516,7 +515,7 @@ public class TestGalaxyAccessControl
             assertThat(accessControl.filterColumns(sameQueryAdmin, table, columns))
                     .isEqualTo(Set.of("column1", "column2", "column3"));
 
-            ColumnId columnId = securityMetadata.toColumnEntity(tableQualifiedName, "column2");
+            ColumnId columnId = securityMetadata.toColumnEntity(table, "column2");
             securityMetadata.addEntityPrivilege(adminSession(), columnId, Set.of(SELECT), DENY, trinoPrincipal(LACKEY_FOLLOWER), false);
             try {
                 assertThat(accessControl.filterColumns(sameQueryUser, table, columns))

@@ -480,12 +480,12 @@ public class GalaxySecurityMetadata
         return new TableId(translateCatalogNameToId(table.getCatalogName()), table.getSchemaTableName().getSchemaName(), table.getSchemaTableName().getTableName());
     }
 
-    public ColumnId toColumnEntity(QualifiedObjectName table, String columnName)
+    private ColumnId toColumnEntity(QualifiedObjectName table, String columnName)
     {
         return toColumnEntity(new CatalogSchemaTableName(table.getCatalogName(), table.getSchemaName(), table.getObjectName()), columnName);
     }
 
-    private ColumnId toColumnEntity(CatalogSchemaTableName table, String columnName)
+    public ColumnId toColumnEntity(CatalogSchemaTableName table, String columnName)
     {
         return new ColumnId(translateCatalogNameToId(table.getCatalogName()), table.getSchemaTableName().getSchemaName(), table.getSchemaTableName().getTableName(), columnName);
     }
