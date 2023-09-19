@@ -31,7 +31,6 @@ import io.starburst.stargate.identity.DispatchSession;
 import io.trino.cache.EvictableCacheBuilder;
 import io.trino.spi.QueryId;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -76,8 +75,8 @@ public class GalaxyPermissionsCache
         private final TrinoSecurityApi trinoSecurityApi;
         private final DispatchSession session;
 
-        @GuardedBy("this")
-        private final Map<EntityPrivilegesKey, EntityPrivileges> entityPrivilegesMap = new HashMap<>();
+        // It's a cache to support concurrent loads while also preventing multiple loads for the same key
+        private final LoadingCache<EntityPrivilegesKey, EntityPrivileges> entityPrivileges;
         @GuardedBy("this")
         private Map<RoleName, RoleId> activeRoles;
         @GuardedBy("this")
@@ -91,6 +90,10 @@ public class GalaxyPermissionsCache
         {
             this.trinoSecurityApi = requireNonNull(trinoSecurityApi, "trinoSecurityApi is null");
             this.session = requireNonNull(session, "session is null");
+
+            entityPrivileges = buildNonEvictableCache(
+                    CacheBuilder.newBuilder(),
+                    CacheLoader.from(key -> trinoSecurityApi.getEntityPrivileges(session, key.roleId(), key.entity())));
 
             tableVisibility = buildNonEvictableCache(
                     CacheBuilder.newBuilder(),
@@ -129,9 +132,9 @@ public class GalaxyPermissionsCache
             return roleName != null ? roleName.getName() : roleId.toString() + " (dropped)";
         }
 
-        public synchronized EntityPrivileges getEntityPrivileges(RoleId roleId, EntityId entity)
+        public EntityPrivileges getEntityPrivileges(RoleId roleId, EntityId entity)
         {
-            return entityPrivilegesMap.computeIfAbsent(new EntityPrivilegesKey(roleId, entity), ignore -> trinoSecurityApi.getEntityPrivileges(session, roleId, entity));
+            return entityPrivileges.getUnchecked(new EntityPrivilegesKey(roleId, entity));
         }
 
         public synchronized ContentsVisibility getCatalogVisibility()
