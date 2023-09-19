@@ -182,7 +182,7 @@ public abstract class AbstractDistributedEngineOnlyQueries
     {
         assertExplain(
                 "EXPLAIN SELECT * FROM nation a, nation b WHERE a.nationkey = b.nationkey",
-                "ScanFilterProject\\[.*, dynamicFilters = \\{\"nationkey\" = #df_\\d+ await}]");
+                "ScanFilter\\[.*, dynamicFilters = \\{\"nationkey\" = #df_\\d+ await}]");
     }
 
     @Test
@@ -230,7 +230,7 @@ public abstract class AbstractDistributedEngineOnlyQueries
                         .build(),
                 "EXPLAIN ANALYZE SELECT * FROM nation a, nation b WHERE a.nationkey = b.nationkey",
                 "Dynamic filters: \n.*ranges=25, \\{\\[0], ..., \\[24]}.* collection time=\\d+.*",
-                "ScanFilterProject\\[.*, dynamicFilters = \\{\"nationkey\" = #df_\\d+ await}]"));
+                "ScanFilter\\[.*, dynamicFilters = \\{\"nationkey\" = #df_\\d+ await}]"));
     }
 
     @Test

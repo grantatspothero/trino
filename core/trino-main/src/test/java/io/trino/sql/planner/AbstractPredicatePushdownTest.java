@@ -29,6 +29,7 @@ import java.util.List;
 import static io.trino.SystemSessionProperties.ENABLE_DYNAMIC_FILTERING;
 import static io.trino.SystemSessionProperties.FILTERING_SEMI_JOIN_TO_INNER;
 import static io.trino.SystemSessionProperties.JOIN_REORDERING_STRATEGY;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.any;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.anyTree;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.assignUniqueId;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.exchange;
@@ -59,25 +60,6 @@ public abstract class AbstractPredicatePushdownTest
     public abstract void testCoercions();
 
     @Test
-    public void testNonStraddlingJoinExpression()
-    {
-        assertPlan(
-                "SELECT * FROM orders JOIN lineitem ON orders.orderkey = lineitem.orderkey AND cast(lineitem.linenumber AS varchar) = '2'",
-                anyTree(
-                        join(INNER, builder -> builder
-                                .equiCriteria("ORDERS_OK", "LINEITEM_OK")
-                                .left(
-                                        anyTree(
-                                                tableScan("orders", ImmutableMap.of("ORDERS_OK", "orderkey"))))
-                                .right(
-                                        anyTree(
-                                                filter("cast(LINEITEM_LINENUMBER as varchar) = VARCHAR '2'",
-                                                        tableScan("lineitem", ImmutableMap.of(
-                                                                "LINEITEM_OK", "orderkey",
-                                                                "LINEITEM_LINENUMBER", "linenumber"))))))));
-    }
-
-    @Test
     public void testPushDownToLhsOfSemiJoin()
     {
         assertPlan("SELECT quantity FROM (SELECT * FROM lineitem WHERE orderkey IN (SELECT orderkey FROM orders)) " +
@@ -101,40 +83,20 @@ public abstract class AbstractPredicatePushdownTest
                 noSemiJoinRewrite(),
                 anyTree(
                         semiJoin("LINE_ORDER_KEY", "ORDERS_ORDER_KEY", "SEMI_JOIN_RESULT", enableDynamicFiltering,
-                                anyTree(
-                                        filter("LINE_ORDER_KEY = CAST(random(5) AS bigint)",
-                                                tableScan("lineitem", ImmutableMap.of(
-                                                        "LINE_ORDER_KEY", "orderkey")))),
+                                filter("LINE_ORDER_KEY = CAST(random(5) AS bigint)",
+                                        tableScan("lineitem", ImmutableMap.of(
+                                                "LINE_ORDER_KEY", "orderkey"))),
                                 node(ExchangeNode.class, // NO filter here
-                                        project(
-                                                tableScan("orders", ImmutableMap.of("ORDERS_ORDER_KEY", "orderkey")))))));
+                                        tableScan("orders", ImmutableMap.of("ORDERS_ORDER_KEY", "orderkey"))))));
 
         assertPlan("SELECT * FROM lineitem WHERE orderkey NOT IN (SELECT orderkey FROM orders) AND orderkey = random(5)",
                 anyTree(
                         semiJoin("LINE_ORDER_KEY", "ORDERS_ORDER_KEY", "SEMI_JOIN_RESULT",
-                                anyTree(
-                                        filter("LINE_ORDER_KEY = CAST(random(5) AS bigint)",
-                                                tableScan("lineitem", ImmutableMap.of(
-                                                        "LINE_ORDER_KEY", "orderkey")))),
-                                anyTree(
-                                        project(// NO filter here
-                                                tableScan("orders", ImmutableMap.of("ORDERS_ORDER_KEY", "orderkey")))))));
-    }
-
-    @Test
-    public void testNonDeterministicPredicateDoesNotPropagateFromFilteringSideToSourceSideOfSemiJoin()
-    {
-        assertPlan("SELECT * FROM lineitem WHERE orderkey IN (SELECT orderkey FROM orders WHERE orderkey = random(5))",
-                noSemiJoinRewrite(),
-                anyTree(
-                        semiJoin("LINE_ORDER_KEY", "ORDERS_ORDER_KEY", "SEMI_JOIN_RESULT", enableDynamicFiltering,
-                                anyTree(
+                                filter("LINE_ORDER_KEY = CAST(random(5) AS bigint)",
                                         tableScan("lineitem", ImmutableMap.of(
                                                 "LINE_ORDER_KEY", "orderkey"))),
-                                node(ExchangeNode.class,
-                                        project(
-                                                filter("ORDERS_ORDER_KEY = CAST(random(5) AS bigint)",
-                                                        tableScan("orders", ImmutableMap.of("ORDERS_ORDER_KEY", "orderkey"))))))));
+                                anyTree(
+                                        tableScan("orders", ImmutableMap.of("ORDERS_ORDER_KEY", "orderkey"))))));
     }
 
     @Test
@@ -144,11 +106,10 @@ public abstract class AbstractPredicatePushdownTest
                 noSemiJoinRewrite(),
                 anyTree(
                         semiJoin("LINE_ORDER_KEY", "ORDERS_ORDER_KEY", "SEMI_JOIN_RESULT", enableDynamicFiltering,
-                                anyTree(
-                                        filter("LINE_ORDER_KEY > BIGINT '2'",
-                                                tableScan("lineitem", ImmutableMap.of(
-                                                        "LINE_ORDER_KEY", "orderkey",
-                                                        "LINE_QUANTITY", "quantity")))),
+                                filter("LINE_ORDER_KEY > BIGINT '2'",
+                                        tableScan("lineitem", ImmutableMap.of(
+                                                "LINE_ORDER_KEY", "orderkey",
+                                                "LINE_QUANTITY", "quantity"))),
                                 anyTree(
                                         filter("ORDERS_ORDER_KEY > BIGINT '2'",
                                                 tableScan("orders", ImmutableMap.of("ORDERS_ORDER_KEY", "orderkey")))))));
@@ -161,11 +122,10 @@ public abstract class AbstractPredicatePushdownTest
                 noSemiJoinRewrite(),
                 anyTree(
                         semiJoin("LINE_ORDER_KEY", "ORDERS_ORDER_KEY", "SEMI_JOIN_RESULT", enableDynamicFiltering,
-                                anyTree(
-                                        filter("LINE_ORDER_KEY = BIGINT '2'",
-                                                tableScan("lineitem", ImmutableMap.of(
-                                                        "LINE_ORDER_KEY", "orderkey",
-                                                        "LINE_QUANTITY", "quantity")))),
+                                filter("LINE_ORDER_KEY = BIGINT '2'",
+                                        tableScan("lineitem", ImmutableMap.of(
+                                                "LINE_ORDER_KEY", "orderkey",
+                                                "LINE_QUANTITY", "quantity"))),
                                 anyTree(
                                         filter("ORDERS_ORDER_KEY = BIGINT '2'",
                                                 tableScan("orders", ImmutableMap.of("ORDERS_ORDER_KEY", "orderkey")))))));
@@ -179,10 +139,9 @@ public abstract class AbstractPredicatePushdownTest
                         semiJoin("LINE_ORDER_KEY", "ORDERS_ORDER_KEY", "SEMI_JOIN_RESULT",
                                 // There should be no Filter above table scan, because we don't know whether SemiJoin's filtering source is empty.
                                 // And filter would filter out NULLs from source side which is not what we need then.
-                                project(
-                                        tableScan("lineitem", ImmutableMap.of(
-                                                "LINE_ORDER_KEY", "orderkey",
-                                                "LINE_QUANTITY", "quantity"))),
+                                tableScan("lineitem", ImmutableMap.of(
+                                        "LINE_ORDER_KEY", "orderkey",
+                                        "LINE_QUANTITY", "quantity")),
                                 anyTree(
                                         filter("ORDERS_ORDER_KEY > BIGINT '2'",
                                                 tableScan("orders", ImmutableMap.of("ORDERS_ORDER_KEY", "orderkey")))))));
@@ -195,11 +154,10 @@ public abstract class AbstractPredicatePushdownTest
                 noSemiJoinRewrite(),
                 anyTree(
                         semiJoin("LINE_ORDER_KEY", "ORDERS_ORDER_KEY", "SEMI_JOIN_RESULT", enableDynamicFiltering,
-                                anyTree(
-                                        filter("LINE_ORDER_KEY > BIGINT '2'",
-                                                tableScan("lineitem", ImmutableMap.of(
-                                                        "LINE_ORDER_KEY", "orderkey",
-                                                        "LINE_QUANTITY", "quantity")))),
+                                filter("LINE_ORDER_KEY > BIGINT '2'",
+                                        tableScan("lineitem", ImmutableMap.of(
+                                                "LINE_ORDER_KEY", "orderkey",
+                                                "LINE_QUANTITY", "quantity"))),
                                 anyTree(
                                         filter("ORDERS_ORDER_KEY > BIGINT '2'",
                                                 tableScan("orders", ImmutableMap.of("ORDERS_ORDER_KEY", "orderkey")))))));
@@ -212,11 +170,10 @@ public abstract class AbstractPredicatePushdownTest
                 noSemiJoinRewrite(),
                 anyTree(
                         semiJoin("LINE_ORDER_KEY", "ORDERS_ORDER_KEY", "SEMI_JOIN_RESULT", enableDynamicFiltering,
-                                anyTree(
-                                        filter("LINE_ORDER_KEY = BIGINT '2'",
-                                                tableScan("lineitem", ImmutableMap.of(
-                                                        "LINE_ORDER_KEY", "orderkey",
-                                                        "LINE_QUANTITY", "quantity")))),
+                                filter("LINE_ORDER_KEY = BIGINT '2'",
+                                        tableScan("lineitem", ImmutableMap.of(
+                                                "LINE_ORDER_KEY", "orderkey",
+                                                "LINE_QUANTITY", "quantity"))),
                                 anyTree(
                                         filter("ORDERS_ORDER_KEY = BIGINT '2'",
                                                 tableScan("orders", ImmutableMap.of("ORDERS_ORDER_KEY", "orderkey")))))));
@@ -228,14 +185,12 @@ public abstract class AbstractPredicatePushdownTest
         assertPlan("SELECT quantity FROM (SELECT * FROM lineitem WHERE orderkey NOT IN (SELECT orderkey FROM orders) AND orderkey > 2)",
                 anyTree(
                         semiJoin("LINE_ORDER_KEY", "ORDERS_ORDER_KEY", "SEMI_JOIN_RESULT",
-                                project(
-                                        filter("LINE_ORDER_KEY > BIGINT '2'",
-                                                tableScan("lineitem", ImmutableMap.of(
-                                                        "LINE_ORDER_KEY", "orderkey",
-                                                        "LINE_QUANTITY", "quantity")))),
+                                filter("LINE_ORDER_KEY > BIGINT '2'",
+                                        tableScan("lineitem", ImmutableMap.of(
+                                                "LINE_ORDER_KEY", "orderkey",
+                                                "LINE_QUANTITY", "quantity"))),
                                 node(ExchangeNode.class, // NO filter here
-                                        project(
-                                                tableScan("orders", ImmutableMap.of("ORDERS_ORDER_KEY", "orderkey")))))));
+                                        tableScan("orders", ImmutableMap.of("ORDERS_ORDER_KEY", "orderkey"))))));
     }
 
     @Test
@@ -245,9 +200,8 @@ public abstract class AbstractPredicatePushdownTest
                 anyTree(
                         semiJoin("LINE_ORDER_KEY", "ORDERS_ORDER_KEY", "SEMI_JOIN_RESULT",
                                 // NO filter here
-                                project(
-                                        tableScan("lineitem", ImmutableMap.of(
-                                                "LINE_ORDER_KEY", "orderkey"))),
+                                tableScan("lineitem", ImmutableMap.of(
+                                        "LINE_ORDER_KEY", "orderkey")),
                                 anyTree(
                                         filter("ORDERS_ORDER_KEY > BIGINT '2'",
                                                 tableScan("orders", ImmutableMap.of("ORDERS_ORDER_KEY", "orderkey")))))));
@@ -290,9 +244,9 @@ public abstract class AbstractPredicatePushdownTest
                         join(LEFT, builder -> builder
                                 .equiCriteria("A", "B")
                                 .left(
-                                        project(assignUniqueId("unique", filter("A = 1", values("A")))))
+                                        assignUniqueId("unique", filter("A = 1", values("A"))))
                                 .right(
-                                        project(filter("1 = B", values("B")))))));
+                                        filter("1 = B", values("B"))))));
     }
 
     @Test
@@ -451,56 +405,6 @@ public abstract class AbstractPredicatePushdownTest
     }
 
     @Test
-    public void testNormalizeOuterJoinToInner()
-    {
-        Session disableJoinReordering = Session.builder(getQueryRunner().getDefaultSession())
-                .setSystemProperty(JOIN_REORDERING_STRATEGY, "NONE")
-                .build();
-
-        // one join
-        assertPlan(
-                "SELECT customer.name, orders.orderdate " +
-                        "FROM orders " +
-                        "LEFT JOIN customer ON orders.custkey = customer.custkey " +
-                        "WHERE customer.name IS NOT NULL",
-                disableJoinReordering,
-                anyTree(
-                        join(INNER, builder -> builder
-                                .equiCriteria("o_custkey", "c_custkey")
-                                .left(
-                                        anyTree(tableScan("orders", ImmutableMap.of("o_orderdate", "orderdate", "o_custkey", "custkey"))))
-                                .right(
-                                        anyTree(
-                                                filter(
-                                                        "NOT (c_name IS NULL)",
-                                                        tableScan("customer", ImmutableMap.of("c_custkey", "custkey", "c_name", "name"))))))));
-
-        // nested joins
-        assertPlan(
-                "SELECT customer.name, lineitem.partkey " +
-                        "FROM lineitem " +
-                        "LEFT JOIN orders ON lineitem.orderkey = orders.orderkey " +
-                        "LEFT JOIN customer ON orders.custkey = customer.custkey " +
-                        "WHERE customer.name IS NOT NULL",
-                disableJoinReordering,
-                anyTree(
-                        join(INNER, builder -> builder
-                                .equiCriteria("o_custkey", "c_custkey")
-                                .left(anyTree(
-                                        join(enableDynamicFiltering ? INNER : LEFT, // TODO (https://github.com/trinodb/trino/issues/2392) this should be INNER also when dynamic filtering is off
-                                                leftJoinBuilder -> leftJoinBuilder
-                                                        .equiCriteria("l_orderkey", "o_orderkey")
-                                                        .left(
-                                                                anyTree(tableScan("lineitem", ImmutableMap.of("l_orderkey", "orderkey"))))
-                                                        .right(
-                                                                anyTree(tableScan("orders", ImmutableMap.of("o_orderkey", "orderkey", "o_custkey", "custkey")))))))
-                                .right(anyTree(
-                                        filter(
-                                                "NOT (c_name IS NULL)",
-                                                tableScan("customer", ImmutableMap.of("c_custkey", "custkey", "c_name", "name"))))))));
-    }
-
-    @Test
     public void testRemovesRedundantTableScanPredicate()
     {
         assertPlan(
@@ -580,7 +484,7 @@ public abstract class AbstractPredicatePushdownTest
                         join(INNER, builder -> builder
                                 .equiCriteria("l_partkey", "p_partkey")
                                 .filter("name <= CAST(comment AS varchar(55))")
-                                .left(anyTree(tableScan(
+                                .left(anyIfDynamicFilteringEnabled(tableScan(
                                         "lineitem",
                                         ImmutableMap.of("l_partkey", "partkey", "comment", "comment"))))
                                 .right(anyTree(
@@ -598,14 +502,13 @@ public abstract class AbstractPredicatePushdownTest
                         join(INNER, builder -> builder
                                 .equiCriteria("l_partkey", "p_partkey")
                                 .filter("concat(CAST(name AS varchar), VARCHAR 'X') BETWEEN VARCHAR 'f' AND CAST(comment AS varchar)")
-                                .left(anyTree(
+                                .left(anyIfDynamicFilteringEnabled(
                                         tableScan(
                                                 "lineitem",
                                                 ImmutableMap.of("l_partkey", "partkey", "comment", "comment"))))
-                                .right(exchange(project(
-                                        tableScan(
-                                                "part",
-                                                ImmutableMap.of("p_partkey", "partkey", "name", "name"))))))));
+                                .right(exchange(tableScan(
+                                        "part",
+                                        ImmutableMap.of("p_partkey", "partkey", "name", "name")))))));
 
         // join build side, max between value pushed down
         assertPlan(
@@ -615,7 +518,7 @@ public abstract class AbstractPredicatePushdownTest
                         join(INNER, builder -> builder
                                 .equiCriteria("l_partkey", "p_partkey")
                                 .filter("name >= CAST(comment AS varchar(55))")
-                                .left(anyTree(tableScan(
+                                .left(anyIfDynamicFilteringEnabled(tableScan(
                                         "lineitem",
                                         ImmutableMap.of("l_partkey", "partkey", "comment", "comment"))))
                                 .right(anyTree(
@@ -633,12 +536,11 @@ public abstract class AbstractPredicatePushdownTest
                         join(INNER, builder -> builder
                                 .equiCriteria("l_partkey", "p_partkey")
                                 .filter("CAST(comment AS varchar(55)) <= name")
-                                .left(anyTree(
-                                        filter(
-                                                "comment >= CAST('f' AS varchar(44))",
-                                                tableScan(
-                                                        "lineitem",
-                                                        ImmutableMap.of("l_partkey", "partkey", "comment", "comment")))))
+                                .left(filter(
+                                        "comment >= CAST('f' AS varchar(44))",
+                                        tableScan(
+                                                "lineitem",
+                                                ImmutableMap.of("l_partkey", "partkey", "comment", "comment"))))
                                 .right(anyTree(
                                         tableScan(
                                                 "part",
@@ -652,12 +554,11 @@ public abstract class AbstractPredicatePushdownTest
                         join(INNER, builder -> builder
                                 .equiCriteria("l_partkey", "p_partkey")
                                 .filter("CAST(comment AS varchar(55)) >= name")
-                                .left(anyTree(
-                                        filter(
-                                                "comment <= CAST('f' AS varchar(44))",
-                                                tableScan(
-                                                        "lineitem",
-                                                        ImmutableMap.of("l_partkey", "partkey", "comment", "comment")))))
+                                .left(filter(
+                                        "comment <= CAST('f' AS varchar(44))",
+                                        tableScan(
+                                                "lineitem",
+                                                ImmutableMap.of("l_partkey", "partkey", "comment", "comment"))))
                                 .right(anyTree(
                                         tableScan(
                                                 "part",
@@ -670,16 +571,20 @@ public abstract class AbstractPredicatePushdownTest
                         join(INNER, builder -> builder
                                 .equiCriteria("l_partkey", "p_partkey")
                                 .filter("name BETWEEN CAST(linestatus AS varchar(55)) AND CAST(comment AS varchar(55))")
-                                .left(anyTree(tableScan(
+                                .left(anyIfDynamicFilteringEnabled(tableScan(
                                         "lineitem",
                                         ImmutableMap.of("l_partkey", "partkey", "comment", "comment", "linestatus", "linestatus"))))
-                                .right(exchange(project(
-                                        tableScan(
-                                                "part",
-                                                ImmutableMap.of("p_partkey", "partkey", "name", "name"))))))));
+                                .right(exchange(tableScan(
+                                        "part",
+                                        ImmutableMap.of("p_partkey", "partkey", "name", "name")))))));
     }
 
-    private Session noSemiJoinRewrite()
+    private PlanMatchPattern anyIfDynamicFilteringEnabled(PlanMatchPattern source)
+    {
+        return enableDynamicFiltering ? any(source) : source;
+    }
+
+    protected Session noSemiJoinRewrite()
     {
         return Session.builder(getQueryRunner().getDefaultSession())
                 .setSystemProperty(FILTERING_SEMI_JOIN_TO_INNER, "false")

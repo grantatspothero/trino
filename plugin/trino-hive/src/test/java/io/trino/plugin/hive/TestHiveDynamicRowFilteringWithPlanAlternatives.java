@@ -68,6 +68,8 @@ public class TestHiveDynamicRowFilteringWithPlanAlternatives
             throws Exception
     {
         return HiveQueryRunner.builder()
+                // TODO (https://github.com/starburstdata/galaxy-trino/issues/1123) Fix the test so that is passes on default configuration; currently it requires optimizer.optimize-hash-generation=true
+                .addCoordinatorProperty("optimizer.optimize-hash-generation", "true")
                 .setInitialTables(REQUIRED_TPCH_TABLES)
                 .withPlanAlternatives()
                 .setHiveProperties(ImmutableMap.of(

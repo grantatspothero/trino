@@ -30,7 +30,6 @@ import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.planner.plan.LimitNode;
 import io.trino.sql.planner.plan.MarkDistinctNode;
 import io.trino.sql.planner.plan.OutputNode;
-import io.trino.sql.planner.plan.ProjectNode;
 import io.trino.sql.planner.plan.TableScanNode;
 import io.trino.sql.planner.plan.TableWriterNode;
 import io.trino.sql.planner.plan.TopNNode;
@@ -327,7 +326,7 @@ public abstract class BaseJdbcConnectorTest
         boolean supportsSumDistinctPushdown = hasBehavior(SUPPORTS_AGGREGATION_PUSHDOWN);
 
         PlanMatchPattern aggregationOverTableScan = node(AggregationNode.class, node(TableScanNode.class));
-        PlanMatchPattern groupingAggregationOverTableScan = node(AggregationNode.class, node(ProjectNode.class, node(TableScanNode.class)));
+        PlanMatchPattern groupingAggregationOverTableScan = node(AggregationNode.class, node(TableScanNode.class));
         try (TestTable table = new TestTable(
                 getQueryRunner()::execute,
                 "test_cs_agg_pushdown",
@@ -514,7 +513,7 @@ public abstract class BaseJdbcConnectorTest
 
         verifyDistinctAggregationPushdown(
                 withMarkDistinct,
-                node(MarkDistinctNode.class, node(ExchangeNode.class, node(ExchangeNode.class, node(ProjectNode.class, node(TableScanNode.class))))));
+                node(MarkDistinctNode.class, node(ExchangeNode.class, node(ExchangeNode.class, node(TableScanNode.class)))));
         verifyDistinctAggregationPushdown(
                 withSingleStep,
                 node(AggregationNode.class, node(ExchangeNode.class, node(ExchangeNode.class, node(TableScanNode.class)))));
@@ -534,7 +533,7 @@ public abstract class BaseJdbcConnectorTest
                 session,
                 "SELECT count(DISTINCT comment) FROM nation",
                 hasBehavior(SUPPORTS_PREDICATE_PUSHDOWN_WITH_VARCHAR_INEQUALITY),
-                node(AggregationNode.class, node(ProjectNode.class, node(TableScanNode.class))));
+                node(AggregationNode.class, node(TableScanNode.class)));
         // two distinct aggregations
         assertConditionallyPushedDown(
                 session,
@@ -645,7 +644,7 @@ public abstract class BaseJdbcConnectorTest
 
                 assertThat(query(withMarkDistinct, "SELECT count(DISTINCT t_char), count(DISTINCT t_varchar) FROM " + testTable.getName()))
                         .matches("VALUES (BIGINT '7', BIGINT '7')")
-                        .isNotFullyPushedDown(MarkDistinctNode.class, ExchangeNode.class, ExchangeNode.class, ProjectNode.class);
+                        .isNotFullyPushedDown(MarkDistinctNode.class, ExchangeNode.class, ExchangeNode.class);
                 assertThat(query(withSingleStep, "SELECT count(DISTINCT t_char), count(DISTINCT t_varchar) FROM " + testTable.getName()))
                         .matches("VALUES (BIGINT '7', BIGINT '7')")
                         .isNotFullyPushedDown(node(AggregationNode.class, anyTree(node(TableScanNode.class))));
@@ -668,7 +667,7 @@ public abstract class BaseJdbcConnectorTest
                         withMarkDistinct,
                         "SELECT count(DISTINCT t_char), count(DISTINCT t_varchar) FROM " + testTable.getName(),
                         hasBehavior(SUPPORTS_AGGREGATION_PUSHDOWN_COUNT_DISTINCT),
-                        node(MarkDistinctNode.class, node(ExchangeNode.class, node(ExchangeNode.class, node(ProjectNode.class, node(TableScanNode.class))))));
+                        node(MarkDistinctNode.class, node(ExchangeNode.class, node(ExchangeNode.class, node(TableScanNode.class)))));
                 assertConditionallyPushedDown(
                         withSingleStep,
                         "SELECT count(DISTINCT t_char), count(DISTINCT t_varchar) FROM " + testTable.getName(),
@@ -1072,7 +1071,7 @@ public abstract class BaseJdbcConnectorTest
                 .isNotFullyPushedDown(
                         node(TopNNode.class, // FINAL TopN
                                 anyTree(node(JoinNode.class,
-                                        node(ExchangeNode.class, node(ProjectNode.class, node(TableScanNode.class))), // no PARTIAL TopN
+                                        node(ExchangeNode.class, node(TableScanNode.class)), // no PARTIAL TopN
                                         anyTree(node(TableScanNode.class))))));
     }
 

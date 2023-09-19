@@ -91,14 +91,14 @@ public class TestDeterminePreferredDynamicFilterTimeout
                                                 .equiCriteria("LINEITEM_OK", "ORDERS_OK")
                                                 .dynamicFilter("LINEITEM_OK", "ORDERS_OK")
                                                 .left(
-                                                        anyTree(node(FilterNode.class,
-                                                                tableScan("lineitem", ImmutableMap.of("LINEITEM_OK", "orderkey")))))
+                                                        node(FilterNode.class,
+                                                                tableScan("lineitem", ImmutableMap.of("LINEITEM_OK", "orderkey"))))
                                                 .right(
                                                         anyTree(node(FilterNode.class,
                                                                 tableScan("orders", ImmutableMap.of("ORDERS_OK", "orderkey")))))))
                                 .right(
                                         exchange(
-                                                project(tableScan("part", ImmutableMap.of("PART_PK", "partkey"))))))));
+                                                tableScan("part", ImmutableMap.of("PART_PK", "partkey")))))));
     }
 
     @Test
@@ -122,14 +122,14 @@ public class TestDeterminePreferredDynamicFilterTimeout
                                                 .equiCriteria("LINEITEM_OK", "ORDERS_OK")
                                                 .dynamicFilter("LINEITEM_OK", "ORDERS_OK")
                                                 .left(
-                                                        anyTree(node(FilterNode.class,
-                                                                tableScan("lineitem", ImmutableMap.of("LINEITEM_OK", "orderkey")))))
+                                                        node(FilterNode.class,
+                                                                tableScan("lineitem", ImmutableMap.of("LINEITEM_OK", "orderkey"))))
                                                 .right(
                                                         anyTree(node(FilterNode.class,
                                                                 tableScan("orders", ImmutableMap.of("ORDERS_OK", "orderkey")))))))
                                 .right(
                                         exchange(
-                                                project(tableScan("part", ImmutableMap.of("PART_PK", "partkey"))))))));
+                                                tableScan("part", ImmutableMap.of("PART_PK", "partkey")))))));
     }
 
     @Test
@@ -154,8 +154,8 @@ public class TestDeterminePreferredDynamicFilterTimeout
                                                 Optional.empty(),
                                                 ImmutableList.of("SUPPLIER_SK"),
                                                 Optional.empty(),
-                                                project(tableScan("supplier", ImmutableMap.of("SUPPLIER_SK_1", "suppkey"))),
-                                                project(tableScan("supplier", ImmutableMap.of("SUPPLIER_SK_2", "suppkey"))))))));
+                                                tableScan("supplier", ImmutableMap.of("SUPPLIER_SK_1", "suppkey")),
+                                                tableScan("supplier", ImmutableMap.of("SUPPLIER_SK_2", "suppkey")))))));
     }
 
     @Test
@@ -193,8 +193,7 @@ public class TestDeterminePreferredDynamicFilterTimeout
                                                         .right(
                                                                 exchange(
                                                                         LOCAL,
-                                                                        anyTree(
-                                                                                tableScan("partsupp", ImmutableMap.of("P_SUPPKEY", "suppkey", "P_PARTKEY", "partkey"))))))))))));
+                                                                        tableScan("partsupp", ImmutableMap.of("P_SUPPKEY", "suppkey", "P_PARTKEY", "partkey")))))))))));
     }
 
     @Test
