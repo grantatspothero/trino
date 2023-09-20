@@ -78,6 +78,7 @@ import static io.trino.spi.type.VarcharType.createVarcharType;
 import static io.trino.sql.DynamicFilters.createDynamicFilterExpression;
 import static io.trino.sql.ExpressionFormatter.formatExpression;
 import static io.trino.sql.ExpressionUtils.and;
+import static io.trino.sql.planner.TestingPlannerContext.PLANNER_CONTEXT;
 import static io.trino.sql.planner.iterative.rule.test.PlanBuilder.expression;
 import static io.trino.testing.TestingHandles.TEST_TABLE_HANDLE;
 import static io.trino.testing.TestingSession.testSessionBuilder;
@@ -110,7 +111,7 @@ public class TestCanonicalSubplanExtractor
     @BeforeClass
     public void setup()
     {
-        planBuilder = new PlanBuilder(new PlanNodeIdAllocator(), TEST_METADATA, TEST_SESSION);
+        planBuilder = new PlanBuilder(new PlanNodeIdAllocator(), PLANNER_CONTEXT, TEST_SESSION);
         tpchCatalogId = getQueryRunner().getCatalogHandle(getQueryRunner().getDefaultSession().getCatalog().orElseThrow()).getId();
     }
 

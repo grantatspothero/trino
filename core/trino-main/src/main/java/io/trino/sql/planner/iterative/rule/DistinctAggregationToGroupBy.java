@@ -18,8 +18,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.trino.matching.Captures;
 import io.trino.matching.Pattern;
-import io.trino.metadata.Metadata;
+import io.trino.metadata.FunctionResolver;
 import io.trino.spi.function.CatalogSchemaFunctionName;
+import io.trino.sql.PlannerContext;
 import io.trino.sql.planner.OptimizerConfig.DistinctAggregationsStrategy;
 import io.trino.sql.planner.Symbol;
 import io.trino.sql.planner.SymbolAllocator;
@@ -143,12 +144,12 @@ public class DistinctAggregationToGroupBy
                 .noneMatch(aggregation -> aggregation.getMask().isPresent());
     }
 
-    private final Metadata metadata;
+    private final FunctionResolver functionResolver;
     private final DistinctAggregationController distinctAggregationController;
 
-    public DistinctAggregationToGroupBy(Metadata metadata, DistinctAggregationController distinctAggregationController)
+    public DistinctAggregationToGroupBy(PlannerContext plannerContext, DistinctAggregationController distinctAggregationController)
     {
-        this.metadata = requireNonNull(metadata, "metadata is null");
+        this.functionResolver = requireNonNull(plannerContext, "plannerContext is null").getFunctionResolver();
         this.distinctAggregationController = requireNonNull(distinctAggregationController, "distinctAggregationController is null");
     }
 
@@ -283,7 +284,7 @@ public class DistinctAggregationToGroupBy
                     // second, let's create outer aggregation
                     // The inner aggregation node already does non-distinct aggregations, just extract the single value per group
                     Aggregation outerAggregation = new Aggregation(
-                            metadata.resolveFunction(
+                            functionResolver.resolveFunction(
                                     context.getSession(),
                                     QualifiedName.of("arbitrary"),
                                     fromTypes(originalAggregation.getResolvedFunction().getSignature().getReturnType())),

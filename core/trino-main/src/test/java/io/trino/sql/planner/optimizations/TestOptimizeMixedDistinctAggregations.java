@@ -140,7 +140,7 @@ public class TestOptimizeMixedDistinctAggregations
                         ImmutableSet.of(
                                 new RemoveRedundantIdentityProjections(),
                                 new SingleDistinctAggregationToGroupBy(),
-                                new DistinctAggregationToGroupBy(getQueryRunner().getMetadata(), distinctAggregationController),
+                                new DistinctAggregationToGroupBy(getQueryRunner().getPlannerContext(), distinctAggregationController),
                                 new MultipleDistinctAggregationToMarkDistinct(distinctAggregationController))),
                 new IterativeOptimizer(
                         getQueryRunner().getPlannerContext(),

@@ -23,7 +23,6 @@ import io.trino.connector.MockConnectorFactory;
 import io.trino.connector.MockConnectorTableHandle;
 import io.trino.cost.StatsAndCosts;
 import io.trino.execution.warnings.WarningCollector;
-import io.trino.metadata.Metadata;
 import io.trino.metadata.TableHandle;
 import io.trino.plugin.tpch.TpchColumnHandle;
 import io.trino.plugin.tpch.TpchConnectorFactory;
@@ -882,9 +881,8 @@ public class TestCommonSubqueriesExtractor
     @Test
     public void testCommonPredicateWasPushedDownAndDynamicFilter()
     {
-        Metadata metadata = getQueryRunner().getMetadata();
         SymbolAllocator symbolAllocator = new SymbolAllocator();
-        PlanBuilder planBuilder = new PlanBuilder(new PlanNodeIdAllocator(), metadata, TEST_SESSION);
+        PlanBuilder planBuilder = new PlanBuilder(new PlanNodeIdAllocator(), getQueryRunner().getPlannerContext(), TEST_SESSION);
         PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
 
         // subquery A
@@ -946,9 +944,8 @@ public class TestCommonSubqueriesExtractor
     @Test
     public void testCommonPredicateWasFullyPushedDown()
     {
-        Metadata metadata = getQueryRunner().getMetadata();
         SymbolAllocator symbolAllocator = new SymbolAllocator();
-        PlanBuilder planBuilder = new PlanBuilder(new PlanNodeIdAllocator(), metadata, TEST_SESSION);
+        PlanBuilder planBuilder = new PlanBuilder(new PlanNodeIdAllocator(), getQueryRunner().getPlannerContext(), TEST_SESSION);
         PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
 
         // subquery A
@@ -995,9 +992,8 @@ public class TestCommonSubqueriesExtractor
     @Test
     public void testCommonPredicateWasPartiallyPushedDown()
     {
-        Metadata metadata = getQueryRunner().getMetadata();
         SymbolAllocator symbolAllocator = new SymbolAllocator();
-        PlanBuilder planBuilder = new PlanBuilder(new PlanNodeIdAllocator(), metadata, TEST_SESSION);
+        PlanBuilder planBuilder = new PlanBuilder(new PlanNodeIdAllocator(), getQueryRunner().getPlannerContext(), TEST_SESSION);
         PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
 
         // subquery A
@@ -1047,9 +1043,8 @@ public class TestCommonSubqueriesExtractor
     @Test
     public void testCommonPredicateWasNotPushedDownWhenValuesNode()
     {
-        Metadata metadata = getQueryRunner().getMetadata();
         SymbolAllocator symbolAllocator = new SymbolAllocator();
-        PlanBuilder planBuilder = new PlanBuilder(new PlanNodeIdAllocator(), metadata, TEST_SESSION);
+        PlanBuilder planBuilder = new PlanBuilder(new PlanNodeIdAllocator(), getQueryRunner().getPlannerContext(), TEST_SESSION);
         PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
 
         // subquery A

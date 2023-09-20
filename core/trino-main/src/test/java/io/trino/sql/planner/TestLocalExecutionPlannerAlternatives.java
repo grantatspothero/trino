@@ -54,9 +54,9 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.trino.SessionTestUtils.TEST_SESSION;
-import static io.trino.metadata.AbstractMockMetadata.dummyMetadata;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.sql.planner.SystemPartitioningHandle.SINGLE_DISTRIBUTION;
+import static io.trino.sql.planner.TestingPlannerContext.PLANNER_CONTEXT;
 import static io.trino.sql.planner.plan.AggregationNode.globalAggregation;
 import static io.trino.sql.planner.plan.ExchangeNode.Scope.LOCAL;
 import static io.trino.testing.TestingHandles.TEST_CATALOG_HANDLE;
@@ -71,7 +71,7 @@ public class TestLocalExecutionPlannerAlternatives
     private ExecutorService executor;
     private ScheduledExecutorService scheduledExecutor;
 
-    PlanBuilder planBuilder = new PlanBuilder(new PlanNodeIdAllocator(), dummyMetadata(), TEST_SESSION);
+    PlanBuilder planBuilder = new PlanBuilder(new PlanNodeIdAllocator(), PLANNER_CONTEXT, TEST_SESSION);
     LocalExecutionPlanner planner = TaskTestUtils.createTestingPlanner();
 
     @BeforeClass

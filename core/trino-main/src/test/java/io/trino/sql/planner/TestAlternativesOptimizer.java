@@ -106,7 +106,7 @@ public class TestAlternativesOptimizer
 
         PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
         Session session = getQueryRunner().getDefaultSession();
-        PlanBuilder planBuilder = new PlanBuilder(idAllocator, getQueryRunner().getMetadata(), session);
+        PlanBuilder planBuilder = new PlanBuilder(idAllocator, getQueryRunner().getPlannerContext(), session);
         ProjectNode plan = planBuilder.project(
                 Assignments.of(),
                 planBuilder.filter(
@@ -146,7 +146,7 @@ public class TestAlternativesOptimizer
 
         PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
         Session session = getQueryRunner().getDefaultSession();
-        PlanBuilder planBuilder = new PlanBuilder(idAllocator, getQueryRunner().getMetadata(), session);
+        PlanBuilder planBuilder = new PlanBuilder(idAllocator, getQueryRunner().getPlannerContext(), session);
         TableScanNode scan = planBuilder.tableScan(tableHandle, emptyList(), emptyMap());
         PlanNode plan = new ChooseAlternativeNode(
                 idAllocator.getNextId(),
@@ -187,7 +187,7 @@ public class TestAlternativesOptimizer
         String symbol = "symbol";
         PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
         Session session = getQueryRunner().getDefaultSession();
-        PlanBuilder planBuilder = new PlanBuilder(idAllocator, getQueryRunner().getMetadata(), session);
+        PlanBuilder planBuilder = new PlanBuilder(idAllocator, getQueryRunner().getPlannerContext(), session);
         ProjectNode plan = planBuilder.project(
                 Assignments.of(new Symbol(symbol), TRUE_LITERAL),
                 planBuilder.filter(
@@ -238,7 +238,7 @@ public class TestAlternativesOptimizer
         String columnName = "nationkey";
         PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
         Session session = getQueryRunner().getDefaultSession();
-        PlanBuilder planBuilder = new PlanBuilder(idAllocator, getQueryRunner().getMetadata(), session);
+        PlanBuilder planBuilder = new PlanBuilder(idAllocator, getQueryRunner().getPlannerContext(), session);
         Symbol symbol = planBuilder.symbol(columnName, BIGINT);
         ProjectNode plan = planBuilder.project(
                 Assignments.of(symbol, new ComparisonExpression(EQUAL, new SymbolReference(columnName), new LongLiteral("1"))),

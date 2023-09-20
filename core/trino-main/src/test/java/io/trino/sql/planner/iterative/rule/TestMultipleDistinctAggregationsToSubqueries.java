@@ -25,6 +25,7 @@ import io.trino.cost.SymbolStatsEstimate;
 import io.trino.cost.TaskCountEstimator;
 import io.trino.metadata.AnalyzeMetadata;
 import io.trino.metadata.AnalyzeTableHandle;
+import io.trino.metadata.CatalogFunctionMetadata;
 import io.trino.metadata.CatalogInfo;
 import io.trino.metadata.InsertTableHandle;
 import io.trino.metadata.MaterializedViewDefinition;
@@ -87,7 +88,10 @@ import io.trino.spi.connector.WriterScalingOptions;
 import io.trino.spi.expression.ConnectorExpression;
 import io.trino.spi.expression.Constant;
 import io.trino.spi.function.AggregationFunctionMetadata;
+import io.trino.spi.function.BoundSignature;
 import io.trino.spi.function.CatalogSchemaFunctionName;
+import io.trino.spi.function.FunctionDependencyDeclaration;
+import io.trino.spi.function.FunctionId;
 import io.trino.spi.function.FunctionMetadata;
 import io.trino.spi.function.OperatorType;
 import io.trino.spi.predicate.TupleDomain;
@@ -1861,9 +1865,9 @@ public class TestMultipleDistinctAggregationsToSubqueries
         }
 
         @Override
-        public ResolvedFunction resolveFunction(Session session, QualifiedName name, List<TypeSignatureProvider> parameterTypes)
+        public Collection<CatalogFunctionMetadata> getFunctions(Session session, CatalogSchemaFunctionName catalogSchemaFunctionName)
         {
-            return metadata.resolveFunction(session, name, parameterTypes);
+            return metadata.getFunctions(session, catalogSchemaFunctionName);
         }
 
         @Override
@@ -1898,27 +1902,15 @@ public class TestMultipleDistinctAggregationsToSubqueries
         }
 
         @Override
-        public boolean isAggregationFunction(Session session, QualifiedName name)
-        {
-            return metadata.isAggregationFunction(session, name);
-        }
-
-        @Override
-        public boolean isWindowFunction(Session session, QualifiedName name)
-        {
-            return metadata.isWindowFunction(session, name);
-        }
-
-        @Override
-        public FunctionMetadata getFunctionMetadata(Session session, ResolvedFunction resolvedFunction)
-        {
-            return metadata.getFunctionMetadata(session, resolvedFunction);
-        }
-
-        @Override
         public AggregationFunctionMetadata getAggregationFunctionMetadata(Session session, ResolvedFunction resolvedFunction)
         {
             return metadata.getAggregationFunctionMetadata(session, resolvedFunction);
+        }
+
+        @Override
+        public FunctionDependencyDeclaration getFunctionDependencies(Session session, CatalogHandle catalogHandle, FunctionId functionId, BoundSignature boundSignature)
+        {
+            return metadata.getFunctionDependencies(session, catalogHandle, functionId, boundSignature);
         }
 
         @Override
