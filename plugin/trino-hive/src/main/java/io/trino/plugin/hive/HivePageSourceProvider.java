@@ -206,14 +206,14 @@ public class HivePageSourceProvider
             ConnectorTableHandle tableHandle,
             TupleDomain<ColumnHandle> predicate)
     {
+        if (predicate.isNone()) {
+            return TupleDomain.none();
+        }
+
         HiveTableHandle hiveTable = (HiveTableHandle) tableHandle;
         HiveSplit hiveSplit = (HiveSplit) split;
 
         if (shouldSkipBucket(hiveTable, hiveSplit, predicate)) {
-            return TupleDomain.none();
-        }
-
-        if (predicate.isNone()) {
             return TupleDomain.none();
         }
 
