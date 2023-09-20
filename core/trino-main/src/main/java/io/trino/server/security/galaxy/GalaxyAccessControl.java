@@ -1089,7 +1089,7 @@ public class GalaxyAccessControl
 
     private String currentRoleName(SystemSecurityContext context)
     {
-        return getSystemAccessController(context).getRoleDisplayName(context, getRoleId(context.getIdentity()));
+        return getSystemAccessController(context).getRoleDisplayName(context.getIdentity(), getRoleId(context.getIdentity()));
     }
 
     private GalaxySystemAccessController getSystemAccessController(SystemSecurityContext context)

@@ -125,24 +125,15 @@ public class GalaxySystemAccessController
         };
     }
 
-    /**
-     * @see #getRoleDisplayName(Identity, RoleId)
-     */
-    public String getRoleDisplayName(SystemSecurityContext context, RoleId roleId)
-    {
-        return withGalaxyPermissions(context, permissions -> permissions.getRoleDisplayName(roleId));
-    }
-
-    /**
-     * Equivalent of {@link #getRoleDisplayName(SystemSecurityContext, RoleId)} but without caching.
-     * To be used when caching is not possible due to lack of query ID.
-     *
-     * @see #getRoleDisplayName(SystemSecurityContext, RoleId)
-     */
     public String getRoleDisplayName(Identity identity, RoleId roleId)
     {
-        // TODO simplify code not to instantiate GalaxyQueryPermissions
-        return new GalaxyQueryPermissions(accessControlClient, toDispatchSession(identity)).getRoleDisplayName(roleId);
+        // Not cached because this is used for error messages only, so at most once per query.
+        return accessControlClient.listRoles(toDispatchSession(identity)).entrySet().stream()
+                .filter(entry -> roleId.equals(entry.getValue()))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .map(RoleName::toString)
+                .orElse(roleId.toString());
     }
 
     public boolean canExecuteFunction(SystemSecurityContext context, FunctionId functionId)

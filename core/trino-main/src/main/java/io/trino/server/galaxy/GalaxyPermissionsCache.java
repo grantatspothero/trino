@@ -80,8 +80,6 @@ public class GalaxyPermissionsCache
         @GuardedBy("this")
         private Map<RoleName, RoleId> activeRoles;
         @GuardedBy("this")
-        private Map<RoleId, RoleName> allRoles;
-        @GuardedBy("this")
         private ContentsVisibility catalogVisibility;
         // It's a cache only for convenience to use loading cache's bulk loading capability
         private final LoadingCache<TableVisibilityKey, ContentsVisibility> tableVisibility;
@@ -120,16 +118,6 @@ public class GalaxyPermissionsCache
                 activeRoles = ImmutableMap.copyOf(trinoSecurityApi.listEnabledRoles(session));
             }
             return activeRoles;
-        }
-
-        public synchronized String getRoleDisplayName(RoleId roleId)
-        {
-            if (allRoles == null) {
-                allRoles = trinoSecurityApi.listRoles(session).entrySet().stream()
-                        .collect(toImmutableMap(Entry::getValue, Entry::getKey));
-            }
-            RoleName roleName = allRoles.get(roleId);
-            return roleName != null ? roleName.getName() : roleId.toString();
         }
 
         public EntityPrivileges getEntityPrivileges(RoleId roleId, EntityId entity)
