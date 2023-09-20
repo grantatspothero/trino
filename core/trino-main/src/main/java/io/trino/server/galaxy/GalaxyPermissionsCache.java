@@ -129,7 +129,7 @@ public class GalaxyPermissionsCache
                         .collect(toImmutableMap(Entry::getValue, Entry::getKey));
             }
             RoleName roleName = allRoles.get(roleId);
-            return roleName != null ? roleName.getName() : roleId.toString() + " (dropped)";
+            return roleName != null ? roleName.getName() : roleId.toString();
         }
 
         public EntityPrivileges getEntityPrivileges(RoleId roleId, EntityId entity)
