@@ -65,7 +65,9 @@ public class TestHivePageSourceProvider
             "table",
             ImmutableList.of(PARTITION_COLUMN),
             ImmutableList.of(BUCKET_COLUMN, DATA_COLUMN),
-            TupleDomain.all(),
+            TupleDomain.withColumnDomains(ImmutableMap.of(
+                    DATA_COLUMN, Domain.create(ValueSet.ofRanges(Range.range(INTEGER, 1L, true, 100L, true)), false),
+                    PARTITION_COLUMN, Domain.create(ValueSet.of(VARCHAR, utf8Slice("part1")), false))),
             TupleDomain.all(),
             Optional.of(HIVE_BUCKET_HANDLE),
             Optional.empty(),
@@ -119,6 +121,28 @@ public class TestHivePageSourceProvider
                         DATA_COLUMN, Domain.create(ValueSet.of(INTEGER, 1L, 10L, 20L), false)))))
                 .isEqualTo(TupleDomain.withColumnDomains(ImmutableMap.of(
                         DATA_COLUMN, Domain.create(ValueSet.ofRanges(Range.range(INTEGER, 1L, true, 20L, true)), false))));
+    }
+
+    @Test
+    public void testSimplifyConsidersEffectivePredicate()
+    {
+        assertThat(pageSourceProvider.simplifyPredicate(
+                SESSION,
+                HIVE_SPLIT,
+                HIVE_TABLE_HANDLE,
+                TupleDomain.withColumnDomains(ImmutableMap.of(
+                        DATA_COLUMN, Domain.create(ValueSet.of(INTEGER, 1L, 10L, 110L), false)))))
+                .isEqualTo(TupleDomain.withColumnDomains(ImmutableMap.of(
+                        DATA_COLUMN, Domain.create(ValueSet.of(INTEGER, 1L, 10L), false))));
+
+        assertThat(pageSourceProvider.simplifyPredicate(
+                SESSION,
+                HIVE_SPLIT,
+                HIVE_TABLE_HANDLE,
+                TupleDomain.withColumnDomains(ImmutableMap.of(
+                        DATA_COLUMN, Domain.create(ValueSet.of(INTEGER, 1L, 10L, 12L), false)))))
+                .isEqualTo(TupleDomain.withColumnDomains(ImmutableMap.of(
+                        DATA_COLUMN, Domain.create(ValueSet.ofRanges(Range.range(INTEGER, 1L, true, 12L, true)), false))));
     }
 
     @Test

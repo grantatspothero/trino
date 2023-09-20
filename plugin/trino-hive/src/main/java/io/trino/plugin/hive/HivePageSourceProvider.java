@@ -126,7 +126,8 @@ public class HivePageSourceProvider
         HiveTableHandle hiveTable = (HiveTableHandle) tableHandle;
         HiveSplit hiveSplit = (HiveSplit) split;
 
-        if (shouldSkipBucket(hiveTable, hiveSplit, dynamicFilter.getCurrentPredicate())) {
+        TupleDomain<ColumnHandle> prunedDynamicFilter = prunePredicate(split, tableHandle, dynamicFilter.getCurrentPredicate());
+        if (prunedDynamicFilter.isNone()) {
             return new EmptyPageSource();
         }
 
@@ -147,12 +148,6 @@ public class HivePageSourceProvider
                 hiveSplit.getEstimatedFileSize(),
                 hiveSplit.getFileModifiedTime());
 
-        // Perform dynamic partition pruning in case coordinator didn't prune split.
-        // This can happen when dynamic filters are collected after partition splits were listed.
-        if (shouldSkipSplit(columnMappings, dynamicFilter.getCurrentPredicate())) {
-            return new EmptyPageSource();
-        }
-
         Configuration configuration = hdfsEnvironment.getConfiguration(new HdfsContext(session), new Path(hiveSplit.getPath()));
 
         Optional<ConnectorPageSource> pageSource = createHivePageSource(
@@ -166,9 +161,8 @@ public class HivePageSourceProvider
                 hiveSplit.getLength(),
                 hiveSplit.getEstimatedFileSize(),
                 hiveSplit.getSchema(),
-                hiveTable.getCompactEffectivePredicate().intersect(
-                                dynamicFilter.getCurrentPredicate().transformKeys(HiveColumnHandle.class::cast))
-                        .simplify(domainCompactionThreshold),
+                getSimplifiedEffectivePredicate(hiveTable, prunedDynamicFilter)
+                        .transformKeys(HiveColumnHandle.class::cast),
                 hiveColumns,
                 typeManager,
                 hiveSplit.getBucketConversion(),
@@ -192,7 +186,29 @@ public class HivePageSourceProvider
             ConnectorTableHandle tableHandle,
             TupleDomain<ColumnHandle> predicate)
     {
-        return prunePredicate(split, tableHandle, predicate)
+        TupleDomain<ColumnHandle> prunedPredicate = prunePredicate(split, tableHandle, predicate);
+
+        if (prunedPredicate.isNone()) {
+            return TupleDomain.none();
+        }
+
+        return getSimplifiedEffectivePredicate((HiveTableHandle) tableHandle, prunedPredicate)
+                // Keep only columns from pruned predicate because removed columns
+                // are prefilled for split and are irrelevant for filtering split file data.
+                .filter((handle, domain) -> prunedPredicate.getDomains().get().containsKey(handle));
+    }
+
+    /**
+     * Returns predicate that will be used to filter (non-enforced) split data by readers.
+     * Predicate includes dynamic filter columns as well as columns from compact effective
+     * predicate.
+     */
+    private TupleDomain<ColumnHandle> getSimplifiedEffectivePredicate(
+            HiveTableHandle tableHandle,
+            TupleDomain<ColumnHandle> predicate)
+    {
+        return predicate
+                .intersect(tableHandle.getCompactEffectivePredicate())
                 .simplify(domainCompactionThreshold);
     }
 
@@ -232,6 +248,8 @@ public class HivePageSourceProvider
                 hiveSplit.getEstimatedFileSize(),
                 hiveSplit.getFileModifiedTime());
 
+        // Perform dynamic partition pruning in case coordinator didn't prune split.
+        // This can happen when dynamic filters are collected after partition splits were listed.
         if (shouldSkipSplit(columnMappings, predicate)) {
             return TupleDomain.none();
         }
@@ -241,9 +259,8 @@ public class HivePageSourceProvider
                 .map(ColumnMapping::getHiveColumnHandle)
                 .collect(toImmutableSet());
 
-        // Exclude predicate columns for which predicate can be resolved
-        // at HivePageSource creation time (see shouldSkipSplit). Such columns
-        // won't be used to filter split data when reading files.
+        // Exclude prefilled columns because such columns won't be used
+        // to filter split data when reading files.
         return predicate
                 .filter(((columnHandle, domain) -> !prefilledColumns.contains(columnHandle)));
     }
