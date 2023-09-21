@@ -63,6 +63,21 @@ public class TestDeltaLakeDatabricksUnityCompatibility
 
     @Test(groups = {DATABRICKS_UNITY_HTTP_HMS, PROFILE_SPECIFIC_TESTS})
     @Flaky(issue = DATABRICKS_COMMUNICATION_FAILURE_ISSUE, match = DATABRICKS_COMMUNICATION_FAILURE_MATCH)
+    public void testShowCreateManagedSchema()
+    {
+        String managedSchemaName = "test_delta_managed_schema_" + randomNameSuffix();
+        try {
+            onDelta().executeQuery(format("CREATE SCHEMA %s.%s", unityCatalogName, managedSchemaName));
+            assertThat(onTrino().executeQuery("SHOW CREATE SCHEMA delta." + managedSchemaName).getOnlyValue())
+                    .isEqualTo("CREATE SCHEMA delta." + managedSchemaName);
+        }
+        finally {
+            onDelta().executeQuery(format("DROP SCHEMA IF EXISTS %s.%s CASCADE", unityCatalogName, managedSchemaName));
+        }
+    }
+
+    @Test(groups = {DATABRICKS_UNITY_HTTP_HMS, PROFILE_SPECIFIC_TESTS})
+    @Flaky(issue = DATABRICKS_COMMUNICATION_FAILURE_ISSUE, match = DATABRICKS_COMMUNICATION_FAILURE_MATCH)
     public void testBasicTableReadWrite()
     {
         String tableName = "test_read_write";

@@ -364,7 +364,7 @@ public final class ThriftMetastoreUtil
 
         return Database.builder()
                 .setDatabaseName(database.getName())
-                .setLocation(Optional.ofNullable(database.getLocationUri()))
+                .setLocation(Optional.ofNullable(emptyToNull(database.getLocationUri())))
                 .setOwnerName(Optional.of(ownerName))
                 .setOwnerType(Optional.of(ownerType))
                 .setComment(Optional.ofNullable(database.getDescription()))
