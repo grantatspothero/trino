@@ -379,6 +379,8 @@ public final class ThriftMetastoreUtil
 
         return Database.builder()
                 .setDatabaseName(database.getName())
+                // Some metastore implementations like Databricks Unity Catalog can return empty strings
+                // for database locations. We treat them as null.
                 .setLocation(Optional.ofNullable(emptyToNull(database.getLocationUri())))
                 .setOwnerName(Optional.of(ownerName))
                 .setOwnerType(Optional.of(ownerType))
