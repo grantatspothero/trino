@@ -43,4 +43,18 @@ public interface ConnectorPageSourceProvider
     {
         throw new UnsupportedOperationException();
     }
+
+    /**
+     * Prunes columns from predicate that have prefilled values for a given split.
+     * If split is completely filtered out by a given predicate, then this method
+     * must return {@link TupleDomain#none}.
+     */
+    default TupleDomain<ColumnHandle> prunePredicate(
+            ConnectorSession session,
+            ConnectorSplit split,
+            ConnectorTableHandle table,
+            TupleDomain<ColumnHandle> predicate)
+    {
+        throw new UnsupportedOperationException();
+    }
 }

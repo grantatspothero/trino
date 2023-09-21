@@ -11,13 +11,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.plugin.hive.dynamicfiltering;
+package io.trino.galaxy.dynamicfiltering;
 
 import com.google.inject.Inject;
 import com.starburstdata.trino.plugins.dynamicfiltering.DynamicPageFilterCache;
 import com.starburstdata.trino.plugins.dynamicfiltering.DynamicRowFilteringPageSource;
 import com.starburstdata.trino.plugins.dynamicfiltering.ForDynamicRowFiltering;
-import io.trino.plugin.hive.HivePageSourceProvider;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.ConnectorPageSource;
 import io.trino.spi.connector.ConnectorPageSourceProvider;
@@ -36,7 +35,7 @@ import static com.starburstdata.trino.plugins.dynamicfiltering.DynamicRowFilteri
 import static com.starburstdata.trino.plugins.dynamicfiltering.DynamicRowFilteringSessionProperties.isDynamicRowFilteringEnabled;
 import static java.util.Objects.requireNonNull;
 
-/**
+/*
  * Copy of DynamicRowFilteringModule from Starburst Trino plugins repo because adjustments
  * to {@link ConnectorPageSourceProvider} are required for Galaxy SPI.
  */
@@ -96,10 +95,6 @@ public class DynamicRowFilteringPageSourceProvider
         // DynamicRowFilteringPageSourceProvider doesn't simplify dynamic predicate,
         // but we can still prune prefilled columns from predicate, which are ineffective
         // in filtering split data
-        if (delegatePageSourceProvider instanceof HivePageSourceProvider hivePageSourceProvider) {
-            return hivePageSourceProvider.prunePredicate(split, table, predicate);
-        }
-
-        return predicate;
+        return delegatePageSourceProvider.prunePredicate(session, split, table, predicate);
     }
 }

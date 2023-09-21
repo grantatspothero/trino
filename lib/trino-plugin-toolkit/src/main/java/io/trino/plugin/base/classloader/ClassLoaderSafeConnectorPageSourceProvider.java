@@ -61,4 +61,16 @@ public class ClassLoaderSafeConnectorPageSourceProvider
             return delegate.simplifyPredicate(session, split, table, predicate);
         }
     }
+
+    @Override
+    public TupleDomain<ColumnHandle> prunePredicate(
+            ConnectorSession session,
+            ConnectorSplit split,
+            ConnectorTableHandle table,
+            TupleDomain<ColumnHandle> predicate)
+    {
+        try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
+            return delegate.prunePredicate(session, split, table, predicate);
+        }
+    }
 }

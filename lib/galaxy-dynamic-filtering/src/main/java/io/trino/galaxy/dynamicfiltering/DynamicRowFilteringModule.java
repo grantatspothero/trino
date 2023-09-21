@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.plugin.hive.dynamicfiltering;
+package io.trino.galaxy.dynamicfiltering;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
@@ -31,7 +31,7 @@ import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static org.weakref.jmx.guice.ExportBinder.newExporter;
 
-/**
+/*
  * Copy of DynamicRowFilteringModule from Starburst Trino plugins repo because adjustments
  * to {@link ConnectorPageSourceProvider} are required for Galaxy SPI.
  */

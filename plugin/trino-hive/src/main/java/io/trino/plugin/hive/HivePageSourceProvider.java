@@ -126,7 +126,7 @@ public class HivePageSourceProvider
         HiveTableHandle hiveTable = (HiveTableHandle) tableHandle;
         HiveSplit hiveSplit = (HiveSplit) split;
 
-        TupleDomain<ColumnHandle> prunedDynamicFilter = prunePredicate(split, tableHandle, dynamicFilter.getCurrentPredicate());
+        TupleDomain<ColumnHandle> prunedDynamicFilter = prunePredicate(session, split, tableHandle, dynamicFilter.getCurrentPredicate());
         if (prunedDynamicFilter.isNone()) {
             return new EmptyPageSource();
         }
@@ -186,7 +186,7 @@ public class HivePageSourceProvider
             ConnectorTableHandle tableHandle,
             TupleDomain<ColumnHandle> predicate)
     {
-        TupleDomain<ColumnHandle> prunedPredicate = prunePredicate(split, tableHandle, predicate);
+        TupleDomain<ColumnHandle> prunedPredicate = prunePredicate(session, split, tableHandle, predicate);
 
         if (prunedPredicate.isNone()) {
             return TupleDomain.none();
@@ -217,7 +217,9 @@ public class HivePageSourceProvider
      * Returns {@link TupleDomain#none()} if no data would be returned for a
      * given split and predicate.
      */
+    @Override
     public TupleDomain<ColumnHandle> prunePredicate(
+            ConnectorSession session,
             ConnectorSplit split,
             ConnectorTableHandle tableHandle,
             TupleDomain<ColumnHandle> predicate)

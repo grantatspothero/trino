@@ -39,6 +39,7 @@
         <module>core/trino-server-rpm</module>
         <module>core/trino-spi</module>
         <module>docs</module>
+        <module>lib/galaxy-dynamic-filtering</module>
         <module>lib/trino-array</module>
         <module>lib/trino-cache</module>
         <module>lib/trino-filesystem</module>
@@ -1088,6 +1089,12 @@
                 <groupId>io.swagger</groupId>
                 <artifactId>swagger-core</artifactId>
                 <version>1.6.2</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>galaxy-dynamic-filtering</artifactId>
+                <version>${project.version}</version>
             </dependency>
 
             <dependency>
