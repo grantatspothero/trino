@@ -71,7 +71,9 @@ public class GalaxyOperatorAuthenticationFilter
             throws IOException
     {
         String requestPath = requestContext.getUriInfo().getPath();
-        if (requestPath.startsWith("v1/statement/drainState") || requestPath.startsWith("v1/galaxy/health")) {
+        if (requestPath.startsWith("v1/statement/drainState")
+                || requestPath.startsWith("v1/galaxy/health")
+                || requestPath.startsWith("v1/galaxy/autoscaling")) {
             String authHeader = requestContext.getHeaderString(OPERATOR_AUTHENTICATION_HEADER);
             if (authHeader == null || authHeader.isEmpty()) {
                 log.error("Missing or empty authentication header");

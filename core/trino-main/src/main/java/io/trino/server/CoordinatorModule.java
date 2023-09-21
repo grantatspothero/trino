@@ -333,6 +333,10 @@ public class CoordinatorModule
         install(new ResultsCacheModule());
         install(new QueryExecutionFactoryModule());
 
+        configBinder(binder).bindConfig(GalaxyTrinoAutoscalingConfig.class);
+        binder.bind(WorkerRecommendationProvider.class).in(Scopes.SINGLETON);
+        jaxrsBinder(binder).bind(GalaxyTrinoAutoscalingResource.class);
+
         // cleanup
         binder.bind(ExecutorCleanup.class).asEagerSingleton();
     }
