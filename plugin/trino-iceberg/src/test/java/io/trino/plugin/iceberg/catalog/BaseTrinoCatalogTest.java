@@ -20,6 +20,7 @@ import io.trino.plugin.hive.LocationAccessControl;
 import io.trino.plugin.hive.NodeVersion;
 import io.trino.plugin.iceberg.CommitTaskData;
 import io.trino.plugin.iceberg.IcebergMetadata;
+import io.trino.plugin.iceberg.NoopWorkScheduler;
 import io.trino.plugin.iceberg.TableStatisticsWriter;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogHandle;
@@ -113,6 +114,7 @@ public abstract class BaseTrinoCatalogTest
                     CatalogHandle.fromId("iceberg:NORMAL:v12345"),
                     jsonCodec(CommitTaskData.class),
                     catalog,
+                    new NoopWorkScheduler(),
                     (connectorIdentity, fileIoProperties) -> {
                         throw new UnsupportedOperationException();
                     },

@@ -127,6 +127,8 @@ public class IcebergModule
         binder.bind(FunctionProvider.class).to(IcebergFunctionProvider.class).in(Scopes.SINGLETON);
         binder.bind(TableChangesFunctionProcessorProvider.class).in(Scopes.SINGLETON);
 
+        newOptionalBinder(binder, WorkScheduler.class).setDefault().toInstance(new NoopWorkScheduler());
+
         // bind block serializers for the purpose of TupleDomain serde
         binder.bind(HiveBlockEncodingSerde.class).in(Scopes.SINGLETON);
         jsonBinder(binder).addSerializerBinding(Block.class).to(BlockJsonSerde.Serializer.class);

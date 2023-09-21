@@ -1005,6 +1005,7 @@ public class TestIcebergV2
         CachingHiveMetastore cachingHiveMetastore = createPerTransactionCache(metastore, 1000);
         TrinoCatalog catalog = new TrinoHiveCatalog(
                 new CatalogName("hive"),
+                new NoopWorkScheduler(),
                 cachingHiveMetastore,
                 new TrinoViewHiveMetastore(cachingHiveMetastore, false, "trino-version", "test"),
                 fileSystemFactory,

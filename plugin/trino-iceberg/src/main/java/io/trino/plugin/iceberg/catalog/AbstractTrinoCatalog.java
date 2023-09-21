@@ -25,6 +25,7 @@ import io.trino.plugin.iceberg.ColumnIdentity;
 import io.trino.plugin.iceberg.IcebergMaterializedViewDefinition;
 import io.trino.plugin.iceberg.IcebergUtil;
 import io.trino.plugin.iceberg.PartitionTransforms.ColumnTransform;
+import io.trino.plugin.iceberg.WorkScheduler;
 import io.trino.plugin.iceberg.fileio.ForwardingOutputFile;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogSchemaTableName;
@@ -79,6 +80,7 @@ import static io.trino.plugin.hive.util.HiveUtil.escapeTableName;
 import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_FILESYSTEM_ERROR;
 import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_INVALID_METADATA;
 import static io.trino.plugin.iceberg.IcebergMaterializedViewAdditionalProperties.STORAGE_SCHEMA;
+import static io.trino.plugin.iceberg.IcebergMaterializedViewAdditionalProperties.getRefreshSchedule;
 import static io.trino.plugin.iceberg.IcebergMaterializedViewAdditionalProperties.getStorageSchema;
 import static io.trino.plugin.iceberg.IcebergMaterializedViewDefinition.decodeMaterializedViewData;
 import static io.trino.plugin.iceberg.IcebergTableName.tableNameWithType;
@@ -118,23 +120,27 @@ public abstract class AbstractTrinoCatalog
         implements TrinoCatalog
 {
     public static final String TRINO_CREATED_BY_VALUE = "Trino Iceberg connector";
+    public static final String REFRESH_JOB_ID_PROPERTY = "refresh_job_id";
     protected static final String TRINO_CREATED_BY = HiveMetadata.TRINO_CREATED_BY;
     protected static final String TRINO_QUERY_ID_NAME = HiveMetadata.TRINO_QUERY_ID_NAME;
 
     private final CatalogName catalogName;
     private final TypeManager typeManager;
     protected final IcebergTableOperationsProvider tableOperationsProvider;
+    protected final WorkScheduler workScheduler;
     private final TrinoFileSystemFactory fileSystemFactory;
     private final boolean useUniqueTableLocation;
 
     protected AbstractTrinoCatalog(
             CatalogName catalogName,
+            WorkScheduler workScheduler,
             TypeManager typeManager,
             IcebergTableOperationsProvider tableOperationsProvider,
             TrinoFileSystemFactory fileSystemFactory,
             boolean useUniqueTableLocation)
     {
         this.catalogName = requireNonNull(catalogName, "catalogName is null");
+        this.workScheduler = requireNonNull(workScheduler, "workScheduler is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.tableOperationsProvider = requireNonNull(tableOperationsProvider, "tableOperationsProvider is null");
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
@@ -219,6 +225,39 @@ public abstract class AbstractTrinoCatalog
         catch (RuntimeException e) {
             throw new TrinoException(ICEBERG_FILESYSTEM_ERROR, "Unable to load storage table metadata for materialized view: " + viewName);
         }
+    }
+
+    public Optional<String> updateMaterializedViewRefreshSchedule(ConnectorSession session, SchemaTableName viewName, Optional<String> existingJobId, Optional<String> schedule)
+    {
+        if (existingJobId.isEmpty()) {
+            if (schedule.isPresent()) {
+                return Optional.of(workScheduler.createMaterializedViewRefreshJob(
+                        session,
+                        catalogName.toString(),
+                        viewName.getSchemaName(),
+                        viewName.getTableName(),
+                        schedule.orElseThrow()));
+            }
+            return Optional.empty();
+        }
+
+        if (schedule.isEmpty()) {
+            workScheduler.deleteJobSchedule(session, existingJobId.get());
+            return Optional.empty();
+        }
+
+        boolean updateSuccessful = workScheduler.updateJobSchedule(session, existingJobId.get(), schedule.get());
+        if (updateSuccessful) {
+            return existingJobId;
+        }
+
+        // This may happen if the job was deleted in the UI
+        return Optional.of(workScheduler.createMaterializedViewRefreshJob(
+                session,
+                catalogName.toString(),
+                viewName.getSchemaName(),
+                viewName.getTableName(),
+                schedule.orElseThrow()));
     }
 
     protected Transaction newCreateTableTransaction(
@@ -398,6 +437,24 @@ public abstract class AbstractTrinoCatalog
                 });
     }
 
+    protected Optional<String> createMaterializedViewRefreshJob(ConnectorSession session, SchemaTableName viewName, Map<String, Object> materializedViewProperties)
+    {
+        Optional<String> refreshSchedule = getRefreshSchedule(materializedViewProperties);
+        return refreshSchedule.map(schedule ->
+                workScheduler.createMaterializedViewRefreshJob(
+                        session,
+                        catalogName.toString(),
+                        viewName.getSchemaName(),
+                        viewName.getTableName(),
+                        schedule));
+    }
+
+    protected void updateMaterializedViewNameForScheduledWork(ConnectorSession session, Map<String, String> tableProperties, SchemaTableName target)
+    {
+        Optional<String> refreshJobId = Optional.ofNullable(tableProperties.get(REFRESH_JOB_ID_PROPERTY));
+        refreshJobId.ifPresent(jobId -> workScheduler.updateMaterializedViewName(session, jobId, target.getTableName()));
+    }
+
     /**
      * Substitutes type not supported by Iceberg with a type that is supported.
      * Upon reading from a materialized view, the types will be coerced back to the original ones,
@@ -500,6 +557,22 @@ public abstract class AbstractTrinoCatalog
     }
 
     protected abstract void invalidateTableCache(SchemaTableName schemaTableName);
+
+    protected Map<String, String> createMaterializedViewProperties(ConnectorSession session, SchemaTableName storageTableName, Optional<String> refreshJobId)
+    {
+        ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
+                .putAll(createMaterializedViewProperties(session, storageTableName));
+        refreshJobId.ifPresent(id -> properties.put(REFRESH_JOB_ID_PROPERTY, id));
+        return properties.buildOrThrow();
+    }
+
+    protected Map<String, String> createMaterializedViewProperties(ConnectorSession session, Location storageMetadataLocation, Optional<String> refreshJobId)
+    {
+        ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
+                .putAll(createMaterializedViewProperties(session, storageMetadataLocation));
+        refreshJobId.ifPresent(id -> properties.put(REFRESH_JOB_ID_PROPERTY, id));
+        return properties.buildOrThrow();
+    }
 
     protected static class MaterializedViewMayBeBeingRemovedException
             extends RuntimeException

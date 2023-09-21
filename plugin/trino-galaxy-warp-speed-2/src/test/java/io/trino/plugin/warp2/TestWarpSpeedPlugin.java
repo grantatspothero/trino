@@ -29,6 +29,7 @@ public class TestWarpSpeedPlugin
 {
     private static final String TESTING_ACCOUNT_URL = "https://whackadoodle.galaxy.com";
     private static final String TESTING_CATALOG_ID = "c-1234567890";
+    private static final String TESTING_CLUSTER_ID = "w-9999999999";
 
     @Test
     public void testCreateConnector()
@@ -41,11 +42,13 @@ public class TestWarpSpeedPlugin
                         ImmutableMap.<String, String>builder()
                                 .put("OBJECTSTORE__galaxy.account-url", TESTING_ACCOUNT_URL)
                                 .put("OBJECTSTORE__galaxy.catalog-id", TESTING_CATALOG_ID)
+                                .put("OBJECTSTORE__galaxy.cluster-id", TESTING_CLUSTER_ID)
                                 .put("HIVE__galaxy.account-url", TESTING_ACCOUNT_URL)
                                 .put("HIVE__galaxy.catalog-id", TESTING_CATALOG_ID)
                                 .put("HIVE__hive.metastore.uri", "thrift://foo:1234")
                                 .put("ICEBERG__galaxy.account-url", TESTING_ACCOUNT_URL)
                                 .put("ICEBERG__galaxy.catalog-id", TESTING_CATALOG_ID)
+                                .put("ICEBERG__galaxy.cluster-id", TESTING_CLUSTER_ID)
                                 .put("ICEBERG__hive.metastore.uri", "thrift://foo:1234")
                                 .put("DELTA__galaxy.account-url", TESTING_ACCOUNT_URL)
                                 .put("DELTA__galaxy.catalog-id", TESTING_CATALOG_ID)

@@ -35,6 +35,7 @@ import io.trino.plugin.hive.metastore.thrift.ThriftMetastoreConfig;
 import io.trino.plugin.hive.metastore.thrift.ThriftMetastoreFactory;
 import io.trino.plugin.iceberg.IcebergConfig;
 import io.trino.plugin.iceberg.IcebergSchemaProperties;
+import io.trino.plugin.iceberg.NoopWorkScheduler;
 import io.trino.plugin.iceberg.catalog.BaseTrinoCatalogTest;
 import io.trino.plugin.iceberg.catalog.TrinoCatalog;
 import io.trino.spi.security.ConnectorIdentity;
@@ -112,6 +113,7 @@ public class TestTrinoHiveCatalogWithHiveMetastore
         CachingHiveMetastore metastore = createPerTransactionCache(new BridgingHiveMetastore(thriftMetastore), 1000);
         return new TrinoHiveCatalog(
                 new CatalogName("catalog"),
+                new NoopWorkScheduler(),
                 metastore,
                 new TrinoViewHiveMetastore(metastore, false, "trino-version", "Test"),
                 fileSystemFactory,

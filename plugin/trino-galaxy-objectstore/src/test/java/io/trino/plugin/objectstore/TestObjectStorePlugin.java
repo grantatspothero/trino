@@ -30,6 +30,7 @@ public class TestObjectStorePlugin
     private static final String TESTING_GALAXY_METASTORE_ID = "ms-1234567890";
     private static final String TESTING_GALAXY_DEFAULT_DATA_DIR = "/dev/null";
     private static final String TESTING_CATALOG_ID = "c-1234567890";
+    private static final String TESTING_CLUSTER_ID = "w-9999999999";
     private static final String SHARED_SECRET = "1234567890123456789012345678901234567890123456789012345678901234";
 
     @Test
@@ -43,11 +44,13 @@ public class TestObjectStorePlugin
                         ImmutableMap.<String, String>builder()
                                 .put("OBJECTSTORE__galaxy.account-url", TESTING_ACCOUNT_URL)
                                 .put("OBJECTSTORE__galaxy.catalog-id", TESTING_CATALOG_ID)
+                                .put("OBJECTSTORE__galaxy.cluster-id", TESTING_CLUSTER_ID)
                                 .put("HIVE__galaxy.account-url", TESTING_ACCOUNT_URL)
                                 .put("HIVE__galaxy.catalog-id", TESTING_CATALOG_ID)
                                 .put("HIVE__hive.metastore.uri", "thrift://foo:1234")
                                 .put("ICEBERG__galaxy.account-url", TESTING_ACCOUNT_URL)
                                 .put("ICEBERG__galaxy.catalog-id", TESTING_CATALOG_ID)
+                                .put("ICEBERG__galaxy.cluster-id", TESTING_CLUSTER_ID)
                                 .put("ICEBERG__hive.metastore.uri", "thrift://foo:1234")
                                 .put("DELTA__galaxy.account-url", TESTING_ACCOUNT_URL)
                                 .put("DELTA__galaxy.catalog-id", TESTING_CATALOG_ID)
@@ -70,12 +73,14 @@ public class TestObjectStorePlugin
                         ImmutableMap.<String, String>builder()
                                 .put("OBJECTSTORE__galaxy.account-url", TESTING_ACCOUNT_URL)
                                 .put("OBJECTSTORE__galaxy.catalog-id", TESTING_CATALOG_ID)
+                                .put("OBJECTSTORE__galaxy.cluster-id", TESTING_CLUSTER_ID)
                                 .put("HIVE__galaxy.account-url", TESTING_ACCOUNT_URL)
                                 .put("HIVE__galaxy.catalog-id", TESTING_CATALOG_ID)
                                 .put("HIVE__hive.metastore", "glue")
                                 .put("HIVE__hive.metastore.glue.region", "us-east-2")
                                 .put("ICEBERG__galaxy.account-url", TESTING_ACCOUNT_URL)
                                 .put("ICEBERG__galaxy.catalog-id", TESTING_CATALOG_ID)
+                                .put("ICEBERG__galaxy.cluster-id", TESTING_CLUSTER_ID)
                                 .put("ICEBERG__iceberg.catalog.type", "glue")
                                 .put("ICEBERG__hive.metastore.glue.region", "us-east-2")
                                 .put("DELTA__galaxy.account-url", TESTING_ACCOUNT_URL)
@@ -99,6 +104,7 @@ public class TestObjectStorePlugin
                         ImmutableMap.<String, String>builder()
                                 .put("OBJECTSTORE__galaxy.account-url", TESTING_ACCOUNT_URL)
                                 .put("OBJECTSTORE__galaxy.catalog-id", TESTING_CATALOG_ID)
+                                .put("OBJECTSTORE__galaxy.cluster-id", TESTING_CLUSTER_ID)
                                 .put("HIVE__galaxy.account-url", TESTING_ACCOUNT_URL)
                                 .put("HIVE__galaxy.catalog-id", TESTING_CATALOG_ID)
                                 .put("HIVE__hive.metastore", "galaxy")
@@ -108,6 +114,7 @@ public class TestObjectStorePlugin
                                 .put("HIVE__galaxy.metastore.server-uri", TESTING_GALAXY_METASTORE_URL)
                                 .put("ICEBERG__galaxy.account-url", TESTING_ACCOUNT_URL)
                                 .put("ICEBERG__galaxy.catalog-id", TESTING_CATALOG_ID)
+                                .put("ICEBERG__galaxy.cluster-id", TESTING_CLUSTER_ID)
                                 .put("ICEBERG__iceberg.catalog.type", "GALAXY_METASTORE")
                                 .put("ICEBERG__galaxy.metastore.default-data-dir", TESTING_GALAXY_DEFAULT_DATA_DIR)
                                 .put("ICEBERG__galaxy.metastore.metastore-id", TESTING_GALAXY_METASTORE_ID)
@@ -152,6 +159,8 @@ public class TestObjectStorePlugin
                                 .putAll(withAllTableTypes("hive.metastore.uri", "thrift://localhost:1234"))
                                 .putAll(withAllTableTypes("galaxy.account-url", "https://localhost:1234"))
                                 .putAll(withAllTableTypes("galaxy.catalog-id", "c-1234567890"))
+                                .put("OBJECTSTORE__galaxy.cluster-id", "w-9999999999")
+                                .put("ICEBERG__galaxy.cluster-id", "w-9999999999")
                                 .buildOrThrow(),
                         new TestingConnectorContext()))
                 .hasMessageContaining(exceptionString);

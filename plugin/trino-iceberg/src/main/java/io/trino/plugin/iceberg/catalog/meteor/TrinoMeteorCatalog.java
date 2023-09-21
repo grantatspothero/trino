@@ -400,6 +400,12 @@ public class TrinoMeteorCatalog
         throw new TrinoException(NOT_SUPPORTED, "Operation not supported by Meteor Catalog");
     }
 
+    @Override
+    public void updateMaterializedViewRefreshSchedule(ConnectorSession session, SchemaTableName viewName, Optional<String> schedule)
+    {
+        throw new TrinoException(NOT_SUPPORTED, "Operation not supported by Meteor Catalog");
+    }
+
     public MeteorCatalogClient getCatalogClient()
     {
         return apiClient;

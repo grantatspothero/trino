@@ -22,6 +22,7 @@ import io.trino.plugin.hive.metastore.HiveMetastoreFactory;
 import io.trino.plugin.hive.metastore.cache.CachingHiveMetastore;
 import io.trino.plugin.iceberg.IcebergConfig;
 import io.trino.plugin.iceberg.IcebergSecurityConfig;
+import io.trino.plugin.iceberg.WorkScheduler;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
 import io.trino.plugin.iceberg.catalog.TrinoCatalog;
 import io.trino.plugin.iceberg.catalog.TrinoCatalogFactory;
@@ -43,6 +44,7 @@ public class TrinoHiveCatalogFactory
     private final TrinoFileSystemFactory fileSystemFactory;
     private final TypeManager typeManager;
     private final IcebergTableOperationsProvider tableOperationsProvider;
+    private final WorkScheduler workScheduler;
     private final String trinoVersion;
     private final boolean isUniqueTableLocation;
     private final boolean isUsingSystemSecurity;
@@ -57,6 +59,7 @@ public class TrinoHiveCatalogFactory
             TrinoFileSystemFactory fileSystemFactory,
             TypeManager typeManager,
             IcebergTableOperationsProvider tableOperationsProvider,
+            WorkScheduler workScheduler,
             NodeVersion nodeVersion,
             IcebergSecurityConfig securityConfig)
     {
@@ -65,6 +68,7 @@ public class TrinoHiveCatalogFactory
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.tableOperationsProvider = requireNonNull(tableOperationsProvider, "tableOperationProvider is null");
+        this.workScheduler = requireNonNull(workScheduler, "workScheduler is null");
         this.trinoVersion = nodeVersion.toString();
         this.isUniqueTableLocation = config.isUniqueTableLocation();
         this.isUsingSystemSecurity = securityConfig.getSecuritySystem() == SYSTEM;
@@ -78,6 +82,7 @@ public class TrinoHiveCatalogFactory
         CachingHiveMetastore metastore = createPerTransactionCache(metastoreFactory.createMetastore(Optional.of(identity)), 1000);
         return new TrinoHiveCatalog(
                 catalogName,
+                workScheduler,
                 metastore,
                 new TrinoViewHiveMetastore(metastore, isUsingSystemSecurity, trinoVersion, TRINO_CREATED_BY_VALUE),
                 fileSystemFactory,

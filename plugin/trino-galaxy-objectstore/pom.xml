@@ -79,6 +79,12 @@
 
         <dependency>
             <groupId>io.starburst.stargate</groupId>
+            <artifactId>account-work-client</artifactId>
+            <version>${dep.stargate.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.starburst.stargate</groupId>
             <artifactId>stargate-ids</artifactId>
         </dependency>
 

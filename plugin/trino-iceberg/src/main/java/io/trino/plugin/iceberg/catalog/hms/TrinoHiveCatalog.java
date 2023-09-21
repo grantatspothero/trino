@@ -36,6 +36,7 @@ import io.trino.plugin.hive.metastore.cache.CachingHiveMetastore;
 import io.trino.plugin.hive.util.HiveUtil;
 import io.trino.plugin.iceberg.IcebergTableName;
 import io.trino.plugin.iceberg.UnknownTableTypeException;
+import io.trino.plugin.iceberg.WorkScheduler;
 import io.trino.plugin.iceberg.catalog.AbstractTrinoCatalog;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperations;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
@@ -99,6 +100,7 @@ import static io.trino.plugin.hive.metastore.StorageFormat.VIEW_STORAGE_FORMAT;
 import static io.trino.plugin.hive.util.HiveUtil.isHiveSystemSchema;
 import static io.trino.plugin.hive.util.HiveUtil.isIcebergTable;
 import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_BAD_DATA;
+import static io.trino.plugin.iceberg.IcebergMaterializedViewAdditionalProperties.REFRESH_SCHEDULE;
 import static io.trino.plugin.iceberg.IcebergMaterializedViewAdditionalProperties.STORAGE_SCHEMA;
 import static io.trino.plugin.iceberg.IcebergMaterializedViewDefinition.encodeMaterializedViewData;
 import static io.trino.plugin.iceberg.IcebergMaterializedViewDefinition.fromConnectorMaterializedViewDefinition;
@@ -151,6 +153,7 @@ public class TrinoHiveCatalog
 
     public TrinoHiveCatalog(
             CatalogName catalogName,
+            WorkScheduler workScheduler,
             CachingHiveMetastore metastore,
             TrinoViewHiveMetastore trinoViewHiveMetastore,
             TrinoFileSystemFactory fileSystemFactory,
@@ -161,7 +164,7 @@ public class TrinoHiveCatalog
             boolean deleteSchemaLocationsFallback,
             boolean hideMaterializedViewStorageTable)
     {
-        super(catalogName, typeManager, tableOperationsProvider, fileSystemFactory, useUniqueTableLocation);
+        super(catalogName, workScheduler, typeManager, tableOperationsProvider, fileSystemFactory, useUniqueTableLocation);
         this.metastore = requireNonNull(metastore, "metastore is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.trinoViewHiveMetastore = requireNonNull(trinoViewHiveMetastore, "trinoViewHiveMetastore is null");
@@ -618,8 +621,9 @@ public class TrinoHiveCatalog
 
         if (hideMaterializedViewStorageTable) {
             Location storageMetadataLocation = createMaterializedViewStorage(session, viewName, definition, materializedViewProperties);
+            Optional<String> refreshJobId = createMaterializedViewRefreshJob(session, viewName, materializedViewProperties);
 
-            Map<String, String> viewProperties = createMaterializedViewProperties(session, storageMetadataLocation);
+            Map<String, String> viewProperties = createMaterializedViewProperties(session, storageMetadataLocation, refreshJobId);
             Column dummyColumn = new Column("dummy", HIVE_STRING, Optional.empty(), ImmutableMap.of());
             io.trino.plugin.hive.metastore.Table.Builder tableBuilder = io.trino.plugin.hive.metastore.Table.builder()
                     .setDatabaseName(viewName.getSchemaName())
@@ -657,9 +661,10 @@ public class TrinoHiveCatalog
             Optional<io.trino.plugin.hive.metastore.Table> existing)
     {
         SchemaTableName storageTable = createMaterializedViewStorageTable(session, viewName, definition, materializedViewProperties);
+        Optional<String> refreshJobId = createMaterializedViewRefreshJob(session, viewName, materializedViewProperties);
 
         // Create a view indicating the storage table
-        Map<String, String> viewProperties = createMaterializedViewProperties(session, storageTable);
+        Map<String, String> viewProperties = createMaterializedViewProperties(session, storageTable, refreshJobId);
         Column dummyColumn = new Column("dummy", HIVE_STRING, Optional.empty(), Map.of());
 
         io.trino.plugin.hive.metastore.Table.Builder tableBuilder = io.trino.plugin.hive.metastore.Table.builder()
@@ -723,6 +728,30 @@ public class TrinoHiveCatalog
         replaceMaterializedView(session, viewName, existing, newDefinition);
     }
 
+    @Override
+    public void updateMaterializedViewRefreshSchedule(ConnectorSession session, SchemaTableName viewName, Optional<String> schedule)
+    {
+        io.trino.plugin.hive.metastore.Table existing = metastore.getTable(viewName.getSchemaName(), viewName.getTableName())
+                .orElseThrow(() -> new ViewNotFoundException(viewName));
+
+        if (!isTrinoMaterializedView(existing.getTableType(), existing.getParameters())) {
+            throw new TrinoException(UNSUPPORTED_TABLE_TYPE, "Existing table is not a Materialized View: " + viewName);
+        }
+
+        Optional<String> existingJobId = Optional.ofNullable(existing.getParameters().get(REFRESH_JOB_ID_PROPERTY));
+        Optional<String> updatedJobId = updateMaterializedViewRefreshSchedule(session, viewName, existingJobId, schedule);
+
+        if (!existingJobId.equals(updatedJobId)) {
+            metastore.replaceTable(
+                    viewName.getSchemaName(),
+                    viewName.getTableName(),
+                    io.trino.plugin.hive.metastore.Table.builder(existing)
+                            .setParameter(REFRESH_JOB_ID_PROPERTY, updatedJobId)
+                            .build(),
+                    NO_PRIVILEGES);
+        }
+    }
+
     private void replaceMaterializedView(ConnectorSession session, SchemaTableName viewName, io.trino.plugin.hive.metastore.Table view, ConnectorMaterializedViewDefinition newDefinition)
     {
         io.trino.plugin.hive.metastore.Table.Builder viewBuilder = io.trino.plugin.hive.metastore.Table.builder(view)
@@ -769,6 +798,9 @@ public class TrinoHiveCatalog
             log.warn(e, "Failed to delete storage location '%s' for materialized view '%s'", storageLocation, viewName);
         }
 
+        Optional<String> refreshJobId = Optional.ofNullable(view.getParameters().get(REFRESH_JOB_ID_PROPERTY));
+        refreshJobId.ifPresent(jobId -> workScheduler.deleteJobSchedule(session, jobId));
+
         metastore.dropTable(viewName.getSchemaName(), viewName.getTableName(), true);
     }
 
@@ -810,6 +842,20 @@ public class TrinoHiveCatalog
                 materializedView.getViewOriginalText()
                         .orElseThrow(() -> new TrinoException(HIVE_INVALID_METADATA, "No view original text: " + viewName)),
                 storageTableName));
+    }
+
+    @Override
+    public Map<String, Object> getMaterializedViewProperties(ConnectorSession session, SchemaTableName viewName, ConnectorMaterializedViewDefinition definition)
+    {
+        ImmutableMap.Builder<String, Object> properties = ImmutableMap.<String, Object>builder()
+                .putAll(super.getMaterializedViewProperties(session, viewName, definition));
+
+        io.trino.plugin.hive.metastore.Table materializedView = metastore.getTable(viewName.getSchemaName(), viewName.getTableName())
+                .filter(table -> isTrinoMaterializedView(table.getTableType(), table.getParameters()))
+                .orElseThrow();
+        Optional<String> jobId = Optional.ofNullable(materializedView.getParameters().get(REFRESH_JOB_ID_PROPERTY));
+        jobId.flatMap(id -> workScheduler.getJobSchedule(session, id)).ifPresent(cronSchedule -> properties.put(REFRESH_SCHEDULE, cronSchedule));
+        return properties.buildOrThrow();
     }
 
     @Override
@@ -857,6 +903,19 @@ public class TrinoHiveCatalog
     @Override
     public void renameMaterializedView(ConnectorSession session, SchemaTableName source, SchemaTableName target)
     {
+        Optional<io.trino.plugin.hive.metastore.Table> tableOptional = metastore.getTable(source.getSchemaName(), source.getTableName());
+        if (tableOptional.isEmpty()) {
+            throw new MaterializedViewNotFoundException(source);
+        }
+
+        io.trino.plugin.hive.metastore.Table table = tableOptional.get();
+        if (!isTrinoMaterializedView(table.getTableType(), table.getParameters())) {
+            throw new TrinoException(UNSUPPORTED_TABLE_TYPE, "Not a Materialized View: " + source);
+        }
+
+        io.trino.plugin.hive.metastore.Table materializedView = tableOptional.get();
+
+        updateMaterializedViewNameForScheduledWork(session, materializedView.getParameters(), target);
         metastore.renameTable(source.getSchemaName(), source.getTableName(), target.getSchemaName(), target.getTableName());
     }
 

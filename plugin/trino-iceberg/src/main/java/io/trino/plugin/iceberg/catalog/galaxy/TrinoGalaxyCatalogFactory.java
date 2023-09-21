@@ -18,6 +18,7 @@ import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.hive.metastore.HiveMetastoreFactory;
 import io.trino.plugin.iceberg.IcebergConfig;
+import io.trino.plugin.iceberg.WorkScheduler;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
 import io.trino.plugin.iceberg.catalog.TrinoCatalog;
 import io.trino.plugin.iceberg.catalog.TrinoCatalogFactory;
@@ -37,6 +38,7 @@ public class TrinoGalaxyCatalogFactory
     private final HiveMetastoreFactory metastoreFactory;
     private final TrinoFileSystemFactory fileSystemFactory;
     private final IcebergTableOperationsProvider tableOperationsProvider;
+    private final WorkScheduler workScheduler;
     private final boolean isUniqueTableLocation;
     private final boolean cacheTableMetadata;
     private final boolean hideMaterializedViewStorageTable;
@@ -48,6 +50,7 @@ public class TrinoGalaxyCatalogFactory
             HiveMetastoreFactory metastoreFactory,
             TrinoFileSystemFactory fileSystemFactory,
             IcebergTableOperationsProvider tableOperationsProvider,
+            WorkScheduler workScheduler,
             IcebergConfig config,
             IcebergGalaxyCatalogConfig galaxyCatalogConfig)
     {
@@ -56,6 +59,7 @@ public class TrinoGalaxyCatalogFactory
         this.metastoreFactory = requireNonNull(metastoreFactory, "metastoreFactory is null");
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.tableOperationsProvider = requireNonNull(tableOperationsProvider, "tableOperationProvider is null");
+        this.workScheduler = requireNonNull(workScheduler, "workScheduler is null");
         this.isUniqueTableLocation = config.isUniqueTableLocation();
         this.cacheTableMetadata = galaxyCatalogConfig.isCacheTableMetadata();
         this.hideMaterializedViewStorageTable = config.isHideMaterializedViewStorageTable();
@@ -66,6 +70,7 @@ public class TrinoGalaxyCatalogFactory
     {
         return new TrinoGalaxyCatalog(
                 catalogName,
+                workScheduler,
                 typeManager,
                 createPerTransactionCache(metastoreFactory.createMetastore(Optional.empty()), 1000),
                 fileSystemFactory,

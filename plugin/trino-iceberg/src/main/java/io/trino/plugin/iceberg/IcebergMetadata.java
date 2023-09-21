@@ -218,6 +218,7 @@ import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_COMMIT_ERROR;
 import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_FILESYSTEM_ERROR;
 import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_INVALID_METADATA;
 import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_MISSING_METADATA;
+import static io.trino.plugin.iceberg.IcebergMaterializedViewAdditionalProperties.REFRESH_SCHEDULE;
 import static io.trino.plugin.iceberg.IcebergMetadataColumn.FILE_MODIFIED_TIME;
 import static io.trino.plugin.iceberg.IcebergMetadataColumn.FILE_PATH;
 import static io.trino.plugin.iceberg.IcebergMetadataColumn.isMetadataColumnId;
@@ -318,6 +319,7 @@ public class IcebergMetadata
     private static final String RETENTION_THRESHOLD = "retention_threshold";
     private static final String UNKNOWN_SNAPSHOT_TOKEN = "UNKNOWN";
     public static final Set<String> UPDATABLE_TABLE_PROPERTIES = ImmutableSet.of(FILE_FORMAT_PROPERTY, FORMAT_VERSION_PROPERTY, PARTITIONING_PROPERTY, SORTED_BY_PROPERTY);
+    public static final Set<String> UPDATABLE_MATERIALIZED_VIEW_PROPERTIES = ImmutableSet.of(REFRESH_SCHEDULE);
 
     public static final String ORC_BLOOM_FILTER_COLUMNS_KEY = "orc.bloom.filter.columns";
     public static final String ORC_BLOOM_FILTER_FPP_KEY = "orc.bloom.filter.fpp";
@@ -334,6 +336,7 @@ public class IcebergMetadata
     private final JsonCodec<CommitTaskData> commitTaskCodec;
     private final TrinoCatalog catalog;
     private final IcebergFileSystemFactory fileSystemFactory;
+    private final WorkScheduler workScheduler;
     private final TableStatisticsWriter tableStatisticsWriter;
 
     private final Map<IcebergTableHandle, TableStatistics> tableStatisticsCache = new ConcurrentHashMap<>();
@@ -353,6 +356,7 @@ public class IcebergMetadata
             CatalogHandle trinoCatalogHandle,
             JsonCodec<CommitTaskData> commitTaskCodec,
             TrinoCatalog catalog,
+            WorkScheduler workScheduler,
             IcebergFileSystemFactory fileSystemFactory,
             TableStatisticsWriter tableStatisticsWriter)
     {
@@ -361,6 +365,7 @@ public class IcebergMetadata
         this.trinoCatalogHandle = requireNonNull(trinoCatalogHandle, "trinoCatalogHandle is null");
         this.commitTaskCodec = requireNonNull(commitTaskCodec, "commitTaskCodec is null");
         this.catalog = requireNonNull(catalog, "catalog is null");
+        this.workScheduler = requireNonNull(workScheduler, "workScheduler is null");
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.tableStatisticsWriter = requireNonNull(tableStatisticsWriter, "tableStatisticsWriter is null");
     }
@@ -2980,6 +2985,17 @@ public class IcebergMetadata
             throw new TrinoException(NOT_SUPPORTED, "Materialized View rename across schemas is not supported");
         }
         catalog.renameMaterializedView(session, source, target);
+    }
+
+    @Override
+    public void setMaterializedViewProperties(ConnectorSession session, SchemaTableName viewName, Map<String, Optional<Object>> properties)
+    {
+        Set<String> unsupportedProperties = difference(properties.keySet(), UPDATABLE_MATERIALIZED_VIEW_PROPERTIES);
+        if (!unsupportedProperties.isEmpty()) {
+            throw new TrinoException(NOT_SUPPORTED, "The following properties cannot be updated: " + String.join(", ", unsupportedProperties));
+        }
+
+        catalog.updateMaterializedViewRefreshSchedule(session, viewName, properties.get(REFRESH_SCHEDULE).map(String.class::cast));
     }
 
     @Override

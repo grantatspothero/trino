@@ -28,6 +28,7 @@ import io.trino.plugin.hive.metastore.glue.GlueMetastoreStats;
 import io.trino.plugin.iceberg.CommitTaskData;
 import io.trino.plugin.iceberg.IcebergConfig;
 import io.trino.plugin.iceberg.IcebergMetadata;
+import io.trino.plugin.iceberg.NoopWorkScheduler;
 import io.trino.plugin.iceberg.TableStatisticsWriter;
 import io.trino.plugin.iceberg.catalog.BaseTrinoCatalogTest;
 import io.trino.plugin.iceberg.catalog.TrinoCatalog;
@@ -67,6 +68,7 @@ public class TestTrinoGlueCatalog
         IcebergGlueCatalogConfig catalogConfig = new IcebergGlueCatalogConfig();
         return new TrinoGlueCatalog(
                 new CatalogName("catalog_name"),
+                new NoopWorkScheduler(),
                 fileSystemFactory,
                 new TestingTypeManager(),
                 catalogConfig.isCacheTableMetadata(),
@@ -118,6 +120,7 @@ public class TestTrinoGlueCatalog
                     CatalogHandle.fromId("iceberg:NORMAL:v12345"),
                     jsonCodec(CommitTaskData.class),
                     catalog,
+                    new NoopWorkScheduler(),
                     (connectorIdentity, fileIoProperties) -> {
                         throw new UnsupportedOperationException();
                     },
@@ -148,6 +151,7 @@ public class TestTrinoGlueCatalog
         IcebergGlueCatalogConfig catalogConfig = new IcebergGlueCatalogConfig();
         TrinoCatalog catalogWithDefaultLocation = new TrinoGlueCatalog(
                 new CatalogName("catalog_name"),
+                new NoopWorkScheduler(),
                 fileSystemFactory,
                 new TestingTypeManager(),
                 catalogConfig.isCacheTableMetadata(),
