@@ -32,7 +32,7 @@ public interface ConnectorPageSourceProvider
             DynamicFilter dynamicFilter);
 
     /**
-     * Simplify predicate into a predicate that {@link ConnectorPageSource} would use
+     * Simplifies predicate into a predicate that {@link ConnectorPageSource} would use
      * to filter split data.
      */
     default TupleDomain<ColumnHandle> simplifyPredicate(
