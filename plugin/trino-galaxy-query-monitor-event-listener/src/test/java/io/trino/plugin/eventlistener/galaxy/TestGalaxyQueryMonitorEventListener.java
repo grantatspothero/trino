@@ -39,6 +39,7 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
+import static io.trino.spi.type.TimeZoneKey.UTC_KEY;
 import static java.util.Objects.requireNonNull;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
@@ -178,6 +179,7 @@ public class TestGalaxyQueryMonitorEventListener
                         ImmutableSet.of(),
                         ImmutableSet.of(),
                         Optional.empty(),
+                        UTC_KEY.getId(),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
