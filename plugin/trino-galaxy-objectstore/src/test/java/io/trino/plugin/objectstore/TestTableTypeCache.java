@@ -17,7 +17,13 @@ import io.trino.spi.connector.SchemaTableName;
 import org.testng.annotations.Test;
 
 import java.util.Arrays;
+import java.util.Optional;
 
+import static io.trino.plugin.objectstore.RelationType.DELTA_TABLE;
+import static io.trino.plugin.objectstore.RelationType.MATERIALIZED_VIEW;
+import static io.trino.plugin.objectstore.RelationType.VIEW;
+import static io.trino.plugin.objectstore.TableType.DELTA;
+import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static org.testng.Assert.assertEquals;
 
 public class TestTableTypeCache
@@ -25,7 +31,7 @@ public class TestTableTypeCache
     @Test
     public void testDefaultToIceberg()
     {
-        assertAffinity(new TableTypeCache(), new SchemaTableName("some_schema", "table_name"), TableType.ICEBERG);
+        assertAffinity(new TableTypeCache(), new SchemaTableName("some_schema", "table_name"), ICEBERG);
     }
 
     @Test
@@ -49,6 +55,36 @@ public class TestTableTypeCache
             assertAffinity(tableTypeCache, new SchemaTableName("some_schema", "different_type"), otherType);
             assertAffinity(tableTypeCache, new SchemaTableName("some_schema", "yet_another_table"), tableType);
         }
+    }
+
+    @Test
+    public void testView()
+    {
+        TableTypeCache tableTypeCache = new TableTypeCache();
+        SchemaTableName viewName = new SchemaTableName("some_schema", "view_name");
+
+        tableTypeCache.record(viewName, VIEW);
+        assertEquals(tableTypeCache.getRelationType(viewName), Optional.of(VIEW));
+        assertAffinity(tableTypeCache, viewName, ICEBERG);
+
+        tableTypeCache.record(viewName, DELTA);
+        assertEquals(tableTypeCache.getRelationType(viewName), Optional.of(DELTA_TABLE));
+        assertAffinity(tableTypeCache, viewName, DELTA);
+    }
+
+    @Test
+    public void testMaterializedView()
+    {
+        TableTypeCache tableTypeCache = new TableTypeCache();
+        SchemaTableName viewName = new SchemaTableName("some_schema", "materialized_view_name");
+
+        tableTypeCache.record(viewName, MATERIALIZED_VIEW);
+        assertEquals(tableTypeCache.getRelationType(viewName), Optional.of(MATERIALIZED_VIEW));
+        assertAffinity(tableTypeCache, viewName, ICEBERG);
+
+        tableTypeCache.record(viewName, DELTA);
+        assertEquals(tableTypeCache.getRelationType(viewName), Optional.of(DELTA_TABLE));
+        assertAffinity(tableTypeCache, viewName, DELTA);
     }
 
     private void assertAffinity(TableTypeCache tableTypeCache, SchemaTableName schemaTableName, TableType expected)

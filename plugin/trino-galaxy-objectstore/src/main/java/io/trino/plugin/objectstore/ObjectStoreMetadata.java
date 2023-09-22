@@ -144,6 +144,9 @@ import static io.trino.plugin.hive.util.HiveUtil.isIcebergTable;
 import static io.trino.plugin.iceberg.IcebergMaterializedViewDefinition.decodeMaterializedViewData;
 import static io.trino.plugin.iceberg.catalog.AbstractTrinoCatalog.toSpiMaterializedViewColumns;
 import static io.trino.plugin.objectstore.ObjectStoreSessionProperties.getInformationSchemaQueriesAcceleration;
+import static io.trino.plugin.objectstore.RelationType.DELTA_TABLE;
+import static io.trino.plugin.objectstore.RelationType.MATERIALIZED_VIEW;
+import static io.trino.plugin.objectstore.RelationType.VIEW;
 import static io.trino.plugin.objectstore.TableType.DELTA;
 import static io.trino.plugin.objectstore.TableType.HIVE;
 import static io.trino.plugin.objectstore.TableType.HUDI;
@@ -264,6 +267,7 @@ public class ObjectStoreMetadata
             Optional<ConnectorTableVersion> endVersion)
     {
         if (startVersion.isEmpty() && endVersion.isEmpty()) {
+            // Typically, getTableHandle is called after getMaterializedView and getView, so no point in checking cached RelationCategory
             ConnectorTableHandle tableHandle = getTableHandleInOrder(session, tableName, tableTypeCache.getTableTypeAffinity(tableName));
             if (tableHandle != null) {
                 tableTypeCache.record(tableName, tableType(tableHandle));
@@ -413,6 +417,7 @@ public class ObjectStoreMetadata
     public void createMaterializedView(ConnectorSession session, SchemaTableName viewName, ConnectorMaterializedViewDefinition definition, boolean replace, boolean ignoreExisting)
     {
         icebergMetadata.createMaterializedView(unwrap(ICEBERG, session), viewName, withProperties(definition, materializedViewProperties.addIcebergPropertyOverrides(definition.getProperties())), replace, ignoreExisting);
+        tableTypeCache.record(viewName, MATERIALIZED_VIEW);
         flushMetadataCache(viewName);
     }
 
@@ -444,8 +449,45 @@ public class ObjectStoreMetadata
     @Override
     public Optional<ConnectorMaterializedViewDefinition> getMaterializedView(ConnectorSession session, SchemaTableName viewName)
     {
-        return icebergMetadata.getMaterializedView(unwrap(ICEBERG, session), viewName)
+        RelationType relationType = tableTypeCache.getRelationType(viewName).orElse(null);
+        if (relationType != null) {
+            switch (relationType) {
+                case MATERIALIZED_VIEW -> {
+                    // Do nothing.
+                }
+
+                case VIEW -> {
+                    if (doGetView(session, viewName).isPresent()) {
+                        // This is a view, so not a materialized view
+                        return Optional.empty();
+                    }
+                }
+
+                case HIVE_TABLE, ICEBERG_TABLE, DELTA_TABLE, HUDI_TABLE -> {
+                    if (relationType == DELTA_TABLE) {
+                        // TODO Currently, DeltaLakeMetadata.getTableHandle does not cache file system access, so calling it would incur e.g. additional _last_checkpoint reads
+                        //  this may be fixed by https://github.com/trinodb/trino/pull/19128
+                        break;
+                    }
+                    if (getTableHandle(session, viewName, Optional.empty(), Optional.empty()) != null) {
+                        // This is a table, so not a materialized view
+                        return Optional.empty();
+                    }
+                }
+            }
+        }
+
+        return doGetMaterializedView(session, viewName);
+    }
+
+    private Optional<ConnectorMaterializedViewDefinition> doGetMaterializedView(ConnectorSession session, SchemaTableName viewName)
+    {
+        Optional<ConnectorMaterializedViewDefinition> materializedViewDefinition = icebergMetadata.getMaterializedView(unwrap(ICEBERG, session), viewName)
                 .map(definition -> withProperties(definition, materializedViewProperties.removeOverriddenOrRemovedIcebergProperties(definition.getProperties())));
+        if (materializedViewDefinition.isPresent()) {
+            tableTypeCache.record(viewName, MATERIALIZED_VIEW);
+        }
+        return materializedViewDefinition;
     }
 
     @Override
@@ -458,6 +500,7 @@ public class ObjectStoreMetadata
     public void renameMaterializedView(ConnectorSession session, SchemaTableName source, SchemaTableName target)
     {
         icebergMetadata.renameMaterializedView(unwrap(ICEBERG, session), source, target);
+        tableTypeCache.record(target, MATERIALIZED_VIEW);
         flushMetadataCache(source);
         flushMetadataCache(target);
     }
@@ -1229,6 +1272,7 @@ public class ObjectStoreMetadata
     public void createView(ConnectorSession session, SchemaTableName viewName, ConnectorViewDefinition definition, boolean replace)
     {
         hiveMetadata.createView(unwrap(HIVE, session), viewName, definition, replace);
+        tableTypeCache.record(viewName, VIEW);
         flushMetadataCache(viewName);
     }
 
@@ -1236,6 +1280,7 @@ public class ObjectStoreMetadata
     public void renameView(ConnectorSession session, SchemaTableName source, SchemaTableName target)
     {
         hiveMetadata.renameView(unwrap(HIVE, session), source, target);
+        tableTypeCache.record(target, VIEW);
         flushMetadataCache(source);
         flushMetadataCache(target);
     }
@@ -1282,7 +1327,44 @@ public class ObjectStoreMetadata
     @Override
     public Optional<ConnectorViewDefinition> getView(ConnectorSession session, SchemaTableName viewName)
     {
-        return hiveMetadata.getView(unwrap(HIVE, session), viewName);
+        RelationType relationType = tableTypeCache.getRelationType(viewName).orElse(null);
+        if (relationType != null) {
+            switch (relationType) {
+                case MATERIALIZED_VIEW -> {
+                    if (doGetMaterializedView(session, viewName).isPresent()) {
+                        // This is a materialized view, so not a view
+                        return Optional.empty();
+                    }
+                }
+
+                case VIEW -> {
+                    // Do nothing.
+                }
+
+                case HIVE_TABLE, ICEBERG_TABLE, DELTA_TABLE, HUDI_TABLE -> {
+                    if (relationType == DELTA_TABLE) {
+                        // TODO Currently, DeltaLakeMetadata.getTableHandle does not cache file system access, so calling it would incur e.g. additional _last_checkpoint reads
+                        //  this may be fixed by https://github.com/trinodb/trino/pull/19128
+                        break;
+                    }
+                    if (getTableHandle(session, viewName, Optional.empty(), Optional.empty()) != null) {
+                        // This is a table, so not a materialized view
+                        return Optional.empty();
+                    }
+                }
+            }
+        }
+
+        return doGetView(session, viewName);
+    }
+
+    private Optional<ConnectorViewDefinition> doGetView(ConnectorSession session, SchemaTableName viewName)
+    {
+        Optional<ConnectorViewDefinition> view = hiveMetadata.getView(unwrap(HIVE, session), viewName);
+        if (view.isPresent()) {
+            tableTypeCache.record(viewName, VIEW);
+        }
+        return view;
     }
 
     @Override

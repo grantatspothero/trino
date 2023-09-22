@@ -25,6 +25,7 @@ import org.gaul.modernizer_maven_annotations.SuppressModernizer;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.trino.plugin.objectstore.TableType.DELTA;
@@ -57,7 +58,7 @@ public final class TableTypeCache
         }
     }
 
-    private final Cache<SchemaTableName, TableType> cache;
+    private final Cache<SchemaTableName, RelationType> cache;
     private final Map<TableType, DecayCounter> tableTypeCounters;
 
     public TableTypeCache()
@@ -80,9 +81,16 @@ public final class TableTypeCache
         return cacheBuilder.build();
     }
 
+    public Optional<RelationType> getRelationType(SchemaTableName tableName)
+    {
+        return Optional.ofNullable(cache.getIfPresent(tableName));
+    }
+
     public List<TableType> getTableTypeAffinity(SchemaTableName tableName)
     {
-        TableType tableType = cache.getIfPresent(tableName);
+        TableType tableType = getRelationType(tableName)
+                .flatMap(RelationType::tableType)
+                .orElse(null);
         if (tableType == null) {
             tableType = tableTypeCounters.entrySet().stream()
                     .max(comparing(entry -> entry.getValue().getRate()))
@@ -93,8 +101,13 @@ public final class TableTypeCache
 
     public void record(SchemaTableName tableName, TableType currentTableType)
     {
+        record(tableName, RelationType.from(currentTableType));
+    }
+
+    public void record(SchemaTableName tableName, RelationType relationType)
+    {
         // it is acceptable for this cache to have a stale value
-        cache.put(tableName, currentTableType);
-        tableTypeCounters.get(currentTableType).add(1);
+        cache.put(tableName, relationType);
+        relationType.tableType().ifPresent(tableType -> tableTypeCounters.get(tableType).add(1));
     }
 }

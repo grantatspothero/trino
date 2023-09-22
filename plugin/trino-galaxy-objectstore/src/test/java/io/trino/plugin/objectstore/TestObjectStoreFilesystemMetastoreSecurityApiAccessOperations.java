@@ -270,7 +270,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         assertInvocations("SELECT * FROM test_select_from",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 3))
+                        .addCopies(GET_TABLE, occurrences(type, 1, 1, 3))
                         .build(),
                 switch (type) {
                     case HIVE -> ImmutableMultiset.<FileOperation>builder()
@@ -296,7 +296,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         assertInvocations("SELECT * FROM test_select_partition",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, occurrences(type, 3, 2, 3))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 1, 3))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
                         .build(),
@@ -321,7 +321,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertUpdate("INSERT INTO test_select_partition SELECT 2 AS data, 20 AS part", 1);
         assertInvocations("SELECT * FROM test_select_partition",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, occurrences(type, 3, 2, 3))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 1, 3))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
                         .build(),
@@ -348,7 +348,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         // Specify a specific partition
         assertInvocations("SELECT * FROM test_select_partition WHERE part = 10",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, occurrences(type, 3, 2, 3))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 1, 3))
                         .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .build(),
@@ -380,7 +380,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         assertInvocations("SELECT * FROM test_select_from_where WHERE age = 2",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 3))
+                        .addCopies(GET_TABLE, occurrences(type, 1, 1, 3))
                         .build(),
                 switch (type) {
                     case HIVE -> ImmutableMultiset.<FileOperation>builder()
@@ -410,7 +410,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         assertInvocations("SELECT * FROM test_select_view_view",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, occurrences(type, 4, 4, 5))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 4))
                         .build(),
                 switch (type) {
                     case HIVE -> ImmutableMultiset.<FileOperation>builder()
@@ -436,7 +436,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         assertInvocations("SELECT * FROM test_select_view_where_view WHERE age = 2",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, occurrences(type, 4, 4, 5))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 4))
                         .build(),
                 switch (type) {
                     case HIVE -> ImmutableMultiset.<FileOperation>builder()
@@ -466,7 +466,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         assertInvocations("SELECT name, age FROM test_join_t1 JOIN test_join_t2 ON test_join_t2.id = test_join_t1.id",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, occurrences(type, 4, 4, 6))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 6))
                         .addCopies(GET_TABLE_STATISTICS, occurrences(type, 2, 0, 0))
                         .build(),
                 switch (type) {
@@ -497,7 +497,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         assertInvocations("SELECT child.age, parent.age FROM test_self_join_table child JOIN test_self_join_table parent ON child.parent = parent.id",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 3))
+                        .addCopies(GET_TABLE, occurrences(type, 1, 1, 3))
                         .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .build(),
                 switch (type) {
@@ -528,7 +528,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         assertInvocations("EXPLAIN SELECT * FROM test_explain",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 3))
+                        .addCopies(GET_TABLE, occurrences(type, 1, 1, 3))
                         .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .build(),
                 switch (type) {
@@ -556,7 +556,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         assertInvocations("SHOW STATS FOR test_show_stats",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 3))
+                        .addCopies(GET_TABLE, occurrences(type, 1, 1, 3))
                         .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .build(),
                 switch (type) {
@@ -584,7 +584,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         assertInvocations("SHOW STATS FOR (SELECT * FROM test_show_stats_with_filter where age >= 2)",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, 2)
+                        .add(GET_TABLE)
                         .add(GET_TABLE_STATISTICS)
                         .build(),
                 switch (type) {
@@ -601,7 +601,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         assertInvocations("ANALYZE test_analyze",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, occurrences(type, 1, 4, 2))
+                        .addCopies(GET_TABLE, occurrences(type, 1, 3, 2))
                         .addCopies(UPDATE_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
                         .build(),
@@ -638,7 +638,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         assertInvocations("ANALYZE test_analyze_partition",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, occurrences(type, 2, 4, 2))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 3, 2))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
@@ -673,7 +673,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         assertInvocations("ANALYZE test_analyze_partition",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, occurrences(type, 2, 4, 2))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 3, 2))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
@@ -718,7 +718,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         };
         assertInvocations(dropStats,
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, occurrences(type, 1, 4, 1))
+                        .addCopies(GET_TABLE, occurrences(type, 1, 3, 1))
                         .addCopies(UPDATE_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
                         .build(),
@@ -752,7 +752,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         };
         assertInvocations(dropStats,
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, occurrences(type, 2, 4, 1))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 3, 1))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
                         .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
@@ -777,7 +777,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         assertInvocations(dropStats,
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, occurrences(type, 2, 3, 1))
+                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 1))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(type, 2, 0, 0))
                         .build(),
@@ -941,7 +941,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         // Pointed lookup
         assertInvocations(session, "SELECT * FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA AND table_name = 'test_select_i_s_columns0'",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 3))
+                        .addCopies(GET_TABLE, occurrences(type, 1, 1, 3))
                         .build(),
                 switch (type) {
                     case HIVE -> ImmutableMultiset.of();
@@ -975,7 +975,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertInvocations(session, "DESCRIBE test_select_i_s_columns0",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
                         .add(GET_DATABASE)
-                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 3))
+                        .addCopies(GET_TABLE, occurrences(type, 1, 1, 3))
                         .build(),
                 switch (type) {
                     case HIVE -> ImmutableMultiset.of();
@@ -1094,7 +1094,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         // Pointed lookup
         assertInvocations(session, "SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name = 'test_select_s_m_t_comments" + 0 + "'",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_TABLE, occurrences(type, 2, 2, 3))
+                        .addCopies(GET_TABLE, occurrences(type, 1, 1, 3))
                         .build(),
                 switch (type) {
                     case HIVE -> ImmutableMultiset.of();
