@@ -38,7 +38,7 @@ import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.function.Function.identity;
 
 @ThreadSafe
-public final class TableTypeCache
+public final class RelationTypeCache
 {
     private static final TableType DEFAULT_TABLE_TYPE = ICEBERG;
     private static final List<TableType> DEFAULT_TABLE_TYPE_ORDER = ImmutableList.of(ICEBERG, DELTA, HUDI, HIVE);
@@ -61,7 +61,7 @@ public final class TableTypeCache
     private final Cache<SchemaTableName, RelationType> cache;
     private final Map<TableType, DecayCounter> tableTypeCounters;
 
-    public TableTypeCache()
+    public RelationTypeCache()
     {
         // it is acceptable for this cache to sometimes return stale value,
         // it is only used to decide about order of calls, so it doesn't affect correctness

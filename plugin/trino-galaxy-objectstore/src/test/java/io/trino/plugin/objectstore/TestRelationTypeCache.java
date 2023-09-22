@@ -26,12 +26,12 @@ import static io.trino.plugin.objectstore.TableType.DELTA;
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static org.testng.Assert.assertEquals;
 
-public class TestTableTypeCache
+public class TestRelationTypeCache
 {
     @Test
     public void testDefaultToIceberg()
     {
-        assertAffinity(new TableTypeCache(), new SchemaTableName("some_schema", "table_name"), ICEBERG);
+        assertAffinity(new RelationTypeCache(), new SchemaTableName("some_schema", "table_name"), ICEBERG);
     }
 
     @Test
@@ -42,55 +42,55 @@ public class TestTableTypeCache
                     .filter(other -> other != tableType)
                     .findFirst().orElseThrow();
 
-            TableTypeCache tableTypeCache = new TableTypeCache();
+            RelationTypeCache relationTypeCache = new RelationTypeCache();
             for (int i = 0; i < 5; i++) {
-                tableTypeCache.record(new SchemaTableName("some_schema", "table_name" + i), tableType);
+                relationTypeCache.record(new SchemaTableName("some_schema", "table_name" + i), tableType);
             }
 
             // it should not default to recently used type
-            assertAffinity(tableTypeCache, new SchemaTableName("some_schema", "other_table"), tableType);
+            assertAffinity(relationTypeCache, new SchemaTableName("some_schema", "other_table"), tableType);
 
             // one table of a different type
-            tableTypeCache.record(new SchemaTableName("some_schema", "different_type"), otherType);
-            assertAffinity(tableTypeCache, new SchemaTableName("some_schema", "different_type"), otherType);
-            assertAffinity(tableTypeCache, new SchemaTableName("some_schema", "yet_another_table"), tableType);
+            relationTypeCache.record(new SchemaTableName("some_schema", "different_type"), otherType);
+            assertAffinity(relationTypeCache, new SchemaTableName("some_schema", "different_type"), otherType);
+            assertAffinity(relationTypeCache, new SchemaTableName("some_schema", "yet_another_table"), tableType);
         }
     }
 
     @Test
     public void testView()
     {
-        TableTypeCache tableTypeCache = new TableTypeCache();
+        RelationTypeCache relationTypeCache = new RelationTypeCache();
         SchemaTableName viewName = new SchemaTableName("some_schema", "view_name");
 
-        tableTypeCache.record(viewName, VIEW);
-        assertEquals(tableTypeCache.getRelationType(viewName), Optional.of(VIEW));
-        assertAffinity(tableTypeCache, viewName, ICEBERG);
+        relationTypeCache.record(viewName, VIEW);
+        assertEquals(relationTypeCache.getRelationType(viewName), Optional.of(VIEW));
+        assertAffinity(relationTypeCache, viewName, ICEBERG);
 
-        tableTypeCache.record(viewName, DELTA);
-        assertEquals(tableTypeCache.getRelationType(viewName), Optional.of(DELTA_TABLE));
-        assertAffinity(tableTypeCache, viewName, DELTA);
+        relationTypeCache.record(viewName, DELTA);
+        assertEquals(relationTypeCache.getRelationType(viewName), Optional.of(DELTA_TABLE));
+        assertAffinity(relationTypeCache, viewName, DELTA);
     }
 
     @Test
     public void testMaterializedView()
     {
-        TableTypeCache tableTypeCache = new TableTypeCache();
+        RelationTypeCache relationTypeCache = new RelationTypeCache();
         SchemaTableName viewName = new SchemaTableName("some_schema", "materialized_view_name");
 
-        tableTypeCache.record(viewName, MATERIALIZED_VIEW);
-        assertEquals(tableTypeCache.getRelationType(viewName), Optional.of(MATERIALIZED_VIEW));
-        assertAffinity(tableTypeCache, viewName, ICEBERG);
+        relationTypeCache.record(viewName, MATERIALIZED_VIEW);
+        assertEquals(relationTypeCache.getRelationType(viewName), Optional.of(MATERIALIZED_VIEW));
+        assertAffinity(relationTypeCache, viewName, ICEBERG);
 
-        tableTypeCache.record(viewName, DELTA);
-        assertEquals(tableTypeCache.getRelationType(viewName), Optional.of(DELTA_TABLE));
-        assertAffinity(tableTypeCache, viewName, DELTA);
+        relationTypeCache.record(viewName, DELTA);
+        assertEquals(relationTypeCache.getRelationType(viewName), Optional.of(DELTA_TABLE));
+        assertAffinity(relationTypeCache, viewName, DELTA);
     }
 
-    private void assertAffinity(TableTypeCache tableTypeCache, SchemaTableName schemaTableName, TableType expected)
+    private void assertAffinity(RelationTypeCache relationTypeCache, SchemaTableName schemaTableName, TableType expected)
     {
         assertEquals(
-                tableTypeCache.getTableTypeAffinity(schemaTableName).get(0),
+                relationTypeCache.getTableTypeAffinity(schemaTableName).get(0),
                 expected);
     }
 }

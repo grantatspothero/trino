@@ -180,7 +180,7 @@ public class ObjectStoreMetadata
     private final Procedure migrateHiveToIcebergProcedure;
     private final boolean hiveRecursiveDirWalkerEnabled;
     private final IcebergFileFormat defaultIcebergFileFormat;
-    private final TableTypeCache tableTypeCache;
+    private final RelationTypeCache relationTypeCache;
     private final ExecutorService parallelInformationSchemaQueryingExecutor;
 
     public ObjectStoreMetadata(
@@ -196,7 +196,7 @@ public class ObjectStoreMetadata
             Procedure migrateHiveToIcebergProcedure,
             boolean hiveRecursiveDirWalkerEnabled,
             IcebergFileFormat defaultIcebergFileFormat,
-            TableTypeCache tableTypeCache,
+            RelationTypeCache relationTypeCache,
             ExecutorService parallelInformationSchemaQueryingExecutor)
     {
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
@@ -214,7 +214,7 @@ public class ObjectStoreMetadata
         this.migrateHiveToIcebergProcedure = requireNonNull(migrateHiveToIcebergProcedure, "migrateHiveToIcebergProcedure is null");
         this.hiveRecursiveDirWalkerEnabled = hiveRecursiveDirWalkerEnabled;
         this.defaultIcebergFileFormat = requireNonNull(defaultIcebergFileFormat, "defaultIcebergFileFormat is null");
-        this.tableTypeCache = requireNonNull(tableTypeCache, "tableTypeCache is null");
+        this.relationTypeCache = requireNonNull(relationTypeCache, "relationTypeCache is null");
         this.parallelInformationSchemaQueryingExecutor = requireNonNull(parallelInformationSchemaQueryingExecutor, "parallelInformationSchemaQueryingExecutor is null");
     }
 
@@ -268,9 +268,9 @@ public class ObjectStoreMetadata
     {
         if (startVersion.isEmpty() && endVersion.isEmpty()) {
             // Typically, getTableHandle is called after getMaterializedView and getView, so no point in checking cached RelationCategory
-            ConnectorTableHandle tableHandle = getTableHandleInOrder(session, tableName, tableTypeCache.getTableTypeAffinity(tableName));
+            ConnectorTableHandle tableHandle = getTableHandleInOrder(session, tableName, relationTypeCache.getTableTypeAffinity(tableName));
             if (tableHandle != null) {
-                tableTypeCache.record(tableName, tableType(tableHandle));
+                relationTypeCache.record(tableName, tableType(tableHandle));
             }
             return tableHandle;
         }
@@ -417,7 +417,7 @@ public class ObjectStoreMetadata
     public void createMaterializedView(ConnectorSession session, SchemaTableName viewName, ConnectorMaterializedViewDefinition definition, boolean replace, boolean ignoreExisting)
     {
         icebergMetadata.createMaterializedView(unwrap(ICEBERG, session), viewName, withProperties(definition, materializedViewProperties.addIcebergPropertyOverrides(definition.getProperties())), replace, ignoreExisting);
-        tableTypeCache.record(viewName, MATERIALIZED_VIEW);
+        relationTypeCache.record(viewName, MATERIALIZED_VIEW);
         flushMetadataCache(viewName);
     }
 
@@ -449,7 +449,7 @@ public class ObjectStoreMetadata
     @Override
     public Optional<ConnectorMaterializedViewDefinition> getMaterializedView(ConnectorSession session, SchemaTableName viewName)
     {
-        RelationType relationType = tableTypeCache.getRelationType(viewName).orElse(null);
+        RelationType relationType = relationTypeCache.getRelationType(viewName).orElse(null);
         if (relationType != null) {
             switch (relationType) {
                 case MATERIALIZED_VIEW -> {
@@ -485,7 +485,7 @@ public class ObjectStoreMetadata
         Optional<ConnectorMaterializedViewDefinition> materializedViewDefinition = icebergMetadata.getMaterializedView(unwrap(ICEBERG, session), viewName)
                 .map(definition -> withProperties(definition, materializedViewProperties.removeOverriddenOrRemovedIcebergProperties(definition.getProperties())));
         if (materializedViewDefinition.isPresent()) {
-            tableTypeCache.record(viewName, MATERIALIZED_VIEW);
+            relationTypeCache.record(viewName, MATERIALIZED_VIEW);
         }
         return materializedViewDefinition;
     }
@@ -500,7 +500,7 @@ public class ObjectStoreMetadata
     public void renameMaterializedView(ConnectorSession session, SchemaTableName source, SchemaTableName target)
     {
         icebergMetadata.renameMaterializedView(unwrap(ICEBERG, session), source, target);
-        tableTypeCache.record(target, MATERIALIZED_VIEW);
+        relationTypeCache.record(target, MATERIALIZED_VIEW);
         flushMetadataCache(source);
         flushMetadataCache(target);
     }
@@ -920,7 +920,7 @@ public class ObjectStoreMetadata
         }
         tableMetadata = unwrap(tableType, tableMetadata);
         delegate(tableType).createTable(unwrap(tableType, session), tableMetadata, ignoreExisting);
-        tableTypeCache.record(tableMetadata.getTableSchema().getTable(), tableType);
+        relationTypeCache.record(tableMetadata.getTableSchema().getTable(), tableType);
         flushMetadataCache(tableMetadata.getTable());
     }
 
@@ -951,7 +951,7 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "Renaming Hudi tables is not supported");
         }
         delegate(tableType).renameTable(unwrap(tableType, session), tableHandle, newTableName);
-        tableTypeCache.record(newTableName, tableType);
+        relationTypeCache.record(newTableName, tableType);
         flushMetadataCache(tableName(tableHandle));
         flushMetadataCache(newTableName);
     }
@@ -1192,7 +1192,7 @@ public class ObjectStoreMetadata
             throw new UnsupportedOperationException("Unhandled class: " + outputHandle.getClass().getName());
         }
         Optional<ConnectorOutputMetadata> outputMetadata = delegate(tableType).finishCreateTable(unwrap(tableType, session), outputHandle, fragments, computedStatistics);
-        tableTypeCache.record(schemaTableName, tableType);
+        relationTypeCache.record(schemaTableName, tableType);
         flushMetadataCache(tableName(outputHandle));
         return outputMetadata;
     }
@@ -1272,7 +1272,7 @@ public class ObjectStoreMetadata
     public void createView(ConnectorSession session, SchemaTableName viewName, ConnectorViewDefinition definition, boolean replace)
     {
         hiveMetadata.createView(unwrap(HIVE, session), viewName, definition, replace);
-        tableTypeCache.record(viewName, VIEW);
+        relationTypeCache.record(viewName, VIEW);
         flushMetadataCache(viewName);
     }
 
@@ -1280,7 +1280,7 @@ public class ObjectStoreMetadata
     public void renameView(ConnectorSession session, SchemaTableName source, SchemaTableName target)
     {
         hiveMetadata.renameView(unwrap(HIVE, session), source, target);
-        tableTypeCache.record(target, VIEW);
+        relationTypeCache.record(target, VIEW);
         flushMetadataCache(source);
         flushMetadataCache(target);
     }
@@ -1327,7 +1327,7 @@ public class ObjectStoreMetadata
     @Override
     public Optional<ConnectorViewDefinition> getView(ConnectorSession session, SchemaTableName viewName)
     {
-        RelationType relationType = tableTypeCache.getRelationType(viewName).orElse(null);
+        RelationType relationType = relationTypeCache.getRelationType(viewName).orElse(null);
         if (relationType != null) {
             switch (relationType) {
                 case MATERIALIZED_VIEW -> {
@@ -1362,7 +1362,7 @@ public class ObjectStoreMetadata
     {
         Optional<ConnectorViewDefinition> view = hiveMetadata.getView(unwrap(HIVE, session), viewName);
         if (view.isPresent()) {
-            tableTypeCache.record(viewName, VIEW);
+            relationTypeCache.record(viewName, VIEW);
         }
         return view;
     }

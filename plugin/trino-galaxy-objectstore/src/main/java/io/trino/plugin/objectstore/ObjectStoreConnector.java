@@ -103,7 +103,7 @@ public class ObjectStoreConnector
     private final FunctionProvider functionProvider;
 
     private final IcebergFileFormat defaultIcebergFileFormat;
-    private final TableTypeCache tableTypeCache = new TableTypeCache();
+    private final RelationTypeCache relationTypeCache = new RelationTypeCache();
     private final ExecutorService parallelInformationSchemaQueryingExecutor;
 
     @Inject
@@ -362,7 +362,7 @@ public class ObjectStoreConnector
                         migrateHiveToIcebergProcedure,
                         hiveRecursiveDirWalkerEnabled,
                         defaultIcebergFileFormat,
-                        tableTypeCache,
+                        relationTypeCache,
                         parallelInformationSchemaQueryingExecutor),
                 getClass().getClassLoader());
     }
