@@ -15,6 +15,7 @@ package io.trino.cost;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.BindingAnnotation;
 import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provider;
@@ -22,9 +23,15 @@ import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import io.trino.sql.PlannerContext;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 import java.util.List;
 
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.util.Objects.requireNonNull;
 
 public class StatsCalculatorModule
@@ -38,7 +45,17 @@ public class StatsCalculatorModule
         binder.bind(FilterStatsCalculator.class).in(Scopes.SINGLETON);
         newOptionalBinder(binder, new TypeLiteral<List<ComposableStatsCalculator.Rule<?>>>() {})
                 .setDefault().toProvider(StatsRulesProvider.class).in(Scopes.SINGLETON);
-        binder.bind(StatsCalculator.class).to(ComposableStatsCalculator.class).in(Scopes.SINGLETON);
+        binder.bind(ComposableStatsCalculator.class).in(Scopes.SINGLETON);
+        binder.bind(HistoryBasedStatsCalculator.class).in(Scopes.SINGLETON);
+        binder.bind(StatsCalculator.class).to(HistoryBasedStatsCalculator.class);
+        binder.bind(StatsCalculator.class).annotatedWith(NoHistoryBasedStats.class).to(ComposableStatsCalculator.class);
+    }
+
+    @Retention(RUNTIME)
+    @Target({FIELD, PARAMETER, METHOD})
+    @BindingAnnotation
+    public @interface NoHistoryBasedStats
+    {
     }
 
     public static class StatsRulesProvider

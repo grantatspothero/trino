@@ -26,6 +26,7 @@ import io.trino.Session;
 import io.trino.SystemSessionProperties;
 import io.trino.cache.CacheConfig;
 import io.trino.cost.CostCalculator;
+import io.trino.cost.HistoryBasedStatsCalculator;
 import io.trino.cost.StatsCalculator;
 import io.trino.exchange.ExchangeManagerRegistry;
 import io.trino.execution.QueryPreparer.PreparedQuery;
@@ -137,6 +138,7 @@ public class SqlQueryExecution
     private final Analysis analysis;
     private final StatsCalculator statsCalculator;
     private final CostCalculator costCalculator;
+    private final HistoryBasedStatsCalculator historyBasedStatsCalculator;
     private final DynamicFilterService dynamicFilterService;
     private final TableExecuteContextManager tableExecuteContextManager;
     private final TypeAnalyzer typeAnalyzer;
@@ -174,6 +176,7 @@ public class SqlQueryExecution
             SplitSchedulerStats schedulerStats,
             StatsCalculator statsCalculator,
             CostCalculator costCalculator,
+            HistoryBasedStatsCalculator historyBasedStatsCalculator,
             DynamicFilterService dynamicFilterService,
             WarningCollector warningCollector,
             PlanOptimizersStatsCollector planOptimizersStatsCollector,
@@ -207,6 +210,7 @@ public class SqlQueryExecution
             this.schedulerStats = requireNonNull(schedulerStats, "schedulerStats is null");
             this.statsCalculator = requireNonNull(statsCalculator, "statsCalculator is null");
             this.costCalculator = requireNonNull(costCalculator, "costCalculator is null");
+            this.historyBasedStatsCalculator = requireNonNull(historyBasedStatsCalculator, "historyBasedStatsCalculator is null");
             this.dynamicFilterService = requireNonNull(dynamicFilterService, "dynamicFilterService is null");
             this.tableExecuteContextManager = requireNonNull(tableExecuteContextManager, "tableExecuteContextManager is null");
 
@@ -227,6 +231,14 @@ public class SqlQueryExecution
 
                 tableExecuteContextManager.unregisterTableExecuteContextForQuery(stateMachine.getQueryId());
             });
+            stateMachine.addQueryInfoStateChangeListener(queryInfo -> {
+                Plan plan = queryPlan.get();
+                if (plan != null) {
+                    historyBasedStatsCalculator.queryFinished(queryInfo, plan.getRoot(), stateMachine.getSession());
+                }
+            });
+
+            addStateChangeListener(newState -> historyBasedStatsCalculator.queryStateChanged(stateMachine.getQueryId(), newState));
 
             this.remoteTaskFactory = new MemoryTrackingRemoteTaskFactory(requireNonNull(remoteTaskFactory, "remoteTaskFactory is null"), stateMachine);
             this.typeAnalyzer = requireNonNull(typeAnalyzer, "typeAnalyzer is null");
@@ -815,6 +827,7 @@ public class SqlQueryExecution
         private final Map<String, ExecutionPolicy> executionPolicies;
         private final StatsCalculator statsCalculator;
         private final CostCalculator costCalculator;
+        private final HistoryBasedStatsCalculator historyBasedStatsCalculator;
         private final DynamicFilterService dynamicFilterService;
         private final TableExecuteContextManager tableExecuteContextManager;
         private final TypeAnalyzer typeAnalyzer;
@@ -849,6 +862,7 @@ public class SqlQueryExecution
                 SplitSchedulerStats schedulerStats,
                 StatsCalculator statsCalculator,
                 CostCalculator costCalculator,
+                HistoryBasedStatsCalculator historyBasedStatsCalculator,
                 DynamicFilterService dynamicFilterService,
                 TableExecuteContextManager tableExecuteContextManager,
                 TypeAnalyzer typeAnalyzer,
@@ -881,6 +895,7 @@ public class SqlQueryExecution
             this.alternativeOptimizers = alternativesOptimizersFactory.get();
             this.statsCalculator = requireNonNull(statsCalculator, "statsCalculator is null");
             this.costCalculator = requireNonNull(costCalculator, "costCalculator is null");
+            this.historyBasedStatsCalculator = requireNonNull(historyBasedStatsCalculator, "historyBasedStatsCalculator is null");
             this.dynamicFilterService = requireNonNull(dynamicFilterService, "dynamicFilterService is null");
             this.tableExecuteContextManager = requireNonNull(tableExecuteContextManager, "tableExecuteContextManager is null");
             this.typeAnalyzer = requireNonNull(typeAnalyzer, "typeAnalyzer is null");
@@ -930,6 +945,7 @@ public class SqlQueryExecution
                     schedulerStats,
                     statsCalculator,
                     costCalculator,
+                    historyBasedStatsCalculator,
                     dynamicFilterService,
                     warningCollector,
                     planOptimizersStatsCollector,

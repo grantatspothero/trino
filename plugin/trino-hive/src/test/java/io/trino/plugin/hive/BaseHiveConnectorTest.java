@@ -16,11 +16,14 @@ package io.trino.plugin.hive;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import io.airlift.json.JsonCodec;
 import io.airlift.json.JsonCodecFactory;
 import io.airlift.json.ObjectMapperProvider;
+import io.airlift.log.Logging;
 import io.airlift.units.DataSize;
 import io.trino.Session;
+import io.trino.cost.HistoryBasedStatsCalculator;
 import io.trino.cost.StatsAndCosts;
 import io.trino.execution.QueryInfo;
 import io.trino.metadata.FunctionManager;
@@ -48,6 +51,8 @@ import io.trino.spi.type.Type;
 import io.trino.spi.type.VarcharType;
 import io.trino.sql.planner.Plan;
 import io.trino.sql.planner.plan.ExchangeNode;
+import io.trino.sql.planner.plan.JoinNode;
+import io.trino.sql.planner.plan.TableScanNode;
 import io.trino.sql.planner.planprinter.IoPlanPrinter;
 import io.trino.sql.planner.planprinter.IoPlanPrinter.ColumnConstraint;
 import io.trino.sql.planner.planprinter.IoPlanPrinter.EstimatedStatsAndCost;
@@ -104,11 +109,14 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.collect.MoreCollectors.onlyElement;
 import static com.google.common.collect.Sets.intersection;
 import static com.google.common.io.MoreFiles.deleteRecursively;
 import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
+import static io.airlift.log.Level.DEBUG;
+import static io.airlift.log.Level.INFO;
 import static io.airlift.units.DataSize.Unit.GIGABYTE;
 import static io.airlift.units.DataSize.Unit.KILOBYTE;
 import static io.airlift.units.DataSize.Unit.MEGABYTE;
@@ -121,6 +129,8 @@ import static io.trino.SystemSessionProperties.FAULT_TOLERANT_EXECUTION_ARBITRAR
 import static io.trino.SystemSessionProperties.FAULT_TOLERANT_EXECUTION_ARBITRARY_DISTRIBUTION_WRITE_TASK_TARGET_SIZE_MIN;
 import static io.trino.SystemSessionProperties.FAULT_TOLERANT_EXECUTION_HASH_DISTRIBUTION_COMPUTE_TASK_TARGET_SIZE;
 import static io.trino.SystemSessionProperties.FAULT_TOLERANT_EXECUTION_HASH_DISTRIBUTION_WRITE_TASK_TARGET_SIZE;
+import static io.trino.SystemSessionProperties.HISTORY_BASED_STATISTICS_ENABLED;
+import static io.trino.SystemSessionProperties.JOIN_REORDERING_STRATEGY;
 import static io.trino.SystemSessionProperties.MAX_WRITER_TASKS_COUNT;
 import static io.trino.SystemSessionProperties.QUERY_MAX_MEMORY_PER_NODE;
 import static io.trino.SystemSessionProperties.REDISTRIBUTE_WRITES;
@@ -160,6 +170,7 @@ import static io.trino.spi.type.TinyintType.TINYINT;
 import static io.trino.spi.type.VarcharType.VARCHAR;
 import static io.trino.spi.type.VarcharType.createUnboundedVarcharType;
 import static io.trino.spi.type.VarcharType.createVarcharType;
+import static io.trino.sql.planner.OptimizerConfig.JoinReorderingStrategy.AUTOMATIC;
 import static io.trino.sql.planner.optimizations.PlanNodeSearcher.searchFrom;
 import static io.trino.sql.planner.planprinter.IoPlanPrinter.FormattedMarker.Bound.ABOVE;
 import static io.trino.sql.planner.planprinter.IoPlanPrinter.FormattedMarker.Bound.EXACTLY;
@@ -8742,9 +8753,75 @@ public abstract class BaseHiveConnectorTest
     @Test
     public void testExplainOfCreateTableAs()
     {
+        Session session = Session.builder(getSession())
+                .setSystemProperty(HISTORY_BASED_STATISTICS_ENABLED, "false")
+                .build();
         String query = "CREATE TABLE copy_orders AS SELECT * FROM orders";
-        MaterializedResult result = computeActual("EXPLAIN " + query);
-        assertEquals(getOnlyElement(result.getOnlyColumnAsSet()), getExplainPlan(query, DISTRIBUTED));
+        MaterializedResult result = computeActual(session, "EXPLAIN " + query);
+        assertEquals(getOnlyElement(result.getOnlyColumnAsSet()), getExplainPlan(session, query, DISTRIBUTED));
+    }
+
+    @Test
+    public void testBetterJoinOrderWithCorrelatedGroupByKeysUsingHistorybasedStats()
+    {
+        Logging.initialize().setLevel(HistoryBasedStatsCalculator.class.getName(), DEBUG);
+        try {
+            Session session = Session.builder(getSession())
+                    .setSystemProperty(JOIN_REORDERING_STRATEGY, AUTOMATIC.name())
+                    // this test works with DF when dynamic-filtering.small-partitioned.range-row-limit-per-driver is crossed, but that does not
+                    // happen for sf1 so we disable DF completely since the above property cannot be changed per session
+                    .setSystemProperty(ENABLE_DYNAMIC_FILTERING, "false")
+                    .build();
+            String tableName = "orders_correlated" + randomNameSuffix();
+            computeActual("""
+                    CREATE TABLE %s AS
+                    SELECT
+                        orderdate,
+                        extract(DAY FROM orderdate) AS d,
+                        extract(MONTH FROM orderdate) AS m,
+                        extract(YEAR FROM orderdate) AS y
+                    FROM orders
+                    """.formatted(tableName));
+            String query = """
+                    SELECT count(*)
+                    FROM orders o,
+                        (SELECT orderdate, d, m,y
+                         FROM %s
+                         GROUP BY 1, 2, 3, 4) oc
+                    WHERE o.orderkey = oc.d AND o.orderpriority = '1-URGENT'
+                    """.formatted(tableName);
+            assertQuery(session, query,
+                    "VALUES (80)",
+                    plan -> assertThat(buildSideTable(plan)).isEqualTo("orders"));
+
+            assertQuery(session, query,
+                    "VALUES (80)",
+                    plan -> assertThat(buildSideTable(plan)).isEqualTo(tableName));
+            assertUpdate("DROP TABLE %s".formatted(tableName));
+        }
+        finally {
+            Logging.initialize().setLevel(HistoryBasedStatsCalculator.class.getName(), INFO);
+        }
+    }
+
+    private String buildSideTable(Plan plan)
+    {
+        JoinNode join = searchFrom(plan.getRoot()).whereIsInstanceOfAny(JoinNode.class).findOnlyElement();
+        QueryRunner queryRunner = getQueryRunner();
+        // in the case of ChooseAlternative, there can be multiple TableScanNodes
+        Set<CatalogSchemaTableName> tables = transaction(queryRunner.getTransactionManager(), queryRunner.getAccessControl())
+                .execute(queryRunner.getDefaultSession(), transactionalSession -> {
+                    return searchFrom(join.getRight()).whereIsInstanceOfAny(TableScanNode.class)
+                            .findAll()
+                            .stream()
+                            .map(tableScan -> {
+                                TableScanNode tableScanNode = (TableScanNode) tableScan;
+                                queryRunner.getMetadata().getCatalogHandle(transactionalSession, tableScanNode.getTable().getCatalogHandle().getCatalogName());
+                                return queryRunner.getMetadata().getTableName(transactionalSession, tableScanNode.getTable());
+                            })
+                            .collect(toImmutableSet());
+                });
+        return Iterables.getOnlyElement(tables).getSchemaTableName().getTableName();
     }
 
     @Test

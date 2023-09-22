@@ -17,6 +17,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 
+import static io.trino.SystemSessionProperties.HISTORY_BASED_STATISTICS_ENABLED;
+import static io.trino.testing.TestingSession.testSessionBuilder;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 @TestInstance(PER_CLASS)
@@ -27,7 +29,7 @@ public abstract class BaseStatsCalculatorTest
     @BeforeAll
     public void setUp()
     {
-        tester = new StatsCalculatorTester();
+        tester = new StatsCalculatorTester(testSessionBuilder().setSystemProperty(HISTORY_BASED_STATISTICS_ENABLED, "false").build());
     }
 
     @AfterAll

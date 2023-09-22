@@ -86,6 +86,7 @@ public class OptimizerConfig
     private boolean mergeProjectWithValues = true;
     private boolean forceSingleNodeOutput;
     private boolean useExactPartitioning;
+    private boolean historyBasedStatisticsEnabled = true;
     private boolean useCostBasedPartitioning = true;
     private boolean useSubPlanAlternatives;
     // adaptive partial aggregation
@@ -775,6 +776,19 @@ public class OptimizerConfig
     public OptimizerConfig setUseExactPartitioning(boolean useExactPartitioning)
     {
         this.useExactPartitioning = useExactPartitioning;
+        return this;
+    }
+
+    public boolean isHistoryBasedStatisticsEnabled()
+    {
+        return historyBasedStatisticsEnabled;
+    }
+
+    @Config("optimizer.history-based-statistics.enabled")
+    @ConfigDescription("Enable using historical query statistics to estimate current query stats. Disabling also disables historical stats collection")
+    public OptimizerConfig setHistoryBasedStatisticsEnabled(boolean historyBasedStatisticsEnabled)
+    {
+        this.historyBasedStatisticsEnabled = historyBasedStatisticsEnabled;
         return this;
     }
 

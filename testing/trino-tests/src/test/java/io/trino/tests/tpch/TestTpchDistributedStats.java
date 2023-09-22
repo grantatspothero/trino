@@ -23,6 +23,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import static io.trino.SystemSessionProperties.COLLECT_PLAN_STATISTICS_FOR_ALL_QUERIES;
+import static io.trino.SystemSessionProperties.HISTORY_BASED_STATISTICS_ENABLED;
 import static io.trino.plugin.tpch.TpchConnectorFactory.TPCH_COLUMN_NAMING_PROPERTY;
 import static io.trino.testing.assertions.Assert.assertEventually;
 import static io.trino.testing.statistics.MetricComparisonStrategies.absoluteError;
@@ -43,7 +44,9 @@ public class TestTpchDistributedStats
         DistributedQueryRunner runner = TpchQueryRunnerBuilder.builder()
                 .amendSession(builder -> builder
                         // Stats for non-EXPLAIN queries are not collected by default
-                        .setSystemProperty(COLLECT_PLAN_STATISTICS_FOR_ALL_QUERIES, "true"))
+                        .setSystemProperty(COLLECT_PLAN_STATISTICS_FOR_ALL_QUERIES, "true")
+                        // To test statistics estimation, let's disable history based stats
+                        .setSystemProperty(HISTORY_BASED_STATISTICS_ENABLED, "false"))
                 .buildWithoutCatalogs();
         runner.createCatalog(
                 "tpch",

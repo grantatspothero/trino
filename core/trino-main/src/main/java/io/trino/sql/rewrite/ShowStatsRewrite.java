@@ -20,6 +20,7 @@ import io.trino.cost.CachingStatsProvider;
 import io.trino.cost.CachingTableStatsProvider;
 import io.trino.cost.PlanNodeStatsEstimate;
 import io.trino.cost.StatsCalculator;
+import io.trino.cost.StatsCalculatorModule.NoHistoryBasedStats;
 import io.trino.cost.SymbolStatsEstimate;
 import io.trino.execution.querystats.PlanOptimizersStatsCollector;
 import io.trino.execution.warnings.WarningCollector;
@@ -94,7 +95,7 @@ public class ShowStatsRewrite
     private final StatsCalculator statsCalculator;
 
     @Inject
-    public ShowStatsRewrite(Metadata metadata, QueryExplainerFactory queryExplainerFactory, StatsCalculator statsCalculator)
+    public ShowStatsRewrite(Metadata metadata, QueryExplainerFactory queryExplainerFactory, @NoHistoryBasedStats StatsCalculator statsCalculator)
     {
         this.metadata = requireNonNull(metadata, "metadata is null");
         this.queryExplainerFactory = requireNonNull(queryExplainerFactory, "queryExplainerFactory is null");
