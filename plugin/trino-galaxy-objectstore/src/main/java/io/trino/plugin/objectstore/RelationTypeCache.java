@@ -68,7 +68,7 @@ public final class RelationTypeCache
         // for the same reason there is no invalidation logic or any other similar mechanism enabled
         this.cache = buildUnsafeCacheWithInvalidationRace(CacheBuilder.newBuilder()
                 .expireAfterWrite(1, HOURS)
-                .maximumSize(1000));
+                .maximumSize(10_000));
 
         tableTypeCounters = DEFAULT_TABLE_TYPE_ORDER.stream()
                 .collect(toImmutableMap(identity(), ignore -> new DecayCounter(ExponentialDecay.seconds(toIntExact(HOURS.toSeconds(1))))));
