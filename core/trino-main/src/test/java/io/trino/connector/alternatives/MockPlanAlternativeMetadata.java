@@ -976,13 +976,13 @@ public class MockPlanAlternativeMetadata
     @Override
     public Optional<CacheTableId> getCacheTableId(ConnectorTableHandle tableHandle)
     {
-        return delegate.getCacheTableId(tableHandle);
+        return delegate.getCacheTableId(getDelegate(tableHandle));
     }
 
     @Override
     public Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
     {
-        return delegate.getCacheColumnId(tableHandle, columnHandle);
+        return delegate.getCacheColumnId(getDelegate(tableHandle), columnHandle);
     }
 
     @Override
