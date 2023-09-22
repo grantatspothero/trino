@@ -908,6 +908,7 @@ public class ObjectStoreMetadata
             throw new TrinoException(NOT_SUPPORTED, "Renaming Hudi tables is not supported");
         }
         delegate(tableType).renameTable(unwrap(tableType, session), tableHandle, newTableName);
+        tableTypeCache.record(newTableName, tableType);
         flushMetadataCache(tableName(tableHandle));
         flushMetadataCache(newTableName);
     }
