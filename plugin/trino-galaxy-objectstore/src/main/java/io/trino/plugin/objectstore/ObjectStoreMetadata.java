@@ -1143,7 +1143,7 @@ public class ObjectStoreMetadata
         }
         else if (outputHandle instanceof DeltaLakeOutputTableHandle deltaLakeOutputTableHandle) {
             tableType = DELTA;
-            schemaTableName = new SchemaTableName(deltaLakeOutputTableHandle.getTableName(), deltaLakeOutputTableHandle.getSchemaName());
+            schemaTableName = new SchemaTableName(deltaLakeOutputTableHandle.getSchemaName(), deltaLakeOutputTableHandle.getTableName());
         }
         else {
             throw new UnsupportedOperationException("Unhandled class: " + outputHandle.getClass().getName());
