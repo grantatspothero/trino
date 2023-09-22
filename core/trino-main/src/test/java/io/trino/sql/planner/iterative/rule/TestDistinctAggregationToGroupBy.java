@@ -70,7 +70,7 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         globalAggregation(),
                         ImmutableMap.of(
-                                "non-distinct-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
+                                "non-distinct-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
                                 "distinct-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1")),
                         project(
                                 ImmutableMap.of(
@@ -97,7 +97,7 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         globalAggregation(),
                         ImmutableMap.of(
-                                "non-distinct-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
+                                "non-distinct-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
                                 "distinct1-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1"),
                                 "distinct2-final", functionCall("count", false, ImmutableList.of(symbol("c")), "gid-filter-2")),
                         project(
@@ -128,7 +128,7 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         globalAggregation(),
                         ImmutableMap.of(
-                                "non-distinct-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
+                                "non-distinct-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
                                 "distinct1-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1"),
                                 "distinct2-final", functionCall("count", false, ImmutableList.of(symbol("c")), "gid-filter-2"),
                                 "distinct3-final", functionCall("sum", false, ImmutableList.of(symbol("c")), "gid-filter-2")),
@@ -160,8 +160,8 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         globalAggregation(),
                         ImmutableMap.of(
-                                "non-distinct1-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct1")), "gid-filter-0"),
-                                "non-distinct2-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct2")), "gid-filter-0"),
+                                "non-distinct1-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct1")), "gid-filter-0"),
+                                "non-distinct2-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct2")), "gid-filter-0"),
                                 "distinct1-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1"),
                                 "distinct2-final", functionCall("count", false, ImmutableList.of(symbol("c")), "gid-filter-2")),
                         project(
@@ -194,8 +194,8 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         globalAggregation(),
                         ImmutableMap.of(
-                                "non-distinct1-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct1")), "gid-filter-0"),
-                                "non-distinct2-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct2")), "gid-filter-0"),
+                                "non-distinct1-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct1")), "gid-filter-0"),
+                                "non-distinct2-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct2")), "gid-filter-0"),
                                 "distinct1-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1"),
                                 "distinct2-final", functionCall("count", false, ImmutableList.of(symbol("c")), "gid-filter-2")),
                         project(
@@ -232,8 +232,8 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         globalAggregation(),
                         ImmutableMap.of(
-                                "non-distinct1-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct1")), "gid-filter-0"),
-                                "non-distinct2-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct2")), "gid-filter-0"),
+                                "non-distinct1-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct1")), "gid-filter-0"),
+                                "non-distinct2-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct2")), "gid-filter-0"),
                                 "distinct1-final", functionCall("sum", false, ImmutableList.of(symbol("a")), "gid-filter-1"),
                                 "distinct2-final", functionCall("count", false, ImmutableList.of(symbol("a")), "gid-filter-1")),
                         project(
@@ -271,7 +271,7 @@ public class TestDistinctAggregationToGroupBy
                         aggregation(
                                 globalAggregation(),
                                 ImmutableMap.of(
-                                        "non-distinct-expression", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
+                                        "non-distinct-expression", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
                                         "distinct-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1")),
                                 project(
                                         ImmutableMap.of(
@@ -299,7 +299,7 @@ public class TestDistinctAggregationToGroupBy
                         aggregation(
                                 singleGroupingSet("groupingKey"),
                                 ImmutableMap.of(
-                                        "non-distinct-expression", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
+                                        "non-distinct-expression", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
                                         "distinct-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1")),
                                 project(
                                         ImmutableMap.of(
@@ -395,7 +395,7 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         globalAggregation(),
                         ImmutableMap.of(
-                                "non-distinct-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
+                                "non-distinct-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
                                 "distinct-final", functionCall("count", false, ImmutableList.of(symbol("nested")), "gid-filter-1")),
                         project(
                                 ImmutableMap.of(
@@ -427,7 +427,7 @@ public class TestDistinctAggregationToGroupBy
                         aggregation(
                                 globalAggregation(),
                                 ImmutableMap.of(
-                                        "non-distinct-expression", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
+                                        "non-distinct-expression", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
                                         "distinct-final", functionCall("count", false, ImmutableList.of(symbol("b")), "gid-filter-1")),
                                 project(
                                         ImmutableMap.of(
@@ -457,8 +457,8 @@ public class TestDistinctAggregationToGroupBy
                         aggregation(
                                 globalAggregation(),
                                 ImmutableMap.of(
-                                        "count-expression", functionCall("arbitrary", false, ImmutableList.of(symbol("count")), "gid-filter-0"),
-                                        "non-distinct-expression", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
+                                        "count-expression", functionCall("any_value", false, ImmutableList.of(symbol("count")), "gid-filter-0"),
+                                        "non-distinct-expression", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
                                         "distinct-final", functionCall("count", false, ImmutableList.of(symbol("b")), "gid-filter-1")),
                                 project(
                                         ImmutableMap.of(
@@ -499,7 +499,7 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         singleGroupingSet("groupingKey"),
                         ImmutableMap.of(
-                                "non-distinct-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
+                                "non-distinct-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
                                 "distinct-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1")),
                         project(
                                 ImmutableMap.of(
@@ -526,7 +526,7 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         singleGroupingSet("groupingKey"),
                         ImmutableMap.of(
-                                "non-distinct-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
+                                "non-distinct-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
                                 "distinct1-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1"),
                                 "distinct2-final", functionCall("count", false, ImmutableList.of(symbol("c")), "gid-filter-2")),
                         project(
@@ -557,7 +557,7 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         singleGroupingSet("groupingKey"),
                         ImmutableMap.of(
-                                "non-distinct-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
+                                "non-distinct-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
                                 "distinct1-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1"),
                                 "distinct2-final", functionCall("count", false, ImmutableList.of(symbol("c")), "gid-filter-2"),
                                 "distinct3-final", functionCall("sum", false, ImmutableList.of(symbol("c")), "gid-filter-2")),
@@ -589,8 +589,8 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         singleGroupingSet("groupingKey"),
                         ImmutableMap.of(
-                                "non-distinct1-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct1")), "gid-filter-0"),
-                                "non-distinct2-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct2")), "gid-filter-0"),
+                                "non-distinct1-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct1")), "gid-filter-0"),
+                                "non-distinct2-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct2")), "gid-filter-0"),
                                 "distinct1-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1"),
                                 "distinct2-final", functionCall("count", false, ImmutableList.of(symbol("c")), "gid-filter-2")),
                         project(
@@ -623,8 +623,8 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         singleGroupingSet("groupingKey"),
                         ImmutableMap.of(
-                                "non-distinct1-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct1")), "gid-filter-0"),
-                                "non-distinct2-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct2")), "gid-filter-0"),
+                                "non-distinct1-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct1")), "gid-filter-0"),
+                                "non-distinct2-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct2")), "gid-filter-0"),
                                 "distinct1-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1"),
                                 "distinct2-final", functionCall("count", false, ImmutableList.of(symbol("c")), "gid-filter-2")),
                         project(
@@ -735,7 +735,7 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         singleGroupingSet("groupingKey1", "groupingKey2"),
                         ImmutableMap.of(
-                                "non-distinct-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
+                                "non-distinct-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
                                 "distinct-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1")),
                         project(
                                 ImmutableMap.of(
@@ -762,7 +762,7 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         singleGroupingSet("groupingKey1", "groupingKey2"),
                         ImmutableMap.of(
-                                "non-distinct-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
+                                "non-distinct-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
                                 "distinct1-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1"),
                                 "distinct2-final", functionCall("count", false, ImmutableList.of(symbol("c")), "gid-filter-2")),
                         project(
@@ -793,7 +793,7 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         singleGroupingSet("groupingKey1", "groupingKey2"),
                         ImmutableMap.of(
-                                "non-distinct-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
+                                "non-distinct-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
                                 "distinct1-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1"),
                                 "distinct2-final", functionCall("count", false, ImmutableList.of(symbol("c")), "gid-filter-2"),
                                 "distinct3-final", functionCall("sum", false, ImmutableList.of(symbol("c")), "gid-filter-2")),
@@ -825,8 +825,8 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         singleGroupingSet("groupingKey1", "groupingKey2"),
                         ImmutableMap.of(
-                                "non-distinct1-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct1")), "gid-filter-0"),
-                                "non-distinct2-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct2")), "gid-filter-0"),
+                                "non-distinct1-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct1")), "gid-filter-0"),
+                                "non-distinct2-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct2")), "gid-filter-0"),
                                 "distinct1-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1"),
                                 "distinct2-final", functionCall("count", false, ImmutableList.of(symbol("c")), "gid-filter-2")),
                         project(
@@ -859,8 +859,8 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         singleGroupingSet("groupingKey1", "groupingKey2"),
                         ImmutableMap.of(
-                                "non-distinct1-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct1")), "gid-filter-0"),
-                                "non-distinct2-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct2")), "gid-filter-0"),
+                                "non-distinct1-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct1")), "gid-filter-0"),
+                                "non-distinct2-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct2")), "gid-filter-0"),
                                 "distinct1-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1"),
                                 "distinct2-final", functionCall("count", false, ImmutableList.of(symbol("c")), "gid-filter-2")),
                         project(
@@ -895,7 +895,7 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         globalAggregation(),
                         ImmutableMap.of(
-                                "non-distinct-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
+                                "non-distinct-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
                                 "distinct-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1")),
                         project(
                                 ImmutableMap.of(
@@ -930,7 +930,7 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         singleGroupingSet("groupingKey"),
                         ImmutableMap.of(
-                                "non-distinct-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
+                                "non-distinct-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
                                 "distinct-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1")),
                         project(
                                 ImmutableMap.of(
@@ -964,7 +964,7 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         singleGroupingSet("groupingKey"),
                         ImmutableMap.of(
-                                "non-distinct-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
+                                "non-distinct-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
                                 "distinct-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1")),
                         project(
                                 ImmutableMap.of(
@@ -1019,7 +1019,7 @@ public class TestDistinctAggregationToGroupBy
                 .matches(aggregation(
                         singleGroupingSet("groupingKey1", "groupingKey2"),
                         ImmutableMap.of(
-                                "non-distinct-final", functionCall("arbitrary", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
+                                "non-distinct-final", functionCall("any_value", false, ImmutableList.of(symbol("non-distinct")), "gid-filter-0"),
                                 "distinct-final", functionCall("sum", false, ImmutableList.of(symbol("b")), "gid-filter-1")),
                         project(
                                 ImmutableMap.of(

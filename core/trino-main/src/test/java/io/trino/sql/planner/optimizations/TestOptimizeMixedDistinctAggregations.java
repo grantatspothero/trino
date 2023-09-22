@@ -74,7 +74,7 @@ public class TestOptimizeMixedDistinctAggregations
         // Second Aggregation data
         List<String> groupByKeysSecond = ImmutableList.of(groupBy);
         Map<Optional<String>, ExpectedValueProvider<FunctionCall>> aggregationsSecond = ImmutableMap.of(
-                Optional.of("arbitrary"), PlanMatchPattern.functionCall("arbitrary", false, ImmutableList.of(anySymbol()), "gid-filter-0"),
+                Optional.of("any_value"), PlanMatchPattern.functionCall("any_value", false, ImmutableList.of(anySymbol()), "gid-filter-0"),
                 Optional.of("count"), PlanMatchPattern.functionCall("count", false, ImmutableList.of(anySymbol()), "gid-filter-1"));
 
         // First Aggregation data
@@ -106,7 +106,7 @@ public class TestOptimizeMixedDistinctAggregations
     {
         // Second Aggregation data
         Map<String, ExpectedValueProvider<FunctionCall>> aggregationsSecond = ImmutableMap.of(
-                "arbitrary", PlanMatchPattern.functionCall("arbitrary", false, ImmutableList.of(anySymbol()), "gid-filter-0"),
+                "any_value", PlanMatchPattern.functionCall("any_value", false, ImmutableList.of(anySymbol()), "gid-filter-0"),
                 "count", PlanMatchPattern.functionCall("count", false, ImmutableList.of(anySymbol()), "gid-filter-1"));
 
         // First Aggregation data
