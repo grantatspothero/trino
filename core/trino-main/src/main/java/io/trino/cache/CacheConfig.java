@@ -89,7 +89,7 @@ public class CacheConfig
     }
 
     @Config("cache.max-split-size")
-    @ConfigDescription("Sets upper bound for size of cached split")
+    @ConfigDescription("Upper bound for size of cached split")
     public CacheConfig setMaxSplitSize(DataSize cacheSubqueriesSize)
     {
         this.maxSplitSize = cacheSubqueriesSize;
