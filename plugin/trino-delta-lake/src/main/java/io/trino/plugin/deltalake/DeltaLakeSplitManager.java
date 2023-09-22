@@ -147,7 +147,7 @@ public class DeltaLakeSplitManager
     {
         TableSnapshot tableSnapshot;
         try {
-            tableSnapshot = transactionLogAccess.loadSnapshot(tableHandle.getSchemaTableName(), tableHandle.getLocation(), session);
+            tableSnapshot = transactionLogAccess.getSnapshot(session, tableHandle.getSchemaTableName(), tableHandle.getLocation(), Optional.of(tableHandle.getReadVersion()));
         }
         catch (IOException e) {
             throw new RuntimeException(e);

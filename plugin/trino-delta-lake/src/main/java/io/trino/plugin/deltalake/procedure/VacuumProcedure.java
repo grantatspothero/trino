@@ -50,6 +50,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -174,7 +175,7 @@ public class VacuumProcedure
         accessControl.checkCanInsertIntoTable(null, tableName);
         accessControl.checkCanDeleteFromTable(null, tableName);
 
-        TableSnapshot tableSnapshot = transactionLogAccess.loadSnapshot(tableName, handle.getLocation(), session);
+        TableSnapshot tableSnapshot = transactionLogAccess.getSnapshot(session, tableName, handle.getLocation(), Optional.of(handle.getReadVersion()));
         // TODO https://github.com/trinodb/trino/issues/15873 Check writer features when supporting writer version 7
         ProtocolEntry protocolEntry = transactionLogAccess.getProtocolEntry(session, tableSnapshot);
         if (protocolEntry.getMinWriterVersion() > MAX_WRITER_VERSION) {
