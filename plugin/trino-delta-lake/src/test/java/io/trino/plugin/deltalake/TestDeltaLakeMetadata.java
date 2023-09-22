@@ -22,10 +22,14 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import io.airlift.bootstrap.Bootstrap;
 import io.airlift.json.JsonModule;
+import io.trino.Session;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.filesystem.hdfs.HdfsFileSystemFactory;
 import io.trino.hdfs.HdfsEnvironment;
 import io.trino.hdfs.TrinoHdfsFileSystemStats;
+import io.trino.metadata.Metadata;
+import io.trino.metadata.QualifiedObjectName;
+import io.trino.metadata.TableHandle;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.deltalake.metastore.DeltaLakeMetastore;
 import io.trino.plugin.deltalake.metastore.DeltaLakeMetastoreModule;
@@ -62,6 +66,8 @@ import io.trino.spi.type.RowType;
 import io.trino.spi.type.Type;
 import io.trino.spi.type.TypeManager;
 import io.trino.spi.type.VarcharType;
+import io.trino.testing.AbstractTestQueryFramework;
+import io.trino.testing.QueryRunner;
 import io.trino.testing.TestingConnectorContext;
 import io.trino.tests.BogusType;
 import org.testng.annotations.AfterClass;
@@ -84,6 +90,9 @@ import static com.google.common.io.MoreFiles.deleteRecursively;
 import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
 import static io.airlift.testing.Closeables.closeAll;
 import static io.trino.plugin.deltalake.DeltaLakeColumnType.REGULAR;
+import static io.trino.plugin.deltalake.DeltaLakeQueryRunner.DELTA_CATALOG;
+import static io.trino.plugin.deltalake.DeltaLakeQueryRunner.createDeltaLakeQueryRunner;
+import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.EXTENDED_STATISTICS_COLLECT_ON_WRITE;
 import static io.trino.plugin.deltalake.DeltaLakeTableProperties.CHANGE_DATA_FEED_ENABLED_PROPERTY;
 import static io.trino.plugin.deltalake.DeltaLakeTableProperties.COLUMN_MAPPING_MODE_PROPERTY;
 import static io.trino.plugin.deltalake.DeltaLakeTableProperties.PARTITIONED_BY_PROPERTY;
@@ -96,12 +105,14 @@ import static io.trino.spi.security.PrincipalType.USER;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.IntegerType.INTEGER;
 import static io.trino.spi.type.TimestampType.TIMESTAMP_MILLIS;
+import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.nio.file.Files.createTempDirectory;
 import static java.util.Locale.ENGLISH;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestDeltaLakeMetadata
+        extends AbstractTestQueryFramework
 {
     private static final String DATABASE_NAME = "mock_database";
 
@@ -207,6 +218,13 @@ public class TestDeltaLakeMetadata
 
     private File temporaryCatalogDirectory;
     private DeltaLakeMetadataFactory deltaLakeMetadataFactory;
+
+    @Override
+    protected QueryRunner createQueryRunner()
+            throws Exception
+    {
+        return createDeltaLakeQueryRunner(DELTA_CATALOG, ImmutableMap.of(), ImmutableMap.of());
+    }
 
     @BeforeClass
     public void setUp()
@@ -660,6 +678,80 @@ public class TestDeltaLakeMetadata
                         .build()));
     }
 
+    @Test
+    public void testInputExtendedStatisticsNotRequested()
+    {
+        String tableName = "test_input_extended_statistics_not_requested_" + randomNameSuffix();
+        assertUpdate("CREATE TABLE " + tableName + " AS SELECT 1 AS a", 1);
+
+        inTransaction(session -> assertInputInfo(session, tableName,  new DeltaLakeInputInfoBuilder()
+                .setExtendedStatisticsMetric("NOT_REQUESTED")
+                .build())
+        );
+
+        assertUpdate("DROP TABLE " + tableName);
+    }
+
+    @Test
+    public void testInputExtendedStatisticsRequestedPresent()
+    {
+        String tableName = "test_input_extended_statistics_requested_present_" + randomNameSuffix();
+        assertUpdate("CREATE TABLE " + tableName + " AS SELECT 1 AS a", 1);
+        inTransaction(session -> {
+            simulateStatisticsRequest(session, tableName);
+            assertInputInfo(session, tableName,  new DeltaLakeInputInfoBuilder()
+                    .setExtendedStatisticsMetric("REQUESTED_PRESENT")
+                    .build());
+
+        });
+        assertUpdate("DROP TABLE " + tableName);
+    }
+
+    @Test
+    public void testInputExtendedStatisticsRequestedNotPresent()
+    {
+        String tableName = "test_input_extended_statistics_requested_not_present_" + randomNameSuffix();
+        Session sessionWithExtendedStatisticsOnWriteDisabled = Session.builder(getSession())
+                .setCatalogSessionProperty(getSession().getCatalog().get(), EXTENDED_STATISTICS_COLLECT_ON_WRITE, "false")
+                .build();
+        assertUpdate(sessionWithExtendedStatisticsOnWriteDisabled, "CREATE TABLE " + tableName + " AS SELECT 1 AS a", 1);
+
+        inTransaction(session -> {
+            simulateStatisticsRequest(session, tableName);
+            assertInputInfo(session, tableName,  new DeltaLakeInputInfoBuilder()
+                    .setExtendedStatisticsMetric("REQUESTED_NOT_PRESENT")
+                    .build());
+        });
+
+        assertUpdate("DROP TABLE " + tableName);
+    }
+
+    private void assertInputInfo(Session session, String tableName, DeltaLakeInputInfo deltaLakeInputInfo)
+    {
+        Metadata metadata = getQueryRunner().getMetadata();
+        QualifiedObjectName qualifiedObjectName = new QualifiedObjectName(
+                session.getCatalog().orElse(DELTA_CATALOG),
+                session.getSchema().orElse("tpch"),
+                tableName);
+        Optional<TableHandle> tableHandle = metadata.getTableHandle(session, qualifiedObjectName);
+        assertThat(tableHandle).isPresent();
+        Optional<Object> tableInfo = metadata.getInfo(session, tableHandle.get());
+        assertThat(tableInfo).isPresent();
+        DeltaLakeInputInfo deltaInputInfo = (DeltaLakeInputInfo) tableInfo.get();
+        assertThat(deltaInputInfo).isEqualTo(deltaLakeInputInfo);
+    }
+
+    private void simulateStatisticsRequest(Session session, String tableName)
+    {
+        Metadata metadata = getQueryRunner().getMetadata();
+        QualifiedObjectName qualifiedObjectName = new QualifiedObjectName(
+                session.getCatalog().orElse(DELTA_CATALOG),
+                session.getSchema().orElse("tpch"),
+                tableName);
+        Optional<TableHandle> tableHandle = metadata.getTableHandle(session, qualifiedObjectName);
+        metadata.getTableStatistics(session, tableHandle.orElseThrow());
+    }
+
     private static DeltaLakeTableHandle createDeltaLakeTableHandle(Set<DeltaLakeColumnHandle> projectedColumns, Set<DeltaLakeColumnHandle> constrainedColumnsn)
     {
         return createDeltaLakeTableHandle(projectedColumns, constrainedColumnsn, createMetadataEntry());
@@ -748,6 +840,7 @@ public class TestDeltaLakeMetadata
         private String columnMappingMode = "NONE";
         private int numberOfGeneratedColumns = 0;
         private int numberOfPartitionGeneratedColumns = 0;
+        private String extendedStatisticsMetric = "NOT_REQUESTED";
 
         public DeltaLakeInputInfoBuilder setPartitioned(boolean partitioned)
         {
@@ -785,6 +878,13 @@ public class TestDeltaLakeMetadata
             return this;
         }
 
+        public DeltaLakeInputInfoBuilder setExtendedStatisticsMetric(String extendedStatisticsMetric)
+        {
+            this.extendedStatisticsMetric = extendedStatisticsMetric;
+            return this;
+        }
+
+
         DeltaLakeInputInfo build()
         {
             return new DeltaLakeInputInfo(
@@ -794,7 +894,8 @@ public class TestDeltaLakeMetadata
                             "checkConstraints", checkConstraints,
                             "columnMappingMode", columnMappingMode,
                             "numberOfGeneratedColumns", Integer.toString(numberOfGeneratedColumns),
-                            "numberOfPartitionGeneratedColumns", Integer.toString(numberOfPartitionGeneratedColumns)));
+                            "numberOfPartitionGeneratedColumns", Integer.toString(numberOfPartitionGeneratedColumns),
+                            "extendedStatisticsMetric", extendedStatisticsMetric));
         }
     }
 }

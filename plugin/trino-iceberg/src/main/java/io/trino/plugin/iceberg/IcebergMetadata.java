@@ -326,6 +326,13 @@ public class IcebergMetadata
 
     private Transaction transaction;
 
+    private ExtendedStatisticsMetric extendedStatisticsMetric = ExtendedStatisticsMetric.NOT_REQUESTED;
+
+    private enum ExtendedStatisticsMetric
+    {
+        NOT_REQUESTED, REQUESTED_NOT_PRESENT, REQUESTED_PRESENT
+    }
+
     public IcebergMetadata(
             LocationAccessControl locationAccessControl,
             TypeManager typeManager,
@@ -1643,10 +1650,15 @@ public class IcebergMetadata
         Optional<Boolean> partitioned = icebergTableHandle.getPartitionSpecJson()
                 .map(partitionSpecJson -> PartitionSpecParser.fromJson(SchemaParser.fromJson(icebergTableHandle.getTableSchemaJson()), partitionSpecJson).isPartitioned());
 
+        Map<String, String> galaxyTraits = ImmutableMap.<String, String>builder()
+                .put("extendedStatisticsMetric", extendedStatisticsMetric.toString())
+                .buildOrThrow();
+
         return Optional.of(new IcebergInputInfo(
                 icebergTableHandle.getSnapshotId(),
                 partitioned,
-                getFileFormat(icebergTableHandle.getStorageProperties()).name()));
+                getFileFormat(icebergTableHandle.getStorageProperties()).name(),
+                galaxyTraits));
     }
 
     @Override
@@ -2652,6 +2664,7 @@ public class IcebergMetadata
     @Override
     public TableStatistics getTableStatistics(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
+        extendedStatisticsMetric = ExtendedStatisticsMetric.REQUESTED_NOT_PRESENT;
         if (!isStatisticsEnabled(session)) {
             return TableStatistics.empty();
         }
@@ -2662,7 +2675,7 @@ public class IcebergMetadata
         checkArgument(!originalHandle.isRecordScannedFiles(), "Unexpected scanned files recording set");
         checkArgument(originalHandle.getMaxScannedFileSize().isEmpty(), "Unexpected max scanned file size set");
 
-        return tableStatisticsCache.computeIfAbsent(
+        TableStatistics tableStatistics = tableStatisticsCache.computeIfAbsent(
                 new IcebergTableHandle(
                         originalHandle.getCatalog(),
                         originalHandle.getSchemaName(),
@@ -2685,6 +2698,16 @@ public class IcebergMetadata
                     Table icebergTable = catalog.loadTable(session, handle.getSchemaTableName());
                     return TableStatisticsReader.getTableStatistics(typeManager, session, handle, icebergTable);
                 });
+        if (areExtendedStatisticsFilled(tableStatistics)) {
+            extendedStatisticsMetric = ExtendedStatisticsMetric.REQUESTED_PRESENT;
+        }
+        return tableStatistics;
+    }
+
+    private boolean areExtendedStatisticsFilled(TableStatistics tableStatistics)
+    {
+        return tableStatistics.getColumnStatistics().values().stream()
+                .anyMatch(stat -> !stat.getDistinctValuesCount().isUnknown());
     }
 
     @Override

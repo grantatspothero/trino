@@ -390,6 +390,12 @@ public class DeltaLakeMetadata
     private final boolean deleteSchemaLocationsFallback;
     private final boolean useUniqueTableLocation;
     private final boolean allowManagedTableRename;
+    private ExtendedStatisticsMetric extendedStatisticsMetric = ExtendedStatisticsMetric.NOT_REQUESTED;
+
+    private enum ExtendedStatisticsMetric
+    {
+        NOT_REQUESTED, REQUESTED_NOT_PRESENT, REQUESTED_PRESENT
+    }
 
     public DeltaLakeMetadata(
             DeltaLakeMetastore metastore,
@@ -797,10 +803,21 @@ public class DeltaLakeMetadata
     public TableStatistics getTableStatistics(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
         DeltaLakeTableHandle handle = checkValidTableHandle(tableHandle);
+        extendedStatisticsMetric = ExtendedStatisticsMetric.REQUESTED_NOT_PRESENT;
         if (!isTableStatisticsEnabled(session)) {
             return TableStatistics.empty();
         }
-        return tableStatisticsProvider.getTableStatistics(session, handle, getSnapshot(session, handle));
+        TableStatistics tableStatistics = tableStatisticsProvider.getTableStatistics(session, handle, getSnapshot(session, handle));
+        if (areExtendedStatisticsFilled(tableStatistics)) {
+            extendedStatisticsMetric = ExtendedStatisticsMetric.REQUESTED_PRESENT;
+        }
+        return tableStatistics;
+    }
+
+    private boolean areExtendedStatisticsFilled(TableStatistics tableStatistics)
+    {
+        return tableStatistics.getColumnStatistics().values().stream()
+                .anyMatch(stat -> !stat.getDistinctValuesCount().isUnknown() || !stat.getDataSize().isUnknown());
     }
 
     @Override
@@ -2449,6 +2466,7 @@ public class DeltaLakeMetadata
                 .put("columnMappingMode", getColumnMappingMode(metadataEntry, protocolEntry).name())
                 .put("numberOfGeneratedColumns", String.valueOf(generatedColumnExpressions.size()))
                 .put("numberOfPartitionGeneratedColumns", String.valueOf(generatedPartitionColumns))
+                .put("extendedStatisticsMetric", extendedStatisticsMetric.toString())
                 .buildOrThrow();
 
         return Optional.of(new DeltaLakeInputInfo(isPartitioned, galaxyTraits));
