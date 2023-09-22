@@ -24,7 +24,7 @@ public class CacheConfig
     private boolean enabled;
     private double revokingThreshold = 0.9;
     private double revokingTarget = 0.7;
-    private boolean cacheSubqueriesEnabled;
+    private boolean cacheSubqueriesEnabled = true;
     private DataSize maxSplitSize = DataSize.of(256, DataSize.Unit.MEGABYTE);
 
     public boolean isEnabled()
