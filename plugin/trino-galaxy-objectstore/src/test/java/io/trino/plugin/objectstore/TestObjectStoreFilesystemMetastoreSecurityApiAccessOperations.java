@@ -243,8 +243,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             .add(new FileOperation(MANIFEST, "", OUTPUT_FILE_CREATE_OR_OVERWRITE))
                             .build();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
-                            .add(new FileOperation(DATA, "no partition", INPUT_FILE_NEW_STREAM))
-                            .add(new FileOperation(DATA, "no partition", INPUT_FILE_GET_LENGTH))
                             .add(new FileOperation(DATA, "no partition", OUTPUT_FILE_CREATE))
                             .add(new FileOperation(TRINO_EXTENDED_STATS_JSON, "extendeded_stats.json", INPUT_FILE_NEW_STREAM))
                             .add(new FileOperation(TRINO_EXTENDED_STATS_JSON, "extendeded_stats.json", INPUT_FILE_EXISTS))
