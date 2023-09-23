@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -75,7 +74,7 @@ public class GalaxySystemAccessController
      */
     public EntityPrivileges getEntityPrivileges(SystemSecurityContext context, EntityId entity)
     {
-        return withGalaxyPermissions(context, permissions -> permissions.getEntityPrivileges(getContextRoleId(context.getIdentity()), entity));
+        return getCache(context).getEntityPrivileges(getContextRoleId(context.getIdentity()), entity);
     }
 
     /**
@@ -96,13 +95,11 @@ public class GalaxySystemAccessController
 
     public Predicate<String> getCatalogVisibility(SystemSecurityContext context)
     {
-        return withGalaxyPermissions(context, permissions -> {
-            ContentsVisibility catalogVisibility = permissions.getCatalogVisibility();
-            return catalogName -> catalogIds.getCatalogId(catalogName)
-                    .map(CatalogId::toString)
-                    .map(catalogVisibility::isVisible)
-                    .orElse(false);
-        });
+        ContentsVisibility catalogVisibility = getCache(context).getCatalogVisibility();
+        return catalogName -> catalogIds.getCatalogId(catalogName)
+                .map(CatalogId::toString)
+                .map(catalogVisibility::isVisible)
+                .orElse(false);
     }
 
     public AccountId getAccountId(Identity identity)
@@ -118,7 +115,7 @@ public class GalaxySystemAccessController
 
     public Predicate<SchemaTableName> getTableVisibility(SystemSecurityContext context, CatalogId catalogId, Set<String> schemaNames)
     {
-        Map<String, ContentsVisibility> tableVisibility = withGalaxyPermissions(context, permissions -> permissions.getTableVisibility(catalogId, schemaNames));
+        Map<String, ContentsVisibility> tableVisibility = getCache(context).getTableVisibility(catalogId, schemaNames);
         return name -> {
             ContentsVisibility contentsVisibility = tableVisibility.get(name.getSchemaName());
             return contentsVisibility != null && contentsVisibility.isVisible(name.getTableName());
@@ -177,8 +174,8 @@ public class GalaxySystemAccessController
                 columnMask.expression()));
     }
 
-    private <V> V withGalaxyPermissions(SystemSecurityContext context, Function<GalaxyQueryPermissions, V> permissionsFunction)
+    private GalaxyQueryPermissions getCache(SystemSecurityContext context)
     {
-        return galaxyPermissionsCache.withGalaxyPermissions(accessControlClient, toDispatchSession(context.getIdentity()), Optional.of(context.getQueryId()), permissionsFunction);
+        return galaxyPermissionsCache.getCache(accessControlClient, toDispatchSession(context.getIdentity()), context.getQueryId());
     }
 }

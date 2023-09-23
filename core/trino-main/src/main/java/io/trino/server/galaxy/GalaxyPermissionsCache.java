@@ -19,7 +19,6 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.ThreadSafe;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import com.google.inject.Inject;
 import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
@@ -34,11 +33,9 @@ import io.trino.spi.QueryId;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -49,6 +46,7 @@ import static com.google.common.collect.Streams.stream;
 import static io.trino.cache.SafeCaches.buildNonEvictableCache;
 import static java.util.Objects.requireNonNull;
 
+@ThreadSafe
 public class GalaxyPermissionsCache
 {
     private static final int CACHE_SIZE = 100;
@@ -57,18 +55,15 @@ public class GalaxyPermissionsCache
             .maximumSize(CACHE_SIZE)
             .build(CacheLoader.from(queryId -> new ConcurrentHashMap<>()));
 
-    @Inject
-    public GalaxyPermissionsCache() {}
-
-    public <V> V withGalaxyPermissions(TrinoSecurityApi trinoSecurityApi, DispatchSession session, Optional<QueryId> optionalQueryId, Function<GalaxyQueryPermissions, V> permissionsFunction)
+    public GalaxyQueryPermissions getCache(TrinoSecurityApi trinoSecurityApi, DispatchSession session, QueryId queryId)
     {
-        GalaxyQueryPermissions queryPermissions = optionalQueryId
-                .map(queryId -> permissionsCache.getUnchecked(queryId)
-                        .computeIfAbsent(session, ignore -> new GalaxyQueryPermissions(trinoSecurityApi, session)))
-                .orElseGet(() -> new GalaxyQueryPermissions(trinoSecurityApi, session));
-        return permissionsFunction.apply(queryPermissions);
+        return permissionsCache.getUnchecked(queryId)
+                .computeIfAbsent(session, ignore -> new GalaxyQueryPermissions(trinoSecurityApi, session));
     }
 
+    /**
+     * Permission cache for given query and identity ({@link DispatchSession}).
+     */
     @ThreadSafe
     public static class GalaxyQueryPermissions
     {
