@@ -15,19 +15,11 @@ package io.trino.execution;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.OptionalInt;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.base.Suppliers.memoize;
 import static java.lang.Long.parseLong;
-import static java.lang.Math.min;
 import static java.lang.Math.multiplyExact;
 import static java.lang.Math.toIntExact;
 import static java.util.Objects.requireNonNull;
@@ -36,7 +28,7 @@ import static java.util.Objects.requireNonNull;
 public class ThreadCountParser
 {
     private static final String PER_CORE_SUFFIX = "C";
-    private static final Supplier<Integer> AVAILABLE_PROCESSORS = memoize(MachineInfo::getAvailablePhysicalProcessorCount);
+    private static final Supplier<Integer> AVAILABLE_PROCESSORS = Runtime.getRuntime()::availableProcessors;
     public static final ThreadCountParser DEFAULT = new ThreadCountParser(AVAILABLE_PROCESSORS);
 
     private final Supplier<Integer> coreCount;
@@ -65,44 +57,5 @@ public class ThreadCountParser
         checkArgument(threads <= Integer.MAX_VALUE, "Thread count is greater than 2^32 - 1");
         checkArgument(0 <= threads, "Thread count cannot be negative");
         return toIntExact(threads);
-    }
-
-    static final class MachineInfo
-    {
-        private MachineInfo() {}
-
-        private static final Path CPU_INFO_PATH = Paths.get("/proc/cpuinfo");
-
-        public static int getAvailablePhysicalProcessorCount()
-        {
-            String osArch = System.getProperty("os.arch");
-            // logical core count (including container cpu quota if there is any)
-            int availableProcessorCount = Runtime.getRuntime().availableProcessors();
-            int totalPhysicalProcessorCount = availableProcessorCount;
-            if ("amd64".equals(osArch) || "x86_64".equals(osArch)) {
-                OptionalInt procInfo = tryReadFromProcCpuinfo();
-                if (procInfo.isPresent()) {
-                    totalPhysicalProcessorCount = procInfo.getAsInt();
-                }
-            }
-
-            // cap available processor count to container cpu quota (if there is any).
-            return min(totalPhysicalProcessorCount, availableProcessorCount);
-        }
-
-        private static OptionalInt tryReadFromProcCpuinfo()
-        {
-            if (!Files.exists(CPU_INFO_PATH)) {
-                return OptionalInt.empty();
-            }
-
-            try (Stream<String> lines = Files.lines(CPU_INFO_PATH)) {
-                return OptionalInt.of(toIntExact(lines.filter(line ->
-                        line.matches("^processor\\s+: \\d")).count()));
-            }
-            catch (IOException e) {
-                return OptionalInt.empty();
-            }
-        }
     }
 }
