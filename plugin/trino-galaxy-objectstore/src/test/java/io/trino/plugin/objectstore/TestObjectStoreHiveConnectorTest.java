@@ -25,6 +25,7 @@ import org.testng.annotations.Test;
 import java.util.Optional;
 
 import static com.google.common.base.Verify.verify;
+import static io.trino.SystemSessionProperties.TASK_MIN_WRITER_COUNT;
 import static io.trino.plugin.hive.HiveQueryRunner.TPCH_SCHEMA;
 import static io.trino.plugin.iceberg.IcebergTestUtils.checkOrcFileSorting;
 import static io.trino.plugin.objectstore.TableType.HIVE;
@@ -512,7 +513,7 @@ public class TestObjectStoreHiveConnectorTest
         assertUpdate(
                 // make sure that we will get one file per bucket regardless of writer count configured
                 Session.builder(getSession())
-                        .setSystemProperty("task_writer_count", "4")
+                        .setSystemProperty(TASK_MIN_WRITER_COUNT, "4")
                         .build(),
                 createTable,
                 "SELECT count(*) FROM orders");
