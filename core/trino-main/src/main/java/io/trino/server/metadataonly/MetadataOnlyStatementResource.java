@@ -212,7 +212,7 @@ public class MetadataOnlyStatementResource
                 .setAttribute(TrinoAttributes.QUERY_ID, queryId.toString())
                 .startSpan();
         try (SetThreadName ignored = new SetThreadName("Resource " + queryId)) {
-            transactionId = transactionManager.registerQueryCatalogs(accountId, sessionContext.getIdentity(), transactionId, queryId, catalogs, serviceProperties);
+            transactionManager.registerQueryCatalogs(accountId, sessionContext.getIdentity(), transactionId, queryId, catalogs, serviceProperties);
             return executeQuery(statement, span, sessionContext.withTransactionId(transactionId), queryId);
         }
         catch (Throwable e) {
@@ -223,9 +223,7 @@ public class MetadataOnlyStatementResource
             return toErrorQueryResult(queryId, e);
         }
         finally {
-            if (transactionId != null) {
-                transactionManager.destroyQueryCatalogs(transactionId);
-            }
+            transactionManager.destroyQueryCatalogs(transactionId);
             span.end();
         }
     }

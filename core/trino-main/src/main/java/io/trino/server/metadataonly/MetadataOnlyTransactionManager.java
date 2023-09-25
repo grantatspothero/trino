@@ -124,7 +124,7 @@ public class MetadataOnlyTransactionManager
         this.permissionsCache = requireNonNull(permissionsCache, "permissionsCache is null");
     }
 
-    public TransactionId registerQueryCatalogs(
+    public void registerQueryCatalogs(
             AccountId accountId,
             Identity identity,
             TransactionId transactionId,
@@ -132,26 +132,20 @@ public class MetadataOnlyTransactionManager
             List<QueryCatalog> catalogs,
             Map<String, String> serviceProperties)
     {
-        while (true) {
-            CachingCatalogFactory contextCatalogFactory = catalogFactory.withContextAccountId(accountId);
-            TransactionMetadata transactionMetadata = new TransactionMetadata(
-                    identity,
-                    queryId,
-                    transactionId,
-                    catalogs,
-                    serviceProperties,
-                    contextCatalogFactory,
-                    systemConnector.get(),
-                    accessControlClient,
-                    accessController,
-                    securityMetadata,
-                    permissionsCache);
-            TransactionMetadata existingTransaction = transactions.putIfAbsent(transactionId, transactionMetadata);
-            if (existingTransaction == null) {
-                return transactionId;
-            }
-            // this should never happen but let's be safe
-        }
+        CachingCatalogFactory contextCatalogFactory = catalogFactory.withContextAccountId(accountId);
+        TransactionMetadata transactionMetadata = new TransactionMetadata(
+                identity,
+                queryId,
+                transactionId,
+                catalogs,
+                serviceProperties,
+                contextCatalogFactory,
+                systemConnector.get(),
+                accessControlClient,
+                accessController,
+                securityMetadata,
+                permissionsCache);
+        transactions.putIfAbsent(transactionId, transactionMetadata);
     }
 
     public void destroyQueryCatalogs(TransactionId transactionId)
