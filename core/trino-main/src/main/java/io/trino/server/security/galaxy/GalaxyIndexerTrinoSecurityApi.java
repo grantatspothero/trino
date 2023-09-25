@@ -49,9 +49,11 @@ import static io.starburst.stargate.accesscontrol.privilege.Privilege.SELECT;
  * catalogs, schemas and tables solely so that they can be indexed. Actual permission
  * filtering is done when the index is queried by a user.
  */
-public class GalaxyIndexerTrinoSecurityApi
+public enum GalaxyIndexerTrinoSecurityApi
         implements TrinoSecurityApi
 {
+    INSTANCE;
+
     private static final ContentsVisibility ALLOW_ALL = new ContentsVisibility(GrantKind.ALLOW, ImmutableSet.of());
 
     @Override

@@ -101,8 +101,6 @@ public class MetadataOnlyTransactionManager
 {
     private static final Logger log = Logger.get(MetadataOnlyTransactionManager.class);
 
-    private static final TrinoSecurityApi INDEXER_CONTROLLER = new GalaxyIndexerTrinoSecurityApi();
-
     private final ConcurrentMap<TransactionId, TransactionMetadata> transactions = new ConcurrentHashMap<>();
     private final CachingCatalogFactory catalogFactory;
     private final HttpClient accessControlClient;
@@ -434,7 +432,7 @@ public class MetadataOnlyTransactionManager
             Optional<URI> accessControlUri = Optional.ofNullable(serviceProperties.get("galaxy.access-control-url")).map(URI::create);
             URI uri = accessControlUri.orElse(URI.create(requiredServiceProperty(serviceProperties, "galaxy.account-url")));
 
-            TrinoSecurityApi securityClient = (getGalaxyIdentityType(identity) == INDEXER) ? INDEXER_CONTROLLER : new HttpTrinoSecurityClient(uri, accessControlClient);
+            TrinoSecurityApi securityClient = (getGalaxyIdentityType(identity) == INDEXER) ? GalaxyIndexerTrinoSecurityApi.INSTANCE : new HttpTrinoSecurityClient(uri, accessControlClient);
 
             GalaxyAccessControlConfig galaxyAccessControlConfig = new GalaxyAccessControlConfig()
                     .setCatalogNames(requiredServiceProperty(serviceProperties, "galaxy.catalog-names"))
