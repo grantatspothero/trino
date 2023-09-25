@@ -25,7 +25,6 @@ import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
 import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.EntityId;
 import io.starburst.stargate.id.RoleId;
-import io.starburst.stargate.id.RoleName;
 import io.starburst.stargate.identity.DispatchSession;
 import io.trino.cache.EvictableCacheBuilder;
 import io.trino.spi.QueryId;
@@ -75,8 +74,6 @@ public class GalaxyPermissionsCache
         // It's a cache to support concurrent loads while also preventing multiple loads for the same key
         private final LoadingCache<EntityPrivilegesKey, EntityPrivileges> entityPrivileges;
         @GuardedBy("this")
-        private Map<RoleName, RoleId> activeRoles;
-        @GuardedBy("this")
         private ContentsVisibility catalogVisibility;
         // It's a cache only for convenience to use loading cache's bulk loading capability
         private final LoadingCache<TableVisibilityKey, ContentsVisibility> tableVisibility;
@@ -107,14 +104,6 @@ public class GalaxyPermissionsCache
                         return visibility.entrySet().stream()
                                 .collect(toImmutableMap(entry -> new TableVisibilityKey(catalogId, entry.getKey()), Entry::getValue));
                     }));
-        }
-
-        public synchronized Map<RoleName, RoleId> listEnabledRoles()
-        {
-            if (activeRoles == null) {
-                activeRoles = ImmutableMap.copyOf(trinoSecurityApi.listEnabledRoles(session));
-            }
-            return activeRoles;
         }
 
         public EntityPrivileges getEntityPrivileges(RoleId roleId, EntityId entity)
