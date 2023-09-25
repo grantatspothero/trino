@@ -49,10 +49,12 @@ import static java.util.Objects.requireNonNull;
 @ThreadSafe
 public class GalaxyPermissionsCache
 {
-    private static final int CACHE_SIZE = 100;
+    // Currently, we allow at most 60 concurrent queries (20 queries and 40 "data definition"), this value is with some margin.
+    private static final int EXPECTED_CONCURRENT_QUERIES = 100;
+    private static final int QUERY_CACHE_SIZE = EXPECTED_CONCURRENT_QUERIES;
 
     private final LoadingCache<QueryId, Map<DispatchSession, GalaxyQueryPermissions>> permissionsCache = EvictableCacheBuilder.newBuilder()
-            .maximumSize(CACHE_SIZE)
+            .maximumSize(QUERY_CACHE_SIZE)
             .build(CacheLoader.from(queryId -> new ConcurrentHashMap<>()));
 
     public GalaxyQueryPermissions getCache(TrinoSecurityApi trinoSecurityApi, DispatchSession session, QueryId queryId)
