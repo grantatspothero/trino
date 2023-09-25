@@ -516,7 +516,7 @@ public class TestGalaxyAccessControl
 
             // Simulate access to view and base table within single query
             SystemSecurityContext sameQueryAdmin = adminContext();
-            SystemSecurityContext sameQueryUser = new SystemSecurityContext(lackeyContext().getIdentity(), sameQueryAdmin.getQueryId());
+            SystemSecurityContext sameQueryUser = new SystemSecurityContext(lackeyContext().getIdentity(), sameQueryAdmin.getQueryId(), sameQueryAdmin.getQueryStart());
 
             // Note: since admin inherits lackeys role, filterColumns(admin) needs to be invoked before doing DENY below
             assertThat(accessControl.filterColumns(sameQueryAdmin, table, columns))

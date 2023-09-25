@@ -41,6 +41,7 @@ import io.trino.spi.security.SystemSecurityContext;
 import io.trino.spi.security.TrinoPrincipal;
 import io.trino.testing.TestingSession;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -68,6 +69,7 @@ public class GalaxyTestHelper
     public static final String PUBLIC = "public";
     public static final String FEARLESS_LEADER = "fearless_leader";
     public static final String LACKEY_FOLLOWER = "lackey_follower";
+    private static final Instant QUERY_START_TIME = Instant.now();
 
     private GalaxyCockroachContainer cockroach;
     private TestingAccountFactory accountFactory;
@@ -292,7 +294,7 @@ public class GalaxyTestHelper
 
     public SystemSecurityContext context(Session session)
     {
-        return new SystemSecurityContext(session.getIdentity(), new QueryId(String.valueOf(queryIds.incrementAndGet())));
+        return new SystemSecurityContext(session.getIdentity(), new QueryId(String.valueOf(queryIds.incrementAndGet())), QUERY_START_TIME);
     }
 
     public SystemSecurityContext adminContext()
@@ -315,7 +317,7 @@ public class GalaxyTestHelper
 
     private SystemSecurityContext withNewQueryId(SystemSecurityContext context)
     {
-        return new SystemSecurityContext(context.getIdentity(), new QueryId(String.valueOf(queryIds.incrementAndGet())));
+        return new SystemSecurityContext(context.getIdentity(), new QueryId(String.valueOf(queryIds.incrementAndGet())), QUERY_START_TIME);
     }
 
     public String getAnyCatalogName()

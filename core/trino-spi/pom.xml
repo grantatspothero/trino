@@ -220,6 +220,13 @@
                                     <old>method io.trino.spi.connector.RelationCommentMetadata io.trino.spi.connector.RelationCommentMetadata::forTable(io.trino.spi.connector.SchemaTableName, java.util.Optional&lt;java.lang.String&gt;)</old>
                                     <justification>cherry picked from future OSS release</justification>
                                 </item>
+                                <item>
+                                    <!-- TODO this can be removed after upgrading to release containing https://github.com/trinodb/trino/pull/19141 -->
+                                    <ignore>true</ignore>
+                                    <code>java.method.numberOfParametersChanged</code>
+                                    <old>method void io.trino.spi.security.SystemSecurityContext::&lt;init&gt;(io.trino.spi.security.Identity, java.util.Optional&lt;io.trino.spi.QueryId&gt;)</old>
+                                    <new>method void io.trino.spi.security.SystemSecurityContext::&lt;init&gt;(io.trino.spi.security.Identity, io.trino.spi.QueryId, java.time.Instant)</new>
+                                </item>
                                 <!-- / Galaxy internal changes -->
                                 <!-- Galaxy backports, i.e. temporary exclusions -->
                                 <item>

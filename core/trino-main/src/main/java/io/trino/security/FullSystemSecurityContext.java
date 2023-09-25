@@ -25,7 +25,7 @@ public class FullSystemSecurityContext
 
     public FullSystemSecurityContext(Session session)
     {
-        super(session.getIdentity(), session.getQueryId());
+        super(session.getIdentity(), session.getQueryId(), session.getStart());
         this.session = session;
     }
 
