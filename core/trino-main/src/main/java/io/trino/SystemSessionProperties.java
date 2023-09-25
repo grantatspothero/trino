@@ -1093,7 +1093,7 @@ public final class SystemSessionProperties
                 booleanProperty(
                         CACHE_SUBQUERIES_ENABLED,
                         "Enables caching of subqueries when running a single query",
-                        cacheConfig.isCacheSubqueriesEnabled(),
+                        cacheConfig.isEnabled() && cacheConfig.isCacheSubqueriesEnabled(),
                         true),
                 dataSizeProperty(
                         CACHE_MAX_SPLIT_SIZE,
