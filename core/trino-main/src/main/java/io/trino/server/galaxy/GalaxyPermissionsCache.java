@@ -26,7 +26,6 @@ import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.EntityId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.identity.DispatchSession;
-import io.trino.cache.EvictableCacheBuilder;
 import io.trino.spi.QueryId;
 
 import java.util.List;
@@ -52,13 +51,19 @@ public class GalaxyPermissionsCache
     private static final int EXPECTED_CONCURRENT_QUERIES = 100;
     private static final int QUERY_CACHE_SIZE = EXPECTED_CONCURRENT_QUERIES;
 
-    private final LoadingCache<QueryId, Map<DispatchSession, GalaxyQueryPermissions>> permissionsCache = EvictableCacheBuilder.newBuilder()
-            .maximumSize(QUERY_CACHE_SIZE)
-            .build(CacheLoader.from(queryId -> new ConcurrentHashMap<>()));
+    private final LoadingCache<QueryId, Map<DispatchSession, GalaxyQueryPermissions>> queryPermissionsCache;
+
+    public GalaxyPermissionsCache()
+    {
+        queryPermissionsCache = buildNonEvictableCache(
+                CacheBuilder.newBuilder()
+                        .maximumSize(QUERY_CACHE_SIZE),
+                CacheLoader.from(queryId -> new ConcurrentHashMap<>()));
+    }
 
     public GalaxyQueryPermissions getCache(TrinoSecurityApi trinoSecurityApi, DispatchSession session, QueryId queryId)
     {
-        return permissionsCache.getUnchecked(queryId)
+        return queryPermissionsCache.getUnchecked(queryId)
                 .computeIfAbsent(session, ignore -> new GalaxyQueryPermissions(trinoSecurityApi, session));
     }
 
