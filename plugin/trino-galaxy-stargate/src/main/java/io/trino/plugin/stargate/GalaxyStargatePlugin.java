@@ -16,6 +16,7 @@ package io.trino.plugin.stargate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.starburstdata.trino.plugins.stargate.EnableWrites;
+import io.trino.plugin.jdbc.ExtraCredentialsBasedIdentityCacheMappingModule;
 import io.trino.plugin.jdbc.JdbcConnectorFactory;
 import io.trino.spi.Plugin;
 import io.trino.spi.connector.ConnectorFactory;
@@ -44,6 +45,7 @@ public class GalaxyStargatePlugin
                 "stargate",
                 combine(
                         binder -> binder.bind(Boolean.class).annotatedWith(EnableWrites.class).toInstance(enableWrites),
+                        binder -> binder.install(new ExtraCredentialsBasedIdentityCacheMappingModule()),
                         new GalaxyStargateModule()));
     }
 }
