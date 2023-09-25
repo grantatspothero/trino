@@ -125,8 +125,8 @@ public class GalaxyKafkaEventListener
     private void publishLifeCycleEvent(Instant eventTime, QueryMetadata metadata, QueryContext context)
     {
         lifeCycleEventKafkaTopic.ifPresent(topic -> {
-            // Use the event type and query ID as the unique message identifier
-            String id = QUERY_LIFECYCLE_EVENT_TYPE + "." + metadata.getQueryId();
+            // Use the event type, query ID and query state as the unique message identifier
+            String id = "%s.%s.%s".formatted(QUERY_LIFECYCLE_EVENT_TYPE, metadata.getQueryId(), metadata.getQueryState());
 
             GalaxyQueryLifeCycleEvent lifeCycleEvent = new GalaxyQueryLifeCycleEvent(
                     accountId,
