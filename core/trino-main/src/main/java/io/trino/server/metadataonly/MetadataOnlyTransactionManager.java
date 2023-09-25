@@ -112,7 +112,12 @@ public class MetadataOnlyTransactionManager
     private final AtomicReference<CatalogConnector> systemConnector = new AtomicReference<>();
 
     @Inject
-    public MetadataOnlyTransactionManager(CachingCatalogFactory catalogFactory, @ForGalaxySystemAccessControl HttpClient accessControlClient, MetadataAccessControllerSupplier accessController, MetadataSystemSecurityMetadata securityMetadata, GalaxyPermissionsCache permissionsCache)
+    public MetadataOnlyTransactionManager(
+            CachingCatalogFactory catalogFactory,
+            @ForGalaxySystemAccessControl HttpClient accessControlClient,
+            MetadataAccessControllerSupplier accessController,
+            MetadataSystemSecurityMetadata securityMetadata,
+            GalaxyPermissionsCache permissionsCache)
     {
         this.catalogFactory = requireNonNull(catalogFactory, "catalogFactory is null");
         this.accessControlClient = requireNonNull(accessControlClient, "accessControlClient is null");
@@ -121,11 +126,28 @@ public class MetadataOnlyTransactionManager
         this.permissionsCache = requireNonNull(permissionsCache, "permissionsCache is null");
     }
 
-    public TransactionId registerQueryCatalogs(AccountId accountId, Identity identity, TransactionId transactionId, QueryId queryId, List<QueryCatalog> catalogs, Map<String, String> serviceProperties)
+    public TransactionId registerQueryCatalogs(
+            AccountId accountId,
+            Identity identity,
+            TransactionId transactionId,
+            QueryId queryId,
+            List<QueryCatalog> catalogs,
+            Map<String, String> serviceProperties)
     {
         while (true) {
             CachingCatalogFactory contextCatalogFactory = catalogFactory.withContextAccountId(accountId);
-            TransactionMetadata transactionMetadata = new TransactionMetadata(identity, queryId, transactionId, catalogs, serviceProperties, contextCatalogFactory, systemConnector.get(), accessControlClient, accessController, securityMetadata, permissionsCache);
+            TransactionMetadata transactionMetadata = new TransactionMetadata(
+                    identity,
+                    queryId,
+                    transactionId,
+                    catalogs,
+                    serviceProperties,
+                    contextCatalogFactory,
+                    systemConnector.get(),
+                    accessControlClient,
+                    accessController,
+                    securityMetadata,
+                    permissionsCache);
             TransactionMetadata existingTransaction = transactions.putIfAbsent(transactionId, transactionMetadata);
             if (existingTransaction == null) {
                 return transactionId;
