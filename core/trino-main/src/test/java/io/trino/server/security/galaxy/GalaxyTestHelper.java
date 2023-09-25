@@ -69,7 +69,6 @@ public class GalaxyTestHelper
     public static final String PUBLIC = "public";
     public static final String FEARLESS_LEADER = "fearless_leader";
     public static final String LACKEY_FOLLOWER = "lackey_follower";
-    private static final Instant QUERY_START_TIME = Instant.now();
 
     private GalaxyCockroachContainer cockroach;
     private TestingAccountFactory accountFactory;
@@ -294,7 +293,7 @@ public class GalaxyTestHelper
 
     public SystemSecurityContext context(Session session)
     {
-        return new SystemSecurityContext(session.getIdentity(), new QueryId(String.valueOf(queryIds.incrementAndGet())), QUERY_START_TIME);
+        return new SystemSecurityContext(session.getIdentity(), new QueryId(String.valueOf(queryIds.incrementAndGet())), Instant.now());
     }
 
     public SystemSecurityContext adminContext()
@@ -317,7 +316,7 @@ public class GalaxyTestHelper
 
     private SystemSecurityContext withNewQueryId(SystemSecurityContext context)
     {
-        return new SystemSecurityContext(context.getIdentity(), new QueryId(String.valueOf(queryIds.incrementAndGet())), QUERY_START_TIME);
+        return new SystemSecurityContext(context.getIdentity(), new QueryId(String.valueOf(queryIds.incrementAndGet())), Instant.now());
     }
 
     public String getAnyCatalogName()

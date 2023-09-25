@@ -176,6 +176,6 @@ public class GalaxySystemAccessController
 
     private GalaxyQueryPermissions getCache(SystemSecurityContext context)
     {
-        return galaxyPermissionsCache.getCache(accessControlClient, toDispatchSession(context.getIdentity()), context.getQueryId());
+        return galaxyPermissionsCache.getCache(accessControlClient, context.getQueryId(), context.getQueryStart(), toDispatchSession(context.getIdentity()));
     }
 }

@@ -30,6 +30,7 @@ import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static java.util.Objects.requireNonNull;
+import static org.weakref.jmx.guice.ExportBinder.newExporter;
 
 public class GalaxySystemAccessModule
         extends AbstractConfigurationAwareModule
@@ -52,6 +53,7 @@ public class GalaxySystemAccessModule
         configBinder(binder).bindConfig(GalaxySystemAccessControlConfig.class);
         newSetBinder(binder, SystemSessionPropertiesProvider.class).addBinding().to(GalaxySecuritySessionProperties.class);
         binder.bind(GalaxyPermissionsCache.class).in(SINGLETON);
+        newExporter(binder).export(GalaxyPermissionsCache.class).withGeneratedName();
         binder.bind(LazyRegistration.class).asEagerSingleton();
     }
 
