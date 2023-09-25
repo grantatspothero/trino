@@ -37,6 +37,7 @@ import io.trino.sql.planner.plan.LoadCachedDataPlanNode;
 import io.trino.tpch.TpchTable;
 import org.intellij.lang.annotations.Language;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.util.Map;
@@ -68,6 +69,12 @@ public abstract class BaseCacheSubqueriesTest
     public void flushCache()
     {
         getDistributedQueryRunner().getServers().forEach(server -> server.getCacheManagerRegistry().flushCache());
+    }
+
+    @DataProvider(name = "isDynamicRowFilteringEnabled")
+    public static Object[][] isDynamicRowFilteringEnabled()
+    {
+        return new Object[][] {{true}, {false}};
     }
 
     @Test
@@ -141,6 +148,60 @@ public abstract class BaseCacheSubqueriesTest
         // make sure data was read from cache as data should be cached across queries
         assertThat(getLoadCachedDataOperatorInputPositions(resultWithCache.getQueryId())).isPositive();
         assertThat(getScanOperatorInputPositions(resultWithCache.getQueryId())).isZero();
+    }
+
+    @Test(dataProvider = "isDynamicRowFilteringEnabled")
+    public void testDynamicFilterCache(boolean isDynamicRowFilteringEnabled)
+    {
+        computeActual("create table orders_part with (partitioned_by = ARRAY['custkey']) as select orderkey, orderdate, orderpriority, mod(custkey, 10) as custkey from orders");
+
+        @Language("SQL") String totalScanOrdersQuery = "select count(orderkey) from orders_part";
+        @Language("SQL") String firstJoinQuery =
+                """
+                select count(orderkey) from orders_part o join (select * from (values 0, 1, 2) t(custkey)) t on o.custkey = t.custkey
+                union all
+                select count(orderkey) from orders_part o join (select * from (values 0, 1, 2) t(custkey)) t on o.custkey = t.custkey
+                """;
+        @Language("SQL") String secondJoinQuery =
+                """
+                select count(orderkey) from orders_part o join (select * from (values 0, 1, 2, 4) t(custkey)) t on o.custkey = t.custkey
+                union all
+                select count(orderkey) from orders_part o join (select * from (values 0, 1, 2, 3) t(custkey)) t on o.custkey = t.custkey
+                """;
+        @Language("SQL") String thirdJoinQuery =
+                """
+                select count(orderkey) from orders_part o join (select * from (values 0, 1) t(custkey)) t on o.custkey = t.custkey
+                union all
+                select count(orderkey) from orders_part o join (select * from (values 0, 1) t(custkey)) t on o.custkey = t.custkey
+                """;
+
+        Session cacheSubqueriesEnabled = withDynamicRowFiltering(withCacheSubqueriesEnabled(), isDynamicRowFilteringEnabled);
+        Session cacheSubqueriesDisabled = withDynamicRowFiltering(withCacheSubqueriesDisabled(), isDynamicRowFilteringEnabled);
+        MaterializedResultWithQueryId totalScanOrdersExecution = executeWithQueryId(cacheSubqueriesDisabled, totalScanOrdersQuery);
+        MaterializedResultWithQueryId firstJoinExecution = executeWithQueryId(cacheSubqueriesEnabled, firstJoinQuery);
+        MaterializedResultWithQueryId anotherFirstJoinExecution = executeWithQueryId(cacheSubqueriesEnabled, firstJoinQuery);
+        MaterializedResultWithQueryId secondJoinExecution = executeWithQueryId(cacheSubqueriesEnabled, secondJoinQuery);
+        MaterializedResultWithQueryId thirdJoinExecution = executeWithQueryId(cacheSubqueriesEnabled, thirdJoinQuery);
+
+        // firstJoinQuery does not read whole probe side as some splits were pruned by dynamic filters
+        assertThat(getScanOperatorInputPositions(firstJoinExecution.getQueryId())).isLessThan(getScanOperatorInputPositions(totalScanOrdersExecution.getQueryId()));
+        assertThat(getCacheDataOperatorInputPositions(firstJoinExecution.getQueryId())).isPositive();
+        // firstJoinQuery reads from table
+        assertThat(getScanOperatorInputPositions(firstJoinExecution.getQueryId())).isPositive();
+        // second run of firstJoinQuery reads only from cache
+        assertThat(getScanOperatorInputPositions(anotherFirstJoinExecution.getQueryId())).isZero();
+        assertThat(getLoadCachedDataOperatorInputPositions(anotherFirstJoinExecution.getQueryId())).isPositive();
+
+        // secondJoinQuery reads from table and cache because its predicate is wider that firstJoinQuery's predicate
+        assertThat(getCacheDataOperatorInputPositions(secondJoinExecution.getQueryId())).isPositive();
+        assertThat(getLoadCachedDataOperatorInputPositions(secondJoinExecution.getQueryId())).isPositive();
+        assertThat(getScanOperatorInputPositions(secondJoinExecution.getQueryId())).isPositive();
+
+        // thirdJoinQuery reads only from cache
+        assertThat(getLoadCachedDataOperatorInputPositions(thirdJoinExecution.getQueryId())).isPositive();
+        assertThat(getScanOperatorInputPositions(thirdJoinExecution.getQueryId())).isZero();
+
+        assertUpdate("drop table orders_part");
     }
 
     @Test
@@ -316,6 +377,13 @@ public abstract class BaseCacheSubqueriesTest
     {
         return Session.builder(getSession())
                 .setSystemProperty(CACHE_SUBQUERIES_ENABLED, "false")
+                .build();
+    }
+
+    protected Session withDynamicRowFiltering(Session baseSession, boolean enabled)
+    {
+        return Session.builder(baseSession)
+                .setCatalogSessionProperty(baseSession.getCatalog().get(), "dynamic_row_filtering_enabled", String.valueOf(enabled))
                 .build();
     }
 }
