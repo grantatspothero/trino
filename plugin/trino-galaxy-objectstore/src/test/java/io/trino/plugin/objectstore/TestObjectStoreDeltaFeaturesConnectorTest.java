@@ -29,6 +29,8 @@ import io.trino.testing.BaseConnectorTest;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import io.trino.testing.minio.MinioClient;
+import org.junit.jupiter.api.Test;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeMethod;
 
 import java.io.IOException;
@@ -38,6 +40,8 @@ import static io.trino.plugin.base.util.Closables.closeAllSuppress;
 import static io.trino.plugin.objectstore.ObjectStoreQueryRunner.initializeTpchTables;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
+import static io.trino.testing.TestingNames.randomNameSuffix;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests ObjectStore connector with Delta backend, exercising all
@@ -51,6 +55,8 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
 {
     private static final ConnectorFeaturesTestHelper HELPER = new ConnectorFeaturesTestHelper(TestObjectStoreDeltaFeaturesConnectorTest.class, TestObjectStoreDeltaConnectorTest.class);
 
+    private TestingGalaxyMetastore galaxyMetastore;
+
     @Override
     protected QueryRunner createQueryRunner()
             throws Exception
@@ -60,7 +66,7 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
         minioClient = closeAfterClass(new MinioClient(minio.getEndpoint(), MinioStorage.ACCESS_KEY, MinioStorage.SECRET_KEY));
 
         GalaxyCockroachContainer cockroach = closeAfterClass(new GalaxyCockroachContainer());
-        TestingGalaxyMetastore galaxyMetastore = closeAfterClass(new TestingGalaxyMetastore(cockroach));
+        galaxyMetastore = closeAfterClass(new TestingGalaxyMetastore(cockroach));
         TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> cockroach));
         TestingAccountClient accountClient = testingAccountFactory.createAccountClient();
         TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> true));
@@ -110,6 +116,14 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
+    @AfterClass(alwaysRun = true)
+    public void tearDown()
+    {
+        galaxyMetastore = null; // closed by closeAfterClass
+        super.tearDown();
+    }
+
+    @Override
     public void ensureDistributedQueryRunner()
     {
         // duplicate test, but still desired to run
@@ -121,6 +135,45 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     {
         // duplicate test, but still desired to run
         super.ensureTestNamingConvention();
+    }
+
+    @Override
+    @Test
+    // Override as the original tests depend on Hive metastore and here we use galaxy metastore
+    public void testTrinoCacheInvalidatedOnCreateTable()
+            throws Exception
+    {
+        String tableName = "test_create_table_invalidate_cache_" + randomNameSuffix();
+        String tableLocation = "s3://%s/%s/%s".formatted(bucketName, SCHEMA, tableName);
+
+        String initialValues = "VALUES" +
+                " (1, BOOLEAN 'false', TINYINT '-128')" +
+                ",(2, BOOLEAN 'true', TINYINT '127')" +
+                ",(3, BOOLEAN 'false', TINYINT '0')" +
+                ",(4, BOOLEAN 'false', TINYINT '1')" +
+                ",(5, BOOLEAN 'true', TINYINT '37')";
+        assertUpdate("CREATE TABLE " + tableName + "(id, boolean, tinyint) WITH (location = '" + tableLocation + "') AS " + initialValues, 5);
+        assertThat(query("SELECT * FROM " + tableName)).matches(initialValues);
+
+        galaxyMetastore.getMetastore().dropTable(SCHEMA, tableName);
+        // caching metadata is enabled for ObjectStore tests, so flush it
+        assertUpdate("CALL system.flush_metadata_cache(schema_name=>'" + SCHEMA + "', table_name=>'" + tableName + "')");
+        for (String file : minioClient.listObjects(bucketName, SCHEMA + "/" + tableName)) {
+            minioClient.removeObject(bucketName, file);
+        }
+
+        String newValues = "VALUES" +
+                " (1, BOOLEAN 'true', TINYINT '1')" +
+                ",(2, BOOLEAN 'true', TINYINT '1')" +
+                ",(3, BOOLEAN 'false', TINYINT '2')" +
+                ",(4, BOOLEAN 'true', TINYINT '3')" +
+                ",(5, BOOLEAN 'true', TINYINT '5')" +
+                ",(6, BOOLEAN 'false', TINYINT '8')" +
+                ",(7, BOOLEAN 'true', TINYINT '13')";
+        assertUpdate("CREATE TABLE " + tableName + "(id, boolean, tinyint) WITH (location = '" + tableLocation + "') AS " + newValues, 7);
+        assertThat(query("SELECT * FROM " + tableName)).matches(newValues);
+
+        assertUpdate("DROP TABLE " + tableName);
     }
 
     private void skipDuplicateTestCoverage(String methodName, Class<?>... args)
