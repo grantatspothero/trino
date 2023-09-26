@@ -161,7 +161,11 @@ public class TestGalaxyAccessControl
         String catalogName = helper.getAnyCatalogName();
 
         // Catalog access is always allowed because it is just a granular check and detailed check are used after it.
-        checkAccess("", allContexts(), ImmutableList.of(), context -> accessControl.checkCanAccessCatalog(context, catalogName));
+        checkAccess("", allContexts(), ImmutableList.of(), context -> {
+            if (!accessControl.canAccessCatalog(context, catalogName)) {
+                throw new AccessDeniedException("Cannot access catalog: " + catalogName);
+            }
+        });
     }
 
     @Test
@@ -824,24 +828,25 @@ public class TestGalaxyAccessControl
         checkNotSupported("Galaxy does not support user impersonation", () -> accessControl.checkCanImpersonateUser(identity, "mickey_mouse@xample.com"));
         checkNotSupported("Galaxy does not support directly reading Trino cluster system information", () -> accessControl.checkCanReadSystemInformation(identity));
         checkNotSupported("Galaxy does not support directly writing Trino cluster system information", () -> accessControl.checkCanWriteSystemInformation(identity));
-        checkNotSupported("Galaxy does not support grants on functions", () -> accessControl.checkCanGrantExecuteFunctionPrivilege(context, "zoomzoom", trinoPrincipal(FEARLESS_LEADER), false));
     }
 
     @Test
     public void testTableFunctionPrivileges()
     {
+        BiConsumer<SystemSecurityContext, CatalogSchemaRoutineName> checkTableFunction = (context, function) -> checkCanExecuteFunction(context, FunctionKind.TABLE, function);
+
         CatalogSchemaRoutineName function = new CatalogSchemaRoutineName(helper.getAnyCatalogName(), newSchemaName(), "query");
         String message = "Access Denied: Cannot execute function %s.*".formatted(function);
-        Consumer<SystemSecurityContext> checkTableFunction = context -> accessControl.checkCanExecuteFunction(context, FunctionKind.TABLE, function);
+        Consumer<SystemSecurityContext> checkFunction = context -> checkTableFunction.accept(context, function);
 
         // Show that with no privilege, the check fails for all contexts regardless of the FunctionKind
         for (FunctionKind kind : FunctionKind.values()) {
-            checkAccessMatching(message, ImmutableList.of(), allContexts(), context -> accessControl.checkCanExecuteFunction(context, kind, function));
+            checkAccessMatching(message, ImmutableList.of(), allContexts(), context -> checkCanExecuteFunction(context, kind, function));
         }
 
         withGrantedFunctionPrivilege(adminContext(), FEARLESS_LEADER, function, false, () -> {
             // If fearlessLeader is granted the privilege, fearlessLeader and admin can execute the function, but lackeyFollower and public can't
-            checkAccessMatching(message, ImmutableList.of(adminContext(), fearlessContext()), ImmutableList.of(lackeyContext(), publicContext()), checkTableFunction);
+            checkAccessMatching(message, ImmutableList.of(adminContext(), fearlessContext()), ImmutableList.of(lackeyContext(), publicContext()), checkFunction);
 
             // If the schema isn't identical to the granted privilege, no access
             CatalogSchemaRoutineName differentFunction = new CatalogSchemaRoutineName(function.getCatalogName(), newSchemaName(), "query");
@@ -849,18 +854,25 @@ public class TestGalaxyAccessControl
                     "Access Denied: Cannot execute function %s.*".formatted(differentFunction),
                     ImmutableList.of(),
                     allContexts(),
-                    context -> accessControl.checkCanExecuteFunction(context, FunctionKind.TABLE, differentFunction));
+                    context -> checkTableFunction.accept(context, differentFunction));
         });
 
         // If lackeyFollower is granted the privilege, lackeyFollower, fearlessLeader and admin can execute the function, but public can't
         withGrantedFunctionPrivilege(adminContext(), LACKEY_FOLLOWER, function, false, () -> {
-            checkAccessMatching(message, ImmutableList.of(adminContext(), fearlessContext(), lackeyContext()), ImmutableList.of(publicContext()), checkTableFunction);
+            checkAccessMatching(message, ImmutableList.of(adminContext(), fearlessContext(), lackeyContext()), ImmutableList.of(publicContext()), checkFunction);
         });
 
         // If public is granted the privilege, all roles can execute the function
         withGrantedFunctionPrivilege(adminContext(), PUBLIC, function, false, () -> {
-            checkAccessMatching(message, allContexts(), ImmutableList.of(), checkTableFunction);
+            checkAccessMatching(message, allContexts(), ImmutableList.of(), checkFunction);
         });
+    }
+
+    private void checkCanExecuteFunction(SystemSecurityContext context, FunctionKind kind, CatalogSchemaRoutineName function)
+    {
+        if (!accessControl.canExecuteFunction(context, kind, function)) {
+            throw new AccessDeniedException("Cannot execute function %s.*".formatted(function));
+        }
     }
 
     @Test
@@ -888,7 +900,7 @@ public class TestGalaxyAccessControl
         SystemSecurityContext context = adminContext();
 
         // Test that read-only schema operations are allowed
-        accessControl.checkCanAccessCatalog(context, catalogName);
+        assertThat(accessControl.canAccessCatalog(context, catalogName)).isTrue();
         accessControl.checkCanShowSchemas(context, schema.getCatalogName());
         if (!catalogName.equals("tpch") && !catalogName.equals("system")) {
             // This operation gets an AccessDeniedException for tpch and system because the catalogs

@@ -69,7 +69,6 @@ import static io.starburst.stargate.accesscontrol.client.OperationNotAllowedExce
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_SCHEMA;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_TABLE;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.DELETE;
-import static io.starburst.stargate.accesscontrol.privilege.Privilege.EXECUTE;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.INSERT;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.SELECT;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.UPDATE;
@@ -96,7 +95,6 @@ import static io.trino.spi.security.AccessDeniedException.denyDropMaterializedVi
 import static io.trino.spi.security.AccessDeniedException.denyDropSchema;
 import static io.trino.spi.security.AccessDeniedException.denyDropTable;
 import static io.trino.spi.security.AccessDeniedException.denyDropView;
-import static io.trino.spi.security.AccessDeniedException.denyExecuteFunction;
 import static io.trino.spi.security.AccessDeniedException.denyExecuteProcedure;
 import static io.trino.spi.security.AccessDeniedException.denyInsertTable;
 import static io.trino.spi.security.AccessDeniedException.denyRefreshMaterializedView;
@@ -203,8 +201,9 @@ public class GalaxyAccessControl
     }
 
     @Override
-    public void checkCanAccessCatalog(SystemSecurityContext context, String catalogName)
+    public boolean canAccessCatalog(SystemSecurityContext context, String catalogName)
     {
+        return true;
         // Allow - the granular check in this class are called after this check
     }
 
@@ -587,15 +586,6 @@ public class GalaxyAccessControl
     }
 
     @Override
-    public void checkCanGrantExecuteFunctionPrivilege(SystemSecurityContext context, String functionName, TrinoPrincipal grantee, boolean grantOption)
-    {
-        // Not allowed unless the identity user is a view definer user
-        if (!context.getIdentity().getUser().startsWith("<galaxy role ")) {
-            throw new TrinoException(NOT_SUPPORTED, "Galaxy does not support grants on functions");
-        }
-    }
-
-    @Override
     public void checkCanGrantExecuteFunctionPrivilege(SystemSecurityContext context, FunctionKind functionKind, CatalogSchemaRoutineName functionName, TrinoPrincipal grantee, boolean grantOption)
     {
         // TODO (https://github.com/starburstdata/stargate/issues/12361) implement. This is needed for views containing table functions.
@@ -699,28 +689,28 @@ public class GalaxyAccessControl
     }
 
     @Override
-    public void checkCanExecuteFunction(SystemSecurityContext context, String functionName)
-    {
-        // Allow - all functions are public and allowed
-    }
-
-    @Override
-    public void checkCanExecuteFunction(SystemSecurityContext context, FunctionKind functionKind, CatalogSchemaRoutineName function)
+    public boolean canExecuteFunction(SystemSecurityContext context, FunctionKind functionKind, CatalogSchemaRoutineName function)
     {
         if (functionKind != FunctionKind.TABLE) {
-            denyExecuteFunction(function.toString(), "Function is of type %s and only TABLE functions are supported".formatted(functionKind));
+            return false;
         }
         if (isWhitelistedTableFunction(function)) {
-            return;
+            return true;
         }
         GalaxySystemAccessController controller = getSystemAccessController(context);
         Optional<CatalogId> catalogId = controller.getCatalogId(function.getCatalogName());
         if (catalogId.isEmpty()) {
-            denyExecuteFunction(function.toString(), "Could not find catalog: %s".formatted(function.getCatalogName()));
+            return false;
         }
-        if (!controller.canExecuteFunction(context, new FunctionId(catalogId.get(), function.getSchemaName(), function.getRoutineName()))) {
-            denyExecuteFunction(function.toString(), roleLacksPrivilege(context, EXECUTE, "function", function.toString()));
-        }
+        return controller.canExecuteFunction(context, new FunctionId(catalogId.get(), function.getSchemaName(), function.getRoutineName()));
+    }
+
+    @Override
+    public boolean canCreateViewWithExecuteFunction(SystemSecurityContext systemSecurityContext, FunctionKind functionKind, CatalogSchemaRoutineName functionName)
+    {
+        // TODO (https://github.com/starburstdata/stargate/issues/12361) implement. This is needed for views containing table functions.
+        // Not allowed unless the identity user is a view definer user
+        return systemSecurityContext.getIdentity().getUser().startsWith("<galaxy role ");
     }
 
     @Override
