@@ -6227,7 +6227,7 @@ public class TestAnalyzer
     {
         assertFails("SELECT * FROM TABLE(non_existent_table_function())")
                 .hasErrorCode(FUNCTION_NOT_FOUND)
-                .hasMessage("line 1:21: Table function non_existent_table_function not registered");
+                .hasMessage("line 1:21: Table function 'non_existent_table_function' not registered");
     }
 
     @Test

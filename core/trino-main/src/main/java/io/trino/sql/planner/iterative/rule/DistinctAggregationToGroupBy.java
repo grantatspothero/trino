@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableSet;
 import io.trino.matching.Captures;
 import io.trino.matching.Pattern;
 import io.trino.metadata.FunctionResolver;
+import io.trino.security.AllowAllAccessControl;
 import io.trino.spi.function.CatalogSchemaFunctionName;
 import io.trino.sql.PlannerContext;
 import io.trino.sql.planner.OptimizerConfig.DistinctAggregationsStrategy;
@@ -287,7 +288,8 @@ public class DistinctAggregationToGroupBy
                             functionResolver.resolveFunction(
                                     context.getSession(),
                                     QualifiedName.of("arbitrary"),
-                                    fromTypes(originalAggregation.getResolvedFunction().getSignature().getReturnType())),
+                                    fromTypes(originalAggregation.getResolvedFunction().getSignature().getReturnType()),
+                                    new AllowAllAccessControl()),
                             ImmutableList.of(innerAggregationOutputSymbol.toSymbolReference()),
                             false,
                             Optional.of(nonDistinctGroupFilterSymbol),
