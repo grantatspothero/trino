@@ -28,7 +28,6 @@ import io.trino.sql.analyzer.Analyzer;
 import io.trino.sql.analyzer.AnalyzerFactory;
 import io.trino.sql.analyzer.Field;
 import io.trino.sql.parser.ParsingException;
-import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.AllColumns;
 import io.trino.sql.tree.Cast;
@@ -306,7 +305,7 @@ public class GalaxyTrinoMetadata
 
     private Optional<Analysis> describe(String sqlStatement)
     {
-        Statement statement = this.sqlParser.createStatement(sqlStatement, new ParsingOptions());
+        Statement statement = this.sqlParser.createStatement(sqlStatement);
         if (statement instanceof Query) {
             Analyzer analyzer = analyzerFactory.createAnalyzer(session, ImmutableList.of(), ImmutableMap.of(), WarningCollector.NOOP, createPlanOptimizersStatsCollector());
             return Optional.of(analyzer.analyze(statement, DESCRIBE));
