@@ -306,7 +306,7 @@ public class GalaxyTrinoMetadata
 
     private Optional<Analysis> describe(String sqlStatement)
     {
-        Statement statement = this.sqlParser.createStatement(sqlStatement, new ParsingOptions(ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL));
+        Statement statement = this.sqlParser.createStatement(sqlStatement, new ParsingOptions());
         if (statement instanceof Query) {
             Analyzer analyzer = analyzerFactory.createAnalyzer(session, ImmutableList.of(), ImmutableMap.of(), WarningCollector.NOOP, createPlanOptimizersStatsCollector());
             return Optional.of(analyzer.analyze(statement, DESCRIBE));

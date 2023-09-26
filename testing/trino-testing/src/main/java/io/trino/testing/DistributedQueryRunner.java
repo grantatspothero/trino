@@ -25,7 +25,6 @@ import io.airlift.log.Logging;
 import io.airlift.testing.Assertions;
 import io.airlift.units.Duration;
 import io.opentelemetry.sdk.trace.SpanProcessor;
-import io.trino.FeaturesConfig;
 import io.trino.Session;
 import io.trino.Session.SessionBuilder;
 import io.trino.cost.StatsCalculator;
@@ -88,8 +87,6 @@ import static io.airlift.log.Level.WARN;
 import static io.airlift.testing.Closeables.closeAllSuppress;
 import static io.airlift.units.Duration.nanosSince;
 import static io.trino.execution.querystats.PlanOptimizersStatsCollector.createPlanOptimizersStatsCollector;
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE;
 import static io.trino.transaction.TransactionBuilder.transaction;
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.System.getenv;
@@ -551,8 +548,7 @@ public class DistributedQueryRunner
         }
 
         SqlParser sqlParser = coordinator.getInstance(Key.get(SqlParser.class));
-        Statement statement = sqlParser.createStatement(sql, new ParsingOptions(
-                new FeaturesConfig().isParseDecimalLiteralsAsDouble() ? AS_DOUBLE : AS_DECIMAL));
+        Statement statement = sqlParser.createStatement(sql, new ParsingOptions());
         return coordinator.getQueryExplainer().getLogicalPlan(session, statement, ImmutableList.of(), WarningCollector.NOOP, createPlanOptimizersStatsCollector());
     }
 
