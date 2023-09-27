@@ -77,6 +77,7 @@ import static io.trino.sql.planner.assertions.PlanMatchPattern.chooseAlternative
 import static io.trino.sql.planner.assertions.PlanMatchPattern.node;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.tableScan;
 import static io.trino.testing.QueryAssertions.assertEqualsIgnoreOrder;
+import static io.trino.tpch.TpchTable.CUSTOMER;
 import static io.trino.tpch.TpchTable.LINE_ITEM;
 import static io.trino.tpch.TpchTable.ORDERS;
 import static io.trino.transaction.TransactionBuilder.transaction;
@@ -85,7 +86,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public abstract class BaseCacheSubqueriesTest
         extends AbstractTestQueryFramework
 {
-    protected static final Set<TpchTable<?>> REQUIRED_TABLES = ImmutableSet.of(LINE_ITEM, ORDERS);
+    protected static final Set<TpchTable<?>> REQUIRED_TABLES = ImmutableSet.of(LINE_ITEM, ORDERS, CUSTOMER);
     protected static final Map<String, String> EXTRA_PROPERTIES = ImmutableMap.of("cache.enabled", "true");
 
     @BeforeMethod
@@ -246,6 +247,39 @@ public abstract class BaseCacheSubqueriesTest
     }
 
     @Test
+    public void testCacheWhenProjectionsWerePushedDown()
+    {
+        computeActual("create table orders_with_row (c row(name varchar, lastname varchar, age integer))");
+        computeActual("insert into orders_with_row values (row (row ('any_name', 'any_lastname', 25)))");
+
+        @Language("SQL") String query = "select c.name, c.age from orders_with_row union all select c.name, c.age from orders_with_row";
+        @Language("SQL") String secondQuery = "select c.lastname, c.age from orders_with_row union all select c.lastname, c.age from orders_with_row";
+
+        Session cacheEnabledProjectionDisabled = withProjectionPushdownEnabled(withCacheEnabled(), false);
+
+        MaterializedResultWithQueryId firstRun = executeWithQueryId(withCacheEnabled(), query);
+        assertThat(firstRun.getResult().getRowCount()).isEqualTo(2);
+        assertThat(firstRun.getResult().getMaterializedRows().get(0).getFieldCount()).isEqualTo(2);
+        assertThat(getCacheDataOperatorInputPositions(firstRun.getQueryId())).isPositive();
+
+        // should use cache
+        MaterializedResultWithQueryId secondRun = executeWithQueryId(withCacheEnabled(), query);
+        assertThat(secondRun.getResult().getRowCount()).isEqualTo(2);
+        assertThat(secondRun.getResult().getMaterializedRows().get(0).getFieldCount()).isEqualTo(2);
+        assertThat(getLoadCachedDataOperatorInputPositions(secondRun.getQueryId())).isPositive();
+
+        // shouldn't use cache because selected cacheColumnIds were different in the first case as projections were pushed down
+        MaterializedResultWithQueryId pushDownProjectionDisabledRun = executeWithQueryId(cacheEnabledProjectionDisabled, query);
+        assertThat(pushDownProjectionDisabledRun.getResult()).isEqualTo(firstRun.getResult());
+
+        // shouldn't use cache because selected columns are different
+        MaterializedResultWithQueryId thirdRun = executeWithQueryId(withCacheEnabled(), secondQuery);
+        assertThat(getLoadCachedDataOperatorInputPositions(thirdRun.getQueryId())).isLessThanOrEqualTo(1);
+
+        assertUpdate("drop table orders_with_row");
+    }
+
+    @Test
     public void testPartitionedQueryCache()
     {
         createPartitionedTableAsSelect("orders_part", ImmutableList.of("orderpriority"), "select orderkey, orderdate, orderpriority from orders");
@@ -278,7 +312,7 @@ public abstract class BaseCacheSubqueriesTest
                 .orElseThrow()
                 .getId());
 
-        PlanSignature signature =  new PlanSignature(
+        PlanSignature signature = new PlanSignature(
                 new SignatureKey(catalogId + ":" + getCacheTableId(getSession(), "orders_part")),
                 Optional.empty(),
                 ImmutableList.of(getCacheColumnId(getSession(), "orders_part", "orderkey")),
@@ -528,4 +562,9 @@ public abstract class BaseCacheSubqueriesTest
     }
 
     abstract protected void createPartitionedTableAsSelect(String tableName, List<String> partitionColumns, String asSelect);
+
+    protected Session withProjectionPushdownEnabled(Session session, boolean projectionPushdownEnabled)
+    {
+        return session;
+    }
 }

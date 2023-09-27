@@ -38,6 +38,12 @@ public class TestTpchCacheSubqueriesTest
     }
 
     @Override
+    public void testCacheWhenProjectionsWerePushedDown()
+    {
+        throw new SkipException("tpch does not support for pushing down projections");
+    }
+
+    @Override
     @Test(dataProvider = "isDynamicRowFilteringEnabled")
     public void testDynamicFilterCache(boolean isDynamicRowFilteringEnabled)
     {
