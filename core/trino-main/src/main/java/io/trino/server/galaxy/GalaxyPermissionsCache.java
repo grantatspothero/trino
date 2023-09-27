@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.Immutable;
 import com.google.errorprone.annotations.ThreadSafe;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import com.google.inject.Inject;
 import io.airlift.jmx.CacheStatsMBean;
 import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
 import io.starburst.stargate.accesscontrol.client.HttpTrinoSecurityClient;
@@ -31,6 +32,7 @@ import io.starburst.stargate.id.EntityId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.identity.DispatchSession;
 import io.trino.server.security.galaxy.GalaxyIndexerTrinoSecurityApi;
+import io.trino.server.security.galaxy.GalaxySystemAccessControlConfig;
 import io.trino.spi.QueryId;
 import org.weakref.jmx.Managed;
 import org.weakref.jmx.Nested;
@@ -63,16 +65,25 @@ public class GalaxyPermissionsCache
     // catalogVisibilityCache is keyed by DispatchSession so will be loaded once per query or more if there are views
     private static final int CATALOG_VISIBILITY_CACHE_SIZE = EXPECTED_CONCURRENT_QUERIES * 3;
 
-    private final TimedMemoizingSupplier.Stats catalogVisibilityLoadingStats = TimedMemoizingSupplier.createStats();
+    private final boolean globalHotSharingCacheEnabled;
 
-    // global time-based cache
+    // global hot sharing (time-based) cache
     private final Cache<AccountSessionKey, TimedMemoizingSupplier<ContentsVisibility>> catalogVisibilityCache;
+    private final TimedMemoizingSupplier.Stats catalogVisibilityLoadingStats = TimedMemoizingSupplier.createStats();
 
     // per-query caches
     private final LoadingCache<QueryId, Map<DispatchSession, GalaxyQueryPermissions>> queryPermissionsCache;
 
-    public GalaxyPermissionsCache()
+    @Inject
+    public GalaxyPermissionsCache(GalaxySystemAccessControlConfig accessControlConfig)
     {
+        this(accessControlConfig.isGlobalHotSharingCacheEnabled());
+    }
+
+    public GalaxyPermissionsCache(boolean globalHotSharingCacheEnabled)
+    {
+        this.globalHotSharingCacheEnabled = globalHotSharingCacheEnabled;
+
         catalogVisibilityCache = buildNonEvictableCache(
                 CacheBuilder.newBuilder()
                         .maximumSize(CATALOG_VISIBILITY_CACHE_SIZE));
@@ -164,11 +175,16 @@ public class GalaxyPermissionsCache
         public synchronized ContentsVisibility getCatalogVisibility()
         {
             if (catalogVisibility == null) {
-                TimedMemoizingSupplier<ContentsVisibility> loader = uncheckedCacheGet(
-                        catalogVisibilityCache,
-                        AccountSessionKey.create(trinoSecurityApi, session),
-                        () -> new TimedMemoizingSupplier<>(() -> trinoSecurityApi.getCatalogVisibility(session), catalogVisibilityLoadingStats));
-                catalogVisibility = loader.get(queryStart);
+                if (globalHotSharingCacheEnabled) {
+                    TimedMemoizingSupplier<ContentsVisibility> loader = uncheckedCacheGet(
+                            catalogVisibilityCache,
+                            AccountSessionKey.create(trinoSecurityApi, session),
+                            () -> new TimedMemoizingSupplier<>(() -> trinoSecurityApi.getCatalogVisibility(session), catalogVisibilityLoadingStats));
+                    catalogVisibility = loader.get(queryStart);
+                }
+                else {
+                    catalogVisibility = trinoSecurityApi.getCatalogVisibility(session);
+                }
             }
             return catalogVisibility;
         }

@@ -14,6 +14,7 @@
 package io.trino.server.security.galaxy;
 
 import io.airlift.configuration.Config;
+import io.airlift.configuration.ConfigDescription;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
@@ -31,6 +32,7 @@ public class GalaxySystemAccessControlConfig
 
     private FilterColumnsAcceleration filterColumnsAcceleration = FilterColumnsAcceleration.NONE;
     private int backgroundProcessingThreads = 8;
+    private boolean globalHotSharingCacheEnabled = true;
 
     @NotNull
     public FilterColumnsAcceleration getFilterColumnsAcceleration()
@@ -55,6 +57,19 @@ public class GalaxySystemAccessControlConfig
     public GalaxySystemAccessControlConfig setBackgroundProcessingThreads(int backgroundProcessingThreads)
     {
         this.backgroundProcessingThreads = backgroundProcessingThreads;
+        return this;
+    }
+
+    public boolean isGlobalHotSharingCacheEnabled()
+    {
+        return globalHotSharingCacheEnabled;
+    }
+
+    @Config("galaxy.access-control.global-hot-sharing.enabled")
+    @ConfigDescription("Enable sharing of equivalent security API call results between queries when load time is after query start time")
+    public GalaxySystemAccessControlConfig setGlobalHotSharingCacheEnabled(boolean globalHotSharingCacheEnabled)
+    {
+        this.globalHotSharingCacheEnabled = globalHotSharingCacheEnabled;
         return this;
     }
 }

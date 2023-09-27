@@ -31,7 +31,8 @@ public class TestGalaxySystemAccessControlConfig
     {
         assertRecordedDefaults(recordDefaults(GalaxySystemAccessControlConfig.class)
                 .setFilterColumnsAcceleration(FilterColumnsAcceleration.NONE)
-                .setBackgroundProcessingThreads(8));
+                .setBackgroundProcessingThreads(8)
+                .setGlobalHotSharingCacheEnabled(true));
     }
 
     @Test
@@ -41,11 +42,13 @@ public class TestGalaxySystemAccessControlConfig
         Map<String, String> properties = ImmutableMap.<String, String>builder()
                 .put("galaxy.filter-columns-acceleration", "FCX2")
                 .put("galaxy.access-control-background-threads", "3")
+                .put("galaxy.access-control.global-hot-sharing.enabled", "false")
                 .buildOrThrow();
 
         GalaxySystemAccessControlConfig expected = new GalaxySystemAccessControlConfig()
                 .setFilterColumnsAcceleration(FilterColumnsAcceleration.FCX2)
-                .setBackgroundProcessingThreads(3);
+                .setBackgroundProcessingThreads(3)
+                .setGlobalHotSharingCacheEnabled(false);
 
         assertFullMapping(properties, expected);
     }

@@ -102,7 +102,7 @@ public class GalaxyTestHelper
 
         catalogIds = new CatalogIds(ImmutableBiMap.copyOf(catalogs), ImmutableSet.of());
         client = accountClient.getTrinoSecurityApi();
-        GalaxyPermissionsCache permissionsCache = new GalaxyPermissionsCache();
+        GalaxyPermissionsCache permissionsCache = new GalaxyPermissionsCache(new GalaxySystemAccessControlConfig());
         accessController = new GalaxySystemAccessController(client, catalogIds, permissionsCache);
         accessControl = new GalaxyAccessControl(
                 new GalaxySystemAccessControlConfig().getBackgroundProcessingThreads(),
