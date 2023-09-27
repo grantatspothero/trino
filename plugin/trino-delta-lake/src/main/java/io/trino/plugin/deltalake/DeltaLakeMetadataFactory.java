@@ -47,6 +47,8 @@ public class DeltaLakeMetadataFactory
     private final DeltaLakeAccessControlMetadataFactory accessControlMetadataFactory;
     private final JsonCodec<DataFileInfo> dataFileInfoCodec;
     private final JsonCodec<DeltaLakeMergeResult> mergeResultJsonCodec;
+    private final JsonCodec<DeltaLakeCacheTableId> tableIdCodec;
+    private final JsonCodec<DeltaLakeColumnHandle> columnCodec;
     private final TransactionLogWriterFactory transactionLogWriterFactory;
     private final NodeManager nodeManager;
     private final CheckpointWriterManager checkpointWriterManager;
@@ -73,6 +75,8 @@ public class DeltaLakeMetadataFactory
             DeltaLakeConfig deltaLakeConfig,
             JsonCodec<DataFileInfo> dataFileInfoCodec,
             JsonCodec<DeltaLakeMergeResult> mergeResultJsonCodec,
+            JsonCodec<DeltaLakeCacheTableId> tableIdCodec,
+            JsonCodec<DeltaLakeColumnHandle> columnCodec,
             TransactionLogWriterFactory transactionLogWriterFactory,
             NodeManager nodeManager,
             CheckpointWriterManager checkpointWriterManager,
@@ -102,6 +106,8 @@ public class DeltaLakeMetadataFactory
         this.useUniqueTableLocation = deltaLakeConfig.isUniqueTableLocation();
         this.allowManagedTableRename = allowManagedTableRename;
         this.trinoVersion = requireNonNull(nodeVersion, "nodeVersion is null").toString();
+        this.tableIdCodec = requireNonNull(tableIdCodec, "tableIdCodec is null");
+        this.columnCodec = requireNonNull(columnCodec, "columnCodec is null");
     }
 
     public DeltaLakeMetadata create(ConnectorIdentity identity)
@@ -134,6 +140,8 @@ public class DeltaLakeMetadataFactory
                 unsafeWritesEnabled,
                 dataFileInfoCodec,
                 mergeResultJsonCodec,
+                tableIdCodec,
+                columnCodec,
                 transactionLogWriterFactory,
                 nodeManager,
                 checkpointWriterManager,

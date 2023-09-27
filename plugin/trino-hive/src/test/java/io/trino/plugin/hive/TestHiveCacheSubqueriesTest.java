@@ -14,6 +14,7 @@
 package io.trino.plugin.hive;
 
 import com.google.common.collect.ImmutableList;
+import io.trino.Session;
 import io.trino.operator.TableScanOperator;
 import io.trino.testing.BaseCacheSubqueriesTest;
 import io.trino.testing.MaterializedResultWithQueryId;
@@ -23,6 +24,7 @@ import org.intellij.lang.annotations.Language;
 import org.testng.annotations.Test;
 
 import java.util.List;
+import java.util.function.Function;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
@@ -79,5 +81,19 @@ public class TestHiveCacheSubqueriesTest
                 asSelect);
 
         getQueryRunner().execute(sql);
+    }
+
+    @Override
+    protected Session withProjectionPushdownEnabled(Session session, boolean projectionPushdownEnabled)
+    {
+        return Session.builder(session)
+                .setSystemProperty("hive.projection_pushdown_enabled", String.valueOf(projectionPushdownEnabled))
+                .build();
+    }
+
+    @Override
+    protected <T> T withTransaction(Function<Session, T> transactionSessionConsumer)
+    {
+        return newTransaction().execute(getSession(), transactionSessionConsumer);
     }
 }

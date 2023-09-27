@@ -16,6 +16,7 @@ package io.trino.plugin.deltalake;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
+import io.airlift.json.JsonCodec;
 import io.airlift.units.DataSize;
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystemFactory;
@@ -28,8 +29,10 @@ import io.trino.plugin.deltalake.transactionlog.TableSnapshot;
 import io.trino.plugin.deltalake.transactionlog.TransactionLogAccess;
 import io.trino.plugin.deltalake.transactionlog.statistics.DeltaLakeFileStatistics;
 import io.trino.spi.SplitWeight;
+import io.trino.spi.cache.CacheSplitId;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.ConnectorSession;
+import io.trino.spi.connector.ConnectorSplit;
 import io.trino.spi.connector.ConnectorSplitManager;
 import io.trino.spi.connector.ConnectorSplitSource;
 import io.trino.spi.connector.ConnectorTableHandle;
@@ -85,6 +88,7 @@ public class DeltaLakeSplitManager
     private final int maxOutstandingSplits;
     private final double minimumAssignedSplitWeight;
     private final TrinoFileSystemFactory fileSystemFactory;
+    private final JsonCodec<DeltaLakeCacheSplitId> splitIdCodec;
 
     @Inject
     public DeltaLakeSplitManager(
@@ -92,7 +96,8 @@ public class DeltaLakeSplitManager
             TransactionLogAccess transactionLogAccess,
             ExecutorService executor,
             DeltaLakeConfig config,
-            TrinoFileSystemFactory fileSystemFactory)
+            TrinoFileSystemFactory fileSystemFactory,
+            JsonCodec<DeltaLakeCacheSplitId> splitIdCodec)
     {
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.transactionLogAccess = requireNonNull(transactionLogAccess, "transactionLogAccess is null");
@@ -102,6 +107,7 @@ public class DeltaLakeSplitManager
         this.maxOutstandingSplits = config.getMaxOutstandingSplits();
         this.minimumAssignedSplitWeight = config.getMinimumAssignedSplitWeight();
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
+        this.splitIdCodec = requireNonNull(splitIdCodec, "splitIdCodec is null");
     }
 
     @Override
@@ -140,6 +146,36 @@ public class DeltaLakeSplitManager
             return new TableChangesSplitSource(session, fileSystemFactory, tableFunctionHandle);
         }
         throw new UnsupportedOperationException("Unrecognized function: " + function);
+    }
+
+    @Override
+    public Optional<CacheSplitId> getCacheSplitId(ConnectorSplit split)
+    {
+        DeltaLakeSplit deltaLakeSplit = (DeltaLakeSplit) split;
+
+        // ensure cache id generation is revisited whenever split classes change
+        deltaLakeSplit = new DeltaLakeSplit(
+                deltaLakeSplit.getPath(),
+                deltaLakeSplit.getStart(),
+                deltaLakeSplit.getLength(),
+                deltaLakeSplit.getFileSize(),
+                deltaLakeSplit.getFileRowCount(),
+                deltaLakeSplit.getFileModifiedTime(),
+                deltaLakeSplit.getDeletionVector(),
+                // weight does not impact split rows
+                SplitWeight.standard(),
+                deltaLakeSplit.getStatisticsPredicate(),
+                deltaLakeSplit.getPartitionKeys());
+
+        return Optional.of(new CacheSplitId(splitIdCodec.toJson(new DeltaLakeCacheSplitId(
+                deltaLakeSplit.getPath(),
+                deltaLakeSplit.getStart(),
+                deltaLakeSplit.getLength(),
+                deltaLakeSplit.getFileSize(),
+                deltaLakeSplit.getFileRowCount(),
+                deltaLakeSplit.getFileModifiedTime(),
+                deltaLakeSplit.getPartitionKeys(),
+                deltaLakeSplit.getDeletionVector()))));
     }
 
     private Stream<DeltaLakeSplit> getSplits(

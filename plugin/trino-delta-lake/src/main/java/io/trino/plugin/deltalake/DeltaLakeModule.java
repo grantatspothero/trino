@@ -20,9 +20,9 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
-import com.starburstdata.trino.plugins.dynamicfiltering.DynamicRowFilteringModule;
 import com.starburstdata.trino.plugins.dynamicfiltering.ForDynamicRowFiltering;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.trino.galaxy.dynamicfiltering.DynamicRowFilteringModule;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.LocalRegionConfig;
@@ -60,6 +60,9 @@ import io.trino.plugin.hive.metastore.SemiTransactionalHiveMetastore;
 import io.trino.plugin.hive.metastore.thrift.TranslateHiveViews;
 import io.trino.plugin.hive.parquet.ParquetReaderConfig;
 import io.trino.plugin.hive.parquet.ParquetWriterConfig;
+import io.trino.plugin.hive.util.BlockJsonSerde;
+import io.trino.plugin.hive.util.HiveBlockEncodingSerde;
+import io.trino.spi.block.Block;
 import io.trino.spi.connector.ConnectorNodePartitioningProvider;
 import io.trino.spi.connector.ConnectorPageSinkProvider;
 import io.trino.spi.connector.ConnectorPageSourceProvider;
@@ -76,6 +79,7 @@ import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.airlift.configuration.ConfigBinder.configBinder;
+import static io.airlift.json.JsonBinder.jsonBinder;
 import static io.airlift.json.JsonCodecBinder.jsonCodecBinder;
 import static io.trino.plugin.deltalake.DeltaLakeAccessControlMetadataFactory.SYSTEM;
 import static java.util.concurrent.Executors.newCachedThreadPool;
@@ -145,6 +149,11 @@ public class DeltaLakeModule
         newExporter(binder).export(FileFormatDataSourceStats.class)
                 .as(generator -> generator.generatedNameOf(FileFormatDataSourceStats.class, catalogName.get().toString()));
 
+        // for table handle, column handle and split ids
+        jsonCodecBinder(binder).bindJsonCodec(DeltaLakeCacheTableId.class);
+        jsonCodecBinder(binder).bindJsonCodec(DeltaLakeCacheSplitId.class);
+        jsonCodecBinder(binder).bindJsonCodec(DeltaLakeColumnHandle.class);
+
         Multibinder<Procedure> procedures = newSetBinder(binder, Procedure.class);
         procedures.addBinding().toProvider(DropExtendedStatsProcedure.class).in(Scopes.SINGLETON);
         procedures.addBinding().toProvider(VacuumProcedure.class).in(Scopes.SINGLETON);
@@ -162,11 +171,16 @@ public class DeltaLakeModule
         binder.bind(Runnable.class)
                 .annotatedWith(ForDynamicRowFiltering.class)
                 .toInstance(() -> {});
-        binder.install(new DynamicRowFilteringModule(() -> true));
+        binder.install(new DynamicRowFilteringModule());
 
         newSetBinder(binder, ConnectorTableFunction.class).addBinding().toProvider(TableChangesFunctionProvider.class).in(Scopes.SINGLETON);
         binder.bind(FunctionProvider.class).to(DeltaLakeFunctionProvider.class).in(Scopes.SINGLETON);
         binder.bind(TableChangesProcessorProvider.class).in(Scopes.SINGLETON);
+
+        // bind block serializers for the purpose of TupleDomain serde
+        binder.bind(HiveBlockEncodingSerde.class).in(Scopes.SINGLETON);
+        jsonBinder(binder).addSerializerBinding(Block.class).to(BlockJsonSerde.Serializer.class);
+        jsonBinder(binder).addDeserializerBinding(Block.class).to(BlockJsonSerde.Deserializer.class);
     }
 
     @Singleton

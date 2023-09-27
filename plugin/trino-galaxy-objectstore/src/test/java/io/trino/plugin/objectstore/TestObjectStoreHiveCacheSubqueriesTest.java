@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.objectstore;
 
+import io.trino.Session;
 import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
@@ -84,5 +85,13 @@ public class TestObjectStoreHiveCacheSubqueriesTest
                 asSelect);
 
         getQueryRunner().execute(sql);
+    }
+
+    @Override
+    protected Session withProjectionPushdownEnabled(Session session, boolean projectionPushdownEnabled)
+    {
+        return Session.builder(session)
+                .setSystemProperty("objectstore.projection_pushdown_enabled", String.valueOf(projectionPushdownEnabled))
+                .build();
     }
 }
