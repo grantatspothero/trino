@@ -92,22 +92,28 @@ public class TestHiveCacheSubqueriesTest
     public void testPartitionedQueryCache()
     {
         computeActual("create table orders_part with (partitioned_by = ARRAY['orderpriority']) as select orderkey, orderdate, orderpriority from orders");
-        @Language("SQL") String filteringQuery = """
-                        select orderkey from orders_part where orderpriority = '3-MEDIUM'
+        @Language("SQL") String selectTwoPartitions = """
+                        select orderkey from orders_part where orderpriority IN ('3-MEDIUM', '1-URGENT')
                         union all
-                        select orderkey from orders_part where orderpriority = '3-MEDIUM'
+                        select orderkey from orders_part where orderpriority IN ('3-MEDIUM', '1-URGENT')
                 """;
-        @Language("SQL") String notFilteringQuery = """
+        @Language("SQL") String selectAllPartitions = """
                         select orderkey from orders_part
                         union all
                         select orderkey from orders_part
                 """;
-        MaterializedResultWithQueryId filteringExecutionFirst = executeWithQueryId(withCacheSubqueriesEnabled(), filteringQuery);
-        Plan filteringPlanFirst = getDistributedQueryRunner().getQueryPlan(filteringExecutionFirst.getQueryId());
-        MaterializedResultWithQueryId filteringExecutionSecond = executeWithQueryId(withCacheSubqueriesEnabled(), filteringQuery);
+        @Language("SQL") String selectSinglePartition = """
+                        select orderkey from orders_part where orderpriority = '3-MEDIUM'
+                        union all
+                        select orderkey from orders_part where orderpriority = '3-MEDIUM'
+                """;
 
-        MaterializedResultWithQueryId notFilteringExecution = executeWithQueryId(withCacheSubqueriesEnabled(), notFilteringQuery);
-        Plan notFilteringPlan = getDistributedQueryRunner().getQueryPlan(notFilteringExecution.getQueryId());
+        MaterializedResultWithQueryId twoPartitionsQueryFirst = executeWithQueryId(withCacheSubqueriesEnabled(), selectTwoPartitions);
+        Plan twoPartitionsQueryPlan = getDistributedQueryRunner().getQueryPlan(twoPartitionsQueryFirst.getQueryId());
+        MaterializedResultWithQueryId twoPartitionsQuerySecond = executeWithQueryId(withCacheSubqueriesEnabled(), selectTwoPartitions);
+
+        MaterializedResultWithQueryId allPartitionsQuery = executeWithQueryId(withCacheSubqueriesEnabled(), selectAllPartitions);
+        Plan allPartitionsQueryPlan = getDistributedQueryRunner().getQueryPlan(allPartitionsQuery.getQueryId());
 
         String hiveCatalogId = withTransaction(session -> getDistributedQueryRunner().getCoordinator()
                 .getMetadata()
@@ -132,23 +138,29 @@ public class TestHiveCacheSubqueriesTest
 
         // predicate for both original plans were pushed down to tableHandle what means that there is no
         // filter nodes. As a result, there is a same plan signatures for both (actually different) queries
-        assertPlan(getSession(), filteringPlanFirst, originalPlanPattern);
-        assertPlan(getSession(), notFilteringPlan, originalPlanPattern);
+        assertPlan(getSession(), twoPartitionsQueryPlan, originalPlanPattern);
+        assertPlan(getSession(), allPartitionsQueryPlan, originalPlanPattern);
 
         // make sure that full scan reads data from table instead of basing on cache even though
         // plan signature is same
-        assertThat(getScanOperatorInputPositions(filteringExecutionFirst.getQueryId())).isPositive();
-        assertThat(getScanOperatorInputPositions(filteringExecutionSecond.getQueryId())).isZero();
-        assertThat(getScanOperatorInputPositions(notFilteringExecution.getQueryId())).isPositive();
+        assertThat(getScanOperatorInputPositions(twoPartitionsQueryFirst.getQueryId())).isPositive();
+        assertThat(getScanOperatorInputPositions(twoPartitionsQuerySecond.getQueryId())).isZero();
+        assertThat(getScanOperatorInputPositions(allPartitionsQuery.getQueryId())).isPositive();
 
         // notFilteringExecution should read from both cache (for partitions pre-loaded by filtering executions) and
         // from source table
-        assertThat(getLoadCachedDataOperatorInputPositions(notFilteringExecution.getQueryId())).isPositive();
+        assertThat(getLoadCachedDataOperatorInputPositions(allPartitionsQuery.getQueryId())).isPositive();
+
+        // single partition query should read from cache only because data for all partitions have been pre-loaded
+        MaterializedResultWithQueryId singlePartitionQuery = executeWithQueryId(withCacheSubqueriesEnabled(), selectSinglePartition);
+        assertThat(getScanOperatorInputPositions(singlePartitionQuery.getQueryId())).isZero();
+        assertThat(getLoadCachedDataOperatorInputPositions(singlePartitionQuery.getQueryId())).isPositive();
 
         // validate results
-        int count = filteringExecutionFirst.getResult().getRowCount();
-        assertThat(count).isEqualTo(filteringExecutionSecond.getResult().getRowCount());
-        assertThat(count).isLessThan(notFilteringExecution.getResult().getRowCount());
+        int twoPartitionsRowCount = twoPartitionsQueryFirst.getResult().getRowCount();
+        assertThat(twoPartitionsRowCount).isEqualTo(twoPartitionsQuerySecond.getResult().getRowCount());
+        assertThat(twoPartitionsRowCount).isLessThan(allPartitionsQuery.getResult().getRowCount());
+        assertThat(singlePartitionQuery.getResult().getRowCount()).isLessThan(twoPartitionsRowCount);
         assertUpdate("drop table orders_part");
     }
 
