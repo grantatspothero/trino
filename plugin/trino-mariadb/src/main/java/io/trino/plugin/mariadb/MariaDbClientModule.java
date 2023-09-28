@@ -18,6 +18,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
+import io.opentelemetry.api.OpenTelemetry;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.LocalRegionConfig;
@@ -64,7 +65,8 @@ public class MariaDbClientModule
             CredentialProvider credentialProvider,
             LocalRegionConfig localRegionConfig,
             CrossRegionConfig crossRegionConfig,
-            SshTunnelConfig sshTunnelConfig)
+            SshTunnelConfig sshTunnelConfig,
+            OpenTelemetry openTelemetry)
     {
         Properties properties = getConnectionProperties();
         properties.setProperty("socketFactory", GalaxyMariaDbSocketFactory.class.getName());
@@ -76,7 +78,7 @@ public class MariaDbClientModule
 
         CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(properties::setProperty, CatalogNetworkMonitorProperties.generateFrom(crossRegionConfig, catalogHandle));
 
-        return new DriverConnectionFactory(new Driver(), config.getConnectionUrl(), properties, credentialProvider);
+        return new DriverConnectionFactory(new Driver(), config.getConnectionUrl(), properties, credentialProvider, openTelemetry);
     }
 
     private static Properties getConnectionProperties()

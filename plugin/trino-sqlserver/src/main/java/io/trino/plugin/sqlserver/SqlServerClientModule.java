@@ -20,6 +20,7 @@ import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.microsoft.sqlserver.jdbc.SQLServerDriver;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.opentelemetry.api.OpenTelemetry;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.LocalRegionConfig;
@@ -87,7 +88,8 @@ public class SqlServerClientModule
             LocalRegionConfig localRegionConfig,
             CrossRegionConfig crossRegionConfig,
             SshTunnelConfig sshTunnelConfig,
-            CredentialProvider credentialProvider)
+            CredentialProvider credentialProvider,
+            OpenTelemetry openTelemetry)
     {
         Properties socketArgs = new Properties();
         RegionVerifierProperties.addRegionVerifierProperties(socketArgs::setProperty, RegionVerifierProperties.generateFrom(localRegionConfig, crossRegionConfig));
@@ -108,7 +110,7 @@ public class SqlServerClientModule
             throw new UncheckedIOException("Could not construct SocketFactory argument", e);
         }
 
-        DriverConnectionFactory delegate = new DriverConnectionFactory(new SQLServerDriver(), config.getConnectionUrl(), connectionProperties, credentialProvider);
+        DriverConnectionFactory delegate = new DriverConnectionFactory(new SQLServerDriver(), config.getConnectionUrl(), connectionProperties, credentialProvider, openTelemetry);
         return new SqlServerConnectionFactory(delegate, sqlServerConfig.isSnapshotIsolationDisabled());
     }
 }
