@@ -57,8 +57,7 @@ import static org.testng.Assert.assertFalse;
 public class TestGroupByHash
 {
     private static final int MAX_GROUP_ID = 500;
-    private static final TypeOperators TYPE_OPERATORS = new TypeOperators();
-    private static final JoinCompiler JOIN_COMPILER = new JoinCompiler(TYPE_OPERATORS);
+    private static final JoinCompiler JOIN_COMPILER = new JoinCompiler(new TypeOperators());
     private static final int BIGINT_EXPECTED_REHASH = 20;
     // first rehash moves from the initial capacity to 1024 (batch size) and last hash moves to 1024 * 1024,
     // which is 1 initial rehash + 10 additional rehashes
@@ -338,7 +337,7 @@ public class TestGroupByHash
 
         // Create GroupByHash with tiny size
         AtomicInteger rehashCount = new AtomicInteger();
-        GroupByHash groupByHash = createGroupByHash(ImmutableList.of(type), true, 1, false, JOIN_COMPILER, TYPE_OPERATORS, () -> {
+        GroupByHash groupByHash = createGroupByHash(ImmutableList.of(type), true, 1, false, JOIN_COMPILER, () -> {
             rehashCount.incrementAndGet();
             return true;
         });
@@ -377,7 +376,7 @@ public class TestGroupByHash
         int yields = 0;
 
         // test addPage
-        GroupByHash groupByHash = createGroupByHash(ImmutableList.of(type), true, 1, false, JOIN_COMPILER, TYPE_OPERATORS, updateMemory);
+        GroupByHash groupByHash = createGroupByHash(ImmutableList.of(type), true, 1, false, JOIN_COMPILER, updateMemory);
         boolean finish = false;
         Work<?> addPageWork = groupByHash.addPage(page);
         while (!finish) {
@@ -403,7 +402,7 @@ public class TestGroupByHash
         currentQuota.set(0);
         allowedQuota.set(6);
         yields = 0;
-        groupByHash = createGroupByHash(ImmutableList.of(type), true, 1, false, JOIN_COMPILER, TYPE_OPERATORS, updateMemory);
+        groupByHash = createGroupByHash(ImmutableList.of(type), true, 1, false, JOIN_COMPILER, updateMemory);
 
         finish = false;
         Work<int[]> getGroupIdsWork = groupByHash.getGroupIds(page);
@@ -701,7 +700,7 @@ public class TestGroupByHash
 
     private static void assertGroupByHashWork(Page page, List<Type> types, Class<?> clazz)
     {
-        GroupByHash groupByHash = createGroupByHash(types, false, 100, true, JOIN_COMPILER, TYPE_OPERATORS, NOOP);
+        GroupByHash groupByHash = createGroupByHash(types, false, 100, true, JOIN_COMPILER, NOOP);
         Work<int[]> work = groupByHash.getGroupIds(page);
         // Compare by name since classes are private
         assertThat(work.getClass().getName()).isEqualTo(clazz.getName());

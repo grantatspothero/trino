@@ -23,7 +23,6 @@ import io.trino.cache.NonEvictableLoadingCache;
 import io.trino.spi.Page;
 import io.trino.spi.PageBuilder;
 import io.trino.spi.type.Type;
-import io.trino.spi.type.TypeOperators;
 import io.trino.sql.gen.IsolatedClass;
 import io.trino.sql.gen.JoinCompiler;
 
@@ -68,11 +67,10 @@ public interface GroupByHash
             boolean hasPrecomputedHash,
             int expectedSize,
             JoinCompiler joinCompiler,
-            TypeOperators typeOperators,
             UpdateMemory updateMemory)
     {
         boolean dictionaryAggregationEnabled = isDictionaryAggregationEnabled(session);
-        return createGroupByHash(types, hasPrecomputedHash, expectedSize, dictionaryAggregationEnabled, joinCompiler, typeOperators, updateMemory);
+        return createGroupByHash(types, hasPrecomputedHash, expectedSize, dictionaryAggregationEnabled, joinCompiler, updateMemory);
     }
 
     static GroupByHash createGroupByHash(
@@ -81,7 +79,6 @@ public interface GroupByHash
             int expectedSize,
             boolean dictionaryAggregationEnabled,
             JoinCompiler joinCompiler,
-            TypeOperators typeOperators,
             UpdateMemory updateMemory)
     {
         try {
