@@ -41,4 +41,11 @@ public class TestTpchCacheSubqueriesTest
     {
         throw new SkipException("tpch does not support for partitioned tables");
     }
+
+    @Override
+    @Test
+    public void testPartitionedQueryCache()
+    {
+        throw new SkipException("tpch does not support for partitioned tables");
+    }
 }

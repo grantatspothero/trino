@@ -13,27 +13,49 @@
  */
 package io.trino.testing;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.trino.Session;
 import io.trino.cache.CacheDataOperator;
 import io.trino.cache.LoadCachedDataOperator;
+import io.trino.metadata.Metadata;
+import io.trino.metadata.QualifiedObjectName;
+import io.trino.metadata.TableHandle;
 import io.trino.operator.OperatorStats;
 import io.trino.operator.ScanFilterAndProjectOperator;
 import io.trino.operator.TableScanOperator;
 import io.trino.spi.QueryId;
+import io.trino.spi.cache.CacheColumnId;
+import io.trino.spi.cache.PlanSignature;
+import io.trino.spi.cache.SignatureKey;
+import io.trino.spi.predicate.TupleDomain;
+import io.trino.sql.planner.Plan;
+import io.trino.sql.planner.assertions.PlanAssert;
+import io.trino.sql.planner.assertions.PlanMatchPattern;
+import io.trino.sql.planner.plan.LoadCachedDataPlanNode;
 import io.trino.tpch.TpchTable;
 import org.intellij.lang.annotations.Language;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 
 import static io.trino.SystemSessionProperties.CACHE_SUBQUERIES_ENABLED;
+import static io.trino.cost.StatsCalculator.noopStatsCalculator;
+import static io.trino.metadata.FunctionManager.createTestingFunctionManager;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.anyTree;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.cacheDataPlanNode;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.chooseAlternativeNode;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.node;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.tableScan;
 import static io.trino.testing.QueryAssertions.assertEqualsIgnoreOrder;
 import static io.trino.tpch.TpchTable.LINE_ITEM;
 import static io.trino.tpch.TpchTable.ORDERS;
+import static io.trino.transaction.TransactionBuilder.transaction;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public abstract class BaseCacheSubqueriesTest
@@ -127,7 +149,7 @@ public abstract class BaseCacheSubqueriesTest
         computeActual("create table orders_part with (partitioned_by = ARRAY['orderkey']) as select orderdate, orderpriority, mod(orderkey, 50) as orderkey from orders");
         // mod predicate will be not pushed to connector
         @Language("SQL") String query =
-                        """
+                """
                         select * from (
                             select orderdate from orders_part where orderkey > 5 and mod(orderkey, 10) = 0 and orderpriority = '1-MEDIUM'
                             union all
@@ -141,6 +163,111 @@ public abstract class BaseCacheSubqueriesTest
         assertThat(getLoadCachedDataOperatorInputPositions(cacheEnabledResult.getQueryId())).isPositive();
         assertThat(cacheDisabledResult.getResult()).isEqualTo(cacheEnabledResult.getResult());
         assertUpdate("drop table orders_part");
+    }
+
+    @Test
+    public void testPartitionedQueryCache()
+    {
+        computeActual("create table orders_part with (partitioned_by = ARRAY['orderpriority']) as select orderkey, orderdate, orderpriority from orders");
+        @Language("SQL") String selectTwoPartitions = """
+                        select orderkey from orders_part where orderpriority IN ('3-MEDIUM', '1-URGENT')
+                        union all
+                        select orderkey from orders_part where orderpriority IN ('3-MEDIUM', '1-URGENT')
+                """;
+        @Language("SQL") String selectAllPartitions = """
+                        select orderkey from orders_part
+                        union all
+                        select orderkey from orders_part
+                """;
+        @Language("SQL") String selectSinglePartition = """
+                        select orderkey from orders_part where orderpriority = '3-MEDIUM'
+                        union all
+                        select orderkey from orders_part where orderpriority = '3-MEDIUM'
+                """;
+
+        MaterializedResultWithQueryId twoPartitionsQueryFirst = executeWithQueryId(withCacheSubqueriesEnabled(), selectTwoPartitions);
+        Plan twoPartitionsQueryPlan = getDistributedQueryRunner().getQueryPlan(twoPartitionsQueryFirst.getQueryId());
+        MaterializedResultWithQueryId twoPartitionsQuerySecond = executeWithQueryId(withCacheSubqueriesEnabled(), selectTwoPartitions);
+
+        MaterializedResultWithQueryId allPartitionsQuery = executeWithQueryId(withCacheSubqueriesEnabled(), selectAllPartitions);
+        Plan allPartitionsQueryPlan = getDistributedQueryRunner().getQueryPlan(allPartitionsQuery.getQueryId());
+
+        String hiveCatalogId = withTransaction(session -> getDistributedQueryRunner().getCoordinator()
+                .getMetadata()
+                .getCatalogHandle(session, session.getCatalog().get())
+                .orElseThrow()
+                .getId());
+
+        PlanSignature signature = new PlanSignature(
+                new SignatureKey(hiveCatalogId + ":{\"schemaName\":\"tpch\",\"tableName\":\"orders_part\",\"compactEffectivePredicate\":{\"columnDomains\":[]}}"),
+                Optional.empty(),
+                ImmutableList.of(getCacheColumnId(getSession(), "orders_part", "orderkey")),
+                TupleDomain.all(),
+                TupleDomain.all());
+
+        PlanMatchPattern chooseAlternativeNode = chooseAlternativeNode(
+                tableScan("orders_part"),
+                cacheDataPlanNode(tableScan("orders_part")),
+                node(LoadCachedDataPlanNode.class)
+                        .with(LoadCachedDataPlanNode.class, node -> node.getPlanSignature().equals(signature)));
+
+        PlanMatchPattern originalPlanPattern = anyTree(chooseAlternativeNode, chooseAlternativeNode);
+
+        // predicate for both original plans were pushed down to tableHandle what means that there is no
+        // filter nodes. As a result, there is a same plan signatures for both (actually different) queries
+        assertPlan(getSession(), twoPartitionsQueryPlan, originalPlanPattern);
+        assertPlan(getSession(), allPartitionsQueryPlan, originalPlanPattern);
+
+        // make sure that full scan reads data from table instead of basing on cache even though
+        // plan signature is same
+        assertThat(getScanOperatorInputPositions(twoPartitionsQueryFirst.getQueryId())).isPositive();
+        assertThat(getScanOperatorInputPositions(twoPartitionsQuerySecond.getQueryId())).isZero();
+        assertThat(getScanOperatorInputPositions(allPartitionsQuery.getQueryId())).isPositive();
+
+        // notFilteringExecution should read from both cache (for partitions pre-loaded by filtering executions) and
+        // from source table
+        assertThat(getLoadCachedDataOperatorInputPositions(allPartitionsQuery.getQueryId())).isPositive();
+
+        // single partition query should read from cache only because data for all partitions have been pre-loaded
+        MaterializedResultWithQueryId singlePartitionQuery = executeWithQueryId(withCacheSubqueriesEnabled(), selectSinglePartition);
+        assertThat(getScanOperatorInputPositions(singlePartitionQuery.getQueryId())).isZero();
+        assertThat(getLoadCachedDataOperatorInputPositions(singlePartitionQuery.getQueryId())).isPositive();
+
+        // validate results
+        int twoPartitionsRowCount = twoPartitionsQueryFirst.getResult().getRowCount();
+        assertThat(twoPartitionsRowCount).isEqualTo(twoPartitionsQuerySecond.getResult().getRowCount());
+        assertThat(twoPartitionsRowCount).isLessThan(allPartitionsQuery.getResult().getRowCount());
+        assertThat(singlePartitionQuery.getResult().getRowCount()).isLessThan(twoPartitionsRowCount);
+        assertUpdate("drop table orders_part");
+    }
+
+    protected CacheColumnId getCacheColumnId(Session session, String tableName, String columnName)
+    {
+        QueryRunner runner = getQueryRunner();
+        QualifiedObjectName table = new QualifiedObjectName(session.getCatalog().orElseThrow(), session.getSchema().orElseThrow(), tableName);
+        return transaction(runner.getTransactionManager(), runner.getAccessControl())
+                .singleStatement()
+                .execute(session, transactionSession -> {
+                    Metadata metadata = runner.getMetadata();
+                    TableHandle tableHandle = metadata.getTableHandle(transactionSession, table).get();
+                    return new CacheColumnId("[" + metadata.getCacheColumnId(transactionSession, tableHandle, metadata.getColumnHandles(transactionSession, tableHandle).get(columnName)).get() + "]");
+                });
+    }
+
+    protected void assertPlan(Session session, Plan plan, PlanMatchPattern pattern)
+    {
+        QueryRunner runner = getQueryRunner();
+        transaction(runner.getTransactionManager(), runner.getAccessControl())
+                .singleStatement()
+                .execute(session, transactionSession -> {
+                    runner.getTransactionManager().getCatalogHandle(transactionSession.getTransactionId().get(), transactionSession.getCatalog().orElseThrow());
+                    PlanAssert.assertPlan(transactionSession, getQueryRunner().getMetadata(), createTestingFunctionManager(), noopStatsCalculator(), plan, pattern);
+                });
+    }
+
+    protected <T> T withTransaction(Function<Session, T> transactionSessionConsumer)
+    {
+        return newTransaction().execute(getSession(), transactionSessionConsumer);
     }
 
     protected MaterializedResultWithQueryId executeWithQueryId(Session session, @Language("SQL") String sql)
