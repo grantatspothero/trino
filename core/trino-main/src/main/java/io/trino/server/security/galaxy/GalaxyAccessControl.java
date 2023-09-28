@@ -291,7 +291,7 @@ public class GalaxyAccessControl
     @Override
     public void checkCanShowCreateSchema(SystemSecurityContext context, CatalogSchemaName schemaName)
     {
-        if (!isSystemCatalog(schemaName) && !isSchemaVisible(context, schemaName)) {
+        if (!isSystemOrInformationSchema(schemaName) && !isSchemaVisible(context, schemaName)) {
             denyShowCreateSchema(schemaName.toString(), entityIsNotVisible(context, "Schema", schemaName.toString()));
         }
     }
@@ -299,7 +299,7 @@ public class GalaxyAccessControl
     @Override
     public void checkCanShowCreateTable(SystemSecurityContext context, CatalogSchemaTableName table)
     {
-        if (!isSystemCatalog(table) && !isTableVisible(context, table)) {
+        if (!isSystemOrInformationSchema(table) && !isTableVisible(context, table)) {
             denyShowCreateTable(table.toString(), entityIsNotVisible(context, "Table", table.toString()));
         }
     }
@@ -512,7 +512,7 @@ public class GalaxyAccessControl
         if (isSchemaDiscovery(table)) {
             checkHasCatalogPrivilege(context, table.getCatalogName(), CREATE_SCHEMA, explanation -> denySelectColumns(table.toString(), columns, explanation));
         }
-        else if (!isSystemCatalog(table)) {
+        else if (!isSystemOrInformationSchema(table)) {
             checkHasPrivilegeOnColumns(context, SELECT, false, table, columns, explanation -> denySelectColumns(table.toString(), columns, explanation));
         }
     }
@@ -1118,12 +1118,12 @@ public class GalaxyAccessControl
                 table.getSchemaTableName().equals(new SchemaTableName("schema_discovery", "shallow_discovery"));
     }
 
-    private static boolean isSystemCatalog(CatalogSchemaName name)
+    private static boolean isSystemOrInformationSchema(CatalogSchemaName name)
     {
         return isSystemCatalog(name.getCatalogName()) || isInformationSchema(name.getSchemaName());
     }
 
-    private static boolean isSystemCatalog(CatalogSchemaTableName name)
+    private static boolean isSystemOrInformationSchema(CatalogSchemaTableName name)
     {
         return isSystemCatalog(name.getCatalogName()) || isInformationSchema(name.getSchemaTableName().getSchemaName());
     }
