@@ -71,17 +71,17 @@ public abstract class BaseCacheSubqueriesTest
     public void testAggregationQuery()
     {
         @Language("SQL") String countQuery = """
-            SELECT * FROM
-                (SELECT count(orderkey), orderkey FROM lineitem GROUP BY orderkey) a
-            JOIN
-                (SELECT count(orderkey), orderkey FROM lineitem GROUP BY orderkey) b
-            ON a.orderkey = b.orderkey""";
+                SELECT * FROM
+                    (SELECT count(orderkey), orderkey FROM lineitem GROUP BY orderkey) a
+                JOIN
+                    (SELECT count(orderkey), orderkey FROM lineitem GROUP BY orderkey) b
+                ON a.orderkey = b.orderkey""";
         @Language("SQL") String sumQuery = """
-            SELECT * FROM
-                (SELECT sum(orderkey), orderkey FROM lineitem GROUP BY orderkey) a
-            JOIN
-                (SELECT sum(orderkey), orderkey FROM lineitem GROUP BY orderkey) b
-            ON a.orderkey = b.orderkey""";
+                SELECT * FROM
+                    (SELECT sum(orderkey), orderkey FROM lineitem GROUP BY orderkey) a
+                JOIN
+                    (SELECT sum(orderkey), orderkey FROM lineitem GROUP BY orderkey) b
+                ON a.orderkey = b.orderkey""";
         MaterializedResultWithQueryId countWithCache = executeWithQueryId(withCacheSubqueriesEnabled(), countQuery);
         MaterializedResultWithQueryId countWithoutCache = executeWithQueryId(withCacheSubqueriesDisabled(), countQuery);
         assertEqualsIgnoreOrder(countWithCache.getResult(), countWithoutCache.getResult());
