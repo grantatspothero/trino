@@ -422,8 +422,14 @@ public class AccessControlManager
             return ImmutableSet.of();
         }
 
-        if (filterCatalogs(securityContext, ImmutableSet.of(catalogName)).isEmpty()) {
-            return ImmutableSet.of();
+        // TODO (https://github.com/starburstdata/stargate/issues/12932) we probably can skip the check for information_schema as well
+        //  but this requires more discussion
+        if (schemaNames.contains("information_schema")) {
+            // This call is meant as a pre-filter, but in Galaxy filterCatalogs is actually expensive
+            // as it is derived from visibility of contained relations.
+            if (filterCatalogs(securityContext, ImmutableSet.of(catalogName)).isEmpty()) {
+                return ImmutableSet.of();
+            }
         }
 
         for (SystemAccessControl systemAccessControl : getSystemAccessControls()) {
@@ -581,8 +587,14 @@ public class AccessControlManager
             return ImmutableSet.of();
         }
 
-        if (filterCatalogs(securityContext, ImmutableSet.of(catalogName)).isEmpty()) {
-            return ImmutableSet.of();
+        // TODO (https://github.com/starburstdata/stargate/issues/12932) we probably can skip the check for information_schema as well
+        //  but this requires more discussion
+        if (tableNames.stream().map(SchemaTableName::getSchemaName).anyMatch("information_schema"::equals)) {
+            // This call is meant as a pre-filter, but in Galaxy filterCatalogs is actually expensive
+            // as it is derived from visibility of contained relations.
+            if (filterCatalogs(securityContext, ImmutableSet.of(catalogName)).isEmpty()) {
+                return ImmutableSet.of();
+            }
         }
 
         for (SystemAccessControl systemAccessControl : getSystemAccessControls()) {

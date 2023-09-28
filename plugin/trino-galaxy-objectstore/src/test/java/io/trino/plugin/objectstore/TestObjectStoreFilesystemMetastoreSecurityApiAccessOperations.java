@@ -326,7 +326,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                         .replace(tableName, "test_ctas_different_catalog"))
                                 .setExpected(ImmutableMultiset.<String>builder()
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/role")
-                                        .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility", tableForm ? 0 : 1) // TODO due to Trino bug, hide-inaccessible-columns does not apply to "AS TABLE t"
                                         .addCopies("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility", tableForm ? 0 : 1) // TODO due to Trino bug, hide-inaccessible-columns does not apply to "AS TABLE t"
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/schema/c-xxx/test_schema/privileges/r-xxx")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/tiny/nation/privileges/r-xxx")
@@ -363,7 +362,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                         .replaceAll("(/[cr])-\\d+(/|$)", "$1-xxx$2"))
                                 .setExpected(ImmutableMultiset.<String>builder()
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/role")
-                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility")
                                         .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/schema/c-xxx/test_schema/privileges/r-xxx")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/tiny/nation/privileges/r-xxx")
@@ -980,7 +978,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                         // TODO (https://github.com/starburstdata/stargate/issues/12879) if information_schema.columns privileges are no longer asked for,
                                         //  remove hot-sharing for them from GalaxyPermissionsCache
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
-                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility")
                                         .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
                                         .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns__/privileges/r-xxx", tableBatches)
                                         // TODO AccessControl is consulted even for tables filtered out by the query LIKE predicate (test_other_select_i_s_columns...)
@@ -1063,7 +1060,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                         .replaceAll("(/[cr])-\\d+(/|$)", "$1-xxx$2"))
                                 .setExpected(ImmutableMultiset.<String>builder()
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
-                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility")
                                         .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns0/privileges/r-xxx")
                                         .build())
