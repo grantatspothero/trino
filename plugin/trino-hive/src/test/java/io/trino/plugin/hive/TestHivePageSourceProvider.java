@@ -52,7 +52,7 @@ public class TestHivePageSourceProvider
 {
     private static final HiveColumnHandle PARTITION_COLUMN = createBaseColumn("partition_col", 0, HIVE_STRING, VARCHAR, PARTITION_KEY, Optional.empty());
     private static final HiveColumnHandle DATA_COLUMN = createBaseColumn("data_col", 0, HIVE_INT, INTEGER, REGULAR, Optional.empty());
-    private static final HiveColumnHandle BUCKET_COLUMN = createBaseColumn("bucket_col", 0, HIVE_INT, INTEGER, REGULAR, Optional.empty());
+    private static final HiveColumnHandle BUCKET_COLUMN = createBaseColumn("bucket_col", 1, HIVE_INT, INTEGER, REGULAR, Optional.empty());
     private static final String PARTITION_NAME = "part1";
     private static final HiveBucketHandle HIVE_BUCKET_HANDLE = new HiveBucketHandle(
             ImmutableList.of(BUCKET_COLUMN),
@@ -60,14 +60,16 @@ public class TestHivePageSourceProvider
             10,
             10,
             ImmutableList.of());
+    private static final Domain DATA_DOMAIN = Domain.create(ValueSet.ofRanges(Range.range(INTEGER, 1L, true, 100L, true)), false);
+    private static final Domain PARTITION_DOMAIN = Domain.create(ValueSet.of(VARCHAR, utf8Slice("part1")), false);
     private static final HiveTableHandle HIVE_TABLE_HANDLE = new HiveTableHandle(
             "schema",
             "table",
             ImmutableList.of(PARTITION_COLUMN),
             ImmutableList.of(BUCKET_COLUMN, DATA_COLUMN),
             TupleDomain.withColumnDomains(ImmutableMap.of(
-                    DATA_COLUMN, Domain.create(ValueSet.ofRanges(Range.range(INTEGER, 1L, true, 100L, true)), false),
-                    PARTITION_COLUMN, Domain.create(ValueSet.of(VARCHAR, utf8Slice("part1")), false))),
+                    DATA_COLUMN, DATA_DOMAIN,
+                    PARTITION_COLUMN, PARTITION_DOMAIN)),
             TupleDomain.all(),
             Optional.of(HIVE_BUCKET_HANDLE),
             Optional.empty(),
@@ -132,6 +134,7 @@ public class TestHivePageSourceProvider
                 HIVE_TABLE_HANDLE,
                 TupleDomain.withColumnDomains(ImmutableMap.of(
                         DATA_COLUMN, Domain.create(ValueSet.of(INTEGER, 1L, 10L, 110L), false)))))
+                // data column domain should not be simplified because it contains only 2 values after intersection with effective predicate
                 .isEqualTo(TupleDomain.withColumnDomains(ImmutableMap.of(
                         DATA_COLUMN, Domain.create(ValueSet.of(INTEGER, 1L, 10L), false))));
 
@@ -141,6 +144,7 @@ public class TestHivePageSourceProvider
                 HIVE_TABLE_HANDLE,
                 TupleDomain.withColumnDomains(ImmutableMap.of(
                         DATA_COLUMN, Domain.create(ValueSet.of(INTEGER, 1L, 10L, 12L), false)))))
+                // data column domain should be simplified because it contains 3 values after intersection with effective predicate
                 .isEqualTo(TupleDomain.withColumnDomains(ImmutableMap.of(
                         DATA_COLUMN, Domain.create(ValueSet.ofRanges(Range.range(INTEGER, 1L, true, 12L, true)), false))));
     }
@@ -154,7 +158,7 @@ public class TestHivePageSourceProvider
                 HIVE_TABLE_HANDLE,
                 TupleDomain.withColumnDomains(ImmutableMap.of(
                         PARTITION_COLUMN, Domain.create(ValueSet.of(VARCHAR, utf8Slice("part1")), false)))))
-                .isEqualTo(TupleDomain.all());
+                .isEqualTo(TupleDomain.withColumnDomains(ImmutableMap.of(DATA_COLUMN, DATA_DOMAIN)));
 
         assertThat(pageSourceProvider.simplifyPredicate(
                 SESSION,
@@ -168,14 +172,17 @@ public class TestHivePageSourceProvider
     @Test
     public void testSimplifySkipsBucket()
     {
+        Domain bucketDomain = Domain.create(ValueSet.of(INTEGER, 1L), false);
         TupleDomain<ColumnHandle> bucketTupleDomain = TupleDomain.withColumnDomains(ImmutableMap.of(
-                BUCKET_COLUMN, Domain.create(ValueSet.of(INTEGER, 1L), false)));
+                BUCKET_COLUMN, bucketDomain));
         assertThat(pageSourceProvider.simplifyPredicate(
                 SESSION,
                 HIVE_SPLIT,
                 HIVE_TABLE_HANDLE,
                 bucketTupleDomain))
-                .isEqualTo(bucketTupleDomain);
+                .isEqualTo(TupleDomain.withColumnDomains(ImmutableMap.of(
+                        BUCKET_COLUMN, bucketDomain,
+                        DATA_COLUMN, DATA_DOMAIN)));
 
         assertThat(pageSourceProvider.simplifyPredicate(
                 SESSION,

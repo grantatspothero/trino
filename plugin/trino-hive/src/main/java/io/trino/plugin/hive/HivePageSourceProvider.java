@@ -126,8 +126,8 @@ public class HivePageSourceProvider
         HiveTableHandle hiveTable = (HiveTableHandle) tableHandle;
         HiveSplit hiveSplit = (HiveSplit) split;
 
-        TupleDomain<ColumnHandle> prunedDynamicFilter = prunePredicate(session, split, tableHandle, dynamicFilter.getCurrentPredicate());
-        if (prunedDynamicFilter.isNone()) {
+        TupleDomain<ColumnHandle> effectivePredicate = simplifyPredicate(session, split, tableHandle, dynamicFilter.getCurrentPredicate());
+        if (effectivePredicate.isNone()) {
             return new EmptyPageSource();
         }
 
@@ -161,8 +161,7 @@ public class HivePageSourceProvider
                 hiveSplit.getLength(),
                 hiveSplit.getEstimatedFileSize(),
                 hiveSplit.getSchema(),
-                getSimplifiedEffectivePredicate(hiveTable, prunedDynamicFilter)
-                        .transformKeys(HiveColumnHandle.class::cast),
+                effectivePredicate.transformKeys(HiveColumnHandle.class::cast),
                 hiveColumns,
                 typeManager,
                 hiveSplit.getBucketConversion(),
@@ -186,29 +185,12 @@ public class HivePageSourceProvider
             ConnectorTableHandle tableHandle,
             TupleDomain<ColumnHandle> predicate)
     {
-        TupleDomain<ColumnHandle> prunedPredicate = prunePredicate(session, split, tableHandle, predicate);
-
-        if (prunedPredicate.isNone()) {
-            return TupleDomain.none();
-        }
-
-        return getSimplifiedEffectivePredicate((HiveTableHandle) tableHandle, prunedPredicate)
-                // Keep only columns from pruned predicate because removed columns
-                // are prefilled for split and are irrelevant for filtering split file data.
-                .filter((handle, domain) -> prunedPredicate.getDomains().get().containsKey(handle));
-    }
-
-    /**
-     * Returns predicate that will be used to filter (non-enforced) split data by readers.
-     * Predicate includes dynamic filter columns as well as columns from compact effective
-     * predicate.
-     */
-    private TupleDomain<ColumnHandle> getSimplifiedEffectivePredicate(
-            HiveTableHandle tableHandle,
-            TupleDomain<ColumnHandle> predicate)
-    {
-        return predicate
-                .intersect(tableHandle.getCompactEffectivePredicate())
+        HiveTableHandle hiveTableHandle = (HiveTableHandle) tableHandle;
+        return prunePredicate(
+                session,
+                split,
+                hiveTableHandle,
+                predicate.intersect(hiveTableHandle.getCompactEffectivePredicate()))
                 .simplify(domainCompactionThreshold);
     }
 
