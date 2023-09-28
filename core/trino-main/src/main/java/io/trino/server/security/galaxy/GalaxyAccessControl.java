@@ -69,8 +69,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import static com.google.common.base.Suppliers.memoize;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.airlift.concurrent.MoreFutures.getDone;
@@ -236,9 +238,10 @@ public class GalaxyAccessControl
     @Override
     public Set<String> filterCatalogs(SystemSecurityContext context, Set<String> catalogs)
     {
-        Predicate<String> catalogVisibility = getSystemAccessController(context).getCatalogVisibility(context);
+        // Call getCatalogVisibility lazily, i.e. avoid call when not needed
+        Supplier<Predicate<String>> catalogVisibility = memoize(() -> getSystemAccessController(context).getCatalogVisibility(context));
         return catalogs.stream()
-                .filter(catalog -> isSystemCatalog(catalog) || catalogVisibility.test(catalog))
+                .filter(catalog -> isSystemCatalog(catalog) || catalogVisibility.get().test(catalog))
                 .collect(toImmutableSet());
     }
 
@@ -282,9 +285,10 @@ public class GalaxyAccessControl
             return schemaNames;
         }
 
-        Predicate<String> schemaVisibility = getSchemaVisibility(context, catalogName);
+        // Call getSchemaVisibility lazily, i.e. avoid call when not needed
+        Supplier<Predicate<String>> schemaVisibility = memoize(() -> getSchemaVisibility(context, catalogName));
         return schemaNames.stream()
-                .filter(name -> isInformationSchema(name) || schemaVisibility.test(name))
+                .filter(name -> isInformationSchema(name) || schemaVisibility.get().test(name))
                 .collect(toImmutableSet());
     }
 
@@ -366,6 +370,7 @@ public class GalaxyAccessControl
                 .filter(schema -> !isInformationSchema(schema))
                 .collect(toImmutableSet());
 
+        // getTableVisibility is no-op when schemaNames.isEmpty, i.e. only information_schema schema
         Predicate<SchemaTableName> tableVisibility = getTableVisibility(context, catalogName, schemaNames);
         return tableNames.stream()
                 .filter(name -> isInformationSchema(name.getSchemaName()) || tableVisibility.test(name))
