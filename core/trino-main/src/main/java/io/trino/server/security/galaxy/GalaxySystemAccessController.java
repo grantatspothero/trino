@@ -102,6 +102,16 @@ public class GalaxySystemAccessController
                 .orElse(false);
     }
 
+    public void implyCatalogVisibility(SystemSecurityContext context, String catalogName)
+    {
+        getCache(context).implyCatalogVisibility(catalogName);
+    }
+
+    public boolean hasImpliedCatalogVisibility(SystemSecurityContext context, String catalogName)
+    {
+        return getCache(context).hasImpliedCatalogVisibility(catalogName);
+    }
+
     public AccountId getAccountId(Identity identity)
     {
         return toDispatchSession(identity).getAccountId();

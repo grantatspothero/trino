@@ -38,6 +38,7 @@ import org.weakref.jmx.Managed;
 import org.weakref.jmx.Nested;
 
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -135,6 +136,8 @@ public class GalaxyPermissionsCache
         private final LoadingCache<EntityPrivilegesKey, EntityPrivileges> entityPrivileges;
         @GuardedBy("this")
         private ContentsVisibility catalogVisibility;
+        @GuardedBy("this")
+        private final Set<String> impliedCatalogVisibility = new HashSet<>();
         // It's a cache only for convenience to use loading cache's bulk loading capability
         private final LoadingCache<TableVisibilityKey, ContentsVisibility> tableVisibility;
 
@@ -187,6 +190,16 @@ public class GalaxyPermissionsCache
                 }
             }
             return catalogVisibility;
+        }
+
+        public synchronized void implyCatalogVisibility(String catalogName)
+        {
+            impliedCatalogVisibility.add(catalogName);
+        }
+
+        public synchronized boolean hasImpliedCatalogVisibility(String catalogName)
+        {
+            return impliedCatalogVisibility.contains(catalogName);
         }
 
         public Map<String, ContentsVisibility> getTableVisibility(CatalogId catalogId, Set<String> schemaNames)

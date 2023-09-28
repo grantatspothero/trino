@@ -238,10 +238,11 @@ public class GalaxyAccessControl
     @Override
     public Set<String> filterCatalogs(SystemSecurityContext context, Set<String> catalogs)
     {
+        GalaxySystemAccessController controller = getSystemAccessController(context);
         // Call getCatalogVisibility lazily, i.e. avoid call when not needed
-        Supplier<Predicate<String>> catalogVisibility = memoize(() -> getSystemAccessController(context).getCatalogVisibility(context));
+        Supplier<Predicate<String>> catalogVisibility = memoize(() -> controller.getCatalogVisibility(context));
         return catalogs.stream()
-                .filter(catalog -> isSystemCatalog(catalog) || catalogVisibility.get().test(catalog))
+                .filter(catalog -> isSystemCatalog(catalog) || controller.hasImpliedCatalogVisibility(context, catalog) || catalogVisibility.get().test(catalog))
                 .collect(toImmutableSet());
     }
 
@@ -390,6 +391,7 @@ public class GalaxyAccessControl
         // Check that the user has wildcard SELECT column privilege
         ContentsVisibility visibility = privileges.getColumnPrivileges().get(SELECT.name());
         if (visibility != null && visibility.defaultVisibility() == GrantKind.ALLOW && visibility.overrideVisibility().isEmpty()) {
+            controller.implyCatalogVisibility(context, table.getCatalogName());
             return;
         }
         denyShowColumns(table.toString(), roleLacksPrivilege(context, SELECT, "all columns of", table.toString()));
@@ -411,9 +413,13 @@ public class GalaxyAccessControl
             }
         }
 
-        return columns.stream()
+        Set<String> filtered = columns.stream()
                 .filter(visibility::isVisible)
                 .collect(toImmutableSet());
+        if (!filtered.isEmpty()) {
+            controller.implyCatalogVisibility(context, table.getCatalogName());
+        }
+        return filtered;
     }
 
     @Override
@@ -517,9 +523,15 @@ public class GalaxyAccessControl
     {
         if (isSchemaDiscovery(table)) {
             checkHasCatalogPrivilege(context, table.getCatalogName(), CREATE_SCHEMA, explanation -> denySelectColumns(table.toString(), columns, explanation));
+            return;
         }
-        else if (!isSystemOrInformationSchema(table)) {
-            checkHasPrivilegeOnColumns(context, SELECT, false, table, columns, explanation -> denySelectColumns(table.toString(), columns, explanation));
+        if (isSystemOrInformationSchema(table)) {
+            // TODO should this implyCatalogVisibility?
+            return;
+        }
+        checkHasPrivilegeOnColumns(context, SELECT, false, table, columns, explanation -> denySelectColumns(table.toString(), columns, explanation));
+        if (!columns.isEmpty()) {
+            getSystemAccessController(context).implyCatalogVisibility(context, table.getCatalogName());
         }
     }
 

@@ -999,7 +999,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                 .setExpected(ImmutableMultiset.<String>builder()
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/role")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
-                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility")
                                         .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns0/privileges/r-xxx")
                                         .build())
