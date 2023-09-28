@@ -1084,7 +1084,7 @@ public class GalaxyAccessControl
 
     private boolean isReadOnlyCatalog(GalaxySystemAccessController controller, String name)
     {
-        return isSystemCatalog(name) || isInformationSchema(name) || controller.isReadOnlyCatalog(name);
+        return isSystemCatalog(name) || controller.isReadOnlyCatalog(name);
     }
 
     private String currentRoleName(SystemSecurityContext context)
