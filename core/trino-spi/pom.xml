@@ -271,6 +271,12 @@
                                     <old>method java.util.Optional&lt;io.trino.spi.QueryId&gt; io.trino.spi.security.SystemSecurityContext::getQueryId()</old>
                                     <new>method io.trino.spi.QueryId io.trino.spi.security.SystemSecurityContext::getQueryId()</new>
                                 </item>
+                                <item>
+                                    <ignore>true</ignore>
+                                    <code>java.method.numberOfParametersChanged</code>
+                                    <old>method void io.trino.spi.resourcegroups.SelectionCriteria::&lt;init&gt;(boolean, java.lang.String, java.util.Set&lt;java.lang.String&gt;, java.util.Optional&lt;java.lang.String&gt;, java.util.Set&lt;java.lang.String&gt;, io.trino.spi.session.ResourceEstimates, java.util.Optional&lt;java.lang.String&gt;)</old>
+                                    <new>method void io.trino.spi.resourcegroups.SelectionCriteria::&lt;init&gt;(boolean, java.lang.String, java.util.Set&lt;java.lang.String&gt;, java.util.Optional&lt;java.lang.String&gt;, java.util.Optional&lt;java.lang.String&gt;, java.util.Set&lt;java.lang.String&gt;, io.trino.spi.session.ResourceEstimates, java.util.Optional&lt;java.lang.String&gt;)</new>
+                                </item>
                                 <!-- / Galaxy backports, i.e. temporary exclusions -->
 
                                 <!-- Allow adding new annotations (such as @Nullable) -->

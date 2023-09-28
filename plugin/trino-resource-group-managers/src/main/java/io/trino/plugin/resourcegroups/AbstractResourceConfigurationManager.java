@@ -96,6 +96,7 @@ public abstract class AbstractResourceConfigurationManager
             selectors.add(new StaticSelector(
                     spec.getUserRegex(),
                     spec.getUserGroupRegex(),
+                    spec.getRoleId(),
                     spec.getSourceRegex(),
                     spec.getClientTags(),
                     spec.getResourceEstimate(),

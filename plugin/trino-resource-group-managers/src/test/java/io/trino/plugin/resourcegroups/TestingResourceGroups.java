@@ -78,6 +78,7 @@ final class TestingResourceGroups
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
+                        Optional.empty(),
                         groupIdTemplate));
     }
 
@@ -103,6 +104,7 @@ final class TestingResourceGroups
                     new SelectorSpec(
                             Optional.of(matchLiterals(users)),
                             spec.getUserGroupRegex(),
+                            spec.getRoleId(),
                             spec.getSourceRegex(),
                             spec.getQueryType(),
                             spec.getClientTags(),
@@ -116,6 +118,21 @@ final class TestingResourceGroups
                     new SelectorSpec(
                             spec.getUserRegex(),
                             Optional.of(matchLiterals(groups)),
+                            spec.getRoleId(),
+                            spec.getSourceRegex(),
+                            spec.getQueryType(),
+                            spec.getClientTags(),
+                            spec.getResourceEstimate(),
+                            spec.getGroup()));
+        }
+
+        public SelectorSpecBuilder roleId(String roleId)
+        {
+            return new SelectorSpecBuilder(
+                    new SelectorSpec(
+                            spec.getUserRegex(),
+                            spec.getUserGroupRegex(),
+                            Optional.of(roleId),
                             spec.getSourceRegex(),
                             spec.getQueryType(),
                             spec.getClientTags(),

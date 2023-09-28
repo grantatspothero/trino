@@ -42,6 +42,7 @@ public class StaticSelector
 
     private final Optional<Pattern> userRegex;
     private final Optional<Pattern> userGroupRegex;
+    private final Optional<String> roleId;
     private final Optional<Pattern> sourceRegex;
     private final Set<String> clientTags;
     private final Optional<SelectorResourceEstimate> selectorResourceEstimate;
@@ -52,6 +53,7 @@ public class StaticSelector
     public StaticSelector(
             Optional<Pattern> userRegex,
             Optional<Pattern> userGroupRegex,
+            Optional<String> roleId,
             Optional<Pattern> sourceRegex,
             Optional<List<String>> clientTags,
             Optional<SelectorResourceEstimate> selectorResourceEstimate,
@@ -60,6 +62,7 @@ public class StaticSelector
     {
         this.userRegex = requireNonNull(userRegex, "userRegex is null");
         this.userGroupRegex = requireNonNull(userGroupRegex, "userGroupRegex is null");
+        this.roleId = requireNonNull(roleId, "roleId is null");
         this.sourceRegex = requireNonNull(sourceRegex, "sourceRegex is null");
         requireNonNull(clientTags, "clientTags is null");
         this.clientTags = ImmutableSet.copyOf(clientTags.orElse(ImmutableList.of()));
@@ -91,6 +94,10 @@ public class StaticSelector
         }
 
         if (userGroupRegex.isPresent() && criteria.getUserGroups().stream().noneMatch(group -> userGroupRegex.get().matcher(group).matches())) {
+            return Optional.empty();
+        }
+
+        if (roleId.isPresent() && !roleId.equals(criteria.getRoleId())) {
             return Optional.empty();
         }
 

@@ -54,6 +54,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.execution.QueryState.QUEUED;
 import static io.trino.execution.QueryState.RUNNING;
+import static io.trino.server.security.galaxy.GalaxyIdentity.getContextRoleId;
 import static io.trino.spi.StandardErrorCode.QUERY_TEXT_TOO_LARGE;
 import static io.trino.tracing.ScopedSpan.scopedSpan;
 import static io.trino.util.StatementUtils.getQueryType;
@@ -192,10 +193,18 @@ public class DispatchManager
 
             // select resource group
             Optional<String> queryType = getQueryType(preparedQuery.getStatement()).map(Enum::name);
+            Optional<String> roleId;
+            try {
+                roleId = Optional.ofNullable(getContextRoleId(sessionContext.getIdentity()).toString());
+            }
+            catch (IllegalArgumentException e) {
+                roleId = Optional.empty();
+            }
             SelectionContext<C> selectionContext = resourceGroupManager.selectGroup(new SelectionCriteria(
                     sessionContext.getIdentity().getPrincipal().isPresent(),
                     sessionContext.getIdentity().getUser(),
                     sessionContext.getIdentity().getGroups(),
+                    roleId,
                     sessionContext.getSource(),
                     sessionContext.getClientTags(),
                     sessionContext.getResourceEstimates(),

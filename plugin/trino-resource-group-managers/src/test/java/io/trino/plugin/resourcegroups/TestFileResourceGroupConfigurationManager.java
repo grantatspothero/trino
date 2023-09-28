@@ -140,6 +140,33 @@ public class TestFileResourceGroupConfigurationManager
     }
 
     @Test
+    public void testMatchByRoleId()
+    {
+        ManagerSpec managerSpec = managerSpec(
+                resourceGroupSpec("group"),
+                ImmutableList.of(selectorSpec(groupIdTemplate("group"))
+                        .roleId("Matching roleId")));
+
+        FileResourceGroupConfigurationManager groupManager = new FileResourceGroupConfigurationManager(listener -> {}, managerSpec);
+
+        assertThat(groupManager.match(roleIdSelectionCriteria("Not matching roleId"))).isEmpty();
+        assertThat(groupManager.match(roleIdSelectionCriteria("Matching roleId")))
+                .map(SelectionContext::getContext)
+                .isEqualTo(Optional.of(groupIdTemplate("group")));
+    }
+
+    @Test
+    public void testRoleIdConfiguration()
+    {
+        ManagerSpec spec = parseManagerSpec("resource_groups_config_role_id.json");
+
+        assertThat(spec.getSelectors()
+                .stream()
+                .map(SelectorSpec::getRoleId))
+                .containsOnly(Optional.of("r-1234567890"));
+    }
+
+    @Test
     public void testConfiguration()
     {
         FileResourceGroupConfigurationManager manager = parse("resource_groups_config.json");
@@ -199,6 +226,7 @@ public class TestFileResourceGroupConfigurationManager
                 true,
                 "Alice",
                 ImmutableSet.of(),
+                Optional.empty(),
                 Optional.of("jdbc#powerfulbi"),
                 ImmutableSet.of("hipri"),
                 EMPTY_RESOURCE_ESTIMATES,
@@ -256,7 +284,7 @@ public class TestFileResourceGroupConfigurationManager
 
     private static SelectionCriteria userAndSourceSelectionCriteria(String user, String source)
     {
-        return new SelectionCriteria(true, user, ImmutableSet.of(), Optional.of(source), ImmutableSet.of(), EMPTY_RESOURCE_ESTIMATES, Optional.empty());
+        return new SelectionCriteria(true, user, ImmutableSet.of(), Optional.empty(), Optional.of(source), ImmutableSet.of(), EMPTY_RESOURCE_ESTIMATES, Optional.empty());
     }
 
     private static SelectionCriteria userSelectionCriteria(String user)
@@ -266,12 +294,12 @@ public class TestFileResourceGroupConfigurationManager
 
     private static SelectionCriteria queryTypeSelectionCriteria(String queryType)
     {
-        return new SelectionCriteria(true, "test_user", ImmutableSet.of(), Optional.empty(), ImmutableSet.of(), EMPTY_RESOURCE_ESTIMATES, Optional.of(queryType));
+        return new SelectionCriteria(true, "test_user", ImmutableSet.of(), Optional.empty(), Optional.empty(), ImmutableSet.of(), EMPTY_RESOURCE_ESTIMATES, Optional.of(queryType));
     }
 
     private static SelectionCriteria userGroupsSelectionCriteria(String... groups)
     {
-        return new SelectionCriteria(true, "test_user", ImmutableSet.copyOf(groups), Optional.empty(), ImmutableSet.of(), EMPTY_RESOURCE_ESTIMATES, Optional.empty());
+        return new SelectionCriteria(true, "test_user", ImmutableSet.copyOf(groups), Optional.empty(), Optional.empty(), ImmutableSet.of(), EMPTY_RESOURCE_ESTIMATES, Optional.empty());
     }
 
     private static SelectionCriteria userAndUserGroupsSelectionCriteria(String user, String group, String... groups)
@@ -283,8 +311,14 @@ public class TestFileResourceGroupConfigurationManager
                         .add(group)
                         .add(groups).build(),
                 Optional.empty(),
+                Optional.empty(),
                 ImmutableSet.of(),
                 EMPTY_RESOURCE_ESTIMATES,
                 Optional.empty());
+    }
+
+    private static SelectionCriteria roleIdSelectionCriteria(String roleId)
+    {
+        return new SelectionCriteria(true, "test_user", ImmutableSet.of(), Optional.of(roleId), Optional.empty(), ImmutableSet.of(), EMPTY_RESOURCE_ESTIMATES, Optional.empty());
     }
 }
