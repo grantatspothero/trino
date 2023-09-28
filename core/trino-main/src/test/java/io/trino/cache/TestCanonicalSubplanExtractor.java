@@ -69,6 +69,7 @@ import java.util.function.Function;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Iterables.getOnlyElement;
+import static io.trino.SystemSessionProperties.OPTIMIZE_HASH_GENERATION;
 import static io.trino.SystemSessionProperties.TASK_CONCURRENCY;
 import static io.trino.cache.CanonicalSubplanExtractor.extractCanonicalSubplans;
 import static io.trino.metadata.MetadataManager.createTestMetadataManager;
@@ -100,8 +101,11 @@ public class TestCanonicalSubplanExtractor
 
     public TestCanonicalSubplanExtractor()
     {
-        // increase task concurrency to get parallel plans
-        super(ImmutableMap.of(TASK_CONCURRENCY, "4"));
+        super(ImmutableMap.of(
+                // increase task concurrency to get parallel plans
+                TASK_CONCURRENCY, "4",
+                // test hash generation
+                OPTIMIZE_HASH_GENERATION, "true"));
     }
 
     @BeforeClass

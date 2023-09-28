@@ -90,6 +90,7 @@ import java.util.function.Function;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static io.trino.SystemSessionProperties.OPTIMIZE_HASH_GENERATION;
 import static io.trino.cache.CanonicalSubplanExtractor.canonicalExpressionToColumnId;
 import static io.trino.cache.CommonSubqueriesExtractor.toSubplanKey;
 import static io.trino.cost.StatsCalculator.noopStatsCalculator;
@@ -138,6 +139,8 @@ public class TestCommonSubqueriesExtractor
     private static final Session TPCH_SESSION = testSessionBuilder()
             .setCatalog("tpch")
             .setSchema("tiny")
+            // test hash generation
+            .setSystemProperty(OPTIMIZE_HASH_GENERATION, "true")
             .build();
     private static final MockConnectorColumnHandle HANDLE_1 = new MockConnectorColumnHandle("column1", BIGINT);
     private static final MockConnectorColumnHandle HANDLE_2 = new MockConnectorColumnHandle("column2", BIGINT);
