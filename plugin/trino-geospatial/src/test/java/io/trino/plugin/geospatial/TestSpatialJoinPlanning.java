@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.geospatial;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.airlift.slice.DynamicSliceOutput;
 import io.trino.Session;
@@ -29,12 +30,15 @@ import io.trino.spi.block.TestingBlockEncodingSerde;
 import io.trino.spi.type.Type;
 import io.trino.sql.planner.assertions.BasePlanTest;
 import io.trino.sql.planner.assertions.PlanMatchPattern;
+import io.trino.sql.planner.iterative.rule.test.PlanBuilder;
 import io.trino.sql.planner.plan.ExchangeNode;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionCall;
+import io.trino.sql.tree.NotExpression;
 import io.trino.testing.LocalQueryRunner;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import java.util.Base64;
 import java.util.List;
@@ -47,8 +51,10 @@ import static io.trino.execution.querystats.PlanOptimizersStatsCollector.createP
 import static io.trino.geospatial.KdbTree.Node.newLeaf;
 import static io.trino.metadata.LiteralFunction.LITERAL_FUNCTION_NAME;
 import static io.trino.plugin.geospatial.GeoFunctions.stPoint;
+import static io.trino.plugin.geospatial.GeometryType.GEOMETRY;
 import static io.trino.spi.StandardErrorCode.INVALID_SPATIAL_PARTITIONING;
 import static io.trino.spi.predicate.Utils.nativeValueToBlock;
+import static io.trino.spi.type.VarcharType.VARCHAR;
 import static io.trino.sql.analyzer.TypeSignatureProvider.fromTypes;
 import static io.trino.sql.planner.LogicalPlanner.Stage.OPTIMIZED_AND_VALIDATED;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.any;
@@ -67,9 +73,11 @@ import static io.trino.testing.TestingSession.testSessionBuilder;
 import static java.lang.Math.cos;
 import static java.lang.Math.toRadians;
 import static java.lang.String.format;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.fail;
 
+@TestInstance(PER_CLASS)
 public class TestSpatialJoinPlanning
         extends BasePlanTest
 {
@@ -94,7 +102,7 @@ public class TestSpatialJoinPlanning
         return queryRunner;
     }
 
-    @BeforeClass
+    @BeforeAll
     public void setUp()
     {
         Block block = nativeValueToBlock(KdbTreeType.KDB_TREE, KdbTreeUtils.fromJson(KDB_TREE_JSON));
@@ -380,15 +388,18 @@ public class TestSpatialJoinPlanning
                         "           WHERE NOT ST_Intersects(ST_GeometryFromText(a.wkt), ST_GeometryFromText(b.wkt))", singleRow()),
                 anyTree(
                         filter(
-                                "NOT ST_Intersects(ST_GeometryFromText(cast(wkt_a as varchar)), ST_GeometryFromText(cast(wkt_b as varchar)))",
+                                new NotExpression(
+                                        functionCall("ST_Intersects", ImmutableList.of(GEOMETRY, GEOMETRY), ImmutableList.of(
+                                                functionCall("ST_GeometryFromText", ImmutableList.of(VARCHAR), ImmutableList.of(PlanBuilder.expression("cast(wkt_a as varchar)"))),
+                                                functionCall("ST_GeometryFromText", ImmutableList.of(VARCHAR), ImmutableList.of(PlanBuilder.expression("cast(wkt_b as varchar)")))))),
                                 join(INNER, builder -> builder
                                         .left(
                                                 project(
-                                                        ImmutableMap.of("wkt_a", expression("(CASE WHEN (rand() >= 0E0) THEN 'POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))' END)"), "name_a", expression("'a'")),
+                                                        ImmutableMap.of("wkt_a", expression("(CASE WHEN (random() >= 0E0) THEN 'POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))' END)"), "name_a", expression("'a'")),
                                                         singleRow()))
                                         .right(
                                                 any(project(
-                                                        ImmutableMap.of("wkt_b", expression("(CASE WHEN (rand() >= 0E0) THEN 'POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))' END)"), "name_b", expression("'a'")),
+                                                        ImmutableMap.of("wkt_b", expression("(CASE WHEN (random() >= 0E0) THEN 'POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))' END)"), "name_b", expression("'a'")),
                                                         singleRow())))))));
     }
 
@@ -459,7 +470,7 @@ public class TestSpatialJoinPlanning
                         "FROM points a LEFT JOIN polygons b " +
                         "ON ST_Contains(ST_GeometryFromText(wkt), ST_Point(lng, lat)) AND rand() < 0.5",
                 anyTree(
-                        spatialLeftJoin("st_contains(st_geometryfromtext, st_point) AND rand() < 5e-1",
+                        spatialLeftJoin("st_contains(st_geometryfromtext, st_point) AND random() < 5e-1",
                                 project(ImmutableMap.of("st_point", expression("ST_Point(lng, lat)")),
                                         tableScan("points", ImmutableMap.of("lng", "lng", "lat", "lat", "name_a", "name"))),
                                 anyTree(

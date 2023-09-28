@@ -13,7 +13,7 @@
  */
 package io.trino.spi.galaxy;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
