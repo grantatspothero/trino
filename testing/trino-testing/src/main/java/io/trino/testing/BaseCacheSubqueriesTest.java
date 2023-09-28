@@ -121,6 +121,28 @@ public abstract class BaseCacheSubqueriesTest
         assertThat(getScanOperatorInputPositions(resultWithCache.getQueryId())).isZero();
     }
 
+    @Test
+    public void testPredicateOnPartitioningColumnThatWasNotFullyPushed()
+    {
+        computeActual("create table orders_part with (partitioned_by = ARRAY['orderkey']) as select orderdate, orderpriority, mod(orderkey, 50) as orderkey from orders");
+        // mod predicate will be not pushed to connector
+        @Language("SQL") String query =
+                        """
+                        select * from (
+                            select orderdate from orders_part where orderkey > 5 and mod(orderkey, 10) = 0 and orderpriority = '1-MEDIUM'
+                            union all
+                            select orderdate from orders_part where orderkey > 10 and mod(orderkey, 10) = 1 and orderpriority = '3-MEDIUM'
+                        ) order by orderdate
+                        """;
+        MaterializedResultWithQueryId cacheDisabledResult = executeWithQueryId(withCacheSubqueriesDisabled(), query);
+        executeWithQueryId(withCacheSubqueriesEnabled(), query);
+        MaterializedResultWithQueryId cacheEnabledResult = executeWithQueryId(withCacheSubqueriesEnabled(), query);
+
+        assertThat(getLoadCachedDataOperatorInputPositions(cacheEnabledResult.getQueryId())).isPositive();
+        assertThat(cacheDisabledResult.getResult()).isEqualTo(cacheEnabledResult.getResult());
+        assertUpdate("drop table orders_part");
+    }
+
     protected MaterializedResultWithQueryId executeWithQueryId(Session session, @Language("SQL") String sql)
     {
         return getDistributedQueryRunner().executeWithQueryId(session, sql);

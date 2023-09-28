@@ -1470,6 +1470,12 @@ public class ObjectStoreMetadata
     }
 
     @Override
+    public ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle tableHandle)
+    {
+        return delegate(tableType(tableHandle)).getCanonicalTableHandle(tableHandle);
+    }
+
+    @Override
     public boolean isColumnarTableScan(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
         return delegate(tableType(tableHandle)).isColumnarTableScan(session, tableHandle);

@@ -15,6 +15,7 @@ package io.trino.tests.tpch;
 
 import io.trino.testing.BaseCacheSubqueriesTest;
 import io.trino.testing.QueryRunner;
+import org.testng.SkipException;
 import org.testng.annotations.Test;
 
 @Test(singleThreaded = true)
@@ -32,5 +33,12 @@ public class TestTpchCacheSubqueriesTest
                 // create enough splits for caching to be effective
                 .withSplitsPerNode(100)
                 .build();
+    }
+
+    @Override
+    @Test
+    public void testPredicateOnPartitioningColumnThatWasNotFullyPushed()
+    {
+        throw new SkipException("tpch does not support for partitioned tables");
     }
 }
