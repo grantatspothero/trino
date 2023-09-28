@@ -392,7 +392,7 @@ public class GalaxyAccessControl
     @Override
     public Set<String> filterColumns(SystemSecurityContext context, CatalogSchemaTableName table, Set<String> columns)
     {
-        if (isSystemCatalog(table.getCatalogName()) || isInformationSchema(table.getSchemaTableName().getSchemaName())) {
+        if (isSystemOrInformationSchema(table)) {
             return columns;
         }
         GalaxySystemAccessController controller = getSystemAccessController(context);
