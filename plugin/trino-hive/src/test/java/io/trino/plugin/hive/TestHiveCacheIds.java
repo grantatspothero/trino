@@ -71,7 +71,7 @@ import static io.trino.type.InternalTypeManager.TESTING_TYPE_MANAGER;
 import static java.util.concurrent.Executors.newScheduledThreadPool;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class TestCacheIds
+public class TestHiveCacheIds
 {
     private ScheduledExecutorService executorService;
     private HiveMetadata metadata;
