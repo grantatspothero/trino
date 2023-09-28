@@ -1125,7 +1125,8 @@ public class GalaxyAccessControl
 
     private static boolean isSystemOrInformationSchema(CatalogSchemaTableName name)
     {
-        return isSystemCatalog(name.getCatalogName()) || isInformationSchema(name.getSchemaTableName().getSchemaName());
+        CatalogSchemaName catalogSchemaName = new CatalogSchemaName(name.getCatalogName(), name.getSchemaTableName().getSchemaName());
+        return isSystemOrInformationSchema(catalogSchemaName);
     }
 
     private static void validateEntityKindPrivilege(String operation, EntityKind entityKind, io.trino.spi.security.Privilege privilege)
