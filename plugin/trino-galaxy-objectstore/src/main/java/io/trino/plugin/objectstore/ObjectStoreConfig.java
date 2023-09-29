@@ -16,7 +16,6 @@ package io.trino.plugin.objectstore;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.airlift.configuration.Config;
 import io.trino.plugin.iceberg.IcebergFileFormat;
-import io.trino.spi.connector.ConnectorSession;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
@@ -24,19 +23,7 @@ import static io.trino.plugin.iceberg.IcebergFileFormat.PARQUET;
 
 public class ObjectStoreConfig
 {
-    // TODO: remove: select good implementation and remove all the rest.
-    public enum InformationSchemaQueriesAcceleration {
-        NONE,
-
-        /**
-         * {@link io.trino.spi.connector.ConnectorMetadata#streamRelationColumns}
-         * with {@link io.trino.plugin.hive.metastore.HiveMetastore#streamTables(ConnectorSession, String)}.
-         */
-        V3,
-    }
-
     private TableType tableType = TableType.HIVE;
-    private InformationSchemaQueriesAcceleration informationSchemaQueriesAcceleration = InformationSchemaQueriesAcceleration.V3; // stargate may configure different default temporarily
     private int maxMetadataQueriesProcessingThreads = 32; // This is for IO, so default value not based on number of cores.
     private IcebergFileFormat defaultIcebergFileFormat = PARQUET;
 
@@ -51,18 +38,6 @@ public class ObjectStoreConfig
     public ObjectStoreConfig setTableType(TableType tableType)
     {
         this.tableType = tableType;
-        return this;
-    }
-
-    public InformationSchemaQueriesAcceleration getInformationSchemaQueriesAcceleration()
-    {
-        return informationSchemaQueriesAcceleration;
-    }
-
-    @Config("object-store.information-schema-queries-acceleration")
-    public ObjectStoreConfig setInformationSchemaQueriesAcceleration(InformationSchemaQueriesAcceleration informationSchemaQueriesAcceleration)
-    {
-        this.informationSchemaQueriesAcceleration = informationSchemaQueriesAcceleration;
         return this;
     }
 

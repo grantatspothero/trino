@@ -36,7 +36,6 @@ import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastoreConfig;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.plugin.iceberg.IcebergUtil;
-import io.trino.plugin.objectstore.ObjectStoreConfig.InformationSchemaQueriesAcceleration;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.testing.AbstractTestQueryFramework;
@@ -74,22 +73,16 @@ import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_STATS;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.CREATE_TABLE;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_ALL_DATABASES;
-import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_ALL_TABLES;
-import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_ALL_TABLES_FROM_DATABASE;
-import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_ALL_VIEWS;
-import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_ALL_VIEWS_FROM_DATABASE;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_DATABASE;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_PARTITIONS_BY_NAMES;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_PARTITION_NAMES_BY_FILTER;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_PARTITION_STATISTICS;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_TABLE;
-import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_TABLES_WITH_PARAMETER;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_TABLE_STATISTICS;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.REPLACE_TABLE;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.STREAM_TABLES;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.UPDATE_PARTITION_STATISTICS;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.UPDATE_TABLE_STATISTICS;
-import static io.trino.plugin.objectstore.ObjectStoreSessionProperties.INFORMATION_SCHEMA_QUERIES_ACCELERATION;
 import static io.trino.plugin.objectstore.TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations.FileType.CDF_DATA;
 import static io.trino.plugin.objectstore.TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations.FileType.DATA;
 import static io.trino.plugin.objectstore.TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations.FileType.LAST_CHECKPOINT;
@@ -108,7 +101,6 @@ import static java.nio.file.Files.createTempDirectory;
 import static java.util.Collections.nCopies;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toCollection;
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test filesystem, metastore and portal's security API accesses when accessing data and metadata with ObjectStore connector.
@@ -813,48 +805,14 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         assertUpdate("CREATE TABLE test_yet_another_other_select_i_s_columns(id varchar, age integer) WITH (type = '" + type + "')"); // won't match the filter
 
-        for (InformationSchemaQueriesAcceleration mode : InformationSchemaQueriesAcceleration.values()) {
-            try {
-                assertInformationSchemaColumns(type, tableBatches, mode);
-            }
-            catch (Throwable e) {
-                throw new AssertionError("Failure with mode: " + mode, e);
-            }
-        }
-    }
-
-    private void assertInformationSchemaColumns(TableType type, int tableBatches, InformationSchemaQueriesAcceleration mode)
-    {
         int allTables = tableBatches * 2 + 1;
 
-        String catalog = getSession().getCatalog().orElseThrow();
-        Session session = Session.builder(getSession())
-                .setCatalogSessionProperty(catalog, INFORMATION_SCHEMA_QUERIES_ACCELERATION, mode.toString())
-                .build();
+        Session session = getSession();
 
         // Bulk retrieval
         assertInvocations(session, "SELECT * FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA AND table_name LIKE 'test_select_i_s_columns%'",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_ALL_VIEWS_FROM_DATABASE, switch (mode) {
-                            case NONE -> 1;
-                            case V3 -> 0;
-                        })
-                        .addCopies(GET_ALL_TABLES_FROM_DATABASE, switch (mode) {
-                            case NONE -> 3;
-                            case V3 -> 0;
-                        })
-                        .addCopies(GET_TABLES_WITH_PARAMETER, switch (mode) {
-                            case NONE -> 1;
-                            case V3 -> 0;
-                        })
-                        .addCopies(STREAM_TABLES, switch (mode) {
-                            case NONE -> 0;
-                            case V3 -> 1;
-                        })
-                        .addCopies(GET_TABLE, switch (mode) {
-                            case NONE -> allTables * 3;
-                            case V3 -> 0; // 🎉
-                        })
+                        .add(STREAM_TABLES)
                         .build(),
                 switch (type) {
                     case HIVE, ICEBERG -> ImmutableMultiset.of();
@@ -890,34 +848,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         // Bulk retrieval without filters. Including information_schema schema involves InformationSchemaMetadata and may result e.g. in additional access control calls
         assertInvocations(session, "TABLE information_schema.columns",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_ALL_DATABASES, switch (mode) {
-                            case NONE -> 2;
-                            case V3 -> 1;
-                        })
-                        .addCopies(GET_ALL_TABLES, switch (mode) {
-                            case NONE -> 1;
-                            case V3 -> 0;
-                        })
-                        .addCopies(GET_ALL_VIEWS, switch (mode) {
-                            case NONE -> 1;
-                            case V3 -> 0;
-                        })
-                        .addCopies(GET_ALL_TABLES_FROM_DATABASE, switch (mode) {
-                            case NONE -> 2;
-                            case V3 -> 0;
-                        })
-                        .addCopies(GET_TABLES_WITH_PARAMETER, switch (mode) {
-                            case NONE -> 1;
-                            case V3 -> 0;
-                        })
-                        .addCopies(STREAM_TABLES, switch (mode) {
-                            case NONE -> 0;
-                            case V3 -> 1;
-                        })
-                        .addCopies(GET_TABLE, switch (mode) {
-                            case NONE -> allTables * 3;
-                            case V3 -> 0; // 🎉
-                        })
+                        .add(GET_ALL_DATABASES)
+                        .add(STREAM_TABLES)
                         .build(),
                 switch (type) {
                     case HIVE, ICEBERG -> ImmutableMultiset.of();
@@ -1012,13 +944,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                         .build())
                                 .build())
                         .build());
-
-        InformationSchemaQueriesAcceleration defaultMode = new ObjectStoreConfig().getInformationSchemaQueriesAcceleration();
-        if (mode != defaultMode) {
-            // Correctness check (needs to be done after invocations check, otherwise invocations check could report on cached state)
-            assertThat(query(session, "TABLE information_schema.columns"))
-                    .matches(computeActual("TABLE information_schema.columns"));
-        }
     }
 
     @Test(dataProvider = "metadataTestDataProvider")
@@ -1033,62 +958,17 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
             assertUpdate("CREATE TABLE test_other_select_s_m_t_comments" + i + "(id varchar, age integer) WITH (type = '" + type + "')");
         }
 
-        for (InformationSchemaQueriesAcceleration mode : InformationSchemaQueriesAcceleration.values()) {
-            try {
-                assertSystemMetadataTableComments(type, tableBatches, mode);
-            }
-            catch (Throwable e) {
-                throw new AssertionError("Failure with mode: " + mode, e);
-            }
-        }
-    }
-
-    private void assertSystemMetadataTableComments(TableType type, int tableBatches, InformationSchemaQueriesAcceleration mode)
-    {
         int allTables = tableBatches * 2;
 
-        String catalog = getSession().getCatalog().orElseThrow();
-        Session session = Session.builder(getSession())
-                .setCatalogSessionProperty(catalog, INFORMATION_SCHEMA_QUERIES_ACCELERATION, mode.toString())
-                .build();
+        Session session = getSession();
 
         // Bulk retrieval
         assertInvocations(session, "SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name LIKE 'test_select_s_m_t_comments%'",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_ALL_VIEWS_FROM_DATABASE, switch (mode) {
-                            case NONE -> 1;
-                            case V3 -> 0;
-                        })
-                        .addCopies(GET_ALL_TABLES_FROM_DATABASE, switch (mode) {
-                            case NONE -> 1;
-                            case V3 -> 0;
-                        })
-                        .addCopies(GET_TABLES_WITH_PARAMETER, switch (mode) {
-                            case NONE -> 1;
-                            case V3 -> 0;
-                        })
-                        .addCopies(GET_TABLE, switch (mode) {
-                            case NONE -> allTables;
-                            case V3 -> 0; // 🎉
-                        })
-                        .addCopies(STREAM_TABLES, switch (mode) {
-                            case NONE -> 0;
-                            case V3 -> 1;
-                        })
+                        .add(STREAM_TABLES)
                         .build(),
                 switch (type) {
-                    case HIVE -> ImmutableMultiset.of();
-                    case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
-                            // 'other' tables (filtered out by the query)
-                            .addCopies(new FileOperation(METADATA_JSON, "00000.metadata.json", INPUT_FILE_NEW_STREAM), switch (mode) {
-                                case NONE -> tableBatches;
-                                case V3 -> 0; // 🎉
-                            })
-                            .addCopies(new FileOperation(METADATA_JSON, "00004.metadata.json", INPUT_FILE_NEW_STREAM), switch (mode) {
-                                case NONE -> tableBatches;
-                                case V3 -> 0; // 🎉
-                            })
-                            .build();
+                    case HIVE, ICEBERG -> ImmutableMultiset.of();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
                             .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), allTables)
                             .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM), allTables)
@@ -1116,12 +996,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM))
                             .build();
                 });
-
-        InformationSchemaQueriesAcceleration defaultMode = new ObjectStoreConfig().getInformationSchemaQueriesAcceleration();
-        if (mode != defaultMode) {
-            assertThat(query(session, "SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name LIKE 'test_select_s_m_t_comments%'"))
-                    .matches(computeActual("SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name LIKE 'test_select_s_m_t_comments%'"));
-        }
     }
 
     @DataProvider
@@ -1143,22 +1017,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertUpdate("CREATE TABLE test_select_i_s_columns_iceberg (iceberg_id VARCHAR, iceberg_age INT) WITH (type = 'ICEBERG')");
         assertUpdate("CREATE TABLE test_select_i_s_columns_hive (hive_id VARCHAR, hive_age INT) WITH (type = 'HIVE')");
 
-        for (InformationSchemaQueriesAcceleration mode : InformationSchemaQueriesAcceleration.values()) {
-            try {
-                assertInformationSchemaColumnsWithMixedTableTypes(mode);
-            }
-            catch (Throwable e) {
-                throw new AssertionError("Failure with mode: " + mode, e);
-            }
-        }
-    }
-
-    private void assertInformationSchemaColumnsWithMixedTableTypes(InformationSchemaQueriesAcceleration mode)
-    {
-        String catalog = getSession().getCatalog().orElseThrow();
-        Session session = Session.builder(getSession())
-                .setCatalogSessionProperty(catalog, INFORMATION_SCHEMA_QUERIES_ACCELERATION, mode.toString())
-                .build();
+        Session session = getSession();
 
         assertQuery(
                 session,
@@ -1167,34 +1026,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         assertInvocations(session, "TABLE information_schema.columns",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
-                        .addCopies(GET_ALL_DATABASES, switch (mode) {
-                            case NONE -> 2;
-                            case V3 -> 1;
-                        })
-                        .addCopies(GET_ALL_TABLES, switch (mode) {
-                            case NONE -> 1;
-                            case V3 -> 0;
-                        })
-                        .addCopies(GET_ALL_VIEWS, switch (mode) {
-                            case NONE -> 1;
-                            case V3 -> 0;
-                        })
-                        .addCopies(GET_ALL_TABLES_FROM_DATABASE, switch (mode) {
-                            case NONE -> 2;
-                            case V3 -> 0;
-                        })
-                        .addCopies(GET_TABLES_WITH_PARAMETER, switch (mode) {
-                            case NONE -> 1;
-                            case V3 -> 0;
-                        })
-                        .addCopies(GET_TABLE, switch (mode) {
-                            case NONE -> 9;
-                            case V3 -> 0;
-                        })
-                        .addCopies(STREAM_TABLES, switch (mode) {
-                            case NONE -> 0;
-                            case V3 -> 1;
-                        })
+                        .add(GET_ALL_DATABASES)
+                        .add(STREAM_TABLES)
                         .build(),
                 ImmutableMultiset.<FileOperation>builder()
                         .add(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM))
