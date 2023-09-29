@@ -47,8 +47,8 @@ public interface ConnectorPageSourceProvider
 
     /**
      * Prunes columns from predicate that have prefilled values for a given split.
-     * If split is completely filtered out by a given predicate, then this method
-     * must return {@link TupleDomain#none}.
+     * If split is completely filtered out by pruned and prefilled columns, then this
+     * method must return {@link TupleDomain#none}.
      */
     default TupleDomain<ColumnHandle> prunePredicate(
             ConnectorSession session,
