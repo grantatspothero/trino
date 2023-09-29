@@ -22,6 +22,10 @@ import io.trino.testing.sql.TestTable;
 import org.intellij.lang.annotations.Language;
 import org.testng.annotations.Test;
 
+import java.util.List;
+
+import static java.lang.String.format;
+import static java.util.stream.Collectors.joining;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Test(singleThreaded = true)
@@ -63,5 +67,17 @@ public class TestHiveCacheSubqueriesTest
             assertThat(getLoadCachedDataOperatorInputPositions(result.getQueryId())).isPositive();
             assertThat(getScanOperatorInputPositions(result.getQueryId())).isPositive();
         }
+    }
+
+    @Override
+    protected void createPartitionedTableAsSelect(String tableName, List<String> partitionColumns, String asSelect)
+    {
+        @Language("SQL") String sql = format(
+                "CREATE TABLE %s WITH (partitioned_by=array[%s]) as %s",
+                tableName,
+                partitionColumns.stream().map(column -> "'" + column + "'").collect(joining(",")),
+                asSelect);
+
+        getQueryRunner().execute(sql);
     }
 }

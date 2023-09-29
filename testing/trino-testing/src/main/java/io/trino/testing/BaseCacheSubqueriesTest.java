@@ -32,6 +32,7 @@ import io.trino.operator.TableScanOperator;
 import io.trino.server.testing.TestingTrinoServer;
 import io.trino.spi.QueryId;
 import io.trino.spi.cache.CacheColumnId;
+import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.cache.PlanSignature;
 import io.trino.spi.cache.SignatureKey;
 import io.trino.spi.connector.ColumnHandle;
@@ -53,6 +54,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -174,8 +176,7 @@ public abstract class BaseCacheSubqueriesTest
     @Test(dataProvider = "isDynamicRowFilteringEnabled")
     public void testDynamicFilterCache(boolean isDynamicRowFilteringEnabled)
     {
-        computeActual("create table orders_part with (partitioned_by = ARRAY['custkey']) as select orderkey, orderdate, orderpriority, mod(custkey, 10) as custkey from orders");
-
+        createPartitionedTableAsSelect("orders_part", ImmutableList.of("custkey"), "select orderkey, orderdate, orderpriority, mod(custkey, 10) as custkey from orders");
         @Language("SQL") String totalScanOrdersQuery = "select count(orderkey) from orders_part";
         @Language("SQL") String firstJoinQuery = """
                 select count(orderkey) from orders_part o join (select * from (values 0, 1, 2) t(custkey)) t on o.custkey = t.custkey
@@ -225,7 +226,7 @@ public abstract class BaseCacheSubqueriesTest
     @Test
     public void testPredicateOnPartitioningColumnThatWasNotFullyPushed()
     {
-        computeActual("create table orders_part with (partitioned_by = ARRAY['orderkey']) as select orderdate, orderpriority, mod(orderkey, 50) as orderkey from orders");
+        createPartitionedTableAsSelect("orders_part", ImmutableList.of("orderkey"), "select orderdate, orderpriority, mod(orderkey, 50) as orderkey from orders");
         // mod predicate will be not pushed to connector
         @Language("SQL") String query =
                 """
@@ -247,7 +248,7 @@ public abstract class BaseCacheSubqueriesTest
     @Test
     public void testPartitionedQueryCache()
     {
-        computeActual("create table orders_part with (partitioned_by = ARRAY['orderpriority']) as select orderkey, orderdate, orderpriority from orders");
+        createPartitionedTableAsSelect("orders_part", ImmutableList.of("orderpriority"), "select orderkey, orderdate, orderpriority from orders");
         @Language("SQL") String selectTwoPartitions = """
                         select orderkey from orders_part where orderpriority IN ('3-MEDIUM', '1-URGENT')
                         union all
@@ -271,14 +272,14 @@ public abstract class BaseCacheSubqueriesTest
         MaterializedResultWithQueryId allPartitionsQuery = executeWithQueryId(withCacheEnabled(), selectAllPartitions);
         Plan allPartitionsQueryPlan = getDistributedQueryRunner().getQueryPlan(allPartitionsQuery.getQueryId());
 
-        String hiveCatalogId = withTransaction(session -> getDistributedQueryRunner().getCoordinator()
+        String catalogId = withTransaction(session -> getDistributedQueryRunner().getCoordinator()
                 .getMetadata()
                 .getCatalogHandle(session, session.getCatalog().get())
                 .orElseThrow()
                 .getId());
 
-        PlanSignature signature = new PlanSignature(
-                new SignatureKey(hiveCatalogId + ":{\"schemaName\":\"tpch\",\"tableName\":\"orders_part\",\"compactEffectivePredicate\":{\"columnDomains\":[]}}"),
+        PlanSignature signature =  new PlanSignature(
+                new SignatureKey(catalogId + ":" + getCacheTableId(getSession(), "orders_part")),
                 Optional.empty(),
                 ImmutableList.of(getCacheColumnId(getSession(), "orders_part", "orderkey")),
                 TupleDomain.all(),
@@ -330,7 +331,7 @@ public abstract class BaseCacheSubqueriesTest
     public void testSimplifyAndPrunePredicate(boolean isDynamicRowFilteringEnabled)
     {
         String tableName = "simplify_and_prune_orders_part_" + isDynamicRowFilteringEnabled;
-        computeActual("create table " + tableName + " with (partitioned_by = ARRAY['orderpriority']) as select orderkey, orderdate, '9876' as orderpriority from orders");
+        createPartitionedTableAsSelect(tableName, ImmutableList.of("orderpriority"), "select orderkey, orderdate, '9876' as orderpriority from orders");
         DistributedQueryRunner runner = getDistributedQueryRunner();
         Session session = withDynamicRowFiltering(
                 Session.builder(getSession())
@@ -437,6 +438,19 @@ public abstract class BaseCacheSubqueriesTest
                 });
     }
 
+    protected CacheTableId getCacheTableId(Session session, String tableName)
+    {
+        QueryRunner runner = getQueryRunner();
+        QualifiedObjectName table = new QualifiedObjectName(session.getCatalog().orElseThrow(), session.getSchema().orElseThrow(), tableName);
+        return transaction(runner.getTransactionManager(), runner.getAccessControl())
+                .singleStatement()
+                .execute(session, transactionSession -> {
+                    Metadata metadata = runner.getMetadata();
+                    TableHandle tableHandle = metadata.getTableHandle(transactionSession, table).get();
+                    return metadata.getCacheTableId(transactionSession, tableHandle).get();
+                });
+    }
+
     protected void assertPlan(Session session, Plan plan, PlanMatchPattern pattern)
     {
         QueryRunner runner = getQueryRunner();
@@ -512,4 +526,6 @@ public abstract class BaseCacheSubqueriesTest
                 .setCatalogSessionProperty(baseSession.getCatalog().get(), "dynamic_row_filtering_enabled", String.valueOf(enabled))
                 .build();
     }
+
+    abstract protected void createPartitionedTableAsSelect(String tableName, List<String> partitionColumns, String asSelect);
 }

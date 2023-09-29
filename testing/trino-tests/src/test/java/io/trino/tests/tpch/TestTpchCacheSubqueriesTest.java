@@ -18,6 +18,8 @@ import io.trino.testing.QueryRunner;
 import org.testng.SkipException;
 import org.testng.annotations.Test;
 
+import java.util.List;
+
 @Test(singleThreaded = true)
 public class TestTpchCacheSubqueriesTest
         extends BaseCacheSubqueriesTest
@@ -61,5 +63,11 @@ public class TestTpchCacheSubqueriesTest
     public void testSimplifyAndPrunePredicate(boolean isDynamicRowFilteringEnabled)
     {
         throw new SkipException("tpch does not support for partitioned tables");
+    }
+
+    @Override
+    protected void createPartitionedTableAsSelect(String tableName, List<String> partitionColumns, String asSelect)
+    {
+        throw new UnsupportedOperationException("tpch does not support for partitioned tables");
     }
 }

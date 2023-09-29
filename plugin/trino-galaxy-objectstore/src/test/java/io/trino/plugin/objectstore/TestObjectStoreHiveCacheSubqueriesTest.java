@@ -20,10 +20,15 @@ import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.testing.BaseCacheSubqueriesTest;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
+import org.intellij.lang.annotations.Language;
 import org.testng.annotations.AfterClass;
+
+import java.util.List;
 
 import static io.trino.plugin.objectstore.TableType.HIVE;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
+import static java.lang.String.format;
+import static java.util.stream.Collectors.joining;
 
 public class TestObjectStoreHiveCacheSubqueriesTest
         extends BaseCacheSubqueriesTest
@@ -67,5 +72,17 @@ public class TestObjectStoreHiveCacheSubqueriesTest
         ObjectStoreQueryRunner.initializeTpchTables(queryRunner, REQUIRED_TABLES);
 
         return queryRunner;
+    }
+
+    @Override
+    protected void createPartitionedTableAsSelect(String tableName, List<String> partitionColumns, String asSelect)
+    {
+        @Language("SQL") String sql = format(
+                "CREATE TABLE %s WITH (partitioned_by=array[%s]) as %s",
+                tableName,
+                partitionColumns.stream().map(column -> "'" + column + "'").collect(joining(",")),
+                asSelect);
+
+        getQueryRunner().execute(sql);
     }
 }
