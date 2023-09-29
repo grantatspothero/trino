@@ -194,11 +194,6 @@ public class HivePageSourceProvider
                 .simplify(domainCompactionThreshold);
     }
 
-    /**
-     * Prunes prefilled columns that won't be used for filtering split data.
-     * Returns {@link TupleDomain#none()} if no data would be returned for a
-     * given split and predicate.
-     */
     @Override
     public TupleDomain<ColumnHandle> prunePredicate(
             ConnectorSession session,
