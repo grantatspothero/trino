@@ -50,11 +50,11 @@ public class CacheController
                 .sorted(Comparator.comparing(entry -> entry.getKey().getPriority()))
                 .collect(toImmutableListMultimap(SimpleEntry::getKey, SimpleEntry::getValue))
                 .asMap().entrySet().stream()
-                .map(entry -> new CacheCandidate(entry.getKey().tableId(), entry.getKey().groupByColumns(), ImmutableList.copyOf(entry.getValue())))
+                .map(entry -> new CacheCandidate(entry.getKey().tableId(), entry.getKey().groupByColumns(), ImmutableList.copyOf(entry.getValue()), 2))
                 .collect(toImmutableList());
     }
 
-    record CacheCandidate(CacheTableId tableId, Optional<Set<CacheColumnId>> groupByColumns, List<CanonicalSubplan> subplans) {}
+    record CacheCandidate(CacheTableId tableId, Optional<Set<CacheColumnId>> groupByColumns, List<CanonicalSubplan> subplans, int minSubplans) {}
 
     private static SubplanKey toSubplanKey(CanonicalSubplan subplan)
     {

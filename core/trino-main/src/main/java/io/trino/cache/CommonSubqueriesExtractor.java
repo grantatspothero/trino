@@ -132,8 +132,8 @@ public final class CommonSubqueriesExtractor
                     .filter(subplan -> !processedSubplans.contains(subplan.getTableScanId()))
                     .collect(toImmutableList());
 
-            if (subplans.size() <= 1) {
-                // skip if subquery has only single occurrence
+            if (subplans.size() < cacheCandidate.minSubplans()) {
+                // skip if not enough subplans
                 continue;
             }
 
