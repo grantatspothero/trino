@@ -14,10 +14,18 @@
 package io.trino.server.galaxy;
 
 import io.airlift.testing.TestingClock;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
+import io.opentelemetry.sdk.trace.SdkTracerProvider;
+import io.opentelemetry.sdk.trace.data.SpanData;
+import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
@@ -25,13 +33,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
+import static io.airlift.tracing.Tracing.noopTracer;
 import static io.trino.server.galaxy.TimedMemoizingSupplier.createStats;
 import static io.trino.testing.assertions.Assert.assertEventually;
 import static java.lang.Thread.State.WAITING;
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.stream.Collectors.toMap;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Timeout.ThreadMode.SEPARATE_THREAD;
 
@@ -42,10 +53,14 @@ public class TestTimedMemoizingSupplier
     public void testDelegate()
     {
         AtomicInteger loads = new AtomicInteger();
-        TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(() -> {
-            loads.incrementAndGet();
-            return "abc";
-        }, createStats());
+        TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(
+                noopTracer(),
+                "some-name",
+                () -> {
+                    loads.incrementAndGet();
+                    return "abc";
+                },
+                createStats());
 
         assertThat(memoizingSupplier.get(Instant.now())).isEqualTo("abc");
         assertThat(loads.get()).isEqualTo(1);
@@ -56,10 +71,14 @@ public class TestTimedMemoizingSupplier
     public void testNullValue()
     {
         AtomicInteger loads = new AtomicInteger();
-        TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(() -> {
-            loads.incrementAndGet();
-            return null;
-        }, createStats());
+        TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(
+                noopTracer(),
+                "some-name",
+                () -> {
+                    loads.incrementAndGet();
+                    return null;
+                },
+                createStats());
 
         assertThat(memoizingSupplier.get(Instant.now())).isNull();
         assertThat(loads.get()).isEqualTo(1);
@@ -73,6 +92,8 @@ public class TestTimedMemoizingSupplier
         AtomicInteger loads = new AtomicInteger();
         TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(
                 clock,
+                noopTracer(),
+                "some-name",
                 () -> "some value @ load #" + loads.incrementAndGet(),
                 createStats());
 
@@ -111,6 +132,8 @@ public class TestTimedMemoizingSupplier
         AtomicInteger loads = new AtomicInteger();
         TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(
                 clock,
+                noopTracer(),
+                "some-name",
                 () -> "some value @ load #" + loads.incrementAndGet(),
                 createStats());
 
@@ -137,6 +160,8 @@ public class TestTimedMemoizingSupplier
                 AtomicInteger loads = new AtomicInteger();
                 TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(
                         clock,
+                        noopTracer(),
+                        "some-name",
                         () -> {
                             int loadNumber = loads.incrementAndGet();
                             loadStarted.countDown();
@@ -181,6 +206,8 @@ public class TestTimedMemoizingSupplier
                 AtomicInteger loads = new AtomicInteger();
                 TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(
                         clock,
+                        noopTracer(),
+                        "some-name",
                         () -> {
                             int loadNumber = loads.incrementAndGet();
                             firstLoadStarted.countDown();
@@ -227,6 +254,8 @@ public class TestTimedMemoizingSupplier
                 AtomicInteger loads = new AtomicInteger();
                 TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(
                         clock,
+                        noopTracer(),
+                        "some-name",
                         () -> {
                             int loadNumber = loads.incrementAndGet();
                             await(loadStarted);
@@ -296,34 +325,51 @@ public class TestTimedMemoizingSupplier
 
     @Test
     @Timeout(value = 10, unit = SECONDS, threadMode = SEPARATE_THREAD)
-    public void testStatsReuse()
+    public void testStatsAndTracesWhenReuse()
     {
-        TestingClock clock = new TestingClock();
-        TimedMemoizingSupplier.Stats stats = createStats();
-        TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(
-                clock,
-                () -> "abc",
-                stats);
+        try (InMemorySpanExporter spanExporter = InMemorySpanExporter.create();
+                SdkTracerProvider tracerProvider = SdkTracerProvider.builder()
+                        .addSpanProcessor(SimpleSpanProcessor.create(spanExporter))
+                        .build()) {
+            Tracer tracer = tracerProvider.get("test");
+            TestingClock clock = new TestingClock();
+            TimedMemoizingSupplier.Stats stats = createStats();
+            TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(
+                    clock,
+                    tracer,
+                    "timed-sharing-supplier",
+                    () -> "abc",
+                    stats);
 
-        Instant requirements1 = clock.instant();
-        clock.increment(1, MILLISECONDS);
-        memoizingSupplier.get(requirements1);
-        assertThat(stats.getCalls().getTotalCount()).isEqualTo(1);
-        assertThat(stats.getLoads().getTotalCount()).isEqualTo(1);
-        assertThat(stats.getReuses().getTotalCount()).isEqualTo(0);
+            Instant requirements1 = clock.instant();
+            clock.increment(1, MILLISECONDS);
+            memoizingSupplier.get(requirements1);
+            assertThat(stats.getCalls().getTotalCount()).isEqualTo(1);
+            assertThat(stats.getLoads().getTotalCount()).isEqualTo(1);
+            assertThat(stats.getReuses().getTotalCount()).isEqualTo(0);
+            assertThat(spansToString(spanExporter.getFinishedSpanItems()))
+                    .containsExactlyInAnyOrder("timed-sharing-supplier {completion-mode=load}");
 
-        memoizingSupplier.get(requirements1);
-        assertThat(stats.getCalls().getTotalCount()).isEqualTo(2);
-        assertThat(stats.getLoads().getTotalCount()).isEqualTo(1);
-        assertThat(stats.getReuses().getTotalCount()).isEqualTo(1);
+            memoizingSupplier.get(requirements1);
+            assertThat(stats.getCalls().getTotalCount()).isEqualTo(2);
+            assertThat(stats.getLoads().getTotalCount()).isEqualTo(1);
+            assertThat(stats.getReuses().getTotalCount()).isEqualTo(1);
+            assertThat(spansToString(spanExporter.getFinishedSpanItems()))
+                    .containsExactlyInAnyOrder("timed-sharing-supplier {completion-mode=load}", "timed-sharing-supplier {completion-mode=ready}");
+        }
     }
 
     @Test
     @Timeout(value = 10, unit = SECONDS, threadMode = SEPARATE_THREAD)
-    public void testStatsLoadSharing()
+    public void testStatsAndTracesWhenLoadSharing()
             throws Exception
     {
-        try (ExecutorService executor = newCachedThreadPool()) {
+        try (ExecutorService executor = newCachedThreadPool();
+                InMemorySpanExporter spanExporter = InMemorySpanExporter.create();
+                SdkTracerProvider tracerProvider = SdkTracerProvider.builder()
+                        .addSpanProcessor(SimpleSpanProcessor.create(spanExporter))
+                        .build()) {
+            Tracer tracer = tracerProvider.get("test");
             CountDownLatch loadStarted = new CountDownLatch(1);
             CountDownLatch allowLoadComplete = new CountDownLatch(1);
             try {
@@ -331,6 +377,8 @@ public class TestTimedMemoizingSupplier
                 TimedMemoizingSupplier.Stats stats = createStats();
                 TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(
                         clock,
+                        tracer,
+                        "concurrent-hot-sharing",
                         () -> {
                             loadStarted.countDown();
                             await(allowLoadComplete);
@@ -357,6 +405,8 @@ public class TestTimedMemoizingSupplier
                 assertThat(stats.getCalls().getTotalCount()).isEqualTo(2);
                 assertThat(stats.getLoads().getTotalCount()).isEqualTo(1);
                 assertThat(stats.getReuses().getTotalCount()).isEqualTo(1);
+                assertThat(spansToString(spanExporter.getFinishedSpanItems()))
+                        .containsExactlyInAnyOrder("concurrent-hot-sharing {completion-mode=load}", "concurrent-hot-sharing {completion-mode=load-sharing}");
             }
             finally {
                 allowLoadComplete.countDown();
@@ -388,5 +438,20 @@ public class TestTimedMemoizingSupplier
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
+    }
+
+    private static Stream<String> spansToString(Collection<SpanData> spans)
+    {
+        return spans.stream()
+                .map(span -> "%s %s".formatted(
+                        span.getName(),
+                        span.getAttributes().asMap().entrySet().stream()
+                                .collect(toMap(
+                                        entry -> entry.getKey().toString(),
+                                        Map.Entry::getValue,
+                                        (a, b) -> {
+                                            throw new UnsupportedOperationException("Duplicate key with values %s, %s".formatted(a, b));
+                                        },
+                                        TreeMap::new))));
     }
 }

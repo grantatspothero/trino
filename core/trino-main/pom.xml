@@ -514,6 +514,12 @@
         </dependency>
 
         <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk-testing</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>io.trino</groupId>
             <artifactId>trino-exchange-filesystem</artifactId>
             <scope>test</scope>

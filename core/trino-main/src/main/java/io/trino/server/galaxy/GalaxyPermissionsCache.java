@@ -22,6 +22,7 @@ import com.google.errorprone.annotations.ThreadSafe;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import io.airlift.jmx.CacheStatsMBean;
+import io.opentelemetry.api.trace.Tracer;
 import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
 import io.starburst.stargate.accesscontrol.client.HttpTrinoSecurityClient;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
@@ -66,6 +67,7 @@ public class GalaxyPermissionsCache
     private static final int CATALOG_VISIBILITY_CACHE_SIZE = EXPECTED_CONCURRENT_QUERIES * 3;
 
     private final boolean globalHotSharingCacheEnabled;
+    private final Tracer tracer;
 
     // global hot sharing (time-based) cache
     private final Cache<AccountSessionKey, TimedMemoizingSupplier<ContentsVisibility>> catalogVisibilityCache;
@@ -75,14 +77,15 @@ public class GalaxyPermissionsCache
     private final LoadingCache<QueryId, Map<DispatchSession, GalaxyQueryPermissions>> queryPermissionsCache;
 
     @Inject
-    public GalaxyPermissionsCache(GalaxySystemAccessControlConfig accessControlConfig)
+    public GalaxyPermissionsCache(GalaxySystemAccessControlConfig accessControlConfig, Tracer tracer)
     {
-        this(accessControlConfig.isGlobalHotSharingCacheEnabled());
+        this(accessControlConfig.isGlobalHotSharingCacheEnabled(), tracer);
     }
 
-    public GalaxyPermissionsCache(boolean globalHotSharingCacheEnabled)
+    public GalaxyPermissionsCache(boolean globalHotSharingCacheEnabled, Tracer tracer)
     {
         this.globalHotSharingCacheEnabled = globalHotSharingCacheEnabled;
+        this.tracer = requireNonNull(tracer);
 
         catalogVisibilityCache = buildNonEvictableCache(
                 CacheBuilder.newBuilder()
@@ -181,7 +184,11 @@ public class GalaxyPermissionsCache
                     TimedMemoizingSupplier<ContentsVisibility> loader = uncheckedCacheGet(
                             catalogVisibilityCache,
                             AccountSessionKey.create(trinoSecurityApi, session),
-                            () -> new TimedMemoizingSupplier<>(() -> trinoSecurityApi.getCatalogVisibility(session), catalogVisibilityLoadingStats));
+                            () -> new TimedMemoizingSupplier<>(
+                                    tracer,
+                                    "GalaxyPermissionsCache.shared.catalogVisibility",
+                                    () -> trinoSecurityApi.getCatalogVisibility(session),
+                                    catalogVisibilityLoadingStats));
                     catalogVisibility = loader.get(queryStart);
                 }
                 else {

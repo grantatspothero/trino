@@ -17,6 +17,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.ThreadSafe;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import io.airlift.stats.CounterStat;
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.Tracer;
+import io.trino.tracing.ScopedSpan;
 import jakarta.annotation.Nullable;
 import org.weakref.jmx.Managed;
 import org.weakref.jmx.Nested;
@@ -35,6 +39,8 @@ import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static io.airlift.concurrent.MoreFutures.getDone;
 import static io.airlift.concurrent.MoreFutures.getFutureValue;
+import static io.opentelemetry.api.common.AttributeKey.stringKey;
+import static io.trino.tracing.ScopedSpan.scopedSpan;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Objects.requireNonNull;
 
@@ -46,8 +52,11 @@ import static java.util.Objects.requireNonNull;
 public final class TimedMemoizingSupplier<T>
 {
     private static final Clock SYSTEM_CLOCK = Clock.tickMillis(UTC);
+    private static final AttributeKey<String> COMPLETION_MODE = stringKey("completion-mode");
 
     private final Clock clock;
+    private final Tracer tracer;
+    private final String name;
     private final Supplier<T> delegate;
     private final Stats stats;
 
@@ -57,15 +66,17 @@ public final class TimedMemoizingSupplier<T>
     @GuardedBy("this")
     private final NavigableMap<Long, Future<T>> ongoingLoadsByTimestamp = new TreeMap<>();
 
-    public TimedMemoizingSupplier(Supplier<T> delegate, Stats stats)
+    public TimedMemoizingSupplier(Tracer tracer, String name, Supplier<T> delegate, Stats stats)
     {
-        this(SYSTEM_CLOCK, delegate, stats);
+        this(SYSTEM_CLOCK, tracer, name, delegate, stats);
     }
 
     @VisibleForTesting
-    TimedMemoizingSupplier(Clock clock, Supplier<T> delegate, Stats stats)
+    TimedMemoizingSupplier(Clock clock, Tracer tracer, String name, Supplier<T> delegate, Stats stats)
     {
         this.clock = requireNonNull(clock, "clock is null");
+        this.tracer = requireNonNull(tracer, "tracer is null");
+        this.name = requireNonNull(name, "name is null");
         this.delegate = requireNonNull(delegate, "delegate is null");
         this.stats = requireNonNull(stats, "stats is null");
     }
@@ -79,6 +90,14 @@ public final class TimedMemoizingSupplier<T>
      * @param visibilityRequirement value freshness requirements
      */
     public @Nullable T get(Instant visibilityRequirement)
+    {
+        Span span = tracer.spanBuilder(name).startSpan();
+        try (ScopedSpan ignore = scopedSpan(span)) {
+            return get(span, visibilityRequirement);
+        }
+    }
+
+    private @Nullable T get(Span span, Instant visibilityRequirement)
     {
         stats.calls.update(1);
 
@@ -113,16 +132,19 @@ public final class TimedMemoizingSupplier<T>
 
             if (foundReady) {
                 stats.reuses.update(1);
+                span.setAttribute(COMPLETION_MODE, "ready");
             }
             else if (concurrentLoad != null) {
                 // Load sharing happens for concurrent loads only, so does not affect the caller's ability to retry.
                 // Load sharing shares exceptions as well.
                 stats.reuses.update(1);
+                span.setAttribute(COMPLETION_MODE, "load-sharing");
                 value = getFutureValue(concurrentLoad);
             }
             else {
                 // This thread got the privilege to do the load
                 stats.loads.update(1);
+                span.setAttribute(COMPLETION_MODE, "load");
                 future.completeAsync(delegate, directExecutor());
                 value = getDone(future);
                 synchronized (this) {
