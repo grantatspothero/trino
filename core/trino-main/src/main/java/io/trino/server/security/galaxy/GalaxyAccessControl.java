@@ -382,7 +382,7 @@ public class GalaxyAccessControl
     public void checkCanShowColumns(SystemSecurityContext context, CatalogSchemaTableName table)
     {
         if (isSystemCatalog(table.getCatalogName())) {
-            // TODO what about information_schema? filterColumns() is no-op for information_schema
+            // TODO what about information_schema? filterColumns() is no-op for information_schema. See also https://github.com/starburstdata/stargate/issues/12879
             return;
         }
         GalaxySystemAccessController controller = getSystemAccessController(context);
@@ -526,7 +526,7 @@ public class GalaxyAccessControl
             return;
         }
         if (isSystemOrInformationSchema(table)) {
-            // TODO should this implyCatalogVisibility?
+            // TODO should this implyCatalogVisibility? See also https://github.com/starburstdata/stargate/issues/12879
             return;
         }
         checkHasPrivilegeOnColumns(context, SELECT, false, table, columns, explanation -> denySelectColumns(table.toString(), columns, explanation));
@@ -777,7 +777,7 @@ public class GalaxyAccessControl
     @Override
     public List<ViewExpression> getRowFilters(SystemSecurityContext context, CatalogSchemaTableName tableName)
     {
-        // TODO what about system catalog or information_schema schema? checkCanSelectFromColumns is no-op for these
+        // TODO (https://github.com/starburstdata/stargate/issues/12879) what about system catalog or information_schema schema? checkCanSelectFromColumns is no-op for these
         GalaxySystemAccessController controller = getSystemAccessController(context);
         Optional<TableId> tableId = toTableId(controller, tableName);
         if (tableId.isEmpty()) {
@@ -789,7 +789,7 @@ public class GalaxyAccessControl
     @Override
     public Optional<ViewExpression> getColumnMask(SystemSecurityContext context, CatalogSchemaTableName tableName, String columnName, Type type)
     {
-        // TODO what about system catalog or information_schema schema? checkCanSelectFromColumns is no-op for these
+        // TODO (https://github.com/starburstdata/stargate/issues/12879) what about system catalog or information_schema schema? checkCanSelectFromColumns is no-op for these
         GalaxySystemAccessController controller = getSystemAccessController(context);
         Optional<TableId> tableId = toTableId(controller, tableName);
         if (tableId.isEmpty()) {
