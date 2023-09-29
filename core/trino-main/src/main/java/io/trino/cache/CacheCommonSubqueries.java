@@ -32,7 +32,6 @@ import io.trino.sql.planner.plan.SimplePlanRewriter;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static io.trino.SystemSessionProperties.isCacheSubqueriesEnabled;
 import static io.trino.cache.CommonSubqueriesExtractor.extractCommonSubqueries;
 import static io.trino.sql.planner.iterative.Lookup.noLookup;
 import static java.util.Objects.requireNonNull;
@@ -51,6 +50,7 @@ public class CacheCommonSubqueries
     public static final int LOAD_PAGES_ALTERNATIVE = 2;
 
     private final boolean cacheEnabled;
+    private final CacheController cacheController;
     private final PlannerContext plannerContext;
     private final Session session;
     private final PlanNodeIdAllocator idAllocator;
@@ -59,6 +59,7 @@ public class CacheCommonSubqueries
 
     public CacheCommonSubqueries(
             CacheConfig cacheConfig,
+            CacheController cacheController,
             PlannerContext plannerContext,
             Session session,
             PlanNodeIdAllocator idAllocator,
@@ -66,6 +67,7 @@ public class CacheCommonSubqueries
             TypeAnalyzer typeAnalyzer)
     {
         this.cacheEnabled = requireNonNull(cacheConfig, "cacheConfig is null").isEnabled();
+        this.cacheController = requireNonNull(cacheController, "cacheController is null");
         this.plannerContext = requireNonNull(plannerContext, "plannerContext is null");
         this.session = requireNonNull(session, "session is null");
         this.idAllocator = requireNonNull(idAllocator, "idAllocator is null");
@@ -75,11 +77,12 @@ public class CacheCommonSubqueries
 
     public PlanNode cacheSubqueries(PlanNode node)
     {
-        if (!cacheEnabled || !isCacheSubqueriesEnabled(session)) {
+        if (!cacheEnabled) {
             return node;
         }
 
         Map<PlanNode, CommonPlanAdaptation> adaptations = extractCommonSubqueries(
+                cacheController,
                 plannerContext,
                 session,
                 idAllocator,

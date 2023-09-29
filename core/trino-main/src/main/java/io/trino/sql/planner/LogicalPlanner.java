@@ -23,6 +23,7 @@ import io.opentelemetry.context.Context;
 import io.trino.Session;
 import io.trino.cache.CacheCommonSubqueries;
 import io.trino.cache.CacheConfig;
+import io.trino.cache.CacheController;
 import io.trino.cost.CachingCostProvider;
 import io.trino.cost.CachingStatsProvider;
 import io.trino.cost.CachingTableStatsProvider;
@@ -238,6 +239,7 @@ public class LogicalPlanner
         this.cacheEnabled = requireNonNull(cacheConfig, "cacheConfig is null").isEnabled();
         this.cacheCommonSubqueries = new CacheCommonSubqueries(
                 cacheConfig,
+                new CacheController(),
                 plannerContext,
                 session,
                 idAllocator,

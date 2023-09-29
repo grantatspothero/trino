@@ -13,14 +13,13 @@
  */
 package io.trino.cache;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import io.trino.Session;
+import io.trino.cache.CacheController.CacheCandidate;
 import io.trino.cost.PlanNodeStatsEstimate;
 import io.trino.metadata.Metadata;
 import io.trino.metadata.ResolvedFunction;
@@ -54,8 +53,6 @@ import io.trino.sql.planner.plan.ValuesNode;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionCall;
 
-import java.util.AbstractMap.SimpleEntry;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -66,7 +63,6 @@ import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Iterables.getOnlyElement;
@@ -115,6 +111,7 @@ public final class CommonSubqueriesExtractor
     private CommonSubqueriesExtractor() {}
 
     public static Map<PlanNode, CommonPlanAdaptation> extractCommonSubqueries(
+            CacheController cacheController,
             PlannerContext plannerContext,
             Session session,
             PlanNodeIdAllocator idAllocator,
@@ -123,14 +120,14 @@ public final class CommonSubqueriesExtractor
             PlanNode root)
     {
         ImmutableMap.Builder<PlanNode, CommonPlanAdaptation> planAdaptations = ImmutableMap.builder();
-        Multimap<SubplanKey, CanonicalSubplan> canonicalSubplans = extractCanonicalSubplans(plannerContext.getMetadata(), session, root).stream()
-                .map(subplan -> new SimpleEntry<>(toSubplanKey(subplan), subplan))
-                .sorted(Comparator.comparing(entry -> entry.getKey().getPriority()))
-                .collect(toImmutableListMultimap(SimpleEntry::getKey, SimpleEntry::getValue));
+        List<CacheCandidate> cacheCandidates = cacheController.getCachingCandidates(
+                session,
+                extractCanonicalSubplans(plannerContext.getMetadata(), session, root));
+
         // extract common subplan adaptations
         Set<PlanNodeId> processedSubplans = new HashSet<>();
-        for (SubplanKey key : canonicalSubplans.keySet()) {
-            List<CanonicalSubplan> subplans = canonicalSubplans.get(key).stream()
+        for (CacheCandidate cacheCandidate : cacheCandidates) {
+            List<CanonicalSubplan> subplans = cacheCandidate.subplans().stream()
                     // skip subqueries for which common subplan was already extracted
                     .filter(subplan -> !processedSubplans.contains(subplan.getTableScanId()))
                     .collect(toImmutableList());
@@ -145,7 +142,7 @@ public final class CommonSubqueriesExtractor
             Expression commonPredicate = extractCommonPredicate(subplans, plannerContext.getMetadata());
             Set<Expression> intersectingConjuncts = extractIntersectingConjuncts(subplans);
             Optional<CacheColumnId> groupByHash = extractGroupByHash(subplans);
-            Map<CacheColumnId, Expression> commonProjections = extractCommonProjections(subplans, commonPredicate, intersectingConjuncts, groupByHash, key.groupByColumns());
+            Map<CacheColumnId, Expression> commonProjections = extractCommonProjections(subplans, commonPredicate, intersectingConjuncts, groupByHash, cacheCandidate.groupByColumns());
             Map<CacheColumnId, ColumnHandle> commonColumnHandles = extractCommonColumnHandles(subplans);
             Map<CacheColumnId, Symbol> commonColumnIds = extractCommonColumnIds(subplans);
 
@@ -154,11 +151,11 @@ public final class CommonSubqueriesExtractor
                     session,
                     symbolAllocator.getTypes(),
                     commonColumnIds,
-                    key.tableId(),
+                    cacheCandidate.tableId(),
                     commonPredicate,
                     commonProjections.keySet().stream()
                             .collect(toImmutableList()),
-                    key.groupByColumns());
+                    cacheCandidate.groupByColumns());
 
             // Create adaptation for each subquery
             subplans.forEach(subplan -> planAdaptations.put(
@@ -179,42 +176,6 @@ public final class CommonSubqueriesExtractor
                             planSignature)));
         }
         return planAdaptations.buildOrThrow();
-    }
-
-    private static SubplanKey toSubplanKey(CanonicalSubplan subplan)
-    {
-        return toSubplanKey(subplan.getTableId(), subplan.getGroupByColumns(), subplan.getConjuncts());
-    }
-
-    @VisibleForTesting
-    static SubplanKey toSubplanKey(CacheTableId tableId, Optional<Set<CacheColumnId>> groupByColumns, List<Expression> conjuncts)
-    {
-        if (groupByColumns.isEmpty()) {
-            return new SubplanKey(tableId, Optional.empty(), ImmutableSet.of());
-        }
-
-        Set<Symbol> groupBySymbols = groupByColumns.get().stream()
-                .map(CanonicalSubplanExtractor::columnIdToSymbol)
-                .collect(toImmutableSet());
-
-        // extract conjuncts that can't be pulled though group by columns
-        Set<Expression> nonPullableConjuncts = conjuncts.stream()
-                .filter(expression -> !groupBySymbols.containsAll(SymbolsExtractor.extractAll(expression)))
-                .collect(toImmutableSet());
-
-        return new SubplanKey(tableId, groupByColumns, nonPullableConjuncts);
-    }
-
-    record SubplanKey(
-            CacheTableId tableId,
-            Optional<Set<CacheColumnId>> groupByColumns,
-            // conjuncts that cannot be pulled up though aggregation
-            Set<Expression> nonPullableConjuncts)
-    {
-        public int getPriority()
-        {
-            return groupByColumns.isPresent() ? 0 : 1;
-        }
     }
 
     private static Expression extractCommonPredicate(List<CanonicalSubplan> subplans, Metadata metadata)

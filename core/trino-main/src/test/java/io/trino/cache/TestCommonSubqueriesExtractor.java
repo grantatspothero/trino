@@ -16,7 +16,6 @@ package io.trino.cache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import io.trino.Session;
 import io.trino.connector.MockConnectorColumnHandle;
@@ -88,9 +87,9 @@ import java.util.function.Function;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static io.trino.SystemSessionProperties.CACHE_SUBQUERIES_ENABLED;
 import static io.trino.SystemSessionProperties.OPTIMIZE_HASH_GENERATION;
 import static io.trino.cache.CanonicalSubplanExtractor.canonicalExpressionToColumnId;
-import static io.trino.cache.CommonSubqueriesExtractor.toSubplanKey;
 import static io.trino.cost.StatsCalculator.noopStatsCalculator;
 import static io.trino.execution.querystats.PlanOptimizersStatsCollector.createPlanOptimizersStatsCollector;
 import static io.trino.metadata.FunctionManager.createTestingFunctionManager;
@@ -136,12 +135,14 @@ public class TestCommonSubqueriesExtractor
     private static final Session TEST_SESSION = testSessionBuilder()
             .setCatalog(TEST_CATALOG_NAME)
             .setSchema(TEST_SCHEMA)
+            .setSystemProperty(CACHE_SUBQUERIES_ENABLED, "true")
             .build();
     private static final Session TPCH_SESSION = testSessionBuilder()
             .setCatalog("tpch")
             .setSchema("tiny")
             // test hash generation
             .setSystemProperty(OPTIMIZE_HASH_GENERATION, "true")
+            .setSystemProperty(CACHE_SUBQUERIES_ENABLED, "true")
             .build();
     private static final MockConnectorColumnHandle HANDLE_1 = new MockConnectorColumnHandle("column1", BIGINT);
     private static final MockConnectorColumnHandle HANDLE_2 = new MockConnectorColumnHandle("column2", BIGINT);
@@ -1254,18 +1255,6 @@ public class TestCommonSubqueriesExtractor
                 TupleDomain.all()));
     }
 
-    @Test
-    public void testToSubplanKey()
-    {
-        CacheTableId tableId = new CacheTableId("table_id");
-        Expression predicateA = expression("a > b");
-        Expression predicateB = expression("c");
-        assertThat(toSubplanKey(tableId, Optional.empty(), ImmutableList.of(predicateA, predicateB)))
-                .isEqualTo(new CommonSubqueriesExtractor.SubplanKey(tableId, Optional.empty(), ImmutableSet.of()));
-        assertThat(toSubplanKey(tableId, Optional.of(ImmutableSet.of(new CacheColumnId("b"), new CacheColumnId("c"))), ImmutableList.of(predicateA, predicateB)))
-                .isEqualTo(new CommonSubqueriesExtractor.SubplanKey(tableId, Optional.of(ImmutableSet.of(new CacheColumnId("b"), new CacheColumnId("c"))), ImmutableSet.of(predicateA)));
-    }
-
     private Expression getHashExpression(ExpressionWithType... expressions)
     {
         Expression hashExpression = new GenericLiteral(StandardTypes.BIGINT, Integer.toString(0));
@@ -1327,6 +1316,7 @@ public class TestCommonSubqueriesExtractor
             PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
             return new CommonSubqueries(
                     CommonSubqueriesExtractor.extractCommonSubqueries(
+                            new CacheController(),
                             getQueryRunner().getPlannerContext(),
                             session,
                             idAllocator,
@@ -1349,6 +1339,7 @@ public class TestCommonSubqueriesExtractor
             // metadata.getCatalogHandle() registers the catalog for the transaction
             session.getCatalog().ifPresent(catalog -> getQueryRunner().getMetadata().getCatalogHandle(session, catalog));
             return CommonSubqueriesExtractor.extractCommonSubqueries(
+                    new CacheController(),
                     getQueryRunner().getPlannerContext(),
                     session,
                     idAllocator,
