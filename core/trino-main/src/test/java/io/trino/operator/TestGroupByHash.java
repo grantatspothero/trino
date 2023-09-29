@@ -24,7 +24,6 @@ import io.trino.spi.block.LongArrayBlock;
 import io.trino.spi.block.RunLengthEncodedBlock;
 import io.trino.spi.block.VariableWidthBlock;
 import io.trino.spi.type.BigintType;
-import io.trino.spi.type.FixedWidthType;
 import io.trino.spi.type.Type;
 import io.trino.spi.type.TypeOperators;
 import io.trino.sql.gen.JoinCompiler;
@@ -225,7 +224,7 @@ public class TestGroupByHash
             rehashThreshold = Byte.MAX_VALUE;
         }
 
-        block = createLongSequenceBlock(1, rehashThreshold, (FixedWidthType) hashType);
+        block = createLongSequenceBlock(1, rehashThreshold, hashType);
         hashBlock = getHashBlock(ImmutableList.of(hashType), block);
         page = new Page(block, hashBlock);
         groupByHash.addPage(page).process();
@@ -455,7 +454,7 @@ public class TestGroupByHash
         }
 
         int[] ids = IntStream.range(0, dictionaryLength).toArray();
-        Block valuesBlock = DictionaryBlock.create(dictionaryLength, createLongSequenceBlock(0, length, (FixedWidthType) hashType), ids);
+        Block valuesBlock = DictionaryBlock.create(dictionaryLength, createLongSequenceBlock(0, length, hashType), ids);
         Block hashBlock = DictionaryBlock.create(dictionaryLength, getHashBlock(ImmutableList.of(hashType), valuesBlock), ids);
         Page page = new Page(valuesBlock, hashBlock);
         AtomicInteger currentQuota = new AtomicInteger(0);
