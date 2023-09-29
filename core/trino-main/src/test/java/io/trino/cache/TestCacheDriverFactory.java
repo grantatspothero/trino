@@ -62,6 +62,7 @@ import static io.trino.RowPagesBuilder.rowPagesBuilder;
 import static io.trino.cache.StaticDynamicFilter.createStaticDynamicFilter;
 import static io.trino.spi.connector.DynamicFilter.EMPTY;
 import static io.trino.spi.type.BigintType.BIGINT;
+import static io.trino.spi.type.DoubleType.DOUBLE;
 import static io.trino.testing.TestingHandles.TEST_CATALOG_HANDLE;
 import static io.trino.testing.TestingHandles.TEST_TABLE_HANDLE;
 import static io.trino.testing.TestingSession.testSessionBuilder;
@@ -237,7 +238,9 @@ public class TestCacheDriverFactory
 
         public TestPageSourceProvider()
         {
-            this(inputPredicate -> inputPredicate);
+            // mimic connector returning compact effective predicate on extra column
+            this(inputPredicate -> inputPredicate.intersect(TupleDomain.withColumnDomains(
+                    ImmutableMap.of(new TestingColumnHandle("extra_column"), Domain.singleValue(DOUBLE, 42.0)))));
         }
 
         @Override

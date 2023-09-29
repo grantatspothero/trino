@@ -102,13 +102,12 @@ public class CacheDriverFactory
         // simplify dynamic filter predicate to improve cache hits
         StaticDynamicFilter dynamicFilter = dynamicFilterSupplier.get();
         TupleDomain<ColumnHandle> dynamicPredicate = pageSourceProvider.simplifyPredicate(
-                session,
-                split.getSplit(),
-                originalTableHandle,
-                dynamicFilter
-                        .getCurrentPredicate()
-                        // filter out DF columns which are not mapped to signature output columns
-                        .filter((column, domain) -> dynamicFilterColumnMapping.containsKey(column)));
+                        session,
+                        split.getSplit(),
+                        originalTableHandle,
+                        dynamicFilter.getCurrentPredicate())
+                // filter out DF columns which are not mapped to signature output columns
+                .filter((column, domain) -> dynamicFilterColumnMapping.containsKey(column));
 
         if (dynamicPredicate.isNone()) {
             // skip caching of completely filtered out splits
