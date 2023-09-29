@@ -30,11 +30,12 @@ import static io.trino.testing.TestingSession.testSessionBuilder;
 import static java.nio.file.Files.createTempDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class TestObjectStoreGalaxyMetastoreBatchFetchEnabled
+@Deprecated // TODO https://github.com/starburstdata/galaxy-trino/issues/890 Remove galaxy.metastore.batch-fetch.enabled
+public class TestObjectStoreGalaxyMetastoreBatchFetchDisabled
         extends AbstractTestQueryFramework
 {
     private static final String CATALOG_NAME = "objectstore";
-    private static final String SCHEMA_NAME = "test_batch_fetch_enabled";
+    private static final String SCHEMA_NAME = "test_batch_fetch_disabled";
 
     @Override
     protected QueryRunner createQueryRunner()
@@ -62,7 +63,7 @@ public class TestObjectStoreGalaxyMetastoreBatchFetchEnabled
                         "galaxy.account-url", "https://localhost:1234"),
                 "galaxy",
                 ImmutableMap.<String, String>builder()
-                        .put("galaxy.metastore.batch-fetch.enabled", "true")
+                        .put("galaxy.metastore.batch-fetch.enabled", "false")
                         .putAll(galaxyMetastore.getMetastoreConfig(schemaDirectory.toUri().toString()))
                         .buildOrThrow(),
                 ImmutableMap.of(),

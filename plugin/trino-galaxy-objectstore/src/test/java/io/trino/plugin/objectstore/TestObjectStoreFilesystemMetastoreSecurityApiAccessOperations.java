@@ -74,7 +74,9 @@ import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_STATS;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.CREATE_TABLE;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_ALL_DATABASES;
+import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_ALL_TABLES;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_ALL_TABLES_FROM_DATABASE;
+import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_ALL_VIEWS;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_ALL_VIEWS_FROM_DATABASE;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_DATABASE;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.GET_PARTITIONS_BY_NAMES;
@@ -889,15 +891,19 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertInvocations(session, "TABLE information_schema.columns",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
                         .addCopies(GET_ALL_DATABASES, switch (mode) {
-                            case NONE -> 3;
+                            case NONE -> 2;
                             case V3 -> 1;
                         })
-                        .addCopies(GET_ALL_VIEWS_FROM_DATABASE, switch (mode) {
+                        .addCopies(GET_ALL_TABLES, switch (mode) {
+                            case NONE -> 1;
+                            case V3 -> 0;
+                        })
+                        .addCopies(GET_ALL_VIEWS, switch (mode) {
                             case NONE -> 1;
                             case V3 -> 0;
                         })
                         .addCopies(GET_ALL_TABLES_FROM_DATABASE, switch (mode) {
-                            case NONE -> 3;
+                            case NONE -> 2;
                             case V3 -> 0;
                         })
                         .addCopies(GET_TABLES_WITH_PARAMETER, switch (mode) {
@@ -1162,15 +1168,19 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertInvocations(session, "TABLE information_schema.columns",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
                         .addCopies(GET_ALL_DATABASES, switch (mode) {
-                            case NONE -> 3;
+                            case NONE -> 2;
                             case V3 -> 1;
                         })
-                        .addCopies(GET_ALL_TABLES_FROM_DATABASE, switch (mode) {
-                            case NONE -> 3;
+                        .addCopies(GET_ALL_TABLES, switch (mode) {
+                            case NONE -> 1;
                             case V3 -> 0;
                         })
-                        .addCopies(GET_ALL_VIEWS_FROM_DATABASE, switch (mode) {
+                        .addCopies(GET_ALL_VIEWS, switch (mode) {
                             case NONE -> 1;
+                            case V3 -> 0;
+                        })
+                        .addCopies(GET_ALL_TABLES_FROM_DATABASE, switch (mode) {
+                            case NONE -> 2;
                             case V3 -> 0;
                         })
                         .addCopies(GET_TABLES_WITH_PARAMETER, switch (mode) {

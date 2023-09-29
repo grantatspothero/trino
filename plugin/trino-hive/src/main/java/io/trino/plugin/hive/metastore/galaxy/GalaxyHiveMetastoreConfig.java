@@ -27,7 +27,7 @@ public class GalaxyHiveMetastoreConfig
     private String sharedSecret;
     private URI serverUri;
     private String defaultDataDirectory;
-    private boolean batchMetadataFetch;
+    private boolean batchMetadataFetch = true;
 
     @NotNull
     public MetastoreId getMetastoreId()
