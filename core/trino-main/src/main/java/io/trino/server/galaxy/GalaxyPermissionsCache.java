@@ -18,7 +18,6 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
-import com.google.errorprone.annotations.Immutable;
 import com.google.errorprone.annotations.ThreadSafe;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
@@ -245,7 +244,6 @@ public class GalaxyPermissionsCache
         }
     }
 
-    @Immutable
     private record AccountSessionKey(
             // Differentiates between TrinoSecurityApi implementations
             Object securityApiId,
