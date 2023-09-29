@@ -102,6 +102,28 @@ public class ObjectStorePageSourceProvider
         throw new VerifyException("Unhandled class: " + table.getClass().getName());
     }
 
+    @Override
+    public TupleDomain<ColumnHandle> prunePredicate(
+            ConnectorSession session,
+            ConnectorSplit split,
+            ConnectorTableHandle table,
+            TupleDomain<ColumnHandle> predicate)
+    {
+        if (table instanceof HiveTableHandle) {
+            return hivePageSourceProvider.prunePredicate(unwrap(HIVE, session), split, table, predicate);
+        }
+        if (table instanceof IcebergTableHandle) {
+            return icebergPageSourceProvider.prunePredicate(unwrap(ICEBERG, session), split, table, predicate);
+        }
+        if (table instanceof DeltaLakeTableHandle) {
+            return deltaPageSourceProvider.prunePredicate(unwrap(DELTA, session), split, table, predicate);
+        }
+        if (table instanceof HudiTableHandle) {
+            return hudiPageSourceProvider.prunePredicate(unwrap(HUDI, session), split, table, predicate);
+        }
+        throw new VerifyException("Unhandled class: " + table.getClass().getName());
+    }
+
     private ConnectorSession unwrap(TableType tableType, ConnectorSession session)
     {
         return sessionProperties.unwrap(tableType, session);

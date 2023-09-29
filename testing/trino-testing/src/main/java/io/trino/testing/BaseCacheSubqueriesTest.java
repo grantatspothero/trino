@@ -16,20 +16,30 @@ package io.trino.testing;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.airlift.slice.Slices;
+import io.opentelemetry.api.trace.Span;
 import io.trino.Session;
 import io.trino.cache.CacheDataOperator;
 import io.trino.cache.LoadCachedDataOperator;
 import io.trino.metadata.Metadata;
 import io.trino.metadata.QualifiedObjectName;
+import io.trino.metadata.Split;
 import io.trino.metadata.TableHandle;
 import io.trino.operator.OperatorStats;
 import io.trino.operator.ScanFilterAndProjectOperator;
 import io.trino.operator.TableScanOperator;
+import io.trino.server.testing.TestingTrinoServer;
 import io.trino.spi.QueryId;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.PlanSignature;
 import io.trino.spi.cache.SignatureKey;
+import io.trino.spi.connector.ColumnHandle;
+import io.trino.spi.connector.ConnectorPageSourceProvider;
+import io.trino.spi.connector.DynamicFilter;
+import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.TupleDomain;
+import io.trino.spi.type.VarcharType;
+import io.trino.split.SplitSource;
 import io.trino.sql.planner.Plan;
 import io.trino.sql.planner.assertions.PlanAssert;
 import io.trino.sql.planner.assertions.PlanMatchPattern;
@@ -45,9 +55,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
+import static io.airlift.concurrent.MoreFutures.getFutureValue;
 import static io.trino.SystemSessionProperties.CACHE_SUBQUERIES_ENABLED;
 import static io.trino.cost.StatsCalculator.noopStatsCalculator;
 import static io.trino.metadata.FunctionManager.createTestingFunctionManager;
+import static io.trino.spi.connector.Constraint.alwaysTrue;
+import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.anyTree;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.cacheDataPlanNode;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.chooseAlternativeNode;
@@ -300,6 +313,62 @@ public abstract class BaseCacheSubqueriesTest
         assertThat(twoPartitionsRowCount).isLessThan(allPartitionsQuery.getResult().getRowCount());
         assertThat(singlePartitionQuery.getResult().getRowCount()).isLessThan(twoPartitionsRowCount);
         assertUpdate("drop table orders_part");
+    }
+
+    @Test
+    public void testPrunePredicate()
+    {
+        computeActual("create table orders_part with (partitioned_by = ARRAY['orderpriority']) as select orderkey, orderdate, 'bar' as orderpriority from orders");
+        DistributedQueryRunner runner = getDistributedQueryRunner();
+        Session session = Session.builder(getSession())
+                .setQueryId(new QueryId("prune_predicate"))
+                .build();
+        transaction(runner.getTransactionManager(), runner.getAccessControl())
+                .singleStatement()
+                .execute(session, transactionSession -> {
+                    TestingTrinoServer server = runner.getCoordinator();
+                    Optional<TableHandle> handle = server.getMetadata().getTableHandle(
+                            transactionSession,
+                            new QualifiedObjectName(transactionSession.getCatalog().orElseThrow(), transactionSession.getSchema().orElseThrow(), "orders_part"));
+                    assertThat(handle).isPresent();
+
+                    SplitSource splitSource = server.getSplitManager().getSplits(transactionSession, Span.current(), handle.get(), DynamicFilter.EMPTY, alwaysTrue());
+                    Split split = getFutureValue(splitSource.getNextBatch(1000)).getSplits().get(0);
+
+                    ColumnHandle partitionColumn = server.getMetadata().getColumnHandles(transactionSession, handle.get()).get("orderpriority");
+                    assertThat(partitionColumn).isNotNull();
+                    ColumnHandle dataColumn = server.getMetadata().getColumnHandles(transactionSession, handle.get()).get("orderkey");
+                    assertThat(dataColumn).isNotNull();
+
+                    ConnectorPageSourceProvider pageSourceProvider = server.getConnector(transactionSession.getCatalog().orElseThrow()).getPageSourceProvider();
+                    VarcharType type = VarcharType.createVarcharType(3);
+
+                    // prunePredicate should return non if predicate is exclusive on partition column
+                    assertThat(pageSourceProvider.prunePredicate(
+                            transactionSession.toConnectorSession(),
+                            split.getConnectorSplit(),
+                            handle.get().getConnectorHandle(),
+                            TupleDomain.withColumnDomains(ImmutableMap.of(partitionColumn, Domain.singleValue(type, Slices.utf8Slice("foo"))))))
+                            .matches(TupleDomain::isNone);
+
+                    // prunePredicate should prune prefilled column that matches given predicate fully
+                    Domain partitionDomain = Domain.singleValue(type, Slices.utf8Slice("bar"));
+                    assertThat(pageSourceProvider.prunePredicate(
+                            transactionSession.toConnectorSession(),
+                            split.getConnectorSplit(),
+                            handle.get().getConnectorHandle(),
+                            TupleDomain.withColumnDomains(ImmutableMap.of(partitionColumn, partitionDomain))))
+                            .matches(TupleDomain::isAll);
+
+                    // prunePredicate should not prune data column
+                    Domain dataDomain = Domain.singleValue(BIGINT, 42L);
+                    assertThat(pageSourceProvider.prunePredicate(
+                            transactionSession.toConnectorSession(),
+                            split.getConnectorSplit(),
+                            handle.get().getConnectorHandle(),
+                            TupleDomain.withColumnDomains(ImmutableMap.of(dataColumn, dataDomain))))
+                            .isEqualTo(TupleDomain.withColumnDomains(ImmutableMap.of(dataColumn, dataDomain)));
+                });
     }
 
     protected CacheColumnId getCacheColumnId(Session session, String tableName, String columnName)

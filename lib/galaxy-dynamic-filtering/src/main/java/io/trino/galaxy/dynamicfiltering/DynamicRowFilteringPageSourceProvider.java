@@ -97,4 +97,14 @@ public class DynamicRowFilteringPageSourceProvider
         // in filtering split data
         return delegatePageSourceProvider.prunePredicate(session, split, table, predicate);
     }
+
+    @Override
+    public TupleDomain<ColumnHandle> prunePredicate(
+            ConnectorSession session,
+            ConnectorSplit split,
+            ConnectorTableHandle table,
+            TupleDomain<ColumnHandle> predicate)
+    {
+        return delegatePageSourceProvider.prunePredicate(session, split, table, predicate);
+    }
 }
