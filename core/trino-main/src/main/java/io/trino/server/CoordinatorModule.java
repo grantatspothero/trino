@@ -65,6 +65,7 @@ import io.trino.execution.resourcegroups.LegacyResourceGroupConfigurationManager
 import io.trino.execution.resourcegroups.ResourceGroupManager;
 import io.trino.execution.scheduler.BinPackingNodeAllocatorService;
 import io.trino.execution.scheduler.EventDrivenTaskSourceFactory;
+import io.trino.execution.scheduler.ExponentialGrowthPartitionMemoryEstimator;
 import io.trino.execution.scheduler.NodeAllocatorService;
 import io.trino.execution.scheduler.PartitionMemoryEstimatorFactory;
 import io.trino.execution.scheduler.SplitSchedulerStats;
@@ -230,7 +231,7 @@ public class CoordinatorModule
         // node allocator
         binder.bind(BinPackingNodeAllocatorService.class).in(Scopes.SINGLETON);
         binder.bind(NodeAllocatorService.class).to(BinPackingNodeAllocatorService.class);
-        binder.bind(PartitionMemoryEstimatorFactory.class).to(BinPackingNodeAllocatorService.class);
+        binder.bind(PartitionMemoryEstimatorFactory.class).to(ExponentialGrowthPartitionMemoryEstimator.Factory.class);
 
         // node monitor
         binder.bind(ClusterSizeMonitor.class).in(Scopes.SINGLETON);
