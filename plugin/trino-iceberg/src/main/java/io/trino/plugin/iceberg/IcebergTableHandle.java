@@ -298,6 +298,33 @@ public class IcebergTableHandle
                 Optional.of(maxScannedFileSize));
     }
 
+    public IcebergTableHandle toCanonical()
+    {
+        return new IcebergTableHandle(
+                getCatalog(),
+                schemaName,
+                tableName,
+                tableType,
+                snapshotId,
+                tableSchemaJson,
+                partitionSpecJson,
+                formatVersion,
+                /*
+                    It overwrites `unenforcedPredicate` because setting this property to `TupleDomain.all()` does not affect
+                    final result when table is queried. It allows to match more similar subqueries that reads from same table
+                    but has different predicates.
+                */
+                TupleDomain.all(),
+                enforcedPredicate,
+                limit,
+                projectedColumns,
+                nameMappingJson,
+                tableLocation,
+                storageProperties,
+                recordScannedFiles,
+                maxScannedFileSize);
+    }
+
     @Override
     public boolean equals(Object o)
     {

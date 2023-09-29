@@ -26,6 +26,8 @@ import io.trino.plugin.hive.LocationAccessControl;
 import io.trino.plugin.hive.NodeVersion;
 import io.trino.plugin.hive.metastore.glue.GlueMetastoreStats;
 import io.trino.plugin.iceberg.CommitTaskData;
+import io.trino.plugin.iceberg.IcebergCacheTableId;
+import io.trino.plugin.iceberg.IcebergColumnHandle;
 import io.trino.plugin.iceberg.IcebergMetadata;
 import io.trino.plugin.iceberg.TableStatisticsWriter;
 import io.trino.plugin.iceberg.catalog.BaseTrinoCatalogTest;
@@ -115,6 +117,8 @@ public class TestTrinoGlueCatalog
                     PLANNER_CONTEXT.getTypeManager(),
                     CatalogHandle.fromId("iceberg:NORMAL:v12345"),
                     jsonCodec(CommitTaskData.class),
+                    jsonCodec(IcebergCacheTableId.class),
+                    jsonCodec(IcebergColumnHandle.class),
                     catalog,
                     connectorIdentity -> {
                         throw new UnsupportedOperationException();

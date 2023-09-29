@@ -18,8 +18,8 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
-import com.starburstdata.trino.plugins.dynamicfiltering.DynamicRowFilteringModule;
 import com.starburstdata.trino.plugins.dynamicfiltering.ForDynamicRowFiltering;
+import io.trino.galaxy.dynamicfiltering.DynamicRowFilteringModule;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.base.session.SessionPropertiesProvider;
@@ -99,6 +99,11 @@ public class IcebergModule
         binder.bind(FileFormatDataSourceStats.class).in(Scopes.SINGLETON);
         newExporter(binder).export(FileFormatDataSourceStats.class).withGeneratedName();
 
+        // for table handle, column handle and split ids
+        jsonCodecBinder(binder).bindJsonCodec(IcebergCacheTableId.class);
+        jsonCodecBinder(binder).bindJsonCodec(IcebergCacheSplitId.class);
+        jsonCodecBinder(binder).bindJsonCodec(IcebergColumnHandle.class);
+
         binder.bind(IcebergFileWriterFactory.class).in(Scopes.SINGLETON);
         newExporter(binder).export(IcebergFileWriterFactory.class).withGeneratedName();
 
@@ -120,7 +125,7 @@ public class IcebergModule
         binder.bind(Runnable.class)
                 .annotatedWith(ForDynamicRowFiltering.class)
                 .toInstance(() -> {});
-        binder.install(new DynamicRowFilteringModule(() -> true));
+        binder.install(new DynamicRowFilteringModule());
 
         newSetBinder(binder, ConnectorTableFunction.class).addBinding().toProvider(TableChangesFunctionProvider.class).in(Scopes.SINGLETON);
         binder.bind(FunctionProvider.class).to(IcebergFunctionProvider.class).in(Scopes.SINGLETON);

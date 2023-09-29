@@ -30,6 +30,8 @@ public class IcebergMetadataFactory
     private final TypeManager typeManager;
     private final CatalogHandle trinoCatalogHandle;
     private final JsonCodec<CommitTaskData> commitTaskCodec;
+    private final JsonCodec<IcebergCacheTableId> tableIdCodec;
+    private final JsonCodec<IcebergColumnHandle> columnHandleCodec;
     private final TrinoCatalogFactory catalogFactory;
     private final TrinoFileSystemFactory fileSystemFactory;
     private final TableStatisticsWriter tableStatisticsWriter;
@@ -40,6 +42,8 @@ public class IcebergMetadataFactory
             TypeManager typeManager,
             CatalogHandle trinoCatalogHandle,
             JsonCodec<CommitTaskData> commitTaskCodec,
+            JsonCodec<IcebergCacheTableId> tableIdCodec,
+            JsonCodec<IcebergColumnHandle> columnHandleCodec,
             TrinoCatalogFactory catalogFactory,
             TrinoFileSystemFactory fileSystemFactory,
             TableStatisticsWriter tableStatisticsWriter)
@@ -48,6 +52,8 @@ public class IcebergMetadataFactory
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.trinoCatalogHandle = requireNonNull(trinoCatalogHandle, "trinoCatalogHandle is null");
         this.commitTaskCodec = requireNonNull(commitTaskCodec, "commitTaskCodec is null");
+        this.tableIdCodec = requireNonNull(tableIdCodec, "tableIdCodec is null");
+        this.columnHandleCodec = requireNonNull(columnHandleCodec, "columnHandleCodec is null");
         this.catalogFactory = requireNonNull(catalogFactory, "catalogFactory is null");
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.tableStatisticsWriter = requireNonNull(tableStatisticsWriter, "tableStatisticsWriter is null");
@@ -60,6 +66,8 @@ public class IcebergMetadataFactory
                 typeManager,
                 trinoCatalogHandle,
                 commitTaskCodec,
+                tableIdCodec,
+                columnHandleCodec,
                 catalogFactory.create(identity),
                 fileSystemFactory,
                 tableStatisticsWriter);

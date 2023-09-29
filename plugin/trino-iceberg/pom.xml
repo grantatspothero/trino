@@ -138,6 +138,11 @@
 
         <dependency>
             <groupId>io.trino</groupId>
+            <artifactId>galaxy-dynamic-filtering</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
             <artifactId>trino-cache</artifactId>
         </dependency>
 

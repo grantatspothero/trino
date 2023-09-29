@@ -52,6 +52,8 @@ import io.trino.plugin.iceberg.util.DataFileWithDeleteFiles;
 import io.trino.spi.ErrorCode;
 import io.trino.spi.TrinoException;
 import io.trino.spi.block.Block;
+import io.trino.spi.cache.CacheColumnId;
+import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.Assignment;
 import io.trino.spi.connector.BeginTableExecuteResult;
 import io.trino.spi.connector.CatalogHandle;
@@ -195,6 +197,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Iterables.getLast;
 import static com.google.common.collect.Maps.transformValues;
 import static com.google.common.collect.Sets.difference;
+import static io.trino.plugin.base.cache.CacheUtils.normalizeTupleDomain;
 import static io.trino.plugin.base.projection.ApplyProjectionUtil.extractSupportedProjectedColumns;
 import static io.trino.plugin.base.projection.ApplyProjectionUtil.replaceWithNewVariables;
 import static io.trino.plugin.base.util.Procedures.checkProcedureArgument;
@@ -318,6 +321,8 @@ public class IcebergMetadata
     private final TypeManager typeManager;
     private final CatalogHandle trinoCatalogHandle;
     private final JsonCodec<CommitTaskData> commitTaskCodec;
+    private final JsonCodec<IcebergCacheTableId> tableIdCodec;
+    private final JsonCodec<IcebergColumnHandle> columnHandleCodec;
     private final TrinoCatalog catalog;
     private final TrinoFileSystemFactory fileSystemFactory;
     private final TableStatisticsWriter tableStatisticsWriter;
@@ -338,6 +343,8 @@ public class IcebergMetadata
             TypeManager typeManager,
             CatalogHandle trinoCatalogHandle,
             JsonCodec<CommitTaskData> commitTaskCodec,
+            JsonCodec<IcebergCacheTableId> tableIdCodec,
+            JsonCodec<IcebergColumnHandle> columnHandleCodec,
             TrinoCatalog catalog,
             TrinoFileSystemFactory fileSystemFactory,
             TableStatisticsWriter tableStatisticsWriter)
@@ -346,6 +353,8 @@ public class IcebergMetadata
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.trinoCatalogHandle = requireNonNull(trinoCatalogHandle, "trinoCatalogHandle is null");
         this.commitTaskCodec = requireNonNull(commitTaskCodec, "commitTaskCodec is null");
+        this.tableIdCodec = requireNonNull(tableIdCodec, "tableIdCodec is null");
+        this.columnHandleCodec = requireNonNull(columnHandleCodec, "columnHandleCodec is null");
         this.catalog = requireNonNull(catalog, "catalog is null");
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.tableStatisticsWriter = requireNonNull(tableStatisticsWriter, "tableStatisticsWriter is null");
@@ -2999,6 +3008,74 @@ public class IcebergMetadata
             return Optional.empty();
         }
         return catalog.redirectTable(session, tableName, targetCatalogName.get());
+    }
+
+    @Override
+    public Optional<CacheTableId> getCacheTableId(ConnectorTableHandle tableHandle)
+    {
+        IcebergTableHandle icebergTableHandle = (IcebergTableHandle) tableHandle;
+
+        if (icebergTableHandle.getSnapshotId().isEmpty()) {
+            // A table with missing snapshot id produces no splits
+            return Optional.empty();
+        }
+
+        // Ensure cache id generation is revisited whenever handle classes change.
+        IcebergTableHandle handle = new IcebergTableHandle(
+                icebergTableHandle.getCatalog(),
+                icebergTableHandle.getSchemaName(),
+                icebergTableHandle.getTableName(),
+                icebergTableHandle.getTableType(),
+                icebergTableHandle.getSnapshotId(),
+                icebergTableHandle.getTableSchemaJson(),
+                icebergTableHandle.getPartitionSpecJson(),
+                icebergTableHandle.getFormatVersion(),
+                icebergTableHandle.getUnenforcedPredicate(),
+                icebergTableHandle.getEnforcedPredicate(),
+                icebergTableHandle.getLimit(),
+                icebergTableHandle.getProjectedColumns(),
+                icebergTableHandle.getNameMappingJson(),
+                icebergTableHandle.getTableLocation(),
+                icebergTableHandle.getStorageProperties(),
+                icebergTableHandle.isRecordScannedFiles(),
+                icebergTableHandle.getMaxScannedFileSize());
+
+        IcebergCacheTableId tableId = new IcebergCacheTableId(
+                handle.getCatalog(),
+                handle.getSchemaName(),
+                handle.getTableName(),
+                handle.getTableLocation(),
+                normalizeTupleDomain(handle.getUnenforcedPredicate().transformKeys(column -> getCacheColumnId(tableHandle, column).orElseThrow())),
+                handle.getStorageProperties().entrySet().stream()
+                        // filter out deprecated Trino statistics placed within storage properties
+                        .filter(entry -> !entry.getKey().startsWith(TRINO_STATS_PREFIX))
+                .sorted(Map.Entry.comparingByKey())
+                .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
+
+        return Optional.of(new CacheTableId(tableIdCodec.toJson(tableId)));
+    }
+
+    @Override
+    public ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle handle)
+    {
+        return ((IcebergTableHandle) handle).toCanonical();
+    }
+
+    @Override
+    public Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
+    {
+        IcebergColumnHandle icebergColumnHandle = (IcebergColumnHandle) columnHandle;
+
+        // ensure cache id generation is revisited whenever handle classes change
+        IcebergColumnHandle canonicalizedHandle = new IcebergColumnHandle(
+                icebergColumnHandle.getBaseColumnIdentity(),
+                icebergColumnHandle.getBaseType(),
+                icebergColumnHandle.getPath(),
+                icebergColumnHandle.getType(),
+                // comment is irrelevant
+                Optional.empty());
+
+        return Optional.of(new CacheColumnId(columnHandleCodec.toJson(canonicalizedHandle)));
     }
 
     @Override
