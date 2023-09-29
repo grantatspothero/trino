@@ -307,6 +307,12 @@ public abstract class BaseCacheSubqueriesTest
         assertThat(getScanOperatorInputPositions(singlePartitionQuery.getQueryId())).isZero();
         assertThat(getLoadCachedDataOperatorInputPositions(singlePartitionQuery.getQueryId())).isPositive();
 
+        // make sure that adding new partition doesn't invalidate existing cache entries
+        computeActual("insert into orders_part values (-42, date '1991-01-01', 'foo')");
+        singlePartitionQuery = executeWithQueryId(withCacheSubqueriesEnabled(), selectSinglePartition);
+        assertThat(getScanOperatorInputPositions(singlePartitionQuery.getQueryId())).isZero();
+        assertThat(getLoadCachedDataOperatorInputPositions(singlePartitionQuery.getQueryId())).isPositive();
+
         // validate results
         int twoPartitionsRowCount = twoPartitionsQueryFirst.getResult().getRowCount();
         assertThat(twoPartitionsRowCount).isEqualTo(twoPartitionsQuerySecond.getResult().getRowCount());
