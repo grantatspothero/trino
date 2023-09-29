@@ -82,7 +82,7 @@ import static org.assertj.core.api.Assertions.fail;
  */
 // see comment at top of TestGalaxyQueries for debugging GalaxyQueryRunner queries in both Trino and Stargate portal-server!
 @Test(singleThreaded = true)
-public class BaseMetadataOnlyQueriesTest
+public abstract class BaseMetadataOnlyQueriesTest
         extends AbstractTestQueryFramework
 {
     private static final JsonCodec<StatementRequest> STATEMENT_REQUEST_CODEC = jsonCodec(StatementRequest.class);
@@ -141,12 +141,15 @@ public class BaseMetadataOnlyQueriesTest
                 .addExtraProperty("experimental.concurrent-startup", "true")
                 .addExtraProperty("metadata.shutdown.authentication-key", shutdownKey.toString())
                 .addExtraProperty("metadata.shutdown.exit-delay", "999m")
+
                 .addPlugin(new TpchPlugin())
                 .addPlugin(new TestingHivePlugin(metastore))
                 .setNodeCount(1)
                 .setInstallSecurityModule(false)
                 .build();
     }
+
+    protected abstract boolean useChunkedEncoding();
 
     @AfterMethod(alwaysRun = true)
     public void verify()
@@ -252,7 +255,7 @@ public class BaseMetadataOnlyQueriesTest
                 "galaxy.catalog-names", "tpch->" + tpchCatalogId.toString() + ",hive->" + hiveCatalogId,
                 "galaxy.read-only-catalogs", ""));
 
-        return preparePost().setUri(baseUrl.resolve("/galaxy/metadata/v1/statement"))
+        return preparePost().setUri(baseUrl.resolve("/galaxy/metadata/v1/" + (useChunkedEncoding() ? "statementchunked" : "statement")))
                 .setHeader("X-Trino-User", "dummy")
                 .addHeader("X-Trino-Extra-Credential", "userId=" + testingAccountClient.getAdminUserId())
                 .addHeader("X-Trino-Extra-Credential", "roleId=" + testingAccountClient.getAdminRoleId())

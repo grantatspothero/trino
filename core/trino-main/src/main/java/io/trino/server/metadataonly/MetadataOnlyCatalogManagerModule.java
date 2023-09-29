@@ -20,6 +20,7 @@ import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.starburst.stargate.crypto.KmsCryptoModule;
 import io.starburst.stargate.crypto.MasterKeyCrypto;
 import io.starburst.stargate.crypto.SecretSealer;
+import io.trino.client.QueryResults;
 import io.trino.connector.ConnectorServicesProvider;
 import io.trino.connector.DefaultCatalogFactory;
 import io.trino.connector.LazyCatalogFactory;
@@ -38,6 +39,7 @@ import static com.google.inject.Scopes.SINGLETON;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.airlift.jaxrs.JaxrsBinder.jaxrsBinder;
+import static io.airlift.json.JsonCodecBinder.jsonCodecBinder;
 import static io.starburst.stargate.crypto.TestingMasterKeyCrypto.createVerifierCrypto;
 import static io.trino.connector.CatalogManagerConfig.CatalogMangerKind.METADATA_ONLY;
 
@@ -49,6 +51,7 @@ public class MetadataOnlyCatalogManagerModule
     {
         jaxrsBinder(binder).bind(MetadataOnlyStatementResource.class);
         jaxrsBinder(binder).bind(MetadataOnlySystemResource.class);
+        jsonCodecBinder(binder).bindJsonCodec(QueryResults.class);
 
         binder.bind(MetadataOnlyTransactionManager.class).in(Scopes.SINGLETON);
         binder.bind(TransactionManager.class).to(MetadataOnlyTransactionManager.class).in(Scopes.SINGLETON);
