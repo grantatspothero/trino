@@ -33,7 +33,8 @@ public interface ConnectorPageSourceProvider
 
     /**
      * Simplifies predicate into a predicate that {@link ConnectorPageSource} would use
-     * to filter split data.
+     * to filter split data. Returned predicate might contain additional columns that
+     * were not part of input predicate.
      */
     default TupleDomain<ColumnHandle> simplifyPredicate(
             ConnectorSession session,
