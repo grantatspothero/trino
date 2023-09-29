@@ -29,6 +29,7 @@ import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
 import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.EntityId;
+import io.starburst.stargate.id.EntityKind;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.identity.DispatchSession;
 import io.trino.server.security.galaxy.GalaxyIndexerTrinoSecurityApi;
@@ -66,12 +67,20 @@ public class GalaxyPermissionsCache
     // catalogVisibilityCache is keyed by DispatchSession so will be loaded once per query or more if there are views
     private static final int CATALOG_VISIBILITY_CACHE_SIZE = EXPECTED_CONCURRENT_QUERIES * 3;
 
+    // informationSchemaEntityPrivilegesCache is keyed by DispatchSession and information_schema.x table name
+    // However it's designed primary for DBT use-case where information_schema.columns is used by multiple concurrent queries,
+    // So it needs to be at least of size EXPECTED_CONCURRENT_QUERIES.
+    private static final int INFORMATION_SCHEMA_ENTITY_PRIVILEGES_CACHE_SIZE = EXPECTED_CONCURRENT_QUERIES * 10;
+
     private final boolean globalHotSharingCacheEnabled;
     private final Tracer tracer;
 
     // global hot sharing (time-based) cache
     private final Cache<AccountSessionKey, TimedMemoizingSupplier<ContentsVisibility>> catalogVisibilityCache;
+    private final Cache<AccountSessionEntityIdKey, TimedMemoizingSupplier<EntityPrivileges>> informationSchemaEntityPrivilegesCache;
+
     private final TimedMemoizingSupplier.Stats catalogVisibilityLoadingStats = TimedMemoizingSupplier.createStats();
+    private final TimedMemoizingSupplier.Stats informationSchemaEntityLoadingStats = TimedMemoizingSupplier.createStats();
 
     // per-query caches
     private final LoadingCache<QueryId, Map<DispatchSession, GalaxyQueryPermissions>> queryPermissionsCache;
@@ -90,6 +99,10 @@ public class GalaxyPermissionsCache
         catalogVisibilityCache = buildNonEvictableCache(
                 CacheBuilder.newBuilder()
                         .maximumSize(CATALOG_VISIBILITY_CACHE_SIZE));
+
+        informationSchemaEntityPrivilegesCache = buildNonEvictableCache(
+                CacheBuilder.newBuilder()
+                        .maximumSize(INFORMATION_SCHEMA_ENTITY_PRIVILEGES_CACHE_SIZE));
 
         queryPermissionsCache = buildNonEvictableCache(
                 CacheBuilder.newBuilder()
@@ -112,9 +125,23 @@ public class GalaxyPermissionsCache
 
     @Managed
     @Nested
+    public TimedMemoizingSupplier.Stats getInformationSchemaEntityLoadingStats()
+    {
+        return informationSchemaEntityLoadingStats;
+    }
+
+    @Managed
+    @Nested
     public CacheStatsMBean getCatalogVisibilityCacheStats()
     {
         return new CacheStatsMBean(catalogVisibilityCache);
+    }
+
+    @Managed
+    @Nested
+    public CacheStatsMBean getInformationSchemaEntityPrivilegesCacheStats()
+    {
+        return new CacheStatsMBean(informationSchemaEntityPrivilegesCache);
     }
 
     @Managed
@@ -151,7 +178,23 @@ public class GalaxyPermissionsCache
 
             entityPrivileges = buildNonEvictableCache(
                     CacheBuilder.newBuilder(),
-                    CacheLoader.from(key -> trinoSecurityApi.getEntityPrivileges(session, key.roleId(), key.entity())));
+                    CacheLoader.from(key -> {
+                        if (globalHotSharingCacheEnabled && key.entity().getEntityKind() == EntityKind.TABLE && key.entity().getSchemaName().equals("information_schema")) {
+                            // The hot sharing EntityPrivileges cache is applied to information_schema tables only to ensure high hit ratio.
+                            // Especially the information_schema.columns has been observed to be queried concurrently by tools such as DBT.
+                            // TODO (https://github.com/starburstdata/stargate/issues/12879) investigate whether information_schema tables need EntityPrivileges at all
+                            TimedMemoizingSupplier<EntityPrivileges> loader = uncheckedCacheGet(
+                                    informationSchemaEntityPrivilegesCache,
+                                    new AccountSessionEntityIdKey(AccountSessionKey.create(trinoSecurityApi, session), key.entity()),
+                                    () -> new TimedMemoizingSupplier<>(
+                                            tracer,
+                                            "GalaxyPermissionsCache.shared.information_schema." + key.entity().getTableName(),
+                                            () -> trinoSecurityApi.getEntityPrivileges(session, key.roleId(), key.entity()),
+                                            informationSchemaEntityLoadingStats));
+                            return loader.get(queryStart);
+                        }
+                        return trinoSecurityApi.getEntityPrivileges(session, key.roleId(), key.entity());
+                    }));
 
             tableVisibility = buildNonEvictableCache(
                     CacheBuilder.newBuilder(),
@@ -284,6 +327,17 @@ public class GalaxyPermissionsCache
                 return ((HttpTrinoSecurityClient) trinoSecurityApi).getBaseUri();
             }
             throw new IllegalArgumentException("Unsupported security API implementation: %s [%s]".formatted(trinoSecurityApi, trinoSecurityApi.getClass()));
+        }
+    }
+
+    private record AccountSessionEntityIdKey(
+            AccountSessionKey sessionKey,
+            EntityId entityId)
+    {
+        AccountSessionEntityIdKey
+        {
+            requireNonNull(sessionKey, "sessionKey is null");
+            requireNonNull(entityId, "entityId is null");
         }
     }
 }
