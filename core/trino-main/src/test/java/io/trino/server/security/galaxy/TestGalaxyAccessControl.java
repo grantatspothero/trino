@@ -40,7 +40,6 @@ import io.trino.spi.connector.CatalogSchemaName;
 import io.trino.spi.connector.CatalogSchemaRoutineName;
 import io.trino.spi.connector.CatalogSchemaTableName;
 import io.trino.spi.connector.SchemaTableName;
-import io.trino.spi.function.FunctionKind;
 import io.trino.spi.security.AccessDeniedException;
 import io.trino.spi.security.Identity;
 import io.trino.spi.security.PrincipalType;
@@ -833,16 +832,14 @@ public class TestGalaxyAccessControl
     @Test
     public void testTableFunctionPrivileges()
     {
-        BiConsumer<SystemSecurityContext, CatalogSchemaRoutineName> checkTableFunction = (context, function) -> checkCanExecuteFunction(context, FunctionKind.TABLE, function);
+        BiConsumer<SystemSecurityContext, CatalogSchemaRoutineName> checkTableFunction = this::checkCanExecuteFunction;
 
         CatalogSchemaRoutineName function = new CatalogSchemaRoutineName(helper.getAnyCatalogName(), newSchemaName(), "query");
         String message = "Access Denied: Cannot execute function %s.*".formatted(function);
         Consumer<SystemSecurityContext> checkFunction = context -> checkTableFunction.accept(context, function);
 
         // Show that with no privilege, the check fails for all contexts regardless of the FunctionKind
-        for (FunctionKind kind : FunctionKind.values()) {
-            checkAccessMatching(message, ImmutableList.of(), allContexts(), context -> checkCanExecuteFunction(context, kind, function));
-        }
+        checkAccessMatching(message, ImmutableList.of(), allContexts(), context -> checkCanExecuteFunction(context, function));
 
         withGrantedFunctionPrivilege(adminContext(), FEARLESS_LEADER, function, false, () -> {
             // If fearlessLeader is granted the privilege, fearlessLeader and admin can execute the function, but lackeyFollower and public can't
@@ -868,9 +865,9 @@ public class TestGalaxyAccessControl
         });
     }
 
-    private void checkCanExecuteFunction(SystemSecurityContext context, FunctionKind kind, CatalogSchemaRoutineName function)
+    private void checkCanExecuteFunction(SystemSecurityContext context, CatalogSchemaRoutineName function)
     {
-        if (!accessControl.canExecuteFunction(context, kind, function)) {
+        if (!accessControl.canExecuteFunction(context, function)) {
             throw new AccessDeniedException("Cannot execute function %s.*".formatted(function));
         }
     }

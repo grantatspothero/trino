@@ -689,11 +689,8 @@ public class GalaxyAccessControl
     }
 
     @Override
-    public boolean canExecuteFunction(SystemSecurityContext context, FunctionKind functionKind, CatalogSchemaRoutineName function)
+    public boolean canExecuteFunction(SystemSecurityContext context, CatalogSchemaRoutineName function)
     {
-        if (functionKind != FunctionKind.TABLE) {
-            return false;
-        }
         if (isWhitelistedTableFunction(function)) {
             return true;
         }
@@ -706,7 +703,7 @@ public class GalaxyAccessControl
     }
 
     @Override
-    public boolean canCreateViewWithExecuteFunction(SystemSecurityContext systemSecurityContext, FunctionKind functionKind, CatalogSchemaRoutineName functionName)
+    public boolean canCreateViewWithExecuteFunction(SystemSecurityContext systemSecurityContext, CatalogSchemaRoutineName functionName)
     {
         // TODO (https://github.com/starburstdata/stargate/issues/12361) implement. This is needed for views containing table functions.
         // Not allowed unless the identity user is a view definer user
