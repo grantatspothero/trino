@@ -82,7 +82,7 @@ import static org.assertj.core.api.Assertions.fail;
  */
 // see comment at top of TestGalaxyQueries for debugging GalaxyQueryRunner queries in both Trino and Stargate portal-server!
 @Test(singleThreaded = true)
-public class TestMetadataOnlyQueries
+public class BaseMetadataOnlyQueriesTest
         extends AbstractTestQueryFramework
 {
     private static final JsonCodec<StatementRequest> STATEMENT_REQUEST_CODEC = jsonCodec(StatementRequest.class);
