@@ -134,7 +134,6 @@ public class TestGalaxyTrinoMetadata
                         new TestingTableFunctions.PolymorphicStaticReturnTypeFunction(),
                         new TestingTableFunctions.PassThroughFunction(),
                         new TestingTableFunctions.RequiredColumnsFunction()))),
-                new SessionPropertyManager(),
                 tablePropertyManager,
                 analyzePropertyManager,
                 new TableProceduresPropertyManager(CatalogServiceProvider.fail("procedures are not supported in testing analyzer")));
