@@ -643,6 +643,7 @@ public class TrinoGalaxyCatalog
                 definition.getGracePeriod(),
                 definition.getComment(),
                 definition.getOwner(),
+                definition.getPath(),
                 definition.getProperties());
 
         io.trino.plugin.hive.metastore.Table.Builder viewBuilder = io.trino.plugin.hive.metastore.Table.builder(existing)

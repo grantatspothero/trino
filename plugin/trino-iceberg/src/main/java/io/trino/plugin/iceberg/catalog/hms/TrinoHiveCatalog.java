@@ -613,6 +613,7 @@ public class TrinoHiveCatalog
                 definition.getGracePeriod(),
                 definition.getComment(),
                 definition.getOwner(),
+                definition.getPath(),
                 definition.getProperties());
 
         replaceMaterializedView(session, viewName, existing, newDefinition);

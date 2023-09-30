@@ -6810,6 +6810,7 @@ public class TestAnalyzer
                 Optional.of(Duration.ZERO),
                 Optional.of("comment"),
                 Identity.ofUser("user"),
+                ImmutableList.of(),
                 Optional.empty(),
                 ImmutableMap.of());
         inSetupTransaction(session -> metadata.createMaterializedView(session, new QualifiedObjectName(TPCH_CATALOG, "s1", "mv1"), materializedViewData1, false, true));
@@ -6821,7 +6822,8 @@ public class TestAnalyzer
                 Optional.of("s1"),
                 ImmutableList.of(new ViewColumn("a", BIGINT.getTypeId(), Optional.empty())),
                 Optional.of("comment"),
-                Optional.of(Identity.ofUser("user")));
+                Optional.of(Identity.ofUser("user")),
+                ImmutableList.of());
         inSetupTransaction(session -> metadata.createView(session, new QualifiedObjectName(TPCH_CATALOG, "s1", "v1"), viewData1, false));
 
         // stale view (different column type)
@@ -6831,7 +6833,8 @@ public class TestAnalyzer
                 Optional.of("s1"),
                 ImmutableList.of(new ViewColumn("a", VARCHAR.getTypeId(), Optional.empty())),
                 Optional.of("comment"),
-                Optional.of(Identity.ofUser("user")));
+                Optional.of(Identity.ofUser("user")),
+                ImmutableList.of());
         inSetupTransaction(session -> metadata.createView(session, new QualifiedObjectName(TPCH_CATALOG, "s1", "v2"), viewData2, false));
 
         // valid view with uppercase column name
@@ -6841,7 +6844,8 @@ public class TestAnalyzer
                 Optional.of("s1"),
                 ImmutableList.of(new ViewColumn("a", BIGINT.getTypeId(), Optional.empty())),
                 Optional.of("comment"),
-                Optional.of(Identity.ofUser("user")));
+                Optional.of(Identity.ofUser("user")),
+                ImmutableList.of());
         inSetupTransaction(session -> metadata.createView(session, new QualifiedObjectName("tpch", "s1", "v4"), viewData4, false));
 
         // recursive view referencing to itself
@@ -6851,7 +6855,8 @@ public class TestAnalyzer
                 Optional.of("s1"),
                 ImmutableList.of(new ViewColumn("a", BIGINT.getTypeId(), Optional.empty())),
                 Optional.of("comment"),
-                Optional.of(Identity.ofUser("user")));
+                Optional.of(Identity.ofUser("user")),
+                ImmutableList.of());
         inSetupTransaction(session -> metadata.createView(session, new QualifiedObjectName(TPCH_CATALOG, "s1", "v5"), viewData5, false));
 
         // type analysis for INSERT
@@ -6929,6 +6934,7 @@ public class TestAnalyzer
                         Optional.of(Duration.ZERO),
                         Optional.empty(),
                         Identity.ofUser("some user"),
+                        ImmutableList.of(),
                         Optional.of(new CatalogSchemaTableName(TPCH_CATALOG, "s1", "t1")),
                         ImmutableMap.of()),
                 false,
@@ -6939,7 +6945,8 @@ public class TestAnalyzer
                 Optional.of("s1"),
                 ImmutableList.of(new ViewColumn("a", BIGINT.getTypeId(), Optional.empty())),
                 Optional.empty(),
-                Optional.empty());
+                Optional.empty(),
+                ImmutableList.of());
         inSetupTransaction(session -> metadata.createView(
                 session,
                 tableViewAndMaterializedView,
@@ -6979,6 +6986,7 @@ public class TestAnalyzer
                         Optional.empty(),
                         Optional.empty(),
                         Identity.ofUser("some user"),
+                        ImmutableList.of(),
                         // t3 has a, b column and hidden column x
                         Optional.of(new CatalogSchemaTableName(TPCH_CATALOG, "s1", "t3")),
                         ImmutableMap.of()),
@@ -6998,6 +7006,7 @@ public class TestAnalyzer
                         Optional.empty(),
                         Optional.empty(),
                         Identity.ofUser("some user"),
+                        ImmutableList.of(),
                         Optional.of(new CatalogSchemaTableName(TPCH_CATALOG, "s1", "t2")),
                         ImmutableMap.of()),
                 false,
@@ -7016,6 +7025,7 @@ public class TestAnalyzer
                         Optional.empty(),
                         Optional.empty(),
                         Identity.ofUser("some user"),
+                        ImmutableList.of(),
                         Optional.of(new CatalogSchemaTableName(TPCH_CATALOG, "s1", "t2")),
                         ImmutableMap.of()),
                 false,
@@ -7034,6 +7044,7 @@ public class TestAnalyzer
                         Optional.empty(),
                         Optional.empty(),
                         Identity.ofUser("some user"),
+                        ImmutableList.of(),
                         Optional.of(new CatalogSchemaTableName(TPCH_CATALOG, "s1", "t2")),
                         ImmutableMap.of()),
                 false,

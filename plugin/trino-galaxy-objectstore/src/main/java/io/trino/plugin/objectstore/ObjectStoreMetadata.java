@@ -1732,6 +1732,7 @@ public class ObjectStoreMetadata
                 definition.getGracePeriod(),
                 definition.getComment(),
                 definition.getOwner(),
+                definition.getPath(),
                 properties);
     }
 }
