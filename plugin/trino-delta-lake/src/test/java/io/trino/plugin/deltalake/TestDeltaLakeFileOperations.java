@@ -446,9 +446,13 @@ public class TestDeltaLakeFileOperations
 
     private void assertFileSystemAccesses(@Language("SQL") String query, Multiset<FileOperation> expectedAccesses)
     {
-        DistributedQueryRunner queryRunner = getDistributedQueryRunner();
+        assertFileSystemAccesses(getSession(), query, expectedAccesses);
+    }
+
+    private void assertFileSystemAccesses(Session session, @Language("SQL") String query, Multiset<FileOperation> expectedAccesses)
+    {
         trackingFileSystemFactory.reset();
-        queryRunner.executeWithQueryId(queryRunner.getDefaultSession(), query);
+        getDistributedQueryRunner().executeWithQueryId(session, query);
         assertMultisetsEqual(getOperations(), expectedAccesses);
     }
 
