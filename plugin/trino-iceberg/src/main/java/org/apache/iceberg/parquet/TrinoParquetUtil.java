@@ -158,7 +158,7 @@ public class TrinoParquetUtil // Renamed from ParquetUtil for avoiding duplicate
                         }
                     }
                 }
-                else {
+                else if (!stats.isEmpty()) {
                     missingStats.add(fieldId);
                 }
             }
