@@ -32,7 +32,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.iceberg.parquet.ParquetUtils.fileMetrics;
+import static org.apache.iceberg.parquet.TrinoParquetUtil.fileMetrics;
 
 public class IcebergParquetFileWriter
         extends ParquetFileWriter

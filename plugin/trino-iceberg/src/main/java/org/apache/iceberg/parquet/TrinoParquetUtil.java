@@ -66,10 +66,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
 // Copied from https://github.com/apache/iceberg/blob/master/parquet/src/main/java/org/apache/iceberg/parquet/ParquetUtil.java
 @Deprecated // This class will be removed after new Iceberg library including https://github.com/apache/iceberg/pull/8559 is released
 @SuppressModernizer
-public class ParquetUtils // Renamed from ParquetUtil for avoiding duplicate resources
+public class TrinoParquetUtil // Renamed from ParquetUtil for avoiding duplicate resources
 {
     // not meant to be instantiated
-    private ParquetUtils() {}
+    private TrinoParquetUtil() {}
 
     private static final long UNIX_EPOCH_JULIAN = 2_440_588L;
 
