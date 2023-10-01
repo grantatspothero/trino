@@ -60,6 +60,10 @@ public class GalaxySecurityModule
                     // Automatic https is disabled because this client is for external
                     // communication back to the Galaxy portal.
                     config.setAutomaticHttpsSharedSecret(null);
+                    // Using 3 times the default, as domain is always the same, so all connections hit same server
+                    // previously used default (20) was throttling requests, doing 3x20 should serve as new conservative default
+                    // this is subject to increase if we see throttling still, or decrease if we overwhelm RBAC
+                    config.setMaxConnectionsPerServer(60);
                 });
     }
 
