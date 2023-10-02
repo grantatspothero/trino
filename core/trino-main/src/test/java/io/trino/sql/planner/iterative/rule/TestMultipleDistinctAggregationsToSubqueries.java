@@ -179,6 +179,7 @@ public class TestMultipleDistinctAggregationsToSubqueries
     {
         // no distinct aggregation
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .on(p -> {
                     Symbol inputSymbol = p.symbol("inputSymbol");
                     return p.aggregation(builder -> builder
@@ -189,11 +190,11 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                             ImmutableList.of(inputSymbol),
                                             ImmutableMap.of(inputSymbol, COLUMN_1_HANDLE))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .doesNotFire();
 
         // single distinct
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .on(p -> {
                     Symbol inputSymbol = p.symbol("inputSymbol");
                     return p.aggregation(builder -> builder
@@ -205,11 +206,11 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                             ImmutableList.of(inputSymbol),
                                             ImmutableMap.of(inputSymbol, COLUMN_1_HANDLE))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .doesNotFire();
 
         // two distinct on the same input
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     return p.aggregation(builder -> builder
@@ -223,11 +224,11 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                             ImmutableMap.of(
                                                     input1Symbol, COLUMN_1_HANDLE))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .doesNotFire();
 
         // hash symbol
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input2Symbol = p.symbol("input2Symbol");
@@ -244,11 +245,11 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                     input1Symbol, COLUMN_1_HANDLE,
                                                     input2Symbol, COLUMN_2_HANDLE))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .doesNotFire();
 
         // non-distinct
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input2Symbol = p.symbol("input2Symbol");
@@ -265,11 +266,11 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                     input1Symbol, COLUMN_1_HANDLE,
                                                     input2Symbol, COLUMN_2_HANDLE))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .doesNotFire();
 
         // groupingSetCount > 1
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input2Symbol = p.symbol("input2Symbol");
@@ -285,11 +286,11 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                     input1Symbol, COLUMN_1_HANDLE,
                                                     input2Symbol, COLUMN_2_HANDLE))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .doesNotFire();
 
         // complex subquery (join)
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input2Symbol = p.symbol("input2Symbol");
@@ -311,11 +312,11 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                             input1Symbol, COLUMN_1_HANDLE,
                                                             input2Symbol, COLUMN_2_HANDLE)))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .doesNotFire();
 
         // complex subquery (filter on top of join to test recursion)
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input2Symbol = p.symbol("input2Symbol");
@@ -339,13 +340,13 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                                     input1Symbol, COLUMN_1_HANDLE,
                                                                     input2Symbol, COLUMN_2_HANDLE))))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .doesNotFire();
 
         // connector does not support efficient single column reads
         RuleTester ruleTesterNotObjectStore = tester(false);
 
         ruleTesterNotObjectStore.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTesterNotObjectStore))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input2Symbol = p.symbol("input2Symbol");
@@ -361,11 +362,11 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                     input1Symbol, COLUMN_1_HANDLE,
                                                     input2Symbol, COLUMN_2_HANDLE))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .doesNotFire();
 
         // rule not enabled
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "single_step")
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input2Symbol = p.symbol("input2Symbol");
@@ -381,12 +382,14 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                     input1Symbol, COLUMN_1_HANDLE,
                                                     input2Symbol, COLUMN_2_HANDLE))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "single_step")
                 .doesNotFire();
 
         // automatic but single_step is preferred
         String aggregationSourceId = "aggregationSourceId";
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "automatic")
+                .overrideStats(aggregationSourceId, PlanNodeStatsEstimate.builder().addSymbolStatistics(
+                        new Symbol("groupingKey"), SymbolStatsEstimate.builder().setDistinctValuesCount(1_000_000).build()).build())
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input2Symbol = p.symbol("input2Symbol");
@@ -403,9 +406,6 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                     input1Symbol, COLUMN_1_HANDLE,
                                                     input2Symbol, COLUMN_2_HANDLE)))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "automatic")
-                .overrideStats(aggregationSourceId, PlanNodeStatsEstimate.builder().addSymbolStatistics(
-                        new Symbol("groupingKey"), SymbolStatsEstimate.builder().setDistinctValuesCount(1_000_000).build()).build())
                 .doesNotFire();
     }
 
@@ -415,6 +415,9 @@ public class TestMultipleDistinctAggregationsToSubqueries
         // automatic but single_step is preferred
         String aggregationSourceId = "aggregationSourceId";
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "automatic")
+                .overrideStats(aggregationSourceId, PlanNodeStatsEstimate.builder().addSymbolStatistics(
+                        new Symbol("groupingKey"), SymbolStatsEstimate.builder().setDistinctValuesCount(1_000_000).build()).build())
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input2Symbol = p.symbol("input2Symbol");
@@ -431,13 +434,14 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                     input1Symbol, COLUMN_1_HANDLE,
                                                     input2Symbol, COLUMN_2_HANDLE)))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "automatic")
-                .overrideStats(aggregationSourceId, PlanNodeStatsEstimate.builder().addSymbolStatistics(
-                        new Symbol("groupingKey"), SymbolStatsEstimate.builder().setDistinctValuesCount(1_000_000).build()).build())
                 .doesNotFire();
 
         // single_step is not preferred, the overhead of groupingKey is not big
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "automatic")
+                .overrideStats(aggregationSourceId, PlanNodeStatsEstimate.builder()
+                        .setOutputRowCount(100)
+                        .addSymbolStatistics(new Symbol("groupingKey"), SymbolStatsEstimate.builder().setDistinctValuesCount(10).build()).build())
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input2Symbol = p.symbol("input2Symbol");
@@ -456,10 +460,6 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                     input2Symbol, COLUMN_2_HANDLE,
                                                     groupingKey, GROUPING_KEY_COLUMN_HANDLE)))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "automatic")
-                .overrideStats(aggregationSourceId, PlanNodeStatsEstimate.builder()
-                        .setOutputRowCount(100)
-                        .addSymbolStatistics(new Symbol("groupingKey"), SymbolStatsEstimate.builder().setDistinctValuesCount(10).build()).build())
                 .matches(project(
                         ImmutableMap.of(
                                 "final_output1", PlanMatchPattern.expression("output1"),
@@ -493,6 +493,13 @@ public class TestMultipleDistinctAggregationsToSubqueries
         // single_step is not preferred, the overhead of groupingKeys is bigger than 50%
         String aggregationId = "aggregationId";
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "automatic")
+                .overrideStats(aggregationSourceId, PlanNodeStatsEstimate.builder()
+                        .setOutputRowCount(100)
+                        .addSymbolStatistics(new Symbol("groupingKey"), SymbolStatsEstimate.builder().setDistinctValuesCount(10).build())
+                        .addSymbolStatistics(new Symbol("groupingKey2"), SymbolStatsEstimate.builder().setAverageRowSize(1_000_000).build())
+                        .build())
+                .overrideStats(aggregationId, PlanNodeStatsEstimate.builder().setOutputRowCount(10).build())
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input2Symbol = p.symbol("input2Symbol");
@@ -514,13 +521,6 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                     groupingKey, GROUPING_KEY_COLUMN_HANDLE,
                                                     groupingKey2, GROUPING_KEY2_COLUMN_HANDLE)))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "automatic")
-                .overrideStats(aggregationSourceId, PlanNodeStatsEstimate.builder()
-                        .setOutputRowCount(100)
-                        .addSymbolStatistics(new Symbol("groupingKey"), SymbolStatsEstimate.builder().setDistinctValuesCount(10).build())
-                        .addSymbolStatistics(new Symbol("groupingKey2"), SymbolStatsEstimate.builder().setAverageRowSize(1_000_000).build())
-                        .build())
-                .overrideStats(aggregationId, PlanNodeStatsEstimate.builder().setOutputRowCount(10).build())
                 .doesNotFire();
     }
 
@@ -531,6 +531,13 @@ public class TestMultipleDistinctAggregationsToSubqueries
         String aggregationId = "aggregationId";
         // the overhead of the projection is bigger than 50%
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "automatic")
+                .overrideStats(aggregationSourceId, PlanNodeStatsEstimate.builder()
+                        .setOutputRowCount(100)
+                        .addSymbolStatistics(new Symbol("projectionInput1"), SymbolStatsEstimate.builder().setDistinctValuesCount(10).build())
+                        .addSymbolStatistics(new Symbol("projectionInput2"), SymbolStatsEstimate.builder().setAverageRowSize(1_000_000).build())
+                        .build())
+                .overrideStats(aggregationId, PlanNodeStatsEstimate.builder().setOutputRowCount(10).build())
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input2Symbol = p.symbol("input2Symbol");
@@ -559,6 +566,10 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                             projectionInput1, GROUPING_KEY_COLUMN_HANDLE,
                                                             projectionInput2, GROUPING_KEY2_COLUMN_HANDLE))))));
                 })
+                .doesNotFire();
+
+        // the big projection is used as distinct input. we could handle this case, but for simplicity sake, the rule won't fire here
+        ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
                 .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "automatic")
                 .overrideStats(aggregationSourceId, PlanNodeStatsEstimate.builder()
                         .setOutputRowCount(100)
@@ -566,10 +577,6 @@ public class TestMultipleDistinctAggregationsToSubqueries
                         .addSymbolStatistics(new Symbol("projectionInput2"), SymbolStatsEstimate.builder().setAverageRowSize(1_000_000).build())
                         .build())
                 .overrideStats(aggregationId, PlanNodeStatsEstimate.builder().setOutputRowCount(10).build())
-                .doesNotFire();
-
-        // the big projection is used as distinct input. we could handle this case, but for simplicity sake, the rule won't fire here
-        ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input2Symbol = p.symbol("input2Symbol");
@@ -598,13 +605,6 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                             projectionInput1, GROUPING_KEY_COLUMN_HANDLE,
                                                             projectionInput2, GROUPING_KEY2_COLUMN_HANDLE))))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "automatic")
-                .overrideStats(aggregationSourceId, PlanNodeStatsEstimate.builder()
-                        .setOutputRowCount(100)
-                        .addSymbolStatistics(new Symbol("projectionInput1"), SymbolStatsEstimate.builder().setDistinctValuesCount(10).build())
-                        .addSymbolStatistics(new Symbol("projectionInput2"), SymbolStatsEstimate.builder().setAverageRowSize(1_000_000).build())
-                        .build())
-                .overrideStats(aggregationId, PlanNodeStatsEstimate.builder().setOutputRowCount(10).build())
                 .doesNotFire();
     }
 
@@ -616,31 +616,6 @@ public class TestMultipleDistinctAggregationsToSubqueries
         String filterId = "filterId";
         // selective filter
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
-                .on(p -> {
-                    Symbol input1Symbol = p.symbol("input1Symbol");
-                    Symbol input2Symbol = p.symbol("input2Symbol");
-                    Symbol groupingKey = p.symbol("groupingKey");
-                    Symbol filterInput = p.symbol("filterInput", VARCHAR);
-
-                    return p.aggregation(builder -> builder
-                            .nodeId(new PlanNodeId(aggregationId))
-                            .singleGroupingSet(groupingKey)
-                            .addAggregation(p.symbol("output1"), expression("count(distinct input1Symbol)"), ImmutableList.of(BIGINT))
-                            .addAggregation(p.symbol("output2"), expression("sum(distinct input2Symbol)"), ImmutableList.of(BIGINT))
-                            .source(
-                                    p.filter(
-                                            new PlanNodeId(filterId),
-                                            expression("filterInput IS NOT NULL"),
-                                            p.tableScan(tableScan -> tableScan
-                                                    .setNodeId(new PlanNodeId(aggregationSourceId))
-                                                    .setTableHandle(testTableHandle(ruleTester))
-                                                    .setSymbols(ImmutableList.of(input1Symbol, input2Symbol, groupingKey, filterInput))
-                                                    .setAssignments(ImmutableMap.of(
-                                                            input1Symbol, COLUMN_1_HANDLE,
-                                                            input2Symbol, COLUMN_2_HANDLE,
-                                                            groupingKey, GROUPING_KEY_COLUMN_HANDLE,
-                                                            filterInput, GROUPING_KEY2_COLUMN_HANDLE))))));
-                })
                 .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "automatic")
                 .overrideStats(aggregationSourceId, PlanNodeStatsEstimate.builder()
                         .setOutputRowCount(100)
@@ -648,10 +623,6 @@ public class TestMultipleDistinctAggregationsToSubqueries
                         .build())
                 .overrideStats(filterId, PlanNodeStatsEstimate.builder().setOutputRowCount(1).build())
                 .overrideStats(aggregationId, PlanNodeStatsEstimate.builder().setOutputRowCount(1).build())
-                .doesNotFire();
-
-        // non-selective filter
-        ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input2Symbol = p.symbol("input2Symbol");
@@ -677,6 +648,10 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                             groupingKey, GROUPING_KEY_COLUMN_HANDLE,
                                                             filterInput, GROUPING_KEY2_COLUMN_HANDLE))))));
                 })
+                .doesNotFire();
+
+        // non-selective filter
+        ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
                 .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "automatic")
                 .overrideStats(aggregationSourceId, PlanNodeStatsEstimate.builder()
                         .setOutputRowCount(100)
@@ -684,6 +659,31 @@ public class TestMultipleDistinctAggregationsToSubqueries
                         .build())
                 .overrideStats(filterId, PlanNodeStatsEstimate.builder().setOutputRowCount(100).build())
                 .overrideStats(aggregationId, PlanNodeStatsEstimate.builder().setOutputRowCount(100).build())
+                .on(p -> {
+                    Symbol input1Symbol = p.symbol("input1Symbol");
+                    Symbol input2Symbol = p.symbol("input2Symbol");
+                    Symbol groupingKey = p.symbol("groupingKey");
+                    Symbol filterInput = p.symbol("filterInput", VARCHAR);
+
+                    return p.aggregation(builder -> builder
+                            .nodeId(new PlanNodeId(aggregationId))
+                            .singleGroupingSet(groupingKey)
+                            .addAggregation(p.symbol("output1"), expression("count(distinct input1Symbol)"), ImmutableList.of(BIGINT))
+                            .addAggregation(p.symbol("output2"), expression("sum(distinct input2Symbol)"), ImmutableList.of(BIGINT))
+                            .source(
+                                    p.filter(
+                                            new PlanNodeId(filterId),
+                                            expression("filterInput IS NOT NULL"),
+                                            p.tableScan(tableScan -> tableScan
+                                                    .setNodeId(new PlanNodeId(aggregationSourceId))
+                                                    .setTableHandle(testTableHandle(ruleTester))
+                                                    .setSymbols(ImmutableList.of(input1Symbol, input2Symbol, groupingKey, filterInput))
+                                                    .setAssignments(ImmutableMap.of(
+                                                            input1Symbol, COLUMN_1_HANDLE,
+                                                            input2Symbol, COLUMN_2_HANDLE,
+                                                            groupingKey, GROUPING_KEY_COLUMN_HANDLE,
+                                                            filterInput, GROUPING_KEY2_COLUMN_HANDLE))))));
+                })
                 .matches(project(
                         ImmutableMap.of(
                                 "final_output1", PlanMatchPattern.expression("output1"),
@@ -729,6 +729,13 @@ public class TestMultipleDistinctAggregationsToSubqueries
         String filterId = "filterId";
         // union with additional columns to read
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "automatic")
+                .overrideStats(aggregationSourceId, PlanNodeStatsEstimate.builder()
+                        .setOutputRowCount(100)
+                        .addSymbolStatistics(new Symbol("filterInput"), SymbolStatsEstimate.builder().setAverageRowSize(1).build())
+                        .build())
+                .overrideStats(filterId, PlanNodeStatsEstimate.builder().setOutputRowCount(100).build())
+                .overrideStats(aggregationId, PlanNodeStatsEstimate.builder().setOutputRowCount(100).build())
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input11Symbol = p.symbol("input1_1Symbol");
@@ -775,13 +782,6 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                                             input22Symbol, COLUMN_2_HANDLE,
                                                                             groupingKey2, GROUPING_KEY_COLUMN_HANDLE)))))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "automatic")
-                .overrideStats(aggregationSourceId, PlanNodeStatsEstimate.builder()
-                        .setOutputRowCount(100)
-                        .addSymbolStatistics(new Symbol("filterInput"), SymbolStatsEstimate.builder().setAverageRowSize(1).build())
-                        .build())
-                .overrideStats(filterId, PlanNodeStatsEstimate.builder().setOutputRowCount(100).build())
-                .overrideStats(aggregationId, PlanNodeStatsEstimate.builder().setOutputRowCount(100).build())
                 .doesNotFire();
     }
 
@@ -789,6 +789,7 @@ public class TestMultipleDistinctAggregationsToSubqueries
     public void testGlobalDistinctToSubqueries()
     {
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input2Symbol = p.symbol("input2Symbol");
@@ -804,7 +805,6 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                     input1Symbol, COLUMN_1_HANDLE,
                                                     input2Symbol, COLUMN_2_HANDLE))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .matches(project(
                         ImmutableMap.of(
                                 "final_output1", PlanMatchPattern.expression("output1"),
@@ -824,6 +824,7 @@ public class TestMultipleDistinctAggregationsToSubqueries
     public void testGlobalWith3DistinctToSubqueries()
     {
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input2Symbol = p.symbol("input2Symbol");
@@ -842,7 +843,6 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                     input2Symbol, COLUMN_2_HANDLE,
                                                     input3Symbol, COLUMN_3_HANDLE))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .matches(project(
                         ImmutableMap.of(
                                 "final_output1", PlanMatchPattern.expression("output1"),
@@ -870,6 +870,7 @@ public class TestMultipleDistinctAggregationsToSubqueries
     public void testGlobalWith4DistinctToSubqueries()
     {
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input2Symbol = p.symbol("input2Symbol");
@@ -891,7 +892,6 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                     input3Symbol, COLUMN_3_HANDLE,
                                                     input4Symbol, COLUMN_4_HANDLE))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .matches(project(
                         ImmutableMap.of(
                                 "final_output1", PlanMatchPattern.expression("output1"),
@@ -925,6 +925,7 @@ public class TestMultipleDistinctAggregationsToSubqueries
     public void testGlobal2DistinctOnTheSameInputtoSubqueries()
     {
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input2Symbol = p.symbol("input2Symbol");
@@ -941,7 +942,6 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                     input1Symbol, COLUMN_1_HANDLE,
                                                     input2Symbol, COLUMN_2_HANDLE))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
                 .matches(project(
                         ImmutableMap.of(
                                 "final_output1", PlanMatchPattern.expression("output1"),
@@ -965,6 +965,8 @@ public class TestMultipleDistinctAggregationsToSubqueries
     {
         String aggregationNodeId = "aggregationNodeId";
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
+                .overrideStats(aggregationNodeId, PlanNodeStatsEstimate.builder().setOutputRowCount(100_000).build())
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input2Symbol = p.symbol("input2Symbol");
@@ -983,8 +985,6 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                     input2Symbol, COLUMN_2_HANDLE,
                                                     groupingKey, GROUPING_KEY_COLUMN_HANDLE))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
-                .overrideStats(aggregationNodeId, PlanNodeStatsEstimate.builder().setOutputRowCount(100_000).build())
                 .matches(project(
                         ImmutableMap.of(
                                 "final_output1", PlanMatchPattern.expression("output1"),
@@ -1021,6 +1021,8 @@ public class TestMultipleDistinctAggregationsToSubqueries
     {
         String aggregationNodeId = "aggregationNodeId";
         ruleTester.assertThat(newMultipleDistinctAggregationsToSubqueries(ruleTester))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
+                .overrideStats(aggregationNodeId, PlanNodeStatsEstimate.builder().setOutputRowCount(100_000).build())
                 .on(p -> {
                     Symbol input1Symbol = p.symbol("input1Symbol");
                     Symbol input11Symbol = p.symbol("input1_1Symbol");
@@ -1067,8 +1069,6 @@ public class TestMultipleDistinctAggregationsToSubqueries
                                                                             input22Symbol, COLUMN_2_HANDLE,
                                                                             groupingKey2, GROUPING_KEY_COLUMN_HANDLE)))))));
                 })
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "split_to_subqueries")
-                .overrideStats(aggregationNodeId, PlanNodeStatsEstimate.builder().setOutputRowCount(100_000).build())
                 .matches(project(
                         ImmutableMap.of(
                                 "final_output1", PlanMatchPattern.expression("output1"),

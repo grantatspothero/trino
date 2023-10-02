@@ -62,6 +62,15 @@ public class TestAddExchangesBelowPartialAggregationOverGroupIdRuleSet
         RuleTester ruleTester = tester();
         String groupIdSourceId = "groupIdSourceId";
         RuleAssert ruleAssert = ruleTester.assertThat(belowExchangeRule(ruleTester))
+                .setSystemProperty(USE_HIGHEST_CARDINALITY_COLUMN_FOR_REPARTITIONING_BELOW_GROUP_ID, String.valueOf(useHighestCardinalityColumn))
+                .overrideStats(groupIdSourceId, PlanNodeStatsEstimate
+                        .builder()
+                        .setOutputRowCount(100_000_000)
+                        .addSymbolStatistics(ImmutableMap.of(
+                                new Symbol("groupingKey1"), SymbolStatsEstimate.builder().setDistinctValuesCount(groupingKey1NDV).build(),
+                                new Symbol("groupingKey2"), SymbolStatsEstimate.builder().setDistinctValuesCount(groupingKey2NDV).build(),
+                                new Symbol("groupingKey3"), SymbolStatsEstimate.builder().setDistinctValuesCount(groupingKey3NDV).build()))
+                        .build())
                 .on(p -> {
                     Symbol groupingKey1 = p.symbol("groupingKey1");
                     Symbol groupingKey2 = p.symbol("groupingKey2");
@@ -83,15 +92,7 @@ public class TestAddExchangesBelowPartialAggregationOverGroupIdRuleSet
                                                             ImmutableList.of(),
                                                             groupId,
                                                             p.values(new PlanNodeId(groupIdSourceId), groupingKey1, groupingKey2, groupingKey3))))));
-                }).overrideStats(groupIdSourceId, PlanNodeStatsEstimate
-                        .builder()
-                        .setOutputRowCount(100_000_000)
-                        .addSymbolStatistics(ImmutableMap.of(
-                                new Symbol("groupingKey1"), SymbolStatsEstimate.builder().setDistinctValuesCount(groupingKey1NDV).build(),
-                                new Symbol("groupingKey2"), SymbolStatsEstimate.builder().setDistinctValuesCount(groupingKey2NDV).build(),
-                                new Symbol("groupingKey3"), SymbolStatsEstimate.builder().setDistinctValuesCount(groupingKey3NDV).build()))
-                        .build())
-                .setSystemProperty(USE_HIGHEST_CARDINALITY_COLUMN_FOR_REPARTITIONING_BELOW_GROUP_ID, String.valueOf(useHighestCardinalityColumn));
+                });
 
         if (partitionedBy.isEmpty()) {
             ruleAssert.doesNotFire();

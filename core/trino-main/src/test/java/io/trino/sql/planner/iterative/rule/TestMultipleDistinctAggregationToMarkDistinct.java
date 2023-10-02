@@ -44,6 +44,7 @@ public class TestMultipleDistinctAggregationToMarkDistinct
     public void testNoDistinct()
     {
         tester().assertThat(new SingleDistinctAggregationToGroupBy())
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "mark_distinct")
                 .on(p -> p.aggregation(builder -> builder
                         .globalGrouping()
                         .addAggregation(p.symbol("output1"), expression("count(input1)"), ImmutableList.of(BIGINT))
@@ -52,7 +53,6 @@ public class TestMultipleDistinctAggregationToMarkDistinct
                                 p.values(
                                         p.symbol("input1"),
                                         p.symbol("input2")))))
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "mark_distinct")
                 .doesNotFire();
     }
 
@@ -60,6 +60,7 @@ public class TestMultipleDistinctAggregationToMarkDistinct
     public void testSingleDistinct()
     {
         tester().assertThat(new MultipleDistinctAggregationToMarkDistinct(DISTINCT_AGGREGATION_CONTROLLER))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "mark_distinct")
                 .on(p -> p.aggregation(builder -> builder
                         .globalGrouping()
                         .addAggregation(p.symbol("output1"), expression("count(DISTINCT input1)"), ImmutableList.of(BIGINT))
@@ -67,7 +68,6 @@ public class TestMultipleDistinctAggregationToMarkDistinct
                                 p.values(
                                         p.symbol("input1"),
                                         p.symbol("input2")))))
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "mark_distinct")
                 .doesNotFire();
     }
 
@@ -75,13 +75,13 @@ public class TestMultipleDistinctAggregationToMarkDistinct
     public void testMultipleAggregations()
     {
         tester().assertThat(new MultipleDistinctAggregationToMarkDistinct(DISTINCT_AGGREGATION_CONTROLLER))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "mark_distinct")
                 .on(p -> p.aggregation(builder -> builder
                         .globalGrouping()
                         .addAggregation(p.symbol("output1"), expression("count(DISTINCT input)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("output2"), expression("sum(DISTINCT input)"), ImmutableList.of(BIGINT))
                         .source(
                                 p.values(p.symbol("input")))))
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "mark_distinct")
                 .doesNotFire();
     }
 
@@ -89,6 +89,7 @@ public class TestMultipleDistinctAggregationToMarkDistinct
     public void testDistinctWithFilter()
     {
         tester().assertThat(new MultipleDistinctAggregationToMarkDistinct(DISTINCT_AGGREGATION_CONTROLLER))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "mark_distinct")
                 .on(p -> p.aggregation(builder -> builder
                         .globalGrouping()
                         .addAggregation(p.symbol("output1"), expression("count(DISTINCT input1) filter (where filter1)"), ImmutableList.of(BIGINT))
@@ -104,10 +105,10 @@ public class TestMultipleDistinctAggregationToMarkDistinct
                                         p.values(
                                                 p.symbol("input1"),
                                                 p.symbol("input2"))))))
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "mark_distinct")
                 .doesNotFire();
 
         tester().assertThat(new MultipleDistinctAggregationToMarkDistinct(DISTINCT_AGGREGATION_CONTROLLER))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "mark_distinct")
                 .on(p -> p.aggregation(builder -> builder
                         .globalGrouping()
                         .addAggregation(p.symbol("output1"), expression("count(DISTINCT input1) filter (where filter1)"), ImmutableList.of(BIGINT))
@@ -123,7 +124,6 @@ public class TestMultipleDistinctAggregationToMarkDistinct
                                         p.values(
                                                 p.symbol("input1"),
                                                 p.symbol("input2"))))))
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "mark_distinct")
                 .doesNotFire();
     }
 
@@ -131,13 +131,13 @@ public class TestMultipleDistinctAggregationToMarkDistinct
     public void testGlobalAggregation()
     {
         tester().assertThat(new MultipleDistinctAggregationToMarkDistinct(DISTINCT_AGGREGATION_CONTROLLER))
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "mark_distinct")
                 .on(p -> p.aggregation(builder -> builder
                         .globalGrouping()
                         .addAggregation(p.symbol("output1"), expression("count(DISTINCT input1)"), ImmutableList.of(BIGINT))
                         .addAggregation(p.symbol("output2"), expression("count(DISTINCT input2)"), ImmutableList.of(BIGINT))
                         .source(
                                 p.values(p.symbol("input1"), p.symbol("input2")))))
-                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "mark_distinct")
                 .matches(aggregation(
                         globalAggregation(),
                         ImmutableMap.of(
