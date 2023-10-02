@@ -69,7 +69,6 @@ import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.INPUT_
 import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.INPUT_FILE_NEW_STREAM;
 import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.OUTPUT_FILE_CREATE;
 import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.OUTPUT_FILE_CREATE_OR_OVERWRITE;
-import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.OUTPUT_FILE_LOCATION;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_STATS;
 import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.CREATE_TABLE;
@@ -204,9 +203,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 switch (type) {
                     case HIVE -> ImmutableMultiset.of();
                     case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
-                            .add(new FileOperation(METADATA_JSON, "00000.metadata.json", OUTPUT_FILE_LOCATION))
                             .add(new FileOperation(METADATA_JSON, "00000.metadata.json", OUTPUT_FILE_CREATE))
-                            .addCopies(new FileOperation(SNAPSHOT, "snap-1.avro", OUTPUT_FILE_LOCATION), 2)
                             .add(new FileOperation(SNAPSHOT, "snap-1.avro", OUTPUT_FILE_CREATE_OR_OVERWRITE))
                             .add(new FileOperation(SNAPSHOT, "snap-1.avro", INPUT_FILE_GET_LENGTH))
                             .add(new FileOperation(SNAPSHOT, "snap-1.avro", INPUT_FILE_NEW_STREAM))
@@ -236,19 +233,14 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                     case HIVE -> ImmutableMultiset.of(
                             new FileOperation(DATA, "no partition", OUTPUT_FILE_CREATE));
                     case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
-                            .add(new FileOperation(METADATA_JSON, "00000.metadata.json", OUTPUT_FILE_LOCATION))
                             .add(new FileOperation(METADATA_JSON, "00000.metadata.json", OUTPUT_FILE_CREATE))
                             .add(new FileOperation(METADATA_JSON, "00000.metadata.json", INPUT_FILE_NEW_STREAM))
                             .add(new FileOperation(METADATA_JSON, "00001.metadata.json", OUTPUT_FILE_CREATE))
-                            .add(new FileOperation(METADATA_JSON, "00001.metadata.json", OUTPUT_FILE_LOCATION))
                             .add(new FileOperation(SNAPSHOT, "snap-1.avro", OUTPUT_FILE_CREATE_OR_OVERWRITE))
-                            .addCopies(new FileOperation(SNAPSHOT, "snap-1.avro", OUTPUT_FILE_LOCATION), 2)
                             .add(new FileOperation(SNAPSHOT, "snap-1.avro", INPUT_FILE_GET_LENGTH))
                             .add(new FileOperation(SNAPSHOT, "snap-1.avro", INPUT_FILE_NEW_STREAM))
-                            .add(new FileOperation(DATA, "no partition", OUTPUT_FILE_LOCATION))
                             .add(new FileOperation(DATA, "no partition", OUTPUT_FILE_CREATE))
                             .add(new FileOperation(STATS, "", OUTPUT_FILE_CREATE))
-                            .add(new FileOperation(MANIFEST, "", OUTPUT_FILE_LOCATION))
                             .add(new FileOperation(MANIFEST, "", OUTPUT_FILE_CREATE_OR_OVERWRITE))
                             .build();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
@@ -292,19 +284,14 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                     case HIVE -> ImmutableMultiset.of(
                             new FileOperation(DATA, "no partition", OUTPUT_FILE_CREATE));
                     case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
-                            .add(new FileOperation(METADATA_JSON, "00000.metadata.json", OUTPUT_FILE_LOCATION))
                             .add(new FileOperation(METADATA_JSON, "00000.metadata.json", OUTPUT_FILE_CREATE))
                             .add(new FileOperation(METADATA_JSON, "00000.metadata.json", INPUT_FILE_NEW_STREAM))
                             .add(new FileOperation(METADATA_JSON, "00001.metadata.json", OUTPUT_FILE_CREATE))
-                            .add(new FileOperation(METADATA_JSON, "00001.metadata.json", OUTPUT_FILE_LOCATION))
                             .add(new FileOperation(SNAPSHOT, "snap-1.avro", OUTPUT_FILE_CREATE_OR_OVERWRITE))
-                            .addCopies(new FileOperation(SNAPSHOT, "snap-1.avro", OUTPUT_FILE_LOCATION), 2)
                             .add(new FileOperation(SNAPSHOT, "snap-1.avro", INPUT_FILE_GET_LENGTH))
                             .add(new FileOperation(SNAPSHOT, "snap-1.avro", INPUT_FILE_NEW_STREAM))
-                            .add(new FileOperation(DATA, "no partition", OUTPUT_FILE_LOCATION))
                             .add(new FileOperation(DATA, "no partition", OUTPUT_FILE_CREATE))
                             .add(new FileOperation(STATS, "", OUTPUT_FILE_CREATE))
-                            .add(new FileOperation(MANIFEST, "", OUTPUT_FILE_LOCATION))
                             .add(new FileOperation(MANIFEST, "", OUTPUT_FILE_CREATE_OR_OVERWRITE))
                             .build();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
@@ -723,7 +710,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             .add(new FileOperation(SNAPSHOT, "snap-1.avro", INPUT_FILE_GET_LENGTH))
                             .add(new FileOperation(METADATA_JSON, "00002.metadata.json", OUTPUT_FILE_CREATE))
                             .add(new FileOperation(METADATA_JSON, "00001.metadata.json", INPUT_FILE_NEW_STREAM))
-                            .add(new FileOperation(METADATA_JSON, "00002.metadata.json", OUTPUT_FILE_LOCATION))
                             .add(new FileOperation(MANIFEST, "", INPUT_FILE_NEW_STREAM))
                             .add(new FileOperation(STATS, "", OUTPUT_FILE_CREATE))
                             .build();
@@ -758,7 +744,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             .add(new FileOperation(DATA, "no partition", INPUT_FILE_NEW_STREAM))
                             .build();
                     case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
-                            .add(new FileOperation(METADATA_JSON, "00002.metadata.json", OUTPUT_FILE_LOCATION))
                             .add(new FileOperation(METADATA_JSON, "00002.metadata.json", OUTPUT_FILE_CREATE))
                             .add(new FileOperation(METADATA_JSON, "00001.metadata.json", INPUT_FILE_NEW_STREAM))
                             .add(new FileOperation(SNAPSHOT, "snap-1.avro", INPUT_FILE_NEW_STREAM))
@@ -798,7 +783,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             .addCopies(new FileOperation(DATA, "no partition", INPUT_FILE_NEW_STREAM), 2)
                             .add(new FileOperation(METADATA_JSON, "00005.metadata.json", OUTPUT_FILE_CREATE))
                             .add(new FileOperation(METADATA_JSON, "00004.metadata.json", INPUT_FILE_NEW_STREAM))
-                            .add(new FileOperation(METADATA_JSON, "00005.metadata.json", OUTPUT_FILE_LOCATION))
                             .add(new FileOperation(STATS, "", OUTPUT_FILE_CREATE))
                             .addCopies(new FileOperation(MANIFEST, "", INPUT_FILE_NEW_STREAM), 2)
                             .build();
@@ -835,7 +819,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             .build();
                     case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
                             .add(new FileOperation(METADATA_JSON, "00001.metadata.json", INPUT_FILE_NEW_STREAM))
-                            .add(new FileOperation(METADATA_JSON, "00002.metadata.json", OUTPUT_FILE_LOCATION))
                             .add(new FileOperation(METADATA_JSON, "00002.metadata.json", OUTPUT_FILE_CREATE))
                             .build();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
@@ -870,7 +853,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             .build();
                     case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
                             .add(new FileOperation(METADATA_JSON, "00002.metadata.json", OUTPUT_FILE_CREATE))
-                            .add(new FileOperation(METADATA_JSON, "00002.metadata.json", OUTPUT_FILE_LOCATION))
                             .add(new FileOperation(METADATA_JSON, "00001.metadata.json", INPUT_FILE_NEW_STREAM))
                             .build();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
