@@ -169,20 +169,17 @@ public abstract class BaseCacheSubqueriesTest
         computeActual("create table orders_part with (partitioned_by = ARRAY['custkey']) as select orderkey, orderdate, orderpriority, mod(custkey, 10) as custkey from orders");
 
         @Language("SQL") String totalScanOrdersQuery = "select count(orderkey) from orders_part";
-        @Language("SQL") String firstJoinQuery =
-                """
+        @Language("SQL") String firstJoinQuery = """
                 select count(orderkey) from orders_part o join (select * from (values 0, 1, 2) t(custkey)) t on o.custkey = t.custkey
                 union all
                 select count(orderkey) from orders_part o join (select * from (values 0, 1, 2) t(custkey)) t on o.custkey = t.custkey
                 """;
-        @Language("SQL") String secondJoinQuery =
-                """
+        @Language("SQL") String secondJoinQuery = """
                 select count(orderkey) from orders_part o join (select * from (values 0, 1, 2, 4) t(custkey)) t on o.custkey = t.custkey
                 union all
                 select count(orderkey) from orders_part o join (select * from (values 0, 1, 2, 3) t(custkey)) t on o.custkey = t.custkey
                 """;
-        @Language("SQL") String thirdJoinQuery =
-                """
+        @Language("SQL") String thirdJoinQuery = """
                 select count(orderkey) from orders_part o join (select * from (values 0, 1) t(custkey)) t on o.custkey = t.custkey
                 union all
                 select count(orderkey) from orders_part o join (select * from (values 0, 1) t(custkey)) t on o.custkey = t.custkey
