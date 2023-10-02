@@ -22,7 +22,6 @@ import io.trino.Session;
 import io.trino.connector.MockConnectorColumnHandle;
 import io.trino.connector.MockConnectorFactory;
 import io.trino.connector.MockConnectorTableHandle;
-import io.trino.cost.PlanNodeStatsEstimate;
 import io.trino.cost.StatsAndCosts;
 import io.trino.execution.warnings.WarningCollector;
 import io.trino.metadata.Metadata;
@@ -1275,7 +1274,6 @@ public class TestCommonSubqueriesExtractor
                             idAllocator,
                             symbolAllocator,
                             new RuleTester(getQueryRunner()).getTypeAnalyzer(),
-                            node -> PlanNodeStatsEstimate.unknown(),
                             plan.getRoot()),
                     symbolAllocator,
                     idAllocator);
@@ -1298,7 +1296,6 @@ public class TestCommonSubqueriesExtractor
                     idAllocator,
                     symbolAllocator,
                     new RuleTester(getQueryRunner()).getTypeAnalyzer(),
-                    node -> PlanNodeStatsEstimate.unknown(),
                     root);
         });
     }

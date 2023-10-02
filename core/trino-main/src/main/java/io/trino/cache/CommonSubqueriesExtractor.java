@@ -21,7 +21,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import io.trino.Session;
-import io.trino.cost.StatsProvider;
+import io.trino.cost.PlanNodeStatsEstimate;
 import io.trino.metadata.Metadata;
 import io.trino.metadata.ResolvedFunction;
 import io.trino.spi.cache.CacheColumnId;
@@ -120,7 +120,6 @@ public final class CommonSubqueriesExtractor
             PlanNodeIdAllocator idAllocator,
             SymbolAllocator symbolAllocator,
             TypeAnalyzer typeAnalyzer,
-            StatsProvider statsProvider,
             PlanNode root)
     {
         ImmutableMap.Builder<PlanNode, CommonPlanAdaptation> planAdaptations = ImmutableMap.builder();
@@ -177,7 +176,6 @@ public final class CommonSubqueriesExtractor
                             groupByHash,
                             typeAnalyzer,
                             session,
-                            statsProvider,
                             planSignature)));
         }
         return planAdaptations.buildOrThrow();
@@ -376,7 +374,6 @@ public final class CommonSubqueriesExtractor
             Optional<CacheColumnId> groupByHash,
             TypeAnalyzer typeAnalyzer,
             Session session,
-            StatsProvider statsProvider,
             PlanSignature planSignature)
     {
         Map<CacheColumnId, Symbol> subqueryColumnIdMapping = new HashMap<>(subplan.getOriginalSymbolMapping());
@@ -393,7 +390,6 @@ public final class CommonSubqueriesExtractor
                 idAllocator,
                 symbolAllocator,
                 typeAnalyzer,
-                statsProvider,
                 session);
         PlanNode commonSubplan = commonSubplanFilter.subplan();
         if (subplan.getGroupByColumns().isPresent()) {
@@ -567,7 +563,6 @@ public final class CommonSubqueriesExtractor
             PlanNodeIdAllocator idAllocator,
             SymbolAllocator symbolAllocator,
             TypeAnalyzer typeAnalyzer,
-            StatsProvider statsProvider,
             Session session)
     {
         if (predicate.equals(TRUE_LITERAL) && subplan.getDynamicConjuncts().isEmpty()) {
@@ -596,7 +591,7 @@ public final class CommonSubqueriesExtractor
                 symbolAllocator,
                 plannerContext,
                 typeAnalyzer,
-                statsProvider,
+                node -> PlanNodeStatsEstimate.unknown(),
                 new DomainTranslator(plannerContext))
                 .getMainAlternative();
 

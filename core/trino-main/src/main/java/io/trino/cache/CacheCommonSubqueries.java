@@ -16,7 +16,6 @@ package io.trino.cache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.trino.Session;
-import io.trino.cost.StatsProvider;
 import io.trino.spi.cache.CacheManager;
 import io.trino.sql.PlannerContext;
 import io.trino.sql.planner.PlanNodeIdAllocator;
@@ -72,7 +71,7 @@ public class CacheCommonSubqueries
         this.typeAnalyzer = requireNonNull(typeAnalyzer, "typeAnalyzer is null");
     }
 
-    public PlanNode cacheSubqueries(PlanNode node, StatsProvider statsProvider)
+    public PlanNode cacheSubqueries(PlanNode node)
     {
         if (!cacheEnabled || !isCacheSubqueriesEnabled(session)) {
             return node;
@@ -84,7 +83,6 @@ public class CacheCommonSubqueries
                 idAllocator,
                 symbolAllocator,
                 typeAnalyzer,
-                statsProvider,
                 node);
 
         // add alternatives for each adaptation
