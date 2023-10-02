@@ -164,17 +164,17 @@ public class TestObjectStoreHudiConnectorTest
     {
         assertThatThrownBy(super::testMaterializedView)
                 .hasMessageMatching("""
-
-                        \\QThe following assertion failed:
-                        1) [Rows for query [SHOW COLUMNS FROM test_materialized_view_\\E\\w+\\Q projected with [Column]]]\s
+                        ^
+                        \\QMultiple Failures (1 failure)
+                        -- failure 1 --
+                        [Rows for query [SHOW COLUMNS FROM test_materialized_view_\\E\\w+\\Q projected with [Column]]]\s
                         Expecting actual:
                           (_hoodie_commit_time), (_hoodie_commit_seqno), (_hoodie_record_key), (_hoodie_partition_path), (_hoodie_file_name), (nationkey), (name), (regionkey), (comment), (_uuid)
                         to contain exactly in any order:
                           [(nationkey), (name), (regionkey), (comment)]
                         but the following elements were unexpected:
                           (_hoodie_commit_time), (_hoodie_commit_seqno), (_hoodie_record_key), (_hoodie_partition_path), (_hoodie_file_name), (_uuid)
-
-                        """);
+                        at QueryAssertions$QueryAssert.\\E.*""");
     }
 
     @Override
