@@ -1459,9 +1459,9 @@ public class TestMultipleDistinctAggregationsToSubqueries
         }
 
         @Override
-        public Optional<Type> getSupportedType(Session session, CatalogHandle catalogHandle, Type type)
+        public Optional<Type> getSupportedType(Session session, CatalogHandle catalogHandle, Map<String, Object> tableProperties, Type type)
         {
-            return metadata.getSupportedType(session, catalogHandle, type);
+            return metadata.getSupportedType(session, catalogHandle, tableProperties, type);
         }
 
         @Override
