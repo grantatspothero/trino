@@ -134,6 +134,7 @@ import static io.trino.SystemSessionProperties.getMaxWriterTaskCount;
 import static io.trino.SystemSessionProperties.getRetryPolicy;
 import static io.trino.SystemSessionProperties.isCollectPlanStatisticsForAllQueries;
 import static io.trino.SystemSessionProperties.isUsePreferredWritePartitioning;
+import static io.trino.SystemSessionProperties.isUseSubPlanAlternatives;
 import static io.trino.metadata.MetadataUtil.createQualifiedObjectName;
 import static io.trino.spi.StandardErrorCode.CATALOG_NOT_FOUND;
 import static io.trino.spi.StandardErrorCode.CONSTRAINT_VIOLATION;
@@ -296,7 +297,7 @@ public class LogicalPlanner
             }
         }
 
-        if (SystemSessionProperties.isUseSubPlanAlternatives(session)) {
+        if (isUseSubPlanAlternatives(session)) {
             for (PlanOptimizer optimizer : alternativeOptimizers) {
                 try (var ignored = scopedSpan(plannerContext.getTracer(), "alternative-optimizer")) {
                     root = runOptimizer(root, tableStatsProvider, optimizer);
