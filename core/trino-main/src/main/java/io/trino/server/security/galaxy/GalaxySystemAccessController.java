@@ -168,11 +168,16 @@ public class GalaxySystemAccessController
     public List<ViewExpression> getRowFilters(SystemSecurityContext context, TableId tableId)
     {
         return getEntityPrivileges(context, tableId).getRowFilters().stream()
-                .map(filter -> new ViewExpression(
-                        getRowFilterAndColumnMaskUserString(context.getIdentity(), filter.owningRoleId()),
-                        catalogIds.getCatalogName(tableId.getCatalogId()),
-                        Optional.of(tableId.getSchemaName()),
-                        filter.expression()))
+                .map(filter -> {
+                    ViewExpression.Builder builder = ViewExpression.builder();
+
+                    getRowFilterAndColumnMaskUserString(context.getIdentity(), filter.owningRoleId()).ifPresent(builder::identity);
+                    catalogIds.getCatalogName(tableId.getCatalogId()).ifPresent(builder::catalog);
+
+                    return builder.schema(tableId.getSchemaName())
+                            .expression(filter.expression())
+                            .build();
+                })
                 .collect(toImmutableList());
     }
 
@@ -194,11 +199,14 @@ public class GalaxySystemAccessController
             return Optional.empty();
         }
 
-        return Optional.of(new ViewExpression(
-                getRowFilterAndColumnMaskUserString(context.getIdentity(), columnMask.owningRoleId()),
-                catalogIds.getCatalogName(tableId.getCatalogId()),
-                Optional.of(tableId.getSchemaName()),
-                columnMask.expression()));
+        ViewExpression.Builder builder = ViewExpression.builder();
+
+        getRowFilterAndColumnMaskUserString(context.getIdentity(), columnMask.owningRoleId()).ifPresent(builder::identity);
+        catalogIds.getCatalogName(tableId.getCatalogId()).ifPresent(builder::catalog);
+
+        return Optional.of(builder.schema(tableId.getSchemaName())
+                .expression(columnMask.expression())
+                .build());
     }
 
     private GalaxyQueryPermissions getCache(SystemSecurityContext context)
