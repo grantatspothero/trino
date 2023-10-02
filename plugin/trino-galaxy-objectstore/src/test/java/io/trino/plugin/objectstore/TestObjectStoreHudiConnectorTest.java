@@ -269,20 +269,6 @@ public class TestObjectStoreHudiConnectorTest
     }
 
     @Override
-    public void testRowLevelUpdate()
-    {
-        // TODO the test is not properly self-excluding, being fixed in https://github.com/trinodb/trino/pull/19229
-        assertThatThrownBy(super::testRowLevelUpdate)
-                .hasMessageStartingWith("""
-
-                        Expecting message:
-                          "Writes are not supported for Hudi tables"
-                        to match regex:
-                          "This connector does not support modifying table rows"
-                        but did not.""");
-    }
-
-    @Override
     public void testMaterializedViewGracePeriod()
     {
         assertFalse(hasBehavior(SUPPORTS_CREATE_TABLE)); // remove override when true
