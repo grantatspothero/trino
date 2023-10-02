@@ -21,7 +21,6 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.context.Context;
 import io.trino.Session;
-import io.trino.SystemSessionProperties;
 import io.trino.cache.CacheCommonSubqueries;
 import io.trino.cache.CacheConfig;
 import io.trino.cost.CachingCostProvider;
@@ -190,6 +189,7 @@ public class LogicalPlanner
     private final StatisticsAggregationPlanner statisticsAggregationPlanner;
     private final StatsCalculator statsCalculator;
     private final CostCalculator costCalculator;
+    private final boolean cacheEnabled;
     private final CacheCommonSubqueries cacheCommonSubqueries;
     private final WarningCollector warningCollector;
     private final PlanOptimizersStatsCollector planOptimizersStatsCollector;
@@ -236,6 +236,7 @@ public class LogicalPlanner
         this.statisticsAggregationPlanner = new StatisticsAggregationPlanner(symbolAllocator, metadata, session);
         this.statsCalculator = requireNonNull(statsCalculator, "statsCalculator is null");
         this.costCalculator = requireNonNull(costCalculator, "costCalculator is null");
+        this.cacheEnabled = requireNonNull(cacheConfig, "cacheConfig is null").isEnabled();
         this.cacheCommonSubqueries = new CacheCommonSubqueries(
                 cacheConfig,
                 plannerContext,
@@ -297,10 +298,16 @@ public class LogicalPlanner
             }
         }
 
-        if (isUseSubPlanAlternatives(session)) {
-            for (PlanOptimizer optimizer : alternativeOptimizers) {
-                try (var ignored = scopedSpan(plannerContext.getTracer(), "alternative-optimizer")) {
-                    root = runOptimizer(root, tableStatsProvider, optimizer);
+        if (cacheEnabled || isUseSubPlanAlternatives(session)) {
+            try (var ignored = scopedSpan(plannerContext.getTracer(), "cache-subqueries")) {
+                root = cacheCommonSubqueries.cacheSubqueries(root);
+            }
+
+            if (isUseSubPlanAlternatives(session)) {
+                for (PlanOptimizer optimizer : alternativeOptimizers) {
+                    try (var ignored = scopedSpan(plannerContext.getTracer(), "alternative-optimizer")) {
+                        root = runOptimizer(root, tableStatsProvider, optimizer);
+                    }
                 }
             }
 
@@ -312,8 +319,6 @@ public class LogicalPlanner
         }
 
         TypeProvider types = symbolAllocator.getTypes();
-
-        root = cacheCommonSubqueries.cacheSubqueries(root);
 
         StatsAndCosts statsAndCosts = StatsAndCosts.empty();
         if (collectPlanStatistics) {

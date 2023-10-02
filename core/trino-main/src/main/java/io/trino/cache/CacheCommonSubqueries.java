@@ -21,6 +21,7 @@ import io.trino.sql.PlannerContext;
 import io.trino.sql.planner.PlanNodeIdAllocator;
 import io.trino.sql.planner.SymbolAllocator;
 import io.trino.sql.planner.TypeAnalyzer;
+import io.trino.sql.planner.iterative.Lookup;
 import io.trino.sql.planner.optimizations.PlanNodeSearcher;
 import io.trino.sql.planner.plan.CacheDataPlanNode;
 import io.trino.sql.planner.plan.ChooseAlternativeNode;
@@ -33,6 +34,7 @@ import java.util.Map;
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.trino.SystemSessionProperties.isCacheSubqueriesEnabled;
 import static io.trino.cache.CommonSubqueriesExtractor.extractCommonSubqueries;
+import static io.trino.sql.planner.iterative.Lookup.noLookup;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -121,13 +123,22 @@ public class CacheCommonSubqueries
         return SimplePlanRewriter.rewriteWith(new PlanReplacer(nodeMapping.buildOrThrow()), node);
     }
 
-    public static boolean isCacheChooseAlternativeNode(ChooseAlternativeNode node)
+    public static boolean isCacheChooseAlternativeNode(PlanNode node)
     {
-        if (node.getSources().size() != 3) {
+        return isCacheChooseAlternativeNode(node, noLookup());
+    }
+
+    public static boolean isCacheChooseAlternativeNode(PlanNode node, Lookup lookup)
+    {
+        if (!(node instanceof ChooseAlternativeNode chooseAlternativeNode)) {
             return false;
         }
 
-        return PlanNodeSearcher.searchFrom(node.getSources().get(LOAD_PAGES_ALTERNATIVE))
+        if (chooseAlternativeNode.getSources().size() != 3) {
+            return false;
+        }
+
+        return PlanNodeSearcher.searchFrom(chooseAlternativeNode.getSources().get(LOAD_PAGES_ALTERNATIVE), lookup)
                 .whereIsInstanceOfAny(LoadCachedDataPlanNode.class)
                 .matches();
     }
