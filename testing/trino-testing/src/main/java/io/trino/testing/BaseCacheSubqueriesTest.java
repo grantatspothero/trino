@@ -16,6 +16,7 @@ package io.trino.testing;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Streams;
 import io.airlift.slice.Slices;
 import io.opentelemetry.api.trace.Span;
 import io.trino.Session;
@@ -35,9 +36,11 @@ import io.trino.spi.cache.PlanSignature;
 import io.trino.spi.cache.SignatureKey;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.ConnectorPageSourceProvider;
+import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.DynamicFilter;
 import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.TupleDomain;
+import io.trino.spi.predicate.ValueSet;
 import io.trino.spi.type.VarcharType;
 import io.trino.split.SplitSource;
 import io.trino.sql.planner.Plan;
@@ -54,12 +57,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.LongStream;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.airlift.concurrent.MoreFutures.getFutureValue;
 import static io.trino.SystemSessionProperties.CACHE_SUBQUERIES_ENABLED;
 import static io.trino.cost.StatsCalculator.noopStatsCalculator;
 import static io.trino.metadata.FunctionManager.createTestingFunctionManager;
 import static io.trino.spi.connector.Constraint.alwaysTrue;
+import static io.trino.spi.predicate.Range.range;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.anyTree;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.cacheDataPlanNode;
@@ -318,21 +324,25 @@ public abstract class BaseCacheSubqueriesTest
         assertUpdate("drop table orders_part");
     }
 
-    @Test
-    public void testPrunePredicate()
+    @Test(dataProvider = "isDynamicRowFilteringEnabled")
+    public void testSimplifyAndPrunePredicate(boolean isDynamicRowFilteringEnabled)
     {
-        computeActual("create table orders_part with (partitioned_by = ARRAY['orderpriority']) as select orderkey, orderdate, 'bar' as orderpriority from orders");
+        String tableName = "simplify_and_prune_orders_part_" + isDynamicRowFilteringEnabled;
+        computeActual("create table " + tableName + " with (partitioned_by = ARRAY['orderpriority']) as select orderkey, orderdate, '9876' as orderpriority from orders");
         DistributedQueryRunner runner = getDistributedQueryRunner();
-        Session session = Session.builder(getSession())
-                .setQueryId(new QueryId("prune_predicate"))
-                .build();
+        Session session = withDynamicRowFiltering(
+                Session.builder(getSession())
+                        .setQueryId(new QueryId("prune_predicate_" + isDynamicRowFilteringEnabled))
+                        .build(),
+                isDynamicRowFilteringEnabled);
         transaction(runner.getTransactionManager(), runner.getAccessControl())
                 .singleStatement()
                 .execute(session, transactionSession -> {
                     TestingTrinoServer server = runner.getCoordinator();
+                    String catalog = transactionSession.getCatalog().orElseThrow();
                     Optional<TableHandle> handle = server.getMetadata().getTableHandle(
                             transactionSession,
-                            new QualifiedObjectName(transactionSession.getCatalog().orElseThrow(), transactionSession.getSchema().orElseThrow(), "orders_part"));
+                            new QualifiedObjectName(catalog, transactionSession.getSchema().orElseThrow(), tableName));
                     assertThat(handle).isPresent();
 
                     SplitSource splitSource = server.getSplitManager().getSplits(transactionSession, Span.current(), handle.get(), DynamicFilter.EMPTY, alwaysTrue());
@@ -343,35 +353,73 @@ public abstract class BaseCacheSubqueriesTest
                     ColumnHandle dataColumn = server.getMetadata().getColumnHandles(transactionSession, handle.get()).get("orderkey");
                     assertThat(dataColumn).isNotNull();
 
-                    ConnectorPageSourceProvider pageSourceProvider = server.getConnector(transactionSession.getCatalog().orElseThrow()).getPageSourceProvider();
-                    VarcharType type = VarcharType.createVarcharType(3);
+                    ConnectorPageSourceProvider pageSourceProvider = server.getConnector(catalog).getPageSourceProvider();
+                    VarcharType type = VarcharType.createVarcharType(4);
 
-                    // prunePredicate should return non if predicate is exclusive on partition column
+                    // simplifyPredicate and prunePredicate should return none if predicate is exclusive on partition column
+                    ConnectorSession connectorSession = transactionSession.toConnectorSession(server.getMetadata().getCatalogHandle(transactionSession, catalog).orElseThrow());
+                    Domain nonPartitionDomain = Domain.multipleValues(type, Streams.concat(LongStream.range(0, 9_000), LongStream.of(9_999))
+                            .boxed()
+                            .map(value -> Slices.utf8Slice(value.toString()))
+                            .collect(toImmutableList()));
                     assertThat(pageSourceProvider.prunePredicate(
-                            transactionSession.toConnectorSession(),
+                            connectorSession,
                             split.getConnectorSplit(),
                             handle.get().getConnectorHandle(),
-                            TupleDomain.withColumnDomains(ImmutableMap.of(partitionColumn, Domain.singleValue(type, Slices.utf8Slice("foo"))))))
+                            TupleDomain.withColumnDomains(ImmutableMap.of(partitionColumn, nonPartitionDomain))))
+                            .matches(TupleDomain::isNone);
+                    assertThat(pageSourceProvider.simplifyPredicate(
+                            connectorSession,
+                            split.getConnectorSplit(),
+                            handle.get().getConnectorHandle(),
+                            TupleDomain.withColumnDomains(ImmutableMap.of(partitionColumn, nonPartitionDomain))))
                             .matches(TupleDomain::isNone);
 
-                    // prunePredicate should prune prefilled column that matches given predicate fully
-                    Domain partitionDomain = Domain.singleValue(type, Slices.utf8Slice("bar"));
+                    // simplifyPredicate and prunePredicate should prune prefilled column that matches given predicate fully
+                    Domain partitionDomain = Domain.singleValue(type, Slices.utf8Slice("9876"));
                     assertThat(pageSourceProvider.prunePredicate(
-                            transactionSession.toConnectorSession(),
+                            connectorSession,
+                            split.getConnectorSplit(),
+                            handle.get().getConnectorHandle(),
+                            TupleDomain.withColumnDomains(ImmutableMap.of(partitionColumn, partitionDomain))))
+                            .matches(TupleDomain::isAll);
+                    assertThat(pageSourceProvider.simplifyPredicate(
+                            connectorSession,
                             split.getConnectorSplit(),
                             handle.get().getConnectorHandle(),
                             TupleDomain.withColumnDomains(ImmutableMap.of(partitionColumn, partitionDomain))))
                             .matches(TupleDomain::isAll);
 
-                    // prunePredicate should not prune data column
-                    Domain dataDomain = Domain.singleValue(BIGINT, 42L);
+                    // prunePredicate should not prune or simplify data column
+                    Domain dataDomain = Domain.multipleValues(BIGINT, LongStream.range(0, 10_000)
+                            .boxed()
+                            .collect(toImmutableList()));
                     assertThat(pageSourceProvider.prunePredicate(
-                            transactionSession.toConnectorSession(),
+                            connectorSession,
                             split.getConnectorSplit(),
                             handle.get().getConnectorHandle(),
                             TupleDomain.withColumnDomains(ImmutableMap.of(dataColumn, dataDomain))))
                             .isEqualTo(TupleDomain.withColumnDomains(ImmutableMap.of(dataColumn, dataDomain)));
+                    if (isDynamicRowFilteringEnabled) {
+                        // simplifyPredicate should not prune or simplify data column
+                        assertThat(pageSourceProvider.simplifyPredicate(
+                                connectorSession,
+                                split.getConnectorSplit(),
+                                handle.get().getConnectorHandle(),
+                                TupleDomain.withColumnDomains(ImmutableMap.of(dataColumn, dataDomain))))
+                                .isEqualTo(TupleDomain.withColumnDomains(ImmutableMap.of(dataColumn, dataDomain)));
+                    }
+                    else {
+                        // simplifyPredicate should not prune but simplify data column
+                        assertThat(pageSourceProvider.simplifyPredicate(
+                                connectorSession,
+                                split.getConnectorSplit(),
+                                handle.get().getConnectorHandle(),
+                                TupleDomain.withColumnDomains(ImmutableMap.of(dataColumn, dataDomain))))
+                                .isEqualTo(TupleDomain.withColumnDomains(ImmutableMap.of(dataColumn, Domain.create(ValueSet.ofRanges(range(BIGINT, 0L, true, 9_999L, true)), false))));
+                    }
                 });
+        assertUpdate("drop table " + tableName);
     }
 
     protected CacheColumnId getCacheColumnId(Session session, String tableName, String columnName)

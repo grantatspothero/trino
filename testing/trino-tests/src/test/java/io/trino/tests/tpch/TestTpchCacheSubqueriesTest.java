@@ -57,8 +57,8 @@ public class TestTpchCacheSubqueriesTest
     }
 
     @Override
-    @Test
-    public void testPrunePredicate()
+    @Test(dataProvider = "isDynamicRowFilteringEnabled")
+    public void testSimplifyAndPrunePredicate(boolean isDynamicRowFilteringEnabled)
     {
         throw new SkipException("tpch does not support for partitioned tables");
     }
