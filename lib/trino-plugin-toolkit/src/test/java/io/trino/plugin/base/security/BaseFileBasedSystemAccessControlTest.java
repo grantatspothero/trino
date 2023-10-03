@@ -1354,6 +1354,7 @@ public abstract class BaseFileBasedSystemAccessControlTest
         assertEquals(actual.getCatalog(), expected.getCatalog(), "Catalog");
         assertEquals(actual.getSchema(), expected.getSchema(), "Schema");
         assertEquals(actual.getExpression(), expected.getExpression(), "Expression");
+        assertEquals(actual.getPath(), expected.getPath(), "Path");
     }
 
     @Test
