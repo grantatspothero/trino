@@ -51,7 +51,6 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.trino.testing.QueryAssertions.assertEqualsIgnoreOrder;
@@ -68,8 +67,6 @@ public class TestHiveDynamicRowFilteringWithPlanAlternatives
             throws Exception
     {
         return HiveQueryRunner.builder()
-                // TODO (https://github.com/starburstdata/galaxy-trino/issues/1123) Fix the test so that is passes on default configuration; currently it requires optimizer.optimize-hash-generation=true
-                .addCoordinatorProperty("optimizer.optimize-hash-generation", "true")
                 .setInitialTables(REQUIRED_TPCH_TABLES)
                 .withPlanAlternatives()
                 .setHiveProperties(ImmutableMap.of(
@@ -249,16 +246,15 @@ public class TestHiveDynamicRowFilteringWithPlanAlternatives
                 .getQueryStats()
                 .getOperatorSummaries()
                 .stream()
-                .filter(summary -> nodeIds.contains(summary.getPlanNodeId()) && summary.getOperatorType().equals("ScanFilterAndProjectOperator"))
+                .filter(summary -> nodeIds.contains(summary.getPlanNodeId()) &&
+                        (summary.getOperatorType().equals("ScanFilterAndProjectOperator") || summary.getOperatorType().equals("TableScanOperator")))
                 .reduce(TestHiveDynamicRowFilteringWithPlanAlternatives::addOperatorStats)
                 .orElseThrow(() -> new NoSuchElementException("table scan operator not found in " + queryId + " nodeIds: " + nodeIds));
     }
 
-    // like OperatorStats::add but does not throw on different operator ids
+    // like OperatorStats::add but does not throw on different operator ids and different operator types
     public static OperatorStats addOperatorStats(OperatorStats left, OperatorStats operator)
     {
-        checkArgument(operator.getOperatorType().equals(left.getOperatorType()), "Expected operatorType to be %s but was %s", left.getOperatorType(), operator.getOperatorType());
-
         long totalDrivers = left.getTotalDrivers() + operator.getTotalDrivers();
         long addInputCalls = left.getAddInputCalls() + operator.getAddInputCalls();
         long addInputWall = left.getAddInputWall().roundTo(NANOSECONDS) + operator.getAddInputWall().roundTo(NANOSECONDS);
