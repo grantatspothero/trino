@@ -129,6 +129,9 @@ public class TestCommonSubqueriesExtractor
         extends BasePlanTest
 {
     private static final CacheTableId CACHE_TABLE_ID = new CacheTableId("cache_table_id");
+    private static final CacheColumnId REGIONKEY_ID = new CacheColumnId("[regionkey:bigint]");
+    private static final CacheColumnId NATIONKEY_ID = new CacheColumnId("[nationkey:bigint]");
+    private static final CacheColumnId NAME_ID = new CacheColumnId("[name:varchar(25)]");
     private static final String TEST_SCHEMA = "test_schema";
     private static final String TEST_TABLE = "test_table";
     private static final Session TEST_SESSION = testSessionBuilder()
@@ -160,7 +163,6 @@ public class TestCommonSubqueriesExtractor
                     Range.lessThan(BIGINT, 30L),
                     Range.greaterThan(BIGINT, 70L)), false)));
     private static final SchemaTableName TABLE_NAME = new SchemaTableName(TEST_SCHEMA, TEST_TABLE);
-    private static final ExpressionWithType REGIONKEY_EXPRESSION = new ExpressionWithType("\"[regionkey:bigint]\"", BIGINT);
     private static final ExpressionWithType NATIONKEY_EXPRESSION = new ExpressionWithType("\"[nationkey:bigint]\"", BIGINT);
 
     private TableHandle testTableHandle;
@@ -431,8 +433,6 @@ public class TestCommonSubqueriesExtractor
                         filter("REGIONKEY < BIGINT '5'", commonSubplan)));
 
         // make sure plan signatures are same
-        CacheColumnId regionkey = new CacheColumnId("[regionkey:bigint]");
-        CacheColumnId name = new CacheColumnId("[name:varchar(25)]");
         Expression hash = getHashExpression(
                 new ExpressionWithType("\"[regionkey:bigint]\"", BIGINT),
                 new ExpressionWithType("\"[name:varchar(25)]\"", createVarcharType(25)));
@@ -441,10 +441,72 @@ public class TestCommonSubqueriesExtractor
         assertThat(aggregationA.getCommonSubplanSignature()).isEqualTo(aggregationA.getCommonSubplanSignature());
         assertThat(aggregationB.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
                 new SignatureKey(tpchCatalogId + ":tiny:nation:0.01:(\"[nationkey:bigint]\" > BIGINT '10')"),
-                Optional.of(ImmutableList.of(regionkey, name)),
-                ImmutableList.of(regionkey, name, canonicalExpressionToColumnId(hash), canonicalExpressionToColumnId(sum), canonicalExpressionToColumnId(max)),
+                Optional.of(ImmutableList.of(REGIONKEY_ID, NAME_ID)),
+                ImmutableList.of(REGIONKEY_ID, NAME_ID, canonicalExpressionToColumnId(hash), canonicalExpressionToColumnId(sum), canonicalExpressionToColumnId(max)),
                 TupleDomain.withColumnDomains(ImmutableMap.of(
-                        regionkey, Domain.create(ValueSet.ofRanges(lessThan(BIGINT, 5L), greaterThan(BIGINT, 10L)), false))),
+                        REGIONKEY_ID, Domain.create(ValueSet.ofRanges(lessThan(BIGINT, 5L), greaterThan(BIGINT, 10L)), false))),
+                TupleDomain.all()));
+    }
+
+    @Test
+    public void testAggregationWithComplexAggregationExpression()
+    {
+        CommonSubqueries commonSubqueries = extractTpchCommonSubqueries("""
+                SELECT sum(nationkey + 1) FROM nation GROUP BY name, regionkey
+                UNION ALL
+                SELECT sum(nationkey + 1) FROM nation GROUP BY regionkey, name""");
+
+        Map<PlanNode, CommonPlanAdaptation> planAdaptations = commonSubqueries.planAdaptations();
+        assertThat(planAdaptations).hasSize(2);
+        assertThat(planAdaptations).allSatisfy((node, adaptation) ->
+                assertThat(node).isInstanceOf(AggregationNode.class));
+
+        CommonPlanAdaptation aggregationA = Iterables.get(planAdaptations.values(), 0);
+        CommonPlanAdaptation aggregationB = Iterables.get(planAdaptations.values(), 1);
+
+        PlanMatchPattern commonSubplan = aggregation(
+                singleGroupingSet("NAME", "REGIONKEY"),
+                ImmutableMap.of(
+                        Optional.of("SUM"), functionCall("sum", false, ImmutableList.of(symbol("EXPR")))),
+                Optional.empty(),
+                PARTIAL,
+                strictProject(ImmutableMap.of(
+                                "NAME", PlanMatchPattern.expression("NAME"),
+                                "REGIONKEY", PlanMatchPattern.expression("REGIONKEY"),
+                                "EXPR", PlanMatchPattern.expression("EXPR"),
+                                "HASH", PlanMatchPattern.expression("combine_hash(combine_hash(bigint '0', COALESCE(\"$operator$hash_code\"(NAME), 0)), COALESCE(\"$operator$hash_code\"(REGIONKEY), 0))")),
+                        strictProject(ImmutableMap.of(
+                                        "NAME", PlanMatchPattern.expression("NAME"),
+                                        "REGIONKEY", PlanMatchPattern.expression("REGIONKEY"),
+                                        "EXPR", PlanMatchPattern.expression("NATIONKEY + BIGINT '1'")),
+                                tableScan("nation", ImmutableMap.of("NATIONKEY", "nationkey", "NAME", "name", "REGIONKEY", "regionkey")))));
+
+        SymbolAllocator symbolAllocator = commonSubqueries.symbolAllocator();
+        assertTpchPlan(symbolAllocator, aggregationA.getCommonSubplan(), commonSubplan);
+        assertTpchPlan(symbolAllocator, aggregationB.getCommonSubplan(), commonSubplan);
+
+        // only subplan B required adaptation (different order for hash columns)
+        PlanNodeIdAllocator idAllocator = commonSubqueries.idAllocator();
+        assertThat(aggregationA.adaptCommonSubplan(aggregationA.getCommonSubplan(), idAllocator)).isEqualTo(aggregationA.getCommonSubplan());
+        assertTpchPlan(symbolAllocator, aggregationB.adaptCommonSubplan(aggregationB.getCommonSubplan(), idAllocator),
+                strictProject(ImmutableMap.of(
+                                "REGIONKEY", PlanMatchPattern.expression("REGIONKEY"),
+                                "NAME", PlanMatchPattern.expression("NAME"),
+                                "SUBQUERY_HASH", PlanMatchPattern.expression("combine_hash(combine_hash(bigint '0', COALESCE(\"$operator$hash_code\"(REGIONKEY), 0)), COALESCE(\"$operator$hash_code\"(NAME), 0))"),
+                                "SUM", PlanMatchPattern.expression("SUM")),
+                        commonSubplan));
+
+        // make sure plan signatures are same
+        Expression hash = getHashExpression(
+                new ExpressionWithType("\"[name:varchar(25)]\"", createVarcharType(25)),
+                new ExpressionWithType("\"[regionkey:bigint]\"", BIGINT));
+        Expression sum = getFunctionCallBuilder("sum", new ExpressionWithType("\"[nationkey:bigint]\" + BIGINT '1'", BIGINT)).build();
+        assertThat(aggregationA.getCommonSubplanSignature()).isEqualTo(aggregationA.getCommonSubplanSignature());
+        assertThat(aggregationB.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
+                new SignatureKey(tpchCatalogId + ":tiny:nation:0.01"),
+                Optional.of(ImmutableList.of(NAME_ID, REGIONKEY_ID)),
+                ImmutableList.of(NAME_ID, REGIONKEY_ID, canonicalExpressionToColumnId(hash), canonicalExpressionToColumnId(sum)),
+                TupleDomain.all(),
                 TupleDomain.all()));
     }
 
@@ -476,7 +538,7 @@ public class TestCommonSubqueriesExtractor
         assertThat(aggregationB.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
                 new SignatureKey(tpchCatalogId + ":tiny:nation:0.01"),
                 Optional.empty(),
-                ImmutableList.of(new CacheColumnId("[nationkey:bigint]"), new CacheColumnId("[regionkey:bigint]")),
+                ImmutableList.of(NATIONKEY_ID, REGIONKEY_ID),
                 TupleDomain.all(),
                 TupleDomain.all()));
     }

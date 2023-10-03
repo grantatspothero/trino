@@ -171,6 +171,57 @@ public class TestCanonicalSubplanExtractor
     }
 
     @Test
+    public void testAggregationWithInlinedHashProjection()
+    {
+        List<CanonicalSubplan> subplans = extractCanonicalSubplansForQuery("""
+                SELECT sum(nationkey + 1)
+                FROM nation
+                GROUP BY name, regionkey""");
+        assertThat(subplans).hasSize(2);
+
+        CanonicalSubplan nonAggregatedSubplan = subplans.get(0);
+        assertThat(nonAggregatedSubplan.getGroupByColumns()).isEmpty();
+
+        Expression hashExpression = getHashExpression(
+                new ExpressionWithType("\"[name:varchar(25)]\"", createVarcharType(25)),
+                new ExpressionWithType("\"[regionkey:bigint]\"", BIGINT));
+        CacheColumnId hashId = new CacheColumnId("(" + formatExpression(hashExpression) + ")");
+        assertThat(nonAggregatedSubplan.getAssignments()).containsExactly(
+                new SimpleEntry<>(new CacheColumnId("[name:varchar(25)]"), new SymbolReference("[name:varchar(25)]")),
+                new SimpleEntry<>(new CacheColumnId("[regionkey:bigint]"), new SymbolReference("[regionkey:bigint]")),
+                new SimpleEntry<>(new CacheColumnId("((\"[nationkey:bigint]\" + BIGINT '1'))"), expression("(\"[nationkey:bigint]\" + BIGINT '1')")),
+                new SimpleEntry<>(hashId, hashExpression));
+
+        CanonicalSubplan aggregatedSubplan = subplans.get(1);
+        assertThat(aggregatedSubplan.getOriginalPlanNode()).isInstanceOf(AggregationNode.class);
+        assertThat(getGroupByExpressions(aggregatedSubplan)).contains(ImmutableList.of(
+                expression("\"[name:varchar(25)]\""),
+                expression("\"[regionkey:bigint]\"")));
+        assertThat(getHashExpression(aggregatedSubplan)).contains(hashExpression);
+
+        Expression sum = getFunctionCallBuilder("sum", new ExpressionWithType("(\"[nationkey:bigint]\" + BIGINT '1')", BIGINT)).build();
+        assertThat(aggregatedSubplan.getOriginalSymbolMapping()).containsOnlyKeys(
+                new CacheColumnId("[nationkey:bigint]"),
+                new CacheColumnId("[name:varchar(25)]"),
+                new CacheColumnId("[regionkey:bigint]"),
+                new CacheColumnId("((\"[nationkey:bigint]\" + BIGINT '1'))"),
+                new CacheColumnId("(" + formatExpression(hashExpression) + ")"),
+                new CacheColumnId("(" + formatExpression(sum) + ")"));
+        assertThat(aggregatedSubplan.getAssignments()).containsExactly(
+                new SimpleEntry<>(new CacheColumnId("[name:varchar(25)]"), expression("\"[name:varchar(25)]\"")),
+                new SimpleEntry<>(new CacheColumnId("[regionkey:bigint]"), expression("\"[regionkey:bigint]\"")),
+                new SimpleEntry<>(new CacheColumnId("(" + formatExpression(hashExpression) + ")"), hashExpression),
+                new SimpleEntry<>(new CacheColumnId("(" + formatExpression(sum) + ")"), sum));
+        assertThat(aggregatedSubplan.getConjuncts()).isEmpty();
+        assertThat(aggregatedSubplan.getDynamicConjuncts()).isEmpty();
+        assertThat(aggregatedSubplan.getColumnHandles()).containsExactly(
+                new SimpleEntry<>(new CacheColumnId("[nationkey:bigint]"), new TpchColumnHandle("nationkey", BIGINT)),
+                new SimpleEntry<>(new CacheColumnId("[name:varchar(25)]"), new TpchColumnHandle("name", createVarcharType(25))),
+                new SimpleEntry<>(new CacheColumnId("[regionkey:bigint]"), new TpchColumnHandle("regionkey", BIGINT)));
+        assertThat(aggregatedSubplan.getTableId()).isEqualTo(new CacheTableId(tpchCatalogId + ":tiny:nation:0.01"));
+    }
+
+    @Test
     public void testAggregationWithoutHashColumn()
     {
         List<CanonicalSubplan> subplans = extractCanonicalSubplansForQuery("""

@@ -24,6 +24,7 @@ import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.sql.planner.Symbol;
+import io.trino.sql.planner.SymbolsExtractor;
 import io.trino.sql.planner.optimizations.SymbolMapper;
 import io.trino.sql.planner.plan.AggregationNode;
 import io.trino.sql.planner.plan.AggregationNode.Aggregation;
@@ -158,15 +159,26 @@ public final class CanonicalSubplanExtractor
             if (node.getHashSymbol().isPresent()) {
                 // projection that computes hash symbol is expected
                 Symbol hashSymbol = node.getHashSymbol().get();
-                if (source instanceof ProjectNode hashProjection && isHashProjection(hashProjection, hashSymbol)) {
-                    // always add non-aggregated canonical subplan so that it can be matched against other
-                    // non-aggregated subqueries
-                    subplanOptional = canonicalizeRecursively(hashProjection.getSource());
-                    originalHashExpression = Optional.of(hashProjection.getAssignments().get(hashSymbol));
-                }
-                else {
+                if (!(source instanceof ProjectNode projectNode)) {
                     canonicalizeRecursively(source);
                     return Optional.empty();
+                }
+
+                originalHashExpression = Optional.of(projectNode.getAssignments().get(hashSymbol));
+                // hash expression is supported if it only contains group by symbols
+                if (!ImmutableSet.copyOf(node.getGroupingKeys()).containsAll(SymbolsExtractor.extractUnique(originalHashExpression.get()))) {
+                    canonicalizeRecursively(source);
+                    return Optional.empty();
+                }
+
+                // skip source projection if it's only computing hash symbol
+                if (isIdentityHashProjection(projectNode, hashSymbol)) {
+                    // always add non-aggregated canonical subplan so that it can be matched against other
+                    // non-aggregated subqueries
+                    subplanOptional = canonicalizeRecursively(projectNode.getSource());
+                }
+                else {
+                    subplanOptional = canonicalizeRecursively(projectNode);
                 }
             }
             else {
@@ -210,11 +222,15 @@ public final class CanonicalSubplanExtractor
                 CacheColumnId columnId = canonicalExpressionToColumnId(canonicalHashExpression);
                 groupByHash = Optional.of(columnId);
                 checkState(assignments.put(columnId, canonicalHashExpression) == null, "Hash column already present");
-                if (originalSymbolMapping.containsKey(columnId)) {
+                Symbol originalSymbol = subplan.getOriginalSymbolMapping().get(columnId);
+                Symbol hashSymbol = node.getHashSymbol().orElseThrow();
+                if (originalSymbol == null) {
+                    symbolMappingBuilder.put(columnId, hashSymbol);
+                }
+                else if (!originalSymbol.equals(hashSymbol)) {
                     // might happen if hash expression is projected by user explicitly
                     return Optional.empty();
                 }
-                symbolMappingBuilder.put(columnId, node.getHashSymbol().orElseThrow());
             }
             else {
                 groupByHash = Optional.empty();
@@ -446,7 +462,7 @@ public final class CanonicalSubplanExtractor
                     node.getId()));
         }
 
-        private boolean isHashProjection(ProjectNode projection, Symbol hashSymbol)
+        private boolean isIdentityHashProjection(ProjectNode projection, Symbol hashSymbol)
         {
             // all projections except hash calculation should be identities
             return projection.getAssignments().getSymbols().stream()
