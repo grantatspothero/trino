@@ -666,10 +666,23 @@ public class ObjectStoreMetadata
                             tableColumnsMetadata = MaybeLazy.ofValue(HiveUtil.getTableColumnMetadata(hiveSession, table, typeManager));
                         }
                         else if (icebergTable) {
-                            tableColumnsMetadata = icebergMetadata.getTableColumnMetadata(icebergSession, table);
+                            try {
+                                tableColumnsMetadata = icebergMetadata.getTableColumnMetadata(icebergSession, table);
+                            }
+                            catch (RuntimeException e) {
+                                // E.g. a table declared as Iceberg table but lacking metadata_location
+                                log.warn(e, "Failed to process metadata of Iceberg table %s during streaming table columns for %s", table, schemaName);
+                                return; // Exclude from response
+                            }
                         }
                         else if (deltaLakeTable) {
-                            tableColumnsMetadata = deltaMetadata.getTableColumnMetadata(deltaSession, table);
+                            try {
+                                tableColumnsMetadata = deltaMetadata.getTableColumnMetadata(deltaSession, table);
+                            }
+                            catch (RuntimeException e) {
+                                log.warn(e, "Failed to process metadata of Delta table %s during streaming table columns for %s", table, schemaName);
+                                return; // Exclude from response
+                            }
                         }
                         else {
                             throw new UnsupportedOperationException("Unreachable");
@@ -781,10 +794,23 @@ public class ObjectStoreMetadata
                             tableComment = MaybeLazy.ofValue(Optional.ofNullable(table.getParameters().get(TABLE_COMMENT)));
                         }
                         else if (icebergTable) {
-                            tableComment = icebergMetadata.getTableComment(icebergSession, table);
+                            try {
+                                tableComment = icebergMetadata.getTableComment(icebergSession, table);
+                            }
+                            catch (RuntimeException e) {
+                                // E.g. a table declared as Iceberg table but lacking metadata_location
+                                log.warn(e, "Failed to process metadata of Iceberg table %s during streaming table comments for %s", table, schemaName);
+                                return; // Exclude from response
+                            }
                         }
                         else if (deltaLakeTable) {
-                            tableComment = deltaMetadata.getTableComment(deltaSession, table);
+                            try {
+                                tableComment = deltaMetadata.getTableComment(deltaSession, table);
+                            }
+                            catch (RuntimeException e) {
+                                log.warn(e, "Failed to process metadata of Delta table %s during streaming table comments for %s", table, schemaName);
+                                return; // Exclude from response
+                            }
                         }
                         else {
                             throw new UnsupportedOperationException("Unreachable");
@@ -806,10 +832,10 @@ public class ObjectStoreMetadata
                                 }
                                 catch (Exception e) {
                                     if (AbstractIcebergTableOperations.isNotFoundException(e)) {
-                                        log.debug(e, "Not found when accessing metadata for table %s during streaming table columns for %s", tableName, schemaName);
+                                        log.debug(e, "Not found when accessing metadata for table %s during streaming table comments for %s", tableName, schemaName);
                                     }
                                     else {
-                                        log.warn(e, "Failed to access metadata of table %s during streaming table columns for %s", tableName, schemaName);
+                                        log.warn(e, "Failed to access metadata of table %s during streaming table comments for %s", tableName, schemaName);
                                     }
                                     return Optional.<RelationCommentMetadata>empty();
                                 }
