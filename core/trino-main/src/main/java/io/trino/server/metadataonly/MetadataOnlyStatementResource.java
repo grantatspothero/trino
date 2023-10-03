@@ -26,6 +26,7 @@ import io.airlift.units.Duration;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
 import io.starburst.stargate.crypto.SecretEncryptionContext;
 import io.starburst.stargate.crypto.SecretSealer;
 import io.starburst.stargate.crypto.SecretSealer.SealedSecret;
@@ -114,6 +115,7 @@ import static io.trino.server.security.galaxy.MetadataAccessControllerSupplier.T
 import static io.trino.spi.StandardErrorCode.EXCEEDED_TIME_LIMIT;
 import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.trino.spi.StandardErrorCode.SERIALIZATION_ERROR;
+import static io.trino.tracing.ScopedSpan.scopedSpan;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN_TYPE;
 import static jakarta.ws.rs.core.Response.Status.BAD_REQUEST;
@@ -231,7 +233,8 @@ public class MetadataOnlyStatementResource
 
         systemState.incrementActiveRequests();
         try {
-            return executeQuery(request.accountId(), transactionId, statement, sessionContext, decryptedCatalogs, request.serviceProperties());
+            QueryId queryId = dispatchManager.createQueryId();
+            return executeQuery(queryId, request.accountId(), transactionId, statement, sessionContext, decryptedCatalogs, request.serviceProperties());
         }
         finally {
             systemState.decrementAndGetActiveRequests();
@@ -274,10 +277,16 @@ public class MetadataOnlyStatementResource
         List<QueryCatalog> decryptedCatalogs = request.catalogs().stream().map(queryCatalog -> decryptCatalog(request.accountId(), queryCatalog)).collect(toImmutableList());
 
         Stopwatch stopwatch = Stopwatch.createStarted();
+        io.opentelemetry.context.Context tracingContext = io.opentelemetry.context.Context.current();
+        QueryId queryId = dispatchManager.createQueryId();
         StreamingOutput stream = output -> {
             systemState.incrementActiveRequests();
             try {
-                Future<QueryResults> future = executorService.submit(() -> executeQuery(request.accountId(), transactionId, statement, sessionContext, decryptedCatalogs, request.serviceProperties()));
+                Future<QueryResults> future = executorService.submit(() -> {
+                    try (Scope ignore = tracingContext.makeCurrent()) {
+                        return executeQuery(queryId, request.accountId(), transactionId, statement, sessionContext, decryptedCatalogs, request.serviceProperties());
+                    }
+                });
                 while (true) {
                     try {
                         QueryResults queryResults = future.get(WHITESPACE_CHUNK_SENDING_INTERVAL.toMillis(), MILLISECONDS);
@@ -293,7 +302,9 @@ public class MetadataOnlyStatementResource
 
                         // write enough data to output so empty HTTP chunk is send over network. Without regular network traffic we observed TCP
                         // connection lost.
-                        writeWhitespaceChunk(output);
+                        try (Scope ignore = tracingContext.makeCurrent()) {
+                            writeWhitespaceChunk(output, queryId);
+                        }
                     }
                     catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
@@ -311,17 +322,21 @@ public class MetadataOnlyStatementResource
         return Response.ok(stream).build();
     }
 
-    private static void writeWhitespaceChunk(OutputStream outputStream)
+    private void writeWhitespaceChunk(OutputStream outputStream, QueryId queryId)
             throws IOException
     {
-        // write some data
-        outputStream.write(WHITESPACE_CHUNK);
-        outputStream.flush();
+        Span span = tracer.spanBuilder("write-whitespace-chunk")
+                .setAttribute(TrinoAttributes.QUERY_ID, queryId.toString())
+                .startSpan();
+        try (var ignored = scopedSpan(span)) {
+            // write some data
+            outputStream.write(WHITESPACE_CHUNK);
+            outputStream.flush();
+        }
     }
 
-    private QueryResults executeQuery(AccountId accountId, TransactionId transactionId, String statement, SessionContext sessionContext, List<QueryCatalog> catalogs, Map<String, String> serviceProperties)
+    private QueryResults executeQuery(QueryId queryId, AccountId accountId, TransactionId transactionId, String statement, SessionContext sessionContext, List<QueryCatalog> catalogs, Map<String, String> serviceProperties)
     {
-        QueryId queryId = dispatchManager.createQueryId();
         Span span = tracer.spanBuilder("metadata-query")
                 .setAttribute(TrinoAttributes.QUERY_ID, queryId.toString())
                 .startSpan();
