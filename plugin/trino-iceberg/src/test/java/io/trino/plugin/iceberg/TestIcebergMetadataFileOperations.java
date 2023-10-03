@@ -680,6 +680,12 @@ public class TestIcebergMetadataFileOperations
         };
     }
 
+    @Test
+    public void testShowTables()
+    {
+        assertFileSystemAccesses("SHOW TABLES", ImmutableMultiset.of());
+    }
+
     private void assertFileSystemAccesses(@Language("SQL") String query, Multiset<FileOperation> expectedAccesses)
     {
         assertFileSystemAccesses(query, METADATA_FILES, expectedAccesses);
