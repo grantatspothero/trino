@@ -115,7 +115,6 @@ import static io.trino.server.security.galaxy.MetadataAccessControllerSupplier.T
 import static io.trino.spi.StandardErrorCode.EXCEEDED_TIME_LIMIT;
 import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.trino.spi.StandardErrorCode.SERIALIZATION_ERROR;
-import static io.trino.tracing.ScopedSpan.scopedSpan;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN_TYPE;
 import static jakarta.ws.rs.core.Response.Status.BAD_REQUEST;
@@ -233,8 +232,7 @@ public class MetadataOnlyStatementResource
 
         systemState.incrementActiveRequests();
         try {
-            QueryId queryId = dispatchManager.createQueryId();
-            return executeQuery(queryId, request.accountId(), transactionId, statement, sessionContext, decryptedCatalogs, request.serviceProperties(), Optional.empty());
+            return executeQuery(request.accountId(), transactionId, statement, sessionContext, decryptedCatalogs, request.serviceProperties(), Optional.empty());
         }
         finally {
             systemState.decrementAndGetActiveRequests();
@@ -277,12 +275,11 @@ public class MetadataOnlyStatementResource
         List<QueryCatalog> decryptedCatalogs = request.catalogs().stream().map(queryCatalog -> decryptCatalog(request.accountId(), queryCatalog)).collect(toImmutableList());
 
         Stopwatch stopwatch = Stopwatch.createStarted();
-        io.opentelemetry.context.Context tracingContext = io.opentelemetry.context.Context.current();
-        QueryId queryId = dispatchManager.createQueryId();
+        Optional<io.opentelemetry.context.Context> tracingContext = Optional.of(io.opentelemetry.context.Context.current());
         StreamingOutput stream = output -> {
             systemState.incrementActiveRequests();
             try {
-                Future<QueryResults> future = executorService.submit(() -> executeQuery(queryId, request.accountId(), transactionId, statement, sessionContext, decryptedCatalogs, request.serviceProperties(), Optional.of(tracingContext)));
+                Future<QueryResults> future = executorService.submit(() -> executeQuery(request.accountId(), transactionId, statement, sessionContext, decryptedCatalogs, request.serviceProperties(), tracingContext));
                 while (true) {
                     try {
                         QueryResults queryResults = future.get(WHITESPACE_CHUNK_SENDING_INTERVAL.toMillis(), MILLISECONDS);
@@ -298,7 +295,7 @@ public class MetadataOnlyStatementResource
 
                         // write enough data to output so empty HTTP chunk is send over network. Without regular network traffic we observed TCP
                         // connection lost.
-                        writeWhitespaceChunk(output, queryId, tracingContext);
+                        writeWhitespaceChunk(output);
                     }
                     catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
@@ -316,22 +313,17 @@ public class MetadataOnlyStatementResource
         return Response.ok(stream).build();
     }
 
-    private void writeWhitespaceChunk(OutputStream outputStream, QueryId queryId, io.opentelemetry.context.Context tracingContext)
+    private static void writeWhitespaceChunk(OutputStream outputStream)
             throws IOException
     {
-        Span span = tracer.spanBuilder("write-whitespace-chunk")
-                .setAttribute(TrinoAttributes.QUERY_ID, queryId.toString())
-                .setParent(tracingContext)
-                .startSpan();
-        try (var ignored = scopedSpan(span)) {
-            // write some data
-            outputStream.write(WHITESPACE_CHUNK);
-            outputStream.flush();
-        }
+        // write some data
+        outputStream.write(WHITESPACE_CHUNK);
+        outputStream.flush();
     }
 
-    private QueryResults executeQuery(QueryId queryId, AccountId accountId, TransactionId transactionId, String statement, SessionContext sessionContext, List<QueryCatalog> catalogs, Map<String, String> serviceProperties, Optional<io.opentelemetry.context.Context> tracingContext)
+    private QueryResults executeQuery(AccountId accountId, TransactionId transactionId, String statement, SessionContext sessionContext, List<QueryCatalog> catalogs, Map<String, String> serviceProperties, Optional<io.opentelemetry.context.Context> tracingContext)
     {
+        QueryId queryId = dispatchManager.createQueryId();
         SpanBuilder spanBuilder = tracer.spanBuilder("metadata-query");
         tracingContext.ifPresent(spanBuilder::setParent);
         Span span = spanBuilder
