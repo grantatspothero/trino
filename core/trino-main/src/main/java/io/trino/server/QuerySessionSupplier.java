@@ -56,7 +56,7 @@ public class QuerySessionSupplier
     private final AccessControl accessControl;
     private final AccessControlManager accessControlManager;
     private final SessionPropertyManager sessionPropertyManager;
-    private final Optional<String> defaultPath;
+    private final String defaultPath;
     private final Optional<TimeZoneKey> forcedSessionTimeZone;
     private final Optional<String> defaultCatalog;
     private final Optional<String> defaultSchema;
@@ -116,12 +116,13 @@ public class QuerySessionSupplier
             identity = addEnabledRoles(identity, context.getSelectedRole(), metadata);
         }
 
+        SqlPath path = SqlPath.buildPath(context.getPath().orElse(defaultPath), context.getCatalog());
         SessionBuilder sessionBuilder = Session.builder(sessionPropertyManager)
                 .setQueryId(queryId)
                 .setQuerySpan(querySpan)
                 .setIdentity(identity)
                 .setOriginalIdentity(originalIdentity)
-                .setPath(context.getPath().or(() -> defaultPath).map(SqlPath::new))
+                .setPath(path)
                 .setSource(context.getSource())
                 .setRemoteUserAddress(context.getRemoteUserAddress())
                 .setUserAgent(context.getUserAgent())

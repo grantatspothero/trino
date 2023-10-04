@@ -57,6 +57,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static io.trino.client.ProtocolHeaders.TRINO_HEADERS;
 import static io.trino.spi.StandardErrorCode.NOT_FOUND;
+import static io.trino.sql.SqlPath.EMPTY_PATH;
 import static io.trino.util.Failures.checkCondition;
 import static java.util.Objects.requireNonNull;
 
@@ -613,7 +614,7 @@ public final class Session
         private String source;
         private String catalog;
         private String schema;
-        private SqlPath path;
+        private SqlPath path = EMPTY_PATH;
         private Optional<String> traceToken = Optional.empty();
         private TimeZoneKey timeZoneKey;
         private Locale locale;
@@ -747,13 +748,6 @@ public final class Session
         public SessionBuilder setPath(SqlPath path)
         {
             this.path = path;
-            return this;
-        }
-
-        @CanIgnoreReturnValue
-        public SessionBuilder setPath(Optional<SqlPath> path)
-        {
-            this.path = path.orElse(null);
             return this;
         }
 
@@ -923,7 +917,7 @@ public final class Session
                     Optional.ofNullable(source),
                     Optional.ofNullable(catalog),
                     Optional.ofNullable(schema),
-                    path != null ? path : new SqlPath(Optional.empty()),
+                    path,
                     traceToken,
                     timeZoneKey != null ? timeZoneKey : TimeZoneKey.getTimeZoneKey(TimeZone.getDefault().getID()),
                     locale != null ? locale : Locale.getDefault(),
