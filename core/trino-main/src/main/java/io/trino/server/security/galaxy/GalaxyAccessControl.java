@@ -37,7 +37,6 @@ import io.trino.spi.connector.CatalogSchemaTableName;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TableNotFoundException;
 import io.trino.spi.eventlistener.EventListener;
-import io.trino.spi.function.FunctionKind;
 import io.trino.spi.function.SchemaFunctionName;
 import io.trino.spi.security.AccessDeniedException;
 import io.trino.spi.security.Identity;
@@ -584,13 +583,6 @@ public class GalaxyAccessControl
     {
         checkCatalogWritableAndMaterializedViewOwner(context, materializedView, explanation -> denyRenameMaterializedView(materializedView.toString(), newView.toString(), explanation));
         checkCatalogIsWritable(getSystemAccessController(context), newView.getCatalogName(), explanation -> denyRenameMaterializedView(materializedView.toString(), newView.toString(), explanation));
-    }
-
-    @Override
-    public void checkCanGrantExecuteFunctionPrivilege(SystemSecurityContext context, FunctionKind functionKind, CatalogSchemaRoutineName functionName, TrinoPrincipal grantee, boolean grantOption)
-    {
-        // TODO (https://github.com/starburstdata/stargate/issues/12361) implement. This is needed for views containing table functions.
-        SystemAccessControl.super.checkCanGrantExecuteFunctionPrivilege(context, functionKind, functionName, grantee, grantOption);
     }
 
     @Override
