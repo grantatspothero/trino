@@ -387,14 +387,11 @@ public class TestLogicalPlanner
     public void testSingleDistinct()
     {
         assertPlan("SELECT custkey, orderstatus, COUNT(DISTINCT orderkey) FROM orders GROUP BY custkey, orderstatus",
-                Session.builder(this.getQueryRunner().getDefaultSession())
-                        .setSystemProperty(OPTIMIZE_HASH_GENERATION, "true") // TODO (https://github.com/starburstdata/galaxy-trino/issues/1123) go back to defaults
-                        .build(),
                 anyTree(
                         aggregation(
                                 singleGroupingSet("custkey", "orderstatus"),
                                 ImmutableMap.of("count", functionCall("count", ImmutableList.of("orderkey"))),
-                                project(aggregation(
+                                aggregation(
                                         singleGroupingSet("custkey", "orderstatus", "orderkey"),
                                         ImmutableMap.of(),
                                         Optional.empty(),
@@ -404,18 +401,15 @@ public class TestLogicalPlanner
                                                 ImmutableMap.of(),
                                                 Optional.empty(),
                                                 PARTIAL,
-                                                project(tableScan(
+                                                tableScan(
                                                         "orders",
-                                                        ImmutableMap.of("orderstatus", "orderstatus", "custkey", "custkey", "orderkey", "orderkey"))))))))));
+                                                        ImmutableMap.of("orderstatus", "orderstatus", "custkey", "custkey", "orderkey", "orderkey"))))))));
     }
 
     @Test
     public void testPreAggregateDistinct()
     {
         assertPlan("SELECT COUNT(DISTINCT orderkey), COUNT(DISTINCT custkey) FROM orders",
-                Session.builder(this.getQueryRunner().getDefaultSession())
-                        .setSystemProperty(OPTIMIZE_HASH_GENERATION, "true") // TODO (https://github.com/starburstdata/galaxy-trino/issues/1123) go back to defaults
-                        .build(),
                 anyTree(
                         aggregation(
                                 singleGroupingSet(),
@@ -439,14 +433,14 @@ public class TestLogicalPlanner
                                                         ImmutableMap.of(),
                                                         Optional.empty(),
                                                         PARTIAL,
-                                                        project(filter(
+                                                        filter(
                                                                 "\"groupId\" IN (BIGINT '0', BIGINT '1')",
                                                                 groupId(
                                                                         ImmutableList.of(ImmutableList.of("orderkey"), ImmutableList.of("custkey")),
                                                                         "groupId",
                                                                         tableScan(
                                                                                 "orders",
-                                                                                ImmutableMap.of("custkey", "custkey", "orderkey", "orderkey"))))))))))));
+                                                                                ImmutableMap.of("custkey", "custkey", "orderkey", "orderkey")))))))))));
     }
 
     @Test
@@ -455,7 +449,6 @@ public class TestLogicalPlanner
         assertPlan("SELECT orderstatus, orderstatus || '1', orderstatus || '2', COUNT(DISTINCT orderkey), COUNT(DISTINCT custkey) FROM orders GROUP BY 1, 2, 3",
                 Session.builder(this.getQueryRunner().getDefaultSession())
                         .setSystemProperty(COST_ESTIMATION_WORKER_COUNT, "6")
-                        .setSystemProperty(OPTIMIZE_HASH_GENERATION, "true") // TODO (https://github.com/starburstdata/galaxy-trino/issues/1123) go back to defaults
                         .build(),
                 anyTree(
                         aggregation(
@@ -469,23 +462,17 @@ public class TestLogicalPlanner
                                 markDistinct(
                                         "custkey_mask",
                                         ImmutableList.of("orderstatus", "orderstatus1", "orderstatus2", "custkey"),
-                                        "hash-custkey",
                                         markDistinct(
                                                 "orderkey_mask",
                                                 ImmutableList.of("orderstatus", "orderstatus1", "orderstatus2", "orderkey"),
-                                                "hash-orderkey",
                                                 exchange(
                                                         project(
                                                                 ImmutableMap.of(
-                                                                        "hash-custkey", expression("combine_hash(combine_hash(combine_hash(combine_hash(bigint '0', COALESCE(\"$operator$hash_code\"(\"orderstatus\"), 0)), COALESCE(\"$operator$hash_code\"(\"orderstatus1\"), 0)), COALESCE(\"$operator$hash_code\"(\"orderstatus2\"), 0)), COALESCE(\"$operator$hash_code\"(\"custkey\"), 0))"),
-                                                                        "hash-orderkey", expression("combine_hash(combine_hash(combine_hash(combine_hash(bigint '0', COALESCE(\"$operator$hash_code\"(\"orderstatus\"), 0)), COALESCE(\"$operator$hash_code\"(\"orderstatus1\"), 0)), COALESCE(\"$operator$hash_code\"(\"orderstatus2\"), 0)), COALESCE(\"$operator$hash_code\"(\"orderkey\"), 0))")),
-                                                                project(
-                                                                        ImmutableMap.of(
-                                                                                "orderstatus1", expression("concat(CAST(\"orderstatus\" AS varchar), VARCHAR '1')"),
-                                                                                "orderstatus2", expression("concat(CAST(\"orderstatus\" AS varchar), VARCHAR '2')")),
-                                                                        tableScan(
-                                                                                "orders",
-                                                                                ImmutableMap.of("custkey", "custkey", "orderkey", "orderkey", "orderstatus", "orderstatus"))))))))));
+                                                                        "orderstatus1", expression("concat(CAST(\"orderstatus\" AS varchar), VARCHAR '1')"),
+                                                                        "orderstatus2", expression("concat(CAST(\"orderstatus\" AS varchar), VARCHAR '2')")),
+                                                                tableScan(
+                                                                        "orders",
+                                                                        ImmutableMap.of("custkey", "custkey", "orderkey", "orderkey", "orderstatus", "orderstatus")))))))));
     }
 
     @Test
