@@ -24,22 +24,23 @@ import io.trino.tests.product.launcher.env.common.TestsEnvironment;
 import static io.trino.tests.product.launcher.env.EnvironmentContainers.COORDINATOR;
 import static io.trino.tests.product.launcher.env.EnvironmentContainers.WORKER;
 import static io.trino.tests.product.launcher.env.common.Standard.CONTAINER_TRINO_CONFIG_PROPERTIES;
+import static io.trino.tests.product.launcher.env.common.Standard.CONTAINER_TRINO_JVM_CONFIG;
 import static org.testcontainers.utility.MountableFile.forHostPath;
 
 @TestsEnvironment
-public final class EnvMultinodeSubqueryCache
+public final class EnvHiveMultinodeSubqueryCache
         extends EnvironmentProvider
 {
     private final DockerFiles.ResourceProvider configDir;
 
     @Inject
-    public EnvMultinodeSubqueryCache(
+    public EnvHiveMultinodeSubqueryCache(
             DockerFiles dockerFiles,
             StandardMultinode standardMultinode,
             Hadoop hadoop)
     {
         super(standardMultinode, hadoop);
-        this.configDir = dockerFiles.getDockerFilesHostDirectory("conf/environment/multinode-subquery-cache");
+        this.configDir = dockerFiles.getDockerFilesHostDirectory("conf/environment/multinode-hive-subquery-cache");
     }
 
     @Override
@@ -48,8 +49,10 @@ public final class EnvMultinodeSubqueryCache
         builder.configureContainer(COORDINATOR, container -> container
                 .withCopyFileToContainer(forHostPath(configDir.getPath("master-config.properties")), CONTAINER_TRINO_CONFIG_PROPERTIES));
         builder.configureContainer(WORKER, container -> container
-                .withCopyFileToContainer(forHostPath(configDir.getPath("worker-config.properties")), CONTAINER_TRINO_CONFIG_PROPERTIES));
+                .withCopyFileToContainer(forHostPath(configDir.getPath("worker-config.properties")), CONTAINER_TRINO_CONFIG_PROPERTIES)
+                .withCopyFileToContainer(forHostPath(configDir.getPath("worker-jvm.config")), CONTAINER_TRINO_JVM_CONFIG));
         builder.addConnector("hive");
         builder.addConnector("tpch", forHostPath(configDir.getPath("tpch.properties")));
+        builder.addConnector("tpcds", forHostPath(configDir.getPath("tpcds.properties")));
     }
 }

@@ -103,7 +103,7 @@ public final class TestGroups
     public static final String HUDI = "hudi";
     public static final String PARQUET = "parquet";
     public static final String IGNITE = "ignite";
-    public static final String CACHE_SUBQUERIES = "cache-subqueries";
+    public static final String HIVE_CACHE_SUBQUERIES = "hive-cache-subqueries";
 
     private TestGroups() {}
 }

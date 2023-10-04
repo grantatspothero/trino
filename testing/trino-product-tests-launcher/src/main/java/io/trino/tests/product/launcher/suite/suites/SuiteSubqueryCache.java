@@ -15,7 +15,7 @@ package io.trino.tests.product.launcher.suite.suites;
 
 import com.google.common.collect.ImmutableList;
 import io.trino.tests.product.launcher.env.EnvironmentConfig;
-import io.trino.tests.product.launcher.env.environment.EnvMultinodeSubqueryCache;
+import io.trino.tests.product.launcher.env.environment.EnvHiveMultinodeSubqueryCache;
 import io.trino.tests.product.launcher.suite.Suite;
 import io.trino.tests.product.launcher.suite.SuiteTestRun;
 
@@ -30,8 +30,8 @@ public class SuiteSubqueryCache
     public List<SuiteTestRun> getTestRuns(EnvironmentConfig config)
     {
         return ImmutableList.of(
-                testOnEnvironment(EnvMultinodeSubqueryCache.class)
-                        .withGroups("cache-subqueries")
+                testOnEnvironment(EnvHiveMultinodeSubqueryCache.class)
+                        .withGroups("hive-cache-subqueries")
                         .build());
     }
 }
