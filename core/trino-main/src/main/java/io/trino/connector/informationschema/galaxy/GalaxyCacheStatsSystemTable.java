@@ -37,7 +37,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static io.trino.connector.informationschema.galaxy.GalaxyCacheConstants.SCHEMA_NAME;
 import static io.trino.connector.system.jdbc.FilterUtil.isImpossibleObjectName;
-import static io.trino.connector.system.jdbc.FilterUtil.tryGetSingleVarcharValue;
 import static io.trino.metadata.MetadataListing.listCatalogNames;
 import static io.trino.spi.connector.SystemTable.Distribution.SINGLE_COORDINATOR;
 import static io.trino.spi.type.BigintType.BIGINT;
@@ -95,7 +94,7 @@ public class GalaxyCacheStatsSystemTable
             return table.build().cursor();
         }
 
-        for (String catalog : listCatalogNames(session, metadata, accessControl, tryGetSingleVarcharValue(catalogDomain))) {
+        for (String catalog : listCatalogNames(session, metadata, accessControl, catalogDomain)) {
             stats.get(catalog).forEach(stat -> table.addRow(
                     catalog,
                     stat.name(),

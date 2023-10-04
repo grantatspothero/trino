@@ -95,7 +95,7 @@ public class GalaxyCacheMaterializedViewSystemTable
 
         Optional<String> schemaFilter = tryGetSingleVarcharValue(schemaDomain);
         Optional<String> tableFilter = tryGetSingleVarcharValue(tableDomain);
-        listCatalogNames(session, metadata, accessControl, tryGetSingleVarcharValue(catalogDomain)).forEach(catalogName -> {
+        listCatalogNames(session, metadata, accessControl, catalogDomain).forEach(catalogName -> {
             QualifiedTablePrefix prefix = tablePrefix(catalogName, schemaFilter, tableFilter);
 
             URI uri = galaxyCacheClient.uriBuilder(session, prefix, ENDPOINT_MATERIALIZED_VIEWS, OptionalLong.empty()).addParameter("type", "BASE TABLE").build();

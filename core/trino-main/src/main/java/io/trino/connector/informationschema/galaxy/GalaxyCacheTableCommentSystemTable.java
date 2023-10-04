@@ -94,7 +94,7 @@ public class GalaxyCacheTableCommentSystemTable
 
         Optional<String> schemaFilter = tryGetSingleVarcharValue(schemaDomain);
         Optional<String> tableFilter = tryGetSingleVarcharValue(tableDomain);
-        for (String catalog : listCatalogNames(session, metadata, accessControl, tryGetSingleVarcharValue(catalogDomain))) {
+        for (String catalog : listCatalogNames(session, metadata, accessControl, catalogDomain)) {
             QualifiedTablePrefix prefix = tablePrefix(catalog, schemaFilter, tableFilter);
 
             URI uri = galaxyCacheClient.uriBuilder(session, prefix, ENDPOINT_TABLES, OptionalLong.empty()).addParameter("type", "BASE TABLE").build();

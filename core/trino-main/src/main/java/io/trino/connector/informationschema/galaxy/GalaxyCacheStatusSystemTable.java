@@ -44,7 +44,6 @@ import static io.trino.connector.informationschema.galaxy.GalaxyCacheConstants.S
 import static io.trino.connector.informationschema.galaxy.GalaxyCacheEndpoint.ENDPOINT_STATUS;
 import static io.trino.connector.informationschema.galaxy.GalaxyCacheSessionProperties.isEnabled;
 import static io.trino.connector.system.jdbc.FilterUtil.isImpossibleObjectName;
-import static io.trino.connector.system.jdbc.FilterUtil.tryGetSingleVarcharValue;
 import static io.trino.metadata.MetadataListing.listCatalogNames;
 import static io.trino.spi.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.trino.spi.connector.SystemTable.Distribution.SINGLE_COORDINATOR;
@@ -110,7 +109,7 @@ public class GalaxyCacheStatusSystemTable
             return table.build().cursor();
         }
 
-        for (String catalog : listCatalogNames(session, metadata, accessControl, tryGetSingleVarcharValue(catalogDomain))) {
+        for (String catalog : listCatalogNames(session, metadata, accessControl, catalogDomain)) {
             QualifiedTablePrefix prefix = new QualifiedTablePrefix(catalog);
             URI uri = galaxyCacheClient.uriBuilder(session, prefix, ENDPOINT_STATUS, OptionalLong.empty()).build();
             try {
