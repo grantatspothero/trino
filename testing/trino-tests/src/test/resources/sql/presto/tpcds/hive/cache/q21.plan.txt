@@ -8,14 +8,31 @@ local exchange (GATHER, SINGLE, [])
                             partial aggregation over (i_item_id, inv_warehouse_sk)
                                 join (INNER, REPLICATED):
                                     join (INNER, REPLICATED):
-                                        dynamic filter (["inv_item_sk"], await ["inv_date_sk", "inv_warehouse_sk"])
-                                            scan inventory
+                                        alternatives
+                                            dynamic filter (["inv_item_sk"], await ["inv_date_sk", "inv_warehouse_sk"])
+                                                scan inventory
+                                            cache data
+                                                dynamic filter (["inv_item_sk"], await ["inv_date_sk", "inv_warehouse_sk"])
+                                                    scan inventory
+                                            load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPLICATE, BROADCAST, [])
-                                                scan item
+                                                alternatives
+                                                    scan item
+                                                    cache data
+                                                        scan item
+                                                    load from cache
                                     local exchange (GATHER, SINGLE, [])
                                         remote exchange (REPLICATE, BROADCAST, [])
-                                            scan date_dim
+                                            alternatives
+                                                scan date_dim
+                                                cache data
+                                                    scan date_dim
+                                                load from cache
                             local exchange (GATHER, SINGLE, [])
                                 remote exchange (REPLICATE, BROADCAST, [])
-                                    scan warehouse
+                                    alternatives
+                                        scan warehouse
+                                        cache data
+                                            scan warehouse
+                                        load from cache

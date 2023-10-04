@@ -12,8 +12,13 @@ local exchange (GATHER, SINGLE, [])
                                             join (INNER, REPLICATED):
                                                 partial aggregation over (ss_store_sk)
                                                     join (INNER, REPLICATED):
-                                                        dynamic filter (await ["ss_sold_date_sk", "ss_store_sk"])
-                                                            scan store_sales
+                                                        alternatives
+                                                            dynamic filter (await ["ss_sold_date_sk", "ss_store_sk"])
+                                                                scan store_sales
+                                                            cache data
+                                                                dynamic filter (await ["ss_sold_date_sk", "ss_store_sk"])
+                                                                    scan store_sales
+                                                            load from cache
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPLICATE, BROADCAST, [])
                                                                 alternatives
@@ -34,8 +39,13 @@ local exchange (GATHER, SINGLE, [])
                                             join (INNER, REPLICATED):
                                                 partial aggregation over (sr_store_sk)
                                                     join (INNER, REPLICATED):
-                                                        dynamic filter (await ["sr_returned_date_sk", "sr_store_sk"])
-                                                            scan store_returns
+                                                        alternatives
+                                                            dynamic filter (await ["sr_returned_date_sk", "sr_store_sk"])
+                                                                scan store_returns
+                                                            cache data
+                                                                dynamic filter (await ["sr_returned_date_sk", "sr_store_sk"])
+                                                                    scan store_returns
+                                                            load from cache
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPLICATE, BROADCAST, [])
                                                                 alternatives
@@ -56,8 +66,13 @@ local exchange (GATHER, SINGLE, [])
                                         remote exchange (REPARTITION, HASH, ["cs_call_center_sk"])
                                             partial aggregation over (cs_call_center_sk)
                                                 join (INNER, REPLICATED):
-                                                    dynamic filter (await ["cs_sold_date_sk"])
-                                                        scan catalog_sales
+                                                    alternatives
+                                                        dynamic filter (await ["cs_sold_date_sk"])
+                                                            scan catalog_sales
+                                                        cache data
+                                                            dynamic filter (await ["cs_sold_date_sk"])
+                                                                scan catalog_sales
+                                                        load from cache
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])
                                                             alternatives
@@ -72,8 +87,13 @@ local exchange (GATHER, SINGLE, [])
                                                 remote exchange (REPARTITION, HASH, ["cr_call_center_sk"])
                                                     partial aggregation over (cr_call_center_sk)
                                                         join (INNER, REPLICATED):
-                                                            dynamic filter (await ["cr_returned_date_sk"])
-                                                                scan catalog_returns
+                                                            alternatives
+                                                                dynamic filter (await ["cr_returned_date_sk"])
+                                                                    scan catalog_returns
+                                                                cache data
+                                                                    dynamic filter (await ["cr_returned_date_sk"])
+                                                                        scan catalog_returns
+                                                                load from cache
                                                             local exchange (GATHER, SINGLE, [])
                                                                 remote exchange (REPLICATE, BROADCAST, [])
                                                                     alternatives
@@ -88,8 +108,13 @@ local exchange (GATHER, SINGLE, [])
                                             join (INNER, REPLICATED):
                                                 partial aggregation over (ws_web_page_sk)
                                                     join (INNER, REPLICATED):
-                                                        dynamic filter (await ["ws_sold_date_sk", "ws_web_page_sk"])
-                                                            scan web_sales
+                                                        alternatives
+                                                            dynamic filter (await ["ws_sold_date_sk", "ws_web_page_sk"])
+                                                                scan web_sales
+                                                            cache data
+                                                                dynamic filter (await ["ws_sold_date_sk", "ws_web_page_sk"])
+                                                                    scan web_sales
+                                                            load from cache
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPLICATE, BROADCAST, [])
                                                                 alternatives
@@ -110,8 +135,13 @@ local exchange (GATHER, SINGLE, [])
                                             join (INNER, REPLICATED):
                                                 partial aggregation over (wr_web_page_sk)
                                                     join (INNER, REPLICATED):
-                                                        dynamic filter (await ["wr_returned_date_sk", "wr_web_page_sk"])
-                                                            scan web_returns
+                                                        alternatives
+                                                            dynamic filter (await ["wr_returned_date_sk", "wr_web_page_sk"])
+                                                                scan web_returns
+                                                            cache data
+                                                                dynamic filter (await ["wr_returned_date_sk", "wr_web_page_sk"])
+                                                                    scan web_returns
+                                                            load from cache
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPLICATE, BROADCAST, [])
                                                                 alternatives

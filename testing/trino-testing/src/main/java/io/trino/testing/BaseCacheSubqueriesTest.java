@@ -61,6 +61,8 @@ import java.util.stream.LongStream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.airlift.concurrent.MoreFutures.getFutureValue;
+import static io.trino.SystemSessionProperties.CACHE_AGGREGATIONS_ENABLED;
+import static io.trino.SystemSessionProperties.CACHE_PROJECTIONS_ENABLED;
 import static io.trino.SystemSessionProperties.CACHE_SUBQUERIES_ENABLED;
 import static io.trino.cost.StatsCalculator.noopStatsCalculator;
 import static io.trino.metadata.FunctionManager.createTestingFunctionManager;
@@ -100,8 +102,8 @@ public abstract class BaseCacheSubqueriesTest
     public void testJoinQuery()
     {
         @Language("SQL") String selectQuery = "select count(l.orderkey) from lineitem l, lineitem r where l.orderkey = r.orderkey";
-        MaterializedResultWithQueryId resultWithCache = executeWithQueryId(withCacheSubqueriesEnabled(), selectQuery);
-        MaterializedResultWithQueryId resultWithoutCache = executeWithQueryId(withCacheSubqueriesDisabled(), selectQuery);
+        MaterializedResultWithQueryId resultWithCache = executeWithQueryId(withCacheEnabled(), selectQuery);
+        MaterializedResultWithQueryId resultWithoutCache = executeWithQueryId(withCacheDisabled(), selectQuery);
         assertEqualsIgnoreOrder(resultWithCache.getResult(), resultWithoutCache.getResult());
 
         // make sure data was read from cache
@@ -130,8 +132,8 @@ public abstract class BaseCacheSubqueriesTest
                 JOIN
                     (SELECT sum(orderkey), orderkey FROM lineitem GROUP BY orderkey) b
                 ON a.orderkey = b.orderkey""";
-        MaterializedResultWithQueryId countWithCache = executeWithQueryId(withCacheSubqueriesEnabled(), countQuery);
-        MaterializedResultWithQueryId countWithoutCache = executeWithQueryId(withCacheSubqueriesDisabled(), countQuery);
+        MaterializedResultWithQueryId countWithCache = executeWithQueryId(withCacheEnabled(), countQuery);
+        MaterializedResultWithQueryId countWithoutCache = executeWithQueryId(withCacheDisabled(), countQuery);
         assertEqualsIgnoreOrder(countWithCache.getResult(), countWithoutCache.getResult());
 
         // make sure data was read from cache
@@ -145,12 +147,12 @@ public abstract class BaseCacheSubqueriesTest
                 .isLessThan(getScanOperatorInputPositions(countWithoutCache.getQueryId()));
 
         // subsequent count aggregation query should use cached data only
-        countWithCache = executeWithQueryId(withCacheSubqueriesEnabled(), countQuery);
+        countWithCache = executeWithQueryId(withCacheEnabled(), countQuery);
         assertThat(getLoadCachedDataOperatorInputPositions(countWithCache.getQueryId())).isPositive();
         assertThat(getScanOperatorInputPositions(countWithCache.getQueryId())).isZero();
 
         // subsequent sum aggregation query should read from source as it doesn't match count plan signature
-        MaterializedResultWithQueryId sumWithCache = executeWithQueryId(withCacheSubqueriesEnabled(), sumQuery);
+        MaterializedResultWithQueryId sumWithCache = executeWithQueryId(withCacheEnabled(), sumQuery);
         assertThat(getScanOperatorInputPositions(sumWithCache.getQueryId())).isPositive();
     }
 
@@ -158,12 +160,12 @@ public abstract class BaseCacheSubqueriesTest
     public void testSubsequentQueryReadsFromCache()
     {
         @Language("SQL") String selectQuery = "select orderkey from lineitem union all (select orderkey from lineitem union all select orderkey from lineitem)";
-        MaterializedResultWithQueryId resultWithCache = executeWithQueryId(withCacheSubqueriesEnabled(), selectQuery);
+        MaterializedResultWithQueryId resultWithCache = executeWithQueryId(withCacheEnabled(), selectQuery);
 
         // make sure data was cached
         assertThat(getCacheDataOperatorInputPositions(resultWithCache.getQueryId())).isPositive();
 
-        resultWithCache = executeWithQueryId(withCacheSubqueriesEnabled(), "select orderkey from lineitem union all select orderkey from lineitem");
+        resultWithCache = executeWithQueryId(withCacheEnabled(), "select orderkey from lineitem union all select orderkey from lineitem");
         // make sure data was read from cache as data should be cached across queries
         assertThat(getLoadCachedDataOperatorInputPositions(resultWithCache.getQueryId())).isPositive();
         assertThat(getScanOperatorInputPositions(resultWithCache.getQueryId())).isZero();
@@ -191,8 +193,8 @@ public abstract class BaseCacheSubqueriesTest
                 select count(orderkey) from orders_part o join (select * from (values 0, 1) t(custkey)) t on o.custkey = t.custkey
                 """;
 
-        Session cacheSubqueriesEnabled = withDynamicRowFiltering(withCacheSubqueriesEnabled(), isDynamicRowFilteringEnabled);
-        Session cacheSubqueriesDisabled = withDynamicRowFiltering(withCacheSubqueriesDisabled(), isDynamicRowFilteringEnabled);
+        Session cacheSubqueriesEnabled = withDynamicRowFiltering(withCacheEnabled(), isDynamicRowFilteringEnabled);
+        Session cacheSubqueriesDisabled = withDynamicRowFiltering(withCacheDisabled(), isDynamicRowFilteringEnabled);
         MaterializedResultWithQueryId totalScanOrdersExecution = executeWithQueryId(cacheSubqueriesDisabled, totalScanOrdersQuery);
         MaterializedResultWithQueryId firstJoinExecution = executeWithQueryId(cacheSubqueriesEnabled, firstJoinQuery);
         MaterializedResultWithQueryId anotherFirstJoinExecution = executeWithQueryId(cacheSubqueriesEnabled, firstJoinQuery);
@@ -233,9 +235,9 @@ public abstract class BaseCacheSubqueriesTest
                             select orderdate from orders_part where orderkey > 10 and mod(orderkey, 10) = 1 and orderpriority = '3-MEDIUM'
                         ) order by orderdate
                         """;
-        MaterializedResultWithQueryId cacheDisabledResult = executeWithQueryId(withCacheSubqueriesDisabled(), query);
-        executeWithQueryId(withCacheSubqueriesEnabled(), query);
-        MaterializedResultWithQueryId cacheEnabledResult = executeWithQueryId(withCacheSubqueriesEnabled(), query);
+        MaterializedResultWithQueryId cacheDisabledResult = executeWithQueryId(withCacheDisabled(), query);
+        executeWithQueryId(withCacheEnabled(), query);
+        MaterializedResultWithQueryId cacheEnabledResult = executeWithQueryId(withCacheEnabled(), query);
 
         assertThat(getLoadCachedDataOperatorInputPositions(cacheEnabledResult.getQueryId())).isPositive();
         assertThat(cacheDisabledResult.getResult()).isEqualTo(cacheEnabledResult.getResult());
@@ -262,11 +264,11 @@ public abstract class BaseCacheSubqueriesTest
                         select orderkey from orders_part where orderpriority = '3-MEDIUM'
                 """;
 
-        MaterializedResultWithQueryId twoPartitionsQueryFirst = executeWithQueryId(withCacheSubqueriesEnabled(), selectTwoPartitions);
+        MaterializedResultWithQueryId twoPartitionsQueryFirst = executeWithQueryId(withCacheEnabled(), selectTwoPartitions);
         Plan twoPartitionsQueryPlan = getDistributedQueryRunner().getQueryPlan(twoPartitionsQueryFirst.getQueryId());
-        MaterializedResultWithQueryId twoPartitionsQuerySecond = executeWithQueryId(withCacheSubqueriesEnabled(), selectTwoPartitions);
+        MaterializedResultWithQueryId twoPartitionsQuerySecond = executeWithQueryId(withCacheEnabled(), selectTwoPartitions);
 
-        MaterializedResultWithQueryId allPartitionsQuery = executeWithQueryId(withCacheSubqueriesEnabled(), selectAllPartitions);
+        MaterializedResultWithQueryId allPartitionsQuery = executeWithQueryId(withCacheEnabled(), selectAllPartitions);
         Plan allPartitionsQueryPlan = getDistributedQueryRunner().getQueryPlan(allPartitionsQuery.getQueryId());
 
         String hiveCatalogId = withTransaction(session -> getDistributedQueryRunner().getCoordinator()
@@ -306,13 +308,13 @@ public abstract class BaseCacheSubqueriesTest
         assertThat(getLoadCachedDataOperatorInputPositions(allPartitionsQuery.getQueryId())).isPositive();
 
         // single partition query should read from cache only because data for all partitions have been pre-loaded
-        MaterializedResultWithQueryId singlePartitionQuery = executeWithQueryId(withCacheSubqueriesEnabled(), selectSinglePartition);
+        MaterializedResultWithQueryId singlePartitionQuery = executeWithQueryId(withCacheEnabled(), selectSinglePartition);
         assertThat(getScanOperatorInputPositions(singlePartitionQuery.getQueryId())).isZero();
         assertThat(getLoadCachedDataOperatorInputPositions(singlePartitionQuery.getQueryId())).isPositive();
 
         // make sure that adding new partition doesn't invalidate existing cache entries
         computeActual("insert into orders_part values (-42, date '1991-01-01', 'foo')");
-        singlePartitionQuery = executeWithQueryId(withCacheSubqueriesEnabled(), selectSinglePartition);
+        singlePartitionQuery = executeWithQueryId(withCacheEnabled(), selectSinglePartition);
         assertThat(getScanOperatorInputPositions(singlePartitionQuery.getQueryId())).isZero();
         assertThat(getLoadCachedDataOperatorInputPositions(singlePartitionQuery.getQueryId())).isPositive();
 
@@ -486,17 +488,21 @@ public abstract class BaseCacheSubqueriesTest
                 .sum();
     }
 
-    protected Session withCacheSubqueriesEnabled()
+    protected Session withCacheEnabled()
     {
         return Session.builder(getSession())
                 .setSystemProperty(CACHE_SUBQUERIES_ENABLED, "true")
+                .setSystemProperty(CACHE_AGGREGATIONS_ENABLED, "true")
+                .setSystemProperty(CACHE_PROJECTIONS_ENABLED, "true")
                 .build();
     }
 
-    protected Session withCacheSubqueriesDisabled()
+    protected Session withCacheDisabled()
     {
         return Session.builder(getSession())
                 .setSystemProperty(CACHE_SUBQUERIES_ENABLED, "false")
+                .setSystemProperty(CACHE_AGGREGATIONS_ENABLED, "false")
+                .setSystemProperty(CACHE_PROJECTIONS_ENABLED, "false")
                 .build();
     }
 

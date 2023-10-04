@@ -25,8 +25,13 @@ local exchange (GATHER, SINGLE, [])
                     remote exchange (REPLICATE, BROADCAST, [])
                         join (INNER, PARTITIONED):
                             remote exchange (REPARTITION, HASH, ["s_store_sk"])
-                                dynamic filter (["s_store_sk"])
-                                    scan store
+                                alternatives
+                                    dynamic filter (["s_store_sk"])
+                                        scan store
+                                    cache data
+                                        dynamic filter (["s_store_sk"])
+                                            scan store
+                                    load from cache
                             final aggregation over (ss_store_sk)
                                 local exchange (GATHER, SINGLE, [])
                                     remote exchange (REPARTITION, HASH, ["ss_store_sk"])
@@ -52,4 +57,8 @@ local exchange (GATHER, SINGLE, [])
                                                                             load from cache
             local exchange (GATHER, SINGLE, [])
                 remote exchange (REPLICATE, BROADCAST, [])
-                    scan item
+                    alternatives
+                        scan item
+                        cache data
+                            scan item
+                        load from cache

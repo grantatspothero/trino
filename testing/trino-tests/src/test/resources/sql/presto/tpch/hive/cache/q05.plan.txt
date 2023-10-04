@@ -8,27 +8,55 @@ remote exchange (GATHER, SINGLE, [])
                             join (INNER, PARTITIONED):
                                 remote exchange (REPARTITION, HASH, ["nationkey_13", "orderkey_5"])
                                     join (INNER, REPLICATED):
-                                        dynamic filter (["orderkey_5", "suppkey"])
-                                            scan lineitem
+                                        alternatives
+                                            dynamic filter (["orderkey_5", "suppkey"])
+                                                scan lineitem
+                                            cache data
+                                                dynamic filter (["orderkey_5", "suppkey"])
+                                                    scan lineitem
+                                            load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPLICATE, BROADCAST, [])
                                                 join (INNER, REPLICATED):
-                                                    dynamic filter (["nationkey_13"], await ["nationkey_13"])
-                                                        scan supplier
+                                                    alternatives
+                                                        dynamic filter (["nationkey_13"], await ["nationkey_13"])
+                                                            scan supplier
+                                                        cache data
+                                                            dynamic filter (["nationkey_13"], await ["nationkey_13"])
+                                                                scan supplier
+                                                        load from cache
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])
                                                             join (INNER, REPLICATED):
-                                                                dynamic filter (["nationkey_20"], await ["regionkey"])
-                                                                    scan nation
+                                                                alternatives
+                                                                    dynamic filter (["nationkey_20"], await ["regionkey"])
+                                                                        scan nation
+                                                                    cache data
+                                                                        dynamic filter (["nationkey_20"], await ["regionkey"])
+                                                                            scan nation
+                                                                    load from cache
                                                                 local exchange (GATHER, SINGLE, [])
                                                                     remote exchange (REPLICATE, BROADCAST, [])
-                                                                        scan region
+                                                                        alternatives
+                                                                            scan region
+                                                                            cache data
+                                                                                scan region
+                                                                            load from cache
                                 local exchange (GATHER, SINGLE, [])
                                     remote exchange (REPARTITION, HASH, ["nationkey", "orderkey"])
                                         join (INNER, PARTITIONED):
                                             remote exchange (REPARTITION, HASH, ["custkey_0"])
-                                                dynamic filter (["custkey_0"])
-                                                    scan orders
+                                                alternatives
+                                                    dynamic filter (["custkey_0"])
+                                                        scan orders
+                                                    cache data
+                                                        dynamic filter (["custkey_0"])
+                                                            scan orders
+                                                    load from cache
                                             local exchange (GATHER, SINGLE, [])
                                                 remote exchange (REPARTITION, HASH, ["custkey"])
-                                                    scan customer
+                                                    alternatives
+                                                        scan customer
+                                                        cache data
+                                                            scan customer
+                                                        load from cache

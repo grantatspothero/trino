@@ -36,7 +36,11 @@ final aggregation over ()
                                             load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPLICATE, BROADCAST, [])
-                                                scan item
+                                                alternatives
+                                                    scan item
+                                                    cache data
+                                                        scan item
+                                                    load from cache
                                     local exchange (GATHER, SINGLE, [])
                                         remote exchange (REPLICATE, BROADCAST, [])
                                             alternatives

@@ -9,9 +9,19 @@ remote exchange (GATHER, SINGLE, [])
                                 final aggregation over (orderkey_0)
                                     local exchange (GATHER, SINGLE, [])
                                         remote exchange (REPARTITION, HASH, ["orderkey_0"])
-                                            partial aggregation over (orderkey_0)
-                                                dynamic filter (["orderkey_0"])
-                                                    scan lineitem
+                                            alternatives
+                                                partial aggregation over (orderkey_0)
+                                                    dynamic filter (["orderkey_0"])
+                                                        scan lineitem
+                                                cache data
+                                                    partial aggregation over (orderkey_0)
+                                                        dynamic filter (["orderkey_0"])
+                                                            scan lineitem
+                                                load from cache
                                 local exchange (GATHER, SINGLE, [])
                                     remote exchange (REPARTITION, HASH, ["orderkey"])
-                                        scan orders
+                                        alternatives
+                                            scan orders
+                                            cache data
+                                                scan orders
+                                            load from cache

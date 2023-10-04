@@ -87,6 +87,8 @@ import java.util.function.Function;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static io.trino.SystemSessionProperties.CACHE_AGGREGATIONS_ENABLED;
+import static io.trino.SystemSessionProperties.CACHE_PROJECTIONS_ENABLED;
 import static io.trino.SystemSessionProperties.CACHE_SUBQUERIES_ENABLED;
 import static io.trino.SystemSessionProperties.OPTIMIZE_HASH_GENERATION;
 import static io.trino.cache.CanonicalSubplanExtractor.canonicalExpressionToColumnId;
@@ -217,6 +219,86 @@ public class TestCommonSubqueriesExtractor
                 TestingTransactionHandle.create());
         tpchCatalogId = queryRunner.getCatalogHandle(TPCH_SESSION.getCatalog().get()).getId();
         return queryRunner;
+    }
+
+    @Test
+    public void testCacheSingleAggregation()
+    {
+        CommonSubqueries commonSubqueries = extractTpchCommonSubqueries("""
+                        SELECT sum(nationkey) FROM nation
+                        WHERE regionkey > 10
+                        GROUP BY name""",
+                true, true, true);
+
+        Map<PlanNode, CommonPlanAdaptation> planAdaptations = commonSubqueries.planAdaptations();
+        assertThat(planAdaptations).hasSize(1);
+        assertThat(planAdaptations).allSatisfy((node, adaptation) -> assertThat(node).isInstanceOf(AggregationNode.class));
+
+        CommonPlanAdaptation aggregation = Iterables.get(planAdaptations.values(), 0);
+        PlanMatchPattern commonSubplan = aggregation(
+                singleGroupingSet("NAME"),
+                ImmutableMap.of(
+                        Optional.of("SUM"), functionCall("sum", false, ImmutableList.of(symbol("NATIONKEY")))),
+                Optional.empty(),
+                PARTIAL,
+                project(ImmutableMap.of(
+                                "HASH", PlanMatchPattern.expression("combine_hash(bigint '0', COALESCE(\"$operator$hash_code\"(NAME), 0))")),
+                        filter("(REGIONKEY > BIGINT '10')",
+                                tableScan("nation", ImmutableMap.of("NATIONKEY", "nationkey", "NAME", "name", "REGIONKEY", "regionkey")))));
+
+        // validate common subplan
+        SymbolAllocator symbolAllocator = commonSubqueries.symbolAllocator();
+        assertTpchPlan(symbolAllocator, aggregation.getCommonSubplan(), commonSubplan);
+
+        // validate no adaptation is required
+        PlanNodeIdAllocator idAllocator = commonSubqueries.idAllocator();
+        assertThat(aggregation.adaptCommonSubplan(aggregation.getCommonSubplan(), idAllocator)).isEqualTo(aggregation.getCommonSubplan());
+
+        // validate signature
+        Expression sum = getFunctionCallBuilder("sum", NATIONKEY_EXPRESSION).build();
+        Expression hash = getHashExpression(new ExpressionWithType("\"[name:varchar(25)]\"", createVarcharType(25)));
+        assertThat(aggregation.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
+                new SignatureKey(tpchCatalogId + ":tiny:nation:0.01:(\"[regionkey:bigint]\" > BIGINT '10')"),
+                Optional.of(ImmutableList.of(NAME_ID)),
+                ImmutableList.of(NAME_ID, canonicalExpressionToColumnId(hash), canonicalExpressionToColumnId(sum)),
+                TupleDomain.all(),
+                TupleDomain.all()));
+    }
+
+    @Test
+    public void testCacheSingleProjection()
+    {
+        CommonSubqueries commonSubqueries = extractTpchCommonSubqueries("""
+                        SELECT sum(nationkey) FROM nation
+                        WHERE regionkey > 10
+                        GROUP BY name""",
+                true, false, true);
+
+        Map<PlanNode, CommonPlanAdaptation> planAdaptations = commonSubqueries.planAdaptations();
+        assertThat(planAdaptations).hasSize(1);
+        assertThat(planAdaptations).allSatisfy((node, adaptation) -> assertThat(node).isInstanceOf(FilterNode.class));
+
+        CommonPlanAdaptation projection = Iterables.get(planAdaptations.values(), 0);
+        PlanMatchPattern commonSubplan =
+                filter("(REGIONKEY > BIGINT '10')",
+                        tableScan("nation", ImmutableMap.of("NATIONKEY", "nationkey", "NAME", "name", "REGIONKEY", "regionkey")));
+
+        // validate common subplan
+        SymbolAllocator symbolAllocator = commonSubqueries.symbolAllocator();
+        assertTpchPlan(symbolAllocator, projection.getCommonSubplan(), commonSubplan);
+
+        // validate no adaptation is required
+        PlanNodeIdAllocator idAllocator = commonSubqueries.idAllocator();
+        assertThat(projection.adaptCommonSubplan(projection.getCommonSubplan(), idAllocator)).isEqualTo(projection.getCommonSubplan());
+
+        // validate signature
+        assertThat(projection.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
+                new SignatureKey(tpchCatalogId + ":tiny:nation:0.01"),
+                Optional.empty(),
+                ImmutableList.of(NATIONKEY_ID, NAME_ID, REGIONKEY_ID),
+                TupleDomain.withColumnDomains(ImmutableMap.of(
+                        REGIONKEY_ID, Domain.create(ValueSet.ofRanges(greaterThan(BIGINT, 10L)), false))),
+                TupleDomain.all()));
     }
 
     @Test
@@ -1307,8 +1389,18 @@ public class TestCommonSubqueriesExtractor
 
     private CommonSubqueries extractTpchCommonSubqueries(@Language("SQL") String query)
     {
+        return extractTpchCommonSubqueries(query, true, false, false);
+    }
+
+    private CommonSubqueries extractTpchCommonSubqueries(@Language("SQL") String query, boolean cacheSubqueries, boolean cacheAggregations, boolean cacheProjections)
+    {
+        Session tpchSession = Session.builder(TPCH_SESSION)
+                .setSystemProperty(CACHE_SUBQUERIES_ENABLED, Boolean.toString(cacheSubqueries))
+                .setSystemProperty(CACHE_AGGREGATIONS_ENABLED, Boolean.toString(cacheAggregations))
+                .setSystemProperty(CACHE_PROJECTIONS_ENABLED, Boolean.toString(cacheProjections))
+                .build();
         LocalQueryRunner queryRunner = getQueryRunner();
-        return queryRunner.inTransaction(TPCH_SESSION, session -> {
+        return queryRunner.inTransaction(tpchSession, session -> {
             Plan plan = queryRunner.createPlan(session, query, OPTIMIZED_AND_VALIDATED, true, WarningCollector.NOOP, createPlanOptimizersStatsCollector());
             // metadata.getCatalogHandle() registers the catalog for the transaction
             session.getCatalog().ifPresent(catalog -> getQueryRunner().getMetadata().getCatalogHandle(session, catalog));

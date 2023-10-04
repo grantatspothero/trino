@@ -6,17 +6,35 @@ local exchange (GATHER, SINGLE, [])
                     join (INNER, REPLICATED):
                         join (INNER, PARTITIONED):
                             remote exchange (REPARTITION, HASH, ["custkey_5"])
-                                dynamic filter (["custkey_5"], await ["nationkey"])
-                                    scan customer
+                                alternatives
+                                    dynamic filter (["custkey_5"], await ["nationkey"])
+                                        scan customer
+                                    cache data
+                                        dynamic filter (["custkey_5"], await ["nationkey"])
+                                            scan customer
+                                    load from cache
                             local exchange (GATHER, SINGLE, [])
                                 remote exchange (REPARTITION, HASH, ["custkey"])
                                     join (INNER, PARTITIONED):
                                         remote exchange (REPARTITION, HASH, ["orderkey"])
-                                            dynamic filter (["orderkey"])
-                                                scan lineitem
+                                            alternatives
+                                                dynamic filter (["orderkey"])
+                                                    scan lineitem
+                                                cache data
+                                                    dynamic filter (["orderkey"])
+                                                        scan lineitem
+                                                load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPARTITION, HASH, ["orderkey_0"])
-                                                scan orders
+                                                alternatives
+                                                    scan orders
+                                                    cache data
+                                                        scan orders
+                                                    load from cache
                         local exchange (GATHER, SINGLE, [])
                             remote exchange (REPLICATE, BROADCAST, [])
-                                scan nation
+                                alternatives
+                                    scan nation
+                                    cache data
+                                        scan nation
+                                    load from cache

@@ -22,8 +22,13 @@ final aggregation over ()
                                                                 load from cache
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPARTITION, HASH, ["wr_order_number"])
-                                                                dynamic filter (["wr_order_number", "wr_order_number"])
-                                                                    scan web_returns
+                                                                alternatives
+                                                                    dynamic filter (["wr_order_number", "wr_order_number"])
+                                                                        scan web_returns
+                                                                    cache data
+                                                                        dynamic filter (["wr_order_number", "wr_order_number"])
+                                                                            scan web_returns
+                                                                    load from cache
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPARTITION, HASH, ["ws_order_number_144"])
                                                             alternatives
@@ -69,10 +74,22 @@ final aggregation over ()
                                                                 load from cache
                                                             local exchange (GATHER, SINGLE, [])
                                                                 remote exchange (REPLICATE, BROADCAST, [])
-                                                                    scan customer_address
+                                                                    alternatives
+                                                                        scan customer_address
+                                                                        cache data
+                                                                            scan customer_address
+                                                                        load from cache
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPLICATE, BROADCAST, [])
-                                                                scan date_dim
+                                                                alternatives
+                                                                    scan date_dim
+                                                                    cache data
+                                                                        scan date_dim
+                                                                    load from cache
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPLICATE, BROADCAST, [])
-                                                            scan web_site
+                                                            alternatives
+                                                                scan web_site
+                                                                cache data
+                                                                    scan web_site
+                                                                load from cache

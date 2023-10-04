@@ -12,11 +12,24 @@ remote exchange (GATHER, SINGLE, [])
                                             remote exchange (REPARTITION, HASH, ["suppkey"])
                                                 join (INNER, PARTITIONED):
                                                     remote exchange (REPARTITION, HASH, ["partkey"])
-                                                        dynamic filter (["partkey"])
-                                                            scan partsupp
+                                                        alternatives
+                                                            dynamic filter (["partkey"])
+                                                                scan partsupp
+                                                            cache data
+                                                                dynamic filter (["partkey"])
+                                                                    scan partsupp
+                                                            load from cache
                                                     local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPARTITION, HASH, ["partkey_0"])
-                                                            scan part
+                                                            alternatives
+                                                                scan part
+                                                                cache data
+                                                                    scan part
+                                                                load from cache
                                             local exchange (GATHER, SINGLE, [])
                                                 remote exchange (REPARTITION, HASH, ["suppkey_5"])
-                                                    scan supplier
+                                                    alternatives
+                                                        scan supplier
+                                                        cache data
+                                                            scan supplier
+                                                        load from cache

@@ -7,8 +7,17 @@ remote exchange (GATHER, SINGLE, [])
                         partial aggregation over (shipmode)
                             join (INNER, PARTITIONED):
                                 remote exchange (REPARTITION, HASH, ["orderkey"])
-                                    dynamic filter (["orderkey"])
-                                        scan orders
+                                    alternatives
+                                        dynamic filter (["orderkey"])
+                                            scan orders
+                                        cache data
+                                            dynamic filter (["orderkey"])
+                                                scan orders
+                                        load from cache
                                 local exchange (GATHER, SINGLE, [])
                                     remote exchange (REPARTITION, HASH, ["orderkey_0"])
-                                        scan lineitem
+                                        alternatives
+                                            scan lineitem
+                                            cache data
+                                                scan lineitem
+                                            load from cache

@@ -467,7 +467,7 @@ public final class CommonSubqueriesExtractor
     private static boolean isOrderInsensitiveIdentityProjection(PlanNode planNode)
     {
         return planNode instanceof ProjectNode projection
-                && ImmutableSet.copyOf(projection.getOutputSymbols()).equals(ImmutableSet.copyOf(projection.getSource().getOutputSymbols()));
+                && ImmutableSet.copyOf(projection.getSource().getOutputSymbols()).containsAll(ImmutableSet.copyOf(projection.getOutputSymbols()));
     }
 
     private static Symbol registerProjectionExpression(Map<CacheColumnId, Expression> projections, Map<CacheColumnId, Symbol> columnIdMapping, Expression projection)

@@ -25,7 +25,11 @@ cross join:
                                                                             load from cache
                                                             local exchange (GATHER, SINGLE, [])
                                                                 remote exchange (GATHER, SINGLE, [])
-                                                                    scan reason
+                                                                    alternatives
+                                                                        scan reason
+                                                                        cache data
+                                                                            scan reason
+                                                                        load from cache
                                                         final aggregation over ()
                                                             local exchange (GATHER, SINGLE, [])
                                                                 remote exchange (GATHER, SINGLE, [])

@@ -19,8 +19,13 @@ local exchange (GATHER, SINGLE, [])
                                 remote exchange (REPARTITION, HASH, ["custkey_0"])
                                     join (INNER, PARTITIONED):
                                         remote exchange (REPARTITION, HASH, ["orderkey"])
-                                            dynamic filter (["custkey_0", "orderkey"])
-                                                scan orders
+                                            alternatives
+                                                dynamic filter (["custkey_0", "orderkey"])
+                                                    scan orders
+                                                cache data
+                                                    dynamic filter (["custkey_0", "orderkey"])
+                                                        scan orders
+                                                load from cache
                                         single aggregation over (orderkey_10)
                                             final aggregation over (orderkey_10)
                                                 local exchange (GATHER, SINGLE, [])
@@ -34,4 +39,8 @@ local exchange (GATHER, SINGLE, [])
                                                             load from cache
                                 local exchange (GATHER, SINGLE, [])
                                     remote exchange (REPARTITION, HASH, ["custkey"])
-                                        scan customer
+                                        alternatives
+                                            scan customer
+                                            cache data
+                                                scan customer
+                                            load from cache

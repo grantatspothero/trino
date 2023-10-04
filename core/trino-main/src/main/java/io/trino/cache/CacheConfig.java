@@ -25,6 +25,8 @@ public class CacheConfig
     private double revokingThreshold = 0.9;
     private double revokingTarget = 0.7;
     private boolean cacheSubqueriesEnabled = true;
+    private boolean cacheAggregationsEnabled = true;
+    private boolean cacheProjectionsEnabled = true;
     private DataSize maxSplitSize = DataSize.of(256, DataSize.Unit.MEGABYTE);
 
     public boolean isEnabled()
@@ -80,6 +82,32 @@ public class CacheConfig
     public CacheConfig setCacheSubqueriesEnabled(boolean cacheSubqueriesEnabled)
     {
         this.cacheSubqueriesEnabled = cacheSubqueriesEnabled;
+        return this;
+    }
+
+    public boolean isCacheAggregationsEnabled()
+    {
+        return cacheAggregationsEnabled;
+    }
+
+    @Config("cache.aggregations.enabled")
+    @ConfigDescription("Enables caching of aggregations")
+    public CacheConfig setCacheAggregationsEnabled(boolean cacheAggregationsEnabled)
+    {
+        this.cacheAggregationsEnabled = cacheAggregationsEnabled;
+        return this;
+    }
+
+    public boolean isCacheProjectionsEnabled()
+    {
+        return cacheProjectionsEnabled;
+    }
+
+    @Config("cache.projections.enabled")
+    @ConfigDescription("Enables caching of projections")
+    public CacheConfig setCacheProjectionsEnabled(boolean cacheProjectionsEnabled)
+    {
+        this.cacheProjectionsEnabled = cacheProjectionsEnabled;
         return this;
     }
 

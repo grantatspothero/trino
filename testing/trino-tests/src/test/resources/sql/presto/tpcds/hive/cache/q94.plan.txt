@@ -10,9 +10,15 @@ final aggregation over ()
                                     final aggregation over (wr_order_number)
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPARTITION, HASH, ["wr_order_number"])
-                                                partial aggregation over (wr_order_number)
-                                                    dynamic filter (["wr_order_number"])
-                                                        scan web_returns
+                                                alternatives
+                                                    partial aggregation over (wr_order_number)
+                                                        dynamic filter (["wr_order_number"])
+                                                            scan web_returns
+                                                    cache data
+                                                        partial aggregation over (wr_order_number)
+                                                            dynamic filter (["wr_order_number"])
+                                                                scan web_returns
+                                                    load from cache
                                     final aggregation over (ca_state, d_date, unique, web_company_name, ws_ext_ship_cost, ws_net_profit, ws_order_number_26, ws_ship_addr_sk, ws_ship_date_sk, ws_warehouse_sk, ws_web_site_sk)
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPARTITION, HASH, ["ws_order_number_26"])
@@ -40,10 +46,22 @@ final aggregation over ()
                                                                                 load from cache
                                                                             local exchange (GATHER, SINGLE, [])
                                                                                 remote exchange (REPLICATE, BROADCAST, [])
-                                                                                    scan customer_address
+                                                                                    alternatives
+                                                                                        scan customer_address
+                                                                                        cache data
+                                                                                            scan customer_address
+                                                                                        load from cache
                                                                         local exchange (GATHER, SINGLE, [])
                                                                             remote exchange (REPLICATE, BROADCAST, [])
-                                                                                scan date_dim
+                                                                                alternatives
+                                                                                    scan date_dim
+                                                                                    cache data
+                                                                                        scan date_dim
+                                                                                    load from cache
                                                                     local exchange (GATHER, SINGLE, [])
                                                                         remote exchange (REPLICATE, BROADCAST, [])
-                                                                            scan web_site
+                                                                            alternatives
+                                                                                scan web_site
+                                                                                cache data
+                                                                                    scan web_site
+                                                                                load from cache

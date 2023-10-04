@@ -10,8 +10,13 @@ local exchange (GATHER, SINGLE, [])
                                     remote exchange (REPARTITION, HASH, ["cs_ship_customer_sk"])
                                         partial aggregation over (cs_ship_customer_sk)
                                             join (INNER, REPLICATED, can skip output duplicates):
-                                                dynamic filter (["cs_ship_customer_sk"], await ["cs_sold_date_sk"])
-                                                    scan catalog_sales
+                                                alternatives
+                                                    dynamic filter (["cs_ship_customer_sk"], await ["cs_sold_date_sk"])
+                                                        scan catalog_sales
+                                                    cache data
+                                                        dynamic filter (["cs_ship_customer_sk"], await ["cs_sold_date_sk"])
+                                                            scan catalog_sales
+                                                    load from cache
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
                                                         alternatives
@@ -26,8 +31,13 @@ local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPARTITION, HASH, ["ws_bill_customer_sk"])
                                                 partial aggregation over (ws_bill_customer_sk)
                                                     join (INNER, REPLICATED, can skip output duplicates):
-                                                        dynamic filter (["ws_bill_customer_sk"], await ["ws_sold_date_sk"])
-                                                            scan web_sales
+                                                        alternatives
+                                                            dynamic filter (["ws_bill_customer_sk"], await ["ws_sold_date_sk"])
+                                                                scan web_sales
+                                                            cache data
+                                                                dynamic filter (["ws_bill_customer_sk"], await ["ws_sold_date_sk"])
+                                                                    scan web_sales
+                                                            load from cache
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPLICATE, BROADCAST, [])
                                                                 alternatives
@@ -38,8 +48,13 @@ local exchange (GATHER, SINGLE, [])
                                     local exchange (GATHER, SINGLE, [])
                                         remote exchange (REPARTITION, HASH, ["ss_customer_sk"])
                                             join (INNER, REPLICATED):
-                                                dynamic filter (["cd_demo_sk"])
-                                                    scan customer_demographics
+                                                alternatives
+                                                    dynamic filter (["cd_demo_sk"])
+                                                        scan customer_demographics
+                                                    cache data
+                                                        dynamic filter (["cd_demo_sk"])
+                                                            scan customer_demographics
+                                                    load from cache
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
                                                         join (INNER, PARTITIONED):
@@ -48,8 +63,13 @@ local exchange (GATHER, SINGLE, [])
                                                                     remote exchange (REPARTITION, HASH, ["ss_customer_sk"])
                                                                         partial aggregation over (ss_customer_sk)
                                                                             join (INNER, REPLICATED, can skip output duplicates):
-                                                                                dynamic filter (["ss_customer_sk"], await ["ss_sold_date_sk"])
-                                                                                    scan store_sales
+                                                                                alternatives
+                                                                                    dynamic filter (["ss_customer_sk"], await ["ss_sold_date_sk"])
+                                                                                        scan store_sales
+                                                                                    cache data
+                                                                                        dynamic filter (["ss_customer_sk"], await ["ss_sold_date_sk"])
+                                                                                            scan store_sales
+                                                                                    load from cache
                                                                                 local exchange (GATHER, SINGLE, [])
                                                                                     remote exchange (REPLICATE, BROADCAST, [])
                                                                                         alternatives
@@ -60,8 +80,17 @@ local exchange (GATHER, SINGLE, [])
                                                             local exchange (GATHER, SINGLE, [])
                                                                 remote exchange (REPARTITION, HASH, ["c_customer_sk"])
                                                                     join (INNER, REPLICATED):
-                                                                        dynamic filter (["c_current_addr_sk"])
-                                                                            scan customer
+                                                                        alternatives
+                                                                            dynamic filter (["c_current_addr_sk"])
+                                                                                scan customer
+                                                                            cache data
+                                                                                dynamic filter (["c_current_addr_sk"])
+                                                                                    scan customer
+                                                                            load from cache
                                                                         local exchange (GATHER, SINGLE, [])
                                                                             remote exchange (REPLICATE, BROADCAST, [])
-                                                                                scan customer_address
+                                                                                alternatives
+                                                                                    scan customer_address
+                                                                                    cache data
+                                                                                        scan customer_address
+                                                                                    load from cache

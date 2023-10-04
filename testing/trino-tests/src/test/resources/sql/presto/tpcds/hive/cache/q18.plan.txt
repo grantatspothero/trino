@@ -10,8 +10,13 @@ local exchange (GATHER, SINGLE, [])
                                     join (INNER, REPLICATED):
                                         join (INNER, REPLICATED):
                                             join (INNER, REPLICATED):
-                                                dynamic filter (["cs_bill_cdemo_sk", "cs_bill_customer_sk", "cs_item_sk"], await ["cs_sold_date_sk"])
-                                                    scan catalog_sales
+                                                alternatives
+                                                    dynamic filter (["cs_bill_cdemo_sk", "cs_bill_customer_sk", "cs_item_sk"], await ["cs_sold_date_sk"])
+                                                        scan catalog_sales
+                                                    cache data
+                                                        dynamic filter (["cs_bill_cdemo_sk", "cs_bill_customer_sk", "cs_item_sk"], await ["cs_sold_date_sk"])
+                                                            scan catalog_sales
+                                                    load from cache
                                                 local exchange (GATHER, SINGLE, [])
                                                     remote exchange (REPLICATE, BROADCAST, [])
                                                         alternatives
@@ -25,11 +30,20 @@ local exchange (GATHER, SINGLE, [])
                                                         remote exchange (REPARTITION, HASH, ["c_current_cdemo_sk"])
                                                             join (INNER, PARTITIONED):
                                                                 remote exchange (REPARTITION, HASH, ["c_current_addr_sk"])
-                                                                    dynamic filter (["c_current_addr_sk", "c_current_cdemo_sk"])
-                                                                        scan customer
+                                                                    alternatives
+                                                                        dynamic filter (["c_current_addr_sk", "c_current_cdemo_sk"])
+                                                                            scan customer
+                                                                        cache data
+                                                                            dynamic filter (["c_current_addr_sk", "c_current_cdemo_sk"])
+                                                                                scan customer
+                                                                        load from cache
                                                                 local exchange (GATHER, SINGLE, [])
                                                                     remote exchange (REPARTITION, HASH, ["ca_address_sk"])
-                                                                        scan customer_address
+                                                                        alternatives
+                                                                            scan customer_address
+                                                                            cache data
+                                                                                scan customer_address
+                                                                            load from cache
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPARTITION, HASH, ["cd_demo_sk_3"])
                                                                 alternatives
@@ -39,7 +53,15 @@ local exchange (GATHER, SINGLE, [])
                                                                     load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPLICATE, BROADCAST, [])
-                                                scan date_dim
+                                                alternatives
+                                                    scan date_dim
+                                                    cache data
+                                                        scan date_dim
+                                                    load from cache
                                     local exchange (GATHER, SINGLE, [])
                                         remote exchange (REPLICATE, BROADCAST, [])
-                                            scan item
+                                            alternatives
+                                                scan item
+                                                cache data
+                                                    scan item
+                                                load from cache

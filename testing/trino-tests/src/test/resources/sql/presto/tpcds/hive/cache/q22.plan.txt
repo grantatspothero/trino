@@ -8,11 +8,24 @@ local exchange (GATHER, SINGLE, [])
                             remote exchange (REPARTITION, HASH, ["i_product_name"])
                                 join (INNER, REPLICATED):
                                     join (INNER, REPLICATED):
-                                        dynamic filter (["inv_item_sk"], await ["inv_date_sk"])
-                                            scan inventory
+                                        alternatives
+                                            dynamic filter (["inv_item_sk"], await ["inv_date_sk"])
+                                                scan inventory
+                                            cache data
+                                                dynamic filter (["inv_item_sk"], await ["inv_date_sk"])
+                                                    scan inventory
+                                            load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPLICATE, BROADCAST, [])
-                                                scan date_dim
+                                                alternatives
+                                                    scan date_dim
+                                                    cache data
+                                                        scan date_dim
+                                                    load from cache
                                     local exchange (GATHER, SINGLE, [])
                                         remote exchange (REPLICATE, BROADCAST, [])
-                                            scan item
+                                            alternatives
+                                                scan item
+                                                cache data
+                                                    scan item
+                                                load from cache

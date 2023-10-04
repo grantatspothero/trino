@@ -5,14 +5,31 @@ final aggregation over ()
                 join (INNER, REPLICATED):
                     join (INNER, REPLICATED):
                         join (INNER, REPLICATED):
-                            dynamic filter (await ["ss_hdemo_sk", "ss_sold_time_sk", "ss_store_sk"])
-                                scan store_sales
+                            alternatives
+                                dynamic filter (await ["ss_hdemo_sk", "ss_sold_time_sk", "ss_store_sk"])
+                                    scan store_sales
+                                cache data
+                                    dynamic filter (await ["ss_hdemo_sk", "ss_sold_time_sk", "ss_store_sk"])
+                                        scan store_sales
+                                load from cache
                             local exchange (GATHER, SINGLE, [])
                                 remote exchange (REPLICATE, BROADCAST, [])
-                                    scan time_dim
+                                    alternatives
+                                        scan time_dim
+                                        cache data
+                                            scan time_dim
+                                        load from cache
                         local exchange (GATHER, SINGLE, [])
                             remote exchange (REPLICATE, BROADCAST, [])
-                                scan household_demographics
+                                alternatives
+                                    scan household_demographics
+                                    cache data
+                                        scan household_demographics
+                                    load from cache
                     local exchange (GATHER, SINGLE, [])
                         remote exchange (REPLICATE, BROADCAST, [])
-                            scan store
+                            alternatives
+                                scan store
+                                cache data
+                                    scan store
+                                load from cache

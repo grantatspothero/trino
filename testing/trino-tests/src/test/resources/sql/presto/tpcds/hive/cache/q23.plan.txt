@@ -39,8 +39,13 @@ final aggregation over ()
                             local exchange (GATHER, SINGLE, [])
                                 remote exchange (REPARTITION, HASH, ["cs_item_sk"])
                                     join (INNER, REPLICATED):
-                                        dynamic filter (["cs_bill_customer_sk"], await ["cs_sold_date_sk"])
-                                            scan catalog_sales
+                                        alternatives
+                                            dynamic filter (["cs_bill_customer_sk"], await ["cs_sold_date_sk"])
+                                                scan catalog_sales
+                                            cache data
+                                                dynamic filter (["cs_bill_customer_sk"], await ["cs_sold_date_sk"])
+                                                    scan catalog_sales
+                                            load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPLICATE, BROADCAST, [])
                                                 alternatives
@@ -140,8 +145,13 @@ final aggregation over ()
                             local exchange (GATHER, SINGLE, [])
                                 remote exchange (REPARTITION, HASH, ["ws_item_sk"])
                                     join (INNER, REPLICATED):
-                                        dynamic filter (["ws_bill_customer_sk"], await ["ws_sold_date_sk"])
-                                            scan web_sales
+                                        alternatives
+                                            dynamic filter (["ws_bill_customer_sk"], await ["ws_sold_date_sk"])
+                                                scan web_sales
+                                            cache data
+                                                dynamic filter (["ws_bill_customer_sk"], await ["ws_sold_date_sk"])
+                                                    scan web_sales
+                                            load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPLICATE, BROADCAST, [])
                                                 alternatives

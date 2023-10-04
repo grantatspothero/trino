@@ -29,5 +29,10 @@ remote exchange (GATHER, SINGLE, [])
                                 final aggregation over (custkey_11)
                                     local exchange (GATHER, SINGLE, [])
                                         remote exchange (REPARTITION, HASH, ["custkey_11"])
-                                            partial aggregation over (custkey_11)
-                                                scan orders
+                                            alternatives
+                                                partial aggregation over (custkey_11)
+                                                    scan orders
+                                                cache data
+                                                    partial aggregation over (custkey_11)
+                                                        scan orders
+                                                load from cache

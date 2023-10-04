@@ -56,7 +56,11 @@ remote exchange (GATHER, SINGLE, [])
                                             load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPLICATE, BROADCAST, [])
-                                                scan part
+                                                alternatives
+                                                    scan part
+                                                    cache data
+                                                        scan part
+                                                    load from cache
                                 local exchange (GATHER, SINGLE, [])
                                     remote exchange (REPARTITION, HASH, ["suppkey"])
                                         join (INNER, REPLICATED):

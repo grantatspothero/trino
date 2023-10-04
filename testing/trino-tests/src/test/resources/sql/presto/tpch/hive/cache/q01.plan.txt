@@ -4,5 +4,10 @@ remote exchange (GATHER, SINGLE, [])
             final aggregation over (linestatus, returnflag)
                 local exchange (GATHER, SINGLE, [])
                     remote exchange (REPARTITION, HASH, ["linestatus", "returnflag"])
-                        partial aggregation over (linestatus, returnflag)
-                            scan lineitem
+                        alternatives
+                            partial aggregation over (linestatus, returnflag)
+                                scan lineitem
+                            cache data
+                                partial aggregation over (linestatus, returnflag)
+                                    scan lineitem
+                            load from cache

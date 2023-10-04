@@ -214,6 +214,8 @@ public final class SystemSessionProperties
     public static final String USE_SUB_PLAN_ALTERNATIVES = "use_sub_plan_alternatives";
     public static final String FORCE_SPILLING_JOIN = "force_spilling_join";
     public static final String CACHE_SUBQUERIES_ENABLED = "cache_subqueries_enabled";
+    public static final String CACHE_AGGREGATIONS_ENABLED = "cache_aggregations_enabled";
+    public static final String CACHE_PROJECTIONS_ENABLED = "cache_projections_enabled";
     public static final String CACHE_MAX_SPLIT_SIZE = "cache_max_split_size";
     public static final String PAGE_PARTITIONING_BUFFER_POOL_SIZE = "page_partitioning_buffer_pool_size";
 
@@ -1106,6 +1108,16 @@ public final class SystemSessionProperties
                         "Enables caching of subqueries when running a single query",
                         cacheConfig.isEnabled() && cacheConfig.isCacheSubqueriesEnabled(),
                         true),
+                booleanProperty(
+                        CACHE_AGGREGATIONS_ENABLED,
+                        "Enables caching of aggregations",
+                        cacheConfig.isEnabled() && cacheConfig.isCacheAggregationsEnabled(),
+                        true),
+                booleanProperty(
+                        CACHE_PROJECTIONS_ENABLED,
+                        "Enables caching of projections",
+                        cacheConfig.isEnabled() && cacheConfig.isCacheProjectionsEnabled(),
+                        true),
                 dataSizeProperty(
                         CACHE_MAX_SPLIT_SIZE,
                         "Max size of cached split",
@@ -1981,6 +1993,16 @@ public final class SystemSessionProperties
     public static boolean isCacheSubqueriesEnabled(Session session)
     {
         return session.getSystemProperty(CACHE_SUBQUERIES_ENABLED, Boolean.class);
+    }
+
+    public static boolean isCacheAggregationsEnabled(Session session)
+    {
+        return session.getSystemProperty(CACHE_AGGREGATIONS_ENABLED, Boolean.class);
+    }
+
+    public static boolean isCacheProjectionsEnabled(Session session)
+    {
+        return session.getSystemProperty(CACHE_PROJECTIONS_ENABLED, Boolean.class);
     }
 
     public static DataSize getCacheMaxSplitSize(Session session)

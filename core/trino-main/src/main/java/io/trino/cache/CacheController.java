@@ -16,6 +16,7 @@ package io.trino.cache;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Multimap;
 import io.trino.Session;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheTableId;
@@ -32,6 +33,8 @@ import java.util.Set;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static io.trino.SystemSessionProperties.isCacheAggregationsEnabled;
+import static io.trino.SystemSessionProperties.isCacheProjectionsEnabled;
 import static io.trino.SystemSessionProperties.isCacheSubqueriesEnabled;
 
 public class CacheController
@@ -41,17 +44,39 @@ public class CacheController
      */
     public List<CacheCandidate> getCachingCandidates(Session session, List<CanonicalSubplan> canonicalSubplans)
     {
-        if (!isCacheSubqueriesEnabled(session)) {
-            return ImmutableList.of();
-        }
-
-        return canonicalSubplans.stream()
+        Multimap<SubplanKey, CanonicalSubplan> groupedSubplans = canonicalSubplans.stream()
                 .map(subplan -> new SimpleEntry<>(toSubplanKey(subplan), subplan))
                 .sorted(Comparator.comparing(entry -> entry.getKey().getPriority()))
-                .collect(toImmutableListMultimap(SimpleEntry::getKey, SimpleEntry::getValue))
-                .asMap().entrySet().stream()
+                .collect(toImmutableListMultimap(SimpleEntry::getKey, SimpleEntry::getValue));
+
+        List<CacheCandidate> commonSubplans = groupedSubplans.asMap().entrySet().stream()
                 .map(entry -> new CacheCandidate(entry.getKey().tableId(), entry.getKey().groupByColumns(), ImmutableList.copyOf(entry.getValue()), 2))
+                .filter(entry -> entry.subplans().size() > 1)
                 .collect(toImmutableList());
+        List<CacheCandidate> aggregationSubplans = groupedSubplans.entries().stream()
+                .filter(entry -> entry.getKey().groupByColumns.isPresent())
+                .map(entry -> new CacheCandidate(entry.getKey().tableId(), entry.getKey().groupByColumns(), ImmutableList.of(entry.getValue()), 1))
+                .collect(toImmutableList());
+        List<CacheCandidate> projectionSubplans = groupedSubplans.entries().stream()
+                .filter(entry -> entry.getKey().groupByColumns.isEmpty())
+                .map(entry -> new CacheCandidate(entry.getKey().tableId(), entry.getKey().groupByColumns(), ImmutableList.of(entry.getValue()), 1))
+                .collect(toImmutableList());
+
+        ImmutableList.Builder<CacheCandidate> cacheCandidates = ImmutableList.builder();
+
+        if (isCacheSubqueriesEnabled(session)) {
+            cacheCandidates.addAll(commonSubplans);
+        }
+
+        if (isCacheAggregationsEnabled(session)) {
+            cacheCandidates.addAll(aggregationSubplans);
+        }
+
+        if (isCacheProjectionsEnabled(session)) {
+            cacheCandidates.addAll(projectionSubplans);
+        }
+
+        return cacheCandidates.build();
     }
 
     record CacheCandidate(CacheTableId tableId, Optional<Set<CacheColumnId>> groupByColumns, List<CanonicalSubplan> subplans, int minSubplans) {}

@@ -7,20 +7,45 @@ final aggregation over ()
                         join (INNER, REPLICATED):
                             join (INNER, REPLICATED):
                                 join (INNER, REPLICATED):
-                                    dynamic filter (["ss_addr_sk", "ss_cdemo_sk"], await ["ss_hdemo_sk", "ss_sold_date_sk", "ss_store_sk"])
-                                        scan store_sales
+                                    alternatives
+                                        dynamic filter (["ss_addr_sk", "ss_cdemo_sk"], await ["ss_hdemo_sk", "ss_sold_date_sk", "ss_store_sk"])
+                                            scan store_sales
+                                        cache data
+                                            dynamic filter (["ss_addr_sk", "ss_cdemo_sk"], await ["ss_hdemo_sk", "ss_sold_date_sk", "ss_store_sk"])
+                                                scan store_sales
+                                        load from cache
                                     local exchange (GATHER, SINGLE, [])
                                         remote exchange (REPLICATE, BROADCAST, [])
-                                            scan customer_address
+                                            alternatives
+                                                scan customer_address
+                                                cache data
+                                                    scan customer_address
+                                                load from cache
                                 local exchange (GATHER, SINGLE, [])
                                     remote exchange (REPLICATE, BROADCAST, [])
-                                        scan date_dim
+                                        alternatives
+                                            scan date_dim
+                                            cache data
+                                                scan date_dim
+                                            load from cache
                             local exchange (GATHER, SINGLE, [])
                                 remote exchange (REPLICATE, BROADCAST, [])
-                                    scan household_demographics
+                                    alternatives
+                                        scan household_demographics
+                                        cache data
+                                            scan household_demographics
+                                        load from cache
                         local exchange (GATHER, SINGLE, [])
                             remote exchange (REPLICATE, BROADCAST, [])
-                                scan customer_demographics
+                                alternatives
+                                    scan customer_demographics
+                                    cache data
+                                        scan customer_demographics
+                                    load from cache
                     local exchange (GATHER, SINGLE, [])
                         remote exchange (REPLICATE, BROADCAST, [])
-                            scan store
+                            alternatives
+                                scan store
+                                cache data
+                                    scan store
+                                load from cache

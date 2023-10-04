@@ -7,12 +7,26 @@ local exchange (GATHER, SINGLE, [])
                         join (INNER, REPLICATED):
                             join (INNER, PARTITIONED):
                                 remote exchange (REPARTITION, HASH, ["ss_item_sk", "ss_ticket_number"])
-                                    dynamic filter (["ss_item_sk", "ss_ticket_number"])
-                                        scan store_sales
+                                    alternatives
+                                        dynamic filter (["ss_item_sk", "ss_ticket_number"])
+                                            scan store_sales
+                                        cache data
+                                            dynamic filter (["ss_item_sk", "ss_ticket_number"])
+                                                scan store_sales
+                                        load from cache
                                 local exchange (GATHER, SINGLE, [])
                                     remote exchange (REPARTITION, HASH, ["sr_item_sk", "sr_ticket_number"])
-                                        dynamic filter (await ["sr_reason_sk"])
-                                            scan store_returns
+                                        alternatives
+                                            dynamic filter (await ["sr_reason_sk"])
+                                                scan store_returns
+                                            cache data
+                                                dynamic filter (await ["sr_reason_sk"])
+                                                    scan store_returns
+                                            load from cache
                             local exchange (GATHER, SINGLE, [])
                                 remote exchange (REPLICATE, BROADCAST, [])
-                                    scan reason
+                                    alternatives
+                                        scan reason
+                                        cache data
+                                            scan reason
+                                        load from cache

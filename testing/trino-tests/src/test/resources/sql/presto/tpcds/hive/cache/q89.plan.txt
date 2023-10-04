@@ -9,15 +9,33 @@ local exchange (GATHER, SINGLE, [])
                                 join (INNER, REPLICATED):
                                     join (INNER, REPLICATED):
                                         join (INNER, REPLICATED):
-                                            partial aggregation over (ss_item_sk, ss_sold_date_sk, ss_store_sk)
-                                                dynamic filter (["ss_item_sk"], await ["ss_sold_date_sk", "ss_store_sk"])
-                                                    scan store_sales
+                                            alternatives
+                                                partial aggregation over (ss_item_sk, ss_sold_date_sk, ss_store_sk)
+                                                    dynamic filter (["ss_item_sk"], await ["ss_sold_date_sk", "ss_store_sk"])
+                                                        scan store_sales
+                                                cache data
+                                                    partial aggregation over (ss_item_sk, ss_sold_date_sk, ss_store_sk)
+                                                        dynamic filter (["ss_item_sk"], await ["ss_sold_date_sk", "ss_store_sk"])
+                                                            scan store_sales
+                                                load from cache
                                             local exchange (GATHER, SINGLE, [])
                                                 remote exchange (REPLICATE, BROADCAST, [])
-                                                    scan item
+                                                    alternatives
+                                                        scan item
+                                                        cache data
+                                                            scan item
+                                                        load from cache
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (REPLICATE, BROADCAST, [])
-                                                scan date_dim
+                                                alternatives
+                                                    scan date_dim
+                                                    cache data
+                                                        scan date_dim
+                                                    load from cache
                                     local exchange (GATHER, SINGLE, [])
                                         remote exchange (REPLICATE, BROADCAST, [])
-                                            scan store
+                                            alternatives
+                                                scan store
+                                                cache data
+                                                    scan store
+                                                load from cache

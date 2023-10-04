@@ -1,5 +1,10 @@
 final aggregation over ()
     local exchange (GATHER, SINGLE, [])
         remote exchange (GATHER, SINGLE, [])
-            partial aggregation over ()
-                scan lineitem
+            alternatives
+                partial aggregation over ()
+                    scan lineitem
+                cache data
+                    partial aggregation over ()
+                        scan lineitem
+                load from cache

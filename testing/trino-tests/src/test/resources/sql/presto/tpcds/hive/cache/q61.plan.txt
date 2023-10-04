@@ -56,7 +56,11 @@ cross join:
                                                     load from cache
                         local exchange (GATHER, SINGLE, [])
                             remote exchange (REPLICATE, BROADCAST, [])
-                                scan promotion
+                                alternatives
+                                    scan promotion
+                                    cache data
+                                        scan promotion
+                                    load from cache
     final aggregation over ()
         local exchange (GATHER, SINGLE, [])
             remote exchange (GATHER, SINGLE, [])
