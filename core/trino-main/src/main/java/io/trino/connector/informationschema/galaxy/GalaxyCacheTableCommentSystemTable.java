@@ -27,6 +27,7 @@ import io.trino.spi.connector.ConnectorTransactionHandle;
 import io.trino.spi.connector.InMemoryRecordSet;
 import io.trino.spi.connector.RecordCursor;
 import io.trino.spi.connector.SystemTable;
+import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.TupleDomain;
 import jakarta.ws.rs.NotFoundException;
 
@@ -38,10 +39,12 @@ import java.util.OptionalLong;
 
 import static io.trino.connector.informationschema.galaxy.GalaxyCacheEndpoint.ENDPOINT_TABLES;
 import static io.trino.connector.system.TableCommentSystemTable.COMMENT_TABLE;
+import static io.trino.connector.system.jdbc.FilterUtil.isImpossibleObjectName;
 import static io.trino.connector.system.jdbc.FilterUtil.tablePrefix;
 import static io.trino.connector.system.jdbc.FilterUtil.tryGetSingleVarcharValue;
 import static io.trino.metadata.MetadataListing.listCatalogNames;
 import static io.trino.spi.connector.SystemTable.Distribution.SINGLE_COORDINATOR;
+import static io.trino.spi.type.VarcharType.VARCHAR;
 import static java.util.Objects.requireNonNull;
 
 public class GalaxyCacheTableCommentSystemTable
@@ -78,14 +81,20 @@ public class GalaxyCacheTableCommentSystemTable
     @Override
     public RecordCursor cursor(ConnectorTransactionHandle transactionHandle, ConnectorSession connectorSession, TupleDomain<Integer> constraint)
     {
-        Optional<String> catalogFilter = tryGetSingleVarcharValue(constraint, 0);
-        Optional<String> schemaFilter = tryGetSingleVarcharValue(constraint, 1);
-        Optional<String> tableFilter = tryGetSingleVarcharValue(constraint, 2);
+        Domain catalogDomain = constraint.getDomain(0, VARCHAR);
+        Domain schemaDomain = constraint.getDomain(1, VARCHAR);
+        Domain tableDomain = constraint.getDomain(2, VARCHAR);
 
         Session session = ((FullConnectorSession) connectorSession).getSession();
         InMemoryRecordSet.Builder table = InMemoryRecordSet.builder(COMMENT_TABLE);
 
-        for (String catalog : listCatalogNames(session, metadata, accessControl, catalogFilter)) {
+        if (isImpossibleObjectName(catalogDomain) || isImpossibleObjectName(schemaDomain) || isImpossibleObjectName(tableDomain)) {
+            return table.build().cursor();
+        }
+
+        Optional<String> schemaFilter = tryGetSingleVarcharValue(schemaDomain);
+        Optional<String> tableFilter = tryGetSingleVarcharValue(tableDomain);
+        for (String catalog : listCatalogNames(session, metadata, accessControl, tryGetSingleVarcharValue(catalogDomain))) {
             QualifiedTablePrefix prefix = tablePrefix(catalog, schemaFilter, tableFilter);
 
             URI uri = galaxyCacheClient.uriBuilder(session, prefix, ENDPOINT_TABLES, OptionalLong.empty()).addParameter("type", "BASE TABLE").build();

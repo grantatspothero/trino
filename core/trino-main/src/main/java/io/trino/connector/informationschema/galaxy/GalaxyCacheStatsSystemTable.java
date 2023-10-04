@@ -27,6 +27,7 @@ import io.trino.spi.connector.InMemoryRecordSet;
 import io.trino.spi.connector.RecordCursor;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SystemTable;
+import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.type.TimeZoneKey;
 
@@ -35,6 +36,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.trino.connector.informationschema.galaxy.GalaxyCacheConstants.SCHEMA_NAME;
+import static io.trino.connector.system.jdbc.FilterUtil.isImpossibleObjectName;
 import static io.trino.connector.system.jdbc.FilterUtil.tryGetSingleVarcharValue;
 import static io.trino.metadata.MetadataListing.listCatalogNames;
 import static io.trino.spi.connector.SystemTable.Distribution.SINGLE_COORDINATOR;
@@ -83,13 +85,17 @@ public class GalaxyCacheStatsSystemTable
     @Override
     public RecordCursor cursor(ConnectorTransactionHandle transactionHandle, ConnectorSession connectorSession, TupleDomain<Integer> constraint)
     {
-        Optional<String> catalogFilter = tryGetSingleVarcharValue(constraint, 0);
+        Domain catalogDomain = constraint.getDomain(0, VARCHAR);
 
         Session session = ((FullConnectorSession) connectorSession).getSession();
         InMemoryRecordSet.Builder table = InMemoryRecordSet.builder(TABLE_METADATA);
         TimeZoneKey timeZoneKey = session.getTimeZoneKey();
 
-        for (String catalog : listCatalogNames(session, metadata, accessControl, catalogFilter)) {
+        if (isImpossibleObjectName(catalogDomain)) {
+            return table.build().cursor();
+        }
+
+        for (String catalog : listCatalogNames(session, metadata, accessControl, tryGetSingleVarcharValue(catalogDomain))) {
             stats.get(catalog).forEach(stat -> table.addRow(
                     catalog,
                     stat.name(),

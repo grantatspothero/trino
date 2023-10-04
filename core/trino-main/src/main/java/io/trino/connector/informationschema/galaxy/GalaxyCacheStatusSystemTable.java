@@ -29,6 +29,7 @@ import io.trino.spi.connector.InMemoryRecordSet;
 import io.trino.spi.connector.RecordCursor;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SystemTable;
+import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.type.TimeZoneKey;
 import jakarta.ws.rs.NotFoundException;
@@ -36,13 +37,13 @@ import jakarta.ws.rs.NotFoundException;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
 import java.util.OptionalLong;
 
 import static io.trino.connector.informationschema.galaxy.GalaxyCacheConstants.ERROR_CACHE_IS_DISABLED;
 import static io.trino.connector.informationschema.galaxy.GalaxyCacheConstants.SCHEMA_NAME;
 import static io.trino.connector.informationschema.galaxy.GalaxyCacheEndpoint.ENDPOINT_STATUS;
 import static io.trino.connector.informationschema.galaxy.GalaxyCacheSessionProperties.isEnabled;
+import static io.trino.connector.system.jdbc.FilterUtil.isImpossibleObjectName;
 import static io.trino.connector.system.jdbc.FilterUtil.tryGetSingleVarcharValue;
 import static io.trino.metadata.MetadataListing.listCatalogNames;
 import static io.trino.spi.StandardErrorCode.GENERIC_USER_ERROR;
@@ -100,12 +101,16 @@ public class GalaxyCacheStatusSystemTable
             throw new TrinoException(GENERIC_USER_ERROR, ERROR_CACHE_IS_DISABLED);
         }
 
-        Optional<String> catalogFilter = tryGetSingleVarcharValue(constraint, 0);
+        Domain catalogDomain = constraint.getDomain(0, VARCHAR);
 
         InMemoryRecordSet.Builder table = InMemoryRecordSet.builder(TABLE_METADATA);
         TimeZoneKey timeZoneKey = session.getTimeZoneKey();
 
-        for (String catalog : listCatalogNames(session, metadata, accessControl, catalogFilter)) {
+        if (isImpossibleObjectName(catalogDomain)) {
+            return table.build().cursor();
+        }
+
+        for (String catalog : listCatalogNames(session, metadata, accessControl, tryGetSingleVarcharValue(catalogDomain))) {
             QualifiedTablePrefix prefix = new QualifiedTablePrefix(catalog);
             URI uri = galaxyCacheClient.uriBuilder(session, prefix, ENDPOINT_STATUS, OptionalLong.empty()).build();
             try {
