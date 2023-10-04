@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableSet;
 import io.trino.Session;
 import io.trino.sql.planner.assertions.BasePlanTest;
 import io.trino.sql.planner.assertions.PlanMatchPattern;
+import io.trino.sql.planner.plan.ExchangeNode;
 import io.trino.sql.planner.plan.FilterNode;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -26,10 +27,12 @@ import org.testng.annotations.Test;
 import java.util.Optional;
 
 import static io.trino.SystemSessionProperties.ENABLE_DYNAMIC_FILTERING;
+import static io.trino.SystemSessionProperties.FILTERING_SEMI_JOIN_TO_INNER;
 import static io.trino.SystemSessionProperties.JOIN_DISTRIBUTION_TYPE;
 import static io.trino.SystemSessionProperties.JOIN_REORDERING_STRATEGY;
 import static io.trino.SystemSessionProperties.SMALL_DYNAMIC_FILTER_MAX_ROW_COUNT;
 import static io.trino.SystemSessionProperties.getSmallDynamicFilterWaitTimeout;
+import static io.trino.sql.DynamicFilters.extractDynamicFilters;
 import static io.trino.sql.planner.OptimizerConfig.JoinDistributionType.BROADCAST;
 import static io.trino.sql.planner.OptimizerConfig.JoinReorderingStrategy.NONE;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.anyTree;
@@ -39,6 +42,7 @@ import static io.trino.sql.planner.assertions.PlanMatchPattern.filter;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.join;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.node;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.project;
+import static io.trino.sql.planner.assertions.PlanMatchPattern.semiJoin;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.tableScan;
 import static io.trino.sql.planner.plan.ExchangeNode.Scope.LOCAL;
 import static io.trino.sql.planner.plan.JoinNode.Type.INNER;
@@ -191,5 +195,27 @@ public class TestDeterminePreferredDynamicFilterTimeout
                                                                         LOCAL,
                                                                         anyTree(
                                                                                 tableScan("partsupp", ImmutableMap.of("P_SUPPKEY", "suppkey", "P_PARTKEY", "partkey"))))))))))));
+    }
+
+    @Test
+    public void testSemiJoinWithDynamicFilter()
+    {
+        assertPlan("SELECT * FROM lineitem WHERE orderkey IN (SELECT orderkey FROM orders WHERE orderkey = random(5))",
+                Session.builder(getQueryRunner().getDefaultSession())
+                        .setSystemProperty(FILTERING_SEMI_JOIN_TO_INNER, "false")
+                        .build(),
+                anyTree(
+                        semiJoin("LINE_ORDER_KEY", "ORDERS_ORDER_KEY", "SEMI_JOIN_RESULT", true,
+                                anyTree(
+                                        filter(TRUE_LITERAL,
+                                                tableScan("lineitem", ImmutableMap.of("LINE_ORDER_KEY", "orderkey")))
+                                                .with(FilterNode.class, filterNode -> extractDynamicFilters(filterNode.getPredicate())
+                                                        .getDynamicConjuncts().get(0).getPreferredTimeout()
+                                                        .equals(Optional.of(waitForCascadingDynamicFiltersTimeout)))),
+                                node(ExchangeNode.class,
+                                        project(
+                                                filter("ORDERS_ORDER_KEY = CAST(random(5) AS bigint)",
+                                                        tableScan("orders", ImmutableMap.of("ORDERS_ORDER_KEY", "orderkey"))))))));
+
     }
 }
