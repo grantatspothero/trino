@@ -71,6 +71,7 @@ PLUGINS="
 bigquery
 clickhouse
 blackhole
+cassandra
 druid
 elasticsearch
 exchange-buffer
