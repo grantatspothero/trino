@@ -7083,7 +7083,7 @@ public class TestAnalyzer
 
     private void inSetupTransaction(Consumer<Session> consumer)
     {
-        transaction(transactionManager, accessControl)
+        transaction(transactionManager, plannerContext.getMetadata(), accessControl)
                 .singleStatement()
                 .readUncommitted()
                 .execute(SETUP_SESSION, consumer);
@@ -7151,7 +7151,7 @@ public class TestAnalyzer
 
     private Analysis analyze(Session clientSession, @Language("SQL") String query, AccessControl accessControl)
     {
-        return transaction(transactionManager, accessControl)
+        return transaction(transactionManager, plannerContext.getMetadata(), accessControl)
                 .singleStatement()
                 .readUncommitted()
                 .execute(clientSession, session -> {

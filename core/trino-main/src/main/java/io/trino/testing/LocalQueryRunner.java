@@ -845,7 +845,7 @@ public class LocalQueryRunner
     {
         lock.readLock().lock();
         try {
-            return transaction(transactionManager, accessControl)
+            return transaction(transactionManager, plannerContext.getMetadata(), accessControl)
                     .readOnly()
                     .execute(session, transactionSession -> {
                         return getMetadata().listTables(transactionSession, new QualifiedTablePrefix(catalog, schema));
@@ -861,7 +861,7 @@ public class LocalQueryRunner
     {
         lock.readLock().lock();
         try {
-            return transaction(transactionManager, accessControl)
+            return transaction(transactionManager, plannerContext.getMetadata(), accessControl)
                     .readOnly()
                     .execute(session, transactionSession -> {
                         return MetadataUtil.tableExists(getMetadata(), transactionSession, table);
@@ -897,7 +897,7 @@ public class LocalQueryRunner
 
     public <T> T inTransaction(Session session, Function<Session, T> transactionSessionConsumer)
     {
-        return transaction(transactionManager, accessControl)
+        return transaction(transactionManager, plannerContext.getMetadata(), accessControl)
                 .singleStatement()
                 .execute(session, transactionSessionConsumer);
     }

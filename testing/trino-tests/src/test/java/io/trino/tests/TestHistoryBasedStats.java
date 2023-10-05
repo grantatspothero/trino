@@ -190,7 +190,7 @@ public class TestHistoryBasedStats
         JoinNode join = searchFrom(plan.getRoot()).whereIsInstanceOfAny(JoinNode.class).findOnlyElement();
         TableScanNode buildSideTableScan = searchFrom(join.getRight()).whereIsInstanceOfAny(TableScanNode.class).findOnlyElement();
         QueryRunner queryRunner = getQueryRunner();
-        return transaction(queryRunner.getTransactionManager(), queryRunner.getAccessControl())
+        return transaction(queryRunner.getTransactionManager(), queryRunner.getMetadata(), queryRunner.getAccessControl())
                 .execute(memorySession, transactionalSession -> {
                     queryRunner.getMetadata().getCatalogHandle(transactionalSession, transactionalSession.getCatalog().get());
                     return queryRunner.getMetadata().getTableName(transactionalSession, buildSideTableScan.getTable()).getSchemaTableName().getTableName();

@@ -88,47 +88,54 @@ public class RuleAssert
             }
         }
         finally {
+            queryRunner.getMetadata().cleanupQuery(session);
             queryRunner.getTransactionManager().asyncAbort(session.getRequiredTransactionId());
         }
     }
 
     public void matches(PlanMatchPattern pattern)
     {
-        RuleApplication ruleApplication = applyRule();
+        try {
+            RuleApplication ruleApplication = applyRule();
 
-        if (!ruleApplication.wasRuleApplied()) {
-            fail(format(
-                    "%s did not fire for:\n%s",
-                    rule,
-                    formatPlan(plan, ruleApplication.types())));
-        }
-
-        List<PlanNode> transformedPlans = ruleApplication.getTransformedPlans();
-
-        for (PlanNode actual : transformedPlans) {
-            if (actual == plan) { // plans are not comparable, so we can only ensure they are not the same instance
+            if (!ruleApplication.wasRuleApplied()) {
                 fail(format(
-                        """
-                        %s: rule fired but return the original plan:
-                        %s
-                        """,
+                        "%s did not fire for:\n%s",
                         rule,
                         formatPlan(plan, ruleApplication.types())));
             }
 
-            if (!ImmutableSet.copyOf(plan.getOutputSymbols()).equals(ImmutableSet.copyOf(actual.getOutputSymbols()))) {
-                fail(format(
-                        """
-                        %s: output schema of transformed and original plans are not equivalent
-                        \texpected: %s
-                        \tactual:   %s
-                        """,
-                        rule,
-                        plan.getOutputSymbols(),
-                        actual.getOutputSymbols()));
-            }
+            List<PlanNode> transformedPlans = ruleApplication.getTransformedPlans();
 
-            assertPlan(session, queryRunner.getMetadata(), queryRunner.getFunctionManager(), ruleApplication.statsProvider(), new Plan(actual, ruleApplication.types(), StatsAndCosts.empty()), ruleApplication.lookup(), pattern);
+            for (PlanNode actual : transformedPlans) {
+                if (actual == plan) { // plans are not comparable, so we can only ensure they are not the same instance
+                    fail(format(
+                            """
+                                    %s: rule fired but return the original plan:
+                                    %s
+                                    """,
+                            rule,
+                            formatPlan(plan, ruleApplication.types())));
+                }
+
+                if (!ImmutableSet.copyOf(plan.getOutputSymbols()).equals(ImmutableSet.copyOf(actual.getOutputSymbols()))) {
+                    fail(format(
+                            """
+                                    %s: output schema of transformed and original plans are not equivalent
+                                    \texpected: %s
+                                    \tactual:   %s
+                                    """,
+                            rule,
+                            plan.getOutputSymbols(),
+                            actual.getOutputSymbols()));
+                }
+
+                assertPlan(session, queryRunner.getMetadata(), queryRunner.getFunctionManager(), ruleApplication.statsProvider(), new Plan(actual, ruleApplication.types(), StatsAndCosts.empty()), ruleApplication.lookup(), pattern);
+            }
+        }
+        finally {
+            queryRunner.getMetadata().cleanupQuery(session);
+            queryRunner.getTransactionManager().asyncAbort(session.getRequiredTransactionId());
         }
     }
 

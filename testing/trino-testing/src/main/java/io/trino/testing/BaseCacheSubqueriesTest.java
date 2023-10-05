@@ -376,7 +376,7 @@ public abstract class BaseCacheSubqueriesTest
                         .setQueryId(new QueryId("prune_predicate_" + isDynamicRowFilteringEnabled))
                         .build(),
                 isDynamicRowFilteringEnabled);
-        transaction(runner.getTransactionManager(), runner.getAccessControl())
+        transaction(runner.getTransactionManager(), runner.getMetadata(), runner.getAccessControl())
                 .singleStatement()
                 .execute(session, transactionSession -> {
                     TestingTrinoServer server = runner.getCoordinator();
@@ -470,7 +470,7 @@ public abstract class BaseCacheSubqueriesTest
     {
         QueryRunner runner = getQueryRunner();
         QualifiedObjectName table = new QualifiedObjectName(session.getCatalog().orElseThrow(), session.getSchema().orElseThrow(), tableName);
-        return transaction(runner.getTransactionManager(), runner.getAccessControl())
+        return transaction(runner.getTransactionManager(), runner.getMetadata(), runner.getAccessControl())
                 .singleStatement()
                 .execute(session, transactionSession -> {
                     Metadata metadata = runner.getMetadata();
@@ -484,7 +484,7 @@ public abstract class BaseCacheSubqueriesTest
     {
         QueryRunner runner = getQueryRunner();
         QualifiedObjectName table = new QualifiedObjectName(session.getCatalog().orElseThrow(), session.getSchema().orElseThrow(), tableName);
-        return transaction(runner.getTransactionManager(), runner.getAccessControl())
+        return transaction(runner.getTransactionManager(), runner.getMetadata(), runner.getAccessControl())
                 .singleStatement()
                 .execute(session, transactionSession -> {
                     Metadata metadata = runner.getMetadata();
@@ -497,7 +497,7 @@ public abstract class BaseCacheSubqueriesTest
     protected void assertPlan(Session session, Plan plan, PlanMatchPattern pattern)
     {
         QueryRunner runner = getQueryRunner();
-        transaction(runner.getTransactionManager(), runner.getAccessControl())
+        transaction(runner.getTransactionManager(), runner.getMetadata(), runner.getAccessControl())
                 .singleStatement()
                 .execute(session, transactionSession -> {
                     runner.getTransactionManager().getCatalogHandle(transactionSession.getTransactionId().get(), transactionSession.getCatalog().orElseThrow());
