@@ -13,8 +13,6 @@
  */
 package io.trino.plugin.cassandra;
 
-import com.datastax.oss.driver.api.core.CqlSession;
-import com.datastax.oss.driver.api.core.CqlSessionBuilder;
 import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
 import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
 import com.datastax.oss.driver.api.core.config.ProgrammaticDriverConfigLoaderBuilder;
@@ -30,12 +28,19 @@ import com.google.inject.Singleton;
 import io.airlift.json.JsonCodec;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.instrumentation.cassandra.v4_4.CassandraTelemetry;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
+import io.trino.plugin.base.galaxy.RegionVerifierProperties;
+import io.trino.plugin.cassandra.galaxy.GalaxyCassandraTunnelManager;
+import io.trino.plugin.cassandra.galaxy.GalaxyCqlSessionBuilder;
 import io.trino.plugin.cassandra.ptf.Query;
 import io.trino.spi.TrinoException;
 import io.trino.spi.function.table.ConnectorTableFunction;
 import io.trino.spi.type.Type;
 import io.trino.spi.type.TypeId;
 import io.trino.spi.type.TypeManager;
+import io.trino.sshtunnel.SshTunnelConfig;
+import io.trino.sshtunnel.SshTunnelProperties;
 
 import javax.net.ssl.SSLContext;
 
@@ -48,14 +53,18 @@ import java.security.GeneralSecurityException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Verify.verify;
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.airlift.json.JsonBinder.jsonBinder;
 import static io.airlift.json.JsonCodecBinder.jsonCodecBinder;
+import static io.trino.plugin.base.galaxy.RegionVerifierProperties.addRegionVerifierProperties;
 import static io.trino.plugin.base.ssl.SslUtils.createSSLContext;
 import static io.trino.plugin.cassandra.CassandraErrorCode.CASSANDRA_SSL_INITIALIZATION_FAILURE;
+import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
 import static java.lang.Math.toIntExact;
 import static java.util.Objects.requireNonNull;
 
@@ -76,6 +85,9 @@ public class CassandraClientModule
 
         binder.bind(CassandraConnector.class).in(Scopes.SINGLETON);
         binder.bind(CassandraMetadata.class).in(Scopes.SINGLETON);
+        configBinder(binder).bindConfig(LocalRegionConfig.class);
+        configBinder(binder).bindConfig(CrossRegionConfig.class);
+        configBinder(binder).bindConfig(SshTunnelConfig.class);
         binder.bind(CassandraSplitManager.class).in(Scopes.SINGLETON);
         binder.bind(CassandraTokenSplitManager.class).in(Scopes.SINGLETON);
         binder.bind(CassandraRecordSetProvider.class).in(Scopes.SINGLETON);
@@ -116,11 +128,22 @@ public class CassandraClientModule
             CassandraTypeManager cassandraTypeManager,
             CassandraClientConfig config,
             JsonCodec<List<ExtraColumnMetadata>> extraColumnMetadataCodec,
-            OpenTelemetry openTelemetry)
+            OpenTelemetry openTelemetry,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig,
+            SshTunnelConfig sshTunnelConfig)
     {
+        verify(!crossRegionConfig.getAllowCrossRegionAccess(), "Cross-region access not supported");
+        Properties galaxyProperties = new Properties();
+        addRegionVerifierProperties(galaxyProperties::setProperty, RegionVerifierProperties.generateFrom(localRegionConfig, crossRegionConfig));
+        SshTunnelProperties.generateFrom(sshTunnelConfig)
+                .ifPresent(sshTunnelProperties -> addSshTunnelProperties(galaxyProperties::setProperty, sshTunnelProperties));
+
+        GalaxyCassandraTunnelManager galaxyCassandraTunnelManager = new GalaxyCassandraTunnelManager(galaxyProperties);
+
         requireNonNull(extraColumnMetadataCodec, "extraColumnMetadataCodec is null");
 
-        CqlSessionBuilder cqlSessionBuilder = CqlSession.builder();
+        GalaxyCqlSessionBuilder cqlSessionBuilder = new GalaxyCqlSessionBuilder(galaxyCassandraTunnelManager);
         ProgrammaticDriverConfigLoaderBuilder driverConfigLoaderBuilder = DriverConfigLoader.programmaticBuilder();
         // allow the retrieval of metadata for the system keyspaces
         driverConfigLoaderBuilder.withStringList(DefaultDriverOption.METADATA_SCHEMA_REFRESHED_KEYSPACES, List.of());
