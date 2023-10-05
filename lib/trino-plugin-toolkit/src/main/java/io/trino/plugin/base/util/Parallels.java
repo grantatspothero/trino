@@ -25,9 +25,11 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+import static com.google.common.base.Verify.verify;
 import static io.airlift.concurrent.MoreFutures.getDone;
 
 public final class Parallels
@@ -53,10 +55,11 @@ public final class Parallels
         LinkedBlockingQueue<T> taskQueue = new LinkedBlockingQueue<>(inputs);
         AtomicInteger runningTasks = new AtomicInteger();
         Context tracingContext = Context.current();
+        AtomicBoolean failure = new AtomicBoolean(false);
         Runnable processQueue = () -> {
             try (Scope ignore = tracingContext.makeCurrent()) {
                 runningTasks.incrementAndGet();
-                while (true) {
+                while (!failure.get()) {
                     T next = taskQueue.poll();
                     if (next == null) {
                         break;
@@ -64,6 +67,10 @@ public final class Parallels
                     process.accept(next);
                 }
                 runningTasks.decrementAndGet();
+            }
+            catch (Throwable e) {
+                failure.set(true);
+                throw e;
             }
         };
         // Do not use background threads for singleton input.
@@ -98,6 +105,8 @@ public final class Parallels
                     throw new RuntimeException("Interrupted", e);
                 }
             }
+
+            verify(!failure.get(), "There was a failure, but exception was not propagated");
         }
         finally {
             allFutures.forEach(future -> future.cancel(true));
