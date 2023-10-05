@@ -679,8 +679,8 @@ jobs:
             - { modules: plugin/trino-galaxy-warp-speed, profile: iceberg-delta, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
             - { modules: plugin/trino-galaxy-warp-speed-2 }
             - { modules: plugin/trino-galaxy-warp-speed-2, profile: iceberg-delta, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
-            - { modules: plugin/trino-hive, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
             - { modules: plugin/trino-google-sheets }
+            - { modules: plugin/trino-hive, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
             - { modules: plugin/trino-hive, profile: fte-tests }
             - { modules: plugin/trino-hive, profile: test-galaxy }
             - { modules: plugin/trino-hive, profile: test-parquet }
