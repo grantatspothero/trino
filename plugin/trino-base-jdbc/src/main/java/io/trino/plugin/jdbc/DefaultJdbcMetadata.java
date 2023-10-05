@@ -45,6 +45,7 @@ import io.trino.spi.connector.JoinStatistics;
 import io.trino.spi.connector.JoinType;
 import io.trino.spi.connector.LimitApplicationResult;
 import io.trino.spi.connector.ProjectionApplicationResult;
+import io.trino.spi.connector.RelationColumnsMetadata;
 import io.trino.spi.connector.RetryMode;
 import io.trino.spi.connector.RowChangeParadigm;
 import io.trino.spi.connector.SchemaTableName;
@@ -71,14 +72,19 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 
 import static com.google.common.base.Functions.identity;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -89,9 +95,12 @@ import static com.google.common.base.Verify.verifyNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static io.trino.plugin.base.expression.ConnectorExpressions.and;
 import static io.trino.plugin.base.expression.ConnectorExpressions.extractConjuncts;
+import static io.trino.plugin.base.util.Parallels.processWithAdditionalThreads;
 import static io.trino.plugin.jdbc.JdbcErrorCode.JDBC_NON_TRANSIENT_ERROR;
+import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.getListColumnsMode;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.isAggregationPushdownEnabled;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.isComplexExpressionPushdown;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.isJoinPushdownEnabled;
@@ -113,14 +122,24 @@ public class DefaultJdbcMetadata
     private static final String DELETE_ROW_ID = "_trino_artificial_column_handle_for_delete_row_id_";
     private static final String MERGE_ROW_ID = "$merge_row_id";
 
+    private final int maxMetadataBackgroundProcessingThreads;
+    private final ExecutorService backgroundExecutorService;
     private final JdbcClient jdbcClient;
     private final boolean precalculateStatisticsForPushdown;
     private final Set<JdbcQueryEventListener> jdbcQueryEventListeners;
 
     private final AtomicReference<Runnable> rollbackAction = new AtomicReference<>();
 
+    @Deprecated
     public DefaultJdbcMetadata(JdbcClient jdbcClient, boolean precalculateStatisticsForPushdown, Set<JdbcQueryEventListener> jdbcQueryEventListeners)
     {
+        this(-1, newDirectExecutorService(), jdbcClient, precalculateStatisticsForPushdown, jdbcQueryEventListeners);
+    }
+
+    public DefaultJdbcMetadata(int maxMetadataBackgroundProcessingThreads, ExecutorService backgroundExecutorService, JdbcClient jdbcClient, boolean precalculateStatisticsForPushdown, Set<JdbcQueryEventListener> jdbcQueryEventListeners)
+    {
+        this.maxMetadataBackgroundProcessingThreads = maxMetadataBackgroundProcessingThreads;
+        this.backgroundExecutorService = requireNonNull(backgroundExecutorService, "backgroundExecutorService is null");
         this.jdbcClient = requireNonNull(jdbcClient, "jdbcClient is null");
         this.precalculateStatisticsForPushdown = precalculateStatisticsForPushdown;
         this.jdbcQueryEventListeners = ImmutableSet.copyOf(requireNonNull(jdbcQueryEventListeners, "queryEventListeners is null"));
@@ -492,9 +511,9 @@ public class DefaultJdbcMetadata
                 asPreparedQuery(rightHandle),
                 jdbcJoinConditions.build(),
                 newRightColumns.entrySet().stream()
-                        .collect(toImmutableMap(Map.Entry::getKey, entry -> entry.getValue().getColumnName())),
+                        .collect(toImmutableMap(Entry::getKey, entry -> entry.getValue().getColumnName())),
                 newLeftColumns.entrySet().stream()
-                        .collect(toImmutableMap(Map.Entry::getKey, entry -> entry.getValue().getColumnName())),
+                        .collect(toImmutableMap(Entry::getKey, entry -> entry.getValue().getColumnName())),
                 statistics);
 
         if (joinQuery.isEmpty()) {
@@ -770,6 +789,55 @@ public class DefaultJdbcMetadata
             }
         }
         return columns.buildOrThrow();
+    }
+
+    @Override
+    public Iterator<RelationColumnsMetadata> streamRelationColumns(ConnectorSession session, Optional<String> schemaName, UnaryOperator<Set<SchemaTableName>> relationFilter)
+    {
+        JdbcMetadataConfig.ListColumnsMode mode = getListColumnsMode(session);
+        return switch (mode) {
+            case CLASSIC -> JdbcMetadata.super.streamRelationColumns(session, schemaName, relationFilter);
+
+            case PARALLEL -> {
+                checkState(maxMetadataBackgroundProcessingThreads >= 0, "maxMetadataBackgroundProcessingThreads and backgroundExecutorService not provided");
+
+                List<SchemaTableName> tables = listTables(session, schemaName);
+                Map<SchemaTableName, List<ColumnMetadata>> result = new ConcurrentHashMap<>();
+                processWithAdditionalThreads(
+                        backgroundExecutorService,
+                        maxMetadataBackgroundProcessingThreads,
+                        tables,
+                        tableName -> {
+                            Map<SchemaTableName, List<ColumnMetadata>> tableColumns = listTableColumns(session, new SchemaTablePrefix(tableName.getSchemaName(), tableName.getTableName()));
+                            // The map is 0 or 1 element
+                            result.putAll(tableColumns);
+                        });
+
+                yield result.entrySet().stream()
+                        .map(entry -> RelationColumnsMetadata.forTable(entry.getKey(), entry.getValue()))
+                        .iterator();
+            }
+
+            case JEDI_1 -> jdbcClient.getAllTableColumns(session, schemaName);
+
+            case JEDI_1P -> {
+                checkState(maxMetadataBackgroundProcessingThreads >= 0, "maxMetadataBackgroundProcessingThreads and backgroundExecutorService not provided");
+
+                ImmutableList.Builder<RelationColumnsMetadata> results = ImmutableList.builder();
+                processWithAdditionalThreads(
+                        backgroundExecutorService,
+                        maxMetadataBackgroundProcessingThreads,
+                        schemaName.map(Set::of)
+                                .orElseGet(() -> jdbcClient.getSchemaNames(session)),
+                        schema -> {
+                            List<RelationColumnsMetadata> allTableColumnsForSchema = ImmutableList.copyOf(jdbcClient.getAllTableColumns(session, Optional.of(schema)));
+                            synchronized (results) {
+                                results.addAll(allTableColumnsForSchema);
+                            }
+                        });
+                yield results.build().iterator();
+            }
+        };
     }
 
     @Override

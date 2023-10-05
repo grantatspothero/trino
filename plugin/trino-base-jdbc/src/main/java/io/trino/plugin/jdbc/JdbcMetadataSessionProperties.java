@@ -16,6 +16,7 @@ package io.trino.plugin.jdbc;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import io.trino.plugin.base.session.SessionPropertiesProvider;
+import io.trino.plugin.jdbc.JdbcMetadataConfig.ListColumnsMode;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.session.PropertyMetadata;
@@ -25,6 +26,7 @@ import java.util.Optional;
 
 import static io.trino.spi.StandardErrorCode.INVALID_SESSION_PROPERTY;
 import static io.trino.spi.session.PropertyMetadata.booleanProperty;
+import static io.trino.spi.session.PropertyMetadata.enumProperty;
 import static io.trino.spi.session.PropertyMetadata.integerProperty;
 import static java.lang.String.format;
 
@@ -35,6 +37,7 @@ public class JdbcMetadataSessionProperties
     public static final String JOIN_PUSHDOWN_ENABLED = "join_pushdown_enabled";
     public static final String AGGREGATION_PUSHDOWN_ENABLED = "aggregation_pushdown_enabled";
     public static final String TOPN_PUSHDOWN_ENABLED = "topn_pushdown_enabled";
+    public static final String LIST_COLUMNS_MODE = "list_columns_mode";
     public static final String DOMAIN_COMPACTION_THRESHOLD = "domain_compaction_threshold";
 
     private final List<PropertyMetadata<?>> properties;
@@ -58,6 +61,12 @@ public class JdbcMetadataSessionProperties
                         AGGREGATION_PUSHDOWN_ENABLED,
                         "Enable aggregation pushdown",
                         jdbcMetadataConfig.isAggregationPushdownEnabled(),
+                        false))
+                .add(enumProperty(
+                        LIST_COLUMNS_MODE,
+                        "Experimental: select implementation for listing tables' columns",
+                        ListColumnsMode.class,
+                        jdbcMetadataConfig.getListColumnsMode(),
                         false))
                 .add(integerProperty(
                         DOMAIN_COMPACTION_THRESHOLD,
@@ -97,6 +106,11 @@ public class JdbcMetadataSessionProperties
     public static boolean isTopNPushdownEnabled(ConnectorSession session)
     {
         return session.getProperty(TOPN_PUSHDOWN_ENABLED, Boolean.class);
+    }
+
+    public static ListColumnsMode getListColumnsMode(ConnectorSession session)
+    {
+        return session.getProperty(LIST_COLUMNS_MODE, ListColumnsMode.class);
     }
 
     public static int getDomainCompactionThreshold(ConnectorSession session)

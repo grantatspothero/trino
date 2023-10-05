@@ -17,11 +17,39 @@ import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;
 import io.airlift.configuration.DefunctConfig;
 import io.airlift.configuration.LegacyConfig;
+import io.trino.spi.connector.ConnectorSession;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+
+import java.util.Optional;
 
 @DefunctConfig("allow-drop-table")
 public class JdbcMetadataConfig
 {
+    public enum ListColumnsMode
+    {
+        /**
+         * Traditional / legacy / battle tested mode.
+         */
+        CLASSIC,
+
+        /**
+         * Like {@link #CLASSIC}, but processes tables in multiple threads.
+         */
+        PARALLEL,
+
+        /**
+         * Uses {@link JdbcClient#getAllTableColumns(ConnectorSession, Optional)}.
+         */
+        JEDI_1,
+
+        /**
+         * Uses {@link JdbcClient#getAllTableColumns(ConnectorSession, Optional)}
+         * and processes schemas in multiple threads.
+         */
+        JEDI_1P,
+    }
+
     private boolean complexExpressionPushdownEnabled = true;
     /*
      * Join pushdown is disabled by default as this is the safer option.
@@ -33,6 +61,11 @@ public class JdbcMetadataConfig
     private boolean aggregationPushdownEnabled = true;
 
     private boolean topNPushdownEnabled = true;
+
+    private ListColumnsMode listColumnsMode = ListColumnsMode.CLASSIC;
+    // This is for IO, so default value not based on number of cores.
+    // This ~limits number of concurrent queries to the remote database
+    private int maxMetadataBackgroundProcessingThreads = 8;
 
     // Pushed domains are transformed into SQL IN lists
     // (or sequence of range predicates) in JDBC connectors.
@@ -92,6 +125,33 @@ public class JdbcMetadataConfig
     public Boolean isTopNPushdownEnabled()
     {
         return this.topNPushdownEnabled;
+    }
+
+    @NotNull
+    public ListColumnsMode getListColumnsMode()
+    {
+        return listColumnsMode;
+    }
+
+    @Config("jdbc.list-columns-mode")
+    @ConfigDescription("Select implementation for listing tables' columns")
+    public JdbcMetadataConfig setListColumnsMode(ListColumnsMode listColumnsMode)
+    {
+        this.listColumnsMode = listColumnsMode;
+        return this;
+    }
+
+    @Min(0)
+    public int getMaxMetadataBackgroundProcessingThreads()
+    {
+        return maxMetadataBackgroundProcessingThreads;
+    }
+
+    @Config("jdbc.metadata-background-threads")
+    public JdbcMetadataConfig setMaxMetadataBackgroundProcessingThreads(int maxMetadataBackgroundProcessingThreads)
+    {
+        this.maxMetadataBackgroundProcessingThreads = maxMetadataBackgroundProcessingThreads;
+        return this;
     }
 
     @Min(1)

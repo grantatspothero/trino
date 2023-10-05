@@ -32,6 +32,8 @@ public class TestJdbcMetadataConfig
                 .setJoinPushdownEnabled(false)
                 .setAggregationPushdownEnabled(true)
                 .setTopNPushdownEnabled(true)
+                .setListColumnsMode(JdbcMetadataConfig.ListColumnsMode.CLASSIC)
+                .setMaxMetadataBackgroundProcessingThreads(8)
                 .setDomainCompactionThreshold(32));
     }
 
@@ -42,6 +44,8 @@ public class TestJdbcMetadataConfig
                 .put("complex-expression-pushdown.enabled", "false")
                 .put("join-pushdown.enabled", "true")
                 .put("aggregation-pushdown.enabled", "false")
+                .put("jdbc.list-columns-mode", "JEDI_1P")
+                .put("jdbc.metadata-background-threads", "13")
                 .put("domain-compaction-threshold", "42")
                 .put("topn-pushdown.enabled", "false")
                 .buildOrThrow();
@@ -51,6 +55,8 @@ public class TestJdbcMetadataConfig
                 .setJoinPushdownEnabled(true)
                 .setAggregationPushdownEnabled(false)
                 .setTopNPushdownEnabled(false)
+                .setListColumnsMode(JdbcMetadataConfig.ListColumnsMode.JEDI_1P)
+                .setMaxMetadataBackgroundProcessingThreads(13)
                 .setDomainCompactionThreshold(42);
 
         assertFullMapping(properties, expected);
