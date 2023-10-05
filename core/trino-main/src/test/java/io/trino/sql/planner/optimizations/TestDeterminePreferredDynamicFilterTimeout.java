@@ -41,7 +41,6 @@ import static io.trino.sql.planner.assertions.PlanMatchPattern.exchange;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.filter;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.join;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.node;
-import static io.trino.sql.planner.assertions.PlanMatchPattern.project;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.semiJoin;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.tableScan;
 import static io.trino.sql.planner.plan.ExchangeNode.Scope.LOCAL;
@@ -205,16 +204,13 @@ public class TestDeterminePreferredDynamicFilterTimeout
                         .build(),
                 anyTree(
                         semiJoin("LINE_ORDER_KEY", "ORDERS_ORDER_KEY", "SEMI_JOIN_RESULT", true,
-                                anyTree(
-                                        filter(TRUE_LITERAL,
-                                                tableScan("lineitem", ImmutableMap.of("LINE_ORDER_KEY", "orderkey")))
-                                                .with(FilterNode.class, filterNode -> extractDynamicFilters(filterNode.getPredicate())
-                                                        .getDynamicConjuncts().get(0).getPreferredTimeout()
-                                                        .equals(Optional.of(waitForCascadingDynamicFiltersTimeout)))),
+                                filter(TRUE_LITERAL,
+                                        tableScan("lineitem", ImmutableMap.of("LINE_ORDER_KEY", "orderkey")))
+                                        .with(FilterNode.class, filterNode -> extractDynamicFilters(filterNode.getPredicate())
+                                                .getDynamicConjuncts().get(0).getPreferredTimeout()
+                                                .equals(Optional.of(waitForCascadingDynamicFiltersTimeout))),
                                 node(ExchangeNode.class,
-                                        project(
-                                                filter("ORDERS_ORDER_KEY = CAST(random(5) AS bigint)",
-                                                        tableScan("orders", ImmutableMap.of("ORDERS_ORDER_KEY", "orderkey"))))))));
-
+                                        filter("ORDERS_ORDER_KEY = CAST(random(5) AS bigint)",
+                                                tableScan("orders", ImmutableMap.of("ORDERS_ORDER_KEY", "orderkey")))))));
     }
 }
