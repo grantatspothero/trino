@@ -20,22 +20,21 @@ import com.google.inject.Inject;
 import io.airlift.security.pem.PemReader;
 import io.airlift.units.Duration;
 import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.instrumentation.apachehttpclient.v4_3.ApacheHttpClientTelemetry;
 import io.trino.plugin.hive.metastore.thrift.ThriftHiveMetastoreClient.TransportSupplier;
 import io.trino.spi.NodeManager;
 import io.trino.sshtunnel.SshTunnelConfig;
 import io.trino.sshtunnel.SshTunnelManager;
 import io.trino.sshtunnel.SshTunnelProperties;
-import org.apache.http.HttpHeaders;
-import org.apache.http.HttpRequestInterceptor;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.config.Registry;
-import org.apache.http.config.RegistryBuilder;
-import org.apache.http.conn.socket.ConnectionSocketFactory;
-import org.apache.http.conn.ssl.DefaultHostnameVerifier;
-import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
+import org.apache.hc.client5.http.impl.io.BasicHttpClientConnectionManager;
+import org.apache.hc.client5.http.socket.ConnectionSocketFactory;
+import org.apache.hc.client5.http.ssl.DefaultHostnameVerifier;
+import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactory;
+import org.apache.hc.core5.http.HttpHeaders;
+import org.apache.hc.core5.http.config.Registry;
+import org.apache.hc.core5.http.config.RegistryBuilder;
+import org.apache.hc.core5.util.Timeout;
 import org.apache.thrift.transport.THttpClient;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
@@ -175,26 +174,28 @@ public class DefaultThriftMetastoreClientFactory
             throws TTransportException
     {
         HttpClientBuilder clientBuilder = createHttpClientBuilder(httpThriftContext);
-        clientBuilder.setDefaultRequestConfig(RequestConfig.custom().setConnectTimeout(timeoutMillis).build());
-        return new THttpClient(uri.toString(), clientBuilder.build());
+        ConnectionConfig.custom().setConnectTimeout(Timeout.ofMilliseconds(timeoutMillis)).build();
+        THttpClient httpClient = new THttpClient(uri.toString(), clientBuilder.build());
+        httpClient.setConnectTimeout(timeoutMillis);
+        return httpClient;
     }
 
     private HttpClientBuilder createHttpClientBuilder(ThriftHttpContext httpThriftContext)
     {
-        HttpClientBuilder httpClientBuilder = ApacheHttpClientTelemetry.builder(openTelemetry).build().newHttpClientBuilder();
+        // TODO: Hook this http client into the opentelemetry field
+        HttpClientBuilder clientBuilder = HttpClientBuilder.create();
         if (sslContext.isPresent()) {
             SSLConnectionSocketFactory socketFactory = new SSLConnectionSocketFactory(sslContext.get(), new DefaultHostnameVerifier(null));
-            Registry<ConnectionSocketFactory> registry = RegistryBuilder
-                    .<ConnectionSocketFactory>create()
+            Registry<ConnectionSocketFactory> registry = RegistryBuilder.<ConnectionSocketFactory>create()
                     .register("https", socketFactory)
                     .build();
-            httpClientBuilder.setConnectionManager(new BasicHttpClientConnectionManager(registry));
+            clientBuilder.setConnectionManager(new BasicHttpClientConnectionManager(registry));
         }
-        httpClientBuilder.addInterceptorFirst((HttpRequestInterceptor) (httpRequest, httpContext) -> {
+        clientBuilder.addRequestInterceptorFirst((httpRequest, entityDetails, httpContext) -> {
             httpRequest.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + httpThriftContext.token());
             httpThriftContext.additionalHeaders().forEach(httpRequest::addHeader);
         });
-        return httpClientBuilder;
+        return clientBuilder;
     }
 
     protected ThriftMetastoreClient create(TransportSupplier transportSupplier, String hostname)
