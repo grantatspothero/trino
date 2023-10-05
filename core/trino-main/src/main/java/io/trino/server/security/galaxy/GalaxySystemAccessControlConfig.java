@@ -47,7 +47,7 @@ public class GalaxySystemAccessControlConfig
         return this;
     }
 
-    @Min(1)
+    @Min(0)
     public int getBackgroundProcessingThreads()
     {
         return backgroundProcessingThreads;
