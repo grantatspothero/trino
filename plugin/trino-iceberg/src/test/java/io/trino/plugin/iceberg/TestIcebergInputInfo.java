@@ -14,6 +14,7 @@
 package io.trino.plugin.iceberg;
 
 import com.google.common.collect.ImmutableList;
+import io.trino.Session;
 import io.trino.metadata.Metadata;
 import io.trino.metadata.QualifiedObjectName;
 import io.trino.metadata.TableHandle;
@@ -45,7 +46,7 @@ public class TestIcebergInputInfo
     {
         String tableName = "test_input_info_with_part_" + randomNameSuffix();
         assertUpdate("CREATE TABLE " + tableName + " WITH (partitioning = ARRAY['regionkey', 'truncate(name, 1)']) AS SELECT * FROM nation WHERE nationkey < 10", 10);
-        assertInputInfo(tableName, true, "PARQUET");
+        inTransaction(session -> assertInputInfo(session, tableName, true, "PARQUET"));
         assertUpdate("DROP TABLE " + tableName);
     }
 
@@ -54,7 +55,7 @@ public class TestIcebergInputInfo
     {
         String tableName = "test_input_info_without_part_" + randomNameSuffix();
         assertUpdate("CREATE TABLE " + tableName + " AS SELECT * FROM nation WHERE nationkey < 10", 10);
-        assertInputInfo(tableName, false, "PARQUET");
+        inTransaction(session -> assertInputInfo(session, tableName, false, "PARQUET"));
         assertUpdate("DROP TABLE " + tableName);
     }
 
@@ -63,27 +64,25 @@ public class TestIcebergInputInfo
     {
         String tableName = "test_input_info_with_orc_file_format_" + randomNameSuffix();
         assertUpdate("CREATE TABLE " + tableName + " WITH (format = 'ORC') AS SELECT * FROM nation WHERE nationkey < 10", 10);
-        assertInputInfo(tableName, false, "ORC");
+        inTransaction(session -> assertInputInfo(session, tableName, false, "ORC"));
         assertUpdate("DROP TABLE " + tableName);
     }
 
-    private void assertInputInfo(String tableName, boolean expectedPartition, String expectedFileFormat)
+    private void assertInputInfo(Session session, String tableName, boolean expectedPartition, String expectedFileFormat)
     {
-        inTransaction(session -> {
-            Metadata metadata = getQueryRunner().getMetadata();
-            QualifiedObjectName qualifiedObjectName = new QualifiedObjectName(
-                    session.getCatalog().orElse(ICEBERG_CATALOG),
-                    session.getSchema().orElse("tpch"),
-                    tableName);
-            Optional<TableHandle> tableHandle = metadata.getTableHandle(session, qualifiedObjectName);
-            assertThat(tableHandle).isPresent();
-            Optional<Object> tableInfo = metadata.getInfo(session, tableHandle.get());
-            assertThat(tableInfo).isPresent();
-            IcebergInputInfo icebergInputInfo = (IcebergInputInfo) tableInfo.get();
-            assertThat(icebergInputInfo).isEqualTo(new IcebergInputInfo(
-                    icebergInputInfo.getSnapshotId(),
-                    Optional.of(expectedPartition),
-                    expectedFileFormat));
-        });
+        Metadata metadata = getQueryRunner().getMetadata();
+        QualifiedObjectName qualifiedObjectName = new QualifiedObjectName(
+                session.getCatalog().orElse(ICEBERG_CATALOG),
+                session.getSchema().orElse("tpch"),
+                tableName);
+        Optional<TableHandle> tableHandle = metadata.getTableHandle(session, qualifiedObjectName);
+        assertThat(tableHandle).isPresent();
+        Optional<Object> tableInfo = metadata.getInfo(session, tableHandle.get());
+        assertThat(tableInfo).isPresent();
+        IcebergInputInfo icebergInputInfo = (IcebergInputInfo) tableInfo.get();
+        assertThat(icebergInputInfo).isEqualTo(new IcebergInputInfo(
+                icebergInputInfo.getSnapshotId(),
+                Optional.of(expectedPartition),
+                expectedFileFormat));
     }
 }
