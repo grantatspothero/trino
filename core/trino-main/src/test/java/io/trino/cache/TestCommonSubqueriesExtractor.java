@@ -1493,7 +1493,7 @@ public class TestCommonSubqueriesExtractor
                 .build();
         LocalQueryRunner queryRunner = getQueryRunner();
         return queryRunner.inTransaction(tpchSession, session -> {
-            Plan plan = queryRunner.createPlan(session, query, OPTIMIZED_AND_VALIDATED, true, WarningCollector.NOOP, createPlanOptimizersStatsCollector());
+            Plan plan = queryRunner.createPlan(session, query, queryRunner.getPlanOptimizers(true), queryRunner.getAlternativeOptimizers(), OPTIMIZED_AND_VALIDATED, WarningCollector.NOOP, createPlanOptimizersStatsCollector());
             // metadata.getCatalogHandle() registers the catalog for the transaction
             session.getCatalog().ifPresent(catalog -> getQueryRunner().getMetadata().getCatalogHandle(session, catalog));
             SymbolAllocator symbolAllocator = new SymbolAllocator(plan.getTypes().allTypes());

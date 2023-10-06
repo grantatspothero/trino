@@ -17,7 +17,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.trino.Session;
-import io.trino.execution.warnings.WarningCollector;
 import io.trino.plugin.tpch.TpchConnectorFactory;
 import io.trino.spi.connector.CatalogHandle;
 import io.trino.sql.planner.LogicalPlanner;
@@ -44,6 +43,7 @@ import java.util.function.Predicate;
 
 import static io.airlift.testing.Closeables.closeAllRuntimeException;
 import static io.trino.execution.querystats.PlanOptimizersStatsCollector.createPlanOptimizersStatsCollector;
+import static io.trino.execution.warnings.WarningCollector.NOOP;
 import static io.trino.sql.planner.LogicalPlanner.Stage.OPTIMIZED;
 import static io.trino.sql.planner.LogicalPlanner.Stage.OPTIMIZED_AND_VALIDATED;
 import static io.trino.sql.planner.PlanOptimizers.columnPruningRules;
@@ -155,7 +155,7 @@ public class BasePlanTest
             queryRunner.inTransaction(transactionSession -> {
                 // TODO: Support alternativeOptimizers
                 List<PlanOptimizer> alternativeOptimizers = emptyList();
-                Plan actualPlan = queryRunner.createPlan(transactionSession, sql, optimizers, alternativeOptimizers, stage, WarningCollector.NOOP, createPlanOptimizersStatsCollector());
+                Plan actualPlan = queryRunner.createPlan(transactionSession, sql, optimizers, alternativeOptimizers, stage, NOOP, createPlanOptimizersStatsCollector());
                 PlanAssert.assertPlan(transactionSession, queryRunner.getMetadata(), queryRunner.getFunctionManager(), queryRunner.getStatsCalculator(), actualPlan, pattern);
                 return null;
             });
@@ -197,7 +197,14 @@ public class BasePlanTest
     {
         try {
             queryRunner.inTransaction(session, transactionSession -> {
-                Plan actualPlan = queryRunner.createPlan(transactionSession, sql, OPTIMIZED_AND_VALIDATED, forceSingleNode, WarningCollector.NOOP, createPlanOptimizersStatsCollector());
+                Plan actualPlan = queryRunner.createPlan(
+                        transactionSession,
+                        sql,
+                        queryRunner.getPlanOptimizers(forceSingleNode),
+                        queryRunner.getAlternativeOptimizers(),
+                        OPTIMIZED_AND_VALIDATED,
+                        NOOP,
+                        createPlanOptimizersStatsCollector());
                 PlanAssert.assertPlan(transactionSession, queryRunner.getMetadata(), queryRunner.getFunctionManager(), queryRunner.getStatsCalculator(), actualPlan, pattern);
                 return null;
             });
@@ -212,7 +219,7 @@ public class BasePlanTest
     {
         try {
             queryRunner.inTransaction(session, transactionSession -> {
-                Plan actualPlan = queryRunner.createPlan(transactionSession, sql, OPTIMIZED_AND_VALIDATED, forceSingleNode, WarningCollector.NOOP, createPlanOptimizersStatsCollector());
+                Plan actualPlan = queryRunner.createPlan(transactionSession, sql, queryRunner.getPlanOptimizers(forceSingleNode), queryRunner.getAlternativeOptimizers(), OPTIMIZED_AND_VALIDATED, NOOP, createPlanOptimizersStatsCollector());
                 PlanAssert.assertPlan(transactionSession, queryRunner.getMetadata(), queryRunner.getFunctionManager(), queryRunner.getStatsCalculator(), actualPlan, pattern);
                 planValidator.accept(actualPlan);
                 return null;
@@ -237,7 +244,8 @@ public class BasePlanTest
     protected Plan plan(@Language("SQL") String sql, LogicalPlanner.Stage stage, boolean forceSingleNode)
     {
         try {
-            return queryRunner.inTransaction(transactionSession -> queryRunner.createPlan(transactionSession, sql, stage, forceSingleNode, WarningCollector.NOOP, createPlanOptimizersStatsCollector()));
+            return queryRunner.inTransaction(queryRunner.getDefaultSession(), transactionSession ->
+                    queryRunner.createPlan(transactionSession, sql, queryRunner.getPlanOptimizers(forceSingleNode), queryRunner.getAlternativeOptimizers(), stage, NOOP, createPlanOptimizersStatsCollector()));
         }
         catch (RuntimeException e) {
             throw new AssertionError("Planning failed for SQL: " + sql, e);
@@ -253,7 +261,7 @@ public class BasePlanTest
     {
         try {
             return queryRunner.inTransaction(session, transactionSession -> {
-                Plan plan = queryRunner.createPlan(transactionSession, sql, stage, forceSingleNode, WarningCollector.NOOP, createPlanOptimizersStatsCollector());
+                Plan plan = queryRunner.createPlan(transactionSession, sql, queryRunner.getPlanOptimizers(forceSingleNode), queryRunner.getAlternativeOptimizers(), stage, NOOP, createPlanOptimizersStatsCollector());
                 return queryRunner.createSubPlans(transactionSession, plan, forceSingleNode);
             });
         }
