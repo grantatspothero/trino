@@ -34,7 +34,6 @@ import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.cassandra.galaxy.GalaxyCassandraTunnelManager;
 import io.trino.plugin.cassandra.galaxy.GalaxyCqlSessionBuilder;
 import io.trino.plugin.cassandra.ptf.Query;
-import io.trino.spi.TrinoException;
 import io.trino.spi.function.table.ConnectorTableFunction;
 import io.trino.spi.type.Type;
 import io.trino.spi.type.TypeId;
@@ -42,17 +41,11 @@ import io.trino.spi.type.TypeManager;
 import io.trino.sshtunnel.SshTunnelConfig;
 import io.trino.sshtunnel.SshTunnelProperties;
 
-import javax.net.ssl.SSLContext;
-
-import java.io.File;
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.security.GeneralSecurityException;
 import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
 import java.util.Properties;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -62,8 +55,7 @@ import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.airlift.json.JsonBinder.jsonBinder;
 import static io.airlift.json.JsonCodecBinder.jsonCodecBinder;
 import static io.trino.plugin.base.galaxy.RegionVerifierProperties.addRegionVerifierProperties;
-import static io.trino.plugin.base.ssl.SslUtils.createSSLContext;
-import static io.trino.plugin.cassandra.CassandraErrorCode.CASSANDRA_SSL_INITIALIZATION_FAILURE;
+import static io.trino.plugin.cassandra.galaxy.GalaxySSLContextUtils.getInsecureSslContext;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
 import static java.lang.Math.toIntExact;
 import static java.util.Objects.requireNonNull;
@@ -179,8 +171,8 @@ public class CassandraClientModule
             driverConfigLoaderBuilder.withInt(DefaultDriverOption.SOCKET_LINGER_INTERVAL, config.getClientSoLinger());
         }
         if (config.isTlsEnabled()) {
-            buildSslContext(config.getKeystorePath(), config.getKeystorePassword(), config.getTruststorePath(), config.getTruststorePassword())
-                    .ifPresent(cqlSessionBuilder::withSslContext);
+            // cert validation is skipped
+            cqlSessionBuilder.withSslContext(getInsecureSslContext());
         }
 
         if (config.getUsername() != null && config.getPassword() != null) {
@@ -210,24 +202,6 @@ public class CassandraClientModule
                     return cassandraTelemetry.wrap(cqlSessionBuilder.build());
                 },
                 config.getNoHostAvailableRetryTimeout());
-    }
-
-    private static Optional<SSLContext> buildSslContext(
-            Optional<File> keystorePath,
-            Optional<String> keystorePassword,
-            Optional<File> truststorePath,
-            Optional<String> truststorePassword)
-    {
-        if (keystorePath.isEmpty() && truststorePath.isEmpty()) {
-            return Optional.empty();
-        }
-
-        try {
-            return Optional.of(createSSLContext(keystorePath, keystorePassword, truststorePath, truststorePassword));
-        }
-        catch (GeneralSecurityException | IOException e) {
-            throw new TrinoException(CASSANDRA_SSL_INITIALIZATION_FAILURE, e);
-        }
     }
 
     private static InetSocketAddress createInetSocketAddress(String contactPoint, int port)
