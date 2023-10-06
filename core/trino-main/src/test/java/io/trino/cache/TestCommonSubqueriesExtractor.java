@@ -44,7 +44,7 @@ import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.predicate.ValueSet;
 import io.trino.spi.type.StandardTypes;
 import io.trino.spi.type.Type;
-import io.trino.sql.DynamicFilters;
+import io.trino.sql.DynamicFilters.Descriptor;
 import io.trino.sql.planner.BuiltinFunctionCallBuilder;
 import io.trino.sql.planner.Plan;
 import io.trino.sql.planner.PlanNodeIdAllocator;
@@ -754,7 +754,7 @@ public class TestCommonSubqueriesExtractor
         assertThat(extractExpressions(subqueryB.getCommonSubplan()).stream()
                 .flatMap(expression -> extractDynamicFilters(expression).getDynamicConjuncts().stream())
                 .collect(toImmutableList()))
-                .containsExactly(new DynamicFilters.Descriptor(
+                .containsExactly(new Descriptor(
                         new DynamicFilterId("subquery_b_dynamic_id"),
                         expression("subquery_b_column1")));
         assertThat(subqueryB.getDynamicFilterColumnMapping()).containsExactly(
