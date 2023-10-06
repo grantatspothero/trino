@@ -1026,6 +1026,11 @@ public final class MetadataManager
     }
 
     @Override
+    public void beginQuery(Session session)
+    {
+    }
+
+    @Override
     public void cleanupQuery(Session session)
     {
         QueryCatalogs queryCatalogs = catalogsByQueryId.remove(session.getQueryId());

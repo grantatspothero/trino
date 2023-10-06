@@ -1507,6 +1507,12 @@ public class TestMultipleDistinctAggregationsToSubqueries
         }
 
         @Override
+        public void beginQuery(Session session)
+        {
+            metadata.beginQuery(session);
+        }
+
+        @Override
         public void cleanupQuery(Session session)
         {
             metadata.cleanupQuery(session);
