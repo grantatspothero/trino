@@ -32,7 +32,8 @@ public class TestGalaxySystemAccessControlConfig
         assertRecordedDefaults(recordDefaults(GalaxySystemAccessControlConfig.class)
                 .setFilterColumnsAcceleration(FilterColumnsAcceleration.NONE)
                 .setBackgroundProcessingThreads(8)
-                .setGlobalHotSharingCacheEnabled(true));
+                .setGlobalHotSharingCacheEnabled(true)
+                .setExpectedQueryParallelism(100));
     }
 
     @Test
@@ -43,12 +44,14 @@ public class TestGalaxySystemAccessControlConfig
                 .put("galaxy.filter-columns-acceleration", "FCX2")
                 .put("galaxy.access-control-background-threads", "3")
                 .put("galaxy.access-control.global-hot-sharing.enabled", "false")
+                .put("galaxy.expected-query-parallelism", "200")
                 .buildOrThrow();
 
         GalaxySystemAccessControlConfig expected = new GalaxySystemAccessControlConfig()
                 .setFilterColumnsAcceleration(FilterColumnsAcceleration.FCX2)
                 .setBackgroundProcessingThreads(3)
-                .setGlobalHotSharingCacheEnabled(false);
+                .setGlobalHotSharingCacheEnabled(false)
+                .setExpectedQueryParallelism(200);
 
         assertFullMapping(properties, expected);
     }

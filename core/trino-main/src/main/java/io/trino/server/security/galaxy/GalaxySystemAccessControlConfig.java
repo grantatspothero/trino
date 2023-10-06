@@ -33,6 +33,8 @@ public class GalaxySystemAccessControlConfig
     private FilterColumnsAcceleration filterColumnsAcceleration = FilterColumnsAcceleration.NONE;
     private int backgroundProcessingThreads = 8;
     private boolean globalHotSharingCacheEnabled = true;
+    // Currently, we allow at most 60 concurrent queries (20 queries and 40 "data definition"), this value is with some margin.
+    private int expectedQueryParallelism = 100;
 
     @NotNull
     public FilterColumnsAcceleration getFilterColumnsAcceleration()
@@ -70,6 +72,20 @@ public class GalaxySystemAccessControlConfig
     public GalaxySystemAccessControlConfig setGlobalHotSharingCacheEnabled(boolean globalHotSharingCacheEnabled)
     {
         this.globalHotSharingCacheEnabled = globalHotSharingCacheEnabled;
+        return this;
+    }
+
+    @Min(1)
+    public int getExpectedQueryParallelism()
+    {
+        return expectedQueryParallelism;
+    }
+
+    @Config("galaxy.expected-query-parallelism")
+    @ConfigDescription("Expected query parallelism, should be the sum of hardConcurrencyLimit of all resource groups")
+    public GalaxySystemAccessControlConfig setExpectedQueryParallelism(int expectedQueryParallelism)
+    {
+        this.expectedQueryParallelism = expectedQueryParallelism;
         return this;
     }
 }

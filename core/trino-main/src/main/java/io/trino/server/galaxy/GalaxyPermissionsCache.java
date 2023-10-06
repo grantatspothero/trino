@@ -61,17 +61,6 @@ import static java.util.Objects.requireNonNull;
 @ThreadSafe
 public class GalaxyPermissionsCache
 {
-    // Currently, we allow at most 60 concurrent queries (20 queries and 40 "data definition"), this value is with some margin.
-    private static final int EXPECTED_CONCURRENT_QUERIES = 100;
-    private static final int QUERY_CACHE_SIZE = EXPECTED_CONCURRENT_QUERIES;
-    // catalogVisibilityCache is keyed by DispatchSession so will be loaded once per query or more if there are views
-    private static final int CATALOG_VISIBILITY_CACHE_SIZE = EXPECTED_CONCURRENT_QUERIES * 3;
-
-    // informationSchemaEntityPrivilegesCache is keyed by DispatchSession and information_schema.x table name
-    // However it's designed primary for DBT use-case where information_schema.columns is used by multiple concurrent queries,
-    // So it needs to be at least of size EXPECTED_CONCURRENT_QUERIES.
-    private static final int INFORMATION_SCHEMA_ENTITY_PRIVILEGES_CACHE_SIZE = EXPECTED_CONCURRENT_QUERIES * 10;
-
     private final boolean globalHotSharingCacheEnabled;
     private final Tracer tracer;
 
@@ -88,25 +77,29 @@ public class GalaxyPermissionsCache
     @Inject
     public GalaxyPermissionsCache(GalaxySystemAccessControlConfig accessControlConfig, Tracer tracer)
     {
-        this(accessControlConfig.isGlobalHotSharingCacheEnabled(), tracer);
+        this(accessControlConfig.isGlobalHotSharingCacheEnabled(), accessControlConfig.getExpectedQueryParallelism(), tracer);
     }
 
-    public GalaxyPermissionsCache(boolean globalHotSharingCacheEnabled, Tracer tracer)
+    public GalaxyPermissionsCache(boolean globalHotSharingCacheEnabled, int expectedQueryParallelism, Tracer tracer)
     {
         this.globalHotSharingCacheEnabled = globalHotSharingCacheEnabled;
         this.tracer = requireNonNull(tracer);
 
+        // catalogVisibilityCache is keyed by DispatchSession so will be loaded once per query or more if there are views
         catalogVisibilityCache = buildNonEvictableCache(
                 CacheBuilder.newBuilder()
-                        .maximumSize(CATALOG_VISIBILITY_CACHE_SIZE));
+                        .maximumSize(expectedQueryParallelism * 3L));
 
+        // informationSchemaEntityPrivilegesCache is keyed by DispatchSession and information_schema.x table name
+        // However it's designed primary for DBT use-case where information_schema.columns is used by multiple concurrent queries,
+        // So it needs to be at least of size expectedQueryParallelism.
         informationSchemaEntityPrivilegesCache = buildNonEvictableCache(
                 CacheBuilder.newBuilder()
-                        .maximumSize(INFORMATION_SCHEMA_ENTITY_PRIVILEGES_CACHE_SIZE));
+                        .maximumSize(expectedQueryParallelism * 10L));
 
         queryPermissionsCache = buildNonEvictableCache(
                 CacheBuilder.newBuilder()
-                        .maximumSize(QUERY_CACHE_SIZE),
+                        .maximumSize(expectedQueryParallelism),
                 CacheLoader.from(queryId -> new ConcurrentHashMap<>()));
     }
 
