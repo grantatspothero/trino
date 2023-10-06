@@ -1341,7 +1341,7 @@ public class DeltaLakeMetadata
         return databaseQueryId.isPresent() && databaseQueryId.get().equals(queryId);
     }
 
-    private static boolean isCreatedBy(Table table, String queryId)
+    public static boolean isCreatedBy(Table table, String queryId)
     {
         Optional<String> tableQueryId = getQueryId(table);
         return tableQueryId.isPresent() && tableQueryId.get().equals(queryId);
@@ -3790,7 +3790,7 @@ public class DeltaLakeMetadata
         return Optional.ofNullable(database.getParameters().get(PRESTO_QUERY_ID_NAME));
     }
 
-    private static Optional<String> getQueryId(Table table)
+    public static Optional<String> getQueryId(Table table)
     {
         return Optional.ofNullable(table.getParameters().get(PRESTO_QUERY_ID_NAME));
     }
