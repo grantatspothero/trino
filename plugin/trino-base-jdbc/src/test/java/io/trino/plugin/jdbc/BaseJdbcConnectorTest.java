@@ -1578,7 +1578,7 @@ public abstract class BaseJdbcConnectorTest
         }
 
         if (temporarySchema.isPresent()) {
-            // Run tests on isolated schema so that we can tests with .matches(), not only .containsAll()
+            // Run tests on isolated schema so that we can test with .matches(), not only .containsAll()
 
             // Hack for Druid, where numeric columns are NOT NULL by default
             String numericNullable = (String) computeScalar("""
