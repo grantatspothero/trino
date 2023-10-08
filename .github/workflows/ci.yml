@@ -561,6 +561,7 @@ jobs:
             !:trino-raptor-legacy,
             !:trino-redis,
             !:trino-redshift,
+            !:trino-resource-group-managers,
             !:trino-server,
             !:trino-server-rpm,
             !:trino-singlestore,
@@ -693,6 +694,7 @@ jobs:
             - { modules: plugin/trino-redshift, profile: default}
             - { modules: plugin/trino-redshift, profile: cloud-tests}
             - { modules: plugin/trino-redshift, profile: fte-tests}
+            - { modules: plugin/trino-resource-group-managers }
             - { modules: plugin/trino-sqlserver }
             - { modules: testing/trino-faulttolerant-tests, profile: default }
             - { modules: testing/trino-faulttolerant-tests, profile: test-fault-tolerant-delta }
