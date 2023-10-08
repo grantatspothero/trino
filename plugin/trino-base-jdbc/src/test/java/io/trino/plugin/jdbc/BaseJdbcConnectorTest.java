@@ -1578,8 +1578,6 @@ public abstract class BaseJdbcConnectorTest
         }
 
         if (temporarySchema.isPresent()) {
-            // Run tests on isolated schema so that we can test with .matches(), not only .containsAll()
-
             // Hack for Druid, where numeric columns are NOT NULL by default
             String numericNullable = (String) computeScalar("""
                     SELECT is_nullable FROM information_schema.columns
@@ -1592,7 +1590,6 @@ public abstract class BaseJdbcConnectorTest
                             WHERE table_schema = '%s'
                     """.formatted(temporarySchema.get())))
                     .skippingTypesCheck()
-                    // containsAll to take care of concurrently running tests, and left-over tables
                     .matches("""
                             VALUES
                                 ('%1$s', 'nationkey', '%3$s')
@@ -1607,7 +1604,6 @@ public abstract class BaseJdbcConnectorTest
                             WHERE table_cat = CURRENT_CATALOG AND table_schem = '%s'
                     """.formatted(temporarySchema.get())))
                     .skippingTypesCheck()
-                    // containsAll to take care of concurrently running tests, and left-over tables
                     .matches("""
                             VALUES
                                 ('%1$s', 'nationkey', '%3$s')
@@ -1621,11 +1617,10 @@ public abstract class BaseJdbcConnectorTest
         assertThat(query(session, """
                         SELECT table_name, column_name, is_nullable FROM information_schema.columns
                         WHERE table_schema = CURRENT_SCHEMA
-                        AND ((column_name LIKE 'n_me' AND table_name IN ('customer', 'nation')) OR rand() = 42) -- not pushed down; just to make assertions shorter
+                        AND ((column_name LIKE 'n_me' AND table_name IN ('customer', 'nation')) OR rand() = 42) -- not pushed down into connector
                 """))
                 .skippingTypesCheck()
-                // containsAll to take care of concurrently running tests, and left-over tables
-                .containsAll("""
+                .matches("""
                         VALUES
                             ('customer', 'name', 'YES')
                           , ('nation', 'name', 'YES')
@@ -1634,10 +1629,10 @@ public abstract class BaseJdbcConnectorTest
         // information_schema.columns without schema filter
         assertThat(query(session, """
                         SELECT table_name, column_name, is_nullable FROM information_schema.columns
-                        WHERE ((column_name LIKE 'n_me' AND table_name IN ('customer', 'nation')) OR rand() = 42) -- not pushed down; just to make assertions shorter
+                        WHERE ((table_schema = CURRENT_SCHEMA AND column_name LIKE 'n_me' AND table_name IN ('customer', 'nation')) OR rand() = 42) -- not pushed down into connector
                 """))
                 .skippingTypesCheck()
-                .containsAll("""
+                .matches("""
                         VALUES
                             ('customer', 'name', 'YES')
                           , ('nation', 'name', 'YES')
@@ -1647,11 +1642,10 @@ public abstract class BaseJdbcConnectorTest
         assertThat(query(session, """
                         SELECT table_name, column_name, is_nullable FROM system.jdbc.columns
                         WHERE table_cat = CURRENT_CATALOG AND table_schem = CURRENT_SCHEMA
-                        AND ((column_name LIKE 'n_me' AND table_name IN ('customer', 'nation')) OR rand() = 42) -- not pushed down; just to make assertions shorter
+                        AND ((column_name LIKE 'n_me' AND table_name IN ('customer', 'nation')) OR rand() = 42) -- not pushed down into connector
                 """))
                 .skippingTypesCheck()
-                // containsAll to take care of concurrently running tests, and left-over tables
-                .containsAll("""
+                .matches("""
                         VALUES
                             ('customer', 'name', 'YES')
                           , ('nation', 'name', 'YES')
@@ -1661,10 +1655,10 @@ public abstract class BaseJdbcConnectorTest
         assertThat(query(session, """
                         SELECT table_name, column_name, is_nullable FROM system.jdbc.columns
                         WHERE table_cat = CURRENT_CATALOG
-                        AND ((column_name LIKE 'n_me' AND table_name IN ('customer', 'nation')) OR rand() = 42) -- not pushed down; just to make assertions shorter
+                        AND ((table_schem = CURRENT_SCHEMA AND column_name LIKE 'n_me' AND table_name IN ('customer', 'nation')) OR rand() = 42) -- not pushed down into connector
                 """))
                 .skippingTypesCheck()
-                .containsAll("""
+                .matches("""
                         VALUES
                             ('customer', 'name', 'YES')
                           , ('nation', 'name', 'YES')
