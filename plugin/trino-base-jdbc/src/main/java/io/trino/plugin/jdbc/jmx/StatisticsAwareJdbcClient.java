@@ -132,7 +132,7 @@ public final class StatisticsAwareJdbcClient
     @Override
     public Iterator<RelationColumnsMetadata> getAllTableColumns(ConnectorSession session, Optional<String> schema)
     {
-        // TODO capture call stats
+        // Note: no stats here. As it results an Iterator, the stats would not reflect actual time.
         return delegate().getAllTableColumns(session, schema);
     }
 
