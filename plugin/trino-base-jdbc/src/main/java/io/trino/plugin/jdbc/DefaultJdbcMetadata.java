@@ -81,7 +81,7 @@ import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
@@ -96,7 +96,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Streams.stream;
-import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static io.trino.plugin.base.expression.ConnectorExpressions.and;
 import static io.trino.plugin.base.expression.ConnectorExpressions.extractConjuncts;
 import static io.trino.plugin.base.util.Parallels.processWithAdditionalThreads;
@@ -124,7 +123,7 @@ public class DefaultJdbcMetadata
     private static final String MERGE_ROW_ID = "$merge_row_id";
 
     private final int maxMetadataBackgroundProcessingThreads;
-    private final ExecutorService backgroundExecutorService;
+    private final Executor backgroundExecutorService;
     private final JdbcClient jdbcClient;
     private final boolean precalculateStatisticsForPushdown;
     private final Set<JdbcQueryEventListener> jdbcQueryEventListeners;
@@ -134,10 +133,10 @@ public class DefaultJdbcMetadata
     @Deprecated
     public DefaultJdbcMetadata(JdbcClient jdbcClient, boolean precalculateStatisticsForPushdown, Set<JdbcQueryEventListener> jdbcQueryEventListeners)
     {
-        this(-1, newDirectExecutorService(), jdbcClient, precalculateStatisticsForPushdown, jdbcQueryEventListeners);
+        this(-1, FailingExecutor.INSTANCE, jdbcClient, precalculateStatisticsForPushdown, jdbcQueryEventListeners);
     }
 
-    public DefaultJdbcMetadata(int maxMetadataBackgroundProcessingThreads, ExecutorService backgroundExecutorService, JdbcClient jdbcClient, boolean precalculateStatisticsForPushdown, Set<JdbcQueryEventListener> jdbcQueryEventListeners)
+    public DefaultJdbcMetadata(int maxMetadataBackgroundProcessingThreads, Executor backgroundExecutorService, JdbcClient jdbcClient, boolean precalculateStatisticsForPushdown, Set<JdbcQueryEventListener> jdbcQueryEventListeners)
     {
         this.maxMetadataBackgroundProcessingThreads = maxMetadataBackgroundProcessingThreads;
         this.backgroundExecutorService = requireNonNull(backgroundExecutorService, "backgroundExecutorService is null");
