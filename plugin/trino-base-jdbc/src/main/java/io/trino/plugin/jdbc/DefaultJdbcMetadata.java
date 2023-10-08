@@ -95,6 +95,7 @@ import static com.google.common.base.Verify.verifyNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.common.collect.Streams.stream;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static io.trino.plugin.base.expression.ConnectorExpressions.and;
 import static io.trino.plugin.base.expression.ConnectorExpressions.extractConjuncts;
@@ -801,7 +802,7 @@ public class DefaultJdbcMetadata
             case PARALLEL -> {
                 checkState(maxMetadataBackgroundProcessingThreads >= 0, "maxMetadataBackgroundProcessingThreads and backgroundExecutorService not provided");
 
-                List<SchemaTableName> tables = listTables(session, schemaName);
+                Set<SchemaTableName> tables = relationFilter.apply(ImmutableSet.copyOf(listTables(session, schemaName)));
                 Map<SchemaTableName, List<ColumnMetadata>> result = new ConcurrentHashMap<>();
                 processWithAdditionalThreads(
                         backgroundExecutorService,
@@ -818,7 +819,13 @@ public class DefaultJdbcMetadata
                         .iterator();
             }
 
-            case JEDI_1 -> jdbcClient.getAllTableColumns(session, schemaName);
+            case JEDI_1 -> {
+                Map<SchemaTableName, RelationColumnsMetadata> resultsByName = stream(jdbcClient.getAllTableColumns(session, schemaName))
+                        .collect(toImmutableMap(RelationColumnsMetadata::name, identity()));
+                yield relationFilter.apply(resultsByName.keySet()).stream()
+                        .map(resultsByName::get)
+                        .iterator();
+            }
 
             case JEDI_1P -> {
                 checkState(maxMetadataBackgroundProcessingThreads >= 0, "maxMetadataBackgroundProcessingThreads and backgroundExecutorService not provided");
@@ -830,9 +837,13 @@ public class DefaultJdbcMetadata
                         schemaName.map(Set::of)
                                 .orElseGet(() -> jdbcClient.getSchemaNames(session)),
                         schema -> {
-                            List<RelationColumnsMetadata> allTableColumnsForSchema = ImmutableList.copyOf(jdbcClient.getAllTableColumns(session, Optional.of(schema)));
+                            Map<SchemaTableName, RelationColumnsMetadata> schemaResultsByName = stream(jdbcClient.getAllTableColumns(session, Optional.of(schema)))
+                                    .collect(toImmutableMap(RelationColumnsMetadata::name, identity()));
+                            List<RelationColumnsMetadata> schemaResults = relationFilter.apply(schemaResultsByName.keySet()).stream()
+                                    .map(schemaResultsByName::get)
+                                    .collect(toImmutableList());
                             synchronized (results) {
-                                results.addAll(allTableColumnsForSchema);
+                                results.addAll(schemaResults);
                             }
                         });
                 yield results.build().iterator();
