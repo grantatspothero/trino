@@ -33,6 +33,7 @@ public class TestJdbcMetadataConfig
                 .setAggregationPushdownEnabled(true)
                 .setTopNPushdownEnabled(true)
                 .setListColumnsMode(JdbcMetadataConfig.ListColumnsMode.CLASSIC)
+                .setListCommentsMode(JdbcMetadataConfig.ListCommentsMode.DMA)
                 .setMaxMetadataBackgroundProcessingThreads(8)
                 .setDomainCompactionThreshold(32));
     }
@@ -45,6 +46,7 @@ public class TestJdbcMetadataConfig
                 .put("join-pushdown.enabled", "true")
                 .put("aggregation-pushdown.enabled", "false")
                 .put("jdbc.list-columns-mode", "DMA")
+                .put("jdbc.list-comments-mode", "CLASSIC")
                 .put("jdbc.metadata-background-threads", "13")
                 .put("domain-compaction-threshold", "42")
                 .put("topn-pushdown.enabled", "false")
@@ -56,6 +58,7 @@ public class TestJdbcMetadataConfig
                 .setAggregationPushdownEnabled(false)
                 .setTopNPushdownEnabled(false)
                 .setListColumnsMode(JdbcMetadataConfig.ListColumnsMode.DMA)
+                .setListCommentsMode(JdbcMetadataConfig.ListCommentsMode.CLASSIC)
                 .setMaxMetadataBackgroundProcessingThreads(13)
                 .setDomainCompactionThreshold(42);
 

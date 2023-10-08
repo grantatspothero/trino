@@ -17,6 +17,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import io.trino.plugin.base.session.SessionPropertiesProvider;
 import io.trino.plugin.jdbc.JdbcMetadataConfig.ListColumnsMode;
+import io.trino.plugin.jdbc.JdbcMetadataConfig.ListCommentsMode;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.session.PropertyMetadata;
@@ -38,6 +39,7 @@ public class JdbcMetadataSessionProperties
     public static final String AGGREGATION_PUSHDOWN_ENABLED = "aggregation_pushdown_enabled";
     public static final String TOPN_PUSHDOWN_ENABLED = "topn_pushdown_enabled";
     public static final String LIST_COLUMNS_MODE = "experimental_list_columns_mode";
+    public static final String LIST_COMMENTS_MODE = "experimental_list_comments_mode";
     public static final String DOMAIN_COMPACTION_THRESHOLD = "domain_compaction_threshold";
 
     private final List<PropertyMetadata<?>> properties;
@@ -67,6 +69,12 @@ public class JdbcMetadataSessionProperties
                         "Experimental: select implementation for listing tables' columns",
                         ListColumnsMode.class,
                         jdbcMetadataConfig.getListColumnsMode(),
+                        true))
+                .add(enumProperty(
+                        LIST_COMMENTS_MODE,
+                        "Experimental: select implementation for listing tables' comments",
+                        ListCommentsMode.class,
+                        jdbcMetadataConfig.getListCommentsMode(),
                         true))
                 .add(integerProperty(
                         DOMAIN_COMPACTION_THRESHOLD,
@@ -111,6 +119,11 @@ public class JdbcMetadataSessionProperties
     public static ListColumnsMode getListColumnsMode(ConnectorSession session)
     {
         return session.getProperty(LIST_COLUMNS_MODE, ListColumnsMode.class);
+    }
+
+    public static ListCommentsMode getListCommentsMode(ConnectorSession session)
+    {
+        return session.getProperty(LIST_COMMENTS_MODE, ListCommentsMode.class);
     }
 
     public static int getDomainCompactionThreshold(ConnectorSession session)

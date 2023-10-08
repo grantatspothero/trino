@@ -38,6 +38,7 @@ import io.trino.spi.connector.FixedSplitSource;
 import io.trino.spi.connector.JoinStatistics;
 import io.trino.spi.connector.JoinType;
 import io.trino.spi.connector.RelationColumnsMetadata;
+import io.trino.spi.connector.RelationCommentMetadata;
 import io.trino.spi.connector.SchemaNotFoundException;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TableNotFoundException;
@@ -184,7 +185,18 @@ public abstract class BaseJdbcClient
     }
 
     @Override
-    public List<SchemaTableName> getTableNames(ConnectorSession session, Optional<String> schema)
+    public final List<SchemaTableName> getTableNames(ConnectorSession session, Optional<String> schema)
+    {
+        // getAllTableComments is currently Galaxy specific.
+        // getTableNames is replaced with getAllTableComments to ensure consistency with new changes
+        // -- it's better to have a code conflict than a logical conflict that goes unnoticed.
+        return getAllTableComments(session, schema).stream()
+                .map(RelationCommentMetadata::name)
+                .collect(toImmutableList());
+    }
+
+    @Override
+    public List<RelationCommentMetadata> getAllTableComments(ConnectorSession session, Optional<String> schema)
     {
         try (Connection connection = connectionFactory.openConnection(session)) {
             ConnectorIdentity identity = session.getIdentity();
@@ -194,13 +206,13 @@ public abstract class BaseJdbcClient
             }
 
             try (ResultSet resultSet = getTables(connection, remoteSchema, Optional.empty())) {
-                ImmutableList.Builder<SchemaTableName> list = ImmutableList.builder();
+                ImmutableList.Builder<RelationCommentMetadata> list = ImmutableList.builder();
                 while (resultSet.next()) {
                     String remoteSchemaFromResultSet = getTableSchemaName(resultSet);
                     String tableSchema = identifierMapping.fromRemoteSchemaName(remoteSchemaFromResultSet);
                     String tableName = identifierMapping.fromRemoteTableName(remoteSchemaFromResultSet, resultSet.getString("TABLE_NAME"));
                     if (filterSchema(tableSchema)) {
-                        list.add(new SchemaTableName(tableSchema, tableName));
+                        list.add(RelationCommentMetadata.forRelation(new SchemaTableName(tableSchema, tableName), getTableComment(resultSet)));
                     }
                 }
                 return list.build();

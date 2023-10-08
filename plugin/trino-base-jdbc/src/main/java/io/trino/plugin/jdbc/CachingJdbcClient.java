@@ -36,6 +36,7 @@ import io.trino.spi.connector.ConnectorTableMetadata;
 import io.trino.spi.connector.JoinStatistics;
 import io.trino.spi.connector.JoinType;
 import io.trino.spi.connector.RelationColumnsMetadata;
+import io.trino.spi.connector.RelationCommentMetadata;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SystemTable;
 import io.trino.spi.connector.TableScanRedirectApplicationResult;
@@ -207,6 +208,15 @@ public class CachingJdbcClient
         // TODO should it cache the iterator (smartly) before it's completed? (sharing failures?)
         // TODO should this put objects into tableCache when iterating?
         return delegate.getAllTableColumns(session, schema);
+    }
+
+    @Override
+    public List<RelationCommentMetadata> getAllTableComments(ConnectorSession session, Optional<String> schema)
+    {
+        // TODO should this cache the list (once iterator is completed)?
+        // TODO should it cache the iterator (smartly) before it's completed? (sharing failures?)
+        // TODO should this put objects into tableCache when iterating?
+        return delegate.getAllTableComments(session, schema);
     }
 
     @Override

@@ -39,6 +39,7 @@ import io.trino.spi.connector.ConnectorTableMetadata;
 import io.trino.spi.connector.JoinStatistics;
 import io.trino.spi.connector.JoinType;
 import io.trino.spi.connector.RelationColumnsMetadata;
+import io.trino.spi.connector.RelationCommentMetadata;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SystemTable;
 import io.trino.spi.connector.TableScanRedirectApplicationResult;
@@ -134,6 +135,13 @@ public final class StatisticsAwareJdbcClient
     {
         // Note: no stats here. As it results an Iterator, the stats would not reflect actual time.
         return delegate().getAllTableColumns(session, schema);
+    }
+
+    @Override
+    public List<RelationCommentMetadata> getAllTableComments(ConnectorSession session, Optional<String> schema)
+    {
+        // TODO capture call stats
+        return delegate().getAllTableComments(session, schema);
     }
 
     @Override

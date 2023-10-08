@@ -46,6 +46,7 @@ import io.trino.spi.connector.JoinType;
 import io.trino.spi.connector.LimitApplicationResult;
 import io.trino.spi.connector.ProjectionApplicationResult;
 import io.trino.spi.connector.RelationColumnsMetadata;
+import io.trino.spi.connector.RelationCommentMetadata;
 import io.trino.spi.connector.RetryMode;
 import io.trino.spi.connector.RowChangeParadigm;
 import io.trino.spi.connector.SchemaTableName;
@@ -101,6 +102,7 @@ import static io.trino.plugin.base.expression.ConnectorExpressions.extractConjun
 import static io.trino.plugin.base.util.Parallels.processWithAdditionalThreads;
 import static io.trino.plugin.jdbc.JdbcErrorCode.JDBC_NON_TRANSIENT_ERROR;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.getListColumnsMode;
+import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.getListCommentsMode;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.isAggregationPushdownEnabled;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.isComplexExpressionPushdown;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.isJoinPushdownEnabled;
@@ -839,6 +841,45 @@ public class DefaultJdbcMetadata
                             Map<SchemaTableName, RelationColumnsMetadata> schemaResultsByName = stream(jdbcClient.getAllTableColumns(session, Optional.of(schema)))
                                     .collect(toImmutableMap(RelationColumnsMetadata::name, identity()));
                             List<RelationColumnsMetadata> schemaResults = relationFilter.apply(schemaResultsByName.keySet()).stream()
+                                    .map(schemaResultsByName::get)
+                                    .collect(toImmutableList());
+                            synchronized (results) {
+                                results.addAll(schemaResults);
+                            }
+                        });
+                yield results.build().iterator();
+            }
+        };
+    }
+
+    @Override
+    public Iterator<RelationCommentMetadata> streamRelationComments(ConnectorSession session, Optional<String> schemaName, UnaryOperator<Set<SchemaTableName>> relationFilter)
+    {
+        JdbcMetadataConfig.ListCommentsMode mode = getListCommentsMode(session);
+        return switch (mode) {
+            case CLASSIC -> JdbcMetadata.super.streamRelationComments(session, schemaName, relationFilter);
+
+            case DMA -> {
+                Map<SchemaTableName, RelationCommentMetadata> resultsByName = jdbcClient.getAllTableComments(session, schemaName).stream()
+                        .collect(toImmutableMap(RelationCommentMetadata::name, identity()));
+                yield relationFilter.apply(resultsByName.keySet()).stream()
+                        .map(resultsByName::get)
+                        .iterator();
+            }
+
+            case DMA_P -> {
+                checkState(maxMetadataBackgroundProcessingThreads >= 0, "maxMetadataBackgroundProcessingThreads and backgroundExecutorService not provided");
+
+                ImmutableList.Builder<RelationCommentMetadata> results = ImmutableList.builder();
+                processWithAdditionalThreads(
+                        backgroundExecutorService,
+                        maxMetadataBackgroundProcessingThreads,
+                        schemaName.map(Set::of)
+                                .orElseGet(() -> jdbcClient.getSchemaNames(session)),
+                        schema -> {
+                            Map<SchemaTableName, RelationCommentMetadata> schemaResultsByName = jdbcClient.getAllTableComments(session, Optional.of(schema)).stream()
+                                    .collect(toImmutableMap(RelationCommentMetadata::name, identity()));
+                            List<RelationCommentMetadata> schemaResults = relationFilter.apply(schemaResultsByName.keySet()).stream()
                                     .map(schemaResultsByName::get)
                                     .collect(toImmutableList());
                             synchronized (results) {

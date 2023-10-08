@@ -18,6 +18,7 @@ import io.airlift.units.Duration;
 import io.trino.Session;
 import io.trino.execution.warnings.WarningCollector;
 import io.trino.plugin.jdbc.JdbcMetadataConfig.ListColumnsMode;
+import io.trino.plugin.jdbc.JdbcMetadataConfig.ListCommentsMode;
 import io.trino.spi.QueryId;
 import io.trino.spi.connector.JoinCondition;
 import io.trino.spi.connector.SortOrder;
@@ -93,6 +94,7 @@ import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_AGGREGATION_PUS
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_AGGREGATION_PUSHDOWN_STDDEV;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_AGGREGATION_PUSHDOWN_VARIANCE;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_CANCELLATION;
+import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_COMMENT_ON_TABLE;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_CREATE_SCHEMA;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_CREATE_TABLE;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_CREATE_TABLE_WITH_DATA;
@@ -1520,7 +1522,7 @@ public abstract class BaseJdbcConnectorTest
     }
 
     @Test
-    public void testColumnsListingMode()
+    public void testColumnsListingModes()
     {
         if (hasBehavior(SUPPORTS_CREATE_SCHEMA)) {
             String schemaName = "test_columns_listing_" + randomNameSuffix();
@@ -1534,6 +1536,9 @@ public abstract class BaseJdbcConnectorTest
                                 getQueryRunner()::execute,
                                 schemaName + ".region",
                                 "AS SELECT name, regionkey FROM region")) {
+                    if (hasBehavior(SUPPORTS_COMMENT_ON_TABLE)) {
+                        assertUpdate("COMMENT ON TABLE " + newNation.getName() + " IS 'tmp nation copy comment'");
+                    }
                     String newNationName = newNation.getName().replaceFirst("^" + Pattern.quote(schemaName) + ".", "");
                     String newRegionName = newRegion.getName().replaceFirst("^" + Pattern.quote(schemaName) + ".", "");
                     testColumnsListingModes(Optional.of(schemaName), Optional.of(newNationName), Optional.of(newRegionName));
@@ -1663,6 +1668,89 @@ public abstract class BaseJdbcConnectorTest
                             ('customer', 'name', 'YES')
                           , ('nation', 'name', 'YES')
                         """);
+    }
+
+    @Test
+    public void testCommentsListingModes()
+    {
+        if (hasBehavior(SUPPORTS_CREATE_SCHEMA)) {
+            String schemaName = "test_comments_listing_" + randomNameSuffix();
+            assertUpdate("CREATE SCHEMA " + schemaName);
+            try {
+                try (TestTable newNation = new TestTable(
+                        getQueryRunner()::execute,
+                        schemaName + ".nation",
+                        "AS SELECT name, nationkey FROM nation");
+                        TestTable newRegion = new TestTable(
+                                getQueryRunner()::execute,
+                                schemaName + ".region",
+                                "AS SELECT name, regionkey FROM region")) {
+                    if (hasBehavior(SUPPORTS_COMMENT_ON_TABLE)) {
+                        assertUpdate("COMMENT ON TABLE " + newNation.getName() + " IS 'tmp nation copy comment'");
+                    }
+                    String newNationName = newNation.getName().replaceFirst("^" + Pattern.quote(schemaName) + ".", "");
+                    String newRegionName = newRegion.getName().replaceFirst("^" + Pattern.quote(schemaName) + ".", "");
+                    testCommentsListingModes(Optional.of(schemaName), Optional.of(newNationName), Optional.of(newRegionName));
+                }
+            }
+            finally {
+                assertUpdate("DROP SCHEMA " + schemaName);
+            }
+            return;
+        }
+
+        testCommentsListingModes(Optional.empty(), Optional.empty(), Optional.empty());
+    }
+
+    private void testCommentsListingModes(Optional<String> temporarySchema, Optional<String> temporaryNationTable, Optional<String> temporaryRegionTable)
+    {
+        for (ListCommentsMode mode : ListCommentsMode.values()) {
+            try {
+                testCommentsListing(temporarySchema, temporaryNationTable, temporaryRegionTable, mode);
+            }
+            catch (RuntimeException | AssertionError e) {
+                fail("Failure for mode " + mode, e);
+            }
+        }
+    }
+
+    private void testCommentsListing(Optional<String> temporarySchema, Optional<String> temporaryNationTable, Optional<String> temporaryRegionTable, ListCommentsMode mode)
+    {
+        String catalogName = getSession().getCatalog().orElseThrow();
+        Session session = Session.builder(getSession())
+                .setCatalogSessionProperty(catalogName, JdbcMetadataSessionProperties.LIST_COMMENTS_MODE, mode.name())
+                .build();
+
+        if (temporarySchema.isPresent()) {
+            // table_comments for single, isolated schema
+            assertThat(query(session, """
+                            SELECT table_name, comment FROM system.metadata.table_comments
+                            WHERE catalog_name = CURRENT_CATALOG AND schema_name = '%s'
+                    """.formatted(temporarySchema.get())))
+                    .skippingTypesCheck()
+                    // containsAll to take care of concurrently running tests, and left-over tables
+                    .matches("VALUES ('%s', NULL), ('%s', %s)".formatted(
+                            temporaryRegionTable.orElseThrow(),
+                            temporaryNationTable.orElseThrow(),
+                            hasBehavior(SUPPORTS_COMMENT_ON_TABLE) ? "'tmp nation copy comment'" : "NULL"));
+        }
+
+        // table_comments for single schema with more tables
+        assertThat(query(session, """
+                        SELECT table_name, comment FROM system.metadata.table_comments
+                        WHERE catalog_name = CURRENT_CATALOG AND schema_name = CURRENT_SCHEMA
+                        AND (table_name IN ('customer', 'nation') OR rand() = 42) -- not pushed down into connector
+                """))
+                .skippingTypesCheck()
+                .matches("VALUES ('customer', NULL), ('nation', NULL)");
+
+        // table_comments without schema filter
+        assertThat(query(session, """
+                        SELECT table_name, comment FROM system.metadata.table_comments
+                        WHERE ((schema_name = CURRENT_SCHEMA AND table_name IN ('customer', 'nation')) OR rand() = 42) -- not pushed down into connector
+                """))
+                .skippingTypesCheck()
+                .matches("VALUES ('customer', NULL), ('nation', NULL)");
     }
 
     @Test(timeOut = 60_000)
