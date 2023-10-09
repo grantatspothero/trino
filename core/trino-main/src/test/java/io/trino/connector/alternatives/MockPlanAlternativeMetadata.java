@@ -54,7 +54,6 @@ import io.trino.spi.connector.Constraint;
 import io.trino.spi.connector.ConstraintApplicationResult;
 import io.trino.spi.connector.ConstraintApplicationResult.Alternative;
 import io.trino.spi.connector.JoinApplicationResult;
-import io.trino.spi.connector.JoinCondition;
 import io.trino.spi.connector.JoinStatistics;
 import io.trino.spi.connector.JoinType;
 import io.trino.spi.connector.LimitApplicationResult;
@@ -70,7 +69,6 @@ import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SchemaTablePrefix;
 import io.trino.spi.connector.SortItem;
 import io.trino.spi.connector.SystemTable;
-import io.trino.spi.connector.TableColumnsMetadata;
 import io.trino.spi.connector.TableFunctionApplicationResult;
 import io.trino.spi.connector.TableScanRedirectApplicationResult;
 import io.trino.spi.connector.TopNApplicationResult;
@@ -134,12 +132,6 @@ public class MockPlanAlternativeMetadata
     public List<String> listSchemaNames(ConnectorSession session)
     {
         return delegate.listSchemaNames(session);
-    }
-
-    @Override
-    public ConnectorTableHandle getTableHandle(ConnectorSession session, SchemaTableName tableName)
-    {
-        return delegate.getTableHandle(session, tableName);
     }
 
     @Override
@@ -240,19 +232,6 @@ public class MockPlanAlternativeMetadata
     public ColumnMetadata getColumnMetadata(ConnectorSession session, ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
     {
         return delegate.getColumnMetadata(session, getDelegate(tableHandle), columnHandle);
-    }
-
-    @Override
-    @Deprecated
-    public Map<SchemaTableName, List<ColumnMetadata>> listTableColumns(ConnectorSession session, SchemaTablePrefix prefix)
-    {
-        return delegate.listTableColumns(session, prefix);
-    }
-
-    @Override
-    public Iterator<TableColumnsMetadata> streamTableColumns(ConnectorSession session, SchemaTablePrefix prefix)
-    {
-        return delegate.streamTableColumns(session, prefix);
     }
 
     @Override
@@ -880,13 +859,6 @@ public class MockPlanAlternativeMetadata
     public Optional<JoinApplicationResult<ConnectorTableHandle>> applyJoin(ConnectorSession session, JoinType joinType, ConnectorTableHandle left, ConnectorTableHandle right, ConnectorExpression joinCondition, Map<String, ColumnHandle> leftAssignments, Map<String, ColumnHandle> rightAssignments, JoinStatistics statistics)
     {
         return delegate.applyJoin(session, joinType, getDelegate(left), getDelegate(right), joinCondition, leftAssignments, rightAssignments, statistics);
-    }
-
-    @Override
-    @Deprecated
-    public Optional<JoinApplicationResult<ConnectorTableHandle>> applyJoin(ConnectorSession session, JoinType joinType, ConnectorTableHandle left, ConnectorTableHandle right, List<JoinCondition> joinConditions, Map<String, ColumnHandle> leftAssignments, Map<String, ColumnHandle> rightAssignments, JoinStatistics statistics)
-    {
-        return delegate.applyJoin(session, joinType, getDelegate(left), getDelegate(right), joinConditions, leftAssignments, rightAssignments, statistics);
     }
 
     @Override
