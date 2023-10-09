@@ -1668,8 +1668,9 @@ public class ObjectStoreMetadata
 
     private ConnectorTableMetadata unwrap(TableType tableType, ConnectorTableMetadata metadata)
     {
+        Map<String, Object> tableProperties = unwrap(tableType, metadata.getProperties());
         validateColumnProperties(tableType, metadata.getColumns());
-        return withProperties(metadata, unwrap(tableType, metadata.getProperties()));
+        return withProperties(metadata, tableProperties);
     }
 
     private Map<String, Object> unwrap(TableType tableType, Map<String, Object> tableProperties)
