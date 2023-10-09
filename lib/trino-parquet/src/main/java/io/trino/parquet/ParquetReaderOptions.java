@@ -33,8 +33,6 @@ public class ParquetReaderOptions
     private final DataSize maxMergeDistance;
     private final DataSize maxBufferSize;
     private final boolean useColumnIndex;
-    private final boolean useBatchColumnReaders;
-    private final boolean useBatchNestedColumnReaders;
     private final boolean useBloomFilter;
     private final boolean nativeZstdDecompressorEnabled;
     private final boolean nativeSnappyDecompressorEnabled;
@@ -49,8 +47,6 @@ public class ParquetReaderOptions
         maxMergeDistance = DEFAULT_MAX_MERGE_DISTANCE;
         maxBufferSize = DEFAULT_MAX_BUFFER_SIZE;
         useColumnIndex = true;
-        useBatchColumnReaders = true;
-        useBatchNestedColumnReaders = true;
         useBloomFilter = true;
         nativeZstdDecompressorEnabled = true;
         nativeSnappyDecompressorEnabled = true;
@@ -65,8 +61,6 @@ public class ParquetReaderOptions
             DataSize maxMergeDistance,
             DataSize maxBufferSize,
             boolean useColumnIndex,
-            boolean useBatchColumnReaders,
-            boolean useBatchNestedColumnReaders,
             boolean useBloomFilter,
             boolean nativeZstdDecompressorEnabled,
             boolean nativeSnappyDecompressorEnabled,
@@ -80,8 +74,6 @@ public class ParquetReaderOptions
         this.maxMergeDistance = requireNonNull(maxMergeDistance, "maxMergeDistance is null");
         this.maxBufferSize = requireNonNull(maxBufferSize, "maxBufferSize is null");
         this.useColumnIndex = useColumnIndex;
-        this.useBatchColumnReaders = useBatchColumnReaders;
-        this.useBatchNestedColumnReaders = useBatchNestedColumnReaders;
         this.useBloomFilter = useBloomFilter;
         this.nativeZstdDecompressorEnabled = nativeZstdDecompressorEnabled;
         this.nativeSnappyDecompressorEnabled = nativeSnappyDecompressorEnabled;
@@ -107,16 +99,6 @@ public class ParquetReaderOptions
     public boolean isUseColumnIndex()
     {
         return useColumnIndex;
-    }
-
-    public boolean useBatchColumnReaders()
-    {
-        return useBatchColumnReaders;
-    }
-
-    public boolean useBatchNestedColumnReaders()
-    {
-        return useBatchNestedColumnReaders;
     }
 
     public boolean useBloomFilter()
@@ -163,8 +145,6 @@ public class ParquetReaderOptions
                 maxMergeDistance,
                 maxBufferSize,
                 useColumnIndex,
-                useBatchColumnReaders,
-                useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
                 nativeSnappyDecompressorEnabled,
@@ -181,8 +161,6 @@ public class ParquetReaderOptions
                 maxMergeDistance,
                 maxBufferSize,
                 useColumnIndex,
-                useBatchColumnReaders,
-                useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
                 nativeSnappyDecompressorEnabled,
@@ -199,8 +177,6 @@ public class ParquetReaderOptions
                 maxMergeDistance,
                 maxBufferSize,
                 useColumnIndex,
-                useBatchColumnReaders,
-                useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
                 nativeSnappyDecompressorEnabled,
@@ -217,8 +193,6 @@ public class ParquetReaderOptions
                 maxMergeDistance,
                 maxBufferSize,
                 useColumnIndex,
-                useBatchColumnReaders,
-                useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
                 nativeSnappyDecompressorEnabled,
@@ -235,8 +209,6 @@ public class ParquetReaderOptions
                 maxMergeDistance,
                 maxBufferSize,
                 useColumnIndex,
-                useBatchColumnReaders,
-                useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
                 nativeSnappyDecompressorEnabled,
@@ -253,44 +225,6 @@ public class ParquetReaderOptions
                 maxMergeDistance,
                 maxBufferSize,
                 useColumnIndex,
-                useBatchColumnReaders,
-                useBatchNestedColumnReaders,
-                useBloomFilter,
-                nativeZstdDecompressorEnabled,
-                nativeSnappyDecompressorEnabled,
-                vectorizedDecodingEnabled,
-                smallFileThreshold);
-    }
-
-    public ParquetReaderOptions withBatchColumnReaders(boolean useBatchColumnReaders)
-    {
-        return new ParquetReaderOptions(
-                ignoreStatistics,
-                maxReadBlockSize,
-                maxReadBlockRowCount,
-                maxMergeDistance,
-                maxBufferSize,
-                useColumnIndex,
-                useBatchColumnReaders,
-                useBatchNestedColumnReaders,
-                useBloomFilter,
-                nativeZstdDecompressorEnabled,
-                nativeSnappyDecompressorEnabled,
-                vectorizedDecodingEnabled,
-                smallFileThreshold);
-    }
-
-    public ParquetReaderOptions withBatchNestedColumnReaders(boolean useBatchNestedColumnReaders)
-    {
-        return new ParquetReaderOptions(
-                ignoreStatistics,
-                maxReadBlockSize,
-                maxReadBlockRowCount,
-                maxMergeDistance,
-                maxBufferSize,
-                useColumnIndex,
-                useBatchColumnReaders,
-                useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
                 nativeSnappyDecompressorEnabled,
@@ -307,8 +241,6 @@ public class ParquetReaderOptions
                 maxMergeDistance,
                 maxBufferSize,
                 useColumnIndex,
-                useBatchColumnReaders,
-                useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
                 nativeSnappyDecompressorEnabled,
@@ -325,8 +257,6 @@ public class ParquetReaderOptions
                 maxMergeDistance,
                 maxBufferSize,
                 useColumnIndex,
-                useBatchColumnReaders,
-                useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
                 nativeSnappyDecompressorEnabled,
@@ -343,8 +273,6 @@ public class ParquetReaderOptions
                 maxMergeDistance,
                 maxBufferSize,
                 useColumnIndex,
-                useBatchColumnReaders,
-                useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
                 nativeSnappyDecompressorEnabled,
@@ -361,8 +289,6 @@ public class ParquetReaderOptions
                 maxMergeDistance,
                 maxBufferSize,
                 useColumnIndex,
-                useBatchColumnReaders,
-                useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
                 nativeSnappyDecompressorEnabled,
@@ -379,8 +305,6 @@ public class ParquetReaderOptions
                 maxMergeDistance,
                 maxBufferSize,
                 useColumnIndex,
-                useBatchColumnReaders,
-                useBatchNestedColumnReaders,
                 useBloomFilter,
                 nativeZstdDecompressorEnabled,
                 nativeSnappyDecompressorEnabled,
