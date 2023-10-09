@@ -1131,6 +1131,17 @@ public class ObjectStoreMetadata
     }
 
     @Override
+    public Optional<Type> getSupportedType(ConnectorSession session, Map<String, Object> tableProperties, Type type)
+    {
+        TableType tableType = tableType(tableProperties);
+        if (tableType == HUDI) {
+            return Optional.empty();
+        }
+        tableProperties = unwrap(tableType, tableProperties);
+        return delegate(tableType).getSupportedType(unwrap(tableType, session), tableProperties, type);
+    }
+
+    @Override
     public Optional<ConnectorTableLayout> getInsertLayout(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
         TableType tableType = tableType(tableHandle);

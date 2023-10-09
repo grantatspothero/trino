@@ -399,6 +399,12 @@ public class MockPlanAlternativeMetadata
     }
 
     @Override
+    public Optional<Type> getSupportedType(ConnectorSession session, Map<String, Object> tableProperties, Type type)
+    {
+        return delegate.getSupportedType(session, tableProperties, type);
+    }
+
+    @Override
     public Optional<ConnectorTableLayout> getInsertLayout(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
         return delegate.getInsertLayout(session, getDelegate(tableHandle));

@@ -20,12 +20,9 @@ import io.trino.plugin.hudi.HudiMetadata;
 import io.trino.plugin.iceberg.IcebergMetadata;
 import io.trino.plugin.objectstore.ObjectStoreMetadata;
 import io.trino.spi.connector.ConnectorMetadata;
-import io.trino.spi.connector.ConnectorSession;
-import io.trino.spi.type.Type;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
-import java.util.Map;
 import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -36,7 +33,6 @@ public class TestMockPlanAlternativeMetadata
 {
     @Test
     public void testEverythingImplemented()
-            throws Exception
     {
         assertAllMethodsOverridden(ConnectorMetadata.class, MockPlanAlternativeMetadata.class, ImmutableSet.<Method>builder()
                 // Do not require implementation of deprecated methods, as they are not called by the engine
@@ -53,8 +49,6 @@ public class TestMockPlanAlternativeMetadata
                         // ... but also allow it to implement more methods (probably not needed by tests)
                         .filter(method -> !overrides(MockPlanAlternativeMetadata.class, method))
                         .collect(toImmutableList()))
-                // TODO
-                .add(ConnectorMetadata.class.getMethod("getSupportedType", ConnectorSession.class, Map.class, Type.class))
                 .build());
     }
 

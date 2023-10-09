@@ -23,11 +23,9 @@ import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SchemaTablePrefix;
 import io.trino.spi.security.TrinoPrincipal;
-import io.trino.spi.type.Type;
 import org.testng.annotations.Test;
 
 import java.lang.reflect.Method;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -59,8 +57,6 @@ public class TestObjectStoreMetadata
                                 !overrides(DeltaLakeMetadata.class, method) &&
                                 !overrides(HudiMetadata.class, method))
                         .collect(toImmutableList()))
-                // TODO
-                .add(ConnectorMetadata.class.getMethod("getSupportedType", ConnectorSession.class, Map.class, Type.class))
                 // Supported in HiveMetadata only, but only with extension point that Galaxy does not use
                 .add(ConnectorMetadata.class.getMethod("refreshMaterializedView", ConnectorSession.class, SchemaTableName.class))
                 // Not implemented, not applicable in Galaxy
