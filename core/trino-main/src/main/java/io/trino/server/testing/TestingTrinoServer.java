@@ -266,8 +266,6 @@ public class TestingTrinoServer
                 .put("internal-communication.shared-secret", "internal-shared-secret");
 
         if (coordinator) {
-            // TODO: enable failure detector
-            serverProperties.put("failure-detector.enabled", "false");
             // Reduce memory footprint in tests
             serverProperties.put("query.min-expire-age", "5s");
 
