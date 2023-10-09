@@ -186,20 +186,20 @@ public class TestObjectStoreDeltaConnectorTest
     {
         assertThat((String) computeActual("SHOW CREATE TABLE orders").getOnlyValue()).matches(
                 "\\QCREATE TABLE objectstore.tpch.orders (\n" +
-                "   orderkey bigint,\n" +
-                "   custkey bigint,\n" +
-                "   orderstatus varchar,\n" +
-                "   totalprice double,\n" +
-                "   orderdate date,\n" +
-                "   orderpriority varchar,\n" +
-                "   clerk varchar,\n" +
-                "   shippriority integer,\n" +
-                "   comment varchar\n" +
-                ")\n" +
-                "WITH (\n" +
-                "   location = 's3://test-bucket/tpch/orders-\\E.*\\Q',\n" +
-                "   type = 'DELTA'\n" +
-                ")\\E");
+                        "   orderkey bigint,\n" +
+                        "   custkey bigint,\n" +
+                        "   orderstatus varchar,\n" +
+                        "   totalprice double,\n" +
+                        "   orderdate date,\n" +
+                        "   orderpriority varchar,\n" +
+                        "   clerk varchar,\n" +
+                        "   shippriority integer,\n" +
+                        "   comment varchar\n" +
+                        ")\n" +
+                        "WITH (\n" +
+                        "   location = 's3://test-bucket/tpch/orders-\\E.*\\Q',\n" +
+                        "   type = 'DELTA'\n" +
+                        ")\\E");
     }
 
     @Override
