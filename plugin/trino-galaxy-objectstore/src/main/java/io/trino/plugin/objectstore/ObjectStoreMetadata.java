@@ -1450,15 +1450,19 @@ public class ObjectStoreMetadata
     @Override
     public void beginQuery(ConnectorSession session)
     {
-        // only implemented by the Hive connector
         hiveMetadata.beginQuery(unwrap(HIVE, session));
+        icebergMetadata.beginQuery(unwrap(ICEBERG, session));
+        deltaMetadata.beginQuery(unwrap(DELTA, session));
+        hudiMetadata.beginQuery(unwrap(HUDI, session));
     }
 
     @Override
     public void cleanupQuery(ConnectorSession session)
     {
-        // only implemented by the Hive connector
         hiveMetadata.cleanupQuery(unwrap(HIVE, session));
+        icebergMetadata.cleanupQuery(unwrap(ICEBERG, session));
+        deltaMetadata.cleanupQuery(unwrap(DELTA, session));
+        hudiMetadata.cleanupQuery(unwrap(HUDI, session));
     }
 
     @Override
