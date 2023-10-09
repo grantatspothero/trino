@@ -41,13 +41,13 @@ public class JdbcMetadataConfig
         /**
          * Uses {@link JdbcClient#getAllTableColumns(ConnectorSession, Optional)}.
          */
-        JEDI_1,
+        DMA,
 
         /**
          * Uses {@link JdbcClient#getAllTableColumns(ConnectorSession, Optional)}
          * and processes schemas in multiple threads.
          */
-        JEDI_1P,
+        DMA_P,
     }
 
     private boolean complexExpressionPushdownEnabled = true;

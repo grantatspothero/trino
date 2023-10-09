@@ -818,7 +818,7 @@ public class DefaultJdbcMetadata
                         .iterator();
             }
 
-            case JEDI_1 -> {
+            case DMA -> {
                 Map<SchemaTableName, RelationColumnsMetadata> resultsByName = stream(jdbcClient.getAllTableColumns(session, schemaName))
                         .collect(toImmutableMap(RelationColumnsMetadata::name, identity()));
                 yield relationFilter.apply(resultsByName.keySet()).stream()
@@ -826,7 +826,7 @@ public class DefaultJdbcMetadata
                         .iterator();
             }
 
-            case JEDI_1P -> {
+            case DMA_P -> {
                 checkState(maxMetadataBackgroundProcessingThreads >= 0, "maxMetadataBackgroundProcessingThreads and backgroundExecutorService not provided");
 
                 ImmutableList.Builder<RelationColumnsMetadata> results = ImmutableList.builder();

@@ -44,7 +44,7 @@ public class TestJdbcMetadataConfig
                 .put("complex-expression-pushdown.enabled", "false")
                 .put("join-pushdown.enabled", "true")
                 .put("aggregation-pushdown.enabled", "false")
-                .put("jdbc.list-columns-mode", "JEDI_1P")
+                .put("jdbc.list-columns-mode", "DMA")
                 .put("jdbc.metadata-background-threads", "13")
                 .put("domain-compaction-threshold", "42")
                 .put("topn-pushdown.enabled", "false")
@@ -55,7 +55,7 @@ public class TestJdbcMetadataConfig
                 .setJoinPushdownEnabled(true)
                 .setAggregationPushdownEnabled(false)
                 .setTopNPushdownEnabled(false)
-                .setListColumnsMode(JdbcMetadataConfig.ListColumnsMode.JEDI_1P)
+                .setListColumnsMode(JdbcMetadataConfig.ListColumnsMode.DMA)
                 .setMaxMetadataBackgroundProcessingThreads(13)
                 .setDomainCompactionThreshold(42);
 

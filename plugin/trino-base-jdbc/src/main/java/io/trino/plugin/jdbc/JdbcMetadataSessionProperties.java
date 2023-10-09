@@ -37,7 +37,7 @@ public class JdbcMetadataSessionProperties
     public static final String JOIN_PUSHDOWN_ENABLED = "join_pushdown_enabled";
     public static final String AGGREGATION_PUSHDOWN_ENABLED = "aggregation_pushdown_enabled";
     public static final String TOPN_PUSHDOWN_ENABLED = "topn_pushdown_enabled";
-    public static final String LIST_COLUMNS_MODE = "list_columns_mode";
+    public static final String LIST_COLUMNS_MODE = "experimental_list_columns_mode";
     public static final String DOMAIN_COMPACTION_THRESHOLD = "domain_compaction_threshold";
 
     private final List<PropertyMetadata<?>> properties;
@@ -67,7 +67,7 @@ public class JdbcMetadataSessionProperties
                         "Experimental: select implementation for listing tables' columns",
                         ListColumnsMode.class,
                         jdbcMetadataConfig.getListColumnsMode(),
-                        false))
+                        true))
                 .add(integerProperty(
                         DOMAIN_COMPACTION_THRESHOLD,
                         "Maximum ranges to allow in a tuple domain without simplifying it",
