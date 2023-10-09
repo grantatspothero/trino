@@ -111,6 +111,7 @@ public class StatsCalculatorModule
             rules.add(new SortStatsRule());
             rules.add(new ChooseAlternativeRule(normalizer));
             rules.add(new DynamicFilterSourceStatsRule());
+            rules.add(new RemoteSourceStatsRule(normalizer));
 
             return rules.build();
         }
