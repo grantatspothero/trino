@@ -52,6 +52,7 @@ public class TableScanOperator
             implements SourceOperatorFactory
     {
         private final int operatorId;
+        private final PlanNodeId planNodeId;
         private final PlanNodeId sourceId;
         private final PageSourceProvider pageSourceProvider;
         private final DynamicRowFilteringPageSourceProvider dynamicRowFilteringPageSourceProvider;
@@ -62,6 +63,7 @@ public class TableScanOperator
 
         public TableScanOperatorFactory(
                 int operatorId,
+                PlanNodeId planNodeId,
                 PlanNodeId sourceId,
                 PageSourceProvider pageSourceProvider,
                 DynamicRowFilteringPageSourceProvider dynamicRowFilteringPageSourceProvider,
@@ -70,6 +72,7 @@ public class TableScanOperator
                 DynamicFilter dynamicFilter)
         {
             this.operatorId = operatorId;
+            this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
             this.sourceId = requireNonNull(sourceId, "sourceId is null");
             this.pageSourceProvider = requireNonNull(pageSourceProvider, "pageSourceProvider is null");
             this.dynamicRowFilteringPageSourceProvider = requireNonNull(dynamicRowFilteringPageSourceProvider, "dynamicRowFilteringPageSourceProvider is null");
@@ -88,7 +91,7 @@ public class TableScanOperator
         public SourceOperator createOperator(DriverContext driverContext)
         {
             checkState(!closed, "Factory is already closed");
-            OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, sourceId, TableScanOperator.class.getSimpleName());
+            OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, planNodeId, TableScanOperator.class.getSimpleName());
             return new TableScanOperator(
                     operatorContext,
                     sourceId,
@@ -105,7 +108,7 @@ public class TableScanOperator
     }
 
     private final OperatorContext operatorContext;
-    private final PlanNodeId planNodeId;
+    private final PlanNodeId sourceId;
     private final TableAwarePageSourceProvider pageSourceProvider;
     private final List<ColumnHandle> columns;
     private final DynamicFilter dynamicFilter;
@@ -126,7 +129,7 @@ public class TableScanOperator
     @VisibleForTesting
     TableScanOperator(
             OperatorContext operatorContext,
-            PlanNodeId planNodeId,
+            PlanNodeId sourceId,
             PageSourceProvider pageSourceProvider,
             DynamicRowFilteringPageSourceProvider dynamicRowFilteringPageSourceProvider,
             TableHandle table,
@@ -134,7 +137,7 @@ public class TableScanOperator
             DynamicFilter dynamicFilter)
     {
         this(operatorContext,
-                planNodeId,
+                sourceId,
                 TableAwarePageSourceProvider.create(operatorContext, table, pageSourceProvider, dynamicRowFilteringPageSourceProvider),
                 columns,
                 dynamicFilter);
@@ -142,13 +145,13 @@ public class TableScanOperator
 
     public TableScanOperator(
             OperatorContext operatorContext,
-            PlanNodeId planNodeId,
+            PlanNodeId sourceId,
             TableAwarePageSourceProvider pageSourceProvider,
             Iterable<ColumnHandle> columns,
             DynamicFilter dynamicFilter)
     {
         this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
+        this.sourceId = requireNonNull(sourceId, "planNodeId is null");
         this.pageSourceProvider = requireNonNull(pageSourceProvider, "pageSourceFactory is null");
         this.columns = ImmutableList.copyOf(requireNonNull(columns, "columns is null"));
         this.dynamicFilter = requireNonNull(dynamicFilter, "dynamicFilter is null");
@@ -164,7 +167,7 @@ public class TableScanOperator
     @Override
     public PlanNodeId getSourceId()
     {
-        return planNodeId;
+        return sourceId;
     }
 
     @Override

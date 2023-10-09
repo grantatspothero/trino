@@ -598,6 +598,7 @@ public class TestOrcPageSourceMemoryTracking
             SourceOperatorFactory sourceOperatorFactory = new TableScanOperatorFactory(
                     0,
                     new PlanNodeId("0"),
+                    new PlanNodeId("0"),
                     (session, split, table, columnHandles, dynamicFilter) -> pageSource,
                     new DynamicRowFilteringPageSourceProvider(new DynamicPageFilterCache(new TypeOperators())),
                     TEST_TABLE_HANDLE,
