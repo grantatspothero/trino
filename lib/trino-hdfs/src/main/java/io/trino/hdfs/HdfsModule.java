@@ -17,8 +17,10 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
 import io.trino.hdfs.galaxy.RegionEnforcementModule;
+import io.trino.hdfs.gcs.GcsStorageFactory;
 
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
+import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 
 public class HdfsModule
@@ -37,5 +39,6 @@ public class HdfsModule
         newSetBinder(binder, DynamicConfigurationProvider.class);
 
         binder.install(new RegionEnforcementModule());
+        newOptionalBinder(binder, GcsStorageFactory.class);
     }
 }
