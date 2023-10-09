@@ -57,8 +57,6 @@ import io.trino.spi.ErrorCodeSupplier;
 import io.trino.spi.TrinoException;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheTableId;
-import io.trino.spi.connector.AggregateFunction;
-import io.trino.spi.connector.AggregationApplicationResult;
 import io.trino.spi.connector.BeginTableExecuteResult;
 import io.trino.spi.connector.CatalogSchemaTableName;
 import io.trino.spi.connector.ColumnHandle;
@@ -77,7 +75,6 @@ import io.trino.spi.connector.ConnectorTableHandle;
 import io.trino.spi.connector.ConnectorTableLayout;
 import io.trino.spi.connector.ConnectorTableMetadata;
 import io.trino.spi.connector.ConnectorTableProperties;
-import io.trino.spi.connector.ConnectorTableSchema;
 import io.trino.spi.connector.ConnectorTableVersion;
 import io.trino.spi.connector.ConnectorViewDefinition;
 import io.trino.spi.connector.Constraint;
@@ -90,8 +87,6 @@ import io.trino.spi.connector.RelationColumnsMetadata;
 import io.trino.spi.connector.RelationCommentMetadata;
 import io.trino.spi.connector.RetryMode;
 import io.trino.spi.connector.RowChangeParadigm;
-import io.trino.spi.connector.SampleApplicationResult;
-import io.trino.spi.connector.SampleType;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SchemaTablePrefix;
 import io.trino.spi.connector.SystemTable;
@@ -542,13 +537,6 @@ public class ObjectStoreMetadata
     }
 
     @Override
-    public ConnectorTableSchema getTableSchema(ConnectorSession session, ConnectorTableHandle tableHandle)
-    {
-        TableType tableType = tableType(tableHandle);
-        return delegate(tableType).getTableSchema(unwrap(tableType, session), tableHandle);
-    }
-
-    @Override
     public ConnectorTableMetadata getTableMetadata(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
         TableType tableType = tableType(tableHandle);
@@ -586,7 +574,14 @@ public class ObjectStoreMetadata
     }
 
     @Override
-    @SuppressWarnings("deprecation") // TODO (https://github.com/starburstdata/galaxy-trino/issues/818) implement new streamRelationComments
+    @SuppressWarnings("deprecation")
+    public Map<SchemaTableName, List<ColumnMetadata>> listTableColumns(ConnectorSession session, SchemaTablePrefix prefix)
+    {
+        throw new UnsupportedOperationException("listTableColumns should not be called when streamRelationColumns is implemented");
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
     public Iterator<TableColumnsMetadata> streamTableColumns(ConnectorSession session, SchemaTablePrefix prefix)
     {
         throw new UnsupportedOperationException("streamTableColumns should not be called when streamRelationColumns is implemented");
@@ -1417,20 +1412,6 @@ public class ObjectStoreMetadata
     {
         TableType tableType = tableType(tableHandle);
         return delegate(tableType).applyProjection(unwrap(tableType, session), tableHandle, projections, assignments);
-    }
-
-    @Override
-    public Optional<SampleApplicationResult<ConnectorTableHandle>> applySample(ConnectorSession session, ConnectorTableHandle tableHandle, SampleType sampleType, double sampleRatio)
-    {
-        TableType tableType = tableType(tableHandle);
-        return delegate(tableType).applySample(unwrap(tableType, session), tableHandle, sampleType, sampleRatio);
-    }
-
-    @Override
-    public Optional<AggregationApplicationResult<ConnectorTableHandle>> applyAggregation(ConnectorSession session, ConnectorTableHandle tableHandle, List<AggregateFunction> aggregates, Map<String, ColumnHandle> assignments, List<List<ColumnHandle>> groupingSets)
-    {
-        TableType tableType = tableType(tableHandle);
-        return delegate(tableType).applyAggregation(unwrap(tableType, session), tableHandle, aggregates, assignments, groupingSets);
     }
 
     @Override
