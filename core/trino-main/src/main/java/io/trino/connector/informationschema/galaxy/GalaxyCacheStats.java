@@ -20,7 +20,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
-import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -34,7 +34,7 @@ public record GalaxyCacheStats(Map<String, Map<String, Stat>> stats)
     public GalaxyCacheStats
     {
         checkArgument(stats == null, "stats must be null");
-        stats = new TreeMap<>();
+        stats = new ConcurrentHashMap<>();
     }
 
     @Inject
