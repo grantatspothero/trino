@@ -49,6 +49,10 @@ public class CommonPlanAdaptation
      */
     private final PlanSignature commonSubplanSignature;
     /**
+     * Dynamic filter disjuncts from all common subplans.
+     */
+    private final Expression commonDynamicFilterDisjuncts;
+    /**
      * Mapping from {@link CacheColumnId} to relevant (for plan signature) dynamic filtering columns.
      */
     private final Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping;
@@ -67,6 +71,7 @@ public class CommonPlanAdaptation
             PlanNode commonSubplan,
             FilteredTableScan commonSubplanFilteredTableScan,
             PlanSignature commonSubplanSignature,
+            Expression commonDynamicFilterDisjuncts,
             Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping,
             Optional<Expression> adaptationPredicate,
             Optional<Assignments> adaptationAssignments)
@@ -74,6 +79,7 @@ public class CommonPlanAdaptation
         this.commonSubplan = requireNonNull(commonSubplan, "commonSubplan is null");
         this.commonSubplanFilteredTableScan = requireNonNull(commonSubplanFilteredTableScan, "commonSubplanFilteredTableScan is null");
         this.commonSubplanSignature = requireNonNull(commonSubplanSignature, "commonSubplanSignature is null");
+        this.commonDynamicFilterDisjuncts = requireNonNull(commonDynamicFilterDisjuncts, "commonDynamicFilterDisjuncts is null");
         this.dynamicFilterColumnMapping = requireNonNull(dynamicFilterColumnMapping, "dynamicFilterColumnMapping is null");
         this.adaptationPredicate = requireNonNull(adaptationPredicate, "adaptationPredicate is null");
         this.adaptationAssignments = requireNonNull(adaptationAssignments, "adaptationAssignments is null");
@@ -111,6 +117,11 @@ public class CommonPlanAdaptation
     public PlanSignature getCommonSubplanSignature()
     {
         return commonSubplanSignature;
+    }
+
+    public Expression getCommonDynamicFilterDisjuncts()
+    {
+        return commonDynamicFilterDisjuncts;
     }
 
     public Map<CacheColumnId, ColumnHandle> getDynamicFilterColumnMapping()

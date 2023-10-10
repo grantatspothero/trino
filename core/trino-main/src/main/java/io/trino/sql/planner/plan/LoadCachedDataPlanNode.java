@@ -21,6 +21,7 @@ import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.PlanSignature;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.sql.planner.Symbol;
+import io.trino.sql.tree.Expression;
 
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,10 @@ public class LoadCachedDataPlanNode
         extends PlanNode
 {
     private final PlanSignature planSignature;
+    /**
+     * Dynamic filter disjuncts from all common subplans.
+     */
+    private final Expression dynamicFilterDisjuncts;
     private final Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping;
     private final List<Symbol> outputSymbols;
 
@@ -39,11 +44,13 @@ public class LoadCachedDataPlanNode
     public LoadCachedDataPlanNode(
             @JsonProperty PlanNodeId id,
             @JsonProperty PlanSignature planSignature,
+            @JsonProperty Expression dynamicFilterDisjuncts,
             @JsonProperty Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping,
             @JsonProperty List<Symbol> outputSymbols)
     {
         super(id);
         this.planSignature = requireNonNull(planSignature, "planSignature is null");
+        this.dynamicFilterDisjuncts = requireNonNull(dynamicFilterDisjuncts, "dynamicFilterDisjuncts is null");
         this.dynamicFilterColumnMapping = requireNonNull(dynamicFilterColumnMapping, "dynamicFilterColumnMapping is null");
         this.outputSymbols = requireNonNull(outputSymbols, "outputSymbols is null");
     }
@@ -52,6 +59,12 @@ public class LoadCachedDataPlanNode
     public PlanSignature getPlanSignature()
     {
         return planSignature;
+    }
+
+    @JsonProperty
+    public Expression getDynamicFilterDisjuncts()
+    {
+        return dynamicFilterDisjuncts;
     }
 
     @JsonProperty
@@ -85,6 +98,7 @@ public class LoadCachedDataPlanNode
         return new LoadCachedDataPlanNode(
                 getId(),
                 planSignature,
+                dynamicFilterDisjuncts,
                 dynamicFilterColumnMapping,
                 outputSymbols);
     }

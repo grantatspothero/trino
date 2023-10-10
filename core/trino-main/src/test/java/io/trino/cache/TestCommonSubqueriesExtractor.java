@@ -25,6 +25,7 @@ import io.trino.cost.StatsAndCosts;
 import io.trino.execution.warnings.WarningCollector;
 import io.trino.metadata.Metadata;
 import io.trino.metadata.TableHandle;
+import io.trino.plugin.tpch.TpchColumnHandle;
 import io.trino.plugin.tpch.TpchConnectorFactory;
 import io.trino.spi.block.LongArrayBlock;
 import io.trino.spi.cache.CacheColumnId;
@@ -62,6 +63,7 @@ import io.trino.sql.planner.plan.AggregationNode.Aggregation;
 import io.trino.sql.planner.plan.Assignments;
 import io.trino.sql.planner.plan.DynamicFilterId;
 import io.trino.sql.planner.plan.FilterNode;
+import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.planner.plan.PlanNode;
 import io.trino.sql.planner.plan.PlanNodeId;
 import io.trino.sql.planner.plan.ProjectNode;
@@ -90,7 +92,9 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.trino.SystemSessionProperties.CACHE_AGGREGATIONS_ENABLED;
 import static io.trino.SystemSessionProperties.CACHE_PROJECTIONS_ENABLED;
 import static io.trino.SystemSessionProperties.CACHE_SUBQUERIES_ENABLED;
+import static io.trino.SystemSessionProperties.JOIN_REORDERING_STRATEGY;
 import static io.trino.SystemSessionProperties.OPTIMIZE_HASH_GENERATION;
+import static io.trino.SystemSessionProperties.SMALL_DYNAMIC_FILTER_MAX_ROW_COUNT;
 import static io.trino.cache.CanonicalSubplanExtractor.canonicalExpressionToColumnId;
 import static io.trino.cost.StatsCalculator.noopStatsCalculator;
 import static io.trino.execution.querystats.PlanOptimizersStatsCollector.createPlanOptimizersStatsCollector;
@@ -104,6 +108,7 @@ import static io.trino.spi.type.VarcharType.createVarcharType;
 import static io.trino.sql.DynamicFilters.createDynamicFilterExpression;
 import static io.trino.sql.DynamicFilters.extractDynamicFilters;
 import static io.trino.sql.ExpressionUtils.and;
+import static io.trino.sql.ExpressionUtils.extractDisjuncts;
 import static io.trino.sql.planner.ExpressionExtractor.extractExpressions;
 import static io.trino.sql.planner.LogicalPlanner.Stage.OPTIMIZED_AND_VALIDATED;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.aggregation;
@@ -144,7 +149,10 @@ public class TestCommonSubqueriesExtractor
             .setSchema("tiny")
             // test hash generation
             .setSystemProperty(OPTIMIZE_HASH_GENERATION, "true")
-            .setSystemProperty(CACHE_SUBQUERIES_ENABLED, "true")
+            // prevent CBO from interfering with tests
+            .setSystemProperty(JOIN_REORDERING_STRATEGY, "none")
+            // simplify tests by disabling small DF waiting
+            .setSystemProperty(SMALL_DYNAMIC_FILTER_MAX_ROW_COUNT, "0")
             .build();
     private static final MockConnectorColumnHandle HANDLE_1 = new MockConnectorColumnHandle("column1", BIGINT);
     private static final MockConnectorColumnHandle HANDLE_2 = new MockConnectorColumnHandle("column2", BIGINT);
@@ -219,6 +227,91 @@ public class TestCommonSubqueriesExtractor
                 TestingTransactionHandle.create());
         tpchCatalogId = queryRunner.getCatalogHandle(TPCH_SESSION.getCatalog().get()).getId();
         return queryRunner;
+    }
+
+    @Test
+    public void testCommonDynamicFilters()
+    {
+        CommonSubqueries commonSubqueries = extractTpchCommonSubqueries("""
+                SELECT nationkey FROM
+                  ((SELECT nationkey, regionkey FROM nation n JOIN (SELECT * FROM (VALUES 0, 1) t(a)) t ON n.nationkey = t.a)
+                   UNION ALL
+                   (SELECT nationkey, regionkey FROM nation n JOIN (SELECT * FROM (VALUES 0, 1) t(a)) t ON n.regionkey = t.a)) l(nationkey, regionkey)
+                JOIN (SELECT * FROM (VALUES 0, 1, 2) t(a)) t ON l.nationkey = t.a""");
+
+        Map<PlanNode, CommonPlanAdaptation> planAdaptations = commonSubqueries.planAdaptations();
+        assertThat(planAdaptations).hasSize(2);
+        assertThat(planAdaptations).allSatisfy((node, adaptation) -> assertThat(node).isInstanceOf(ProjectNode.class));
+
+        CommonPlanAdaptation projectionA = Iterables.get(planAdaptations.values(), 0);
+        CommonPlanAdaptation projectionB = Iterables.get(planAdaptations.values(), 1);
+
+        // extract dynamic filter ids
+        List<DynamicFilterId> dynamicFilterIds = PlanNodeSearcher.searchFrom(commonSubqueries.plan())
+                .whereIsInstanceOfAny(JoinNode.class)
+                .<JoinNode>findAll().stream()
+                .flatMap(join -> join.getDynamicFilters().keySet().stream())
+                .collect(toImmutableList());
+        DynamicFilterId topId = dynamicFilterIds.get(0);
+        DynamicFilterId leftId = dynamicFilterIds.get(1);
+        DynamicFilterId rightId = dynamicFilterIds.get(2);
+
+        List<String> symbols = commonSubqueries.planAdaptations.values().stream()
+                .map(subplan -> subplan.getCommonSubplanFilteredTableScan().tableScanNode())
+                .flatMap(scan -> scan.getOutputSymbols().stream())
+                .map(Symbol::toString)
+                .collect(toImmutableList());
+        String leftNationkey = symbols.get(0);
+        String leftRegionkey = symbols.get(1);
+        String rightNationkey = symbols.get(2);
+        String rightRegionkey = symbols.get(3);
+
+        // assert that common subplan have dynamic filter preserved in both FilterNode and FilteredTableScan
+        assertThat(extractExpressions(projectionA.getCommonSubplan()).stream()
+                .flatMap(expression -> extractDynamicFilters(expression).getDynamicConjuncts().stream())
+                .collect(toImmutableList()))
+                .containsExactly(
+                        new Descriptor(topId, expression(leftNationkey)),
+                        new Descriptor(leftId, expression(leftNationkey)));
+        assertThat(projectionA.getCommonSubplanFilteredTableScan().filterPredicate().stream()
+                .flatMap(expression -> extractDynamicFilters(expression).getDynamicConjuncts().stream())
+                .collect(toImmutableList()))
+                .containsExactly(
+                        new Descriptor(topId, expression(leftNationkey)),
+                        new Descriptor(leftId, expression(leftNationkey)));
+
+        assertThat(extractExpressions(projectionB.getCommonSubplan()).stream()
+                .flatMap(expression -> extractDynamicFilters(expression).getDynamicConjuncts().stream())
+                .collect(toImmutableList()))
+                .containsExactly(
+                        new Descriptor(topId, expression(rightNationkey)),
+                        new Descriptor(rightId, expression(rightRegionkey)));
+        assertThat(projectionB.getCommonSubplanFilteredTableScan().filterPredicate().stream()
+                .flatMap(expression -> extractDynamicFilters(expression).getDynamicConjuncts().stream())
+                .collect(toImmutableList()))
+                .containsExactly(
+                        new Descriptor(topId, expression(rightNationkey)),
+                        new Descriptor(rightId, expression(rightRegionkey)));
+
+        // assert that common dynamic filter is extracted for both subplans
+        assertThat(extractDisjuncts(projectionA.getCommonDynamicFilterDisjuncts()).stream()
+                .map(expression -> extractDynamicFilters(expression).getDynamicConjuncts()))
+                .containsExactly(
+                        ImmutableList.of(new Descriptor(topId, expression(leftNationkey)), new Descriptor(leftId, expression(leftNationkey))),
+                        ImmutableList.of(new Descriptor(topId, expression(leftNationkey)), new Descriptor(rightId, expression(leftRegionkey))));
+
+        assertThat(extractDisjuncts(projectionB.getCommonDynamicFilterDisjuncts()).stream()
+                .map(expression -> extractDynamicFilters(expression).getDynamicConjuncts()))
+                .containsExactly(
+                        ImmutableList.of(new Descriptor(topId, expression(rightNationkey)), new Descriptor(leftId, expression(rightNationkey))),
+                        ImmutableList.of(new Descriptor(topId, expression(rightNationkey)), new Descriptor(rightId, expression(rightRegionkey))));
+
+        // verify DF mappings for common dynamic filter
+        TpchColumnHandle nationkeyHandle = new TpchColumnHandle("nationkey", BIGINT);
+        TpchColumnHandle regionkeyHandle = new TpchColumnHandle("regionkey", BIGINT);
+        assertThat(projectionA.getDynamicFilterColumnMapping())
+                .containsExactly(new SimpleEntry<>(NATIONKEY_ID, nationkeyHandle), new SimpleEntry<>(REGIONKEY_ID, regionkeyHandle));
+        assertThat(projectionA.getDynamicFilterColumnMapping()).isEqualTo(projectionB.getDynamicFilterColumnMapping());
     }
 
     @Test
@@ -759,6 +852,10 @@ public class TestCommonSubqueriesExtractor
                         expression("subquery_b_column1")));
         assertThat(subqueryB.getDynamicFilterColumnMapping()).containsExactly(
                 new SimpleEntry<>(new CacheColumnId("[cache_column1]"), HANDLE_1));
+
+        // common DF is true since subqueryA doesn't have DF
+        assertThat(subqueryA.getCommonDynamicFilterDisjuncts()).isEqualTo(TRUE_LITERAL);
+        assertThat(subqueryB.getCommonDynamicFilterDisjuncts()).isEqualTo(TRUE_LITERAL);
 
         // symbols used in common subplans for both subqueries should be unique
         assertThat(SymbolsExtractor.extractUnique(subqueryA.getCommonSubplan()))
@@ -1416,11 +1513,12 @@ public class TestCommonSubqueriesExtractor
                             new RuleTester(getQueryRunner()).getTypeAnalyzer(),
                             plan.getRoot()),
                     symbolAllocator,
-                    idAllocator);
+                    idAllocator,
+                    plan.getRoot());
         });
     }
 
-    record CommonSubqueries(Map<PlanNode, CommonPlanAdaptation> planAdaptations, SymbolAllocator symbolAllocator, PlanNodeIdAllocator idAllocator) {}
+    record CommonSubqueries(Map<PlanNode, CommonPlanAdaptation> planAdaptations, SymbolAllocator symbolAllocator, PlanNodeIdAllocator idAllocator, PlanNode plan) {}
 
     private Map<PlanNode, CommonPlanAdaptation> extractCommonSubqueries(
             PlanNodeIdAllocator idAllocator,

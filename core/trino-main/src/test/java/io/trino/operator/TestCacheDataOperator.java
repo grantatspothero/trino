@@ -177,7 +177,8 @@ public class TestCacheDataOperator
                 TEST_TABLE_HANDLE,
                 signature,
                 ImmutableMap.of(),
-                () -> createStaticDynamicFilter(EMPTY),
+                () -> createStaticDynamicFilter(ImmutableList.of(EMPTY)),
+                () -> createStaticDynamicFilter(ImmutableList.of(EMPTY)),
                 driverFactories);
 
         // process splits where split's page is small. All splits will be successfully cached

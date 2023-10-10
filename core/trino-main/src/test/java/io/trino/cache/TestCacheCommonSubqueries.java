@@ -21,6 +21,7 @@ import io.trino.plugin.tpch.TpchConnectorFactory;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.PlanSignature;
 import io.trino.spi.cache.SignatureKey;
+import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.predicate.ValueSet;
@@ -31,12 +32,14 @@ import io.trino.sql.planner.assertions.BasePlanTest;
 import io.trino.sql.planner.iterative.rule.test.PlanBuilder;
 import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.JoinNode;
+import io.trino.sql.planner.plan.ValuesNode;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.SymbolReference;
 import io.trino.testing.LocalQueryRunner;
 import org.intellij.lang.annotations.Language;
 import org.testng.annotations.Test;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -132,7 +135,7 @@ public class TestCacheCommonSubqueries
                                 // load data from cache alternative
                                 strictProject(ImmutableMap.of("REGIONKEY_A", expression("REGIONKEY_A")),
                                         filter("NATIONKEY_A > BIGINT '10'",
-                                                loadCachedDataPlanNode(signature, ImmutableMap.of(), "REGIONKEY_A", "NATIONKEY_A")))),
+                                                loadCachedDataPlanNode(signature, "REGIONKEY_A", "NATIONKEY_A")))),
                         chooseAlternativeNode(
                                 // original subplan
                                 strictProject(ImmutableMap.of("REGIONKEY_B", expression("REGIONKEY_B")),
@@ -148,7 +151,7 @@ public class TestCacheCommonSubqueries
                                 // load data from cache alternative
                                 strictProject(ImmutableMap.of("REGIONKEY_B", expression("REGIONKEY_B")),
                                         filter("NATIONKEY_B < BIGINT '5'",
-                                                loadCachedDataPlanNode(signature, ImmutableMap.of(), "REGIONKEY_B", "NATIONKEY_B")))))));
+                                                loadCachedDataPlanNode(signature, "REGIONKEY_B", "NATIONKEY_B")))))));
     }
 
     @Test
@@ -187,6 +190,7 @@ public class TestCacheCommonSubqueries
                                         loadCachedDataPlanNode(
                                                 signature,
                                                 ImmutableMap.of(NATIONKEY_COLUMN_ID, new TpchColumnHandle("nationkey", BIGINT)),
+                                                dfDisjuncts -> dfDisjuncts.size() == 1,
                                                 "NATIONKEY", "REGIONKEY"))),
                         anyTree(
                                 chooseAlternativeNode(
@@ -198,7 +202,44 @@ public class TestCacheCommonSubqueries
                                                         tableScan("nation", ImmutableMap.of("NATIONKEY", "nationkey", "REGIONKEY", "regionkey")))),
                                         // load data from cache alternative
                                         strictProject(ImmutableMap.of("REGIONKEY", expression("REGIONKEY")),
-                                                loadCachedDataPlanNode(signature, ImmutableMap.of(), "NATIONKEY", "REGIONKEY")))))));
+                                                loadCachedDataPlanNode(signature, "NATIONKEY", "REGIONKEY")))))));
+    }
+
+    @Test
+    public void testJoinQueryWithCommonDynamicFilters()
+    {
+        PlanSignature signature = new PlanSignature(
+                new SignatureKey(testCatalogId + ":tiny:nation:0.01:((\"[nationkey:bigint]\" IN (BIGINT '0', BIGINT '1')) OR (\"[regionkey:bigint]\" IN (BIGINT '0', BIGINT '1')))"),
+                Optional.empty(),
+                ImmutableList.of(NATIONKEY_COLUMN_ID, REGIONKEY_COLUMN_ID),
+                TupleDomain.all(),
+                TupleDomain.all());
+        Map<CacheColumnId, ColumnHandle> dynamicFilteringMapping = ImmutableMap.of(
+                NATIONKEY_COLUMN_ID, new TpchColumnHandle("nationkey", BIGINT),
+                REGIONKEY_COLUMN_ID, new TpchColumnHandle("regionkey", BIGINT));
+        Predicate<FilterNode> isNationKeyDynamicFilter = node -> DynamicFilters.getDescriptor(node.getPredicate())
+                .map(descriptor -> descriptor.getInput().equals(new SymbolReference("nationkey")))
+                .orElse(false);
+        assertPlan("""
+                        (SELECT nationkey FROM nation n JOIN (SELECT * FROM (VALUES 0, 1) t(a)) t ON n.nationkey = t.a)
+                        UNION ALL
+                        (SELECT regionkey FROM nation n JOIN (SELECT * FROM (VALUES 0, 1) t(a)) t ON n.regionkey = t.a)
+                        """,
+                anyTree(exchange(LOCAL,
+                        node(JoinNode.class,
+                                chooseAlternativeNode(
+                                        anyTree(tableScan("nation")),
+                                        anyTree(cacheDataPlanNode(
+                                                anyTree(tableScan("nation")))),
+                                        anyTree(loadCachedDataPlanNode(signature, dynamicFilteringMapping, dfDisjuncts -> dfDisjuncts.size() == 2, "NATIONKEY", "REGIONKEY"))),
+                                anyTree(node(ValuesNode.class))),
+                        node(JoinNode.class,
+                                chooseAlternativeNode(
+                                        anyTree(tableScan("nation")),
+                                        anyTree(cacheDataPlanNode(
+                                                anyTree(tableScan("nation")))),
+                                        anyTree(loadCachedDataPlanNode(signature, dynamicFilteringMapping, dfDisjuncts -> dfDisjuncts.size() == 2, "NATIONKEY", "REGIONKEY"))),
+                                anyTree(node(ValuesNode.class))))));
     }
 
     @Test
@@ -256,7 +297,7 @@ public class TestCacheCommonSubqueries
                                                                 "REGIONKEY_A", expression("REGIONKEY_A"),
                                                                 "MAX_PARTIAL_A", expression("MAX_PARTIAL_A"),
                                                                 "SUM_PARTIAL_A", expression("SUM_PARTIAL_A")),
-                                                        loadCachedDataPlanNode(signature, ImmutableMap.of(), "REGIONKEY_A", "MAX_PARTIAL_A", "SUM_PARTIAL_A", "AVG_PARTIAL_A")))))),
+                                                        loadCachedDataPlanNode(signature, "REGIONKEY_A", "MAX_PARTIAL_A", "SUM_PARTIAL_A", "AVG_PARTIAL_A")))))),
                         anyTree(aggregation(
                                 singleGroupingSet("REGIONKEY_B"),
                                 ImmutableMap.of(
@@ -295,7 +336,7 @@ public class TestCacheCommonSubqueries
                                                                 "REGIONKEY_B", expression("REGIONKEY_B"),
                                                                 "SUM_PARTIAL_B", expression("SUM_PARTIAL_B"),
                                                                 "AVG_PARTIAL_B", expression("AVG_PARTIAL_B")),
-                                                        loadCachedDataPlanNode(signature, ImmutableMap.of(), "REGIONKEY_B", "MAX_PARTIAL_B", "SUM_PARTIAL_B", "AVG_PARTIAL_B"))))))));
+                                                        loadCachedDataPlanNode(signature, "REGIONKEY_B", "MAX_PARTIAL_B", "SUM_PARTIAL_B", "AVG_PARTIAL_B"))))))));
     }
 
     private BuiltinFunctionCallBuilder getFunctionCallBuilder(String name, ExpressionWithType... arguments)

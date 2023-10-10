@@ -362,7 +362,6 @@ import static io.trino.operator.window.pattern.PhysicalValuePointer.CLASSIFIER;
 import static io.trino.operator.window.pattern.PhysicalValuePointer.MATCH_NUMBER;
 import static io.trino.spi.StandardErrorCode.COMPILER_ERROR;
 import static io.trino.spi.connector.CatalogHandle.createRootCatalogHandle;
-import static io.trino.spi.connector.DynamicFilter.EMPTY;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.TypeUtils.readNativeValue;
 import static io.trino.spi.type.TypeUtils.writeNativeValue;
@@ -370,6 +369,7 @@ import static io.trino.spi.type.VarcharType.VARCHAR;
 import static io.trino.spiller.PartitioningSpillerFactory.unsupportedPartitioningSpillerFactory;
 import static io.trino.sql.DynamicFilters.extractDynamicFilters;
 import static io.trino.sql.ExpressionUtils.combineConjuncts;
+import static io.trino.sql.ExpressionUtils.extractDisjuncts;
 import static io.trino.sql.gen.LambdaBytecodeGenerator.compileLambdaProvider;
 import static io.trino.sql.planner.ExpressionExtractor.extractExpressions;
 import static io.trino.sql.planner.ExpressionNodeInliner.replaceExpression;
@@ -782,7 +782,8 @@ public class LocalExecutionPlanner
                                 cacheContext.getOriginalTableHandle(),
                                 cacheContext.getBasePlanSignature(),
                                 cacheContext.getDynamicFilterColumnMapping(),
-                                cacheContext.getDynamicFilterSupplier(),
+                                cacheContext.getCommonDynamicFilterSupplier(),
+                                cacheContext.getOriginalDynamicFilterSupplier(),
                                 ImmutableList.copyOf(alternatives.values())));
                 driverFactories.add(new AlternativesAwareDriverFactory(
                         alternativeChooser,
@@ -946,14 +947,21 @@ public class LocalExecutionPlanner
         private final TableHandle originalTableHandle;
         private final PlanSignature basePlanSignature;
         private final Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping;
-        private final Supplier<StaticDynamicFilter> dynamicFilterSupplier;
+        private final Supplier<StaticDynamicFilter> commonDynamicFilterSupplier;
+        private final Supplier<StaticDynamicFilter> originalDynamicFilterSupplier;
 
-        public CacheContext(TableHandle originalTableHandle, PlanSignature basePlanSignature, Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping, Supplier<StaticDynamicFilter> dynamicFilterSupplier)
+        public CacheContext(
+                TableHandle originalTableHandle,
+                PlanSignature basePlanSignature,
+                Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping,
+                Supplier<StaticDynamicFilter> commonDynamicFilterSupplier,
+                Supplier<StaticDynamicFilter> originalDynamicFilterSupplier)
         {
             this.originalTableHandle = requireNonNull(originalTableHandle, "originalTableHandle is null");
             this.basePlanSignature = requireNonNull(basePlanSignature, "basePlanSignature is null");
             this.dynamicFilterColumnMapping = requireNonNull(dynamicFilterColumnMapping, "dynamicFilterColumnMapping is null");
-            this.dynamicFilterSupplier = requireNonNull(dynamicFilterSupplier, "dynamicFilterSupplier is null");
+            this.commonDynamicFilterSupplier = requireNonNull(commonDynamicFilterSupplier, "commonDynamicFilterSupplier is null");
+            this.originalDynamicFilterSupplier = requireNonNull(originalDynamicFilterSupplier, "originalDynamicFilterSupplier is null");
         }
 
         public TableHandle getOriginalTableHandle()
@@ -971,9 +979,14 @@ public class LocalExecutionPlanner
             return dynamicFilterColumnMapping;
         }
 
-        public Supplier<StaticDynamicFilter> getDynamicFilterSupplier()
+        public Supplier<StaticDynamicFilter> getCommonDynamicFilterSupplier()
         {
-            return dynamicFilterSupplier;
+            return commonDynamicFilterSupplier;
+        }
+
+        public Supplier<StaticDynamicFilter> getOriginalDynamicFilterSupplier()
+        {
+            return originalDynamicFilterSupplier;
         }
     }
 
@@ -2264,16 +2277,21 @@ public class LocalExecutionPlanner
                 // therefore table handle is not needed.
                 tableHandleProvider = ignored -> createCacheTableHandle();
                 // when splits are cached dynamic filter needs to be static during split processing
-                Supplier<StaticDynamicFilter> dynamicFilterSupplier = node.getOriginalTableScan().filterPredicate()
-                        .map(predicate -> getDynamicFilter(node.getOriginalTableScan().tableScanNode(), predicate, context))
-                        .map(dynamicFilter -> (Supplier<StaticDynamicFilter>) () -> createStaticDynamicFilter(dynamicFilter))
-                        .orElse(() -> createStaticDynamicFilter(EMPTY));
                 LoadCachedDataPlanNode loadCachedData = getLoadCachedDataPlanNode(node);
+                List<DynamicFilter> commonDynamicFilters = extractDisjuncts(loadCachedData.getDynamicFilterDisjuncts()).stream()
+                        .map(predicate -> getDynamicFilter(node.getOriginalTableScan().tableScanNode(), predicate, context))
+                        .collect(toImmutableList());
+                Supplier<StaticDynamicFilter> commonDynamicFilterSupplier = () -> createStaticDynamicFilter(commonDynamicFilters);
+                Supplier<StaticDynamicFilter> originalDynamicFilterSupplier = node.getOriginalTableScan().filterPredicate()
+                        .map(predicate -> getDynamicFilter(node.getOriginalTableScan().tableScanNode(), predicate, context))
+                        .map(dynamicFilter -> (Supplier<StaticDynamicFilter>) () -> createStaticDynamicFilter(ImmutableList.of(dynamicFilter)))
+                        .orElse(() -> createStaticDynamicFilter(ImmutableList.of(DynamicFilter.EMPTY)));
                 context.setCacheContext(new CacheContext(
                         node.getOriginalTableScan().tableHandle(),
                         loadCachedData.getPlanSignature(),
                         loadCachedData.getDynamicFilterColumnMapping(),
-                        dynamicFilterSupplier));
+                        commonDynamicFilterSupplier,
+                        originalDynamicFilterSupplier));
             }
 
             ImmutableMap.Builder<TableHandle, PhysicalOperation> alternatives = ImmutableMap.builder();

@@ -159,6 +159,7 @@ public class TestAlternativesOptimizer
                         new LoadCachedDataPlanNode(
                                 idAllocator.getNextId(),
                                 new PlanSignature(new SignatureKey("sig"), Optional.empty(), ImmutableList.of(), TupleDomain.all(), TupleDomain.all()),
+                                FALSE_LITERAL,
                                 ImmutableMap.of(),
                                 ImmutableList.of())),
                 new FilteredTableScan(scan, Optional.empty()));

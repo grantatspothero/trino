@@ -17,9 +17,13 @@ import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.DynamicFilter;
 import io.trino.spi.predicate.TupleDomain;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -32,14 +36,19 @@ public class StaticDynamicFilter
     private final boolean isComplete;
     private final TupleDomain<ColumnHandle> tupleDomain;
 
-    public static StaticDynamicFilter createStaticDynamicFilter(DynamicFilter dynamicFilter)
+    public static StaticDynamicFilter createStaticDynamicFilter(List<DynamicFilter> disjunctiveDynamicFilters)
     {
-        requireNonNull(dynamicFilter, "dynamicFilter is null");
+        requireNonNull(disjunctiveDynamicFilters, "disjunctiveDynamicFilters is null");
+        checkArgument(!disjunctiveDynamicFilters.isEmpty());
         return new StaticDynamicFilter(
-                dynamicFilter.getColumnsCovered(),
+                disjunctiveDynamicFilters.stream()
+                        .flatMap(filter -> filter.getColumnsCovered().stream())
+                        .collect(toImmutableSet()),
                 // isComplete needs to be called before getCurrentPredicate
-                dynamicFilter.isComplete(),
-                dynamicFilter.getCurrentPredicate());
+                disjunctiveDynamicFilters.stream().allMatch(DynamicFilter::isComplete),
+                TupleDomain.columnWiseUnion(disjunctiveDynamicFilters.stream()
+                        .map(DynamicFilter::getCurrentPredicate)
+                        .collect(toImmutableList())));
     }
 
     private StaticDynamicFilter(Set<ColumnHandle> columnsCovered, boolean isComplete, TupleDomain<ColumnHandle> tupleDomain)

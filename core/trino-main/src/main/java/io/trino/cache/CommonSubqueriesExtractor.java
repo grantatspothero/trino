@@ -76,7 +76,9 @@ import static io.trino.sql.DynamicFilters.extractSourceSymbol;
 import static io.trino.sql.ExpressionFormatter.formatExpression;
 import static io.trino.sql.ExpressionUtils.and;
 import static io.trino.sql.ExpressionUtils.combineConjuncts;
+import static io.trino.sql.ExpressionUtils.combineDisjuncts;
 import static io.trino.sql.ExpressionUtils.extractConjuncts;
+import static io.trino.sql.ExpressionUtils.extractDisjuncts;
 import static io.trino.sql.ExpressionUtils.or;
 import static io.trino.sql.planner.iterative.rule.ExtractCommonPredicatesExpressionRewriter.extractCommonPredicates;
 import static io.trino.sql.planner.iterative.rule.NormalizeOrExpressionRewriter.normalizeOrExpression;
@@ -145,6 +147,7 @@ public final class CommonSubqueriesExtractor
             Map<CacheColumnId, Expression> commonProjections = extractCommonProjections(subplans, commonPredicate, intersectingConjuncts, groupByHash, cacheCandidate.groupByColumns());
             Map<CacheColumnId, ColumnHandle> commonColumnHandles = extractCommonColumnHandles(subplans);
             Map<CacheColumnId, Symbol> commonColumnIds = extractCommonColumnIds(subplans);
+            Expression commonDynamicFilterDisjuncts = extractCommonDynamicFilterDisjuncts(plannerContext, subplans);
 
             PlanSignature planSignature = computePlanSignature(
                     plannerContext,
@@ -171,6 +174,7 @@ public final class CommonSubqueriesExtractor
                             commonColumnHandles,
                             commonColumnIds,
                             groupByHash,
+                            commonDynamicFilterDisjuncts,
                             typeAnalyzer,
                             session,
                             planSignature)));
@@ -265,6 +269,15 @@ public final class CommonSubqueriesExtractor
         return commonColumnIds;
     }
 
+    private static Expression extractCommonDynamicFilterDisjuncts(PlannerContext plannerContext, List<CanonicalSubplan> subplans)
+    {
+        return combineDisjuncts(
+                plannerContext.getMetadata(),
+                subplans.stream()
+                        .map(subplan -> combineConjuncts(plannerContext.getMetadata(), subplan.getDynamicConjuncts()))
+                        .collect(toImmutableList()));
+    }
+
     private static PlanSignature computePlanSignature(
             PlannerContext plannerContext,
             Session session,
@@ -333,6 +346,7 @@ public final class CommonSubqueriesExtractor
             Map<CacheColumnId, ColumnHandle> commonColumnHandles,
             Map<CacheColumnId, Symbol> commonColumnIds,
             Optional<CacheColumnId> groupByHash,
+            Expression commonDynamicFilterDisjuncts,
             TypeAnalyzer typeAnalyzer,
             Session session,
             PlanSignature planSignature)
@@ -368,12 +382,13 @@ public final class CommonSubqueriesExtractor
         }
         Optional<Expression> adaptationPredicate = createAdaptationPredicate(subplan, commonPredicate, intersectingConjuncts, subquerySymbolMapper);
         Optional<Assignments> adaptationAssignments = createAdaptationAssignments(commonSubplan, subplan, subqueryColumnIdMapping, subquerySymbolMapper);
-        Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping = createDynamicFilterColumnMapping(subplan);
+        Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping = createDynamicFilterColumnMapping(subplan, commonDynamicFilterDisjuncts, commonColumnHandles);
 
         return new CommonPlanAdaptation(
                 commonSubplan,
                 new FilteredTableScan(commonSubplanFilter.tableScan(), commonSubplanFilter.predicate()),
                 planSignature,
+                subquerySymbolMapper.map(commonDynamicFilterDisjuncts),
                 dynamicFilterColumnMapping,
                 adaptationPredicate,
                 adaptationAssignments);
@@ -477,16 +492,20 @@ public final class CommonSubqueriesExtractor
         return requireNonNull(columnIdMapping.get(id));
     }
 
-    private static Map<CacheColumnId, ColumnHandle> createDynamicFilterColumnMapping(CanonicalSubplan subplan)
+    private static Map<CacheColumnId, ColumnHandle> createDynamicFilterColumnMapping(CanonicalSubplan subplan, Expression commonDynamicFilterDisjuncts, Map<CacheColumnId, ColumnHandle> commonColumnHandles)
     {
         // Create mapping between dynamic filtering columns and column ids.
         // All dynamic filtering columns are part of planSignature columns
         // because joins are not supported yet.
-        return subplan.getDynamicConjuncts().stream()
-                .flatMap(conjunct -> extractDynamicFilters(conjunct).getDynamicConjuncts().stream())
-                .map(filter -> canonicalSymbolToColumnId(extractSourceSymbol(filter)))
+        return Streams.concat(
+                        extractDisjuncts(commonDynamicFilterDisjuncts).stream()
+                                .flatMap(conjunct -> extractDynamicFilters(conjunct).getDynamicConjuncts().stream())
+                                .map(filter -> canonicalSymbolToColumnId(extractSourceSymbol(filter))),
+                        subplan.getDynamicConjuncts().stream()
+                                .flatMap(conjunct -> extractDynamicFilters(conjunct).getDynamicConjuncts().stream())
+                                .map(filter -> canonicalSymbolToColumnId(extractSourceSymbol(filter))))
                 .distinct()
-                .collect(toImmutableMap(identity(), columnId -> subplan.getColumnHandles().get(columnId)));
+                .collect(toImmutableMap(identity(), commonColumnHandles::get));
     }
 
     private static TableScanNode createSubplanTableScan(

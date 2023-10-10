@@ -57,7 +57,8 @@ public class CacheDriverFactory
     private final TableHandle originalTableHandle;
     private final PlanSignature basePlanSignature;
     private final Map<ColumnHandle, CacheColumnId> dynamicFilterColumnMapping;
-    private final Supplier<StaticDynamicFilter> dynamicFilterSupplier;
+    private final Supplier<StaticDynamicFilter> commonDynamicFilterSupplier;
+    private final Supplier<StaticDynamicFilter> originalDynamicFilterSupplier;
     private final List<DriverFactory> alternatives;
     private final CacheMetrics cacheMetrics = new CacheMetrics();
 
@@ -78,7 +79,8 @@ public class CacheDriverFactory
             TableHandle originalTableHandle,
             PlanSignature basePlanSignature,
             Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping,
-            Supplier<StaticDynamicFilter> dynamicFilterSupplier,
+            Supplier<StaticDynamicFilter> commonDynamicFilterSupplier,
+            Supplier<StaticDynamicFilter> originalDynamicFilterSupplier,
             List<DriverFactory> alternatives)
     {
         this.session = requireNonNull(session, "session is null");
@@ -87,7 +89,8 @@ public class CacheDriverFactory
         this.originalTableHandle = requireNonNull(originalTableHandle, "originalTableHandle is null");
         this.basePlanSignature = requireNonNull(basePlanSignature, "basePlanSignature is null");
         this.dynamicFilterColumnMapping = ImmutableBiMap.copyOf(requireNonNull(dynamicFilterColumnMapping, "dynamicFilterColumnMapping is null")).inverse();
-        this.dynamicFilterSupplier = requireNonNull(dynamicFilterSupplier, "dynamicFilterSupplier is null");
+        this.commonDynamicFilterSupplier = requireNonNull(commonDynamicFilterSupplier, "commonDynamicFilterSupplier is null");
+        this.originalDynamicFilterSupplier = requireNonNull(originalDynamicFilterSupplier, "originalDynamicFilterSupplier is null");
         this.alternatives = requireNonNull(alternatives, "alternatives is null");
     }
 
@@ -100,7 +103,9 @@ public class CacheDriverFactory
         CacheSplitId splitId = cacheSplitIdOptional.get();
 
         // simplify dynamic filter predicate to improve cache hits
-        StaticDynamicFilter dynamicFilter = dynamicFilterSupplier.get();
+        StaticDynamicFilter originalDynamicFilter = originalDynamicFilterSupplier.get();
+        StaticDynamicFilter commonDynamicFilter = commonDynamicFilterSupplier.get();
+        StaticDynamicFilter dynamicFilter = resolveDynamicFilter(originalDynamicFilter, commonDynamicFilter);
         TupleDomain<ColumnHandle> dynamicPredicate = pageSourceProvider.simplifyPredicate(
                         session,
                         split.getSplit(),
@@ -117,7 +122,7 @@ public class CacheDriverFactory
         // enhance plan signature with current dynamic filter
         PlanSignature planSignature = basePlanSignature
                 .withDynamicPredicate(normalizeTupleDomain(dynamicPredicate.transformKeys(dynamicFilterColumnMapping::get)));
-        boolean planSignatureComplete = dynamicFilter.isComplete();
+        boolean planSignatureComplete = originalDynamicFilter.isComplete() && commonDynamicFilter.isComplete();
 
         // load data from cache
         Optional<ConnectorPageSource> pageSource = loadPages(splitId, planSignature, planSignatureComplete);
@@ -161,6 +166,24 @@ public class CacheDriverFactory
         return cachePlanSignature;
     }
 
+    private StaticDynamicFilter resolveDynamicFilter(StaticDynamicFilter originalDynamicFilter, StaticDynamicFilter commonDynamicFilter)
+    {
+        TupleDomain<ColumnHandle> originalPredicate = originalDynamicFilter.getCurrentPredicate();
+        TupleDomain<ColumnHandle> commonPredicate = commonDynamicFilter.getCurrentPredicate();
+
+        if (commonPredicate.isNone() || originalPredicate.isNone()) {
+            // prefer original DF when common DF is absent
+            return originalDynamicFilter;
+        }
+
+        if (originalPredicate.getDomains().get().size() > commonPredicate.getDomains().get().size()) {
+            // prefer original DF when it contains more domains
+            return originalDynamicFilter;
+        }
+
+        return commonDynamicFilter;
+    }
+
     private synchronized Optional<ConnectorPageSource> loadPages(
             CacheSplitId splitId,
             PlanSignature planSignature,
@@ -183,7 +206,7 @@ public class CacheDriverFactory
     synchronized void updateSplitCache(PlanSignature planSignature, boolean planSignatureComplete)
     {
         if (splitCache != null) {
-            if (cachePlanSignatureComplete) {
+            if (cachePlanSignatureComplete && planSignatureComplete) {
                 // plan signature cannot be enhanced further, no need to compare signatures or re-create SplitCache
                 return;
             }

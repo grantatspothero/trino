@@ -28,6 +28,7 @@ import io.trino.spi.connector.ConnectorTableHandle;
 import io.trino.spi.connector.SortOrder;
 import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.TupleDomain;
+import io.trino.sql.DynamicFilters;
 import io.trino.sql.planner.PartitioningHandle;
 import io.trino.sql.planner.Symbol;
 import io.trino.sql.planner.iterative.GroupReference;
@@ -100,6 +101,8 @@ import static io.trino.spi.connector.SortOrder.ASC_NULLS_FIRST;
 import static io.trino.spi.connector.SortOrder.ASC_NULLS_LAST;
 import static io.trino.spi.connector.SortOrder.DESC_NULLS_FIRST;
 import static io.trino.spi.connector.SortOrder.DESC_NULLS_LAST;
+import static io.trino.sql.DynamicFilters.extractDynamicFilters;
+import static io.trino.sql.ExpressionUtils.extractDisjuncts;
 import static io.trino.sql.planner.assertions.MatchResult.NO_MATCH;
 import static io.trino.sql.planner.assertions.MatchResult.match;
 import static io.trino.sql.planner.assertions.StrictAssignedSymbolsMatcher.actualAssignments;
@@ -157,7 +160,12 @@ public final class PlanMatchPattern
         return node(CacheDataPlanNode.class, source);
     }
 
-    public static PlanMatchPattern loadCachedDataPlanNode(PlanSignature signature, Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping, String... outputSymbolAliases)
+    public static PlanMatchPattern loadCachedDataPlanNode(PlanSignature signature, String... outputSymbolAliases)
+    {
+        return loadCachedDataPlanNode(signature, ImmutableMap.of(), dynamicFilters -> true, outputSymbolAliases);
+    }
+
+    public static PlanMatchPattern loadCachedDataPlanNode(PlanSignature signature, Map<CacheColumnId, ColumnHandle> dynamicFilterColumnMapping, Predicate<List<List<DynamicFilters.Descriptor>>> dynamicFiltersPredicate, String... outputSymbolAliases)
     {
         PlanMatchPattern result = node(LoadCachedDataPlanNode.class);
         for (int i = 0; i < outputSymbolAliases.length; i++) {
@@ -171,6 +179,10 @@ public final class PlanMatchPattern
         }
         result.with(LoadCachedDataPlanNode.class, node -> node.getPlanSignature().equals(signature));
         result.with(LoadCachedDataPlanNode.class, node -> node.getDynamicFilterColumnMapping().equals(dynamicFilterColumnMapping));
+        result.with(LoadCachedDataPlanNode.class, node -> dynamicFiltersPredicate.test(
+                extractDisjuncts(node.getDynamicFilterDisjuncts()).stream()
+                        .map(expression -> extractDynamicFilters(expression).getDynamicConjuncts())
+                        .collect(toImmutableList())));
         return result;
     }
 
