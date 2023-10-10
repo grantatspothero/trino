@@ -1531,11 +1531,11 @@ public abstract class BaseJdbcConnectorTest
                 try (TestTable newNation = new TestTable(
                         getQueryRunner()::execute,
                         schemaName + ".nation",
-                        "AS SELECT name, nationkey FROM nation");
+                        "(name varchar(25), nationkey bigint)");
                         TestTable newRegion = new TestTable(
                                 getQueryRunner()::execute,
                                 schemaName + ".region",
-                                "AS SELECT name, regionkey FROM region")) {
+                                "(name varchar(25), regionkey bigint)")) {
                     if (hasBehavior(SUPPORTS_COMMENT_ON_TABLE)) {
                         assertUpdate("COMMENT ON TABLE " + newNation.getName() + " IS 'tmp nation copy comment'");
                     }
@@ -1680,11 +1680,11 @@ public abstract class BaseJdbcConnectorTest
                 try (TestTable newNation = new TestTable(
                         getQueryRunner()::execute,
                         schemaName + ".nation",
-                        "AS SELECT name, nationkey FROM nation");
+                        "(name varchar(25), nationkey bigint)");
                         TestTable newRegion = new TestTable(
                                 getQueryRunner()::execute,
                                 schemaName + ".region",
-                                "AS SELECT name, regionkey FROM region")) {
+                                "(name varchar(25), regionkey bigint)")) {
                     if (hasBehavior(SUPPORTS_COMMENT_ON_TABLE)) {
                         assertUpdate("COMMENT ON TABLE " + newNation.getName() + " IS 'tmp nation copy comment'");
                     }
