@@ -69,6 +69,7 @@ mv ${UNPACK_DIR}/${PREFIX}/{bin,lib} ${WORK_DIR}/${PREFIX}
 
 PLUGINS="
 bigquery
+clickhouse
 blackhole
 druid
 elasticsearch
