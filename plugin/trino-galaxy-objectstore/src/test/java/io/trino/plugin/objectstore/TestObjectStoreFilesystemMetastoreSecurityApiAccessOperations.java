@@ -171,6 +171,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 .addPlugin(new TestingObjectStorePlugin(metastore, trackingFileSystemFactory))
                 .addCatalog(CATALOG_NAME, "galaxy_objectstore", properties)
                 .addCoordinatorProperty("optimizer.experimental-max-prefetched-information-schema-prefixes", Integer.toString(MAX_PREFIXES_COUNT))
+                .addCoordinatorProperty("hide-inaccessible-columns", "true") // Galaxy always sets this // TODO set in GalaxyQueryRunner
                 .build();
         queryRunner.execute("CREATE SCHEMA %s.%s WITH (location = '%s')".formatted(CATALOG_NAME, SCHEMA_NAME, schemaDirectory.toUri().toString()));
         return queryRunner;
@@ -264,11 +265,11 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
     @Test(dataProvider = "tableTypeDataProvider")
     public void testCreateTableAsSelectFromDifferentCatalog(TableType type)
     {
-        testCreateTableAsSelectFromDifferentCatalog(type, "SELECT * FROM tpch.tiny.nation");
-        testCreateTableAsSelectFromDifferentCatalog(type, "TABLE tpch.tiny.nation");
+        testCreateTableAsSelectFromDifferentCatalog(type, "SELECT * FROM tpch.tiny.nation", false);
+        testCreateTableAsSelectFromDifferentCatalog(type, "TABLE tpch.tiny.nation", true);
     }
 
-    private void testCreateTableAsSelectFromDifferentCatalog(TableType type, @Language("SQL") String sourceForm)
+    private void testCreateTableAsSelectFromDifferentCatalog(TableType type, @Language("SQL") String sourceForm, boolean tableForm)
     {
         // Need random name because this test creates tables twice
         String tableName = "test_ctas_different_catalog" + randomNameSuffix();
@@ -325,6 +326,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                         .replace(tableName, "test_ctas_different_catalog"))
                                 .setExpected(ImmutableMultiset.<String>builder()
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/role")
+                                        .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility", tableForm ? 0 : 1) // TODO due to Trino bug, hide-inaccessible-columns does not apply to "AS TABLE t"
+                                        .addCopies("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility", tableForm ? 0 : 1) // TODO due to Trino bug, hide-inaccessible-columns does not apply to "AS TABLE t"
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/schema/c-xxx/test_schema/privileges/r-xxx")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/tiny/nation/privileges/r-xxx")
                                         .add("galaxy-access-control POST /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_ctas_different_catalog/:create")
@@ -360,6 +363,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                         .replaceAll("(/[cr])-\\d+(/|$)", "$1-xxx$2"))
                                 .setExpected(ImmutableMultiset.<String>builder()
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/role")
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility")
+                                        .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/schema/c-xxx/test_schema/privileges/r-xxx")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/tiny/nation/privileges/r-xxx")
                                         .add("galaxy-access-control POST /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_create_view_different_catalog/:create")
