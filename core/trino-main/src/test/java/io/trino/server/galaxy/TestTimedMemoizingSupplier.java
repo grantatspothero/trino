@@ -152,43 +152,43 @@ public class TestTimedMemoizingSupplier
     public void testLoadSharing()
             throws Exception
     {
-        try (ExecutorService executor = newCachedThreadPool()) {
+        ExecutorService executor = newCachedThreadPool();
+        CountDownLatch allowLoadComplete = new CountDownLatch(1);
+        try {
             CountDownLatch loadStarted = new CountDownLatch(1);
-            CountDownLatch allowLoadComplete = new CountDownLatch(1);
-            try {
-                TestingClock clock = new TestingClock();
-                AtomicInteger loads = new AtomicInteger();
-                TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(
-                        clock,
-                        noopTracer(),
-                        "some-name",
-                        () -> {
-                            int loadNumber = loads.incrementAndGet();
-                            loadStarted.countDown();
-                            await(allowLoadComplete);
-                            return "some value @ load #" + loadNumber;
-                        },
-                        createStats());
 
-                Instant requirements = clock.instant();
-                clock.increment(1, MILLISECONDS);
+            TestingClock clock = new TestingClock();
+            AtomicInteger loads = new AtomicInteger();
+            TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(
+                    clock,
+                    noopTracer(),
+                    "some-name",
+                    () -> {
+                        int loadNumber = loads.incrementAndGet();
+                        loadStarted.countDown();
+                        await(allowLoadComplete);
+                        return "some value @ load #" + loadNumber;
+                    },
+                    createStats());
 
-                Future<String> firstCall = executor.submit(() -> memoizingSupplier.get(requirements));
-                Future<String> secondCall = executor.submit(() -> memoizingSupplier.get(requirements));
-                loadStarted.await();
-                assertThat(loads.get()).isEqualTo(1);
-                assertThat(firstCall).isNotDone();
-                assertThat(secondCall).isNotDone();
+            Instant requirements = clock.instant();
+            clock.increment(1, MILLISECONDS);
 
-                allowLoadComplete.countDown();
-                assertThat(firstCall).succeedsWithin(1, SECONDS).isEqualTo("some value @ load #1");
-                assertThat(secondCall).succeedsWithin(1, SECONDS).isEqualTo("some value @ load #1");
-                assertThat(loads.get()).isEqualTo(1);
-            }
-            finally {
-                allowLoadComplete.countDown();
-                executor.shutdownNow();
-            }
+            Future<String> firstCall = executor.submit(() -> memoizingSupplier.get(requirements));
+            Future<String> secondCall = executor.submit(() -> memoizingSupplier.get(requirements));
+            loadStarted.await();
+            assertThat(loads.get()).isEqualTo(1);
+            assertThat(firstCall).isNotDone();
+            assertThat(secondCall).isNotDone();
+
+            allowLoadComplete.countDown();
+            assertThat(firstCall).succeedsWithin(1, SECONDS).isEqualTo("some value @ load #1");
+            assertThat(secondCall).succeedsWithin(1, SECONDS).isEqualTo("some value @ load #1");
+            assertThat(loads.get()).isEqualTo(1);
+        }
+        finally {
+            allowLoadComplete.countDown();
+            executor.shutdownNow();
         }
     }
 
@@ -197,47 +197,47 @@ public class TestTimedMemoizingSupplier
     public void testNoLoadSharingWhenRequirementsSameMilli()
             throws Exception
     {
-        try (ExecutorService executor = newCachedThreadPool()) {
-            CountDownLatch allowLoadComplete = new CountDownLatch(1);
-            CountDownLatch firstLoadStarted = new CountDownLatch(1);
-            CountDownLatch secondLoadStarted = new CountDownLatch(2);
-            try {
-                TestingClock clock = new TestingClock();
-                AtomicInteger loads = new AtomicInteger();
-                TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(
-                        clock,
-                        noopTracer(),
-                        "some-name",
-                        () -> {
-                            int loadNumber = loads.incrementAndGet();
-                            firstLoadStarted.countDown();
-                            secondLoadStarted.countDown();
-                            await(allowLoadComplete);
-                            return "some value @ load #" + loadNumber;
-                        },
-                        createStats());
+        ExecutorService executor = newCachedThreadPool();
+        CountDownLatch allowLoadComplete = new CountDownLatch(1);
+        CountDownLatch firstLoadStarted = new CountDownLatch(1);
+        CountDownLatch secondLoadStarted = new CountDownLatch(2);
 
-                Instant requirements = clock.instant();
-                Future<String> firstCall = executor.submit(() -> memoizingSupplier.get(requirements));
-                firstLoadStarted.await();
-                Future<String> secondCall = executor.submit(() -> memoizingSupplier.get(requirements));
-                secondLoadStarted.await();
-                assertThat(loads.get()).isEqualTo(2);
-                assertThat(firstCall).isNotDone();
-                assertThat(secondCall).isNotDone();
+        try {
+            TestingClock clock = new TestingClock();
+            AtomicInteger loads = new AtomicInteger();
+            TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(
+                    clock,
+                    noopTracer(),
+                    "some-name",
+                    () -> {
+                        int loadNumber = loads.incrementAndGet();
+                        firstLoadStarted.countDown();
+                        secondLoadStarted.countDown();
+                        await(allowLoadComplete);
+                        return "some value @ load #" + loadNumber;
+                    },
+                    createStats());
 
-                allowLoadComplete.countDown();
-                assertThat(loads.get()).isEqualTo(2);
-                assertThat(firstCall).succeedsWithin(1, SECONDS).isEqualTo("some value @ load #1");
-                assertThat(secondCall).succeedsWithin(1, SECONDS).isEqualTo("some value @ load #2");
-            }
-            finally {
-                allowLoadComplete.countDown();
-                firstLoadStarted.countDown();
-                secondLoadStarted.countDown();
-                secondLoadStarted.countDown();
-                executor.shutdownNow();
-            }
+            Instant requirements = clock.instant();
+            Future<String> firstCall = executor.submit(() -> memoizingSupplier.get(requirements));
+            firstLoadStarted.await();
+            Future<String> secondCall = executor.submit(() -> memoizingSupplier.get(requirements));
+            secondLoadStarted.await();
+            assertThat(loads.get()).isEqualTo(2);
+            assertThat(firstCall).isNotDone();
+            assertThat(secondCall).isNotDone();
+
+            allowLoadComplete.countDown();
+            assertThat(loads.get()).isEqualTo(2);
+            assertThat(firstCall).succeedsWithin(1, SECONDS).isEqualTo("some value @ load #1");
+            assertThat(secondCall).succeedsWithin(1, SECONDS).isEqualTo("some value @ load #2");
+        }
+        finally {
+            allowLoadComplete.countDown();
+            firstLoadStarted.countDown();
+            secondLoadStarted.countDown();
+            secondLoadStarted.countDown();
+            executor.shutdownNow();
         }
     }
 
@@ -246,80 +246,79 @@ public class TestTimedMemoizingSupplier
     public void testShareOldestSufficientLoad()
             throws Exception
     {
-        try (ExecutorService executor = newCachedThreadPool()) {
+        ExecutorService executor = newCachedThreadPool();
+        CountDownLatch allowLoadComplete = new CountDownLatch(1);
+        try {
             CyclicBarrier loadStarted = new CyclicBarrier(2);
-            CountDownLatch allowLoadComplete = new CountDownLatch(1);
-            try {
-                TestingClock clock = new TestingClock();
-                AtomicInteger loads = new AtomicInteger();
-                TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(
-                        clock,
-                        noopTracer(),
-                        "some-name",
-                        () -> {
-                            int loadNumber = loads.incrementAndGet();
-                            await(loadStarted);
-                            await(allowLoadComplete);
-                            return "some value @ load #" + loadNumber;
-                        },
-                        createStats());
+            TestingClock clock = new TestingClock();
+            AtomicInteger loads = new AtomicInteger();
+            TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(
+                    clock,
+                    noopTracer(),
+                    "some-name",
+                    () -> {
+                        int loadNumber = loads.incrementAndGet();
+                        await(loadStarted);
+                        await(allowLoadComplete);
+                        return "some value @ load #" + loadNumber;
+                    },
+                    createStats());
 
-                clock.increment(1, MILLISECONDS);
-                Instant requirements1 = clock.instant();
-                clock.increment(1, MILLISECONDS);
-                Future<String> load1 = executor.submit(() -> memoizingSupplier.get(requirements1));
-                loadStarted.await();
+            clock.increment(1, MILLISECONDS);
+            Instant requirements1 = clock.instant();
+            clock.increment(1, MILLISECONDS);
+            Future<String> load1 = executor.submit(() -> memoizingSupplier.get(requirements1));
+            loadStarted.await();
 
-                clock.increment(1, MILLISECONDS);
-                Instant requirements2 = clock.instant();
-                clock.increment(1, MILLISECONDS);
-                Instant requirements2Prime = clock.instant();
-                clock.increment(1, MILLISECONDS);
-                Future<String> load2 = executor.submit(() -> memoizingSupplier.get(requirements2));
-                loadStarted.await();
+            clock.increment(1, MILLISECONDS);
+            Instant requirements2 = clock.instant();
+            clock.increment(1, MILLISECONDS);
+            Instant requirements2Prime = clock.instant();
+            clock.increment(1, MILLISECONDS);
+            Future<String> load2 = executor.submit(() -> memoizingSupplier.get(requirements2));
+            loadStarted.await();
 
-                clock.increment(1, MILLISECONDS);
-                Instant requirements3 = clock.instant();
-                clock.increment(1, MILLISECONDS);
-                Future<String> load3 = executor.submit(() -> memoizingSupplier.get(requirements3));
-                loadStarted.await();
+            clock.increment(1, MILLISECONDS);
+            Instant requirements3 = clock.instant();
+            clock.increment(1, MILLISECONDS);
+            Future<String> load3 = executor.submit(() -> memoizingSupplier.get(requirements3));
+            loadStarted.await();
 
-                clock.increment(1, MILLISECONDS);
-                Instant requirements4 = clock.instant();
-                clock.increment(1, MILLISECONDS);
-                Future<String> load4 = executor.submit(() -> memoizingSupplier.get(requirements4));
-                loadStarted.await();
+            clock.increment(1, MILLISECONDS);
+            Instant requirements4 = clock.instant();
+            clock.increment(1, MILLISECONDS);
+            Future<String> load4 = executor.submit(() -> memoizingSupplier.get(requirements4));
+            loadStarted.await();
 
-                assertThat(loads.get()).isEqualTo(4);
-                assertThat(load1).isNotDone();
-                assertThat(load2).isNotDone();
-                assertThat(load3).isNotDone();
-                assertThat(load4).isNotDone();
+            assertThat(loads.get()).isEqualTo(4);
+            assertThat(load1).isNotDone();
+            assertThat(load2).isNotDone();
+            assertThat(load3).isNotDone();
+            assertThat(load4).isNotDone();
 
-                // This should re-use a future, not start a new load
-                AtomicReference<Thread> submissionThread = new AtomicReference<>();
-                Future<String> load2Prime = executor.submit(() -> {
-                    submissionThread.set(Thread.currentThread());
-                    return memoizingSupplier.get(requirements2Prime);
-                });
-                assertThat(loads.get()).isEqualTo(4);
-                // To ensure load2Prime sees 4 futures still incomplete, release the allowLoadComplete latch only after the call blocks, presumably on the future.
-                assertEventually(() -> assertThat(submissionThread.get().getState()).isEqualTo(WAITING));
+            // This should re-use a future, not start a new load
+            AtomicReference<Thread> submissionThread = new AtomicReference<>();
+            Future<String> load2Prime = executor.submit(() -> {
+                submissionThread.set(Thread.currentThread());
+                return memoizingSupplier.get(requirements2Prime);
+            });
+            assertThat(loads.get()).isEqualTo(4);
+            // To ensure load2Prime sees 4 futures still incomplete, release the allowLoadComplete latch only after the call blocks, presumably on the future.
+            assertEventually(() -> assertThat(submissionThread.get().getState()).isEqualTo(WAITING));
 
-                allowLoadComplete.countDown();
-                assertThat(load1).succeedsWithin(1, SECONDS).isEqualTo("some value @ load #1");
-                assertThat(load2).succeedsWithin(1, SECONDS).isEqualTo("some value @ load #2");
-                assertThat(load3).succeedsWithin(1, SECONDS).isEqualTo("some value @ load #3");
-                assertThat(load4).succeedsWithin(1, SECONDS).isEqualTo("some value @ load #4");
+            allowLoadComplete.countDown();
+            assertThat(load1).succeedsWithin(1, SECONDS).isEqualTo("some value @ load #1");
+            assertThat(load2).succeedsWithin(1, SECONDS).isEqualTo("some value @ load #2");
+            assertThat(load3).succeedsWithin(1, SECONDS).isEqualTo("some value @ load #3");
+            assertThat(load4).succeedsWithin(1, SECONDS).isEqualTo("some value @ load #4");
 
-                // Currently the call which does not require new load reuses oldest sufficient future.
-                // TODO it could use the first sufficient future to complete.
-                assertThat(load2Prime).succeedsWithin(1, SECONDS).isEqualTo("some value @ load #2");
-                assertThat(loads.get()).isEqualTo(4);
-            }
-            finally {
-                allowLoadComplete.countDown();
-            }
+            // Currently the call which does not require new load reuses oldest sufficient future.
+            // TODO it could use the first sufficient future to complete.
+            assertThat(load2Prime).succeedsWithin(1, SECONDS).isEqualTo("some value @ load #2");
+            assertThat(loads.get()).isEqualTo(4);
+        }
+        finally {
+            allowLoadComplete.countDown();
         }
     }
 
@@ -364,54 +363,52 @@ public class TestTimedMemoizingSupplier
     public void testStatsAndTracesWhenLoadSharing()
             throws Exception
     {
-        try (ExecutorService executor = newCachedThreadPool();
-                InMemorySpanExporter spanExporter = InMemorySpanExporter.create();
+        ExecutorService executor = newCachedThreadPool();
+        CountDownLatch allowLoadComplete = new CountDownLatch(1);
+        try (InMemorySpanExporter spanExporter = InMemorySpanExporter.create();
                 SdkTracerProvider tracerProvider = SdkTracerProvider.builder()
                         .addSpanProcessor(SimpleSpanProcessor.create(spanExporter))
                         .build()) {
             Tracer tracer = tracerProvider.get("test");
             CountDownLatch loadStarted = new CountDownLatch(1);
-            CountDownLatch allowLoadComplete = new CountDownLatch(1);
-            try {
-                TestingClock clock = new TestingClock();
-                TimedMemoizingSupplier.Stats stats = createStats();
-                TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(
-                        clock,
-                        tracer,
-                        "concurrent-hot-sharing",
-                        () -> {
-                            loadStarted.countDown();
-                            await(allowLoadComplete);
-                            return "abc";
-                        },
-                        stats);
+            TestingClock clock = new TestingClock();
+            TimedMemoizingSupplier.Stats stats = createStats();
+            TimedMemoizingSupplier<String> memoizingSupplier = new TimedMemoizingSupplier<>(
+                    clock,
+                    tracer,
+                    "concurrent-hot-sharing",
+                    () -> {
+                        loadStarted.countDown();
+                        await(allowLoadComplete);
+                        return "abc";
+                    },
+                    stats);
 
-                Instant requirements = clock.instant();
-                clock.increment(1, MILLISECONDS);
+            Instant requirements = clock.instant();
+            clock.increment(1, MILLISECONDS);
 
-                Future<String> firstCall = executor.submit(() -> memoizingSupplier.get(requirements));
-                loadStarted.await();
-                AtomicReference<Thread> submissionThread = new AtomicReference<>();
-                Future<String> secondCall = executor.submit(() -> {
-                    submissionThread.set(Thread.currentThread());
-                    return memoizingSupplier.get(requirements);
-                });
-                // To ensure the load is shared we need to ensure second call find the future, not the computed value
-                // So release the allowLoadComplete latch only after the second call blocks, presumably on the future.
-                assertEventually(() -> assertThat(submissionThread.get().getState()).isEqualTo(WAITING));
-                allowLoadComplete.countDown();
-                firstCall.get();
-                secondCall.get();
-                assertThat(stats.getCalls().getTotalCount()).isEqualTo(2);
-                assertThat(stats.getLoads().getTotalCount()).isEqualTo(1);
-                assertThat(stats.getReuses().getTotalCount()).isEqualTo(1);
-                assertThat(spansToString(spanExporter.getFinishedSpanItems()))
-                        .containsExactlyInAnyOrder("concurrent-hot-sharing {completion-mode=load}", "concurrent-hot-sharing {completion-mode=load-sharing}");
-            }
-            finally {
-                allowLoadComplete.countDown();
-                executor.shutdownNow();
-            }
+            Future<String> firstCall = executor.submit(() -> memoizingSupplier.get(requirements));
+            loadStarted.await();
+            AtomicReference<Thread> submissionThread = new AtomicReference<>();
+            Future<String> secondCall = executor.submit(() -> {
+                submissionThread.set(Thread.currentThread());
+                return memoizingSupplier.get(requirements);
+            });
+            // To ensure the load is shared we need to ensure second call find the future, not the computed value
+            // So release the allowLoadComplete latch only after the second call blocks, presumably on the future.
+            assertEventually(() -> assertThat(submissionThread.get().getState()).isEqualTo(WAITING));
+            allowLoadComplete.countDown();
+            firstCall.get();
+            secondCall.get();
+            assertThat(stats.getCalls().getTotalCount()).isEqualTo(2);
+            assertThat(stats.getLoads().getTotalCount()).isEqualTo(1);
+            assertThat(stats.getReuses().getTotalCount()).isEqualTo(1);
+            assertThat(spansToString(spanExporter.getFinishedSpanItems()))
+                    .containsExactlyInAnyOrder("concurrent-hot-sharing {completion-mode=load}", "concurrent-hot-sharing {completion-mode=load-sharing}");
+        }
+        finally {
+            allowLoadComplete.countDown();
+            executor.shutdownNow();
         }
     }
 
