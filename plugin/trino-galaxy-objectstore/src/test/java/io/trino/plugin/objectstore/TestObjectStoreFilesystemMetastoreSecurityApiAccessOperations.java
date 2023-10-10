@@ -333,6 +333,41 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                         .build());
     }
 
+    @Test
+    public void testCreateReplaceViewFromDifferentCatalog()
+    {
+        // Need random name because this test creates tables twice
+        String viewName = "test_create_view_different_catalog";
+
+        // Prime the RelationTypeCache to make the test deterministic
+        assertUpdate("CREATE TABLE " + viewName + "(a bigint)");
+        assertUpdate("DROP TABLE " + viewName);
+
+        assertInvocations(
+                getSession(),
+                "CREATE OR REPLACE VIEW " + viewName + " SECURITY INVOKER AS SELECT * FROM tpch.tiny.nation",
+                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                        .addCopies(GET_TABLE, 2)
+                        .add(CREATE_TABLE)
+                        .build(),
+                ImmutableMultiset.of(),
+                ImmutableList.<TracesAssertion>builder()
+                        .add(TracesAssertion.builder()
+                                .filterByAttribute("airlift.http.client_name", "galaxy-access-control")
+                                .formattingName()
+                                .formattingUriAttribute("http.url", uri -> uri.getPath()
+                                        // TODO differentiate source and target catalogs
+                                        .replaceAll("(/[cr])-\\d+(/|$)", "$1-xxx$2"))
+                                .setExpected(ImmutableMultiset.<String>builder()
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/role")
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/schema/c-xxx/test_schema/privileges/r-xxx")
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/tiny/nation/privileges/r-xxx")
+                                        .add("galaxy-access-control POST /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_create_view_different_catalog/:create")
+                                        .build())
+                                .build())
+                        .build());
+    }
+
     @Test(dataProvider = "tableTypeDataProvider")
     public void testSelectFromEmpty(TableType type)
     {
