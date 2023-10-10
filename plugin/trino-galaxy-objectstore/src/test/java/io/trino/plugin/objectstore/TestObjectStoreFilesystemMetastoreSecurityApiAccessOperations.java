@@ -36,6 +36,7 @@ import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastoreConfig;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.plugin.iceberg.IcebergUtil;
+import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.testing.AbstractTestQueryFramework;
@@ -97,6 +98,7 @@ import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectSt
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static io.trino.testing.DataProviders.toDataProvider;
 import static io.trino.testing.MultisetAssertions.assertMultisetsEqual;
+import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.nio.file.Files.createTempDirectory;
 import static java.util.Collections.nCopies;
 import static java.util.Objects.requireNonNull;
@@ -163,6 +165,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder(CATALOG_NAME, SCHEMA_NAME)
                 .setSpanProcessor(spanProcessor)
                 .setAccountClient(testingAccountFactory.createAccountClient())
+                .addPlugin(new TpchPlugin())
+                .addCatalog("tpch", "tpch", Map.of())
                 .addPlugin(new IcebergPlugin())
                 .addPlugin(new TestingObjectStorePlugin(metastore, trackingFileSystemFactory))
                 .addCatalog(CATALOG_NAME, "galaxy_objectstore", properties)
@@ -255,6 +259,78 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", OUTPUT_FILE_CREATE))
                             .build();
                 });
+    }
+
+    @Test(dataProvider = "tableTypeDataProvider")
+    public void testCreateTableAsSelectFromDifferentCatalog(TableType type)
+    {
+        testCreateTableAsSelectFromDifferentCatalog(type, "SELECT * FROM tpch.tiny.nation");
+        testCreateTableAsSelectFromDifferentCatalog(type, "TABLE tpch.tiny.nation");
+    }
+
+    private void testCreateTableAsSelectFromDifferentCatalog(TableType type, @Language("SQL") String sourceForm)
+    {
+        // Need random name because this test creates tables twice
+        String tableName = "test_ctas_different_catalog" + randomNameSuffix();
+
+        // Prime the RelationTypeCache to make the test deterministic
+        assertUpdate("CREATE TABLE " + tableName + "(a bigint) WITH (type = '" + type + "')");
+        assertUpdate("DROP TABLE " + tableName);
+
+        assertInvocations(
+                getSession(),
+                "CREATE TABLE " + tableName + " WITH (type = '" + type + "') AS " + sourceForm,
+                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                        .add(GET_DATABASE)
+                        .addCopies(GET_TABLE, occurrences(type, 1, 4, 1))
+                        .add(CREATE_TABLE)
+                        .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
+                        .addCopies(UPDATE_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
+                        .build(),
+                switch (type) {
+                    case HIVE -> ImmutableMultiset.of(
+                            new FileOperation(DATA, "no partition", OUTPUT_FILE_CREATE));
+                    case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
+                            .add(new FileOperation(METADATA_JSON, "00000.metadata.json", OUTPUT_FILE_LOCATION))
+                            .add(new FileOperation(METADATA_JSON, "00000.metadata.json", OUTPUT_FILE_CREATE))
+                            .add(new FileOperation(METADATA_JSON, "00000.metadata.json", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(METADATA_JSON, "00001.metadata.json", OUTPUT_FILE_CREATE))
+                            .add(new FileOperation(METADATA_JSON, "00001.metadata.json", OUTPUT_FILE_LOCATION))
+                            .add(new FileOperation(SNAPSHOT, "snap-1.avro", OUTPUT_FILE_CREATE_OR_OVERWRITE))
+                            .addCopies(new FileOperation(SNAPSHOT, "snap-1.avro", OUTPUT_FILE_LOCATION), 2)
+                            .add(new FileOperation(SNAPSHOT, "snap-1.avro", INPUT_FILE_GET_LENGTH))
+                            .add(new FileOperation(SNAPSHOT, "snap-1.avro", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(DATA, "no partition", OUTPUT_FILE_LOCATION))
+                            .add(new FileOperation(DATA, "no partition", OUTPUT_FILE_CREATE))
+                            .add(new FileOperation(STATS, "", OUTPUT_FILE_CREATE))
+                            .add(new FileOperation(MANIFEST, "", OUTPUT_FILE_LOCATION))
+                            .add(new FileOperation(MANIFEST, "", OUTPUT_FILE_CREATE_OR_OVERWRITE))
+                            .build();
+                    case DELTA -> ImmutableMultiset.<FileOperation>builder()
+                            .add(new FileOperation(DATA, "no partition", OUTPUT_FILE_CREATE))
+                            .add(new FileOperation(TRINO_EXTENDED_STATS_JSON, "extendeded_stats.json", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(TRINO_EXTENDED_STATS_JSON, "extendeded_stats.json", INPUT_FILE_EXISTS))
+                            .add(new FileOperation(TRINO_EXTENDED_STATS_JSON, "extended_stats.json", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(TRINO_EXTENDED_STATS_JSON, "extended_stats.json", OUTPUT_FILE_CREATE_OR_OVERWRITE))
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", OUTPUT_FILE_CREATE))
+                            .build();
+                },
+                ImmutableList.<TracesAssertion>builder()
+                        .add(TracesAssertion.builder()
+                                .filterByAttribute("airlift.http.client_name", "galaxy-access-control")
+                                .formattingName()
+                                .formattingUriAttribute("http.url", uri -> uri.getPath()
+                                        // TODO differentiate source and target catalogs
+                                        .replaceAll("(/[cr])-\\d+(/|$)", "$1-xxx$2")
+                                        .replace(tableName, "test_ctas_different_catalog"))
+                                .setExpected(ImmutableMultiset.<String>builder()
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/role")
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/schema/c-xxx/test_schema/privileges/r-xxx")
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/tiny/nation/privileges/r-xxx")
+                                        .add("galaxy-access-control POST /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_ctas_different_catalog/:create")
+                                        .build())
+                                .build())
+                        .build());
     }
 
     @Test(dataProvider = "tableTypeDataProvider")
