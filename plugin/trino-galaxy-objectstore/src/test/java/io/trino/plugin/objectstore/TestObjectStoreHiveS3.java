@@ -19,6 +19,7 @@ import org.testng.annotations.Test;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import static io.trino.plugin.objectstore.TableType.HIVE;
 import static io.trino.testing.TestingNames.randomNameSuffix;
@@ -41,7 +42,7 @@ public class TestObjectStoreHiveS3
         {
             String locationDirectory = location.endsWith("/") ? location : location + "/";
             String partitionPart = partitionColumn.isEmpty() ? "" : partitionColumn + "=[a-z0-9]+/";
-            assertThat(dataFile).matches("^" + locationDirectory + partitionPart + "[a-zA-Z0-9_-]+$");
+            assertThat(dataFile).matches("^" + Pattern.quote(locationDirectory) + partitionPart + "[a-zA-Z0-9_-]+$");
             verifyPathExist(dataFile);
         });
     }

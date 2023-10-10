@@ -123,6 +123,8 @@ public abstract class BaseObjectStoreS3Test
                 {"s3://%s/galaxy//double_slash/%s"},
                 {"s3://%s/galaxy/a%%percent/%s"},
                 {"s3://%s/galaxy/a whitespace/%s"},
+                {"s3://%s/galaxy/a#hash/%s"},
+                {"s3://%s/galaxy/a?question_mark/%s"},
                 {"s3://%s/galaxy/trailing_whitespace/%s "},
         };
         return cartesianProduct(trueFalse(), locationPatterns);
@@ -172,7 +174,7 @@ public abstract class BaseObjectStoreS3Test
 
         assertUpdate("CREATE TABLE " + qualifiedTableName + "(col_str varchar, col_int int)" + partitionQueryPart);
         // in case of regular CREATE TABLE, location has generated suffix
-        String expectedTableLocationPattern = (schemaLocation.endsWith("/") ? schemaLocation : schemaLocation + "/") + tableName + "-[a-z0-9]+";
+        String expectedTableLocationPattern = Pattern.quote((schemaLocation.endsWith("/") ? schemaLocation : schemaLocation + "/") + tableName) + "-[a-z0-9]+";
         String actualTableLocation = getTableLocation(qualifiedTableName);
         assertThat(actualTableLocation).matches(expectedTableLocationPattern);
 

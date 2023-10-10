@@ -17,6 +17,7 @@ import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
@@ -39,7 +40,7 @@ public class TestObjectStoreIcebergS3
         {
             String locationDirectory = location.endsWith("/") ? location : location + "/";
             String partitionPart = partitionColumn.isEmpty() ? "" : partitionColumn + "=[a-z0-9]+/";
-            assertThat(dataFile).matches("^" + locationDirectory + "data/" + partitionPart + "[a-zA-Z0-9_-]+.parquet$");
+            assertThat(dataFile).matches("^" + Pattern.quote(locationDirectory) + "data/" + partitionPart + "[a-zA-Z0-9_-]+.parquet$");
             verifyPathExist(dataFile);
         });
     }
@@ -50,7 +51,7 @@ public class TestObjectStoreIcebergS3
         getAllMetadataDataFilesFromTableDirectory(location).forEach(metadataFile ->
         {
             String locationDirectory = location.endsWith("/") ? location : location + "/";
-            assertThat(metadataFile).matches("^" + locationDirectory + "metadata/[a-zA-Z0-9_-]+.(avro|metadata.json|stats)$");
+            assertThat(metadataFile).matches("^" + Pattern.quote(locationDirectory) + "metadata/[a-zA-Z0-9_-]+.(avro|metadata.json|stats)$");
             verifyPathExist(metadataFile);
         });
     }
