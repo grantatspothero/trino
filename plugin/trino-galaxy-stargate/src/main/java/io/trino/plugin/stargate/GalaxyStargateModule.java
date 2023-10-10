@@ -25,6 +25,8 @@ import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.plugin.jdbc.ConfiguringConnectionFactory;
 import io.trino.plugin.jdbc.ConnectionFactory;
 import io.trino.plugin.jdbc.ForBaseJdbc;
+import io.trino.plugin.jdbc.JdbcClient;
+import io.trino.plugin.jdbc.JdbcMetadataConfig;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -32,6 +34,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
+import static io.airlift.configuration.ConfigBinder.configBinder;
+import static io.trino.plugin.jdbc.JdbcMetadataConfig.ListColumnsMode.DMA;
 import static java.util.Objects.requireNonNull;
 
 public class GalaxyStargateModule
@@ -42,11 +46,17 @@ public class GalaxyStargateModule
     {
         install(new StargateModule());
 
+        newOptionalBinder(binder, Key.get(JdbcClient.class, ForBaseJdbc.class)).setBinding().to(GalaxyStargateClient.class).in(Scopes.SINGLETON);
+
         install(new GalaxyStargateAuthenticationModule());
         newOptionalBinder(binder, Key.get(ConnectionFactory.class, ForBaseJdbc.class))
                 .setBinding()
                 .to(Key.get(ConnectionFactory.class, ForStargate.class))
                 .in(Scopes.SINGLETON);
+
+        // DMA is a safe bet for Stargate connector, since we know exactly how the other system will behave.
+        // TODO DMA_P may actually perform better, especially if the remote is a data lake connector, which will iterate over schemas anyway.
+        configBinder(binder).bindConfigDefaults(JdbcMetadataConfig.class, config -> config.setListColumnsMode(DMA));
     }
 
     @Provides
