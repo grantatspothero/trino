@@ -925,21 +925,50 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         Session session = getSession();
 
+        Multiset<FileOperation> bulkRetrievalFileOperations = switch (type) {
+            case HIVE, ICEBERG -> ImmutableMultiset.of();
+            case DELTA -> ImmutableMultiset.<FileOperation>builder()
+                    .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), allTables)
+                    .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM), allTables)
+                    .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM), allTables)
+                    .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM), tableBatches)
+                    .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), tableBatches)
+                    .build();
+        };
+
         // Bulk retrieval
         assertInvocations(session, "SELECT * FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA AND table_name LIKE 'test_select_i_s_columns%'",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
                         .add(STREAM_TABLES)
                         .build(),
-                switch (type) {
-                    case HIVE, ICEBERG -> ImmutableMultiset.of();
-                    case DELTA -> ImmutableMultiset.<FileOperation>builder()
-                            .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), allTables)
-                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM), allTables)
-                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM), allTables)
-                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM), tableBatches)
-                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), tableBatches)
-                            .build();
-                },
+                bulkRetrievalFileOperations,
+                ImmutableList.<TracesAssertion>builder()
+                        .add(TracesAssertion.builder()
+                                .filterByAttribute("airlift.http.client_name", "galaxy-access-control")
+                                .formattingName()
+                                .formattingUriAttribute("http.url", uri -> uri.getPath()
+                                        .replaceAll("(/[cr])-\\d+(/|$)", "$1-xxx$2")
+                                        .replaceAll("/(test_select_i_s_columns|test_other_select_i_s_columns)\\d+/", "/$1__/"))
+                                .setExpected(ImmutableMultiset.<String>builder()
+                                        // TODO (https://github.com/starburstdata/stargate/issues/12879) if information_schema.columns privileges are no longer asked for,
+                                        //  remove hot-sharing for them from GalaxyPermissionsCache
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility")
+                                        .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
+                                        .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns__/privileges/r-xxx", tableBatches)
+                                        // TODO AccessControl is consulted even for tables filtered out by the query LIKE predicate (test_other_select_i_s_columns...)
+                                        .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_other_select_i_s_columns__/privileges/r-xxx", tableBatches)
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_yet_another_other_select_i_s_columns/privileges/r-xxx")
+                                        .build())
+                                .build())
+                        .build());
+
+        // Bulk retrieval specific columns
+        assertInvocations(session, "SELECT table_name, column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA AND table_name LIKE 'test_select_i_s_columns%'",
+                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                        .add(STREAM_TABLES)
+                        .build(),
+                bulkRetrievalFileOperations,
                 ImmutableList.<TracesAssertion>builder()
                         .add(TracesAssertion.builder()
                                 .filterByAttribute("airlift.http.client_name", "galaxy-access-control")
@@ -967,16 +996,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                         .add(GET_ALL_DATABASES)
                         .add(STREAM_TABLES)
                         .build(),
-                switch (type) {
-                    case HIVE, ICEBERG -> ImmutableMultiset.of();
-                    case DELTA -> ImmutableMultiset.<FileOperation>builder()
-                            .addCopies(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM), allTables)
-                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM), allTables)
-                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM), allTables)
-                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM), tableBatches) // 'other' tables have shorter history
-                            .addCopies(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM), tableBatches)
-                            .build();
-                },
+                bulkRetrievalFileOperations,
                 ImmutableList.<TracesAssertion>builder()
                         .add(TracesAssertion.builder()
                                 .filterByAttribute("airlift.http.client_name", "galaxy-access-control")
@@ -994,24 +1014,47 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                 .build())
                         .build());
 
+        Multiset<FileOperation> pointedLookupFileOperations = switch (type) {
+            case HIVE -> ImmutableMultiset.of();
+            case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
+                    .add(new FileOperation(METADATA_JSON, "00004.metadata.json", INPUT_FILE_NEW_STREAM))
+                    .build();
+            case DELTA -> ImmutableMultiset.<FileOperation>builder()
+                    .add(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM))
+                    .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM))
+                    .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM))
+                    .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM))
+                    .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM))
+                    .build();
+        };
+
         // Pointed lookup
         assertInvocations(session, "SELECT * FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA AND table_name = 'test_select_i_s_columns0'",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
                         .addCopies(GET_TABLE, occurrences(type, 1, 1, 3))
                         .build(),
-                switch (type) {
-                    case HIVE -> ImmutableMultiset.of();
-                    case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
-                            .add(new FileOperation(METADATA_JSON, "00004.metadata.json", INPUT_FILE_NEW_STREAM))
-                            .build();
-                    case DELTA -> ImmutableMultiset.<FileOperation>builder()
-                            .add(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM))
-                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM))
-                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM))
-                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM))
-                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM))
-                            .build();
-                },
+                pointedLookupFileOperations,
+                ImmutableList.<TracesAssertion>builder()
+                        .add(TracesAssertion.builder()
+                                .filterByAttribute("airlift.http.client_name", "galaxy-access-control")
+                                .formattingName()
+                                .formattingUriAttribute("http.url", uri -> uri.getPath()
+                                        .replaceAll("(/[cr])-\\d+(/|$)", "$1-xxx$2"))
+                                .setExpected(ImmutableMultiset.<String>builder()
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility")
+                                        .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
+                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns0/privileges/r-xxx")
+                                        .build())
+                                .build())
+                        .build());
+
+        // Pointed lookup specific columns
+        assertInvocations(session, "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA AND table_name = 'test_select_i_s_columns0'",
+                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                        .addCopies(GET_TABLE, occurrences(type, 1, 1, 3))
+                        .build(),
+                pointedLookupFileOperations,
                 ImmutableList.<TracesAssertion>builder()
                         .add(TracesAssertion.builder()
                                 .filterByAttribute("airlift.http.client_name", "galaxy-access-control")
@@ -1033,19 +1076,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                         .add(GET_DATABASE)
                         .addCopies(GET_TABLE, occurrences(type, 1, 1, 3))
                         .build(),
-                switch (type) {
-                    case HIVE -> ImmutableMultiset.of();
-                    case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
-                            .add(new FileOperation(METADATA_JSON, "00004.metadata.json", INPUT_FILE_NEW_STREAM))
-                            .build();
-                    case DELTA -> ImmutableMultiset.<FileOperation>builder()
-                            .add(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM))
-                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM))
-                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM))
-                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000002.json", INPUT_FILE_NEW_STREAM))
-                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000003.json", INPUT_FILE_NEW_STREAM))
-                            .build();
-                },
+                pointedLookupFileOperations,
                 ImmutableList.<TracesAssertion>builder()
                         .add(TracesAssertion.builder()
                                 .filterByAttribute("airlift.http.client_name", "galaxy-access-control")
@@ -1079,6 +1110,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         Session session = getSession();
 
         // Bulk retrieval
+        // TODO add assertions for galaxy-access-control. When doing so, test separately `SELECT *` and `SELECT <explicit-columns` cases
         assertInvocations(session, "SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name LIKE 'test_select_s_m_t_comments%'",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
                         .add(STREAM_TABLES)
@@ -1095,6 +1127,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 });
 
         // Pointed lookup
+        // TODO add assertions for galaxy-access-control. When doing so, test separately `SELECT *` and `SELECT <explicit-columns` cases
         assertInvocations(session, "SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name = 'test_select_s_m_t_comments" + 0 + "'",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
                         .addCopies(GET_TABLE, occurrences(type, 1, 1, 3))
@@ -1140,7 +1173,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 "SELECT column_name FROM information_schema.columns WHERE table_schema = '" + SCHEMA_NAME + "'",
                 "VALUES 'delta_id', 'delta_age', 'iceberg_id', 'iceberg_age', 'hive_id', 'hive_age'");
 
-        assertInvocations(session, "TABLE information_schema.columns",
+        assertInvocations(session, "SELECT table_name, column_name, data_type, is_nullable FROM information_schema.columns",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
                         .add(GET_ALL_DATABASES)
                         .add(STREAM_TABLES)
@@ -1157,7 +1190,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                 .formattingUriAttribute("http.url", uri -> uri.getPath()
                                         .replaceAll("(/[cr])-\\d+(/|$)", "$1-xxx$2"))
                                 .setExpected(ImmutableMultiset.<String>builder()
-                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/role")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility")
                                         .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
