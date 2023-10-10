@@ -215,10 +215,14 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
     @Test(dataProvider = "tableTypeDataProvider")
     public void testCreateTableAsSelect(TableType type)
     {
+        // Prime the RelationTypeCache to make the test deterministic
+        assertUpdate("CREATE TABLE test_ctas(a bigint) WITH (type = '" + type + "')");
+        assertUpdate("DROP TABLE test_ctas");
+
         assertInvocations("CREATE TABLE test_ctas WITH (type = '" + type + "') AS SELECT 1 AS age",
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
                         .add(CREATE_TABLE)
-                        .addCopies(GET_TABLE, occurrences(type, 2, 5, 1))
+                        .addCopies(GET_TABLE, occurrences(type, 1, 4, 1))
                         .add(GET_DATABASE)
                         .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
                         .addCopies(UPDATE_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
