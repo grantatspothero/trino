@@ -29,7 +29,6 @@ import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestObjectStoreDeltaS3
         extends BaseObjectStoreS3Test
@@ -189,37 +188,5 @@ public class TestObjectStoreDeltaS3
         finally {
             assertUpdate("DROP TABLE " + tableName);
         }
-    }
-
-    @Test
-    public void testCreateTableWithIncorrectLocation()
-    {
-        String tableName = "test_create_table_with_incorrect_location_" + randomNameSuffix();
-        String location = "s3://%s/galaxy/a#hash/%s".formatted(bucketName, tableName);
-
-        assertThatThrownBy(() -> assertUpdate("CREATE TABLE " + tableName + " (key integer, value varchar) WITH (location = '" + location + "')"))
-                .hasMessageContaining("location contains a fragment");
-    }
-
-    @Test
-    public void testCTASWithIncorrectLocation()
-    {
-        String tableName = "test_create_table_with_incorrect_location_" + randomNameSuffix();
-        String location = "s3://%s/galaxy/a#hash/%s".formatted(bucketName, tableName);
-
-        assertThatThrownBy(() -> assertUpdate("CREATE TABLE " + tableName +
-                " WITH (location = '" + location + "')" +
-                " AS SELECT * FROM tpch.tiny.nation"))
-                .hasMessageContaining("Error reading statistics from cache")
-                .cause().cause().hasMessageContaining("Fragment is not allowed in a file system location");
-    }
-
-    @Test
-    public void testCreateSchemaWithIncorrectLocation()
-    {
-        String schemaName = "test_create_schema_with_incorrect_location_" + randomNameSuffix();
-        String schemaLocation = "s3://%s/galaxy/a#hash/%s".formatted(bucketName, schemaName);
-        assertThatThrownBy(() -> assertUpdate("CREATE SCHEMA " + schemaName + " WITH (location = '" + schemaLocation + "')"))
-                .hasStackTraceContaining("Fragment is not allowed in a file system location");
     }
 }

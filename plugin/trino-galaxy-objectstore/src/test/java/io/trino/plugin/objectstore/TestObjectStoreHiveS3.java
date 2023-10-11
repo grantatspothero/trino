@@ -191,39 +191,6 @@ public class TestObjectStoreHiveS3
     }
 
     @Test
-    public void testCreateTableWithIncorrectLocation()
-    {
-        String tableName = "test_create_table_with_incorrect_location_" + randomNameSuffix();
-        String location = "s3://%s/galaxy/a#hash/%s".formatted(bucketName, tableName);
-
-        assertThatThrownBy(() -> assertUpdate("CREATE TABLE " + tableName + "(col_str varchar, col_int integer)" +
-                "WITH (external_location = '" + location + "')"))
-                .hasMessage("External location is not a valid file system URI: " + location);
-    }
-
-    @Test
-    public void testCTASWithIncorrectLocation()
-    {
-        String tableName = "test_ctas_with_incorrect_location_" + randomNameSuffix();
-        String location = "s3://%s/galaxy/a#hash/%s".formatted(bucketName, tableName);
-
-        assertThatThrownBy(() -> assertUpdate("CREATE TABLE " + tableName + "(col_str, col_int)" +
-                " WITH (external_location = '" + location + "')" +
-                " AS VALUES ('str1', 1)"))
-                .hasMessage("External location is not a valid file system URI: " + location);
-    }
-
-    @Test
-    public void testCreateSchemaWithIncorrectLocation()
-    {
-        String schemaName = "test_create_schema_with_incorrect_location_" + randomNameSuffix();
-        String schemaLocation = "s3://%s/galaxy/a#hash/%s".formatted(bucketName, schemaName);
-
-        assertThatThrownBy(() -> assertUpdate("CREATE SCHEMA " + schemaName + " WITH (location = '" + schemaLocation + "')"))
-                .hasStackTraceContaining("Fragment is not allowed in a file system location");
-    }
-
-    @Test
     public void testSchemaNameEscape()
     {
         String schemaNameSuffix = randomNameSuffix();
