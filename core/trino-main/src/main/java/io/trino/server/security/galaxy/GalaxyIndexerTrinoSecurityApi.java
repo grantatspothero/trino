@@ -63,6 +63,12 @@ public enum GalaxyIndexerTrinoSecurityApi
     }
 
     @Override
+    public ContentsVisibility getCatalogVisibility(DispatchSession session, Set<CatalogId> catalogIds)
+    {
+        return ALLOW_ALL;
+    }
+
+    @Override
     public ContentsVisibility getSchemaVisibility(DispatchSession session, CatalogId catalogId)
     {
         return ALLOW_ALL;
