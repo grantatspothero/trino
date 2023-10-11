@@ -15,6 +15,7 @@ package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.trino.Session;
 import io.trino.filesystem.TrinoFileSystem;
 import io.trino.filesystem.hdfs.HdfsFileSystemFactory;
 import io.trino.hdfs.ConfigurationInitializer;
@@ -1055,5 +1056,14 @@ public abstract class BaseObjectStoreConnectorTest
         HdfsConfiguration hdfsConfiguration = new DynamicHdfsConfiguration(initializer, ImmutableSet.of());
         return new HdfsFileSystemFactory(new HdfsEnvironment(hdfsConfiguration, new HdfsConfig(), new NoHdfsAuthentication()), new TrinoHdfsFileSystemStats())
                 .create(SESSION);
+    }
+
+    @Override
+    protected Session withoutSmallFileThreshold(Session session)
+    {
+        return Session.builder(session)
+                .setCatalogSessionProperty(getSession().getCatalog().orElseThrow(), "parquet_small_file_threshold", "0B")
+                .setCatalogSessionProperty(getSession().getCatalog().orElseThrow(), "orc_tiny_stripe_threshold", "0B")
+                .build();
     }
 }
