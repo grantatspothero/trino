@@ -38,7 +38,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.trino.server.security.galaxy.GalaxyIdentity.getContextRoleId;
 import static io.trino.server.security.galaxy.GalaxyIdentity.getRowFilterAndColumnMaskUserString;
 import static io.trino.server.security.galaxy.GalaxyIdentity.toDispatchSession;
@@ -93,13 +95,19 @@ public class GalaxySystemAccessController
         return accessControlClient.listEnabledRoles(toDispatchSession(identity));
     }
 
-    public Predicate<String> getCatalogVisibility(SystemSecurityContext context)
+    public Predicate<String> getCatalogVisibility(SystemSecurityContext context, Set<String> requestedCatalogs)
     {
-        ContentsVisibility catalogVisibility = getCache(context).getCatalogVisibility();
-        return catalogName -> catalogIds.getCatalogId(catalogName)
-                .map(CatalogId::toString)
-                .map(catalogVisibility::isVisible)
-                .orElse(false);
+        Set<CatalogId> requestedCatalogIds = requestedCatalogs.stream()
+                .flatMap(catalogName -> catalogIds.getCatalogId(catalogName).stream())
+                .collect(toImmutableSet());
+        ContentsVisibility catalogVisibility = getCache(context).getCatalogVisibility(requestedCatalogIds);
+        return catalogName -> {
+            checkArgument(requestedCatalogs.contains(catalogName), "Unexpected catalog checked for visibility: %s, expected one of: %s", catalogName, requestedCatalogs);
+            return catalogIds.getCatalogId(catalogName)
+                    .map(CatalogId::toString)
+                    .map(catalogVisibility::isVisible)
+                    .orElse(false);
+        };
     }
 
     public void implyCatalogVisibility(SystemSecurityContext context, String catalogName)

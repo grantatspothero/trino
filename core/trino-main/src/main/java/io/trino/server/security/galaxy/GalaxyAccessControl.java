@@ -231,10 +231,16 @@ public class GalaxyAccessControl
     public Set<String> filterCatalogs(SystemSecurityContext context, Set<String> catalogs)
     {
         GalaxySystemAccessController controller = getSystemAccessController(context);
-        // Call getCatalogVisibility lazily, i.e. avoid call when not needed
-        Supplier<Predicate<String>> catalogVisibility = memoize(() -> controller.getCatalogVisibility(context));
+
+        Set<String> needFiltering = catalogs.stream()
+                .filter(catalog -> !isSystemCatalog(catalog) && !controller.hasImpliedCatalogVisibility(context, catalog))
+                .collect(toImmutableSet());
+        if (needFiltering.isEmpty()) {
+            return catalogs;
+        }
+        Predicate<String> catalogVisibility = controller.getCatalogVisibility(context, needFiltering);
         return catalogs.stream()
-                .filter(catalog -> isSystemCatalog(catalog) || controller.hasImpliedCatalogVisibility(context, catalog) || catalogVisibility.get().test(catalog))
+                .filter(catalogName -> !needFiltering.contains(catalogName) || catalogVisibility.test(catalogName))
                 .collect(toImmutableSet());
     }
 

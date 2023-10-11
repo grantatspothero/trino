@@ -134,8 +134,12 @@ public class GalaxyPermissionsCache
             return entityPrivileges.getUnchecked(new EntityPrivilegesKey(roleId, entity));
         }
 
-        public synchronized ContentsVisibility getCatalogVisibility()
+        public synchronized ContentsVisibility getCatalogVisibility(Set<CatalogId> requestedCatalogs)
         {
+            if (requestedCatalogs.isEmpty()) {
+                return ContentsVisibility.DENY_ALL;
+            }
+
             if (catalogVisibility == null) {
                 catalogVisibility = trinoSecurityApi.getCatalogVisibility(session);
             }
