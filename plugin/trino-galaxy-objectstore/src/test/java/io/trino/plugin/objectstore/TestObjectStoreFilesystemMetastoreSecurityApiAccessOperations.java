@@ -950,7 +950,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                 .setExpected(ImmutableMultiset.<String>builder()
                                         // TODO (https://github.com/starburstdata/stargate/issues/12879) if information_schema.columns privileges are no longer asked for,
                                         //  remove hot-sharing for them from GalaxyPermissionsCache
-                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility")
                                         .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
                                         .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns__/privileges/r-xxx", tableBatches)
@@ -977,7 +976,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                 .setExpected(ImmutableMultiset.<String>builder()
                                         // TODO (https://github.com/starburstdata/stargate/issues/12879) if information_schema.columns privileges are no longer asked for,
                                         //  remove hot-sharing for them from GalaxyPermissionsCache
-                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
                                         .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
                                         .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns__/privileges/r-xxx", tableBatches)
                                         // TODO AccessControl is consulted even for tables filtered out by the query LIKE predicate (test_other_select_i_s_columns...)
@@ -1003,7 +1001,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                         .replaceAll("/((test_select_i_s_columns|test_other_select_i_s_columns)\\d+|test_yet_another_other_select_i_s_columns)/", "/table-xxx/"))
                                 .setExpected(ImmutableMultiset.<String>builder()
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/role")
-                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility")
                                         .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
                                         .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/table-xxx/privileges/r-xxx", allTables)
@@ -1038,7 +1035,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                 .formattingUriAttribute("http.url", uri -> uri.getPath()
                                         .replaceAll("(/[cr])-\\d+(/|$)", "$1-xxx$2"))
                                 .setExpected(ImmutableMultiset.<String>builder()
-                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility")
                                         .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns0/privileges/r-xxx")
@@ -1059,7 +1055,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                 .formattingUriAttribute("http.url", uri -> uri.getPath()
                                         .replaceAll("(/[cr])-\\d+(/|$)", "$1-xxx$2"))
                                 .setExpected(ImmutableMultiset.<String>builder()
-                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
                                         .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns0/privileges/r-xxx")
                                         .build())
@@ -1081,7 +1076,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                         .replaceAll("(/[cr])-\\d+(/|$)", "$1-xxx$2"))
                                 .setExpected(ImmutableMultiset.<String>builder()
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/role")
-                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
                                         .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns0/privileges/r-xxx")
                                         .build())
@@ -1186,7 +1180,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                 .formattingUriAttribute("http.url", uri -> uri.getPath()
                                         .replaceAll("(/[cr])-\\d+(/|$)", "$1-xxx$2"))
                                 .setExpected(ImmutableMultiset.<String>builder()
-                                        .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/information_schema/columns/privileges/r-xxx")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/catalogVisibility")
                                         .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns_iceberg/privileges/r-xxx")
