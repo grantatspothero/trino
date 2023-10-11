@@ -924,6 +924,7 @@ public class LocalExecutionPlanner
 
         public void setCacheContext(CacheContext cacheContext)
         {
+            checkState(this.cacheContext.isEmpty(), "cacheContext is already set");
             this.cacheContext = Optional.of(requireNonNull(cacheContext, "cacheContext is null"));
         }
 
