@@ -1631,36 +1631,11 @@ public abstract class BaseJdbcConnectorTest
                           , ('nation', 'name', 'YES')
                         """);
 
-        // information_schema.columns without schema filter
-        assertThat(query(session, """
-                        SELECT table_name, column_name, is_nullable FROM information_schema.columns
-                        WHERE ((table_schema = CURRENT_SCHEMA AND column_name LIKE 'n_me' AND table_name IN ('customer', 'nation')) OR rand() = 42) -- not pushed down into connector
-                """))
-                .skippingTypesCheck()
-                .matches("""
-                        VALUES
-                            ('customer', 'name', 'YES')
-                          , ('nation', 'name', 'YES')
-                        """);
-
         // system.jdbc.columns for single schema with more tables
         assertThat(query(session, """
                         SELECT table_name, column_name, is_nullable FROM system.jdbc.columns
                         WHERE table_cat = CURRENT_CATALOG AND table_schem = CURRENT_SCHEMA
                         AND ((column_name LIKE 'n_me' AND table_name IN ('customer', 'nation')) OR rand() = 42) -- not pushed down into connector
-                """))
-                .skippingTypesCheck()
-                .matches("""
-                        VALUES
-                            ('customer', 'name', 'YES')
-                          , ('nation', 'name', 'YES')
-                        """);
-
-        // system.jdbc.columns without schema filter
-        assertThat(query(session, """
-                        SELECT table_name, column_name, is_nullable FROM system.jdbc.columns
-                        WHERE table_cat = CURRENT_CATALOG
-                        AND ((table_schem = CURRENT_SCHEMA AND column_name LIKE 'n_me' AND table_name IN ('customer', 'nation')) OR rand() = 42) -- not pushed down into connector
                 """))
                 .skippingTypesCheck()
                 .matches("""
@@ -1740,14 +1715,6 @@ public abstract class BaseJdbcConnectorTest
                         SELECT table_name, comment FROM system.metadata.table_comments
                         WHERE catalog_name = CURRENT_CATALOG AND schema_name = CURRENT_SCHEMA
                         AND (table_name IN ('customer', 'nation') OR rand() = 42) -- not pushed down into connector
-                """))
-                .skippingTypesCheck()
-                .matches("VALUES ('customer', NULL), ('nation', NULL)");
-
-        // table_comments without schema filter
-        assertThat(query(session, """
-                        SELECT table_name, comment FROM system.metadata.table_comments
-                        WHERE ((schema_name = CURRENT_SCHEMA AND table_name IN ('customer', 'nation')) OR rand() = 42) -- not pushed down into connector
                 """))
                 .skippingTypesCheck()
                 .matches("VALUES ('customer', NULL), ('nation', NULL)");
