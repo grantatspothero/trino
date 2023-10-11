@@ -13,7 +13,6 @@
  */
 package io.trino.server.galaxy;
 
-import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -22,23 +21,18 @@ import com.google.errorprone.annotations.ThreadSafe;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import io.airlift.jmx.CacheStatsMBean;
-import io.opentelemetry.api.trace.Tracer;
 import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
-import io.starburst.stargate.accesscontrol.client.HttpTrinoSecurityClient;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
 import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.EntityId;
-import io.starburst.stargate.id.EntityKind;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.identity.DispatchSession;
-import io.trino.server.security.galaxy.GalaxyIndexerTrinoSecurityApi;
 import io.trino.server.security.galaxy.GalaxySystemAccessControlConfig;
 import io.trino.spi.QueryId;
 import org.weakref.jmx.Managed;
 import org.weakref.jmx.Nested;
 
-import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -48,93 +42,38 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.MoreCollectors.onlyElement;
 import static com.google.common.collect.Streams.stream;
-import static io.trino.cache.CacheUtils.uncheckedCacheGet;
 import static io.trino.cache.SafeCaches.buildNonEvictableCache;
 import static java.util.Objects.requireNonNull;
 
 @ThreadSafe
 public class GalaxyPermissionsCache
 {
-    private final boolean globalHotSharingCacheEnabled;
-    private final Tracer tracer;
-
-    // global hot sharing (time-based) cache
-    private final Cache<AccountSessionKey, TimedMemoizingSupplier<ContentsVisibility>> catalogVisibilityCache;
-    private final Cache<AccountSessionEntityIdKey, TimedMemoizingSupplier<EntityPrivileges>> informationSchemaEntityPrivilegesCache;
-
-    private final TimedMemoizingSupplier.Stats catalogVisibilityLoadingStats = TimedMemoizingSupplier.createStats();
-    private final TimedMemoizingSupplier.Stats informationSchemaEntityLoadingStats = TimedMemoizingSupplier.createStats();
-
     // per-query caches
     private final LoadingCache<QueryId, Map<DispatchSession, GalaxyQueryPermissions>> queryPermissionsCache;
 
     @Inject
-    public GalaxyPermissionsCache(GalaxySystemAccessControlConfig accessControlConfig, Tracer tracer)
+    public GalaxyPermissionsCache(GalaxySystemAccessControlConfig accessControlConfig)
     {
-        this(accessControlConfig.isGlobalHotSharingCacheEnabled(), accessControlConfig.getExpectedQueryParallelism(), tracer);
+        this(accessControlConfig.getExpectedQueryParallelism());
     }
 
-    public GalaxyPermissionsCache(boolean globalHotSharingCacheEnabled, int expectedQueryParallelism, Tracer tracer)
+    public GalaxyPermissionsCache(int expectedQueryParallelism)
     {
-        this.globalHotSharingCacheEnabled = globalHotSharingCacheEnabled;
-        this.tracer = requireNonNull(tracer);
-
-        // catalogVisibilityCache is keyed by DispatchSession so will be loaded once per query or more if there are views
-        catalogVisibilityCache = buildNonEvictableCache(
-                CacheBuilder.newBuilder()
-                        .maximumSize(expectedQueryParallelism * 3L));
-
-        // informationSchemaEntityPrivilegesCache is keyed by DispatchSession and information_schema.x table name
-        // However it's designed primary for DBT use-case where information_schema.columns is used by multiple concurrent queries,
-        // So it needs to be at least of size expectedQueryParallelism.
-        informationSchemaEntityPrivilegesCache = buildNonEvictableCache(
-                CacheBuilder.newBuilder()
-                        .maximumSize(expectedQueryParallelism * 10L));
-
         queryPermissionsCache = buildNonEvictableCache(
                 CacheBuilder.newBuilder()
                         .maximumSize(expectedQueryParallelism),
                 CacheLoader.from(queryId -> new ConcurrentHashMap<>()));
     }
 
-    public GalaxyQueryPermissions getCache(TrinoSecurityApi trinoSecurityApi, QueryId queryId, Instant queryStart, DispatchSession session)
+    public GalaxyQueryPermissions getCache(TrinoSecurityApi trinoSecurityApi, QueryId queryId, DispatchSession session)
     {
         return queryPermissionsCache.getUnchecked(queryId)
-                .computeIfAbsent(session, ignore -> new GalaxyQueryPermissions(trinoSecurityApi, queryStart, session));
-    }
-
-    @Managed
-    @Nested
-    public TimedMemoizingSupplier.Stats getCatalogVisibilityLoadingStats()
-    {
-        return catalogVisibilityLoadingStats;
-    }
-
-    @Managed
-    @Nested
-    public TimedMemoizingSupplier.Stats getInformationSchemaEntityLoadingStats()
-    {
-        return informationSchemaEntityLoadingStats;
-    }
-
-    @Managed
-    @Nested
-    public CacheStatsMBean getCatalogVisibilityCacheStats()
-    {
-        return new CacheStatsMBean(catalogVisibilityCache);
-    }
-
-    @Managed
-    @Nested
-    public CacheStatsMBean getInformationSchemaEntityPrivilegesCacheStats()
-    {
-        return new CacheStatsMBean(informationSchemaEntityPrivilegesCache);
+                .computeIfAbsent(session, ignore -> new GalaxyQueryPermissions(trinoSecurityApi, session));
     }
 
     @Managed
@@ -148,10 +87,9 @@ public class GalaxyPermissionsCache
      * Permission cache for given query and identity ({@link DispatchSession}).
      */
     @ThreadSafe
-    public class GalaxyQueryPermissions
+    public static class GalaxyQueryPermissions
     {
         private final TrinoSecurityApi trinoSecurityApi;
-        private final Instant queryStart;
         private final DispatchSession session;
 
         // It's a cache to support concurrent loads while also preventing multiple loads for the same key
@@ -163,31 +101,14 @@ public class GalaxyPermissionsCache
         // It's a cache only for convenience to use loading cache's bulk loading capability
         private final LoadingCache<TableVisibilityKey, ContentsVisibility> tableVisibility;
 
-        public GalaxyQueryPermissions(TrinoSecurityApi trinoSecurityApi, Instant queryStart, DispatchSession session)
+        public GalaxyQueryPermissions(TrinoSecurityApi trinoSecurityApi, DispatchSession session)
         {
             this.trinoSecurityApi = requireNonNull(trinoSecurityApi, "trinoSecurityApi is null");
-            this.queryStart = requireNonNull(queryStart, "queryStart is null");
             this.session = requireNonNull(session, "session is null");
 
             entityPrivileges = buildNonEvictableCache(
                     CacheBuilder.newBuilder(),
-                    CacheLoader.from(key -> {
-                        if (globalHotSharingCacheEnabled && key.entity().getEntityKind() == EntityKind.TABLE && key.entity().getSchemaName().equals("information_schema")) {
-                            // The hot sharing EntityPrivileges cache is applied to information_schema tables only to ensure high hit ratio.
-                            // Especially the information_schema.columns has been observed to be queried concurrently by tools such as DBT.
-                            // TODO (https://github.com/starburstdata/stargate/issues/12879) investigate whether information_schema tables need EntityPrivileges at all
-                            TimedMemoizingSupplier<EntityPrivileges> loader = uncheckedCacheGet(
-                                    informationSchemaEntityPrivilegesCache,
-                                    new AccountSessionEntityIdKey(AccountSessionKey.create(trinoSecurityApi, session), key.entity()),
-                                    () -> new TimedMemoizingSupplier<>(
-                                            tracer,
-                                            "GalaxyPermissionsCache.shared.information_schema." + key.entity().getTableName(),
-                                            () -> trinoSecurityApi.getEntityPrivileges(session, key.roleId(), key.entity()),
-                                            informationSchemaEntityLoadingStats));
-                            return loader.get(queryStart);
-                        }
-                        return trinoSecurityApi.getEntityPrivileges(session, key.roleId(), key.entity());
-                    }));
+                    CacheLoader.from(key -> trinoSecurityApi.getEntityPrivileges(session, key.roleId(), key.entity())));
 
             tableVisibility = buildNonEvictableCache(
                     CacheBuilder.newBuilder(),
@@ -216,20 +137,7 @@ public class GalaxyPermissionsCache
         public synchronized ContentsVisibility getCatalogVisibility()
         {
             if (catalogVisibility == null) {
-                if (globalHotSharingCacheEnabled) {
-                    TimedMemoizingSupplier<ContentsVisibility> loader = uncheckedCacheGet(
-                            catalogVisibilityCache,
-                            AccountSessionKey.create(trinoSecurityApi, session),
-                            () -> new TimedMemoizingSupplier<>(
-                                    tracer,
-                                    "GalaxyPermissionsCache.shared.catalogVisibility",
-                                    () -> trinoSecurityApi.getCatalogVisibility(session),
-                                    catalogVisibilityLoadingStats));
-                    catalogVisibility = loader.get(queryStart);
-                }
-                else {
-                    catalogVisibility = trinoSecurityApi.getCatalogVisibility(session);
-                }
+                catalogVisibility = trinoSecurityApi.getCatalogVisibility(session);
             }
             return catalogVisibility;
         }
@@ -284,53 +192,6 @@ public class GalaxyPermissionsCache
                 requireNonNull(catalogId, "catalogId is null");
                 requireNonNull(schemaName, "schemaName is null");
             }
-        }
-    }
-
-    private record AccountSessionKey(
-            // Differentiates between TrinoSecurityApi implementations
-            Object securityApiId,
-            // Differentiates between accounts and current identity
-            DispatchSession dispatchSession)
-    {
-        static {
-            verify(
-                    GalaxyIndexerTrinoSecurityApi.class.isEnum(),
-                    "securityApiId(GalaxyIndexerTrinoSecurityApi) uses passed value directly as a securityApiId because the class is an enum");
-        }
-
-        static AccountSessionKey create(TrinoSecurityApi trinoSecurityApi, DispatchSession dispatchSession)
-        {
-            return new AccountSessionKey(securityApiId(trinoSecurityApi), dispatchSession);
-        }
-
-        AccountSessionKey
-        {
-            requireNonNull(securityApiId, "securityApiId is null");
-            requireNonNull(dispatchSession, "dispatchSession is null");
-        }
-
-        private static Object securityApiId(TrinoSecurityApi trinoSecurityApi)
-        {
-            if (trinoSecurityApi instanceof GalaxyIndexerTrinoSecurityApi) {
-                // This is an enum, as verified above
-                return trinoSecurityApi;
-            }
-            if (trinoSecurityApi.getClass() == HttpTrinoSecurityClient.class) {
-                return ((HttpTrinoSecurityClient) trinoSecurityApi).getBaseUri();
-            }
-            throw new IllegalArgumentException("Unsupported security API implementation: %s [%s]".formatted(trinoSecurityApi, trinoSecurityApi.getClass()));
-        }
-    }
-
-    private record AccountSessionEntityIdKey(
-            AccountSessionKey sessionKey,
-            EntityId entityId)
-    {
-        AccountSessionEntityIdKey
-        {
-            requireNonNull(sessionKey, "sessionKey is null");
-            requireNonNull(entityId, "entityId is null");
         }
     }
 }
