@@ -18,8 +18,6 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
-import com.starburstdata.trino.plugins.dynamicfiltering.ForDynamicRowFiltering;
-import io.trino.galaxy.dynamicfiltering.DynamicRowFilteringModule;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.base.session.SessionPropertiesProvider;
@@ -121,15 +119,6 @@ public class IcebergModule
         tableProcedures.addBinding().toProvider(DropExtendedStatsTableProcedure.class).in(Scopes.SINGLETON);
         tableProcedures.addBinding().toProvider(ExpireSnapshotsTableProcedure.class).in(Scopes.SINGLETON);
         tableProcedures.addBinding().toProvider(RemoveOrphanFilesTableProcedure.class).in(Scopes.SINGLETON);
-
-        binder.bind(ConnectorPageSourceProvider.class)
-                .annotatedWith(ForDynamicRowFiltering.class)
-                .to(IcebergPageSourceProvider.class)
-                .in(Scopes.SINGLETON);
-        binder.bind(Runnable.class)
-                .annotatedWith(ForDynamicRowFiltering.class)
-                .toInstance(() -> {});
-        binder.install(new DynamicRowFilteringModule());
 
         newSetBinder(binder, ConnectorTableFunction.class).addBinding().toProvider(TableChangesFunctionProvider.class).in(Scopes.SINGLETON);
         binder.bind(FunctionProvider.class).to(IcebergFunctionProvider.class).in(Scopes.SINGLETON);

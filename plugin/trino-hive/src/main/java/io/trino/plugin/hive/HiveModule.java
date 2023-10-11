@@ -20,11 +20,9 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
-import com.starburstdata.trino.plugins.dynamicfiltering.ForDynamicRowFiltering;
 import io.airlift.concurrent.BoundedExecutor;
 import io.airlift.concurrent.ExecutorServiceAdapter;
 import io.airlift.event.client.EventClient;
-import io.trino.galaxy.dynamicfiltering.DynamicRowFilteringModule;
 import io.trino.hdfs.HdfsNamenodeStats;
 import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.hdfs.TrinoFileSystemCacheStats;
@@ -181,15 +179,6 @@ public class HiveModule
         configBinder(binder).bindConfig(ParquetReaderConfig.class);
         configBinder(binder).bindConfig(ParquetWriterConfig.class);
         fileWriterFactoryBinder.addBinding().to(ParquetFileWriterFactory.class).in(Scopes.SINGLETON);
-
-        binder.bind(ConnectorPageSourceProvider.class)
-                .annotatedWith(ForDynamicRowFiltering.class)
-                .to(HivePageSourceProvider.class)
-                .in(Scopes.SINGLETON);
-        binder.bind(Runnable.class)
-                .annotatedWith(ForDynamicRowFiltering.class)
-                .toInstance(() -> {});
-        binder.install(new DynamicRowFilteringModule());
 
         // bind block serializers for the purpose of TupleDomain serde
         binder.bind(HiveBlockEncodingSerde.class).in(Scopes.SINGLETON);

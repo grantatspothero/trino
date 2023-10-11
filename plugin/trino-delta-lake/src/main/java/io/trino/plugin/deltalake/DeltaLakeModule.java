@@ -20,9 +20,7 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
-import com.starburstdata.trino.plugins.dynamicfiltering.ForDynamicRowFiltering;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
-import io.trino.galaxy.dynamicfiltering.DynamicRowFilteringModule;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.LocalRegionConfig;
@@ -163,15 +161,6 @@ public class DeltaLakeModule
 
         Multibinder<TableProcedureMetadata> tableProcedures = newSetBinder(binder, TableProcedureMetadata.class);
         tableProcedures.addBinding().toProvider(OptimizeTableProcedure.class).in(Scopes.SINGLETON);
-
-        binder.bind(ConnectorPageSourceProvider.class)
-                .annotatedWith(ForDynamicRowFiltering.class)
-                .to(DeltaLakePageSourceProvider.class)
-                .in(Scopes.SINGLETON);
-        binder.bind(Runnable.class)
-                .annotatedWith(ForDynamicRowFiltering.class)
-                .toInstance(() -> {});
-        binder.install(new DynamicRowFilteringModule());
 
         newSetBinder(binder, ConnectorTableFunction.class).addBinding().toProvider(TableChangesFunctionProvider.class).in(Scopes.SINGLETON);
         binder.bind(FunctionProvider.class).to(DeltaLakeFunctionProvider.class).in(Scopes.SINGLETON);

@@ -37,6 +37,8 @@ import io.trino.memory.NodeMemoryConfig;
 import io.trino.metadata.InMemoryNodeManager;
 import io.trino.metadata.Split;
 import io.trino.operator.PagesIndex;
+import io.trino.operator.dynamicfiltering.DynamicPageFilterCache;
+import io.trino.operator.dynamicfiltering.DynamicRowFilteringPageSourceProvider;
 import io.trino.operator.index.IndexJoinLookupStats;
 import io.trino.spi.connector.CatalogHandle;
 import io.trino.spiller.GenericSpillerFactory;
@@ -136,7 +138,11 @@ public final class TaskTestUtils
 
     public static LocalExecutionPlanner createTestingPlanner()
     {
-        PageSourceManager pageSourceManager = new PageSourceManager(CatalogServiceProvider.singleton(CATALOG_HANDLE, new TestingPageSourceProvider()));
+        DynamicRowFilteringPageSourceProvider dynamicRowFilteringPageSourceProvider = new DynamicRowFilteringPageSourceProvider(
+                new DynamicPageFilterCache(PLANNER_CONTEXT.getTypeOperators()));
+        PageSourceManager pageSourceManager = new PageSourceManager(
+                CatalogServiceProvider.singleton(CATALOG_HANDLE, new TestingPageSourceProvider()),
+                dynamicRowFilteringPageSourceProvider);
         AlternativeChooser alternativeChooser = new AlternativeChooser(CatalogServiceProvider.fail());
 
         // we don't start the finalizer so nothing will be collected, which is ok for a test
@@ -159,6 +165,7 @@ public final class TaskTestUtils
                 createTestingTypeAnalyzer(PLANNER_CONTEXT),
                 Optional.empty(),
                 pageSourceManager,
+                dynamicRowFilteringPageSourceProvider,
                 alternativeChooser,
                 new IndexManager(CatalogServiceProvider.fail()),
                 nodePartitioningManager,

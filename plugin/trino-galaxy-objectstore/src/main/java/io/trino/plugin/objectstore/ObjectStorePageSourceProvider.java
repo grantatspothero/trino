@@ -124,6 +124,12 @@ public class ObjectStorePageSourceProvider
         throw new VerifyException("Unhandled class: " + table.getClass().getName());
     }
 
+    @Override
+    public boolean shouldPerformDynamicRowFiltering()
+    {
+        return true;
+    }
+
     private ConnectorSession unwrap(TableType tableType, ConnectorSession session)
     {
         return sessionProperties.unwrap(tableType, session);

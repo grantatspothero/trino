@@ -23,6 +23,8 @@ import io.trino.metadata.InternalFunctionBundle;
 import io.trino.metadata.Split;
 import io.trino.metadata.SqlScalarFunction;
 import io.trino.metadata.TestingFunctionResolution;
+import io.trino.operator.dynamicfiltering.DynamicPageFilterCache;
+import io.trino.operator.dynamicfiltering.DynamicRowFilteringPageSourceProvider;
 import io.trino.operator.index.PageRecordSet;
 import io.trino.operator.project.CursorProcessor;
 import io.trino.operator.project.PageProcessor;
@@ -35,6 +37,7 @@ import io.trino.spi.connector.ConnectorPageSource;
 import io.trino.spi.connector.DynamicFilter;
 import io.trino.spi.connector.FixedPageSource;
 import io.trino.spi.connector.RecordPageSource;
+import io.trino.spi.type.TypeOperators;
 import io.trino.sql.gen.ExpressionCompiler;
 import io.trino.sql.gen.PageFunctionCompiler;
 import io.trino.sql.gen.columnar.ColumnarFilterCompiler;
@@ -130,6 +133,7 @@ public class TestScanFilterAndProjectOperator
                 new PlanNodeId("test"),
                 new PlanNodeId("0"),
                 (session, split, table, columns, dynamicFilter) -> new FixedPageSource(ImmutableList.of(input)),
+                createTestingDynamicRowFilterProvider(),
                 cursorProcessor,
                 pageProcessor,
                 TEST_TABLE_HANDLE,
@@ -172,6 +176,7 @@ public class TestScanFilterAndProjectOperator
                 new PlanNodeId("test"),
                 new PlanNodeId("0"),
                 (session, split, table, columns, dynamicFilter) -> new FixedPageSource(input),
+                createTestingDynamicRowFilterProvider(),
                 cursorProcessor,
                 pageProcessor,
                 TEST_TABLE_HANDLE,
@@ -217,6 +222,7 @@ public class TestScanFilterAndProjectOperator
                 new PlanNodeId("test"),
                 new PlanNodeId("0"),
                 (session, split, table, columns, dynamicFilter) -> new SinglePagePageSource(input),
+                createTestingDynamicRowFilterProvider(),
                 cursorProcessor,
                 () -> pageProcessor,
                 TEST_TABLE_HANDLE,
@@ -251,6 +257,7 @@ public class TestScanFilterAndProjectOperator
                 new PlanNodeId("test"),
                 new PlanNodeId("0"),
                 (session, split, table, columns, dynamicFilter) -> new RecordPageSource(new PageRecordSet(ImmutableList.of(VARCHAR), input)),
+                createTestingDynamicRowFilterProvider(),
                 cursorProcessor,
                 pageProcessor,
                 TEST_TABLE_HANDLE,
@@ -305,6 +312,7 @@ public class TestScanFilterAndProjectOperator
                 new PlanNodeId("test"),
                 new PlanNodeId("0"),
                 (session, split, table, columns, dynamicFilter) -> new FixedPageSource(ImmutableList.of(input)),
+                createTestingDynamicRowFilterProvider(),
                 cursorProcessor,
                 pageProcessor,
                 TEST_TABLE_HANDLE,
@@ -373,6 +381,7 @@ public class TestScanFilterAndProjectOperator
                 new PlanNodeId("test"),
                 new PlanNodeId("0"),
                 (session, split, table, columns, dynamicFilter) -> new RecordPageSource(new PageRecordSet(ImmutableList.of(BIGINT), input)),
+                createTestingDynamicRowFilterProvider(),
                 cursorProcessor,
                 pageProcessor,
                 TEST_TABLE_HANDLE,
@@ -477,5 +486,10 @@ public class TestScanFilterAndProjectOperator
             this.page = null;
             return page;
         }
+    }
+
+    private static DynamicRowFilteringPageSourceProvider createTestingDynamicRowFilterProvider()
+    {
+        return new DynamicRowFilteringPageSourceProvider(new DynamicPageFilterCache(new TypeOperators()));
     }
 }

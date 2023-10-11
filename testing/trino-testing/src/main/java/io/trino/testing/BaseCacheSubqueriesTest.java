@@ -29,6 +29,8 @@ import io.trino.metadata.TableHandle;
 import io.trino.operator.OperatorStats;
 import io.trino.operator.ScanFilterAndProjectOperator;
 import io.trino.operator.TableScanOperator;
+import io.trino.operator.dynamicfiltering.DynamicPageFilterCache;
+import io.trino.operator.dynamicfiltering.DynamicRowFilteringPageSourceProvider;
 import io.trino.server.testing.TestingTrinoServer;
 import io.trino.spi.QueryId;
 import io.trino.spi.cache.CacheColumnId;
@@ -42,6 +44,7 @@ import io.trino.spi.connector.DynamicFilter;
 import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.predicate.ValueSet;
+import io.trino.spi.type.TypeOperators;
 import io.trino.spi.type.VarcharType;
 import io.trino.split.SplitSource;
 import io.trino.sql.planner.Plan;
@@ -438,8 +441,11 @@ public abstract class BaseCacheSubqueriesTest
                             TupleDomain.withColumnDomains(ImmutableMap.of(dataColumn, dataDomain))))
                             .isEqualTo(TupleDomain.withColumnDomains(ImmutableMap.of(dataColumn, dataDomain)));
                     if (isDynamicRowFilteringEnabled) {
+                        DynamicRowFilteringPageSourceProvider dynamicRowFilteringPageSourceProvider = new DynamicRowFilteringPageSourceProvider(new DynamicPageFilterCache(new TypeOperators()));
                         // simplifyPredicate should not prune or simplify data column
-                        assertThat(pageSourceProvider.simplifyPredicate(
+                        assertThat(dynamicRowFilteringPageSourceProvider.simplifyPredicate(
+                                pageSourceProvider,
+                                session,
                                 connectorSession,
                                 split.getConnectorSplit(),
                                 handle.get().getConnectorHandle(),
@@ -557,7 +563,7 @@ public abstract class BaseCacheSubqueriesTest
     protected Session withDynamicRowFiltering(Session baseSession, boolean enabled)
     {
         return Session.builder(baseSession)
-                .setCatalogSessionProperty(baseSession.getCatalog().get(), "dynamic_row_filtering_enabled", String.valueOf(enabled))
+                .setSystemProperty("dynamic_row_filtering_enabled", String.valueOf(enabled))
                 .build();
     }
 

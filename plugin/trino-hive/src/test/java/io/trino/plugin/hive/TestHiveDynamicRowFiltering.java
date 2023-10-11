@@ -13,10 +13,10 @@
  */
 package io.trino.plugin.hive;
 
-import com.starburstdata.trino.plugins.dynamicfiltering.AbstractTestDynamicRowFiltering;
 import io.trino.spi.connector.ConnectorTableHandle;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.sql.planner.OptimizerConfig.JoinDistributionType;
+import io.trino.testing.AbstractTestDynamicRowFiltering;
 import io.trino.testing.QueryRunner;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;

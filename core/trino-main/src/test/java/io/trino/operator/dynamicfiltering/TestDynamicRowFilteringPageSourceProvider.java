@@ -11,11 +11,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.galaxy.dynamicfiltering;
+package io.trino.operator.dynamicfiltering;
 
-import com.starburstdata.trino.plugins.dynamicfiltering.DynamicPageFilterCache;
-import io.trino.FeaturesConfig;
-import io.trino.metadata.TypeRegistry;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.ConnectorPageSource;
 import io.trino.spi.connector.ConnectorPageSourceProvider;
@@ -30,8 +27,8 @@ import io.trino.spi.session.PropertyMetadata;
 import io.trino.spi.type.TypeOperators;
 import io.trino.testing.TestingConnectorSession;
 import io.trino.testing.TestingMetadata;
+import io.trino.testing.TestingSession;
 import io.trino.testing.TestingSplit;
-import io.trino.type.InternalTypeManager;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
@@ -50,8 +47,7 @@ public class TestDynamicRowFilteringPageSourceProvider
     public void testFill()
     {
         DynamicRowFilteringPageSourceProvider pageSourceProvider = new DynamicRowFilteringPageSourceProvider(
-                new TestPageSourceProvider(),
-                new DynamicPageFilterCache(new InternalTypeManager(new TypeRegistry(new TypeOperators(), new FeaturesConfig()))));
+                new DynamicPageFilterCache(new TypeOperators()));
         PropertyMetadata<Boolean> property = new PropertyMetadata<>(
                 "dynamic_row_filtering_enabled",
                 "description",
@@ -71,6 +67,8 @@ public class TestDynamicRowFilteringPageSourceProvider
                 .setPropertyMetadata(properties)
                 .build();
         assertThat(pageSourceProvider.simplifyPredicate(
+                new TestPageSourceProvider(),
+                TestingSession.testSessionBuilder().build(),
                 session,
                 new TestingSplit(true, new ArrayList<>()),
                 new ConnectorTableHandle() {},

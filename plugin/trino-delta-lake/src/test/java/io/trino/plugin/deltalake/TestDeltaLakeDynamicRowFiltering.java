@@ -14,11 +14,11 @@
 package io.trino.plugin.deltalake;
 
 import com.google.common.collect.ImmutableMap;
-import com.starburstdata.trino.plugins.dynamicfiltering.AbstractTestDynamicRowFiltering;
 import io.trino.execution.DynamicFilterConfig;
 import io.trino.plugin.hive.containers.HiveMinioDataLake;
 import io.trino.spi.connector.ConnectorTableHandle;
 import io.trino.spi.connector.SchemaTableName;
+import io.trino.testing.AbstractTestDynamicRowFiltering;
 import io.trino.testing.QueryRunner;
 
 import static com.google.common.base.Verify.verify;

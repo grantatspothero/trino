@@ -14,16 +14,14 @@
 package io.trino.plugin.hive;
 
 import com.google.common.collect.ImmutableMap;
-import com.starburstdata.trino.plugins.dynamicfiltering.DynamicRowFilteringPageSource;
-import com.starburstdata.trino.plugins.dynamicfiltering.DynamicRowFilteringSessionProperties;
 import io.airlift.units.DataSize;
 import io.airlift.units.Duration;
-import io.trino.Session;
 import io.trino.connector.alternatives.MockPlanAlternativeChooser.PlanAlternativePageSource;
 import io.trino.connector.alternatives.MockPlanAlternativeTableHandle;
 import io.trino.operator.BlockedReason;
 import io.trino.operator.OperatorInfo;
 import io.trino.operator.OperatorStats;
+import io.trino.operator.dynamicfiltering.DynamicRowFilteringPageSource;
 import io.trino.spi.Mergeable;
 import io.trino.spi.QueryId;
 import io.trino.spi.connector.ConnectorTableHandle;
@@ -219,23 +217,6 @@ public class TestHiveDynamicRowFilteringWithPlanAlternatives
         Count<?> filterInputPositions = (Count<?>) metrics.get(DynamicRowFilteringPageSource.FILTER_INPUT_POSITIONS);
         assertThat(filterOutputPositions).isEqualTo(filterInputPositions);
         assertThat(((Count<?>) metrics.get(DynamicRowFilteringPageSource.ROW_FILTERING_TIME_MILLIS)).getTotal()).isGreaterThanOrEqualTo(0);
-    }
-
-    private Session dynamicRowFiltering(JoinDistributionType distributionType)
-    {
-        String catalog = super.getSession().getCatalog().orElseThrow();
-        return Session.builder(noJoinReordering(distributionType))
-                .setCatalogSessionProperty(catalog, DynamicRowFilteringSessionProperties.DYNAMIC_ROW_FILTERING_ENABLED, "true")
-                .setCatalogSessionProperty(catalog, DynamicRowFilteringSessionProperties.DYNAMIC_ROW_FILTERING_WAIT_TIMEOUT, "10m")
-                .setCatalogSessionProperty(catalog, DynamicRowFilteringSessionProperties.DYNAMIC_ROW_FILTERING_SELECTIVITY_THRESHOLD, "1")
-                .build();
-    }
-
-    private Session noDynamicRowFiltering(JoinDistributionType distributionType)
-    {
-        return Session.builder(noJoinReordering(distributionType))
-                .setCatalogSessionProperty(getSession().getCatalog().orElseThrow(), DynamicRowFilteringSessionProperties.DYNAMIC_ROW_FILTERING_ENABLED, "false")
-                .build();
     }
 
     private static OperatorStats extractOperatorStatsForNodeIds(DistributedQueryRunner queryRunner, QueryId queryId, Set<PlanNodeId> nodeIds)

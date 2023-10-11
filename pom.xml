@@ -39,7 +39,6 @@
         <module>core/trino-server-rpm</module>
         <module>core/trino-spi</module>
         <module>docs</module>
-        <module>lib/galaxy-dynamic-filtering</module>
         <module>lib/trino-array</module>
         <module>lib/trino-cache</module>
         <module>lib/trino-filesystem</module>
@@ -638,19 +637,6 @@
 
             <dependency>
                 <groupId>com.starburstdata.trino.plugins</groupId>
-                <artifactId>starburst-dynamic-filtering</artifactId>
-                <version>${dep.starburst-trino-plugins.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.starburstdata.trino.plugins</groupId>
-                <artifactId>starburst-dynamic-filtering</artifactId>
-                <version>${dep.starburst-trino-plugins.version}</version>
-                <type>test-jar</type>
-            </dependency>
-
-            <dependency>
-                <groupId>com.starburstdata.trino.plugins</groupId>
                 <artifactId>starburst-license</artifactId>
                 <version>${dep.starburst-trino-plugins.version}</version>
             </dependency>
@@ -1112,12 +1098,6 @@
                 <groupId>io.swagger</groupId>
                 <artifactId>swagger-core</artifactId>
                 <version>${dep.swagger.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.trino</groupId>
-                <artifactId>galaxy-dynamic-filtering</artifactId>
-                <version>${project.version}</version>
             </dependency>
 
             <dependency>
