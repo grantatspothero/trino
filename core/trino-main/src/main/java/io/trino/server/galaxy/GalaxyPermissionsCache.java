@@ -17,6 +17,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.errorprone.annotations.ThreadSafe;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
@@ -40,6 +41,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Predicate;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -49,6 +51,7 @@ import static com.google.common.collect.MoreCollectors.onlyElement;
 import static com.google.common.collect.Streams.stream;
 import static io.trino.cache.SafeCaches.buildNonEvictableCache;
 import static java.util.Objects.requireNonNull;
+import static java.util.function.Function.identity;
 
 @ThreadSafe
 public class GalaxyPermissionsCache
@@ -89,13 +92,10 @@ public class GalaxyPermissionsCache
     @ThreadSafe
     public static class GalaxyQueryPermissions
     {
-        private final TrinoSecurityApi trinoSecurityApi;
-        private final DispatchSession session;
-
         // It's a cache to support concurrent loads while also preventing multiple loads for the same key
         private final LoadingCache<EntityPrivilegesKey, EntityPrivileges> entityPrivileges;
-        @GuardedBy("this")
-        private ContentsVisibility catalogVisibility;
+        // It's a cache only for convenience to use loading cache's bulk loading capability
+        private final LoadingCache<CatalogId, ContentsVisibility> catalogVisibility;
         @GuardedBy("this")
         private final Set<String> impliedCatalogVisibility = new HashSet<>();
         // It's a cache only for convenience to use loading cache's bulk loading capability
@@ -103,12 +103,18 @@ public class GalaxyPermissionsCache
 
         public GalaxyQueryPermissions(TrinoSecurityApi trinoSecurityApi, DispatchSession session)
         {
-            this.trinoSecurityApi = requireNonNull(trinoSecurityApi, "trinoSecurityApi is null");
-            this.session = requireNonNull(session, "session is null");
-
             entityPrivileges = buildNonEvictableCache(
                     CacheBuilder.newBuilder(),
                     CacheLoader.from(key -> trinoSecurityApi.getEntityPrivileges(session, key.roleId(), key.entity())));
+
+            catalogVisibility = buildNonEvictableCache(
+                    CacheBuilder.newBuilder(),
+                    BulkOnlyLoader.of(catalogIds -> {
+                        Set<CatalogId> catalogIdsSet = ImmutableSet.copyOf(catalogIds);
+                        ContentsVisibility catalogVisibility = trinoSecurityApi.getCatalogVisibility(session, catalogIdsSet);
+                        return catalogIdsSet.stream()
+                                .collect(toImmutableMap(identity(), ignored -> catalogVisibility));
+                    }));
 
             tableVisibility = buildNonEvictableCache(
                     CacheBuilder.newBuilder(),
@@ -134,16 +140,28 @@ public class GalaxyPermissionsCache
             return entityPrivileges.getUnchecked(new EntityPrivilegesKey(roleId, entity));
         }
 
-        public synchronized ContentsVisibility getCatalogVisibility(Set<CatalogId> requestedCatalogs)
+        public Predicate<CatalogId> getCatalogVisibility(Set<CatalogId> requestedCatalogs)
         {
             if (requestedCatalogs.isEmpty()) {
-                return ContentsVisibility.DENY_ALL;
+                return catalogId -> {
+                    throw new IllegalArgumentException("Unexpected catalog checked for visibility: %s, none was expected".formatted(catalogId));
+                };
             }
-
-            if (catalogVisibility == null) {
-                catalogVisibility = trinoSecurityApi.getCatalogVisibility(session);
+            try {
+                Map<CatalogId, ContentsVisibility> visibility = catalogVisibility.getAll(requestedCatalogs);
+                return catalogId -> {
+                    // The ContentsVisibility, values in this map, may be all the same, but also may have been loaded at different times and may be different.
+                    // For example, they may have different values of ContentsVisibility.defaultVisibility.
+                    // The ContentsVisibility at the catalogId is authoritative for given catalogId.
+                    ContentsVisibility contentsVisibility = visibility.get(catalogId);
+                    checkArgument(contentsVisibility != null, "Unexpected catalog checked for visibility: %s, expected one of: %s", catalogId, requestedCatalogs);
+                    return contentsVisibility.isVisible(catalogId.toString());
+                };
             }
-            return catalogVisibility;
+            catch (ExecutionException e) {
+                // Impossible, loader does not throw checked exceptions
+                throw new RuntimeException(e);
+            }
         }
 
         public synchronized void implyCatalogVisibility(String catalogName)

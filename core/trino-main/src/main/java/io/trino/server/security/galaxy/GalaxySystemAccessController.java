@@ -100,12 +100,11 @@ public class GalaxySystemAccessController
         Set<CatalogId> requestedCatalogIds = requestedCatalogs.stream()
                 .flatMap(catalogName -> catalogIds.getCatalogId(catalogName).stream())
                 .collect(toImmutableSet());
-        ContentsVisibility catalogVisibility = getCache(context).getCatalogVisibility(requestedCatalogIds);
+        Predicate<CatalogId> catalogVisibility = getCache(context).getCatalogVisibility(requestedCatalogIds);
         return catalogName -> {
             checkArgument(requestedCatalogs.contains(catalogName), "Unexpected catalog checked for visibility: %s, expected one of: %s", catalogName, requestedCatalogs);
             return catalogIds.getCatalogId(catalogName)
-                    .map(CatalogId::toString)
-                    .map(catalogVisibility::isVisible)
+                    .map(catalogVisibility::test)
                     .orElse(false);
         };
     }
