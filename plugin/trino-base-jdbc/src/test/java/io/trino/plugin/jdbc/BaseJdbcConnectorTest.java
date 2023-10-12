@@ -2083,14 +2083,23 @@ public abstract class BaseJdbcConnectorTest
         }
     }
 
-    @Test(dataProvider = "batchSizeAndTotalNumberOfRowsToInsertDataProvider")
-    public void testWriteBatchSizeSessionProperty(Integer batchSize, Integer numberOfRows)
+    @Test
+    public void testWriteBatchSizeSessionProperty()
+    {
+        testWriteBatchSizeSessionProperty(10, 8); // number of rows < batch size
+        testWriteBatchSizeSessionProperty(10, 10); // number of rows = batch size
+        testWriteBatchSizeSessionProperty(10, 11); // number of rows > batch size
+        testWriteBatchSizeSessionProperty(10, 50); // number of rows = n * batch size
+        testWriteBatchSizeSessionProperty(10, 52); // number of rows > n * batch size
+    }
+
+    private void testWriteBatchSizeSessionProperty(int batchSize, int numberOfRows)
     {
         if (!hasBehavior(SUPPORTS_CREATE_TABLE)) {
             throw new SkipException("CREATE TABLE is required for write_batch_size test but is not supported");
         }
         Session session = Session.builder(getSession())
-                .setCatalogSessionProperty(getSession().getCatalog().orElseThrow(), "write_batch_size", batchSize.toString())
+                .setCatalogSessionProperty(getSession().getCatalog().orElseThrow(), "write_batch_size", Integer.toString(batchSize))
                 .build();
 
         try (TestTable table = new TestTable(
@@ -2151,18 +2160,6 @@ public abstract class BaseJdbcConnectorTest
             result.add(format("('%s', %d)", UUID.randomUUID(), ThreadLocalRandom.current().nextLong()));
         }
         return result;
-    }
-
-    @DataProvider
-    public static Object[][] batchSizeAndTotalNumberOfRowsToInsertDataProvider()
-    {
-        return new Object[][] {
-                {10, 8},  // number of rows < batch size
-                {10, 10}, // number of rows = batch size
-                {10, 11}, // number of rows > batch size
-                {10, 50}, // number of rows = n * batch size
-                {10, 52}, // number of rows > n * batch size
-        };
     }
 
     @Test
@@ -2295,19 +2292,18 @@ public abstract class BaseJdbcConnectorTest
         return new TestTable(onRemoteDatabase(), format("%s.simple_table", getSession().getSchema().orElseThrow()), "(col BIGINT)", ImmutableList.of("1", "2"));
     }
 
-    @DataProvider
-    public Object[][] fixedJoinDistributionTypes()
-    {
-        return new Object[][] {{BROADCAST}, {PARTITIONED}};
-    }
-
-    @Test(dataProvider = "fixedJoinDistributionTypes")
-    public void testDynamicFiltering(JoinDistributionType joinDistributionType)
+    @Test
+    public void testDynamicFiltering()
     {
         skipTestUnless(hasBehavior(SUPPORTS_DYNAMIC_FILTER_PUSHDOWN));
+
         assertDynamicFiltering(
                 "SELECT * FROM orders a JOIN orders b ON a.orderkey = b.orderkey AND b.totalprice < 1000",
-                joinDistributionType);
+                BROADCAST);
+
+        assertDynamicFiltering(
+                "SELECT * FROM orders a JOIN orders b ON a.orderkey = b.orderkey AND b.totalprice < 1000",
+                PARTITIONED);
     }
 
     @Test
