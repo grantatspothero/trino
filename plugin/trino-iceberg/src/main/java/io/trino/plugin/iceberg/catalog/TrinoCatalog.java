@@ -120,6 +120,11 @@ public interface TrinoCatalog
      */
     Table loadTable(ConnectorSession session, SchemaTableName schemaTableName);
 
+    default Optional<TableMetadata> getCachedTableMetadata(SchemaTableName schemaTableName)
+    {
+        return Optional.empty();
+    }
+
     /**
      * Bulk load column metadata. The returned map may contain fewer entries then asked for.
      */

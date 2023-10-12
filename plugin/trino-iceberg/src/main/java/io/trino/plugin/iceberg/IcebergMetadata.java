@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.MoreCollectors;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import io.airlift.json.JsonCodec;
@@ -140,6 +141,7 @@ import org.apache.iceberg.SortField;
 import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.StatisticsFile;
 import org.apache.iceberg.Table;
+import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.TableProperties;
 import org.apache.iceberg.TableScan;
 import org.apache.iceberg.Transaction;
@@ -175,6 +177,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
@@ -290,6 +293,7 @@ import static org.apache.iceberg.ReachableFileUtil.versionHintLocation;
 import static org.apache.iceberg.SnapshotSummary.DELETED_RECORDS_PROP;
 import static org.apache.iceberg.SnapshotSummary.REMOVED_EQ_DELETES_PROP;
 import static org.apache.iceberg.SnapshotSummary.REMOVED_POS_DELETES_PROP;
+import static org.apache.iceberg.SnapshotSummary.TOTAL_DATA_FILES_PROP;
 import static org.apache.iceberg.TableProperties.DELETE_ISOLATION_LEVEL;
 import static org.apache.iceberg.TableProperties.DELETE_ISOLATION_LEVEL_DEFAULT;
 import static org.apache.iceberg.TableProperties.FORMAT_VERSION;
@@ -1658,16 +1662,24 @@ public class IcebergMetadata
         IcebergTableHandle icebergTableHandle = (IcebergTableHandle) tableHandle;
         Optional<Boolean> partitioned = icebergTableHandle.getPartitionSpecJson()
                 .map(partitionSpecJson -> PartitionSpecParser.fromJson(SchemaParser.fromJson(icebergTableHandle.getTableSchemaJson()), partitionSpecJson).isPartitioned());
+        Optional<TableMetadata> tableMetadata = catalog.getCachedTableMetadata(((IcebergTableHandle) tableHandle).getSchemaTableName());
 
-        Map<String, String> galaxyTraits = ImmutableMap.<String, String>builder()
-                .put("extendedStatisticsMetric", extendedStatisticsMetric.toString())
-                .buildOrThrow();
+        ImmutableMap.Builder<String, String> galaxyTraitsBuilder = ImmutableMap.<String, String>builder()
+                .put("extendedStatisticsMetric", extendedStatisticsMetric.toString());
+
+        tableMetadata.stream()
+                .map(TableMetadata::currentSnapshot)
+                .filter(Objects::nonNull)
+                .map(snapshot -> snapshot.summary().get(TOTAL_DATA_FILES_PROP))
+                .filter(Objects::nonNull)
+                .collect(MoreCollectors.toOptional())
+                .ifPresent(numberOfFiles -> galaxyTraitsBuilder.put("numberOfDataFilesInTable", numberOfFiles));
 
         return Optional.of(new IcebergInputInfo(
                 icebergTableHandle.getSnapshotId(),
                 partitioned,
                 getFileFormat(icebergTableHandle.getStorageProperties()).name(),
-                galaxyTraits));
+                galaxyTraitsBuilder.buildOrThrow()));
     }
 
     @Override

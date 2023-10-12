@@ -350,6 +350,12 @@ public class TrinoGalaxyCatalog
     }
 
     @Override
+    public Optional<TableMetadata> getCachedTableMetadata(SchemaTableName schemaTableName)
+    {
+        return Optional.of(tableMetadataCache.get(schemaTableName));
+    }
+
+    @Override
     public Map<SchemaTableName, List<ColumnMetadata>> tryGetColumnMetadata(ConnectorSession session, List<SchemaTableName> tables)
     {
         if (!cacheTableMetadata) {

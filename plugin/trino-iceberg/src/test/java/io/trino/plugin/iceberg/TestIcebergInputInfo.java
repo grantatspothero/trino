@@ -48,7 +48,7 @@ public class TestIcebergInputInfo
     {
         String tableName = "test_input_info_with_part_" + randomNameSuffix();
         assertUpdate("CREATE TABLE " + tableName + " WITH (partitioning = ARRAY['regionkey', 'truncate(name, 1)']) AS SELECT * FROM nation WHERE nationkey < 10", 10);
-        inTransaction(session -> assertInputInfo(session, tableName, true, "PARQUET", "NOT_REQUESTED"));
+        inTransaction(session -> assertInputInfo(session, tableName, true, "PARQUET", "NOT_REQUESTED", 9));
         assertUpdate("DROP TABLE " + tableName);
     }
 
@@ -57,7 +57,7 @@ public class TestIcebergInputInfo
     {
         String tableName = "test_input_info_without_part_" + randomNameSuffix();
         assertUpdate("CREATE TABLE " + tableName + " AS SELECT * FROM nation WHERE nationkey < 10", 10);
-        inTransaction(session -> assertInputInfo(session, tableName, false, "PARQUET", "NOT_REQUESTED"));
+        inTransaction(session -> assertInputInfo(session, tableName, false, "PARQUET", "NOT_REQUESTED", 1));
         assertUpdate("DROP TABLE " + tableName);
     }
 
@@ -66,7 +66,7 @@ public class TestIcebergInputInfo
     {
         String tableName = "test_input_info_with_orc_file_format_" + randomNameSuffix();
         assertUpdate("CREATE TABLE " + tableName + " WITH (format = 'ORC') AS SELECT * FROM nation WHERE nationkey < 10", 10);
-        inTransaction(session -> assertInputInfo(session, tableName, false, "ORC", "NOT_REQUESTED"));
+        inTransaction(session -> assertInputInfo(session, tableName, false, "ORC", "NOT_REQUESTED", 1));
         assertUpdate("DROP TABLE " + tableName);
     }
 
@@ -75,7 +75,7 @@ public class TestIcebergInputInfo
     {
         String tableName = "test_input_extended_statistics_not_requested_" + randomNameSuffix();
         assertUpdate("CREATE TABLE " + tableName + " AS SELECT * FROM nation WHERE nationkey < 10", 10);
-        inTransaction(session -> assertInputInfo(session, tableName, false, "PARQUET", "NOT_REQUESTED"));
+        inTransaction(session -> assertInputInfo(session, tableName, false, "PARQUET", "NOT_REQUESTED", 1));
         assertUpdate("DROP TABLE " + tableName);
     }
 
@@ -86,7 +86,7 @@ public class TestIcebergInputInfo
         assertUpdate("CREATE TABLE " + tableName + " AS SELECT * FROM nation WHERE nationkey < 10", 10);
         inTransaction(session -> {
             simulateStatisticsRequest(session, tableName);
-            assertInputInfo(session, tableName, false, "PARQUET", "REQUESTED_PRESENT");
+            assertInputInfo(session, tableName, false, "PARQUET", "REQUESTED_PRESENT", 1);
         });
         assertUpdate("DROP TABLE " + tableName);
     }
@@ -102,13 +102,36 @@ public class TestIcebergInputInfo
 
         inTransaction(session -> {
             simulateStatisticsRequest(session, tableName);
-            assertInputInfo(session, tableName, false, "PARQUET", "REQUESTED_NOT_PRESENT");
+            assertInputInfo(session, tableName, false, "PARQUET", "REQUESTED_NOT_PRESENT", 1);
         });
 
         assertUpdate("DROP TABLE " + tableName);
     }
 
-    private void assertInputInfo(Session session, String tableName, boolean expectedPartition, String expectedFileFormat, String extendedStatisticsMetric)
+    @Test
+    public void testInputNumberOfDataFiles()
+    {
+        String tableName = "test_input_number_of_data_files_" + randomNameSuffix();
+
+        assertUpdate("CREATE TABLE " + tableName + " AS SELECT 1 AS a", 1);
+        inTransaction(session -> assertInputInfo(session, tableName, false, "PARQUET", "NOT_REQUESTED", 1));
+
+        assertUpdate("INSERT INTO " + tableName + " VALUES (2),(3),(4)", 3);
+        inTransaction(session -> assertInputInfo(session, tableName, false, "PARQUET", "NOT_REQUESTED", 2));
+
+        assertUpdate("INSERT INTO " + tableName + " VALUES (5),(6),(7)", 3);
+        inTransaction(session -> assertInputInfo(session, tableName, false, "PARQUET", "NOT_REQUESTED", 3));
+
+        assertUpdate("UPDATE " + tableName + " SET a = 10 WHERE a = 1", 1);
+        inTransaction(session -> assertInputInfo(session, tableName, false, "PARQUET", "NOT_REQUESTED", 4));
+
+        assertUpdate("DELETE FROM " + tableName, 7);
+        inTransaction(session -> assertInputInfo(session, tableName, false, "PARQUET", "NOT_REQUESTED", 0));
+
+        assertUpdate("DROP TABLE " + tableName);
+    }
+
+    private void assertInputInfo(Session session, String tableName, boolean expectedPartition, String expectedFileFormat, String extendedStatisticsMetric, int numberOfDataFiles)
     {
         Metadata metadata = getQueryRunner().getMetadata();
         QualifiedObjectName qualifiedObjectName = new QualifiedObjectName(
@@ -124,7 +147,9 @@ public class TestIcebergInputInfo
                 icebergInputInfo.getSnapshotId(),
                 Optional.of(expectedPartition),
                 expectedFileFormat,
-                ImmutableMap.of("extendedStatisticsMetric", extendedStatisticsMetric)));
+                ImmutableMap.of(
+                        "extendedStatisticsMetric", extendedStatisticsMetric,
+                        "numberOfDataFilesInTable", Integer.toString(numberOfDataFiles))));
     }
 
     private void simulateStatisticsRequest(Session session, String tableName)
