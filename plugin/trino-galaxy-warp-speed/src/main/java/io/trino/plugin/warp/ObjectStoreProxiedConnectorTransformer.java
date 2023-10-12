@@ -36,7 +36,6 @@ import io.trino.plugin.varada.storage.splits.ConnectorSplitNodeDistributor;
 import io.trino.plugin.warp.proxiedconnector.deltalake.DeltaLakeProxiedConnectorTransformer;
 import io.trino.plugin.warp.proxiedconnector.hive.HiveProxiedConnectorTransformer;
 import io.trino.plugin.warp.proxiedconnector.hudi.HudiProxiedConnectorTransformer;
-import io.trino.plugin.warp.proxiedconnector.iceberg.IcebergProxiedConnectorTransformer;
 import io.trino.spi.Node;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.ConnectorBucketNodeMap;
@@ -61,14 +60,14 @@ public class ObjectStoreProxiedConnectorTransformer
 {
     private final DeltaLakeProxiedConnectorTransformer deltaLakeProxiedConnectorTransformer;
     private final HiveProxiedConnectorTransformer hiveProxiedConnectorTransformer;
-    private final IcebergProxiedConnectorTransformer icebergProxiedConnectorTransformer;
+    private final GalaxyIcebergProxiedConnectorTransformer icebergProxiedConnectorTransformer;
     private final HudiProxiedConnectorTransformer hudiProxiedConnectorTransformer;
 
     @Inject
     public ObjectStoreProxiedConnectorTransformer(
             DeltaLakeProxiedConnectorTransformer deltaLakeProxiedConnectorTransformer,
             HiveProxiedConnectorTransformer hiveProxiedConnectorTransformer,
-            IcebergProxiedConnectorTransformer icebergProxiedConnectorTransformer,
+            GalaxyIcebergProxiedConnectorTransformer icebergProxiedConnectorTransformer,
             HudiProxiedConnectorTransformer hudiProxiedConnectorTransformer)
     {
         this.deltaLakeProxiedConnectorTransformer = requireNonNull(deltaLakeProxiedConnectorTransformer);

@@ -19,7 +19,6 @@ import io.trino.plugin.iceberg.InternalIcebergConnectorFactory;
 import io.trino.plugin.varada.configuration.ProxiedConnectorConfiguration;
 import io.trino.plugin.varada.dispatcher.DispatcherProxiedConnectorTransformer;
 import io.trino.plugin.varada.dispatcher.ProxiedConnectorInitializer;
-import io.trino.plugin.warp.proxiedconnector.iceberg.IcebergProxiedConnectorTransformer;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
 
@@ -39,7 +38,7 @@ public class IcebergProxiedConnectorInitializer
                 new ConnectorObjectNameGeneratorModule(
                         "io.trino.plugin.iceberg",
                         "presto.plugin.iceberg"),
-                binder -> binder.bind(DispatcherProxiedConnectorTransformer.class).to(IcebergProxiedConnectorTransformer.class));
+                binder -> binder.bind(DispatcherProxiedConnectorTransformer.class).to(GalaxyIcebergProxiedConnectorTransformer.class));
     }
 
     @Override

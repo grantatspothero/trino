@@ -96,6 +96,38 @@ public class TestWarpSpeed
     }
 
     @Test(groups = {WARP_SPEED, PROFILE_SPECIFIC_TESTS})
+    public void testWarpIcebergQuery()
+    {
+        String fullyQualifiedName = "warp" + "." + "default" + "." + "nation_iceberg";
+        onTrino().executeQuery("DROP TABLE IF EXISTS " + fullyQualifiedName);
+
+        QueryResult queryResult = onTrino().executeQuery("CREATE TABLE " + fullyQualifiedName + " WITH (type='Iceberg', format='parquet') AS SELECT * FROM tpch.tiny.nation");
+        QueryAssert.assertThat(queryResult).containsOnly(row(25));
+        String query = "SELECT * FROM " + fullyQualifiedName + " WHERE nationkey > 1";
+        int expectedRowsCountResult = 23;
+        testQueryWithRetry(query, WARM_JMX_TABLE, expectedRowsCountResult, new long[] {1L, 5L, 1L, 0L});
+        testQueryWithRetry(query, QUERY_JMX_TABLE, expectedRowsCountResult, new long[] {4L, 1L, 0L, 0L});
+
+        onTrino().executeQuery("DROP TABLE " + fullyQualifiedName);
+    }
+
+    @Test(groups = {WARP_SPEED, PROFILE_SPECIFIC_TESTS})
+    public void testWarpDeltaLakeQuery()
+    {
+        String fullyQualifiedName = "warp" + "." + "default" + "." + "nation_delta";
+        onTrino().executeQuery("DROP TABLE IF EXISTS " + fullyQualifiedName);
+
+        QueryResult queryResult = onTrino().executeQuery("CREATE TABLE " + fullyQualifiedName + " WITH (type='DELTA') AS SELECT * FROM tpch.tiny.nation");
+        QueryAssert.assertThat(queryResult).containsOnly(row(25));
+        String query = "SELECT * FROM " + fullyQualifiedName + " WHERE nationkey > 1";
+        int expectedRowsCountResult = 23;
+        testQueryWithRetry(query, WARM_JMX_TABLE, expectedRowsCountResult, new long[] {1L, 5L, 1L, 0L});
+        testQueryWithRetry(query, QUERY_JMX_TABLE, expectedRowsCountResult, new long[] {4L, 1L, 0L, 0L});
+
+        onTrino().executeQuery("DROP TABLE " + fullyQualifiedName);
+    }
+
+    @Test(groups = {WARP_SPEED, PROFILE_SPECIFIC_TESTS})
     public void testWarpHudiQuery()
     {
         String tableName = "hudi_insert_" + randomNameSuffix();
