@@ -84,7 +84,7 @@ public class JdbcMetadataConfig
 
     private boolean topNPushdownEnabled = true;
 
-    private ListColumnsMode listColumnsMode = ListColumnsMode.CLASSIC;
+    private ListColumnsMode listColumnsMode = ListColumnsMode.CLASSIC; // default overridden in connectors that support other modes
     private ListCommentsMode listCommentsMode = ListCommentsMode.DMA;
     // This is for IO, so default value not based on number of cores.
     // This ~limits number of concurrent queries to the remote database
