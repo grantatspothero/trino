@@ -25,7 +25,7 @@ import io.trino.spi.eventlistener.QueryIOMetadata;
 import io.trino.spi.eventlistener.QueryMetadata;
 import io.trino.spi.eventlistener.QueryStatistics;
 import io.trino.spi.session.ResourceEstimates;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.time.Duration;
@@ -43,7 +43,7 @@ import static io.trino.spi.type.TimeZoneKey.UTC_KEY;
 import static java.util.Objects.requireNonNull;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
-import static org.testng.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestGalaxyQueryMonitorEventListener
 {
@@ -95,7 +95,7 @@ public class TestGalaxyQueryMonitorEventListener
 
         logger.removeHandler(handler);
 
-        assertEquals(actual, expected);
+        assertEquals(expected, actual);
     }
 
     private record LogEntry(String loggerName, Level logLevel, String message)
