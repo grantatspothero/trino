@@ -85,8 +85,9 @@ public class MemoryCacheManager
     private final Map<SplitKey, SettableFuture<?>> splitLoaded = new HashMap<>();
     @GuardedBy("this")
     private final ObjectToIdMap<PlanSignature> signatureToId = new ObjectToIdMap<>();
-    private volatile long allocatedRevocableBytes;
     private final Distribution cachedSplitSizeDistribution = new Distribution();
+    @GuardedBy("this")
+    private long allocatedRevocableBytes;
 
     @Inject
     public MemoryCacheManager(CacheManagerContext context)
@@ -130,7 +131,7 @@ public class MemoryCacheManager
     }
 
     @Managed
-    public long getAllocatedRevocableBytes()
+    public synchronized long getAllocatedRevocableBytes()
     {
         return allocatedRevocableBytes;
     }
