@@ -30,6 +30,7 @@ import io.trino.filesystem.TrinoInputFile;
 import io.trino.parquet.ParquetReaderOptions;
 import io.trino.plugin.deltalake.DeltaLakeColumnMetadata;
 import io.trino.plugin.deltalake.DeltaLakeConfig;
+import io.trino.plugin.deltalake.DeltaLakeTableHandle;
 import io.trino.plugin.deltalake.transactionlog.checkpoint.CheckpointEntryIterator;
 import io.trino.plugin.deltalake.transactionlog.checkpoint.CheckpointSchemaManager;
 import io.trino.plugin.deltalake.transactionlog.checkpoint.LastCheckpoint;
@@ -253,6 +254,13 @@ public class TransactionLogAccess
         }
         return tableSnapshot.getCachedMetadata()
                 .orElseThrow(() -> new TrinoException(DELTA_LAKE_INVALID_SCHEMA, "Metadata not found in transaction log for " + tableSnapshot.getTable()));
+    }
+
+    public Optional<List<AddFileEntry>> getActiveFilesOnlyFromCache(DeltaLakeTableHandle handle)
+    {
+        TableVersion tableVersion = new TableVersion(new TableLocation(handle.getSchemaTableName(), handle.location()), handle.getReadVersion());
+        return Optional.ofNullable(activeDataFileCache.getIfPresent(tableVersion))
+                .map(DeltaLakeDataFileCacheEntry::getActiveFiles);
     }
 
     public List<AddFileEntry> getActiveFiles(TableSnapshot tableSnapshot, ConnectorSession session)

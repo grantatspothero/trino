@@ -43,6 +43,7 @@ import io.trino.plugin.hive.metastore.HiveMetastoreFactory;
 import io.trino.plugin.hive.metastore.RawHiveMetastoreFactory;
 import io.trino.spi.NodeManager;
 import io.trino.spi.PageIndexerFactory;
+import io.trino.spi.QueryId;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.Assignment;
 import io.trino.spi.connector.ColumnHandle;
@@ -701,6 +702,7 @@ public class TestDeltaLakeMetadata
             simulateStatisticsRequest(session, tableName);
             assertInputInfo(session, tableName,  new DeltaLakeInputInfoBuilder()
                     .setExtendedStatisticsMetric("REQUESTED_PRESENT")
+                    .setNumberOfDataFiles(Optional.of(1))
                     .build());
 
         });
@@ -720,10 +722,54 @@ public class TestDeltaLakeMetadata
             simulateStatisticsRequest(session, tableName);
             assertInputInfo(session, tableName,  new DeltaLakeInputInfoBuilder()
                     .setExtendedStatisticsMetric("REQUESTED_NOT_PRESENT")
+                    .setNumberOfDataFiles(Optional.of(1))
                     .build());
         });
 
         assertUpdate("DROP TABLE " + tableName);
+    }
+
+    @Test
+    public void testGetInputInfoForNumberOfDataFiles()
+    {
+        String tableName = "test_get_input_info_for_number_of_data_files_" + randomNameSuffix();
+        assertUpdate("CREATE TABLE " + tableName + " (a VARCHAR)");
+        assertUpdate("INSERT INTO " + tableName + " VALUES('txt1'), ('txt2')", 2);
+
+        // Number of data files metric is not present until cache is loaded
+        assertInputInfoNumberOfDataFiles(tableName, Optional.empty());
+
+        query("SELECT * FROM " + tableName); // Fill cache
+        assertInputInfoNumberOfDataFiles(tableName, Optional.of(1));
+
+        assertUpdate("INSERT INTO " + tableName + " VALUES('txt3')", 1);
+        assertUpdate("INSERT INTO " + tableName + " VALUES('txt3')", 1);
+        assertUpdate("INSERT INTO " + tableName + " VALUES('txt3')", 1);
+        assertUpdate("INSERT INTO " + tableName + " VALUES('txt3')", 1);
+        assertUpdate("INSERT INTO " + tableName + " VALUES('txt3')", 1);
+        query("SELECT * FROM " + tableName); // Fill cache
+        assertInputInfoNumberOfDataFiles(tableName, Optional.of(6));
+
+        assertUpdate("UPDATE " + tableName + " SET a = 'txt10' WHERE a = 'txt2'", 1);
+        query("SELECT * FROM " + tableName); // Fill cache
+        assertInputInfoNumberOfDataFiles(tableName, Optional.of(7));
+
+        assertUpdate("DELETE FROM " + tableName, 7);
+        query("SELECT * FROM " + tableName); // Fill cache
+        assertInputInfoNumberOfDataFiles(tableName, Optional.of(0));
+    }
+
+    private void assertInputInfoNumberOfDataFiles(String tableName, Optional<Integer> numberOfDataFiles)
+    {
+        newTransaction().execute(
+                // Make sure that each call to getInfo is with different query_id to not read cached transactionLog
+                Session.builder(super.getSession()).setQueryId(QueryId.valueOf(randomNameSuffix())).build(),
+                (session) -> {
+                     assertInputInfo(session, tableName, new DeltaLakeInputInfoBuilder()
+                            .setNumberOfDataFiles(numberOfDataFiles)
+                            .build());
+                }
+        );
     }
 
     private void assertInputInfo(Session session, String tableName, DeltaLakeInputInfo deltaLakeInputInfo)
@@ -841,6 +887,7 @@ public class TestDeltaLakeMetadata
         private int numberOfGeneratedColumns = 0;
         private int numberOfPartitionGeneratedColumns = 0;
         private String extendedStatisticsMetric = "NOT_REQUESTED";
+        private Optional<Integer> numberOfDataFiles = Optional.empty();
 
         public DeltaLakeInputInfoBuilder setPartitioned(boolean partitioned)
         {
@@ -884,18 +931,25 @@ public class TestDeltaLakeMetadata
             return this;
         }
 
+        public DeltaLakeInputInfoBuilder setNumberOfDataFiles(Optional<Integer> numberOfDataFiles)
+        {
+            this.numberOfDataFiles = numberOfDataFiles;
+            return this;
+        }
 
         DeltaLakeInputInfo build()
         {
-            return new DeltaLakeInputInfo(
-                    partitioned,
-                    ImmutableMap.of(
-                            "cdfEnabled", Boolean.toString(cdfEnabled),
-                            "checkConstraints", checkConstraints,
-                            "columnMappingMode", columnMappingMode,
-                            "numberOfGeneratedColumns", Integer.toString(numberOfGeneratedColumns),
-                            "numberOfPartitionGeneratedColumns", Integer.toString(numberOfPartitionGeneratedColumns),
-                            "extendedStatisticsMetric", extendedStatisticsMetric));
+            ImmutableMap.Builder<String, String> galaxyTraitsBuilder = ImmutableMap.<String, String>builder()
+                    .put("cdfEnabled", Boolean.toString(cdfEnabled))
+                    .put("checkConstraints", checkConstraints)
+                    .put("columnMappingMode", columnMappingMode)
+                    .put("numberOfGeneratedColumns", Integer.toString(numberOfGeneratedColumns))
+                    .put("numberOfPartitionGeneratedColumns", Integer.toString(numberOfPartitionGeneratedColumns))
+                    .put("extendedStatisticsMetric", extendedStatisticsMetric);
+
+            numberOfDataFiles.ifPresent(numberOfDataFiles -> galaxyTraitsBuilder.put("numberOfDataFilesInTable", Integer.toString(numberOfDataFiles)));
+
+            return new DeltaLakeInputInfo(partitioned, galaxyTraitsBuilder.buildOrThrow());
         }
     }
 }

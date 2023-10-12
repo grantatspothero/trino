@@ -2469,16 +2469,19 @@ public class DeltaLakeMetadata
                 .filter(columnName -> metadataEntry.getLowercasePartitionColumns().contains(columnName.toLowerCase(ENGLISH)))
                 .count();
 
-        Map<String, String> galaxyTraits = ImmutableMap.<String, String>builder()
+        ImmutableMap.Builder<String, String> galaxyTraitsBuilder = ImmutableMap.<String, String>builder()
                 .put("cdfEnabled", Boolean.toString(changeDataFeedEnabled(metadataEntry, protocolEntry).orElse(FALSE)))
                 .put("checkConstraints", String.join(",", getCheckConstraints(metadataEntry, protocolEntry).values()))
                 .put("columnMappingMode", getColumnMappingMode(metadataEntry, protocolEntry).name())
                 .put("numberOfGeneratedColumns", String.valueOf(generatedColumnExpressions.size()))
                 .put("numberOfPartitionGeneratedColumns", String.valueOf(generatedPartitionColumns))
-                .put("extendedStatisticsMetric", extendedStatisticsMetric.toString())
-                .buildOrThrow();
+                .put("extendedStatisticsMetric", extendedStatisticsMetric.toString());
 
-        return Optional.of(new DeltaLakeInputInfo(isPartitioned, galaxyTraits));
+        // TODO: Adjust number of files usage metrics when predicate pruning is implemented https://github.com/starburstdata/team-lakehouse/issues/276
+        transactionLogAccess.getActiveFilesOnlyFromCache(tableHandle)
+                .ifPresent(addFileEntries -> galaxyTraitsBuilder.put("numberOfDataFilesInTable", Integer.toString(addFileEntries.size())));
+
+        return Optional.of(new DeltaLakeInputInfo(isPartitioned, galaxyTraitsBuilder.buildOrThrow()));
     }
 
     @Override
