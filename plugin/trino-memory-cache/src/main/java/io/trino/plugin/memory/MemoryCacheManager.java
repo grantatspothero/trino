@@ -174,10 +174,7 @@ public class MemoryCacheManager
 
     private synchronized void finishStorePages(SplitKey key, long memoryUsageBytes, List<Page> pages)
     {
-        // account for splitCache entry memory
-        long entrySize = MAP_ENTRY_SIZE + key.getRetainedSizeInBytes() + memoryUsageBytes;
-        // account for splitLoaded entry
-        entrySize += MAP_ENTRY_SIZE + SETTABLE_FUTURE_INSTANCE_SIZE;
+        long entrySize = getCacheEntrySize(key, memoryUsageBytes);
         if (!revocableMemoryAllocator.trySetBytes(allocatedRevocableBytes + entrySize)) {
             // not sufficient memory to store split pages
             abortStorePages(key);
@@ -214,21 +211,14 @@ public class MemoryCacheManager
 
             Map.Entry<SplitKey, List<Page>> entry = iterator.next();
             SplitKey key = entry.getKey();
-
-            // account for splitCache entry memory
-            long splitRetainedSizeInBytes = MAP_ENTRY_SIZE + key.getRetainedSizeInBytes();
-            for (Page block : entry.getValue()) {
-                splitRetainedSizeInBytes += block.getRetainedSizeInBytes();
-            }
-            // account for splitLoaded entry memory
-            splitRetainedSizeInBytes += MAP_ENTRY_SIZE + SETTABLE_FUTURE_INSTANCE_SIZE;
+            long entrySize = getCacheEntrySize(key, entry.getValue());
 
             iterator.remove();
             splitLoaded.remove(key);
             releaseSignatureId(key.signatureId());
 
-            allocatedRevocableBytes -= splitRetainedSizeInBytes;
-            freedAllocatedRevocableBytes += splitRetainedSizeInBytes;
+            allocatedRevocableBytes -= entrySize;
+            freedAllocatedRevocableBytes += entrySize;
         }
 
         // freeing memory should always succeed, while any non-negative allocation might return false
@@ -247,6 +237,23 @@ public class MemoryCacheManager
     private synchronized void releaseSignatureId(long signatureId)
     {
         signatureToId.releaseId(signatureId);
+    }
+
+    private static long getCacheEntrySize(SplitKey key, List<Page> pages)
+    {
+        long pagesRetainedSizeInBytes = 0L;
+        for (Page page : pages) {
+            pagesRetainedSizeInBytes += page.getRetainedSizeInBytes();
+        }
+        return getCacheEntrySize(key, pagesRetainedSizeInBytes);
+    }
+
+    private static long getCacheEntrySize(SplitKey key, long pagesRetainedSizeInBytes)
+    {
+        // account for splitCache entry memory
+        return MAP_ENTRY_SIZE + key.getRetainedSizeInBytes() + pagesRetainedSizeInBytes +
+                // account for splitLoaded entry
+                MAP_ENTRY_SIZE + SETTABLE_FUTURE_INSTANCE_SIZE;
     }
 
     private class MemorySplitCache
