@@ -82,6 +82,7 @@ public class TestThriftHttpMetastoreClient
                 Optional.empty(),
                 Optional.empty(),
                 timeout,
+                timeout,
                 noAuthentication,
                 "localhost",
                 DefaultThriftMetastoreClientFactory.buildThriftHttpContext(getHttpMetastoreConfig()),

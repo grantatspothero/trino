@@ -41,7 +41,7 @@ public class TestingTokenAwareMetastoreClientFactory
 
     public TestingTokenAwareMetastoreClientFactory(Optional<HostAndPort> socksProxy, URI address, Duration timeout)
     {
-        this.factory = new DefaultThriftMetastoreClientFactory(new SshTunnelConfig(), Optional.empty(), socksProxy, timeout, AUTHENTICATION, "localhost", Optional.empty(), OpenTelemetry.noop());
+        this.factory = new DefaultThriftMetastoreClientFactory(new SshTunnelConfig(), Optional.empty(), socksProxy, timeout, timeout, AUTHENTICATION, "localhost", Optional.empty(), OpenTelemetry.noop());
         this.address = requireNonNull(address, "address is null");
     }
 
