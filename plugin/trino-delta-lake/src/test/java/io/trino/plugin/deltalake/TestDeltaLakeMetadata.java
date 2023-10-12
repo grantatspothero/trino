@@ -522,14 +522,11 @@ public class TestDeltaLakeMetadata
                 ImmutableList.of(BIGINT_COLUMN_1));
         deltaLakeMetadata.createTable(SESSION, tableMetadata, false);
         DeltaLakeTableHandle tableHandle = (DeltaLakeTableHandle) deltaLakeMetadata.getTableHandle(SESSION, tableMetadata.getTable());
-        assertThat(deltaLakeMetadata.getInfo(tableHandle)).isEqualTo(Optional.of(new DeltaLakeInputInfo(
-                true,
-                ImmutableMap.of(
-                        "cdfEnabled", "false",
-                        "checkConstraints", "",
-                        "columnMappingMode", "NONE",
-                        "numberOfGeneratedColumns", "0",
-                        "numberOfPartitionGeneratedColumns", "0"))));
+
+        assertThat(deltaLakeMetadata.getInfo(tableHandle)).isEqualTo(Optional.of(
+                new DeltaLakeInputInfoBuilder()
+                        .setPartitioned(true)
+                        .build()));
     }
 
     @Test
@@ -541,14 +538,8 @@ public class TestDeltaLakeMetadata
                 ImmutableList.of());
         deltaLakeMetadata.createTable(SESSION, tableMetadata, false);
         DeltaLakeTableHandle tableHandle = (DeltaLakeTableHandle) deltaLakeMetadata.getTableHandle(SESSION, tableMetadata.getTable());
-        assertThat(deltaLakeMetadata.getInfo(tableHandle)).isEqualTo(Optional.of(new DeltaLakeInputInfo(
-                false,
-                ImmutableMap.of(
-                        "cdfEnabled", "false",
-                        "checkConstraints", "",
-                        "columnMappingMode", "NONE",
-                        "numberOfGeneratedColumns", "0",
-                        "numberOfPartitionGeneratedColumns", "0"))));
+
+        assertThat(deltaLakeMetadata.getInfo(tableHandle)).isEqualTo(Optional.of(new DeltaLakeInputInfoBuilder().build()));
     }
 
     @Test
@@ -562,14 +553,11 @@ public class TestDeltaLakeMetadata
                 NONE);
         deltaLakeMetadata.createTable(SESSION, tableMetadata, false);
         DeltaLakeTableHandle tableHandle = (DeltaLakeTableHandle) deltaLakeMetadata.getTableHandle(SESSION, tableMetadata.getTable());
-        assertThat(deltaLakeMetadata.getInfo(tableHandle)).isEqualTo(Optional.of(new DeltaLakeInputInfo(
-                false,
-                ImmutableMap.of(
-                        "cdfEnabled", "true",
-                        "checkConstraints", "",
-                        "columnMappingMode", "NONE",
-                        "numberOfGeneratedColumns", "0",
-                        "numberOfPartitionGeneratedColumns", "0"))));
+
+        assertThat(deltaLakeMetadata.getInfo(tableHandle)).isEqualTo(Optional.of(
+                new DeltaLakeInputInfoBuilder()
+                        .setCdfEnabled(true)
+                        .build()));
     }
 
     @Test
@@ -593,14 +581,11 @@ public class TestDeltaLakeMetadata
 
         DeltaLakeTableHandle deltaLakeTableHandle = createDeltaLakeTableHandle(ImmutableSet.of(), ImmutableSet.of(), metadataEntry);
 
-        assertThat(deltaLakeMetadata.getInfo(deltaLakeTableHandle)).isEqualTo(Optional.of(new DeltaLakeInputInfo(
-                true,
-                ImmutableMap.of(
-                        "cdfEnabled", "false",
-                        "checkConstraints", "a>10,b>20",
-                        "columnMappingMode", "NONE",
-                        "numberOfGeneratedColumns", "0",
-                        "numberOfPartitionGeneratedColumns", "0"))));
+        assertThat(deltaLakeMetadata.getInfo(deltaLakeTableHandle)).isEqualTo(Optional.of(
+                new DeltaLakeInputInfoBuilder()
+                        .setPartitioned(true)
+                        .setCheckConstraints("a>10,b>20")
+                        .build()));
     }
 
     @Test
@@ -614,14 +599,10 @@ public class TestDeltaLakeMetadata
                 NAME);
         deltaLakeMetadata.createTable(SESSION, tableMetadata, false);
         DeltaLakeTableHandle tableHandle = (DeltaLakeTableHandle) deltaLakeMetadata.getTableHandle(SESSION, tableMetadata.getTable());
-        assertThat(deltaLakeMetadata.getInfo(tableHandle)).isEqualTo(Optional.of(new DeltaLakeInputInfo(
-                false,
-                ImmutableMap.of(
-                        "cdfEnabled", "false",
-                        "checkConstraints", "",
-                        "columnMappingMode", "NAME",
-                        "numberOfGeneratedColumns", "0",
-                        "numberOfPartitionGeneratedColumns", "0"))));
+        assertThat(deltaLakeMetadata.getInfo(tableHandle)).isEqualTo(Optional.of(
+                new DeltaLakeInputInfoBuilder()
+                        .setColumnMappingMode("NAME")
+                        .build()));
     }
 
     @Test
@@ -644,14 +625,11 @@ public class TestDeltaLakeMetadata
 
         DeltaLakeTableHandle deltaLakeTableHandle = createDeltaLakeTableHandle(ImmutableSet.of(), ImmutableSet.of(), metadataEntry);
 
-        assertThat(deltaLakeMetadata.getInfo(deltaLakeTableHandle)).isEqualTo(Optional.of(new DeltaLakeInputInfo(
-                true,
-                ImmutableMap.of(
-                        "cdfEnabled", "false",
-                        "checkConstraints", "",
-                        "columnMappingMode", "NONE",
-                        "numberOfGeneratedColumns", "1",
-                        "numberOfPartitionGeneratedColumns", "0"))));
+        assertThat(deltaLakeMetadata.getInfo(deltaLakeTableHandle)).isEqualTo(Optional.of(
+                new DeltaLakeInputInfoBuilder()
+                        .setPartitioned(true)
+                        .setNumberOfGeneratedColumns(1)
+                        .build()));
     }
 
     @Test
@@ -674,14 +652,12 @@ public class TestDeltaLakeMetadata
 
         DeltaLakeTableHandle deltaLakeTableHandle = createDeltaLakeTableHandle(ImmutableSet.of(), ImmutableSet.of(), metadataEntry);
 
-        assertThat(deltaLakeMetadata.getInfo(deltaLakeTableHandle)).isEqualTo(Optional.of(new DeltaLakeInputInfo(
-                true,
-                ImmutableMap.of(
-                        "cdfEnabled", "false",
-                        "checkConstraints", "",
-                        "columnMappingMode", "NONE",
-                        "numberOfGeneratedColumns", "1",
-                        "numberOfPartitionGeneratedColumns", "1"))));
+        assertThat(deltaLakeMetadata.getInfo(deltaLakeTableHandle)).isEqualTo(Optional.of(
+                new DeltaLakeInputInfoBuilder()
+                        .setPartitioned(true)
+                        .setNumberOfGeneratedColumns(1)
+                        .setNumberOfPartitionGeneratedColumns(1)
+                        .build()));
     }
 
     private static DeltaLakeTableHandle createDeltaLakeTableHandle(Set<DeltaLakeColumnHandle> projectedColumns, Set<DeltaLakeColumnHandle> constrainedColumnsn)
@@ -762,5 +738,63 @@ public class TestDeltaLakeMetadata
     {
         String randomSuffix = UUID.randomUUID().toString().toLowerCase(ENGLISH).replace("-", "");
         return new SchemaTableName(DATABASE_NAME, "table_" + randomSuffix);
+    }
+
+    private static class DeltaLakeInputInfoBuilder
+    {
+        private boolean partitioned = false;
+        private boolean cdfEnabled = false;
+        private String checkConstraints = "";
+        private String columnMappingMode = "NONE";
+        private int numberOfGeneratedColumns = 0;
+        private int numberOfPartitionGeneratedColumns = 0;
+
+        public DeltaLakeInputInfoBuilder setPartitioned(boolean partitioned)
+        {
+            this.partitioned = partitioned;
+            return this;
+        }
+
+        public DeltaLakeInputInfoBuilder setCdfEnabled(boolean cdfEnabled)
+        {
+            this.cdfEnabled = cdfEnabled;
+            return this;
+        }
+
+        public DeltaLakeInputInfoBuilder setCheckConstraints(String checkConstraints)
+        {
+            this.checkConstraints = checkConstraints;
+            return this;
+        }
+
+        public DeltaLakeInputInfoBuilder setColumnMappingMode(String columnMappingMode)
+        {
+            this.columnMappingMode = columnMappingMode;
+            return this;
+        }
+
+        public DeltaLakeInputInfoBuilder setNumberOfGeneratedColumns(int numberOfGeneratedColumns)
+        {
+            this.numberOfGeneratedColumns = numberOfGeneratedColumns;
+            return this;
+        }
+
+        public DeltaLakeInputInfoBuilder setNumberOfPartitionGeneratedColumns(int numberOfPartitionGeneratedColumns)
+        {
+            this.numberOfPartitionGeneratedColumns = numberOfPartitionGeneratedColumns;
+            return this;
+        }
+
+        DeltaLakeInputInfo build()
+        {
+            return new DeltaLakeInputInfo(
+                    partitioned,
+                    ImmutableMap.of(
+                            "cdfEnabled", Boolean.toString(cdfEnabled),
+                            "checkConstraints", checkConstraints,
+                            "columnMappingMode", columnMappingMode,
+                            "numberOfGeneratedColumns", Integer.toString(numberOfGeneratedColumns),
+                            "numberOfPartitionGeneratedColumns", Integer.toString(numberOfPartitionGeneratedColumns)));
+        }
     }
 }
