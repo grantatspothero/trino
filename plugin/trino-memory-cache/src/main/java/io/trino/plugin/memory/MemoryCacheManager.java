@@ -49,7 +49,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
@@ -85,23 +84,8 @@ public class MemoryCacheManager
     private final Map<SplitKey, List<Page>> splitCache = new LinkedHashMap<>();
     @GuardedBy("this")
     private final Map<SplitKey, SettableFuture<?>> splitLoaded = new HashMap<>();
-    /**
-     * Comparing of {@link PlanSignature} per split can be expensive (e.g. when
-     * {@link PlanSignature#getPredicate() is large}. Therefore {@link PlanSignature}s
-     * are mapped to {@link Long} signatureIds.
-     */
     @GuardedBy("this")
-    private final Map<PlanSignature, Long> signatureToId = new HashMap<>();
-    @GuardedBy("this")
-    private final Map<Long, PlanSignature> idToSignature = new HashMap<>();
-    /**
-     * Usage count per signatureId. When usage count for particular
-     * signatureId drops to 0, then corresponding mapping from {@link PlanSignature}
-     * to signatureId can be dropped.
-     */
-    @GuardedBy("this")
-    private final Map<Long, Long> idUsageCount = new HashMap<>();
-    private final AtomicLong nextSignatureId = new AtomicLong();
+    private final ObjectToIdMap<PlanSignature> signatureToId = new ObjectToIdMap<>();
     private volatile long allocatedRevocableBytes;
     private final Distribution cachedSplitSizeDistribution = new Distribution();
 
@@ -153,7 +137,7 @@ public class MemoryCacheManager
     }
 
     @Managed
-    public synchronized long getCachedPlanSignaturesCount()
+    public synchronized int getCachedPlanSignaturesCount()
     {
         return signatureToId.size();
     }
@@ -183,7 +167,7 @@ public class MemoryCacheManager
             return Optional.empty();
         }
 
-        acquireSignatureId(signatureId);
+        signatureToId.acquireId(signatureId);
         // memory for splitLoaded entry will be accounted in finishStorePages
         splitLoaded.put(key, SettableFuture.create());
         return Optional.of(new MemoryCachePageSink(key));
@@ -205,44 +189,13 @@ public class MemoryCacheManager
         splitCache.put(key, pages);
         splitLoaded.get(key).set(null);
         cachedSplitSizeDistribution.add(memoryUsageBytes);
-        checkState(idUsageCount.get(key.signatureId()) > 0, "Signature id must not be released while split is cached");
+        checkState(signatureToId.getUsageCount(key.signatureId()) > 0, "Signature id must not be released while split is cached");
     }
 
     private synchronized void abortStorePages(SplitKey key)
     {
         splitLoaded.remove(key).set(null);
         releaseSignatureId(key.signatureId());
-    }
-
-    private synchronized long allocateSignatureId(PlanSignature signature)
-    {
-        Long signatureId = signatureToId.get(signature);
-        if (signatureId == null) {
-            signatureId = nextSignatureId.incrementAndGet();
-            signatureToId.put(signature, signatureId);
-            idToSignature.put(signatureId, signature);
-            idUsageCount.put(signatureId, 0L);
-        }
-
-        acquireSignatureId(signatureId);
-        return signatureId;
-    }
-
-    private synchronized void acquireSignatureId(long signatureId)
-    {
-        idUsageCount.put(signatureId, idUsageCount.get(signatureId) + 1);
-    }
-
-    private synchronized void releaseSignatureId(long signatureId)
-    {
-        long usageCount = idUsageCount.get(signatureId) - 1;
-        checkState(usageCount >= 0, "Usage count is negative");
-        idUsageCount.put(signatureId, usageCount);
-        if (usageCount == 0) {
-            signatureToId.remove(idToSignature.get(signatureId));
-            idToSignature.remove(signatureId);
-            idUsageCount.remove(signatureId);
-        }
     }
 
     private synchronized long removeEldestSplits(BooleanSupplier stopCondition)
@@ -285,6 +238,16 @@ public class MemoryCacheManager
             checkState(revocableMemoryAllocator.trySetBytes(allocatedRevocableBytes));
         }
         return freedAllocatedRevocableBytes;
+    }
+
+    private synchronized long allocateSignatureId(PlanSignature signature)
+    {
+        return signatureToId.allocateId(signature);
+    }
+
+    private synchronized void releaseSignatureId(long signatureId)
+    {
+        signatureToId.releaseId(signatureId);
     }
 
     private class MemorySplitCache
