@@ -46,13 +46,11 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
-import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -369,40 +367,6 @@ public class MemoryCacheManager
     record SplitKey(long signatureId, CacheSplitId splitId)
     {
         static final int INSTANCE_SIZE = instanceSize(SplitKey.class);
-
-        public SplitKey(long signatureId, CacheSplitId splitId)
-        {
-            this.signatureId = signatureId;
-            this.splitId = requireNonNull(splitId, "splitId is null");
-        }
-
-        @Override
-        public boolean equals(Object o)
-        {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            SplitKey splitKey = (SplitKey) o;
-            return signatureId == splitKey.signatureId && splitId.equals(splitKey.splitId);
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return Objects.hash(signatureId, splitId);
-        }
-
-        @Override
-        public String toString()
-        {
-            return toStringHelper(this)
-                    .add("signatureId", signatureId)
-                    .add("splitId", splitId)
-                    .toString();
-        }
 
         public long getRetainedSizeInBytes()
         {
