@@ -19,6 +19,7 @@ import io.trino.client.NodeVersion;
 import io.trino.plugin.memory.MemoryCacheManager.SplitKey;
 import io.trino.spi.Page;
 import io.trino.spi.block.BlockBuilder;
+import io.trino.spi.block.IntArrayBlock;
 import io.trino.spi.cache.CacheManager.PreferredAddressProvider;
 import io.trino.spi.cache.CacheManager.SplitCache;
 import io.trino.spi.cache.CacheManagerContext;
@@ -35,11 +36,14 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static io.trino.plugin.memory.EmptySplitCache.EMPTY_SPLIT_CACHE;
 import static io.trino.plugin.memory.MemoryCacheManager.MAP_ENTRY_SIZE;
 import static io.trino.plugin.memory.MemoryCacheManager.SETTABLE_FUTURE_INSTANCE_SIZE;
 import static io.trino.spi.type.BigintType.BIGINT;
+import static java.util.stream.Collectors.joining;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Test(singleThreaded = true)
@@ -77,6 +81,8 @@ public class TestMemoryCacheManager
         // split data should not be cached yet
         SplitCache cache = cacheManager.getSplitCache(signature);
         assertThat(cache.loadPages(splitId)).isEmpty();
+        long signatureIdSize = ObjectToIdMap.getEntrySize(signature, PlanSignature::getRetainedSizeInBytes);
+        assertThat(allocatedRevocableMemory).isEqualTo(signatureIdSize);
 
         Optional<ConnectorPageSink> sinkOptional = cache.storePages(splitId);
         assertThat(sinkOptional).isPresent();
@@ -90,12 +96,12 @@ public class TestMemoryCacheManager
 
         // make sure memory usage is accounted for in page sink
         assertThat(sink.getMemoryUsage()).isEqualTo(oneMegabytePage.getRetainedSizeInBytes());
-        assertThat(allocatedRevocableMemory).isEqualTo(0);
+        assertThat(allocatedRevocableMemory).isEqualTo(signatureIdSize);
 
         // make sure memory is transferred to cacheManager after sink is finished
         sink.finish();
         long cacheEntrySize = 2L * MAP_ENTRY_SIZE + SplitKey.INSTANCE_SIZE + splitId.getRetainedSizeInBytes() + SETTABLE_FUTURE_INSTANCE_SIZE;
-        assertThat(allocatedRevocableMemory).isEqualTo(oneMegabytePage.getRetainedSizeInBytes() + cacheEntrySize);
+        assertThat(allocatedRevocableMemory).isEqualTo(oneMegabytePage.getRetainedSizeInBytes() + cacheEntrySize + signatureIdSize);
 
         // split data should be available now
         Optional<ConnectorPageSource> sourceOptional = cache.loadPages(splitId);
@@ -108,17 +114,21 @@ public class TestMemoryCacheManager
         assertThat(source.isFinished()).isTrue();
 
         // make sure no data is available for other signatures
-        PlanSignature signature2 = createPlanSignature("sig2");
-        SplitCache cache2 = cacheManager.getSplitCache(signature2);
-        assertThat(cache2.loadPages(splitId)).isEmpty();
-        cache2.close();
+        PlanSignature anotherSignature = createPlanSignature("sig2");
+        SplitCache anotherCache = cacheManager.getSplitCache(anotherSignature);
+        assertThat(anotherCache.loadPages(splitId)).isEmpty();
+        long anotherSignatureIdSize = ObjectToIdMap.getEntrySize(anotherSignature, PlanSignature::getRetainedSizeInBytes);
+        assertThat(allocatedRevocableMemory).isEqualTo(oneMegabytePage.getRetainedSizeInBytes() + cacheEntrySize + signatureIdSize + anotherSignatureIdSize);
+        anotherCache.close();
+        // SplitCache close should release signature memory
+        assertThat(allocatedRevocableMemory).isEqualTo(oneMegabytePage.getRetainedSizeInBytes() + cacheEntrySize + signatureIdSize);
 
         // store data for another split
         CacheSplitId splitId2 = new CacheSplitId("split2");
         sink = cache.storePages(splitId2).orElseThrow();
         sink.appendPage(oneMegabytePage);
         sink.finish();
-        assertThat(allocatedRevocableMemory).isEqualTo(2 * (oneMegabytePage.getRetainedSizeInBytes() + cacheEntrySize));
+        assertThat(allocatedRevocableMemory).isEqualTo(2 * (oneMegabytePage.getRetainedSizeInBytes() + cacheEntrySize) + signatureIdSize);
 
         // data for both splits should be cached
         assertThat(cache.loadPages(splitId)).isPresent();
@@ -126,7 +136,7 @@ public class TestMemoryCacheManager
 
         // revoke memory and make sure only the least recently used split is left
         cacheManager.revokeMemory(500_000);
-        assertThat(allocatedRevocableMemory).isEqualTo(oneMegabytePage.getRetainedSizeInBytes() + cacheEntrySize);
+        assertThat(allocatedRevocableMemory).isEqualTo(oneMegabytePage.getRetainedSizeInBytes() + cacheEntrySize + signatureIdSize);
         assertThat(cache.loadPages(splitId)).isEmpty();
 
         // make sure no new split data is cached when memory limit is lowered
@@ -134,7 +144,7 @@ public class TestMemoryCacheManager
         sink = cache.storePages(splitId).orElseThrow();
         sink.appendPage(oneMegabytePage);
         sink.finish();
-        assertThat(allocatedRevocableMemory).isEqualTo(oneMegabytePage.getRetainedSizeInBytes() + cacheEntrySize);
+        assertThat(allocatedRevocableMemory).isEqualTo(oneMegabytePage.getRetainedSizeInBytes() + cacheEntrySize + signatureIdSize);
         assertThat(cache.loadPages(splitId)).isEmpty();
 
         cache.close();
@@ -147,60 +157,78 @@ public class TestMemoryCacheManager
         PlanSignature signature = createPlanSignature("sig");
         CacheSplitId splitId = new CacheSplitId("split");
 
-        // start caching of split data
+        // create new SplitCache
+        long signatureIdSize = ObjectToIdMap.getEntrySize(signature, PlanSignature::getRetainedSizeInBytes);
         SplitCache cache = cacheManager.getSplitCache(signature);
+
+        // start caching of new split
         Optional<ConnectorPageSink> sinkOptional = cache.storePages(splitId);
         assertThat(sinkOptional).isPresent();
         ConnectorPageSink sink = sinkOptional.get();
         sink.appendPage(oneMegabytePage);
-        assertThat(allocatedRevocableMemory).isEqualTo(0);
+        assertThat(allocatedRevocableMemory).isEqualTo(signatureIdSize);
+        assertThat(sink.getMemoryUsage()).isEqualTo(oneMegabytePage.getRetainedSizeInBytes());
         assertThat(cache.loadPages(splitId)).isEmpty();
+
+        // active sink should keep signature memory allocated
+        cache.close();
+        assertThat(allocatedRevocableMemory).isEqualTo(signatureIdSize);
 
         // no data should be cached after abort
         sink.abort();
-        assertThat(allocatedRevocableMemory).isEqualTo(0);
-        assertThat(cache.loadPages(splitId)).isEmpty();
-
-        cache.close();
+        assertThat(allocatedRevocableMemory).isEqualTo(0L);
+        assertThat(cacheManager.getSplitCache(signature).loadPages(splitId)).isEmpty();
     }
 
     @Test
-    public void testPlanSignatureLimit()
+    public void testPlanSignatureRevoke()
             throws IOException
     {
-        MemoryCacheManager cacheManager = new MemoryCacheManager(() -> bytes -> true, 1);
+        Page smallPage = new Page(new IntArrayBlock(1, Optional.empty(), new int[] {0}));
+        PlanSignature bigSignature = createPlanSignature(IntStream.range(0, 500_000).mapToObj(Integer::toString).collect(joining()));
+        PlanSignature secondBigSignature = createPlanSignature(IntStream.range(0, 500_001).mapToObj(Integer::toString).collect(joining()));
 
         // cache some data for first signature
-        PlanSignature signature = createPlanSignature("sig");
         CacheSplitId splitId = new CacheSplitId("split");
-        SplitCache cache = cacheManager.getSplitCache(signature);
+        assertThat(allocatedRevocableMemory).isEqualTo(0);
+        SplitCache cache = cacheManager.getSplitCache(bigSignature);
         ConnectorPageSink sink = cache.storePages(splitId).orElseThrow();
-        sink.appendPage(oneMegabytePage);
+        sink.appendPage(smallPage);
         sink.finish();
         cache.close();
 
         // make sure page is present with new SplitCache instance
-        SplitCache anotherCache = cacheManager.getSplitCache(signature);
+        SplitCache anotherCache = cacheManager.getSplitCache(bigSignature);
         assertThat(anotherCache.loadPages(splitId)).isPresent();
 
         // cache data for another signature
-        PlanSignature anotherSignature = createPlanSignature("sig2");
-        SplitCache cacheForAnotherSignature = cacheManager.getSplitCache(anotherSignature);
-        sink = cacheForAnotherSignature.storePages(splitId).orElseThrow();
-        sink.appendPage(oneMegabytePage);
+        SplitCache cacheForSecondSignature = cacheManager.getSplitCache(secondBigSignature);
+        sink = cacheForSecondSignature.storePages(splitId).orElseThrow();
+        sink.appendPage(smallPage);
         sink.finish();
 
-        // both splits should be still cached while anotherCache and cacheForAnotherSignature are open
+        // both splits should be still cached
         assertThat(anotherCache.loadPages(splitId)).isPresent();
-        assertThat(cacheForAnotherSignature.loadPages(splitId)).isPresent();
-
-        // only one split (for one signature) should be cached after anotherCache and cacheForAnotherSignature are reopened
+        assertThat(cacheForSecondSignature.loadPages(splitId)).isPresent();
         anotherCache.close();
-        cacheForAnotherSignature.close();
-        anotherCache = cacheManager.getSplitCache(signature);
-        cacheForAnotherSignature = cacheManager.getSplitCache(anotherSignature);
+        cacheForSecondSignature.close();
+
+        // revoke some small amount of memory
+        assertThat(cacheManager.revokeMemory(100)).isPositive();
+
+        // only one split (for secondBigSignature signature) should be cached, because big signature was purged
+        anotherCache = cacheManager.getSplitCache(bigSignature);
+        cacheForSecondSignature = cacheManager.getSplitCache(secondBigSignature);
         assertThat(anotherCache.loadPages(splitId)).isEmpty();
-        assertThat(cacheForAnotherSignature.loadPages(splitId)).isPresent();
+        assertThat(cacheForSecondSignature.loadPages(splitId)).isPresent();
+        anotherCache.close();
+
+        // memory limits should be enforced for large signatures
+        memoryLimit = 10_000;
+        long initialMemory = allocatedRevocableMemory;
+        SplitCache thirdCache = cacheManager.getSplitCache(bigSignature);
+        assertThat(thirdCache).isEqualTo(EMPTY_SPLIT_CACHE);
+        assertThat(allocatedRevocableMemory).isEqualTo(initialMemory);
     }
 
     @Test

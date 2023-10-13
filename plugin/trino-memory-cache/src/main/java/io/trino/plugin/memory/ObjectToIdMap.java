@@ -13,13 +13,19 @@
  */
 package io.trino.plugin.memory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import io.trino.spi.cache.PlanSignature;
 import it.unimi.dsi.fastutil.longs.Long2LongMap;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 
+import java.util.function.Function;
+
 import static com.google.common.base.Preconditions.checkState;
+import static io.airlift.slice.SizeOf.LONG_INSTANCE_SIZE;
+import static io.trino.plugin.memory.MemoryCacheManager.MAP_ENTRY_SIZE;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Maps objects to numeric id. Comparing of big objects like {@link PlanSignature} can be expensive
@@ -28,6 +34,7 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class ObjectToIdMap<T>
 {
+    private final Function<T, Long> retainedSizeInBytesProvider;
     private final BiMap<T, Long> objectToId = HashBiMap.create();
     /**
      * Usage count per id. When usage count for particular id drops to 0,
@@ -35,7 +42,13 @@ public class ObjectToIdMap<T>
      * can be dropped.
      */
     private final Long2LongMap idUsageCount = new Long2LongOpenHashMap();
+    private long revocableBytes;
     private long nextId;
+
+    public ObjectToIdMap(Function<T, Long> retainedSizeInBytesProvider)
+    {
+        this.retainedSizeInBytesProvider = requireNonNull(retainedSizeInBytesProvider, "retainedSizeInBytesProvider is null");
+    }
 
     public long allocateId(T object)
     {
@@ -44,6 +57,7 @@ public class ObjectToIdMap<T>
             id = nextId++;
             objectToId.put(object, id);
             idUsageCount.put((long) id, 1L);
+            revocableBytes += getEntrySize(object);
             return id;
         }
 
@@ -71,8 +85,9 @@ public class ObjectToIdMap<T>
         long usageCount = idUsageCount.merge(id, -count, Long::sum);
         checkState(usageCount >= 0, "Usage count is negative");
         if (usageCount == 0) {
-            objectToId.inverse().remove(id);
+            T object = requireNonNull(objectToId.inverse().remove(id));
             idUsageCount.remove(id);
+            revocableBytes -= getEntrySize(object);
         }
     }
 
@@ -84,5 +99,24 @@ public class ObjectToIdMap<T>
     public int size()
     {
         return objectToId.size();
+    }
+
+    public long getRevocableBytes()
+    {
+        return revocableBytes;
+    }
+
+    private long getEntrySize(T object)
+    {
+        return getEntrySize(object, retainedSizeInBytesProvider);
+    }
+
+    @VisibleForTesting
+    static <T> long getEntrySize(T object, Function<T, Long> retainedSizeInBytesProvider)
+    {
+        // account for objectToId
+        return MAP_ENTRY_SIZE + retainedSizeInBytesProvider.apply(object) + LONG_INSTANCE_SIZE +
+                // account for idUsageCount
+                MAP_ENTRY_SIZE + 2L * LONG_INSTANCE_SIZE;
     }
 }

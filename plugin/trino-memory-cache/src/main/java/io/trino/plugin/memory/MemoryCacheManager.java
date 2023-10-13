@@ -58,6 +58,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.hash.Hashing.consistentHash;
 import static io.airlift.slice.SizeOf.instanceSize;
+import static io.trino.plugin.memory.EmptySplitCache.EMPTY_SPLIT_CACHE;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -73,10 +74,8 @@ public class MemoryCacheManager
     static final int MAP_ENTRY_SIZE = instanceSize(AbstractMap.SimpleEntry.class);
     static final int SETTABLE_FUTURE_INSTANCE_SIZE = instanceSize(SettableFuture.class);
 
-    private static final int DEFAULT_MAX_PLAN_SIGNATURES = 200;
     private static final long WORKER_NODES_CACHE_TIMEOUT_SECS = 10;
 
-    private final int maxPlanSignatures;
     private final MemoryAllocator revocableMemoryAllocator;
 
     @GuardedBy("this")
@@ -84,29 +83,24 @@ public class MemoryCacheManager
     @GuardedBy("this")
     private final Map<SplitKey, SettableFuture<?>> splitLoaded = new HashMap<>();
     @GuardedBy("this")
-    private final ObjectToIdMap<PlanSignature> signatureToId = new ObjectToIdMap<>();
+    private final ObjectToIdMap<PlanSignature> signatureToId = new ObjectToIdMap<>(PlanSignature::getRetainedSizeInBytes);
     private final Distribution cachedSplitSizeDistribution = new Distribution();
     @GuardedBy("this")
-    private long allocatedRevocableBytes;
+    private long cacheRevocableBytes;
 
     @Inject
     public MemoryCacheManager(CacheManagerContext context)
     {
-        this(context, DEFAULT_MAX_PLAN_SIGNATURES);
-    }
-
-    @VisibleForTesting
-    MemoryCacheManager(CacheManagerContext context, int maxPlanSignatures)
-    {
         requireNonNull(context, "context is null");
-        this.maxPlanSignatures = maxPlanSignatures;
         this.revocableMemoryAllocator = context.revocableMemoryAllocator();
     }
 
     @Override
     public SplitCache getSplitCache(PlanSignature signature)
     {
-        return new MemorySplitCache(signature);
+        return allocateSignatureId(signature)
+                .<SplitCache>map(MemorySplitCache::new)
+                .orElse(EMPTY_SPLIT_CACHE);
     }
 
     @Override
@@ -119,8 +113,8 @@ public class MemoryCacheManager
     public synchronized long revokeMemory(long bytesToRevoke)
     {
         checkArgument(bytesToRevoke >= 0);
-        long initialAllocatedBytes = allocatedRevocableBytes;
-        return removeEldestSplits(() -> initialAllocatedBytes - allocatedRevocableBytes >= bytesToRevoke);
+        long initialRevocableBytes = getRevocableBytes();
+        return removeEldestSplits(() -> initialRevocableBytes - getRevocableBytes() >= bytesToRevoke);
     }
 
     @Managed
@@ -131,9 +125,9 @@ public class MemoryCacheManager
     }
 
     @Managed
-    public synchronized long getAllocatedRevocableBytes()
+    public synchronized long getRevocableBytes()
     {
-        return allocatedRevocableBytes;
+        return cacheRevocableBytes + signatureToId.getRevocableBytes();
     }
 
     @Managed
@@ -176,13 +170,13 @@ public class MemoryCacheManager
     private synchronized void finishStorePages(SplitKey key, long memoryUsageBytes, List<Page> pages)
     {
         long entrySize = getCacheEntrySize(key, memoryUsageBytes);
-        if (!revocableMemoryAllocator.trySetBytes(allocatedRevocableBytes + entrySize)) {
+        if (!revocableMemoryAllocator.trySetBytes(getRevocableBytes() + entrySize)) {
             // not sufficient memory to store split pages
             abortStorePages(key);
             return;
         }
 
-        allocatedRevocableBytes += entrySize;
+        cacheRevocableBytes += entrySize;
         splitCache.put(key, pages);
         splitLoaded.get(key).set(null);
         cachedSplitSizeDistribution.add(memoryUsageBytes);
@@ -202,9 +196,7 @@ public class MemoryCacheManager
             return 0L;
         }
 
-        long freedAllocatedRevocableBytes = 0;
-        long initialRevocableMemoryAllocator = allocatedRevocableBytes;
-
+        long initialRevocableBytes = getRevocableBytes();
         for (Iterator<Map.Entry<SplitKey, List<Page>>> iterator = splitCache.entrySet().iterator(); iterator.hasNext(); ) {
             if (stopCondition.getAsBoolean()) {
                 break;
@@ -216,28 +208,43 @@ public class MemoryCacheManager
 
             iterator.remove();
             splitLoaded.remove(key);
-            releaseSignatureId(key.signatureId());
+            signatureToId.releaseId(key.signatureId());
 
-            allocatedRevocableBytes -= entrySize;
-            freedAllocatedRevocableBytes += entrySize;
+            cacheRevocableBytes -= entrySize;
         }
+        checkState(cacheRevocableBytes >= 0);
 
         // freeing memory should always succeed, while any non-negative allocation might return false
-        if (initialRevocableMemoryAllocator != allocatedRevocableBytes) {
-            checkState(allocatedRevocableBytes >= 0);
-            checkState(revocableMemoryAllocator.trySetBytes(allocatedRevocableBytes));
-        }
-        return freedAllocatedRevocableBytes;
+        long currentRevocableBytes = getRevocableBytes();
+        checkState(initialRevocableBytes >= currentRevocableBytes);
+        checkState(initialRevocableBytes == currentRevocableBytes || revocableMemoryAllocator.trySetBytes(currentRevocableBytes));
+        return initialRevocableBytes - currentRevocableBytes;
     }
 
-    private synchronized long allocateSignatureId(PlanSignature signature)
+    private synchronized Optional<Long> allocateSignatureId(PlanSignature signature)
     {
-        return signatureToId.allocateId(signature);
+        long initialRevocableBytes = getRevocableBytes();
+
+        long signatureId = signatureToId.allocateId(signature);
+
+        long currentRevocableBytes = getRevocableBytes();
+        checkState(currentRevocableBytes >= initialRevocableBytes);
+        if (currentRevocableBytes > initialRevocableBytes && !revocableMemoryAllocator.trySetBytes(currentRevocableBytes)) {
+            // couldn't allocate ids due to memory constraints
+            signatureToId.releaseId(signatureId);
+            return Optional.empty();
+        }
+
+        return Optional.of(signatureId);
     }
 
     private synchronized void releaseSignatureId(long signatureId)
     {
+        long initialRevocableBytes = getRevocableBytes();
         signatureToId.releaseId(signatureId);
+        long currentRevocableBytes = getRevocableBytes();
+        checkState(initialRevocableBytes >= currentRevocableBytes);
+        checkState(initialRevocableBytes == currentRevocableBytes || revocableMemoryAllocator.trySetBytes(currentRevocableBytes));
     }
 
     private static long getCacheEntrySize(SplitKey key, List<Page> pages)
@@ -263,9 +270,9 @@ public class MemoryCacheManager
         private final long signatureId;
         private volatile boolean closed;
 
-        private MemorySplitCache(PlanSignature signature)
+        private MemorySplitCache(long signatureId)
         {
-            signatureId = allocateSignatureId(signature);
+            this.signatureId = signatureId;
         }
 
         @Override
@@ -288,8 +295,6 @@ public class MemoryCacheManager
             checkState(!closed, "MemorySplitCache already closed");
             closed = true;
             releaseSignatureId(signatureId);
-            // remove oldest cached splits in order to free plan signature slots
-            removeEldestSplits(() -> signatureToId.size() <= maxPlanSignatures);
         }
     }
 
