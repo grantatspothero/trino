@@ -42,6 +42,7 @@ import io.trino.execution.executor.TaskExecutor;
 import io.trino.execution.executor.TaskHandle;
 import io.trino.memory.LocalMemoryManager;
 import io.trino.memory.NodeMemoryConfig;
+import io.trino.metadata.WorkerLanguageFunctionProvider;
 import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorFactory;
@@ -253,6 +254,7 @@ public class TestSqlTaskManagerRaceWithCatalogPrune
                 new EmbedVersion("testversion"),
                 workerConnectorServiceProvider,
                 createTestingPlanner(),
+                new WorkerLanguageFunctionProvider(),
                 new BaseTestSqlTaskManager.MockLocationFactory(),
                 NOOP_TASK_EXECUTOR,
                 createTestSplitMonitor(),

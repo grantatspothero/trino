@@ -369,7 +369,7 @@ public class PlanFragment
                 this.outputPartitioningScheme,
                 this.statsAndCosts,
                 activeCatalogs,
-                // this.languageFunctions,
+                this.languageFunctions,
                 this.jsonRepresentation);
     }
 }
