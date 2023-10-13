@@ -615,7 +615,7 @@ public class TestCommonSubqueriesExtractor
         assertThat(aggregationA.getCommonSubplanSignature()).isEqualTo(aggregationA.getCommonSubplanSignature());
         assertThat(aggregationB.getCommonSubplanSignature()).isEqualTo(new PlanSignature(
                 new SignatureKey(tpchCatalogId + ":tiny:nation:0.01:(\"[nationkey:bigint]\" > BIGINT '10')"),
-                Optional.of(ImmutableList.of(REGIONKEY_ID, NAME_ID)),
+                Optional.of(ImmutableList.of(NAME_ID, REGIONKEY_ID)),
                 ImmutableList.of(REGIONKEY_ID, NAME_ID, canonicalExpressionToColumnId(hash), canonicalExpressionToColumnId(sum), canonicalExpressionToColumnId(max)),
                 TupleDomain.withColumnDomains(ImmutableMap.of(
                         REGIONKEY_ID, Domain.create(ValueSet.ofRanges(lessThan(BIGINT, 5L), greaterThan(BIGINT, 10L)), false))),

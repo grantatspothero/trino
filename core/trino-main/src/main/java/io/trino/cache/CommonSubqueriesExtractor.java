@@ -16,6 +16,7 @@ package io.trino.cache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import io.trino.Session;
@@ -53,6 +54,7 @@ import io.trino.sql.planner.plan.ValuesNode;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionCall;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -289,11 +291,9 @@ public final class CommonSubqueriesExtractor
             Optional<Set<CacheColumnId>> groupByColumns)
     {
         SignatureKey signatureKey = new SignatureKey(tableId.toString());
-        // Order group by columns according to projected columns
+        // Order group by columns by name
         Optional<List<CacheColumnId>> orderedGroupByColumns = groupByColumns.map(
-                columns -> projections.stream()
-                        .filter(columns::contains)
-                        .collect(toImmutableList()));
+                Ordering.from(Comparator.comparing(Object::toString))::sortedCopy);
         checkState(groupByColumns.isEmpty() || groupByColumns.get().containsAll(orderedGroupByColumns.get()));
 
         if (predicate.equals(TRUE_LITERAL)) {
