@@ -29,7 +29,7 @@ import io.trino.operator.DirectExchangeClientSupplier;
 import io.trino.server.BasicQueryInfo;
 import io.trino.server.ForStatementResource;
 import io.trino.server.ServerConfig;
-import io.trino.server.resultscache.ResultsCacheEntry;
+import io.trino.server.resultscache.ActiveResultsCacheEntry;
 import io.trino.server.resultscache.ResultsCacheManager;
 import io.trino.server.security.ResourceSecurity;
 import io.trino.spi.QueryId;
@@ -200,7 +200,7 @@ public class ExecutingStatementResource
         }
 
         BasicQueryInfo queryInfo = queryManager.getQueryInfo(queryId);
-        Optional<ResultsCacheEntry> resultsCacheEntry = queryManager.getResultsCacheState(queryId).map(parameters ->
+        Optional<ActiveResultsCacheEntry> resultsCacheEntry = queryManager.getResultsCacheState(queryId).map(parameters ->
                 resultsCacheManager.createResultsCacheEntry(
                         session.getIdentity(),
                         parameters,
@@ -209,8 +209,9 @@ public class ExecutingStatementResource
                         session.getCatalog(),
                         session.getSchema(),
                         queryInfo.getQueryType().map(QueryType::name),
-                        queryInfo.getUpdateType(),
-                        queryManager.getResultsCacheFinalResultConsumer(queryId)));
+                        queryInfo.getUpdateType()));
+
+        resultsCacheEntry.ifPresent(entry -> queryManager.registerResultsCacheEntry(queryInfo.getQueryId(), entry));
 
         query = queries.computeIfAbsent(queryId, id -> Query.create(
                 session,

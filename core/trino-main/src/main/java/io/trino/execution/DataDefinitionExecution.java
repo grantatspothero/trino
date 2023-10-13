@@ -26,6 +26,7 @@ import io.trino.execution.querystats.PlanOptimizersStatsCollector;
 import io.trino.execution.warnings.WarningCollector;
 import io.trino.server.BasicQueryInfo;
 import io.trino.server.protocol.Slug;
+import io.trino.server.resultscache.ResultsCacheEntry;
 import io.trino.spi.QueryId;
 import io.trino.sql.planner.Plan;
 import io.trino.sql.tree.Expression;
@@ -261,9 +262,9 @@ public class DataDefinitionExecution<T extends Statement>
     }
 
     @Override
-    public ResultsCacheFinalResultConsumer getResultsCacheFinalResultConsumer()
+    public void registerResultsCacheEntry(ResultsCacheEntry resultsCacheEntry)
     {
-        return stateMachine;
+        throw new UnsupportedOperationException("Results cache is not supported with DataDefinitionExecution");
     }
 
     @Override

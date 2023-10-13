@@ -20,7 +20,6 @@ import io.airlift.log.Logger;
 import io.airlift.units.Duration;
 import io.trino.Session;
 import io.trino.execution.QueryTracker.TrackedQuery;
-import io.trino.server.resultscache.ResultsCacheEntry.ResultCacheFinalResult;
 import io.trino.server.resultscache.ResultsCacheState;
 import io.trino.spi.QueryId;
 import io.trino.spi.TrinoException;
@@ -313,11 +312,6 @@ public class QueryTracker<T extends TrackedQuery>
         default Optional<ResultsCacheState> getResultsCacheState()
         {
             return Optional.empty();
-        }
-
-        default void setResultsCacheStatus(ResultCacheFinalResult resultCacheFinalResult)
-        {
-            return;
         }
     }
 }

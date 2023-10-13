@@ -12,11 +12,32 @@
  * limitations under the License.
  */
 
-package io.trino.execution;
+package io.trino.server.resultscache;
 
-import static io.trino.server.resultscache.ResultsCacheEntry.ResultCacheFinalResult;
+import java.util.Optional;
 
-public interface ResultsCacheFinalResultConsumer
+public class EmptyResultsCacheEntry
+        implements ResultsCacheEntry
 {
-    void setResultsCacheFinalResult(ResultCacheFinalResult finalResult);
+    @Override
+    public void done() {}
+
+    @Override
+    public boolean isDone()
+    {
+        return true;
+    }
+
+    @Override
+    public boolean addTransitionToDoneCallback(DoneCallback doneCallback)
+    {
+        // Does not transition, doneCallback will never be called
+        return false;
+    }
+
+    @Override
+    public Optional<ResultsCacheResult> getEntryResult()
+    {
+        return Optional.empty();
+    }
 }

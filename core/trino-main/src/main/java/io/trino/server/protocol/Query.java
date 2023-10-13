@@ -45,6 +45,7 @@ import io.trino.execution.buffer.PageDeserializer;
 import io.trino.execution.buffer.PagesSerdeFactory;
 import io.trino.memory.context.SimpleLocalMemoryContext;
 import io.trino.operator.DirectExchangeClientSupplier;
+import io.trino.server.resultscache.ActiveResultsCacheEntry;
 import io.trino.server.resultscache.ResultsCacheEntry;
 import io.trino.spi.ErrorCode;
 import io.trino.spi.Page;
@@ -173,7 +174,7 @@ class Query
     @GuardedBy("this")
     private Long updateCount;
 
-    private final Optional<ResultsCacheEntry> resultsCacheEntry;
+    private final Optional<ActiveResultsCacheEntry> resultsCacheEntry;
 
     public static Query create(
             Session session,
@@ -185,7 +186,7 @@ class Query
             Executor dataProcessorExecutor,
             ScheduledExecutorService timeoutExecutor,
             BlockEncodingSerde blockEncodingSerde,
-            Optional<ResultsCacheEntry> resultsCacheEntry)
+            Optional<ActiveResultsCacheEntry> resultsCacheEntry)
     {
         ExchangeDataSource exchangeDataSource = new LazyExchangeDataSource(
                 session.getQueryId(),
@@ -221,7 +222,7 @@ class Query
             Executor resultsProcessorExecutor,
             ScheduledExecutorService timeoutExecutor,
             BlockEncodingSerde blockEncodingSerde,
-            Optional<ResultsCacheEntry> resultsCacheEntry)
+            Optional<ActiveResultsCacheEntry> resultsCacheEntry)
     {
         requireNonNull(session, "session is null");
         requireNonNull(slug, "slug is null");
@@ -438,7 +439,12 @@ class Query
             updateCount = updatedRowsCount.orElse(null);
         }
 
+        resultsCacheEntry.ifPresent(entry -> entry.appendResults(resultRows.getColumns().orElse(null), resultRows));
+
         if (isStarted && (queryInfo.getOutputStage().isEmpty() || exchangeDataSource.isFinished())) {
+            if (queryInfo.getState() != FAILED) {
+                resultsCacheEntry.ifPresent(ResultsCacheEntry::done);
+            }
             queryManager.resultsConsumed(queryId);
             resultsConsumed = true;
             // update query since the query might have been transitioned to the FINISHED state
@@ -512,12 +518,6 @@ class Query
         // cache the new result
         lastToken = token;
         lastResult = queryResults;
-
-        resultsCacheEntry.ifPresent(entry -> entry.appendResults(resultRows.getColumns().orElse(null), resultRows));
-
-        if (nextResultsUri == null) {
-            resultsCacheEntry.ifPresent(ResultsCacheEntry::done);
-        }
 
         return toResultsResponse(queryResults);
     }

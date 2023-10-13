@@ -42,6 +42,9 @@ import io.trino.operator.OperatorStats;
 import io.trino.security.AccessControl;
 import io.trino.server.BasicQueryInfo;
 import io.trino.server.BasicQueryStats;
+import io.trino.server.resultscache.EmptyResultsCacheEntry;
+import io.trino.server.resultscache.ResultsCacheEntry;
+import io.trino.server.resultscache.ResultsCacheEntry.ResultsCacheResult;
 import io.trino.spi.ErrorCode;
 import io.trino.spi.QueryId;
 import io.trino.spi.TrinoException;
@@ -103,7 +106,6 @@ import static io.trino.execution.QueryState.WAITING_FOR_RESOURCES;
 import static io.trino.execution.StageInfo.getAllStages;
 import static io.trino.operator.RetryPolicy.TASK;
 import static io.trino.server.DynamicFilterService.DynamicFiltersStats;
-import static io.trino.server.resultscache.ResultsCacheEntry.ResultCacheFinalResult;
 import static io.trino.spi.StandardErrorCode.NOT_FOUND;
 import static io.trino.spi.StandardErrorCode.USER_CANCELED;
 import static io.trino.util.Ciphers.createRandomAesEncryptionKey;
@@ -116,9 +118,12 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 @ThreadSafe
 public class QueryStateMachine
-        implements ResultsCacheFinalResultConsumer
 {
     private static final Logger QUERY_STATE_LOG = Logger.get(QueryStateMachine.class);
+
+    // Static singular definition of an EmptyResultsCacheEntry to be used as the initial value for ResultsCacheEntry
+    // This is used for the compareAndSet method call for the AtomicReference
+    private static final ResultsCacheEntry EMPTY_RESULTS_CACHE_ENTRY = new EmptyResultsCacheEntry();
 
     private final QueryId queryId;
     private final String query;
@@ -189,7 +194,7 @@ public class QueryStateMachine
 
     private final AtomicBoolean committed = new AtomicBoolean();
     private final AtomicBoolean consumed = new AtomicBoolean();
-    private final AtomicReference<ResultCacheFinalResult> resultsCacheFinalResult = new AtomicReference<>();
+    private final AtomicReference<ResultsCacheEntry> resultsCacheEntry = new AtomicReference<>(EMPTY_RESULTS_CACHE_ENTRY);
 
     private final NodeVersion version;
 
@@ -525,6 +530,8 @@ public class QueryStateMachine
         QueryStats queryStats = getQueryStats(rootStage, allStages);
         boolean finalInfo = state.isDone() && allStages.stream().allMatch(StageInfo::isFinalStageInfo);
 
+        Optional<ResultsCacheResult> resultsCacheResult = resultsCacheEntry.get().getEntryResult();
+
         return new QueryInfo(
                 queryId,
                 session.toSessionRepresentation(),
@@ -544,8 +551,8 @@ public class QueryStateMachine
                 setRoles,
                 addedPreparedStatements,
                 deallocatedPreparedStatements,
-                Optional.ofNullable(resultsCacheFinalResult.get()).map(finalResult -> finalResult.status().getDisplay()),
-                Optional.ofNullable(resultsCacheFinalResult.get()).map(ResultCacheFinalResult::resultSetSize),
+                resultsCacheResult.map(finalResult -> finalResult.status().getDisplay()),
+                resultsCacheResult.map(ResultsCacheResult::resultSetSize),
                 Optional.ofNullable(startedTransactionId.get()),
                 clearTransactionId.get(),
                 updateType.get(),
@@ -1110,6 +1117,12 @@ public class QueryStateMachine
             return;
         }
 
+        // The purpose of waiting on the ResultsCacheEntry to be done is so that the final state is what is
+        // populated in the final QueryInfo.
+        if (!resultsCacheEntry.get().isDone()) {
+            return;
+        }
+
         queryStateTimer.endQuery();
 
         queryState.setIf(FINISHED, currentState -> !currentState.isDone());
@@ -1359,11 +1372,22 @@ public class QueryStateMachine
         finalQueryInfo.compareAndSet(finalInfo, Optional.of(prunedQueryInfo));
     }
 
-    @Override
-    public void setResultsCacheFinalResult(ResultCacheFinalResult finalResult)
+    public void setResultsCacheEntry(ResultsCacheEntry resultsCacheEntry)
     {
-        requireNonNull(finalResult, "finalResult is null");
-        resultsCacheFinalResult.set(finalResult);
+        requireNonNull(resultsCacheEntry, "resultsCacheEntry is null");
+        boolean isAlreadyDone = !resultsCacheEntry.addTransitionToDoneCallback(() -> resultsCacheEntryDone());
+        if (!this.resultsCacheEntry.compareAndSet(EMPTY_RESULTS_CACHE_ENTRY, resultsCacheEntry)) {
+            throw new IllegalStateException("ResultsCacheEntry cannot be set twice");
+        }
+
+        if (isAlreadyDone) {
+            transitionToFinishedIfReady();
+        }
+    }
+
+    public void resultsCacheEntryDone()
+    {
+        transitionToFinishedIfReady();
     }
 
     private static QueryStats pruneQueryStats(QueryStats queryStats)

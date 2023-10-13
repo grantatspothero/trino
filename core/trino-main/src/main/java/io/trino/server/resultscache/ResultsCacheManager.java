@@ -20,7 +20,6 @@ import io.airlift.http.client.HttpClient;
 import io.airlift.log.Logger;
 import io.airlift.units.DataSize;
 import io.trino.Session;
-import io.trino.execution.ResultsCacheFinalResultConsumer;
 import io.trino.spi.QueryId;
 import io.trino.spi.security.Identity;
 
@@ -52,7 +51,7 @@ public class ResultsCacheManager
                 config.getDeploymentId());
     }
 
-    public ResultsCacheEntry createResultsCacheEntry(
+    public ActiveResultsCacheEntry createResultsCacheEntry(
             Identity identity,
             ResultsCacheState resultsCacheParameters,
             QueryId queryId,
@@ -60,12 +59,11 @@ public class ResultsCacheManager
             Optional<String> sessionCatalog,
             Optional<String> sessionSchema,
             Optional<String> queryType,
-            Optional<String> updateType,
-            ResultsCacheFinalResultConsumer queryInfoRegistrar)
+            Optional<String> updateType)
     {
         long maximumSizeBytes = resultsCacheParameters.maximumSizeBytes().orElse(DEFAULT_MAXIMUM_SIZE_BYTES);
         log.debug("QueryId: %s, created ResultsCacheEntry with key %s", queryId, resultsCacheParameters.key());
-        return new ResultsCacheEntry(
+        return new ActiveResultsCacheEntry(
                 identity,
                 resultsCacheParameters.key(),
                 queryId,
@@ -75,7 +73,6 @@ public class ResultsCacheManager
                 queryType,
                 updateType,
                 maximumSizeBytes,
-                queryInfoRegistrar,
                 resultsCacheClient,
                 executorService);
     }

@@ -50,7 +50,9 @@ import io.trino.operator.RetryPolicy;
 import io.trino.server.BasicQueryInfo;
 import io.trino.server.DynamicFilterService;
 import io.trino.server.protocol.Slug;
+import io.trino.server.resultscache.FilteredResultsCacheEntry;
 import io.trino.server.resultscache.ResultsCacheAnalyzerFactory;
+import io.trino.server.resultscache.ResultsCacheEntry;
 import io.trino.server.resultscache.ResultsCacheState;
 import io.trino.spi.QueryId;
 import io.trino.spi.TrinoException;
@@ -97,7 +99,6 @@ import static io.trino.execution.ParameterExtractor.bindParameters;
 import static io.trino.execution.QueryState.FAILED;
 import static io.trino.execution.QueryState.PLANNING;
 import static io.trino.server.DynamicFilterService.DynamicFiltersStats;
-import static io.trino.server.resultscache.ResultsCacheEntry.ResultCacheFinalResult;
 import static io.trino.server.resultscache.ResultsCacheManager.createResultsCacheParameters;
 import static io.trino.spi.StandardErrorCode.STACK_OVERFLOW;
 import static io.trino.tracing.ScopedSpan.scopedSpan;
@@ -235,9 +236,32 @@ public class SqlQueryExecution
             this.cacheConfig = requireNonNull(cacheConfig, "cacheConfig is null");
             this.taskDescriptorStorage = requireNonNull(taskDescriptorStorage, "taskDescriptorStorage is null");
             this.planOptimizersStatsCollector = requireNonNull(planOptimizersStatsCollector, "planOptimizersStatsCollector is null");
-            this.resultsCacheState = createResultsCacheParameters(stateMachine.getSession()).filter(state ->
-                    resultsCacheAnalyzerFactory.createResultsCacheAnalyzer(
-                            stateMachine.getSession().toSecurityContext()).isStatementCacheable(stateMachine, stateMachine.getQueryId(), preparedQuery, analysis));
+
+            // The ResultsCacheState, if present, represents the Dispatcher indicating to the Coordinator to cache
+            // the results of the query if it meets the criteria.
+            Optional<ResultsCacheState> potentialResultsCacheState = createResultsCacheParameters(stateMachine.getSession());
+            if (potentialResultsCacheState.isEmpty()) {
+                this.resultsCacheState = Optional.empty();
+            }
+            else {
+                // ResultsCacheState is present, use the ResultsCacheAnalyzer to determine if any filter criteria is
+                // met:
+                //   If no filter criteria is met, the Coordinator will attempt to cache the results through setting
+                //     the resultsCacheState member to what was passed by the Dispatcher.
+                //   If a filter criterion is met, a FilteredResultCacheEntry will be returned that can be registered
+                //     with the QueryStateMachine in order to report this in QueryInfo.
+                Optional<FilteredResultsCacheEntry> filteredResultsCacheEntry = potentialResultsCacheState.flatMap(state ->
+                        resultsCacheAnalyzerFactory.createResultsCacheAnalyzer(
+                                stateMachine.getSession().toSecurityContext()).isStatementCacheable(stateMachine.getQueryId(), preparedQuery, analysis));
+
+                if (filteredResultsCacheEntry.isPresent()) {
+                    stateMachine.setResultsCacheEntry(filteredResultsCacheEntry.get());
+                    this.resultsCacheState = Optional.empty();
+                }
+                else {
+                    this.resultsCacheState = potentialResultsCacheState;
+                }
+            }
         }
     }
 
@@ -694,9 +718,9 @@ public class SqlQueryExecution
     }
 
     @Override
-    public ResultsCacheFinalResultConsumer getResultsCacheFinalResultConsumer()
+    public void registerResultsCacheEntry(ResultsCacheEntry resultsCacheEntry)
     {
-        return stateMachine;
+        stateMachine.setResultsCacheEntry(resultsCacheEntry);
     }
 
     @Override
@@ -730,12 +754,6 @@ public class SqlQueryExecution
     public Optional<ResultsCacheState> getResultsCacheState()
     {
         return resultsCacheState;
-    }
-
-    @Override
-    public void setResultsCacheStatus(ResultCacheFinalResult resultCacheFinalResult)
-    {
-        stateMachine.setResultsCacheFinalResult(resultCacheFinalResult);
     }
 
     private boolean shouldWaitForMinWorkers(Statement statement)

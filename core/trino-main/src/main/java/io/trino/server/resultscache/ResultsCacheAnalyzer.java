@@ -16,7 +16,6 @@ package io.trino.server.resultscache;
 
 import io.airlift.log.Logger;
 import io.trino.execution.QueryPreparer.PreparedQuery;
-import io.trino.execution.ResultsCacheFinalResultConsumer;
 import io.trino.metadata.QualifiedObjectName;
 import io.trino.metadata.TableHandle;
 import io.trino.security.AccessControl;
@@ -25,11 +24,12 @@ import io.trino.spi.QueryId;
 import io.trino.sql.analyzer.Analysis;
 import io.trino.sql.tree.Query;
 
-import static io.trino.server.resultscache.ResultsCacheEntry.ResultCacheFinalResult;
-import static io.trino.server.resultscache.ResultsCacheEntry.ResultCacheFinalResult.ResultStatus.EXECUTE_STATEMENT;
-import static io.trino.server.resultscache.ResultsCacheEntry.ResultCacheFinalResult.ResultStatus.NOT_SELECT;
-import static io.trino.server.resultscache.ResultsCacheEntry.ResultCacheFinalResult.ResultStatus.QUERY_HAS_ABAC_RBAC_TABLE;
-import static io.trino.server.resultscache.ResultsCacheEntry.ResultCacheFinalResult.ResultStatus.QUERY_HAS_SYSTEM_TABLE;
+import java.util.Optional;
+
+import static io.trino.server.resultscache.ResultsCacheEntry.ResultsCacheResult.Status.EXECUTE_STATEMENT;
+import static io.trino.server.resultscache.ResultsCacheEntry.ResultsCacheResult.Status.NOT_SELECT;
+import static io.trino.server.resultscache.ResultsCacheEntry.ResultsCacheResult.Status.QUERY_HAS_ABAC_RBAC_TABLE;
+import static io.trino.server.resultscache.ResultsCacheEntry.ResultsCacheResult.Status.QUERY_HAS_SYSTEM_TABLE;
 import static java.util.Objects.requireNonNull;
 
 public class ResultsCacheAnalyzer
@@ -44,18 +44,16 @@ public class ResultsCacheAnalyzer
         this.securityContext = requireNonNull(securityContext, "securityContext is null");
     }
 
-    public boolean isStatementCacheable(ResultsCacheFinalResultConsumer resultsCacheFinalResultConsumer, QueryId queryId, PreparedQuery preparedQuery, Analysis analysis)
+    public Optional<FilteredResultsCacheEntry> isStatementCacheable(QueryId queryId, PreparedQuery preparedQuery, Analysis analysis)
     {
         if (preparedQuery.isExecuteStatement()) {
             log.debug("QueryId: %s, statement is EXECUTE statement, not caching", queryId);
-            resultsCacheFinalResultConsumer.setResultsCacheFinalResult(new ResultCacheFinalResult(EXECUTE_STATEMENT));
-            return false;
+            return Optional.of(new FilteredResultsCacheEntry(EXECUTE_STATEMENT));
         }
 
         if (!(preparedQuery.getStatement() instanceof Query)) {
             log.debug("QueryId: %s, statement is not a Query, not caching", queryId);
-            resultsCacheFinalResultConsumer.setResultsCacheFinalResult(new ResultCacheFinalResult(NOT_SELECT));
-            return false;
+            return Optional.of(new FilteredResultsCacheEntry(NOT_SELECT));
         }
 
         for (TableHandle tableHandle : analysis.getTables()) {
@@ -63,8 +61,7 @@ public class ResultsCacheAnalyzer
                 case INFORMATION_SCHEMA:
                 case SYSTEM:
                     log.debug("QueryId: %s, query uses INFORMATION_SCHEMA or SYSTEM table %s, not caching", queryId, tableHandle);
-                    resultsCacheFinalResultConsumer.setResultsCacheFinalResult(new ResultCacheFinalResult(QUERY_HAS_SYSTEM_TABLE));
-                    return false;
+                    return Optional.of(new FilteredResultsCacheEntry(QUERY_HAS_SYSTEM_TABLE));
                 case NORMAL:
                     continue;
             }
@@ -73,11 +70,11 @@ public class ResultsCacheAnalyzer
         for (QualifiedObjectName qualifiedObjectName : analysis.getTableNames()) {
             if (!accessControl.getRowFilters(securityContext, qualifiedObjectName).isEmpty()) {
                 log.debug("QueryId: %s, query uses table: %s, which has row filters; not caching", queryId, qualifiedObjectName);
-                resultsCacheFinalResultConsumer.setResultsCacheFinalResult(new ResultCacheFinalResult(QUERY_HAS_ABAC_RBAC_TABLE));
+                return Optional.of(new FilteredResultsCacheEntry(QUERY_HAS_ABAC_RBAC_TABLE));
             }
         }
 
         log.debug("QueryId: %s, statement is cacheable", queryId);
-        return true;
+        return Optional.empty();
     }
 }

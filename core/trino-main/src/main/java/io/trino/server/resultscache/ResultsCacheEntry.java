@@ -14,234 +14,81 @@
 
 package io.trino.server.resultscache;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import io.airlift.concurrent.MoreFutures;
-import io.airlift.log.Logger;
-import io.airlift.units.DataSize;
-import io.trino.client.Column;
-import io.trino.execution.ResultsCacheFinalResultConsumer;
-import io.trino.server.protocol.QueryResultRows;
-import io.trino.spi.QueryId;
-import io.trino.spi.security.Identity;
-
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static io.airlift.units.DataSize.Unit.MEGABYTE;
-import static io.trino.server.resultscache.ResultsCacheEntry.ResultCacheFinalResult.ResultStatus.CACHED;
-import static io.trino.server.resultscache.ResultsCacheEntry.ResultCacheFinalResult.ResultStatus.INCOMPLETE;
-import static io.trino.server.resultscache.ResultsCacheEntry.ResultCacheFinalResult.ResultStatus.NO_COLUMNS;
-import static io.trino.server.resultscache.ResultsCacheEntry.ResultCacheFinalResult.ResultStatus.OVER_MAX_SIZE;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-public class ResultsCacheEntry
+public interface ResultsCacheEntry
 {
-    private static final Logger log = Logger.get(ResultsCacheEntry.class);
-    private static final long MAX_SIZE = DataSize.of(1, MEGABYTE).toBytes();
-    private final Identity identity;
-    private final String key;
-    private final QueryId queryId;
-    private final String query;
-    private final Optional<String> sessionCatalog;
-    private final Optional<String> sessionSchema;
-    private final Optional<String> queryType;
-    private final Optional<String> updateType;
-    private final long maximumSize;
-    private final ResultsCacheFinalResultConsumer queryInfoRegistrar;
-    private final ResultsCacheClient client;
-    private final ListeningExecutorService executorService;
-    private long currentSize;
-    private boolean valid = true;
-    private Optional<ResultsData> resultsData = Optional.empty();
-    private ResultCacheFinalResult finalResult;
+    void done();
 
-    public ResultsCacheEntry(
-            Identity identity,
-            String key,
-            QueryId queryId,
-            String query,
-            Optional<String> sessionCatalog,
-            Optional<String> sessionSchema,
-            Optional<String> queryType,
-            Optional<String> updateType,
-            long maximumSize,
-            ResultsCacheFinalResultConsumer queryInfoRegistrar,
-            ResultsCacheClient client,
-            ListeningExecutorService executorService)
+    boolean isDone();
+
+    /**
+     * @return True, if `isDone` == false and the callback was added.  False, if the `isDone` == true.
+     */
+    boolean addTransitionToDoneCallback(DoneCallback doneCallback);
+
+    Optional<ResultsCacheResult> getEntryResult();
+
+    record ResultsCacheResult(Status status, long resultSetSize)
     {
-        this.identity = requireNonNull(identity, "identity is null");
-        this.key = requireNonNull(key, "key is null");
-        this.finalResult = new ResultCacheFinalResult(INCOMPLETE);
-        this.queryId = requireNonNull(queryId, "queryId is null");
-        this.query = requireNonNull(query, "query is null");
-        this.sessionCatalog = requireNonNull(sessionCatalog, "sessionCatalog is null");
-        this.sessionSchema = requireNonNull(sessionSchema, "sessionSchema is null");
-        this.queryType = requireNonNull(queryType, "queryType is null");
-        this.updateType = requireNonNull(updateType, "updateType is null");
-        checkArgument(maximumSize > 0, "maximumSize is <= 0");
-        if (maximumSize > MAX_SIZE) {
-            log.warn("Cache entry size: %s is greater than the maximum: %s, using maximum", maximumSize, MAX_SIZE);
-        }
-        this.maximumSize = Math.min(maximumSize, MAX_SIZE);
-        this.queryInfoRegistrar = requireNonNull(queryInfoRegistrar, "queryInfoRegistrar is null");
-        this.client = requireNonNull(client, "client is null");
-        this.executorService = requireNonNull(executorService, "executorService is null");
-    }
-
-    public void appendResults(List<Column> columns, QueryResultRows resultRows)
-    {
-        if (!valid) {
-            return;
-        }
-
-        if (resultsData.isEmpty()) {
-            if (columns == null && resultRows.isEmpty()) {
-                log.debug("QueryId: %s, received null columns and empty rows for cache entry %s, ignoring", queryId, key);
-                return;
-            }
-            else if (columns == null) {
-                log.debug("QueryId: %s, null columns provided for results cache entry %s, not caching", queryId, key);
-                valid = false;
-                finalResult = new ResultCacheFinalResult(NO_COLUMNS);
-                return;
-            }
-
-            resultsData = Optional.of(new ResultsData(columns));
-        }
-
-        long logicalSizeInBytes = resultRows.countLogicalSizeInBytes();
-        currentSize += logicalSizeInBytes;
-
-        if (currentSize > maximumSize) {
-            log.debug("QueryId: %s, results exceeded maximum size of %s bytes, not caching", queryId, maximumSize);
-            valid = false;
-            finalResult = new ResultCacheFinalResult(OVER_MAX_SIZE);
-            return;
-        }
-
-        log.debug("QueryId: %s, appending to cache entry, %s bytes, %s current total size", queryId, logicalSizeInBytes, currentSize);
-        resultsData.get().addRecords(resultRows);
-    }
-
-    public void done()
-    {
-        if (valid && resultsData.isPresent()) {
-            log.debug("QueryId: %s, done called and cache entry is valid, uploading to cache", queryId);
-            finalResult = new ResultCacheFinalResult(CACHED, currentSize);
-            submitAsyncUpload(
-                    executorService,
-                    client,
-                    identity,
-                    key,
-                    queryId,
-                    query,
-                    sessionCatalog,
-                    sessionSchema,
-                    queryType,
-                    updateType,
-                    OffsetDateTime.now().toInstant(),
-                    resultsData.orElseThrow());
-            resultsData = Optional.empty();
-        }
-        else if (resultsData.isEmpty()) {
-            log.debug("QueryId: %s, done called and cache entry is empty.  Not uploading", queryId);
-        }
-        else {
-            log.debug("QueryId: %s, done called and cache entry is invalid", queryId);
-        }
-        queryInfoRegistrar.setResultsCacheFinalResult(finalResult);
-        valid = false;
-    }
-
-    private static void submitAsyncUpload(
-            ListeningExecutorService executorService,
-            ResultsCacheClient client,
-            Identity identity,
-            String cacheKey,
-            QueryId queryId,
-            String query,
-            Optional<String> sessionCatalog,
-            Optional<String> sessionSchema,
-            Optional<String> queryType,
-            Optional<String> updateType,
-            Instant createdTime,
-            ResultsData resultsData)
-    {
-        ListenableFuture<?> submitFuture = executorService.submit(() ->
-                client.uploadResultsCacheEntry(
-                        identity,
-                        cacheKey,
-                        queryId,
-                        query,
-                        sessionCatalog,
-                        sessionSchema,
-                        queryType,
-                        updateType,
-                        resultsData.columns,
-                        resultsData.data,
-                        createdTime));
-        MoreFutures.addExceptionCallback(submitFuture, throwable ->
-                log.error(throwable, "Upload to cache failed"));
-    }
-
-    public record ResultCacheFinalResult(ResultStatus status, long resultSetSize)
-    {
-        public enum ResultStatus
+        public enum Status
         {
-            INCOMPLETE("incomplete"),
-            CACHED("cached"),
-            OVER_MAX_SIZE("over max size"),
-            NO_COLUMNS("no columns in result set"),
-            EXECUTE_STATEMENT("execute statement not supported"),
-            NOT_SELECT("not a select statement"),
-            QUERY_HAS_SYSTEM_TABLE("query has system table"),
-            QUERY_HAS_ABAC_RBAC_TABLE("query has table with ABAC/RBAC");
+            CACHING("caching", false),
+            CACHED("cached", false),
+            OVER_MAX_SIZE("over max size", true),
+            NO_COLUMNS("no columns in result set", true),
+            EXECUTE_STATEMENT("execute statement not supported", true),
+            NOT_SELECT("not a select statement", true),
+            QUERY_HAS_SYSTEM_TABLE("query has system table", true),
+            QUERY_HAS_ABAC_RBAC_TABLE("query has table with ABAC/RBAC", true);
 
             private final String display;
+            private final boolean isFiltered;
 
-            ResultStatus(String display)
+            Status(String display, boolean isFiltered)
             {
+                requireNonNull(display, "display is null");
                 this.display = display;
+                this.isFiltered = isFiltered;
             }
 
             public String getDisplay()
             {
                 return display;
             }
+
+            public boolean isFiltered()
+            {
+                return isFiltered;
+            }
         }
 
-        public ResultCacheFinalResult(ResultStatus status)
+        public ResultsCacheResult(Status status)
         {
             this(status, 0);
         }
 
-        public ResultCacheFinalResult(ResultStatus status, long resultSetSize)
+        public ResultsCacheResult(Status status, long resultSetSize)
         {
             this.status = requireNonNull(status, "status is null");
+            checkArgument(resultSetSize >= 0, "resultSetSize cannot be negative");
             this.resultSetSize = resultSetSize;
+        }
+
+        public ResultsCacheResult withCurrentSize(long currentSize)
+        {
+            checkState(status == Status.CACHING, "can only update size in CACHEING state");
+            checkArgument(currentSize >= resultSetSize, "new size is less than current size");
+            return new ResultsCacheResult(Status.CACHING, currentSize);
         }
     }
 
-    private static class ResultsData
+    interface DoneCallback
     {
-        private final List<Column> columns;
-        private List<List<Object>> data = new ArrayList<>();
-
-        public ResultsData(List<Column> columns)
-        {
-            this.columns = ImmutableList.copyOf(requireNonNull(columns, "columns is null"));
-        }
-
-        public void addRecords(Iterable<List<Object>> records)
-        {
-            Iterables.addAll(data, records);
-        }
+        void done();
     }
 }
