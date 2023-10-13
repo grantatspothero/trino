@@ -329,4 +329,20 @@ public class PlanFragment
                 this.activeCatalogs,
                 this.jsonRepresentation);
     }
+
+    public PlanFragment withActiveCatalogs(List<CatalogProperties> activeCatalogs)
+    {
+        return new PlanFragment(
+                this.id,
+                this.root,
+                this.symbols,
+                this.partitioning,
+                this.partitionCount,
+                this.partitionedSources,
+                this.outputPartitioningScheme,
+                this.statsAndCosts,
+                activeCatalogs,
+                // this.languageFunctions,
+                this.jsonRepresentation);
+    }
 }

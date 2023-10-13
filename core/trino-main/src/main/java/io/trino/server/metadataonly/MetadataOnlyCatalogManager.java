@@ -51,6 +51,12 @@ public class MetadataOnlyCatalogManager
     }
 
     @Override
+    public Set<CatalogHandle> getActiveCatalogs()
+    {
+        return ImmutableSet.of();
+    }
+
+    @Override
     public void createCatalog(String catalogName, ConnectorName connectorName, Map<String, String> properties, boolean notExists)
     {
         throw new TrinoException(NOT_SUPPORTED, "CREATE CATALOG is not supported by the metadata only catalog manager");
