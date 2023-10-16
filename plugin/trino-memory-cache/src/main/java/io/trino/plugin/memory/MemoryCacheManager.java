@@ -61,7 +61,6 @@ import static io.airlift.slice.SizeOf.instanceSize;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static sun.misc.Unsafe.ARRAY_OBJECT_INDEX_SCALE;
 
 /**
  * {@link CacheManager} implementation that caches split pages in revocable memory and does not have
@@ -71,7 +70,7 @@ public class MemoryCacheManager
         implements CacheManager
 {
     // based on SizeOf.estimatedSizeOf(java.util.Map<K,V>, java.util.function.ToLongFunction<K>, java.util.function.ToLongFunction<V>)
-    static final int MAP_ENTRY_SIZE = ARRAY_OBJECT_INDEX_SCALE + instanceSize(AbstractMap.SimpleEntry.class);
+    static final int MAP_ENTRY_SIZE = instanceSize(AbstractMap.SimpleEntry.class);
     static final int SETTABLE_FUTURE_INSTANCE_SIZE = instanceSize(SettableFuture.class);
 
     private static final int DEFAULT_MAX_PLAN_SIGNATURES = 200;
