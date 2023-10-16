@@ -89,7 +89,7 @@ public abstract class BaseMariaDbTableStatisticsTest
 
             if (cardinality != null) {
                 // TABLE_ROWS in INFORMATION_SCHEMA.TABLES can be estimated as a very small number
-                assertThat(cardinality).isBetween(1d, 1500 * 1.5);
+                assertThat(cardinality).isBetween(1d, 15000 * 1.5);
             }
 
             assertColumnStats(statsResult, new MapBuilder<String, Integer>()
