@@ -177,7 +177,7 @@ public class MemoryCacheManager
         // account for splitCache entry memory
         long entrySize = MAP_ENTRY_SIZE + key.getRetainedSizeInBytes() + memoryUsageBytes;
         // account for splitLoaded entry
-        entrySize += MAP_ENTRY_SIZE + key.getRetainedSizeInBytes() + SETTABLE_FUTURE_INSTANCE_SIZE;
+        entrySize += MAP_ENTRY_SIZE + SETTABLE_FUTURE_INSTANCE_SIZE;
         if (!revocableMemoryAllocator.trySetBytes(allocatedRevocableBytes + entrySize)) {
             // not sufficient memory to store split pages
             abortStorePages(key);
@@ -221,7 +221,7 @@ public class MemoryCacheManager
                 splitRetainedSizeInBytes += block.getRetainedSizeInBytes();
             }
             // account for splitLoaded entry memory
-            splitRetainedSizeInBytes += MAP_ENTRY_SIZE + key.getRetainedSizeInBytes() + SETTABLE_FUTURE_INSTANCE_SIZE;
+            splitRetainedSizeInBytes += MAP_ENTRY_SIZE + SETTABLE_FUTURE_INSTANCE_SIZE;
 
             iterator.remove();
             splitLoaded.remove(key);

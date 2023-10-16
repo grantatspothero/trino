@@ -93,7 +93,7 @@ public class TestMemoryCacheManager
 
         // make sure memory is transferred to cacheManager after sink is finished
         sink.finish();
-        long cacheEntrySize = 2L * (MAP_ENTRY_SIZE + SplitKey.INSTANCE_SIZE + splitId.getRetainedSizeInBytes()) + SETTABLE_FUTURE_INSTANCE_SIZE;
+        long cacheEntrySize = 2L * MAP_ENTRY_SIZE + SplitKey.INSTANCE_SIZE + splitId.getRetainedSizeInBytes() + SETTABLE_FUTURE_INSTANCE_SIZE;
         assertThat(allocatedRevocableMemory).isEqualTo(page.getRetainedSizeInBytes() + cacheEntrySize);
 
         // split data should be available now
