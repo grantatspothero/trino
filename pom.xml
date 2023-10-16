@@ -10,7 +10,7 @@
 
     <groupId>io.trino</groupId>
     <artifactId>trino-root</artifactId>
-    <version>428-galaxy-1-SNAPSHOT</version>
+    <version>429-galaxy-1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>${project.artifactId}</name>
@@ -202,7 +202,7 @@
         <!-- released from https://github.com/starburstdata/varada -->
         <dep.warp-speed.version>428.2.2</dep.warp-speed.version>
         <!-- released from https://github.com/starburstdata/trino-buffer-service -->
-        <dep.trino-buffer-service.version>427-trino-buffer-service-601-g76f8374</dep.trino-buffer-service.version>
+        <dep.trino-buffer-service.version>429-trino-buffer-service-603-g32bef77</dep.trino-buffer-service.version>
         <!-- released form https://github.com/starburstdata/schema-discovery -->
         <dep.schema-discovery.version>428.20231018-542c99f</dep.schema-discovery.version>
         <!-- released from https://github.com/starburstdata/starburst-dataframe -->
@@ -210,7 +210,7 @@
         <!-- released from https://github.com/starburstdata/stargate -->
         <dep.stargate.version>stargate-12013-g5b63b1db2</dep.stargate.version>
         <!-- released from https://github.com/starburstdata/starburst-trino-plugins -->
-        <dep.starburst-trino-plugins.version>428</dep.starburst-trino-plugins.version>
+        <dep.starburst-trino-plugins.version>429</dep.starburst-trino-plugins.version>
         <dep.cloudevents.version>2.2.0</dep.cloudevents.version>
 
         <!--

@@ -32,7 +32,7 @@ import io.trino.spi.type.TypeManager;
 
 import java.util.Map;
 
-import static com.starburstdata.trino.plugins.snowflake.SnowflakePlugin.SNOWFLAKE_PARALLEL;
+import static com.starburstdata.trino.plugins.snowflake.SnowflakeConnectorFlavour.PARALLEL;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.trino.plugin.base.Versions.checkStrictSpiVersionMatch;
 import static java.util.Objects.requireNonNull;
@@ -43,7 +43,7 @@ public class GalaxySnowflakeParallelConnectorFactory
     @Override
     public String getName()
     {
-        return SNOWFLAKE_PARALLEL;
+        return PARALLEL.getName();
     }
 
     @Override

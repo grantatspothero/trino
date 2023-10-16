@@ -20,7 +20,7 @@ import io.trino.spi.connector.ConnectorFactory;
 
 import java.util.List;
 
-import static com.starburstdata.trino.plugins.snowflake.SnowflakePlugin.SNOWFLAKE_JDBC;
+import static com.starburstdata.trino.plugins.snowflake.SnowflakeConnectorFlavour.JDBC;
 import static io.airlift.configuration.ConfigurationAwareModule.combine;
 
 public class GalaxySnowflakePlugin
@@ -30,7 +30,7 @@ public class GalaxySnowflakePlugin
     public Iterable<ConnectorFactory> getConnectorFactories()
     {
         return List.of(
-                new JdbcConnectorFactory(SNOWFLAKE_JDBC, combine(new GalaxySnowflakeJdbcModule(), new SnowflakeJdbcClientModule(false))),
+                new JdbcConnectorFactory(JDBC.getName(), combine(new GalaxySnowflakeJdbcModule(), new SnowflakeJdbcClientModule(JDBC))),
                 new GalaxySnowflakeParallelConnectorFactory());
     }
 }
