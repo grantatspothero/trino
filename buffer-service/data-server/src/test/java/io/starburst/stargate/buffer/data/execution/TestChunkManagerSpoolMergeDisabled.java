@@ -42,6 +42,7 @@ public class TestChunkManagerSpoolMergeDisabled
         getFutureValue(spoolingStorage.writeChunk(drainedBufferNodeId, EXCHANGE_0, 0L, toChunkDataLease(dataPages)));
 
         ChunkManager chunkManager = createChunkManager(
+                BUFFER_NODE_ID,
                 defaultMemoryAllocator(),
                 DataSize.of(16, MEGABYTE),
                 DataSize.of(64, MEGABYTE),
