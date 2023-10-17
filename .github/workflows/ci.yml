@@ -1193,6 +1193,7 @@ jobs:
             - config: default
               suite: suite-warp-speed
               runners: [ self-hosted, sep-cicd, gha-fleet-large ]
+           # this suite is designed specifically for apache-hive3. TODO remove the suite once we can run all regular tests on apache-hive3.
             - config: apache-hive3
               suite: suite-hms-only
           EOF
