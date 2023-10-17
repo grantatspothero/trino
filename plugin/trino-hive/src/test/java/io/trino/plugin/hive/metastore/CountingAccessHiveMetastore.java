@@ -46,6 +46,7 @@ public class CountingAccessHiveMetastore
     public enum Method
     {
         CREATE_DATABASE,
+        DROP_DATABASE,
         CREATE_TABLE,
         GET_ALL_DATABASES,
         GET_DATABASE,
@@ -158,7 +159,8 @@ public class CountingAccessHiveMetastore
     @Override
     public void dropDatabase(String databaseName, boolean deleteData)
     {
-        throw new UnsupportedOperationException();
+        methodInvocations.add(Method.DROP_DATABASE);
+        delegate.dropDatabase(databaseName, deleteData);
     }
 
     @Override
