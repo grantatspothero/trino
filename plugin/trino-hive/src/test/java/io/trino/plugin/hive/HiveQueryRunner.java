@@ -245,6 +245,9 @@ public final class HiveQueryRunner
         {
             setupLogging();
 
+            if (withPlanAlternatives) {
+                super.addExtraProperty("optimizer.use-sub-plan-alternatives", "true");
+            }
             DistributedQueryRunner queryRunner = super.build();
 
             try {
