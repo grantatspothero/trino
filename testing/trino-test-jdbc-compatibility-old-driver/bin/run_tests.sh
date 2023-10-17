@@ -26,7 +26,8 @@ fi
 echo "Testing every ${version_step}. version between ${first_tested_version} and ${previous_released_version}"
 
 # 404 was skipped
-tested_versions=$(seq "${first_tested_version}" ${version_step} "${previous_released_version}" | grep -vx 404)
+# 422 needs a different version of opentelemetry-api and tests fail with ClassNotFoundException: io.opentelemetry.semconv.trace.attributes.SemanticAttributes
+tested_versions=$(seq "${first_tested_version}" ${version_step} "${previous_released_version}" | grep -vx 404 | grep -vx 422)
 
 if (( (previous_released_version - first_tested_version) % version_step != 0 )); then
     tested_versions="${tested_versions} ${previous_released_version}"
