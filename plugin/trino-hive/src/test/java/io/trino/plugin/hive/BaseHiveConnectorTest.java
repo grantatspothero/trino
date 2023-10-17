@@ -8772,6 +8772,7 @@ public abstract class BaseHiveConnectorTest
                     // happen for sf1 so we disable DF completely since the above property cannot be changed per session
                     .setSystemProperty(ENABLE_DYNAMIC_FILTERING, "false")
                     .build();
+            assertQuerySucceeds("call system.system.flush_history_based_stats_cache()");
             String tableName = "orders_correlated" + randomNameSuffix();
             computeActual("""
                     CREATE TABLE %s AS

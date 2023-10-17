@@ -21,6 +21,9 @@ import com.google.inject.Module;
 import com.google.inject.Provider;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
+import com.google.inject.multibindings.ProvidesIntoSet;
+import io.trino.connector.system.FlushHistoryBasedStatsCacheProcedure;
+import io.trino.spi.procedure.Procedure;
 import io.trino.sql.PlannerContext;
 
 import java.lang.annotation.Retention;
@@ -49,6 +52,7 @@ public class StatsCalculatorModule
         binder.bind(HistoryBasedStatsCalculator.class).in(Scopes.SINGLETON);
         binder.bind(StatsCalculator.class).to(HistoryBasedStatsCalculator.class);
         binder.bind(StatsCalculator.class).annotatedWith(NoHistoryBasedStats.class).to(ComposableStatsCalculator.class);
+        binder.bind(FlushHistoryBasedStatsCacheProcedure.class).in(Scopes.SINGLETON);
     }
 
     @Retention(RUNTIME)
@@ -104,5 +108,11 @@ public class StatsCalculatorModule
 
             return rules.build();
         }
+    }
+
+    @ProvidesIntoSet
+    public static Procedure getFlushHistoryBasedStatsCacheProcedure(FlushHistoryBasedStatsCacheProcedure procedure)
+    {
+        return procedure.get();
     }
 }

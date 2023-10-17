@@ -31,6 +31,7 @@ import io.trino.testing.QueryRunner;
 import io.trino.tests.tpch.TpchQueryRunnerBuilder;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import static io.airlift.log.Level.DEBUG;
@@ -91,6 +92,12 @@ public class TestHistoryBasedStats
         queryRunner.execute(memorySession, "CREATE TABLE two_values AS SELECT id, value as value2 FROM three_values WHERE value IN (1, 2)");
 
         return queryRunner;
+    }
+
+    @BeforeMethod
+    public void flushCache()
+    {
+        assertQuerySucceeds("call system.system.flush_history_based_stats_cache()");
     }
 
     @Test
