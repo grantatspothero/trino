@@ -107,7 +107,7 @@ public class GalaxyCacheMaterializedViewSystemTable
                 }
             }
             catch (NotFoundException ignore) {
-                materializedViewSystemTable.addMaterializedViewForCatalog(session, displayTable, prefix);
+                materializedViewSystemTable.addMaterializedViewForCatalog(session, displayTable, prefix, true);
             }
         });
 
