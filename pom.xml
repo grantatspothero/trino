@@ -197,7 +197,7 @@
         <dep.antlr.version>4.13.1</dep.antlr.version>
         <dep.asm.version>9.6</dep.asm.version>
 
-        <dep.docker.images.version>86</dep.docker.images.version>
+        <dep.docker.images.version>87</dep.docker.images.version>
 
         <!-- released from https://github.com/starburstdata/varada -->
         <dep.warp-speed.version>429.2.4</dep.warp-speed.version>
