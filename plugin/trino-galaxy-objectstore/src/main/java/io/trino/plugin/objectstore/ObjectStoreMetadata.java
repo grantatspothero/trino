@@ -137,7 +137,6 @@ import static io.trino.plugin.hive.util.HiveUtil.isHudiTable;
 import static io.trino.plugin.hive.util.HiveUtil.isIcebergTable;
 import static io.trino.plugin.iceberg.IcebergMaterializedViewDefinition.decodeMaterializedViewData;
 import static io.trino.plugin.iceberg.catalog.AbstractTrinoCatalog.toSpiMaterializedViewColumns;
-import static io.trino.plugin.objectstore.RelationType.DELTA_TABLE;
 import static io.trino.plugin.objectstore.RelationType.MATERIALIZED_VIEW;
 import static io.trino.plugin.objectstore.RelationType.VIEW;
 import static io.trino.plugin.objectstore.TableType.DELTA;
@@ -457,11 +456,6 @@ public class ObjectStoreMetadata
                 }
 
                 case HIVE_TABLE, ICEBERG_TABLE, DELTA_TABLE, HUDI_TABLE -> {
-                    if (relationType == DELTA_TABLE) {
-                        // TODO Currently, DeltaLakeMetadata.getTableHandle does not cache file system access, so calling it would incur e.g. additional _last_checkpoint reads
-                        //  this may be fixed by https://github.com/trinodb/trino/pull/19128
-                        break;
-                    }
                     if (getTableHandle(session, viewName, Optional.empty(), Optional.empty()) != null) {
                         // This is a table, so not a materialized view
                         return Optional.empty();
@@ -1352,11 +1346,6 @@ public class ObjectStoreMetadata
                 }
 
                 case HIVE_TABLE, ICEBERG_TABLE, DELTA_TABLE, HUDI_TABLE -> {
-                    if (relationType == DELTA_TABLE) {
-                        // TODO Currently, DeltaLakeMetadata.getTableHandle does not cache file system access, so calling it would incur e.g. additional _last_checkpoint reads
-                        //  this may be fixed by https://github.com/trinodb/trino/pull/19128
-                        break;
-                    }
                     if (getTableHandle(session, viewName, Optional.empty(), Optional.empty()) != null) {
                         // This is a table, so not a materialized view
                         return Optional.empty();
