@@ -107,7 +107,9 @@ import static io.trino.hdfs.s3.TrinoS3FileSystem.S3_STREAMING_UPLOAD_ENABLED;
 import static io.trino.hdfs.s3.TrinoS3FileSystem.S3_STREAMING_UPLOAD_PART_SIZE;
 import static io.trino.hdfs.s3.TrinoS3FileSystem.S3_USER_AGENT_PREFIX;
 import static io.trino.hdfs.s3.TrinoS3FileSystem.keysFromPath;
+import static io.trino.hdfs.s3.TrinoS3FileSystem.legacyCorruptedKeyFromPath;
 import static io.trino.memory.context.AggregatedMemoryContext.newRootAggregatedMemoryContext;
+import static java.lang.String.format;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
@@ -1005,6 +1007,34 @@ public class TestTrinoS3FileSystem
 
     @Test
     public void testLegacyCorruptedLocation()
+    {
+        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3a", "some//path", true))
+                .isEqualTo(Optional.of("some/path#%2Fsome%2F%2Fpath"));
+        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "some//path", false))
+                .isEqualTo(Optional.empty());
+        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "some//path", true))
+                .isEqualTo(Optional.of("some/path#%2Fsome%2F%2Fpath"));
+        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "some%path", true))
+                .isEqualTo(Optional.empty());
+        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "some%path", false))
+                .isEqualTo(Optional.empty());
+        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "some?path", true))
+                .isEqualTo(Optional.empty());
+        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "some?path", false))
+                .isEqualTo(Optional.empty());
+        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "/some/path", true))
+                .isEqualTo(Optional.of("some/path#%2F%2Fsome%2Fpath"));
+        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "/some/path", false))
+                .isEqualTo(Optional.empty());
+    }
+
+    private static Optional<String> createLegacyCorruptedPathForKeyAndProtocol(String protocol, String correctKey, boolean supportLegacyCorruptedMode)
+    {
+        return legacyCorruptedKeyFromPath(new Path(format("%s://my-bucket/%s", protocol, correctKey)), correctKey, supportLegacyCorruptedMode);
+    }
+
+    @Test
+    public void testKeysFromPath()
     {
         // s3a:// and s3n:// did not go through path corruption, since the original code checked for s3://
         // https://github.com/trinodb/trino/blob/46e215294bb01917ddd2bd7ce085a2f2d2cad8a4/lib/trino-hdfs/src/main/java/io/trino/filesystem/hdfs/HadoopPaths.java#L28-L41

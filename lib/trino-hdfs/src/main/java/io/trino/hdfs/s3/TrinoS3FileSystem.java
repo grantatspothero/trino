@@ -1092,7 +1092,8 @@ public class TrinoS3FileSystem
         return new PathKeys(correctKey, legacyCorrupted);
     }
 
-    private static Optional<String> legacyCorruptedKeyFromPath(Path mangledPath, String correctKey, boolean supportLegacyCorruptedPaths)
+    @VisibleForTesting
+    static Optional<String> legacyCorruptedKeyFromPath(Path mangledPath, String correctKey, boolean supportLegacyCorruptedPaths)
     {
         if (!supportLegacyCorruptedPaths) {
             return Optional.empty();
