@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.iceberg;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.airlift.json.JsonCodec;
 import io.airlift.json.JsonCodecFactory;
@@ -30,10 +31,15 @@ import io.trino.plugin.iceberg.delete.DeleteFile;
 import io.trino.spi.SplitWeight;
 import io.trino.spi.block.Block;
 import io.trino.spi.block.TestingBlockJsonSerde;
+import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.SchemaTableName;
+import io.trino.spi.predicate.Domain;
+import io.trino.spi.predicate.Range;
 import io.trino.spi.predicate.TupleDomain;
+import io.trino.spi.predicate.ValueSet;
 import io.trino.spi.security.ConnectorIdentity;
+import io.trino.spi.type.LongTimestampWithTimeZone;
 import io.trino.spi.type.TestingTypeManager;
 import io.trino.spi.type.Type;
 import org.apache.iceberg.PartitionSpec;
@@ -47,20 +53,26 @@ import org.testng.annotations.Test;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.google.common.io.MoreFiles.deleteRecursively;
 import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_FACTORY;
-import static io.trino.plugin.iceberg.ColumnIdentity.TypeCategory.PRIMITIVE;
+import static io.trino.plugin.iceberg.ColumnIdentity.primitiveColumnIdentity;
 import static io.trino.spi.predicate.Domain.singleValue;
 import static io.trino.spi.type.BigintType.BIGINT;
-import static io.trino.spi.type.IntegerType.INTEGER;
+import static io.trino.spi.type.TimeZoneKey.UTC_KEY;
+import static io.trino.spi.type.TimestampWithTimeZoneType.TIMESTAMP_TZ_MICROS;
+import static io.trino.spi.type.Timestamps.MILLISECONDS_PER_DAY;
+import static io.trino.spi.type.Timestamps.MILLISECONDS_PER_SECOND;
 import static io.trino.type.InternalTypeManager.TESTING_TYPE_MANAGER;
+import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestIcebergCacheIds
@@ -69,6 +81,7 @@ public class TestIcebergCacheIds
     private IcebergMetadata icebergMetadata;
     private IcebergSplitManager splitManager;
     private File tempDir;
+    private static final AtomicInteger nextColumnId = new AtomicInteger(1);
 
     @BeforeClass
     public void setup()
@@ -122,7 +135,8 @@ public class TestIcebergCacheIds
     @Test
     public void testTableId()
     {
-        IcebergColumnHandle columnHandle = new IcebergColumnHandle(new ColumnIdentity(2, "col1", PRIMITIVE, List.of()), INTEGER, List.of(), INTEGER, Optional.empty());
+        IcebergColumnHandle bigIntColumnHandle = newPrimitiveColumn(BIGINT);
+        IcebergColumnHandle timestampColumnHandle = newPrimitiveColumn(TIMESTAMP_TZ_MICROS);
         Optional<String> partitionSpecJson = Optional.of("partitionSpecJson");
         SchemaTableName schemaTableName = new SchemaTableName(DATABASE_NAME, "testing");
         CatalogHandle catalogHandle = CatalogHandle.fromId("iceberg:NORMAL:v12345");
@@ -164,7 +178,7 @@ public class TestIcebergCacheIds
 
         // `projectedColumns` is not part of table id
         assertThat(icebergMetadata.getCacheTableId(
-                createIcebergTableHandle(catalogHandle, schemaTableName, "tableSchemaJson", partitionSpecJson, Set.of(columnHandle), Optional.empty(), "location")))
+                createIcebergTableHandle(catalogHandle, schemaTableName, "tableSchemaJson", partitionSpecJson, Set.of(bigIntColumnHandle), Optional.empty(), "location")))
                 .isEqualTo(icebergMetadata.getCacheTableId(
                         createIcebergTableHandle(catalogHandle, schemaTableName, "tableSchemaJson", Optional.of("different"), Set.of(), Optional.empty(), "location")));
 
@@ -181,13 +195,34 @@ public class TestIcebergCacheIds
                         createIcebergTableHandle(catalogHandle, schemaTableName, "tableSchemaJson", partitionSpecJson, Set.of(), Optional.empty(), "different")));
 
         // unenforce predicate should be part of table id
-        assertThat(icebergMetadata.getCacheTableId(createIcebergTableHandle(catalogHandle, schemaTableName, "tableSchemaJson", partitionSpecJson, TupleDomain.withColumnDomains(ImmutableMap.of(columnHandle, singleValue(BIGINT, 1L))), TupleDomain.all(), Set.of(), Optional.empty(), "location")))
+        assertThat(icebergMetadata.getCacheTableId(createIcebergTableHandle(catalogHandle, schemaTableName, "tableSchemaJson", partitionSpecJson, TupleDomain.withColumnDomains(ImmutableMap.of(bigIntColumnHandle, singleValue(BIGINT, 1L))), TupleDomain.all(), Set.of(), Optional.empty(), "location")))
                 .isNotEqualTo(icebergMetadata.getCacheTableId(
                         createIcebergTableHandle(catalogHandle, schemaTableName, "tableSchemaJson", partitionSpecJson, Set.of(), Optional.empty(), "location")));
 
+        // unenforce predicate timestamp(6) should be part of table id
+        LocalDate someDate = LocalDate.of(2022, 3, 22);
+
+        long startOfDateUtcEpochMillis = someDate.atStartOfDay().toEpochSecond(UTC) * MILLISECONDS_PER_SECOND;
+        LongTimestampWithTimeZone startOfDateUtc = timestampTzFromEpochMillis(startOfDateUtcEpochMillis);
+        LongTimestampWithTimeZone startOfNextDateUtc = timestampTzFromEpochMillis(startOfDateUtcEpochMillis + MILLISECONDS_PER_DAY);
+        assertThat(icebergMetadata.getCacheTableId(createIcebergTableHandle(
+                catalogHandle,
+                schemaTableName,
+                "tableSchemaJson",
+                partitionSpecJson,
+                TupleDomain.withColumnDomains(Map.of(timestampColumnHandle, Domain.create(ValueSet.ofRanges(Range.range(TIMESTAMP_TZ_MICROS, startOfDateUtc, true, startOfNextDateUtc, false)), false))),
+                TupleDomain.all(),
+                Set.of(),
+                Optional.empty(),
+                "location")))
+                .isEqualTo(Optional.of(new CacheTableId("{\"catalog\":\"iceberg:normal:v12345\",\"schemaName\":\"iceberg_cache\",\"tableName\":\"testing\"," +
+                        "\"tableLocation\":\"location\",\"unenforcedPredicate\":{\"columnDomains\":[{\"column\":\"{\\\"baseColumnIdentity\\\":{\\\"id\\\":2,\\\"name\\\":\\\"column_2\\\",\\\"typeCategory\\\":\\\"PRIMITIVE\\\",\\\"children\\\":[]},\\\"baseType\\\":\\\"timestamp(6) with time zone\\\"," +
+                        "\\\"path\\\":[],\\\"type\\\":\\\"timestamp(6) with time zone\\\"}\",\"domain\":{\"values\":{\"@type\":\"sortable\",\"type\":\"timestamp(6) with time zone\",\"inclusive\":[true,false]," +
+                        "\"sortedRanges\":\"BwAAAEZJWEVEMTICAAAAAAAAwMXu+hcAAAAAAAAAgCtB+xcAAAAAAA==\"},\"nullAllowed\":false}}]},\"storageProperties\":{}}")));
+
         // enforce predicate is not part of table id
         assertThat(icebergMetadata.getCacheTableId(
-                createIcebergTableHandle(catalogHandle, schemaTableName, "tableSchemaJson", partitionSpecJson, TupleDomain.all(), TupleDomain.withColumnDomains(ImmutableMap.of(columnHandle, singleValue(BIGINT, 1L))), Set.of(), Optional.empty(), "location")))
+                createIcebergTableHandle(catalogHandle, schemaTableName, "tableSchemaJson", partitionSpecJson, TupleDomain.all(), TupleDomain.withColumnDomains(ImmutableMap.of(bigIntColumnHandle, singleValue(BIGINT, 1L))), Set.of(), Optional.empty(), "location")))
                 .isEqualTo(icebergMetadata.getCacheTableId(
                         createIcebergTableHandle(catalogHandle, schemaTableName, "tableSchemaJson", partitionSpecJson, Set.of(), Optional.empty(), "location")));
 
@@ -385,6 +420,22 @@ public class TestIcebergCacheIds
                 "tableLocation",
                 storageProperties,
                 true,
+                Optional.empty());
+    }
+
+    private static LongTimestampWithTimeZone timestampTzFromEpochMillis(long epochMillis)
+    {
+        return LongTimestampWithTimeZone.fromEpochMillisAndFraction(epochMillis, 0, UTC_KEY);
+    }
+
+    private static IcebergColumnHandle newPrimitiveColumn(Type type)
+    {
+        int id = nextColumnId.getAndIncrement();
+        return new IcebergColumnHandle(
+                primitiveColumnIdentity(id, "column_" + id),
+                type,
+                ImmutableList.of(),
+                type,
                 Optional.empty());
     }
 
