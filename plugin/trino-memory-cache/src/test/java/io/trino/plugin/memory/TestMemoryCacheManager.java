@@ -14,7 +14,6 @@
 package io.trino.plugin.memory;
 
 import com.google.common.collect.ImmutableList;
-import io.airlift.stats.Distribution;
 import io.trino.client.NodeVersion;
 import io.trino.plugin.memory.MemoryCacheManager.SplitKey;
 import io.trino.spi.Page;
@@ -35,6 +34,7 @@ import org.testng.annotations.Test;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
@@ -268,9 +268,8 @@ public class TestMemoryCacheManager
         sink.get().appendPage(oneMegabytePage);
         sink.get().finish();
 
-        Distribution splitSizeDistribution = cacheManager.getCachedSplitSizeDistribution();
-        assertThat(splitSizeDistribution.getCount()).isEqualTo(1);
-        assertThat(splitSizeDistribution.getAvg()).isEqualTo(oneMegabytePage.getRetainedSizeInBytes());
+        Map<Double, Double> splitSizePercentiles = cacheManager.getCachedSplitSizeDistribution();
+        assertThat(splitSizePercentiles.get(0.01)).isEqualTo(oneMegabytePage.getRetainedSizeInBytes());
     }
 
     private static PlanSignature createPlanSignature(String signature)

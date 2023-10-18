@@ -35,7 +35,6 @@ import io.trino.spi.connector.ConnectorPageSink;
 import io.trino.spi.connector.ConnectorPageSource;
 import io.trino.spi.connector.FixedPageSource;
 import org.weakref.jmx.Managed;
-import org.weakref.jmx.Nested;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -73,6 +72,7 @@ public class MemoryCacheManager
     static final int SETTABLE_FUTURE_INSTANCE_SIZE = instanceSize(SettableFuture.class);
 
     private static final long WORKER_NODES_CACHE_TIMEOUT_SECS = 10;
+    private static final int DISTRIBUTION_ENTRY_COUNT = 1_000_000;
 
     private final MemoryAllocator revocableMemoryAllocator;
 
@@ -82,7 +82,6 @@ public class MemoryCacheManager
     private final Map<SplitKey, SettableFuture<?>> splitLoaded = new HashMap<>();
     @GuardedBy("this")
     private final ObjectToIdMap<PlanSignature> signatureToId = new ObjectToIdMap<>(PlanSignature::getRetainedSizeInBytes);
-    private final Distribution cachedSplitSizeDistribution = new Distribution();
     @GuardedBy("this")
     private long cacheRevocableBytes;
 
@@ -116,10 +115,19 @@ public class MemoryCacheManager
     }
 
     @Managed
-    @Nested
-    public Distribution getCachedSplitSizeDistribution()
+    public synchronized Map<Double, Double> getCachedSplitSizeDistribution()
     {
-        return cachedSplitSizeDistribution;
+        Distribution distribution = new Distribution();
+        int counter = 0;
+        for (Iterator<Map.Entry<SplitKey, List<Page>>> iterator = splitCache.entrySet().iterator(); iterator.hasNext() && counter < DISTRIBUTION_ENTRY_COUNT; counter++) {
+            Map.Entry<SplitKey, List<Page>> entry = iterator.next();
+            long pagesRetainedSizeInBytes = 0L;
+            for (Page page : entry.getValue()) {
+                pagesRetainedSizeInBytes += page.getRetainedSizeInBytes();
+            }
+            distribution.add(pagesRetainedSizeInBytes);
+        }
+        return distribution.getPercentiles();
     }
 
     @Managed
@@ -177,7 +185,6 @@ public class MemoryCacheManager
         cacheRevocableBytes += entrySize;
         splitCache.put(key, pages);
         splitLoaded.get(key).set(null);
-        cachedSplitSizeDistribution.add(memoryUsageBytes);
         checkState(signatureToId.getUsageCount(key.signatureId()) > 0, "Signature id must not be released while split is cached");
     }
 
