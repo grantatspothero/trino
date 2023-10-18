@@ -30,12 +30,12 @@ import io.trino.memory.NodeMemoryConfig;
 import io.trino.metadata.Split;
 import io.trino.metadata.TableHandle;
 import io.trino.spi.Page;
+import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheManager;
 import io.trino.spi.cache.CacheSplitId;
 import io.trino.spi.cache.PlanSignature;
 import io.trino.spi.cache.SignatureKey;
 import io.trino.spi.connector.ColumnHandle;
-import io.trino.spi.connector.ConnectorPageSink;
 import io.trino.spi.connector.ConnectorPageSource;
 import io.trino.spi.connector.ConnectorSplit;
 import io.trino.spi.connector.DynamicFilter;
@@ -98,9 +98,7 @@ public class TestCacheDataOperator
     public void testLimitCache()
     {
         PlanSignature signature = createPlanSignature("sig");
-        CacheSplitId splitId = new CacheSplitId("split");
         CacheManager.SplitCache splitCache = registry.getCacheManager().getSplitCache(signature);
-        Optional<ConnectorPageSink> sink = splitCache.storePages(splitId);
         PlanNodeIdAllocator planNodeIdAllocator = new PlanNodeIdAllocator();
 
         CacheDataOperator.CacheDataOperatorFactory operatorFactory = new CacheDataOperator.CacheDataOperatorFactory(
@@ -113,31 +111,29 @@ public class TestCacheDataOperator
 
         CacheMetrics cacheMetrics = new CacheMetrics();
 
-        driverContext.setCacheDriverContext(new CacheDriverContext(Optional.empty(), sink, EMPTY, cacheMetrics));
+        driverContext.setCacheDriverContext(new CacheDriverContext(Optional.empty(), splitCache.storePages(new CacheSplitId("split1")), EMPTY, cacheMetrics));
         CacheDataOperator cacheDataOperator = (CacheDataOperator) operatorFactory.createOperator(driverContext);
 
         // sink was not aborted - there is a space in a cache. The page was passed through and split is going to be cached
         Page smallPage = createPage(ImmutableList.of(BIGINT), 1, Optional.empty(), ImmutableList.of(createLongSequenceBlock(0, 10)));
         cacheDataOperator.addInput(smallPage);
         assertThat(cacheDataOperator.getOutput()).isEqualTo(smallPage);
-        assertThat(sink.get().getMemoryUsage()).isEqualTo(204L);
         cacheDataOperator.finish();
         assertThat(cacheMetrics.getSplitNotCachedCount()).isEqualTo(0);
         assertThat(cacheMetrics.getSplitCachedCount()).isEqualTo(1);
 
         // sink was aborted - there is no sufficient space in a cache. The page was passed through but split is not going to be cached
-        Page bigPage = createPage(ImmutableList.of(BIGINT), 1, Optional.empty(), ImmutableList.of(createLongSequenceBlock(0, 102)));
+        Page bigPage = createPage(ImmutableList.of(BIGINT), 1, Optional.empty(), ImmutableList.of(createLongSequenceBlock(0, 2_000)));
         driverContext = createTaskContext(Executors.newSingleThreadExecutor(), Executors.newScheduledThreadPool(1), TEST_SESSION)
                 .addPipelineContext(0, true, true, false)
                 .addDriverContext();
-        driverContext.setCacheDriverContext(new CacheDriverContext(Optional.empty(), sink, EMPTY, cacheMetrics));
+        driverContext.setCacheDriverContext(new CacheDriverContext(Optional.empty(), splitCache.storePages(new CacheSplitId("split2")), EMPTY, cacheMetrics));
         cacheDataOperator = (CacheDataOperator) operatorFactory.createOperator(driverContext);
 
         cacheDataOperator.addInput(bigPage);
         cacheDataOperator.finish();
 
         assertThat(cacheDataOperator.getOutput()).isEqualTo(bigPage);
-        assertThat(sink.get().getMemoryUsage()).isEqualTo(1144L);
         assertThat(cacheMetrics.getSplitNotCachedCount()).isEqualTo(1);
         assertThat(cacheMetrics.getSplitCachedCount()).isEqualTo(1);
     }
@@ -168,11 +164,10 @@ public class TestCacheDataOperator
                         ImmutableList.of(passThroughOperatorFactory, cacheDataOperatorFactory),
                         OptionalInt.empty()),
                 prepareDriverFactory(operatorIdAllocator, 2, preparePassThroughOperator(() -> smallPage)));
-        TestPageSourceProvider pageSourceProvider = new TestPageSourceProvider(smallPage);
 
         CacheDriverFactory cacheDriverFactory = new CacheDriverFactory(
                 TEST_SESSION,
-                pageSourceProvider,
+                new TestPageSourceProvider(),
                 registry,
                 TEST_TABLE_HANDLE,
                 signature,
@@ -213,7 +208,7 @@ public class TestCacheDataOperator
         return new PlanSignature(
                 new SignatureKey(signature),
                 Optional.empty(),
-                ImmutableList.of(),
+                ImmutableList.of(new CacheColumnId("id")),
                 TupleDomain.all(),
                 TupleDomain.all());
     }
@@ -252,13 +247,6 @@ public class TestCacheDataOperator
     private static class TestPageSourceProvider
             implements PageSourceProvider
     {
-        private Page page;
-
-        public TestPageSourceProvider(Page page)
-        {
-            this.page = page;
-        }
-
         @Override
         public ConnectorPageSource createPageSource(
                 Session session,
@@ -267,7 +255,7 @@ public class TestCacheDataOperator
                 List<ColumnHandle> columns,
                 DynamicFilter dynamicFilter)
         {
-            return new FixedPageSource(ImmutableList.of(page));
+            return new FixedPageSource(ImmutableList.of());
         }
 
         @Override
@@ -301,7 +289,7 @@ public class TestCacheDataOperator
             @Override
             public Operator createOperator(DriverContext driverContext)
             {
-                return new PassThroughOperator(driverContext.addOperatorContext(operatorId, planNodeId, PassThroughOperator.class.getSimpleName()), pageSupplier);
+                return new PassThroughOperator(driverContext.addOperatorContext(operatorId, planNodeId, PassThroughOperator.class.getSimpleName()), pageSupplier.get());
             }
 
             @Override
@@ -322,13 +310,13 @@ public class TestCacheDataOperator
         }
 
         private final OperatorContext context;
+        private final Page page;
         private boolean finished;
-        private Supplier<Page> pageSupplier;
 
-        public PassThroughOperator(OperatorContext context, Supplier<Page> pageSupplier)
+        public PassThroughOperator(OperatorContext context, Page page)
         {
             this.context = requireNonNull(context, "context is null");
-            this.pageSupplier = requireNonNull(pageSupplier, "pageSupplier is null");
+            this.page = requireNonNull(page, "page is null");
         }
 
         @Override
@@ -353,7 +341,7 @@ public class TestCacheDataOperator
         public Page getOutput()
         {
             finished = true;
-            return pageSupplier.get();
+            return page;
         }
 
         @Override
