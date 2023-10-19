@@ -22,6 +22,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import io.airlift.slice.Slice;
 import io.airlift.stats.Distribution;
+import io.airlift.stats.TimeStat;
 import io.trino.spi.HostAddress;
 import io.trino.spi.Node;
 import io.trino.spi.NodeManager;
@@ -35,6 +36,7 @@ import io.trino.spi.connector.ConnectorPageSink;
 import io.trino.spi.connector.ConnectorPageSource;
 import io.trino.spi.connector.FixedPageSource;
 import org.weakref.jmx.Managed;
+import org.weakref.jmx.Nested;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -82,6 +84,7 @@ public class MemoryCacheManager
     private final Map<SplitKey, SettableFuture<?>> splitLoaded = new HashMap<>();
     @GuardedBy("this")
     private final ObjectToIdMap<PlanSignature> signatureToId = new ObjectToIdMap<>(PlanSignature::getRetainedSizeInBytes);
+    private final TimeStat revokeMemoryTime = new TimeStat();
     @GuardedBy("this")
     private long cacheRevocableBytes;
 
@@ -109,9 +112,11 @@ public class MemoryCacheManager
     @Override
     public synchronized long revokeMemory(long bytesToRevoke)
     {
-        checkArgument(bytesToRevoke >= 0);
-        long initialRevocableBytes = getRevocableBytes();
-        return removeEldestSplits(() -> initialRevocableBytes - getRevocableBytes() >= bytesToRevoke);
+        try (TimeStat.BlockTimer timer = revokeMemoryTime.time()) {
+            checkArgument(bytesToRevoke >= 0);
+            long initialRevocableBytes = getRevocableBytes();
+            return removeEldestSplits(() -> initialRevocableBytes - getRevocableBytes() >= bytesToRevoke);
+        }
     }
 
     @Managed
@@ -128,6 +133,13 @@ public class MemoryCacheManager
             distribution.add(pagesRetainedSizeInBytes);
         }
         return distribution.getPercentiles();
+    }
+
+    @Managed
+    @Nested
+    public TimeStat getRevokeMemoryTime()
+    {
+        return revokeMemoryTime;
     }
 
     @Managed
