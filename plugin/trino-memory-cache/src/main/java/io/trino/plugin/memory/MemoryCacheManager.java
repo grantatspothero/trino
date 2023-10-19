@@ -97,7 +97,7 @@ public class MemoryCacheManager
     static final int MAX_CACHED_CHANNELS_PER_COLUMN = 20;
 
     private final MemoryAllocator revocableMemoryAllocator;
-
+    private final boolean forceStore;
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     @GuardedBy("lock")
     private final LinkedListMultimap<SplitKey, Channel> splitCache = LinkedListMultimap.create();
@@ -113,8 +113,15 @@ public class MemoryCacheManager
     @Inject
     public MemoryCacheManager(CacheManagerContext context)
     {
+        this(context, false);
+    }
+
+    @VisibleForTesting
+    MemoryCacheManager(CacheManagerContext context, boolean forceStore)
+    {
         requireNonNull(context, "context is null");
         this.revocableMemoryAllocator = context.revocableMemoryAllocator();
+        this.forceStore = forceStore;
     }
 
     public static PlanSignature canonicalizePlanSignature(PlanSignature signature)
@@ -222,7 +229,7 @@ public class MemoryCacheManager
             keys[i] = new SplitKey(signatureId, columnIds[i], splitId);
         }
 
-        if (hasChannelsWithSameStoreId(keys)) {
+        if (hasChannelsWithSameStoreId(keys) && !forceStore) {
             // split is already cached or currently being stored
             return Optional.empty();
         }
