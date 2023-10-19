@@ -27,13 +27,13 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
+import io.starburst.stargate.catalog.EncryptedSecret;
+import io.starburst.stargate.catalog.QueryCatalog;
 import io.starburst.stargate.crypto.SecretEncryptionContext;
 import io.starburst.stargate.crypto.SecretSealer;
 import io.starburst.stargate.crypto.SecretSealer.SealedSecret;
 import io.starburst.stargate.id.AccountId;
 import io.starburst.stargate.id.TrinoPlaneId;
-import io.starburst.stargate.metadata.EncryptedSecret;
-import io.starburst.stargate.metadata.QueryCatalog;
 import io.starburst.stargate.metadata.StatementRequest;
 import io.trino.Session;
 import io.trino.client.Column;
@@ -540,7 +540,7 @@ public class MetadataOnlyStatementResource
     private QueryCatalog decryptCatalog(AccountId accountId, QueryCatalog queryCatalog)
     {
         Map<String, String> decryptedProperties = decryptSecrets(accountId, queryCatalog);
-        return new QueryCatalog(queryCatalog.catalogName(), queryCatalog.connectorName(), decryptedProperties, queryCatalog.secretsMap(), queryCatalog.secrets());
+        return new QueryCatalog(queryCatalog.catalogId(), queryCatalog.version(), queryCatalog.catalogName(), queryCatalog.connectorName(), queryCatalog.readOnly(), decryptedProperties, queryCatalog.secretsMap(), queryCatalog.secrets());
     }
 
     private Map<String, String> decryptSecrets(AccountId accountId, QueryCatalog queryCatalog)

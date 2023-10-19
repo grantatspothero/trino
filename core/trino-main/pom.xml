@@ -284,6 +284,11 @@
 
         <dependency>
             <groupId>io.starburst.stargate</groupId>
+            <artifactId>catalog-configuration-client</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.starburst.stargate</groupId>
             <artifactId>stargate-common</artifactId>
         </dependency>
 

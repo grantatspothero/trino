@@ -208,7 +208,7 @@
         <!-- released from https://github.com/starburstdata/starburst-dataframe -->
         <dep.starburst-dataframe.version>0.5.0.20231006-9161ca8</dep.starburst-dataframe.version>
         <!-- released from https://github.com/starburstdata/stargate -->
-        <dep.stargate.version>stargate-11573-g5ed8e0789</dep.stargate.version>
+        <dep.stargate.version>stargate-11629-gf9c59df50</dep.stargate.version>
         <!-- released from https://github.com/starburstdata/starburst-trino-plugins -->
         <dep.starburst-trino-plugins.version>428</dep.starburst-trino-plugins.version>
         <dep.cloudevents.version>2.2.0</dep.cloudevents.version>
@@ -1032,6 +1032,12 @@
                         <artifactId>snakeyaml</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+
+            <dependency>
+                <groupId>io.starburst.stargate</groupId>
+                <artifactId>catalog-configuration-client</artifactId>
+                <version>${dep.stargate.version}</version>
             </dependency>
 
             <dependency>

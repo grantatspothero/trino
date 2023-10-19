@@ -197,6 +197,12 @@
 
         <dependency>
             <groupId>io.starburst.stargate</groupId>
+            <artifactId>catalog-configuration-client</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.starburst.stargate</groupId>
             <artifactId>stargate-common</artifactId>
             <scope>test</scope>
         </dependency>

@@ -23,8 +23,9 @@ import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient.GrantDetails;
 import io.starburst.stargate.accesscontrol.privilege.GrantKind;
 import io.starburst.stargate.accesscontrol.privilege.Privilege;
+import io.starburst.stargate.catalog.QueryCatalog;
 import io.starburst.stargate.id.CatalogId;
-import io.starburst.stargate.metadata.QueryCatalog;
+import io.starburst.stargate.id.Version;
 import io.starburst.stargate.metadata.StatementRequest;
 import io.trino.client.QueryResults;
 import io.trino.hdfs.TrinoFileSystemCache;
@@ -258,8 +259,8 @@ public class TestGalaxyMetadataOnlyQueries
         URI baseUrl = distributedQueryRunner.getCoordinator().getBaseUrl();
 
         List<QueryCatalog> catalogs = List.of(
-                new QueryCatalog("tpch", "tpch", Map.of(), Map.of(), Optional.empty()),
-                new QueryCatalog("objectstore", "galaxy_objectstore", objectStoreProperties, Map.of(), Optional.empty()));
+                new QueryCatalog(tpchCatalogId, new Version(1), "tpch", "tpch", true, Map.of(), Map.of(), Optional.empty()),
+                new QueryCatalog(objectStoreCatalogId, new Version(1), "objectstore", "galaxy_objectstore", false, objectStoreProperties, Map.of(), Optional.empty()));
 
         TestingAccountClient testingAccountClient = getTestingAccountClient();
         StatementRequest statementRequest = new StatementRequest(testingAccountClient.getAccountId(), statement, catalogs, Map.of(

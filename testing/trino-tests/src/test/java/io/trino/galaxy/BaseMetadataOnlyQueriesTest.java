@@ -26,8 +26,9 @@ import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient.GrantDetails;
 import io.starburst.stargate.accesscontrol.privilege.GrantKind;
 import io.starburst.stargate.accesscontrol.privilege.Privilege;
+import io.starburst.stargate.catalog.QueryCatalog;
 import io.starburst.stargate.id.CatalogId;
-import io.starburst.stargate.metadata.QueryCatalog;
+import io.starburst.stargate.id.Version;
 import io.starburst.stargate.metadata.StatementRequest;
 import io.trino.client.QueryResults;
 import io.trino.plugin.hive.NodeVersion;
@@ -246,8 +247,8 @@ public abstract class BaseMetadataOnlyQueriesTest
         URI baseUrl = distributedQueryRunner.getCoordinator().getBaseUrl();
 
         List<QueryCatalog> catalogs = ImmutableList.of(
-                new QueryCatalog("tpch", "tpch", ImmutableMap.of(), ImmutableMap.of(), Optional.empty()),
-                new QueryCatalog("hive", "hive", ImmutableMap.of(), ImmutableMap.of(), Optional.empty()));
+                new QueryCatalog(tpchCatalogId, new Version(1), "tpch", "tpch", true, ImmutableMap.of(), ImmutableMap.of(), Optional.empty()),
+                new QueryCatalog(hiveCatalogId, new Version(1), "hive", "hive", false, ImmutableMap.of(), ImmutableMap.of(), Optional.empty()));
 
         StatementRequest statementRequest = new StatementRequest(testingAccountClient.getAccountId(), statement, catalogs, ImmutableMap.of(
                 "access-control.name", "galaxy",
