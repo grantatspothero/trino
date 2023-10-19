@@ -243,7 +243,7 @@ public class HiveMetadataFactory
 
         DirectoryLister directoryLister = transactionScopeCachingDirectoryListerFactory.get(this.directoryLister);
         SemiTransactionalHiveMetastore metastore = new SemiTransactionalHiveMetastore(
-                hdfsEnvironment,
+                fileSystemFactory,
                 hiveMetastoreClosure,
                 fileSystemExecutor,
                 dropExecutor,
