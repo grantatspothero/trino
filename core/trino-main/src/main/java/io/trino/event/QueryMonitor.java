@@ -275,7 +275,7 @@ public class QueryMonitor
         logQueryTimeline(queryInfo);
     }
 
-    private QueryMetadata createQueryMetadata(QueryInfo queryInfo, boolean requiresAnonymizedPlan)
+    public QueryMetadata createQueryMetadata(QueryInfo queryInfo, boolean requiresAnonymizedPlan)
     {
         Anonymizer anonymizer = requiresAnonymizedPlan ? new CounterBasedAnonymizer() : new NoOpAnonymizer();
         return new QueryMetadata(
@@ -295,7 +295,7 @@ public class QueryMonitor
                 queryInfo.getResultsCacheResultSize());
     }
 
-    private QueryStatistics createQueryStatistics(QueryInfo queryInfo)
+    public QueryStatistics createQueryStatistics(QueryInfo queryInfo)
     {
         List<OperatorStats> operatorStats = queryInfo.getQueryStats().getOperatorSummaries();
         ImmutableList.Builder<String> operatorSummaries = ImmutableList.builderWithExpectedSize(operatorStats.size());
@@ -352,7 +352,7 @@ public class QueryMonitor
                 serializedPlanNodeStatsAndCosts);
     }
 
-    private QueryContext createQueryContext(SessionRepresentation session, Optional<ResourceGroupId> resourceGroup, Optional<QueryType> queryType, RetryPolicy retryPolicy)
+    public QueryContext createQueryContext(SessionRepresentation session, Optional<ResourceGroupId> resourceGroup, Optional<QueryType> queryType, RetryPolicy retryPolicy)
     {
         return new QueryContext(
                 session.getUser(),
@@ -421,7 +421,7 @@ public class QueryMonitor
         return Optional.empty();
     }
 
-    private static QueryIOMetadata getQueryIOMetadata(QueryInfo queryInfo)
+    public static QueryIOMetadata getQueryIOMetadata(QueryInfo queryInfo)
     {
         Multimap<FragmentNode, OperatorStats> planNodeStats = extractPlanNodeStats(queryInfo);
 
@@ -528,7 +528,7 @@ public class QueryMonitor
                 ImmutableList.of());
     }
 
-    private Optional<QueryFailureInfo> createQueryFailureInfo(ExecutionFailureInfo failureInfo, Optional<StageInfo> outputStage)
+    public Optional<QueryFailureInfo> createQueryFailureInfo(ExecutionFailureInfo failureInfo, Optional<StageInfo> outputStage)
     {
         if (failureInfo == null) {
             return Optional.empty();

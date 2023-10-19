@@ -16,8 +16,10 @@ package io.trino.server.ui;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import io.trino.dispatcher.DispatchManager;
+import io.trino.event.QueryMonitor;
 import io.trino.execution.QueryInfo;
 import io.trino.execution.QueryState;
+import io.trino.execution.QueryStats;
 import io.trino.security.AccessControl;
 import io.trino.server.BasicQueryInfo;
 import io.trino.server.HttpRequestSessionContextFactory;
@@ -37,7 +39,9 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.Response.Status;
+import org.joda.time.base.BaseDateTime;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.NoSuchElementException;
@@ -49,6 +53,7 @@ import static io.trino.security.AccessControlUtil.checkCanKillQueryOwnedBy;
 import static io.trino.security.AccessControlUtil.checkCanViewQueryOwnedBy;
 import static io.trino.security.AccessControlUtil.filterQueries;
 import static io.trino.server.security.ResourceSecurity.AccessType.WEB_UI;
+import static java.time.Instant.ofEpochMilli;
 import static java.util.Objects.requireNonNull;
 
 @Path("/ui/api/query")
@@ -57,14 +62,16 @@ public class UiQueryResource
     private final DispatchManager dispatchManager;
     private final AccessControl accessControl;
     private final HttpRequestSessionContextFactory sessionContextFactory;
+    private final QueryMonitor queryMonitor;
     private final Optional<String> alternateHeaderName;
 
     @Inject
-    public UiQueryResource(DispatchManager dispatchManager, AccessControl accessControl, HttpRequestSessionContextFactory sessionContextFactory, ProtocolConfig protocolConfig)
+    public UiQueryResource(DispatchManager dispatchManager, AccessControl accessControl, HttpRequestSessionContextFactory sessionContextFactory, ProtocolConfig protocolConfig, QueryMonitor queryMonitor)
     {
         this.dispatchManager = requireNonNull(dispatchManager, "dispatchManager is null");
         this.accessControl = requireNonNull(accessControl, "accessControl is null");
         this.sessionContextFactory = requireNonNull(sessionContextFactory, "sessionContextFactory is null");
+        this.queryMonitor = requireNonNull(queryMonitor, "queryMonitor is null");
         this.alternateHeaderName = protocolConfig.getAlternateHeaderName();
     }
 
@@ -104,6 +111,41 @@ public class UiQueryResource
             }
         }
         return Response.status(Status.GONE).build();
+    }
+
+    @ResourceSecurity(WEB_UI)
+    @GET
+    @Path("/{queryId}/details")
+    public Response getQueryDetails(@PathParam("queryId") QueryId queryId, @Context HttpServletRequest servletRequest, @Context HttpHeaders httpHeaders)
+    {
+        requireNonNull(queryId, "queryId is null");
+        Optional<QueryInfo> optionalQueryInfo = dispatchManager.getFullQueryInfo(queryId);
+        if (optionalQueryInfo.isEmpty()) {
+            return Response.status(Status.GONE).build();
+        }
+
+        try {
+            QueryInfo queryInfo = optionalQueryInfo.get();
+            checkCanViewQueryOwnedBy(sessionContextFactory.extractAuthorizedIdentity(servletRequest, httpHeaders, alternateHeaderName), queryInfo.getSession().toIdentity(), accessControl);
+            QueryStats queryStats = queryInfo.getQueryStats();
+            QueryDetails queryDetails = new QueryDetails(queryMonitor.createQueryMetadata(queryInfo, false),
+                    queryMonitor.createQueryStatistics(queryInfo),
+                    queryMonitor.createQueryContext(
+                            queryInfo.getSession(),
+                            queryInfo.getResourceGroupId(),
+                            queryInfo.getQueryType(),
+                            queryInfo.getRetryPolicy()),
+                    QueryMonitor.getQueryIOMetadata(queryInfo),
+                    queryMonitor.createQueryFailureInfo(queryInfo.getFailureInfo(), queryInfo.getOutputStage()),
+                    queryInfo.getWarnings(),
+                    ofEpochMilli(queryStats.getCreateTime().getMillis()),
+                    Optional.ofNullable(queryStats.getExecutionStartTime()).map(BaseDateTime::getMillis).map(Instant::ofEpochMilli),
+                    Optional.ofNullable(queryStats.getEndTime()).map(BaseDateTime::getMillis).map(Instant::ofEpochMilli));
+            return Response.ok(queryDetails).build();
+        }
+        catch (AccessDeniedException e) {
+            throw new ForbiddenException();
+        }
     }
 
     @ResourceSecurity(WEB_UI)
