@@ -27,12 +27,14 @@ public record CatalogNetworkMonitorProperties(
         String catalogName,
         String catalogId,
         boolean tlsEnabled,
+        boolean crossRegionAllowed,
         Optional<DataSize> crossRegionReadLimit,
         Optional<DataSize> crossRegionWriteLimit)
 {
     public static final String CATALOG_NAME_PROPERTY_NAME = "catalogName";
     public static final String CATALOG_ID_PROPERTY_NAME = "catalogId";
     public static final String TLS_ENABLED_PROPERTY_NAME = "tlsEnabled";
+    public static final String CROSS_REGION_ALLOWED_PROPERTY_NAME = "crossRegionAllowed";
     private static final String CROSS_REGION_READ_LIMIT_PROPERTY_NAME = "crossRegionReadLimit";
     private static final String CROSS_REGION_WRITE_LIMIT_PROPERTY_NAME = "crossRegionWriteLimit";
 
@@ -46,7 +48,13 @@ public record CatalogNetworkMonitorProperties(
 
     public CatalogNetworkMonitorProperties withTlsEnabled(boolean tlsEnabled)
     {
-        return new CatalogNetworkMonitorProperties(catalogName, catalogId, tlsEnabled, crossRegionReadLimit, crossRegionWriteLimit);
+        return new CatalogNetworkMonitorProperties(
+                catalogName,
+                catalogId,
+                tlsEnabled,
+                crossRegionAllowed,
+                crossRegionReadLimit,
+                crossRegionWriteLimit);
     }
 
     public static CatalogNetworkMonitorProperties generateFrom(CrossRegionConfig crossRegionConfig, CatalogHandle catalogHandle)
@@ -57,7 +65,13 @@ public record CatalogNetworkMonitorProperties(
         Optional<DataSize> crossRegionWriteLimit = crossRegionConfig.getAllowCrossRegionAccess()
                 ? Optional.of(crossRegionConfig.getCrossRegionWriteLimit())
                 : Optional.empty();
-        return new CatalogNetworkMonitorProperties(catalogHandle.getCatalogName(), catalogHandle.getId(), false, crossRegionReadLimit, crossRegionWriteLimit);
+        return new CatalogNetworkMonitorProperties(
+                catalogHandle.getCatalogName(),
+                catalogHandle.getId(),
+                false,
+                crossRegionConfig.getAllowCrossRegionAccess(),
+                crossRegionReadLimit,
+                crossRegionWriteLimit);
     }
 
     public static void addCatalogNetworkMonitorProperties(BiConsumer<String, String> propertiesConsumer, CatalogNetworkMonitorProperties properties)
@@ -65,6 +79,7 @@ public record CatalogNetworkMonitorProperties(
         propertiesConsumer.accept(CATALOG_NAME_PROPERTY_NAME, properties.catalogName());
         propertiesConsumer.accept(CATALOG_ID_PROPERTY_NAME, properties.catalogId());
         propertiesConsumer.accept(TLS_ENABLED_PROPERTY_NAME, String.valueOf(properties.tlsEnabled()));
+        propertiesConsumer.accept(CROSS_REGION_ALLOWED_PROPERTY_NAME, String.valueOf(properties.crossRegionAllowed()));
         properties.crossRegionReadLimit().ifPresent(crossRegionReadLimit -> propertiesConsumer.accept(CROSS_REGION_READ_LIMIT_PROPERTY_NAME, crossRegionReadLimit.toString()));
         properties.crossRegionWriteLimit().ifPresent(crossRegionWriteLimit -> propertiesConsumer.accept(CROSS_REGION_WRITE_LIMIT_PROPERTY_NAME, crossRegionWriteLimit.toString()));
     }
@@ -74,9 +89,16 @@ public record CatalogNetworkMonitorProperties(
         String catalogName = getRequiredProperty(propertyProvider, CATALOG_NAME_PROPERTY_NAME);
         String catalogId = getRequiredProperty(propertyProvider, CATALOG_ID_PROPERTY_NAME);
         boolean tlsEnabled = Boolean.parseBoolean(getRequiredProperty(propertyProvider, TLS_ENABLED_PROPERTY_NAME));
+        boolean crossRegionAllowed = Boolean.parseBoolean(getRequiredProperty(propertyProvider, CROSS_REGION_ALLOWED_PROPERTY_NAME));
         Optional<DataSize> crossRegionReadLimit = getOptionalDataSizeProperty(propertyProvider, CROSS_REGION_READ_LIMIT_PROPERTY_NAME);
         Optional<DataSize> crossRegionWriteLimit = getOptionalDataSizeProperty(propertyProvider, CROSS_REGION_WRITE_LIMIT_PROPERTY_NAME);
-        return new CatalogNetworkMonitorProperties(catalogName, catalogId, tlsEnabled, crossRegionReadLimit, crossRegionWriteLimit);
+        return new CatalogNetworkMonitorProperties(
+                catalogName,
+                catalogId,
+                tlsEnabled,
+                crossRegionAllowed,
+                crossRegionReadLimit,
+                crossRegionWriteLimit);
     }
 
     private static Optional<DataSize> getOptionalDataSizeProperty(Function<String, Optional<String>> propertyProvider, String propertyName)

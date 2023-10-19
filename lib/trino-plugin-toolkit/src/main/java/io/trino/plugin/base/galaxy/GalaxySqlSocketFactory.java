@@ -51,6 +51,7 @@ public class GalaxySqlSocketFactory
     private final String catalogName;
     private final String catalogId;
     private final boolean tlsEnabled;
+    private final boolean crossRegionAllowed;
     private final Optional<DataSize> crossRegionReadLimit;
     private final Optional<DataSize> crossRegionWriteLimit;
 
@@ -64,6 +65,7 @@ public class GalaxySqlSocketFactory
         catalogName = catalogNetworkMonitorProperties.catalogName();
         catalogId = catalogNetworkMonitorProperties.catalogId();
         tlsEnabled = catalogNetworkMonitorProperties.tlsEnabled();
+        crossRegionAllowed = catalogNetworkMonitorProperties.crossRegionAllowed();
         crossRegionReadLimit = catalogNetworkMonitorProperties.crossRegionReadLimit();
         crossRegionWriteLimit = catalogNetworkMonitorProperties.crossRegionWriteLimit();
     }
@@ -101,7 +103,7 @@ public class GalaxySqlSocketFactory
         public InputStream getInputStream(InputStream inputStream)
                 throws IOException
         {
-            if (isCrossRegion) {
+            if (crossRegionAllowed) {
                 verify(crossRegionReadLimit.isPresent(), "Cross-region read limit must be present to query cross-region catalog");
                 verify(crossRegionWriteLimit.isPresent(), "Cross-region write limit must be present to query cross-region catalog");
 
@@ -113,7 +115,7 @@ public class GalaxySqlSocketFactory
         public OutputStream getOutputStream(OutputStream outputStream)
                 throws IOException
         {
-            if (isCrossRegion) {
+            if (crossRegionAllowed) {
                 verify(crossRegionReadLimit.isPresent(), "Cross-region read limit must be present to query cross-region catalog");
                 verify(crossRegionWriteLimit.isPresent(), "Cross-region write limit must be present to query cross-region catalog");
 

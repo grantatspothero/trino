@@ -53,6 +53,7 @@ public class GalaxyMySqlSocketFactory
         CatalogNetworkMonitorProperties catalogNetworkMonitorProperties = CatalogNetworkMonitorProperties.getCatalogNetworkMonitorProperties(propertyName -> getOptionalProperty(props, propertyName));
         String catalogName = catalogNetworkMonitorProperties.catalogName();
         String catalogId = catalogNetworkMonitorProperties.catalogId();
+        boolean crossRegionAllowed = catalogNetworkMonitorProperties.crossRegionAllowed();
         Optional<DataSize> crossRegionReadLimit = catalogNetworkMonitorProperties.crossRegionReadLimit();
         Optional<DataSize> crossRegionWriteLimit = catalogNetworkMonitorProperties.crossRegionWriteLimit();
 
@@ -94,7 +95,7 @@ public class GalaxyMySqlSocketFactory
             public InputStream getInputStream()
                     throws IOException
             {
-                if (crossRegionAddress) {
+                if (crossRegionAllowed) {
                     verify(crossRegionReadLimit.isPresent(), "Cross-region read limit must be present to query cross-region catalog");
                     verify(crossRegionWriteLimit.isPresent(), "Cross-region write limit must be present to query cross-region catalog");
 
@@ -107,7 +108,7 @@ public class GalaxyMySqlSocketFactory
             public OutputStream getOutputStream()
                     throws IOException
             {
-                if (crossRegionAddress) {
+                if (crossRegionAllowed) {
                     verify(crossRegionReadLimit.isPresent(), "Cross-region read limit must be present to query cross-region catalog");
                     verify(crossRegionWriteLimit.isPresent(), "Cross-region write limit must be present to query cross-region catalog");
 

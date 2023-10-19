@@ -36,6 +36,7 @@ public class GalaxyNetworkInterceptor
     private final RegionVerifier regionVerifier;
     private final String catalogName;
     private final String catalogId;
+    private final boolean crossRegionAllowed;
     private final Optional<DataSize> crossRegionReadLimit;
     private final Optional<DataSize> crossRegionWriteLimit;
 
@@ -45,6 +46,7 @@ public class GalaxyNetworkInterceptor
         requireNonNull(catalogNetworkMonitorProperties, "catalogNetworkMonitorProperties is null");
         catalogName = catalogNetworkMonitorProperties.catalogName();
         catalogId = catalogNetworkMonitorProperties.catalogId();
+        crossRegionAllowed = catalogNetworkMonitorProperties.crossRegionAllowed();
         crossRegionReadLimit = catalogNetworkMonitorProperties.crossRegionReadLimit();
         crossRegionWriteLimit = catalogNetworkMonitorProperties.crossRegionWriteLimit();
     }
@@ -56,7 +58,7 @@ public class GalaxyNetworkInterceptor
     {
         Request request = chain.request();
         boolean isCrossRegion = regionVerifier.isCrossRegionAccess("Database server", toInetAddresses(request.url().host()));
-        CatalogNetworkMonitor networkMonitor = getCatalogNetworkMonitor(isCrossRegion);
+        CatalogNetworkMonitor networkMonitor = getCatalogNetworkMonitor();
 
         Response response = chain.proceed(request);
         if (response.isSuccessful()) {
@@ -70,9 +72,9 @@ public class GalaxyNetworkInterceptor
         return response;
     }
 
-    private CatalogNetworkMonitor getCatalogNetworkMonitor(boolean isCrossRegion)
+    private CatalogNetworkMonitor getCatalogNetworkMonitor()
     {
-        if (isCrossRegion) {
+        if (crossRegionAllowed) {
             verify(crossRegionReadLimit.isPresent(), "Cross-region read limit must be present to query cross-region catalog");
             verify(crossRegionWriteLimit.isPresent(), "Cross-region write limit must be present to query cross-region catalog");
 
