@@ -15,9 +15,11 @@ package io.trino.plugin.memory;
 
 import com.google.inject.Injector;
 import io.airlift.bootstrap.Bootstrap;
+import io.trino.plugin.base.jmx.MBeanServerModule;
 import io.trino.spi.cache.CacheManager;
 import io.trino.spi.cache.CacheManagerContext;
 import io.trino.spi.cache.CacheManagerFactory;
+import org.weakref.jmx.guice.MBeanModule;
 
 import java.util.Map;
 
@@ -42,6 +44,8 @@ public class MemoryCacheManagerFactory
         // A plugin is not required to use Guice; it is just very convenient
         Bootstrap app = new Bootstrap(
                 new MemoryCacheModule(),
+                new MBeanModule(),
+                new MBeanServerModule(),
                 binder -> binder.bind(CacheManagerContext.class).toInstance(context));
 
         Injector injector = app
