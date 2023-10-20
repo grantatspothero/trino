@@ -1008,29 +1008,42 @@ public class TestTrinoS3FileSystem
     @Test
     public void testLegacyCorruptedLocation()
     {
-        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3a", "some//path", true))
+        // s3a, s3n (never affected and thus ignored by legacy path handling)
+        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3a", "some//path"))
                 .isEqualTo(Optional.of("some/path#%2Fsome%2F%2Fpath"));
-        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "some//path", false))
-                .isEqualTo(Optional.empty());
-        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "some//path", true))
+        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3n", "some//path"))
                 .isEqualTo(Optional.of("some/path#%2Fsome%2F%2Fpath"));
-        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "some%path", true))
+
+        // no slashes
+        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "some-path"))
                 .isEqualTo(Optional.empty());
-        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "some%path", false))
+
+        // single slashes
+        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "some/path"))
                 .isEqualTo(Optional.empty());
-        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "some?path", true))
+        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "some/longer/path"))
                 .isEqualTo(Optional.empty());
-        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "some?path", false))
+
+        // double slash
+        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "some//path"))
+                .isEqualTo(Optional.of("some/path#%2Fsome%2F%2Fpath"));
+
+        // percent
+        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "some%path"))
                 .isEqualTo(Optional.empty());
-        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "/some/path", true))
+
+        // question mark
+        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "some?path"))
+                .isEqualTo(Optional.empty());
+
+        // initial slash (so double slash when combined with <bucket>/ prefix)
+        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "/some/path"))
                 .isEqualTo(Optional.of("some/path#%2F%2Fsome%2Fpath"));
-        assertThat(createLegacyCorruptedPathForKeyAndProtocol("s3", "/some/path", false))
-                .isEqualTo(Optional.empty());
     }
 
-    private static Optional<String> createLegacyCorruptedPathForKeyAndProtocol(String protocol, String correctKey, boolean supportLegacyCorruptedMode)
+    private static Optional<String> createLegacyCorruptedPathForKeyAndProtocol(String protocol, String correctKey)
     {
-        return legacyCorruptedKeyFromPath(new Path(format("%s://my-bucket/%s", protocol, correctKey)), correctKey, supportLegacyCorruptedMode);
+        return legacyCorruptedKeyFromPath(new Path(format("%s://my-bucket/%s", protocol, correctKey)), correctKey, true);
     }
 
     @Test
