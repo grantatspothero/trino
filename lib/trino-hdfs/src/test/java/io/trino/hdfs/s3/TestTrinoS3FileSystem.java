@@ -41,8 +41,6 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
-import io.trino.filesystem.Location;
-import io.trino.hdfs.s3.TrinoS3FileSystem.PathKeys;
 import io.trino.hdfs.s3.TrinoS3FileSystem.UnrecoverableS3OperationException;
 import io.trino.memory.context.AggregatedMemoryContext;
 import io.trino.memory.context.MemoryReservationHandler;
@@ -74,14 +72,12 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.io.ByteStreams.toByteArray;
 import static com.google.common.io.MoreFiles.deleteRecursively;
 import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
 import static io.airlift.testing.Assertions.assertInstanceOf;
-import static io.trino.filesystem.hdfs.HadoopPaths.hadoopPath;
 import static io.trino.hadoop.ConfigurationInstantiator.newEmptyConfiguration;
 import static io.trino.hdfs.s3.TrinoS3FileSystem.NO_SUCH_BUCKET_ERROR_CODE;
 import static io.trino.hdfs.s3.TrinoS3FileSystem.NO_SUCH_KEY_ERROR_CODE;
@@ -106,10 +102,7 @@ import static io.trino.hdfs.s3.TrinoS3FileSystem.S3_STAGING_DIRECTORY;
 import static io.trino.hdfs.s3.TrinoS3FileSystem.S3_STREAMING_UPLOAD_ENABLED;
 import static io.trino.hdfs.s3.TrinoS3FileSystem.S3_STREAMING_UPLOAD_PART_SIZE;
 import static io.trino.hdfs.s3.TrinoS3FileSystem.S3_USER_AGENT_PREFIX;
-import static io.trino.hdfs.s3.TrinoS3FileSystem.keysFromPath;
-import static io.trino.hdfs.s3.TrinoS3FileSystem.legacyCorruptedKeyFromPath;
 import static io.trino.memory.context.AggregatedMemoryContext.newRootAggregatedMemoryContext;
-import static java.lang.String.format;
 import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
@@ -1003,68 +996,6 @@ public class TestTrinoS3FileSystem
         }
         assertThat(memoryReservationHandler.getReserved()).isEqualTo(0);
         assertThat(memoryReservationHandler.getMaxReserved()).isGreaterThan(0);
-    }
-
-    @Test
-    public void testLegacyCorruptedKey()
-    {
-        // s3a, s3n (never affected and thus ignored by legacy path handling)
-        assertLegacyCorruptedKey("s3a", "some//path", Optional.of("some/path#%2Fsome%2F%2Fpath"));
-        assertLegacyCorruptedKey("s3n", "some//path", Optional.of("some/path#%2Fsome%2F%2Fpath"));
-
-        // no slashes
-        assertLegacyCorruptedKey("s3", "some-path", Optional.empty());
-
-        // single slashes
-        assertLegacyCorruptedKey("s3", "some/path", Optional.empty());
-        assertLegacyCorruptedKey("s3", "some/longer/path", Optional.empty());
-
-        // double slash
-        assertLegacyCorruptedKey("s3", "some//path", Optional.of("some/path#%2Fsome%2F%2Fpath"));
-
-        // percent
-        assertLegacyCorruptedKey("s3", "some%path", Optional.empty());
-
-        // question mark
-        assertLegacyCorruptedKey("s3", "some?path", Optional.empty());
-
-        // initial slash (so double slash when combined with <bucket>/ prefix)
-        assertLegacyCorruptedKey("s3", "/some/path", Optional.of("some/path#%2F%2Fsome%2Fpath"));
-    }
-
-    private static void assertLegacyCorruptedKey(String protocol, String correctKey, Optional<String> expected)
-    {
-        assertThat(legacyCorruptedKeyFromPath(new Path(format("%s://my-bucket/%s", protocol, correctKey)), correctKey, true))
-                .isEqualTo(expected);
-    }
-
-    @Test
-    public void testKeysFromPath()
-    {
-        // s3a:// and s3n:// did not go through path corruption, since the original code checked for s3://
-        // https://github.com/trinodb/trino/blob/46e215294bb01917ddd2bd7ce085a2f2d2cad8a4/lib/trino-hdfs/src/main/java/io/trino/filesystem/hdfs/HadoopPaths.java#L28-L41
-        assertThat(keysFromPath(hadoopPath(Location.of("s3a://my-bucket/some//path")), true))
-                .isEqualTo(new PathKeys(
-                        "some/path",
-                        Optional.empty()));
-
-        // Double slash
-        assertThat(keysFromPath(hadoopPath(Location.of("s3://my-bucket/some//path")), true))
-                .isEqualTo(new PathKeys(
-                        "some//path",
-                        Optional.of("some/path#%2Fsome%2F%2Fpath")));
-
-        // Double slash with supportLegacyCorruptedPaths=false
-        assertThat(keysFromPath(hadoopPath(Location.of("s3://my-bucket/some//path")), false))
-                .isEqualTo(new PathKeys(
-                        "some//path",
-                        Optional.empty()));
-
-        // Percent
-        assertThat(keysFromPath(hadoopPath(Location.of("s3://my-bucket/some%path")), true))
-                .isEqualTo(new PathKeys(
-                        "some%path",
-                        Optional.empty()));
     }
 
     private static List<LocatedFileStatus> remoteIteratorToList(RemoteIterator<LocatedFileStatus> statuses)

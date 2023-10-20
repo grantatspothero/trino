@@ -1085,7 +1085,7 @@ public class TrinoS3FileSystem
     }
 
     @VisibleForTesting
-    static PathKeys keysFromPath(Path path, boolean supportLegacyCorruptedPaths)
+    public static PathKeys keysFromPath(Path path, boolean supportLegacyCorruptedPaths)
     {
         String correctKey = keyFromPath(path);
         Optional<String> legacyCorrupted = legacyCorruptedKeyFromPath(path, correctKey, supportLegacyCorruptedPaths);
@@ -1093,7 +1093,7 @@ public class TrinoS3FileSystem
     }
 
     @VisibleForTesting
-    static Optional<String> legacyCorruptedKeyFromPath(Path mangledPath, String correctKey, boolean supportLegacyCorruptedPaths)
+    public static Optional<String> legacyCorruptedKeyFromPath(Path mangledPath, String correctKey, boolean supportLegacyCorruptedPaths)
     {
         if (!supportLegacyCorruptedPaths) {
             return Optional.empty();
@@ -2227,9 +2227,9 @@ public class TrinoS3FileSystem
     }
 
     @VisibleForTesting
-    record PathKeys(String correctKey, Optional<String> legacyCorruptedKey)
+    public record PathKeys(String correctKey, Optional<String> legacyCorruptedKey)
     {
-        PathKeys
+        public PathKeys
         {
             requireNonNull(correctKey, "correctKey is null");
             requireNonNull(legacyCorruptedKey, "legacyCorruptedKey is null");
