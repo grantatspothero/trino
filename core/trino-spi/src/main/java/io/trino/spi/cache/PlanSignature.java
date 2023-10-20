@@ -65,6 +65,8 @@ public class PlanSignature
      */
     private final TupleDomain<CacheColumnId> dynamicPredicate;
 
+    private volatile int hashCode;
+
     @JsonCreator
     public PlanSignature(
             SignatureKey key,
@@ -143,7 +145,10 @@ public class PlanSignature
     @Override
     public int hashCode()
     {
-        return Objects.hash(key, groupByColumns, columns, predicate, dynamicPredicate);
+        if (hashCode == 0) {
+            hashCode = Objects.hash(key, groupByColumns, columns, predicate, dynamicPredicate);
+        }
+        return hashCode;
     }
 
     @Override
