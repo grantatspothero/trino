@@ -45,6 +45,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Test(singleThreaded = true)
 public class TestMemoryCacheManager
 {
+    private Page oneMegabytePage;
     private MemoryCacheManager cacheManager;
     private long allocatedRevocableMemory;
     private long memoryLimit;
@@ -52,6 +53,7 @@ public class TestMemoryCacheManager
     @BeforeMethod
     public void setup()
     {
+        oneMegabytePage = createOneMegaBytePage();
         allocatedRevocableMemory = 0;
         memoryLimit = Long.MAX_VALUE;
         CacheManagerContext context = () -> bytes -> {
@@ -83,18 +85,17 @@ public class TestMemoryCacheManager
         assertThat(cache.storePages(splitId)).isEmpty();
         assertThat(cache.loadPages(splitId)).isEmpty();
 
-        Page page = createOneMegaBytePage();
         ConnectorPageSink sink = sinkOptional.get();
-        sink.appendPage(page);
+        sink.appendPage(oneMegabytePage);
 
         // make sure memory usage is accounted for in page sink
-        assertThat(sink.getMemoryUsage()).isEqualTo(page.getRetainedSizeInBytes());
+        assertThat(sink.getMemoryUsage()).isEqualTo(oneMegabytePage.getRetainedSizeInBytes());
         assertThat(allocatedRevocableMemory).isEqualTo(0);
 
         // make sure memory is transferred to cacheManager after sink is finished
         sink.finish();
         long cacheEntrySize = 2L * MAP_ENTRY_SIZE + SplitKey.INSTANCE_SIZE + splitId.getRetainedSizeInBytes() + SETTABLE_FUTURE_INSTANCE_SIZE;
-        assertThat(allocatedRevocableMemory).isEqualTo(page.getRetainedSizeInBytes() + cacheEntrySize);
+        assertThat(allocatedRevocableMemory).isEqualTo(oneMegabytePage.getRetainedSizeInBytes() + cacheEntrySize);
 
         // split data should be available now
         Optional<ConnectorPageSource> sourceOptional = cache.loadPages(splitId);
@@ -102,8 +103,8 @@ public class TestMemoryCacheManager
 
         // ensure cached pages are correct
         ConnectorPageSource source = sourceOptional.get();
-        assertThat(source.getMemoryUsage()).isEqualTo(page.getRetainedSizeInBytes());
-        assertThat(source.getNextPage()).isEqualTo(page);
+        assertThat(source.getMemoryUsage()).isEqualTo(oneMegabytePage.getRetainedSizeInBytes());
+        assertThat(source.getNextPage()).isEqualTo(oneMegabytePage);
         assertThat(source.isFinished()).isTrue();
 
         // make sure no data is available for other signatures
@@ -115,9 +116,9 @@ public class TestMemoryCacheManager
         // store data for another split
         CacheSplitId splitId2 = new CacheSplitId("split2");
         sink = cache.storePages(splitId2).orElseThrow();
-        sink.appendPage(page);
+        sink.appendPage(oneMegabytePage);
         sink.finish();
-        assertThat(allocatedRevocableMemory).isEqualTo(2 * (page.getRetainedSizeInBytes() + cacheEntrySize));
+        assertThat(allocatedRevocableMemory).isEqualTo(2 * (oneMegabytePage.getRetainedSizeInBytes() + cacheEntrySize));
 
         // data for both splits should be cached
         assertThat(cache.loadPages(splitId)).isPresent();
@@ -125,15 +126,15 @@ public class TestMemoryCacheManager
 
         // revoke memory and make sure only the least recently used split is left
         cacheManager.revokeMemory(500_000);
-        assertThat(allocatedRevocableMemory).isEqualTo(page.getRetainedSizeInBytes() + cacheEntrySize);
+        assertThat(allocatedRevocableMemory).isEqualTo(oneMegabytePage.getRetainedSizeInBytes() + cacheEntrySize);
         assertThat(cache.loadPages(splitId)).isEmpty();
 
         // make sure no new split data is cached when memory limit is lowered
         memoryLimit = 1_500_000;
         sink = cache.storePages(splitId).orElseThrow();
-        sink.appendPage(page);
+        sink.appendPage(oneMegabytePage);
         sink.finish();
-        assertThat(allocatedRevocableMemory).isEqualTo(page.getRetainedSizeInBytes() + cacheEntrySize);
+        assertThat(allocatedRevocableMemory).isEqualTo(oneMegabytePage.getRetainedSizeInBytes() + cacheEntrySize);
         assertThat(cache.loadPages(splitId)).isEmpty();
 
         cache.close();
@@ -151,7 +152,7 @@ public class TestMemoryCacheManager
         Optional<ConnectorPageSink> sinkOptional = cache.storePages(splitId);
         assertThat(sinkOptional).isPresent();
         ConnectorPageSink sink = sinkOptional.get();
-        sink.appendPage(createOneMegaBytePage());
+        sink.appendPage(oneMegabytePage);
         assertThat(allocatedRevocableMemory).isEqualTo(0);
         assertThat(cache.loadPages(splitId)).isEmpty();
 
@@ -174,8 +175,7 @@ public class TestMemoryCacheManager
         CacheSplitId splitId = new CacheSplitId("split");
         SplitCache cache = cacheManager.getSplitCache(signature);
         ConnectorPageSink sink = cache.storePages(splitId).orElseThrow();
-        Page page = createOneMegaBytePage();
-        sink.appendPage(page);
+        sink.appendPage(oneMegabytePage);
         sink.finish();
         cache.close();
 
@@ -187,7 +187,7 @@ public class TestMemoryCacheManager
         PlanSignature anotherSignature = createPlanSignature("sig2");
         SplitCache cacheForAnotherSignature = cacheManager.getSplitCache(anotherSignature);
         sink = cacheForAnotherSignature.storePages(splitId).orElseThrow();
-        sink.appendPage(page);
+        sink.appendPage(oneMegabytePage);
         sink.finish();
 
         // both splits should be still cached while anotherCache and cacheForAnotherSignature are open
@@ -237,13 +237,12 @@ public class TestMemoryCacheManager
         Optional<ConnectorPageSink> sink = cache.storePages(splitId);
         assertThat(sink).isPresent();
 
-        Page page = createOneMegaBytePage();
-        sink.get().appendPage(page);
+        sink.get().appendPage(oneMegabytePage);
         sink.get().finish();
 
         Distribution splitSizeDistribution = cacheManager.getCachedSplitSizeDistribution();
         assertThat(splitSizeDistribution.getCount()).isEqualTo(1);
-        assertThat(splitSizeDistribution.getAvg()).isEqualTo(page.getRetainedSizeInBytes());
+        assertThat(splitSizeDistribution.getAvg()).isEqualTo(oneMegabytePage.getRetainedSizeInBytes());
     }
 
     private static PlanSignature createPlanSignature(String signature)
