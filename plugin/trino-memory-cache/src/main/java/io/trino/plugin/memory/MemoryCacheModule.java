@@ -25,7 +25,7 @@ public class MemoryCacheModule
     @Override
     public void configure(Binder binder)
     {
-        binder.bind(MemoryCacheManager.class).in(Scopes.SINGLETON);
-        newExporter(binder).export(MemoryCacheManager.class).withGeneratedName();
+        binder.bind(ConcurrentCacheManager.class).in(Scopes.SINGLETON);
+        newExporter(binder).export(ConcurrentCacheManager.class).withGeneratedName();
     }
 }

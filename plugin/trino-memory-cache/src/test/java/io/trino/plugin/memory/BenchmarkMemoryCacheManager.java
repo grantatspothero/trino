@@ -40,6 +40,7 @@ import org.testng.annotations.Test;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.IntStream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -60,18 +61,25 @@ public class BenchmarkMemoryCacheManager
     {
         @Param({"false", "true"})
         private boolean polluteCache;
+        @Param({"false", "true"})
+        private boolean changeSignatures;
 
-        private final MemoryCacheManager cacheManager = new MemoryCacheManager(() -> bytes -> bytes <= 4_000_000_000L, true);
+        private final MemoryCacheManager memoryCacheManager = new MemoryCacheManager(bytes -> bytes <= 4_000_000_000L, true);
+        private final ConcurrentCacheManager concurrentCacheManager = new ConcurrentCacheManager(() -> bytes -> bytes <= 4_000_000_000L, true);
         private final CacheSplitId splitId = new CacheSplitId("split");
         private final List<CacheColumnId> columnIds = IntStream.range(0, 64)
                 .mapToObj(i -> new CacheColumnId("column" + i))
                 .collect(toImmutableList());
-        private final PlanSignature signature = new PlanSignature(
-                new SignatureKey("key"),
-                Optional.empty(),
-                columnIds,
-                TupleDomain.all(),
-                TupleDomain.all());
+        private final PlanSignature[] signatures = IntStream.range(0, 200)
+                .mapToObj(i -> new PlanSignature(
+                        new SignatureKey("key" + i),
+                        Optional.empty(),
+                        columnIds,
+                        TupleDomain.all(),
+                        TupleDomain.all()))
+                .toArray(PlanSignature[]::new);
+        private final AtomicLong nextSignature = new AtomicLong();
+
         private final Page page = new Page(nCopies(
                 columnIds.size(),
                 new IntArrayBlock(4, Optional.empty(), new int[] {0, 1, 2, 3}))
@@ -83,63 +91,117 @@ public class BenchmarkMemoryCacheManager
         {
             if (polluteCache) {
                 for (int i = 0; i < 100; i++) {
-                    storeCachedData();
+                    storeCachedData(memoryCacheManager);
+                    storeCachedData(concurrentCacheManager);
                 }
             }
-            storeCachedData();
+            storeCachedData(memoryCacheManager);
+            storeCachedData(concurrentCacheManager);
         }
 
-        public Optional<ConnectorPageSource> loadCachedData()
+        public MemoryCacheManager memoryCacheManager()
+        {
+            return memoryCacheManager;
+        }
+
+        public ConcurrentCacheManager concurrentCacheManager()
+        {
+            return concurrentCacheManager;
+        }
+
+        public Optional<ConnectorPageSource> loadCachedData(CacheManager cacheManager)
                 throws IOException
         {
-            try (CacheManager.SplitCache splitCache = cacheManager.getSplitCache(signature)) {
+            try (CacheManager.SplitCache splitCache = cacheManager.getSplitCache(getSignature())) {
                 return splitCache.loadPages(splitId);
             }
         }
 
-        public void storeCachedData()
+        public void storeCachedData(CacheManager cacheManager)
                 throws IOException
         {
-            try (CacheManager.SplitCache splitCache = cacheManager.getSplitCache(signature)) {
+            try (CacheManager.SplitCache splitCache = cacheManager.getSplitCache(getSignature())) {
                 ConnectorPageSink sink = splitCache.storePages(splitId).orElseThrow();
                 sink.appendPage(page);
                 sink.finish();
             }
         }
+
+        private PlanSignature getSignature()
+        {
+            if (changeSignatures) {
+                return signatures[(int) (nextSignature.getAndIncrement() % signatures.length)];
+            }
+            return signatures[0];
+        }
     }
 
     @Threads(10)
     @Benchmark
-    public Optional<ConnectorPageSource> benchmarkLoadPages(Context context)
+    public Optional<ConnectorPageSource> benchmarkMemoryLoadPages(Context context)
             throws IOException
     {
-        return context.loadCachedData();
+        return context.loadCachedData(context.memoryCacheManager());
     }
 
     @Threads(10)
     @Benchmark
-    public void benchmarkStorePages(Context context)
+    public void benchmarkMemoryStorePages(Context context)
             throws IOException
     {
-        context.storeCachedData();
+        context.storeCachedData(context.memoryCacheManager());
+    }
+
+    @Threads(10)
+    @Benchmark
+    public Optional<ConnectorPageSource> benchmarkConcurrentLoadPages(Context context)
+            throws IOException
+    {
+        return context.loadCachedData(context.concurrentCacheManager());
+    }
+
+    @Threads(10)
+    @Benchmark
+    public void benchmarkConcurrentStorePages(Context context)
+            throws IOException
+    {
+        context.storeCachedData(context.concurrentCacheManager());
     }
 
     @Test
-    public void testBenchmarkLoadPages()
+    public void testBenchmarkMemoryLoadPages()
             throws IOException
     {
         Context context = new Context();
         context.setup();
-        assertThat(benchmarkLoadPages(context)).isPresent();
+        assertThat(benchmarkMemoryLoadPages(context)).isPresent();
     }
 
     @Test
-    public void testBenchmarkStorePages()
+    public void testBenchmarkMemoryStorePages()
             throws IOException
     {
         Context context = new Context();
         context.setup();
-        benchmarkStorePages(context);
+        benchmarkMemoryStorePages(context);
+    }
+
+    @Test
+    public void testBenchmarkConcurrentLoadPages()
+            throws IOException
+    {
+        Context context = new Context();
+        context.setup();
+        assertThat(benchmarkConcurrentLoadPages(context)).isPresent();
+    }
+
+    @Test
+    public void testBenchmarkConcurrentStorePages()
+            throws IOException
+    {
+        Context context = new Context();
+        context.setup();
+        benchmarkConcurrentStorePages(context);
     }
 
     public static void main(String[] args)

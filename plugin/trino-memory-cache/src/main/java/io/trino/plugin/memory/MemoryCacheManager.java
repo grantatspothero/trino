@@ -18,10 +18,8 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import com.google.inject.Inject;
 import io.airlift.slice.Slice;
 import io.airlift.stats.Distribution;
-import io.airlift.stats.TimeStat;
 import io.trino.spi.HostAddress;
 import io.trino.spi.Node;
 import io.trino.spi.NodeManager;
@@ -29,7 +27,6 @@ import io.trino.spi.Page;
 import io.trino.spi.block.Block;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheManager;
-import io.trino.spi.cache.CacheManagerContext;
 import io.trino.spi.cache.CacheSplitId;
 import io.trino.spi.cache.MemoryAllocator;
 import io.trino.spi.cache.PlanSignature;
@@ -37,8 +34,6 @@ import io.trino.spi.connector.ConnectorPageSink;
 import io.trino.spi.connector.ConnectorPageSource;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import org.weakref.jmx.Managed;
-import org.weakref.jmx.Nested;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -105,22 +100,13 @@ public class MemoryCacheManager
     private final ObjectToIdMap<PlanSignature> signatureToId = new ObjectToIdMap<>(PlanSignature::getRetainedSizeInBytes);
     @GuardedBy("lock")
     private final ObjectToIdMap<CacheColumnId> columnToId = new ObjectToIdMap<>(CacheColumnId::getRetainedSizeInBytes);
-    private final TimeStat revokeMemoryTime = new TimeStat();
     private final AtomicLong nextStoreId = new AtomicLong();
     @GuardedBy("lock")
     private long cacheRevocableBytes;
 
-    @Inject
-    public MemoryCacheManager(CacheManagerContext context)
+    public MemoryCacheManager(MemoryAllocator memoryAllocator, boolean forceStore)
     {
-        this(context, false);
-    }
-
-    @VisibleForTesting
-    MemoryCacheManager(CacheManagerContext context, boolean forceStore)
-    {
-        requireNonNull(context, "context is null");
-        this.revocableMemoryAllocator = context.revocableMemoryAllocator();
+        this.revocableMemoryAllocator = requireNonNull(memoryAllocator, "memoryAllocator is null");
         this.forceStore = forceStore;
     }
 
@@ -152,58 +138,52 @@ public class MemoryCacheManager
     @Override
     public long revokeMemory(long bytesToRevoke)
     {
-        try (TimeStat.BlockTimer timer = revokeMemoryTime.time()) {
-            checkArgument(bytesToRevoke >= 0);
-            return runWithLock(lock.writeLock(), () -> {
-                long initialRevocableBytes = getRevocableBytes();
-                return removeEldestSplits(() -> initialRevocableBytes - getRevocableBytes() >= bytesToRevoke);
-            });
-        }
+        return revokeMemory(bytesToRevoke, Integer.MAX_VALUE);
     }
 
-    @Managed
-    public Map<Double, Double> getCachedSplitSizeDistribution()
+    public long revokeMemory(long bytesToRevoke, int maxElementsToRevoke)
     {
-        return runWithLock(lock.readLock(), () -> {
-            Distribution distribution = new Distribution();
+        checkArgument(bytesToRevoke >= 0);
+        return runWithLock(lock.writeLock(), () -> {
+            long initialRevocableBytes = getRevocableBytes();
+            return removeEldestSplits(() -> initialRevocableBytes - getRevocableBytes() >= bytesToRevoke, maxElementsToRevoke);
+        });
+    }
+
+    public void addCachedSplitSizeDistribution(Distribution distribution)
+    {
+        runWithLock(lock.readLock(), () -> {
             int counter = 0;
             for (Iterator<Map.Entry<SplitKey, Channel>> iterator = reverse(splitCache.entries()).iterator(); iterator.hasNext() && counter < DISTRIBUTION_ENTRY_COUNT; counter++) {
                 Map.Entry<SplitKey, Channel> entry = iterator.next();
                 distribution.add(entry.getValue().getRetainedSizeInBytes());
             }
-            return distribution.getPercentiles();
         });
     }
 
-    @Managed
-    @Nested
-    public TimeStat getRevokeMemoryTime()
-    {
-        return revokeMemoryTime;
-    }
-
-    @Managed
     public long getRevocableBytes()
     {
         return runWithLock(lock.readLock(), () -> cacheRevocableBytes + signatureToId.getRevocableBytes() + columnToId.getRevocableBytes());
     }
 
-    @Managed
     public int getCachedPlanSignaturesCount()
     {
         return runWithLock(lock.readLock(), signatureToId::size);
     }
 
-    @Managed
     public int getCachedColumnIdsCount()
     {
         return runWithLock(lock.readLock(), columnToId::size);
     }
 
-    @Managed
     public int getCachedSplitsCount()
     {
         return runWithLock(lock.readLock(), splitCache::size);
+    }
+
+    public ReentrantReadWriteLock getLock()
+    {
+        return lock;
     }
 
     private Optional<ConnectorPageSource> loadPages(long signatureId, long[] columnIds, CacheSplitId splitId)
@@ -410,7 +390,7 @@ public class MemoryCacheManager
         });
     }
 
-    private long removeEldestSplits(BooleanSupplier stopCondition)
+    private long removeEldestSplits(BooleanSupplier stopCondition, int maxElementsToRevoke)
     {
         return runWithLock(lock.writeLock(), () -> {
             if (splitCache.isEmpty()) {
@@ -419,8 +399,9 @@ public class MemoryCacheManager
             }
 
             long initialRevocableBytes = getRevocableBytes();
+            int elementsToRevoke = maxElementsToRevoke;
             for (Iterator<Map.Entry<SplitKey, Channel>> iterator = splitCache.entries().iterator(); iterator.hasNext(); ) {
-                if (stopCondition.getAsBoolean()) {
+                if (stopCondition.getAsBoolean() || elementsToRevoke <= 0) {
                     break;
                 }
 
@@ -436,6 +417,7 @@ public class MemoryCacheManager
                 iterator.remove();
                 signatureToId.releaseId(key.signatureId());
                 columnToId.releaseId(key.columnId());
+                elementsToRevoke--;
 
                 cacheRevocableBytes -= getCacheEntrySize(key, channel);
             }
@@ -553,7 +535,7 @@ public class MemoryCacheManager
             closed = true;
             releaseSignatureIds(signatureId, columnIds);
             // prevent cache overflow
-            removeEldestSplits(() -> splitCache.size() <= MAP_SIZE_LIMIT && signatureToId.size() <= MAP_SIZE_LIMIT && columnToId.size() <= MAP_SIZE_LIMIT);
+            removeEldestSplits(() -> splitCache.size() <= MAP_SIZE_LIMIT && signatureToId.size() <= MAP_SIZE_LIMIT && columnToId.size() <= MAP_SIZE_LIMIT, Integer.MAX_VALUE);
         }
     }
 

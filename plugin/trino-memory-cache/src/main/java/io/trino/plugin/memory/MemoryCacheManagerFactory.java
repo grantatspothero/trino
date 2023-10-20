@@ -53,6 +53,6 @@ public class MemoryCacheManagerFactory
                 .setRequiredConfigurationProperties(config)
                 .initialize();
 
-        return injector.getInstance(MemoryCacheManager.class);
+        return injector.getInstance(ConcurrentCacheManager.class);
     }
 }

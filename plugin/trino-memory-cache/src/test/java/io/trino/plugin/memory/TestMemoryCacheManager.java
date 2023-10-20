@@ -14,6 +14,7 @@
 package io.trino.plugin.memory;
 
 import com.google.common.collect.ImmutableList;
+import io.airlift.stats.Distribution;
 import io.trino.client.NodeVersion;
 import io.trino.plugin.memory.MemoryCacheManager.Channel;
 import io.trino.plugin.memory.MemoryCacheManager.SplitKey;
@@ -38,7 +39,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
@@ -82,7 +82,7 @@ public class TestMemoryCacheManager
             allocatedRevocableMemory = bytes;
             return true;
         };
-        cacheManager = new MemoryCacheManager(context);
+        cacheManager = new MemoryCacheManager(context.revocableMemoryAllocator(), false);
     }
 
     @Test
@@ -152,11 +152,9 @@ public class TestMemoryCacheManager
         assertThat(cache.loadPages(SPLIT2)).isPresent();
 
         // revoke memory and make sure only the least recently used split is left
-        assertThat(cacheManager.getRevokeMemoryTime().getAllTime().getCount()).isZero();
         cacheManager.revokeMemory(500_000);
         assertThat(allocatedRevocableMemory).isEqualTo(cacheEntrySize + idSize);
         assertThat(cache.loadPages(SPLIT1)).isEmpty();
-        assertThat(cacheManager.getRevokeMemoryTime().getAllTime().getCount()).isNotZero();
 
         // make sure no new split data is cached when memory limit is lowered
         memoryLimit = 1_500_000;
@@ -473,12 +471,15 @@ public class TestMemoryCacheManager
         sink.get().appendPage(oneMegabytePage);
         sink.get().finish();
 
+        Distribution splitSizeDistribution = new Distribution();
+        cacheManager.addCachedSplitSizeDistribution(splitSizeDistribution);
+        assertThat(splitSizeDistribution.getCount()).isEqualTo(1);
+
         long channelSize = getChannelRetainedSizeInBytes(oneMegabytePage.getBlock(0));
-        Map<Double, Double> splitSizePercentiles = cacheManager.getCachedSplitSizeDistribution();
-        assertThat(splitSizePercentiles.get(0.01)).isEqualTo(channelSize);
+        assertThat(splitSizeDistribution.getAvg()).isEqualTo(channelSize);
     }
 
-    private static long getChannelRetainedSizeInBytes(Block block)
+    static long getChannelRetainedSizeInBytes(Block block)
     {
         Channel channel = new Channel(0);
         channel.setBlocks(new Block[] {block});
@@ -486,7 +487,7 @@ public class TestMemoryCacheManager
         return channel.getRetainedSizeInBytes();
     }
 
-    private static PlanSignature createPlanSignature(String signature)
+    static PlanSignature createPlanSignature(String signature)
     {
         return createPlanSignature(signature, COLUMN1);
     }
@@ -501,7 +502,7 @@ public class TestMemoryCacheManager
                 TupleDomain.all());
     }
 
-    private static Page createOneMegaBytePage()
+    static Page createOneMegaBytePage()
     {
         BlockBuilder blockBuilder = BIGINT.createFixedSizeBlockBuilder(0);
         while (blockBuilder.getRetainedSizeInBytes() < 1024 * 1024) {
