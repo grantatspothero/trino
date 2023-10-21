@@ -30,7 +30,6 @@ import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.ConnectorViewDefinition;
 import io.trino.spi.connector.RelationColumnsMetadata;
 import io.trino.spi.connector.RelationCommentMetadata;
-import io.trino.spi.connector.SchemaNotFoundException;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TableNotFoundException;
 import io.trino.spi.security.TrinoPrincipal;
@@ -225,9 +224,6 @@ public class TrinoJdbcCatalog
             String location,
             Map<String, String> properties)
     {
-        if (!listNamespaces(session, Optional.of(schemaTableName.getSchemaName())).contains(schemaTableName.getSchemaName())) {
-            throw new SchemaNotFoundException(schemaTableName.getSchemaName());
-        }
         return newCreateTableTransaction(
                 session,
                 schemaTableName,
