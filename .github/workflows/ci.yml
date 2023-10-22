@@ -972,12 +972,12 @@ jobs:
       - name: Cloud Redshift Tests ${{ matrix.profile }}
         env:
           AWS_REGION: ${{ vars.REDSHIFT_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.ENG_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.ENG_AWS_SECRET_ACCESS_KEY }}
-          REDSHIFT_SUBNET_GROUP_NAME: redshift-cicd-subnet-group
-          REDSHIFT_IAM_ROLES: arn:aws:iam::888469412714:role/redshift-cicd
-          REDSHIFT_VPC_SECURITY_GROUP_IDS: "[\"sg-0ad7ac36a73650b08\", \"sg-012799e2208deb2ab\"]"
-          REDSHIFT_S3_TPCH_TABLES_ROOT: "s3://starburstdata-engineering-redshift-test"
+          AWS_ACCESS_KEY_ID: ${{ secrets.REDSHIFT_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.REDSHIFT_AWS_SECRET_ACCESS_KEY }}
+          REDSHIFT_SUBNET_GROUP_NAME: ${{ vars.REDSHIFT_SUBNET_GROUP_NAME }}
+          REDSHIFT_IAM_ROLES: ${{ vars.REDSHIFT_IAM_ROLES }}
+          REDSHIFT_VPC_SECURITY_GROUP_IDS: ${{ vars.REDSHIFT_VPC_SECURITY_GROUP_IDS }}
+          REDSHIFT_S3_TPCH_TABLES_ROOT: ${{ vars.REDSHIFT_S3_TPCH_TABLES_ROOT }}
         if: >-
           contains(matrix.modules, 'trino-redshift') &&
           (contains(matrix.profile, 'default') || contains(matrix.profile, 'cloud-tests') || contains(matrix.profile, 'fte-tests')) &&
