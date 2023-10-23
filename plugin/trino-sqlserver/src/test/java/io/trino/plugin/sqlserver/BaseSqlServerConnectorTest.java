@@ -139,6 +139,20 @@ public abstract class BaseSqlServerConnectorTest
 
     @Test
     @Override
+    public void testColumnsListingModes()
+    {
+        throw new SkipException("not supported.");
+    }
+
+    @Test
+    @Override
+    public void testCommentsListingModes()
+    {
+        throw new SkipException("not supported.");
+    }
+
+    @Test
+    @Override
     public void testReadMetadataWithRelationsConcurrentModifications()
     {
         try {
