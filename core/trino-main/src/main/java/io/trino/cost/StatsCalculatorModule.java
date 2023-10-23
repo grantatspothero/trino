@@ -36,6 +36,7 @@ import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.util.Objects.requireNonNull;
+import static org.weakref.jmx.guice.ExportBinder.newExporter;
 
 public class StatsCalculatorModule
         implements Module
@@ -53,6 +54,9 @@ public class StatsCalculatorModule
         binder.bind(StatsCalculator.class).to(HistoryBasedStatsCalculator.class);
         binder.bind(StatsCalculator.class).annotatedWith(NoHistoryBasedStats.class).to(ComposableStatsCalculator.class);
         binder.bind(FlushHistoryBasedStatsCacheProcedure.class).in(Scopes.SINGLETON);
+
+        newExporter(binder).export(HistoryBasedStatsCalculator.class)
+                .as(generator -> generator.generatedNameOf(HistoryBasedStatsCalculator.class));
     }
 
     @Retention(RUNTIME)

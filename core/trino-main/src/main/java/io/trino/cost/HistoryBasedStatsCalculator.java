@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
+import io.airlift.jmx.CacheStatsMBean;
 import io.airlift.log.Logger;
 import io.trino.Session;
 import io.trino.cache.CacheMetadata;
@@ -56,6 +57,8 @@ import io.trino.sql.planner.plan.UnionNode;
 import io.trino.sql.planner.planprinter.PlanNodeStats;
 import io.trino.sql.tree.Expression;
 import org.gaul.modernizer_maven_annotations.SuppressModernizer;
+import org.weakref.jmx.Managed;
+import org.weakref.jmx.Nested;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -98,6 +101,8 @@ public class HistoryBasedStatsCalculator
     private final StatsNormalizer statsNormalizer;
     // per query StatsCachePlanSignature cache to limit the signature recalculation cost of previously seen plan nodes
     private final Cache<QueryId, Map<PlanNode, Optional<StatsCachePlanSignature>>> signatureCache;
+    private final CacheStatsMBean historicalQueryStatsCacheMBean;
+    private final CacheStatsMBean signatureCacheMBean;
 
     @Inject
     public HistoryBasedStatsCalculator(
@@ -112,8 +117,10 @@ public class HistoryBasedStatsCalculator
         this.cacheMetadata = requireNonNull(cacheMetadata, "cacheMetadata is null");
         this.delegate = requireNonNull(delegate, "delegate is null");
         this.statsNormalizer = requireNonNull(statsNormalizer, "statsNormalizer is null");
-        this.rowCountCache = buildUnsafeCacheWithInvalidationRace(CacheBuilder.newBuilder().maximumSize(10_000));
-        this.signatureCache = buildUnsafeCacheWithInvalidationRace(CacheBuilder.newBuilder().maximumSize(1000));
+        this.rowCountCache = buildUnsafeCacheWithInvalidationRace(CacheBuilder.newBuilder().maximumSize(10_000).recordStats());
+        this.historicalQueryStatsCacheMBean = new CacheStatsMBean(rowCountCache);
+        this.signatureCache = buildUnsafeCacheWithInvalidationRace(CacheBuilder.newBuilder().maximumSize(1000).recordStats());
+        this.signatureCacheMBean = new CacheStatsMBean(signatureCache);
     }
 
     // we do not use loader here, so there is no race
@@ -329,10 +336,25 @@ public class HistoryBasedStatsCalculator
         return Optional.empty();
     }
 
+    @Managed
     public void invalidateCache()
     {
         rowCountCache.invalidateAll();
         signatureCache.invalidateAll();
+    }
+
+    @Managed
+    @Nested
+    public CacheStatsMBean getHistoricalQueryStatsCache()
+    {
+        return historicalQueryStatsCacheMBean;
+    }
+
+    @Managed
+    @Nested
+    public CacheStatsMBean getSessionSignatureCache()
+    {
+        return signatureCacheMBean;
     }
 
     interface StatsCachePlanSignature
