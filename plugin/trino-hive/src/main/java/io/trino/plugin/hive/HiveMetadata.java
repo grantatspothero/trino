@@ -2312,7 +2312,6 @@ public class HiveMetadata
         String queryId = session.getQueryId();
         TrinoFileSystem fileSystem = fileSystemFactory.create(session);
         try {
-            // use TrinoFileSystem instead of Hadoop file system
             FileIterator iterator = fileSystem.listFiles(partitionLocation);
             while (iterator.hasNext()) {
                 Location location = iterator.next().location();
