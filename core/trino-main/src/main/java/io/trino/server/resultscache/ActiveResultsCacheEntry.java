@@ -21,7 +21,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import io.airlift.concurrent.MoreFutures;
 import io.airlift.log.Logger;
-import io.airlift.units.DataSize;
 import io.trino.client.Column;
 import io.trino.server.protocol.QueryResultRows;
 import io.trino.spi.QueryId;
@@ -35,7 +34,6 @@ import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static io.airlift.units.DataSize.Unit.MEGABYTE;
 import static io.trino.server.resultscache.ResultsCacheEntry.ResultsCacheResult.Status.CACHED;
 import static io.trino.server.resultscache.ResultsCacheEntry.ResultsCacheResult.Status.CACHING;
 import static io.trino.server.resultscache.ResultsCacheEntry.ResultsCacheResult.Status.NO_COLUMNS;
@@ -46,7 +44,6 @@ public class ActiveResultsCacheEntry
         implements ResultsCacheEntry
 {
     private static final Logger log = Logger.get(ActiveResultsCacheEntry.class);
-    private static final long MAX_SIZE = DataSize.of(1, MEGABYTE).toBytes();
     private final Identity identity;
     private final String cacheKey;
     private final QueryId queryId;
@@ -94,10 +91,7 @@ public class ActiveResultsCacheEntry
         this.queryType = requireNonNull(queryType, "queryType is null");
         this.updateType = requireNonNull(updateType, "updateType is null");
         checkArgument(maximumSize > 0, "maximumSize is <= 0");
-        if (maximumSize > MAX_SIZE) {
-            log.warn("Cache entry size: %s is greater than the maximum: %s, using maximum", maximumSize, MAX_SIZE);
-        }
-        this.maximumSize = Math.min(maximumSize, MAX_SIZE);
+        this.maximumSize = maximumSize;
         this.client = requireNonNull(client, "client is null");
         this.executorService = requireNonNull(executorService, "executorService is null");
     }

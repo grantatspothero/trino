@@ -18,7 +18,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
 import io.airlift.http.client.HttpClient;
 import io.airlift.log.Logger;
-import io.airlift.units.DataSize;
 import io.trino.Session;
 import io.trino.spi.QueryId;
 import io.trino.spi.security.Identity;
@@ -27,7 +26,6 @@ import java.util.Optional;
 
 import static com.google.common.util.concurrent.MoreExecutors.listeningDecorator;
 import static io.airlift.concurrent.Threads.threadsNamed;
-import static io.airlift.units.DataSize.Unit.MEGABYTE;
 import static io.trino.server.resultscache.ResultsCacheSessionProperties.getResultsCacheKey;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.Executors.newFixedThreadPool;
@@ -35,20 +33,21 @@ import static java.util.concurrent.Executors.newFixedThreadPool;
 public class ResultsCacheManager
 {
     private static final Logger log = Logger.get(ResultsCacheManager.class);
-    private static final long DEFAULT_MAXIMUM_SIZE_BYTES = DataSize.of(1, MEGABYTE).toBytes();
+    private final long configuredMaxSize;
     private final ResultsCacheClient resultsCacheClient;
     private final ListeningExecutorService executorService;
 
     @Inject
     public ResultsCacheManager(@ForResultsCache HttpClient httpClient, ResultsCacheConfig config)
     {
-        this.executorService = listeningDecorator(newFixedThreadPool(config.getCacheUploadThreads(), threadsNamed("resultscache-upload-%s")));
+        this.configuredMaxSize = config.getMaxResultsSize().toBytes();
         this.resultsCacheClient = new ResultsCacheClient(
                 config.getCacheEndpoint(),
                 requireNonNull(httpClient, "httpClient is null"),
                 config.isGalaxyEnabled(),
                 config.getClusterId(),
                 config.getDeploymentId());
+        this.executorService = listeningDecorator(newFixedThreadPool(config.getCacheUploadThreads(), threadsNamed("resultscache-upload-%s")));
     }
 
     public ActiveResultsCacheEntry createResultsCacheEntry(
@@ -61,7 +60,15 @@ public class ResultsCacheManager
             Optional<String> queryType,
             Optional<String> updateType)
     {
-        long maximumSizeBytes = resultsCacheParameters.maximumSizeBytes().orElse(DEFAULT_MAXIMUM_SIZE_BYTES);
+        Optional<Long> requestMaxSizeOptional = resultsCacheParameters.maximumSizeBytes();
+        long maximumSizeBytes = requestMaxSizeOptional.map(requestMaxSize -> {
+            if (requestMaxSize > configuredMaxSize) {
+                log.debug("Maximum results size configured in request %s is larger than globally configured maximum %s.", requestMaxSize, configuredMaxSize);
+                return configuredMaxSize;
+            }
+            return requestMaxSize;
+        }).orElse(configuredMaxSize);
+
         log.debug("QueryId: %s, created ResultsCacheEntry with key %s", queryId, resultsCacheParameters.key());
         return new ActiveResultsCacheEntry(
                 identity,

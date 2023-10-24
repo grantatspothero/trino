@@ -16,6 +16,7 @@ package io.trino.server.resultscache;
 
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;
+import io.airlift.units.DataSize;
 import jakarta.annotation.PostConstruct;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -23,6 +24,7 @@ import jakarta.validation.constraints.Positive;
 import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkState;
+import static io.airlift.units.DataSize.Unit.MEGABYTE;
 
 public class ResultsCacheConfig
 {
@@ -31,6 +33,7 @@ public class ResultsCacheConfig
     private boolean galaxyEnabled;
     private Optional<String> clusterId = Optional.empty();
     private Optional<String> deploymentId = Optional.empty();
+    private DataSize maxResultsSize = DataSize.of(1, MEGABYTE);
 
     @Positive
     public int getCacheUploadThreads()
@@ -95,6 +98,19 @@ public class ResultsCacheConfig
     public ResultsCacheConfig setDeploymentId(String deploymentId)
     {
         this.deploymentId = Optional.of(deploymentId);
+        return this;
+    }
+
+    @NotNull
+    public DataSize getMaxResultsSize()
+    {
+        return maxResultsSize;
+    }
+
+    @Config("galaxy-results-cache.max-results-size")
+    public ResultsCacheConfig setMaxResultsSize(DataSize maxResultsSize)
+    {
+        this.maxResultsSize = maxResultsSize;
         return this;
     }
 
