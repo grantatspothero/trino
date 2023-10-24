@@ -17,6 +17,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
+import com.google.common.hash.HashCode;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import io.airlift.slice.Slice;
 import io.airlift.stats.Distribution;
@@ -53,6 +54,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Lists.reverse;
+import static com.google.common.hash.Hashing.combineOrdered;
 import static com.google.common.hash.Hashing.consistentHash;
 import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.SizeOf.sizeOf;
@@ -602,12 +604,12 @@ public class MemoryCacheManager
     private static class MemoryPreferredAddressProvider
             implements PreferredAddressProvider
     {
-        private final long signatureHash;
+        private final HashCode signatureHash;
         private final Supplier<List<Node>> nodesSupplier;
 
         public MemoryPreferredAddressProvider(PlanSignature signature, NodeManager nodeManager)
         {
-            signatureHash = canonicalizePlanSignature(signature).hashCode();
+            signatureHash = HashCode.fromInt(canonicalizePlanSignature(signature).hashCode());
             nodesSupplier = Suppliers.memoizeWithExpiration(
                     () -> nodeManager.getWorkerNodes()
                             .stream()
@@ -621,7 +623,7 @@ public class MemoryCacheManager
         public HostAddress getPreferredAddress(CacheSplitId splitId)
         {
             List<Node> nodes = nodesSupplier.get();
-            return nodes.get(consistentHash(31 * signatureHash + splitId.hashCode(), nodes.size())).getHostAndPort();
+            return nodes.get(consistentHash(combineOrdered(ImmutableList.of(signatureHash, HashCode.fromInt(splitId.hashCode()))), nodes.size())).getHostAndPort();
         }
     }
 

@@ -441,9 +441,9 @@ public class TestMemoryCacheManager
         nodeManager.addNode(new InternalNode("node3", new URI("http://127.0.0.3/"), NodeVersion.UNKNOWN, false));
         nodeManager.addNode(new InternalNode("node4", new URI("http://127.0.0.4/"), NodeVersion.UNKNOWN, false));
 
-        PlanSignature signature1 = createPlanSignature("sig1", COLUMN1);
-        PlanSignature signature2 = createPlanSignature("sig2", COLUMN1);
-        PlanSignature signature3 = createPlanSignature("sig1", COLUMN2);
+        PlanSignature signature1 = createPlanSignature("signature1", COLUMN1);
+        PlanSignature signature2 = createPlanSignature("signature2", COLUMN1);
+        PlanSignature signature3 = createPlanSignature("signature1", COLUMN2);
         PreferredAddressProvider addressProvider1 = cacheManager.getPreferredAddressProvider(signature1, nodeManager);
         PreferredAddressProvider addressProvider2 = cacheManager.getPreferredAddressProvider(signature2, nodeManager);
         PreferredAddressProvider addressProvider3 = cacheManager.getPreferredAddressProvider(signature3, nodeManager);
