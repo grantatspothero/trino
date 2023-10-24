@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.plugin.warp;
+package io.trino.plugin.warp2;
 
 import com.google.inject.Module;
 import io.trino.plugin.objectstore.InternalObjectStoreConnectorFactory;
@@ -53,7 +53,11 @@ public class ObjectStoreProxyConnectorInitializer
     {
         Map<String, String> objectStoreConfig = config.entrySet()
                 .stream()
-                .filter(e -> !e.getKey().startsWith("warp-speed.") && !e.getKey().startsWith("WARP__"))
+                .filter(entry -> entry.getKey().startsWith("OBJECTSTORE__") ||
+                        entry.getKey().startsWith("HIVE__") ||
+                        entry.getKey().startsWith("ICEBERG__") ||
+                        entry.getKey().startsWith("DELTA__") ||
+                        entry.getKey().startsWith("HUDI__"))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         // Because of native code, Warp Speed does not support multiple catalogs and thus doesn't need classloader duplication.

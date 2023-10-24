@@ -86,6 +86,7 @@
         <module>plugin/trino-galaxy-stargate</module>
         <module>plugin/trino-galaxy-synapse</module>
         <module>plugin/trino-galaxy-warp-speed</module>
+        <module>plugin/trino-galaxy-warp-speed-2</module>
         <module>plugin/trino-geospatial</module>
         <module>plugin/trino-google-sheets</module>
         <module>plugin/trino-hive</module>
@@ -200,7 +201,7 @@
         <dep.docker.images.version>86</dep.docker.images.version>
 
         <!-- released from https://github.com/starburstdata/varada -->
-        <dep.warp-speed.version>428.0.0</dep.warp-speed.version>
+        <dep.warp-speed.version>428.2.1</dep.warp-speed.version>
         <!-- released from https://github.com/starburstdata/trino-buffer-service -->
         <dep.trino-buffer-service.version>427-trino-buffer-service-601-g76f8374</dep.trino-buffer-service.version>
         <!-- released form https://github.com/starburstdata/schema-discovery -->

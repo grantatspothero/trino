@@ -86,6 +86,7 @@ galaxy-snowflake
 galaxy-stargate
 galaxy-synapse
 galaxy-warp-speed
+galaxy-warp-speed-2
 geospatial
 google-sheets
 hive

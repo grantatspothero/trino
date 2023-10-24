@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.plugin.warp;
+package io.trino.plugin.warp2;
 
 import com.google.inject.Inject;
 import io.trino.plugin.deltalake.DeltaLakeColumnHandle;
@@ -147,9 +147,9 @@ public class ObjectStoreProxiedConnectorTransformer
     }
 
     @Override
-    public ConnectorSplit createProxiedConnectorSplitForMixedQuery(ConnectorSplit connectorSplit)
+    public ConnectorSplit createProxiedConnectorNonFilteredSplit(ConnectorSplit connectorSplit)
     {
-        return getTransformer(connectorSplit).createProxiedConnectorSplitForMixedQuery(connectorSplit);
+        return getTransformer(connectorSplit).createProxiedConnectorNonFilteredSplit(connectorSplit);
     }
 
     @Override

@@ -205,6 +205,11 @@
             <unpack />
         </artifact>
     </artifactSet>
+    <artifactSet to="plugin/galaxy-warp-speed-2">
+        <artifact id="${project.groupId}:trino-galaxy-warp-speed-2:zip:${project.version}">
+            <unpack />
+        </artifact>
+    </artifactSet>
 
     <artifactSet to="plugin/galaxy-salesforce">
         <artifact id="${project.groupId}:trino-galaxy-salesforce:zip:${project.version}">

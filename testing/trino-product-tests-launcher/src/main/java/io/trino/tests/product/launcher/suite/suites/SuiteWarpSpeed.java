@@ -16,6 +16,7 @@ package io.trino.tests.product.launcher.suite.suites;
 import com.google.common.collect.ImmutableList;
 import io.trino.tests.product.launcher.env.EnvironmentConfig;
 import io.trino.tests.product.launcher.env.environment.EnvMultinodeWarpSpeed;
+import io.trino.tests.product.launcher.env.environment.EnvMultinodeWarpSpeed2;
 import io.trino.tests.product.launcher.suite.Suite;
 import io.trino.tests.product.launcher.suite.SuiteTestRun;
 
@@ -31,6 +32,9 @@ public class SuiteWarpSpeed
     {
         return ImmutableList.of(
                 testOnEnvironment(EnvMultinodeWarpSpeed.class)
+                        .withGroups("warp_speed")
+                        .build(),
+                testOnEnvironment(EnvMultinodeWarpSpeed2.class)
                         .withGroups("warp_speed")
                         .build());
     }
