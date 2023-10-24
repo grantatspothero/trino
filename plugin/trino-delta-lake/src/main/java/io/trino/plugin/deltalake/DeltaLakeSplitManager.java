@@ -46,7 +46,6 @@ import io.trino.spi.predicate.NullableValue;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.type.TypeManager;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.time.Instant;
@@ -89,6 +88,7 @@ public class DeltaLakeSplitManager
     private final double minimumAssignedSplitWeight;
     private final TrinoFileSystemFactory fileSystemFactory;
     private final JsonCodec<DeltaLakeCacheSplitId> splitIdCodec;
+    private final DeltaLakeTransactionManager deltaLakeTransactionManager;
 
     @Inject
     public DeltaLakeSplitManager(
@@ -97,7 +97,8 @@ public class DeltaLakeSplitManager
             ExecutorService executor,
             DeltaLakeConfig config,
             TrinoFileSystemFactory fileSystemFactory,
-            JsonCodec<DeltaLakeCacheSplitId> splitIdCodec)
+            JsonCodec<DeltaLakeCacheSplitId> splitIdCodec,
+            DeltaLakeTransactionManager deltaLakeTransactionManager)
     {
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.transactionLogAccess = requireNonNull(transactionLogAccess, "transactionLogAccess is null");
@@ -108,6 +109,7 @@ public class DeltaLakeSplitManager
         this.minimumAssignedSplitWeight = config.getMinimumAssignedSplitWeight();
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.splitIdCodec = requireNonNull(splitIdCodec, "splitIdCodec is null");
+        this.deltaLakeTransactionManager = requireNonNull(deltaLakeTransactionManager, "deltaLakeTransactionManager is null");
     }
 
     @Override
@@ -128,7 +130,7 @@ public class DeltaLakeSplitManager
 
         DeltaLakeSplitSource splitSource = new DeltaLakeSplitSource(
                 deltaLakeTableHandle.getSchemaTableName(),
-                getSplits(deltaLakeTableHandle, session, deltaLakeTableHandle.getMaxScannedFileSize(), dynamicFilter.getColumnsCovered(), constraint),
+                getSplits(transaction, deltaLakeTableHandle, session, deltaLakeTableHandle.getMaxScannedFileSize(), dynamicFilter.getColumnsCovered(), constraint),
                 executor,
                 maxSplitsPerSecond,
                 maxOutstandingSplits,
@@ -179,19 +181,15 @@ public class DeltaLakeSplitManager
     }
 
     private Stream<DeltaLakeSplit> getSplits(
+            ConnectorTransactionHandle transaction,
             DeltaLakeTableHandle tableHandle,
             ConnectorSession session,
             Optional<DataSize> maxScannedFileSize,
             Set<ColumnHandle> columnsCoveredByDynamicFilter,
             Constraint constraint)
     {
-        TableSnapshot tableSnapshot;
-        try {
-            tableSnapshot = transactionLogAccess.getSnapshot(session, tableHandle.getSchemaTableName(), tableHandle.getLocation(), Optional.of(tableHandle.getReadVersion()));
-        }
-        catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        TableSnapshot tableSnapshot = deltaLakeTransactionManager.get(transaction, session.getIdentity())
+                .getSnapshot(session, tableHandle.getSchemaTableName(), tableHandle.getLocation(), tableHandle.getReadVersion());
         List<AddFileEntry> validDataFiles = transactionLogAccess.getActiveFiles(tableSnapshot, session);
         TupleDomain<DeltaLakeColumnHandle> enforcedPartitionConstraint = tableHandle.getEnforcedPartitionConstraint();
         TupleDomain<DeltaLakeColumnHandle> nonPartitionConstraint = tableHandle.getNonPartitionConstraint();

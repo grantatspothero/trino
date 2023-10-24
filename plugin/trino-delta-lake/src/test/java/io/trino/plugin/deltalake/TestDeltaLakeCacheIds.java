@@ -140,7 +140,8 @@ public class TestDeltaLakeCacheIds
                 newDirectExecutorService(),
                 config,
                 hdfsFileSystemFactory,
-                createJsonCodec(DeltaLakeCacheSplitId.class));
+                createJsonCodec(DeltaLakeCacheSplitId.class),
+                new DeltaLakeTransactionManager(metadataFactory));
     }
 
     @AfterClass(alwaysRun = true)
