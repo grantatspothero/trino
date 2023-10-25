@@ -34,8 +34,10 @@ import io.trino.spi.connector.SchemaNotFoundException;
 import io.trino.spi.security.TrinoPrincipal;
 import io.trino.spi.type.TestingTypeManager;
 import io.trino.spi.type.TypeManager;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -56,7 +58,9 @@ import static io.trino.spi.StandardErrorCode.SCHEMA_NOT_EMPTY;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
+@TestInstance(PER_CLASS)
 public class TestTrinoGalaxyCatalog
         extends BaseTrinoCatalogTest
 {
@@ -85,7 +89,7 @@ public class TestTrinoGalaxyCatalog
                 false);
     }
 
-    @BeforeClass
+    @BeforeAll
     public void setUp()
             throws IOException
     {
@@ -94,7 +98,7 @@ public class TestTrinoGalaxyCatalog
         tempDir = Files.createTempDirectory("test_trino_hive_catalog");
     }
 
-    @AfterClass(alwaysRun = true)
+    @AfterAll
     public void tearDown()
             throws Exception
     {
@@ -109,6 +113,7 @@ public class TestTrinoGalaxyCatalog
         deleteRecursively(tempDir, ALLOW_INSECURE);
     }
 
+    @Test
     @Override
     public void testView()
     {
