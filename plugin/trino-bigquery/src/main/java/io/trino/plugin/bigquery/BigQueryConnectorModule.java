@@ -23,6 +23,8 @@ import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.multibindings.OptionalBinder;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.base.logging.FormatInterpolator;
 import io.trino.plugin.base.logging.SessionInterpolatedValues;
 import io.trino.plugin.base.session.SessionPropertiesProvider;
@@ -87,11 +89,16 @@ public class BigQueryConnectorModule
             newSetBinder(binder, ConnectorTableFunction.class).addBinding().toProvider(Query.class).in(Scopes.SINGLETON);
             newSetBinder(binder, SessionPropertiesProvider.class).addBinding().to(BigQuerySessionProperties.class).in(Scopes.SINGLETON);
 
+            configBinder(binder).bindConfig(LocalRegionConfig.class);
+            configBinder(binder).bindConfig(CrossRegionConfig.class);
+            configBinder(binder).bindConfigDefaults(CrossRegionConfig.class, config -> config.setAllowCrossRegionAccess(true));
+
             Multibinder<BigQueryOptionsConfigurer> optionsConfigurers = newSetBinder(binder, BigQueryOptionsConfigurer.class);
             optionsConfigurers.addBinding().to(CredentialsOptionsConfigurer.class).in(Scopes.SINGLETON);
             optionsConfigurers.addBinding().to(HeaderOptionsConfigurer.class).in(Scopes.SINGLETON);
             optionsConfigurers.addBinding().to(RetryOptionsConfigurer.class).in(Scopes.SINGLETON);
             optionsConfigurers.addBinding().to(GrpcChannelOptionsConfigurer.class).in(Scopes.SINGLETON);
+            optionsConfigurers.addBinding().to(GalaxyTransportChannelProviderConfigurer.class).in(Scopes.SINGLETON);
             newOptionalBinder(binder, ProxyTransportFactory.class);
 
             install(conditionalModule(

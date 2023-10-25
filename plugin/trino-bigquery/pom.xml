@@ -545,6 +545,7 @@
                                 <exclude>**/TestBigQueryCaseInsensitiveMapping.java</exclude>
                                 <exclude>**/TestBigQuery*FailureRecoveryTest.java</exclude>
                                 <exclude>**/TestBigQueryWithProxyConnectorSmokeTest.java</exclude>
+                                <exclude>**/TestBigQueryNetworkUsageTracking.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -572,6 +573,7 @@
                                 <include>**/TestBigQueryInstanceCleaner.java</include>
                                 <include>**/TestBigQuery*FailureRecoveryTest.java</include>
                                 <include>**/TestBigQueryWithProxyConnectorSmokeTest.java</include>
+                                <include>**/TestBigQueryNetworkUsageTracking.java</include>
                             </includes>
                         </configuration>
                     </plugin>

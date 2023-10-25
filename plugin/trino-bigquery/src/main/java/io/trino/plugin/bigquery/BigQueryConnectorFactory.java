@@ -17,6 +17,7 @@ import com.google.inject.Injector;
 import io.airlift.bootstrap.Bootstrap;
 import io.airlift.json.JsonModule;
 import io.trino.spi.NodeManager;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
 import io.trino.spi.connector.ConnectorFactory;
@@ -49,6 +50,7 @@ public class BigQueryConnectorFactory
                 binder -> {
                     binder.bind(TypeManager.class).toInstance(context.getTypeManager());
                     binder.bind(NodeManager.class).toInstance(context.getNodeManager());
+                    binder.bind(CatalogHandle.class).toInstance(context.getCatalogHandle());
                 });
 
         Injector injector = app
