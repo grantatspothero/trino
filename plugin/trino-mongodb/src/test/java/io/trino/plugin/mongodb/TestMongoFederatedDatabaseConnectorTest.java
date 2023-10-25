@@ -271,6 +271,7 @@ public class TestMongoFederatedDatabaseConnectorTest
 
     // Overridden as the data types are different for few columns
     @Override
+    @org.junit.jupiter.api.Test
     public void testShowColumns()
     {
         MaterializedResult actual = computeActual("SHOW COLUMNS FROM orders");
