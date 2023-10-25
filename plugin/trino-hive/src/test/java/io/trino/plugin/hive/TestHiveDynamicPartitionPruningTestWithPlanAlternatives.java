@@ -31,10 +31,12 @@ import io.trino.testing.MaterializedResult;
 import io.trino.testing.MaterializedResultWithQueryId;
 import io.trino.testing.QueryRunner;
 import org.intellij.lang.annotations.Language;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Iterables.getOnlyElement;
@@ -58,7 +60,8 @@ public class TestHiveDynamicPartitionPruningTestWithPlanAlternatives
                 .build();
     }
 
-    @Test(timeOut = 30_000)
+    @Test
+    @Timeout(value = 30_000, unit = TimeUnit.MILLISECONDS)
     public void testJoinWithSelectiveBuildSideAndAlternativesOnBothSides()
     {
         @Language("SQL") String selectQuery = "SELECT * FROM partitioned_lineitem JOIN supplier ON partitioned_lineitem.suppkey = supplier.suppkey " +
