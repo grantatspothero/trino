@@ -19,7 +19,8 @@ echo "Testing every ${version_step}. version between ${first_tested_version} and
 
 # 404 was skipped
 # 422 needs a different version of opentelemetry-api and tests fail with ClassNotFoundException: io.opentelemetry.semconv.trace.attributes.SemanticAttributes
-tested_versions=$(seq "${first_tested_version}" ${version_step} "${previous_released_version}" | grep -vx 404 | grep -vx 422)
+# 422-424 depend on the incompatible version of the open-telemetry semantic conventions used while invoking tests
+tested_versions=$(seq "${first_tested_version}" ${version_step} "${previous_released_version}" | grep -vx '404\|42[234]')
 
 if (( (previous_released_version - first_tested_version) % version_step != 0 )); then
     tested_versions="${tested_versions} ${previous_released_version}"
