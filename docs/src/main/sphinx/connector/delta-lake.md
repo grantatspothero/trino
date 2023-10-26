@@ -132,6 +132,10 @@ values. Typical usage does not require you to configure them.
         The equivalent catalog session property is
         ``dynamic_filtering_wait_timeout``.
       -
+    * - ``delta.checkpoint-filtering.enabled``
+      - Enable partition pruning when reading checkpoint files.
+        The equivalent catalog session property is ``checkpoint_filtering_enabled``.
+      - ``false``      
     * - ``delta.table-statistics-enabled``
       - Enables :ref:`Table statistics <delta-lake-table-statistics>` for
         performance improvements. The equivalent catalog session property
