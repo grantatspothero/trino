@@ -31,7 +31,6 @@ import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import io.trino.testing.minio.MinioClient;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -154,7 +153,6 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
-    @Test
     // Override as the original tests depend on Hive metastore and here we use galaxy metastore
     public void testTrinoCacheInvalidatedOnCreateTable()
             throws Exception
