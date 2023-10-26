@@ -14,15 +14,16 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableMap;
-import io.trino.plugin.hive.BaseTestHiveOnDataLake;
+import io.trino.plugin.hive.TestHive3OnDataLake;
 import io.trino.plugin.hive.containers.HiveHadoop;
 import io.trino.plugin.hive.containers.HiveMinioDataLake;
 import io.trino.plugin.hive.metastore.thrift.BridgingHiveMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.testing.QueryRunner;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import static io.trino.plugin.hive.TestingThriftHiveMetastoreBuilder.testingThriftHiveMetastoreBuilder;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
@@ -34,17 +35,16 @@ import static java.lang.String.format;
 import static java.util.regex.Pattern.quote;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 /**
  * Test certain Hive features like flush_metadata_cache procedure via Object Store connector.
  */
+@TestInstance(PER_CLASS)
 public class TestObjectStoreHiveOnDataLake
-        extends BaseTestHiveOnDataLake
+        extends TestHive3OnDataLake
 {
-    public TestObjectStoreHiveOnDataLake()
-    {
-        super("whatever-this-is-unused");
-    }
+    public TestObjectStoreHiveOnDataLake() {}
 
     @Override
     protected QueryRunner createQueryRunner()
@@ -104,12 +104,13 @@ public class TestObjectStoreHiveOnDataLake
         return true;
     }
 
-    @BeforeClass
+    @BeforeAll
     public void grantAccessToTestSchema()
     {
         computeActual("GRANT ALL PRIVILEGES ON hive.\"%s\".\"*\" TO ROLE %s WITH GRANT OPTION".formatted(HIVE_TEST_SCHEMA, ACCOUNT_ADMIN));
     }
 
+    @Test
     @Override
     public void testEnumPartitionProjectionOnVarcharColumnWithStorageLocationTemplateCreatedOnTrino()
     {
@@ -158,6 +159,7 @@ public class TestObjectStoreHiveOnDataLake
         testEnumPartitionProjectionOnVarcharColumnWithStorageLocationTemplate(schemaName, tableName);
     }
 
+    @Test
     @Override
     public void testInsertOverwriteInTransaction()
     {
@@ -172,5 +174,14 @@ public class TestObjectStoreHiveOnDataLake
         // objectstore connector allows drop schema cascade with non-hive tables
         assertThatThrownBy(super::testUnsupportedDropSchemaCascadeWithNonHiveTable)
                 .hasMessageMatching("Expected query to fail: DROP SCHEMA test_unsupported_drop_schema_cascade_.{10} CASCADE .+");
+    }
+
+    @Test
+    @Override
+    public void testCreateFunction()
+    {
+        // CREATE FUNCTION not supported by Galaxy so far
+        assertThatThrownBy(super::testCreateFunction)
+                .hasMessageContaining("Catalog and schema must be specified when function schema is not configured");
     }
 }
