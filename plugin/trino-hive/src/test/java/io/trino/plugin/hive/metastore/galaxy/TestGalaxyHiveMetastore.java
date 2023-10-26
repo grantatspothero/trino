@@ -20,9 +20,9 @@ import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.session.PropertyMetadata;
 import io.trino.testing.TestingConnectorSession;
-import org.testng.SkipException;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,6 +30,7 @@ import java.io.IOException;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
 import static io.trino.plugin.hive.HiveTestUtils.getHiveSessionProperties;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.abort;
 
 public class TestGalaxyHiveMetastore
         extends AbstractTestHiveLocal
@@ -37,7 +38,7 @@ public class TestGalaxyHiveMetastore
     private GalaxyCockroachContainer cockroach;
     private TestingGalaxyMetastore testingGalaxyMetastore;
 
-    @BeforeClass(alwaysRun = true)
+    @BeforeAll
     @Override
     public void initialize()
             throws Exception
@@ -47,7 +48,7 @@ public class TestGalaxyHiveMetastore
         super.initialize();
     }
 
-    @AfterClass(alwaysRun = true)
+    @AfterAll
     @Override
     public void cleanup()
             throws IOException
@@ -81,6 +82,7 @@ public class TestGalaxyHiveMetastore
         return new GalaxyHiveMetastore(testingGalaxyMetastore.getMetastore(), HDFS_ENVIRONMENT, tempDir.getAbsolutePath(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
     }
 
+    @Test
     @Override
     public void testHideDeltaLakeTables()
     {
@@ -91,7 +93,12 @@ public class TestGalaxyHiveMetastore
                         "not to contain\n" +
                         "  \\[\\1]\n" +
                         "but found.*");
+    }
 
-        throw new SkipException("not supported");
+    @Test
+    @Override
+    public void testPartitionSchemaMismatch()
+    {
+        abort("tests using existing tables are not supported");
     }
 }
