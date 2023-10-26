@@ -35,10 +35,16 @@ import static com.google.common.collect.MoreCollectors.onlyElement;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
+import static org.junit.jupiter.api.Assumptions.abort;
 import static org.testng.Assert.fail;
 
 class ConnectorFeaturesTestHelper
 {
+    enum TestFramework {
+        TESTNG,
+        JUNIT,
+    }
+
     private final Class<?> objectStoreConnectorFeaturesTestClass;
     private final Class<?> connectorTestClass;
     private final Class<?> objectStoreTestClass;
@@ -63,7 +69,7 @@ class ConnectorFeaturesTestHelper
         }
     }
 
-    void skipDuplicateTestCoverage(String methodName, Class<?>... args)
+    void skipDuplicateTestCoverage(TestFramework testFramework, String methodName, Class<?>... args)
     {
         try {
             Method ignored = objectStoreConnectorFeaturesTestClass.getDeclaredMethod(methodName, args); // validate we have the override
@@ -75,7 +81,10 @@ class ConnectorFeaturesTestHelper
             throw new RuntimeException(e);
         }
 
-        throw new SkipException("This method is probably run in %s".formatted(objectStoreTestClass.getSimpleName()));
+        switch (testFramework) {
+            case TESTNG -> throw new SkipException("This method is probably run in %s".formatted(objectStoreTestClass.getSimpleName()));
+            case JUNIT -> abort("This method is probably run in %s".formatted(objectStoreTestClass.getSimpleName()));
+        }
     }
 
     private boolean isTestSpecializedForConnector(String methodName, Class<?>... args)

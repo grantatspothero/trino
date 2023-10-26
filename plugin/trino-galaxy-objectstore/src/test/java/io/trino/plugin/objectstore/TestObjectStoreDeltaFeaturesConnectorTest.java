@@ -22,6 +22,7 @@ import io.starburst.stargate.id.FunctionId;
 import io.trino.plugin.deltalake.DeltaLakeQueryRunner;
 import io.trino.plugin.deltalake.TestDeltaLakeConnectorTest;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
+import io.trino.plugin.objectstore.ConnectorFeaturesTestHelper.TestFramework;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.sql.planner.OptimizerConfig;
@@ -29,8 +30,10 @@ import io.trino.testing.BaseConnectorTest;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import io.trino.testing.minio.MinioClient;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 
 import java.io.IOException;
@@ -56,6 +59,7 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     private static final ConnectorFeaturesTestHelper HELPER = new ConnectorFeaturesTestHelper(TestObjectStoreDeltaFeaturesConnectorTest.class, TestObjectStoreDeltaConnectorTest.class);
 
     private TestingGalaxyMetastore galaxyMetastore;
+    private TestFramework testFramework;
 
     @Override
     protected QueryRunner createQueryRunner()
@@ -123,6 +127,18 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
         super.tearDown();
     }
 
+    @BeforeClass
+    public void detectTestNg()
+    {
+        testFramework = TestFramework.TESTNG;
+    }
+
+    @BeforeAll
+    public void detectJunit()
+    {
+        testFramework = TestFramework.JUNIT;
+    }
+
     @Override
     public void ensureDistributedQueryRunner()
     {
@@ -178,7 +194,7 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
 
     private void skipDuplicateTestCoverage(String methodName, Class<?>... args)
     {
-        HELPER.skipDuplicateTestCoverage(methodName, args);
+        HELPER.skipDuplicateTestCoverage(testFramework, methodName, args);
     }
 
     // Nested class because IntelliJ poorly handles case where one class is run sometimes as a test and sometimes as an application
