@@ -50,6 +50,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Delta-specific tests inherited from {@link TestDeltaLakeConnectorTest}.
  *
  * @see TestObjectStoreDeltaConnectorTest
+ * @see TestObjectStoreHiveFeaturesConnectorTest
  * @see TestObjectStoreIcebergFeaturesConnectorTest
  */
 public class TestObjectStoreDeltaFeaturesConnectorTest

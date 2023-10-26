@@ -14,66 +14,71 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableMap;
-import io.trino.filesystem.TrinoFileSystemFactory;
-import io.trino.plugin.iceberg.BaseIcebergConnectorTest;
-import io.trino.plugin.iceberg.IcebergConfig;
-import io.trino.plugin.iceberg.IcebergConnector;
-import io.trino.plugin.iceberg.IcebergFileFormat;
+import io.trino.Session;
+import io.trino.metadata.TableMetadata;
+import io.trino.plugin.hive.BaseHiveConnectorTest;
+import io.trino.plugin.hive.HiveConnector;
+import io.trino.plugin.hive.HiveQueryRunner;
+import io.trino.plugin.hive.HiveStorageFormat;
 import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.plugin.objectstore.ConnectorFeaturesTestHelper.TestFramework;
 import io.trino.plugin.tpch.TpchPlugin;
+import io.trino.spi.connector.ConnectorTableMetadata;
 import io.trino.sql.planner.OptimizerConfig;
 import io.trino.testing.BaseConnectorTest;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryFailedException;
 import io.trino.testing.QueryRunner;
 import org.junit.jupiter.api.BeforeAll;
+import org.testng.SkipException;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
-import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.trino.plugin.base.util.Closables.closeAllSuppress;
-import static io.trino.plugin.iceberg.IcebergTestUtils.checkParquetFileSorting;
+import static io.trino.plugin.hive.HiveQueryRunner.copyTpchTablesBucketed;
+import static io.trino.plugin.hive.HiveTableProperties.STORAGE_FORMAT_PROPERTY;
 import static io.trino.plugin.objectstore.ObjectStoreQueryRunner.initializeTpchTables;
-import static io.trino.testing.TestingConnectorSession.SESSION;
+import static io.trino.plugin.tpch.ColumnNaming.SIMPLIFIED;
 import static io.trino.testing.TestingSession.testSessionBuilder;
+import static java.util.Map.entry;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Tests ObjectStore connector with Iceberg backend, exercising all
- * iceberg-specific tests inherited from {@link BaseIcebergConnectorTest}.
+ * Tests ObjectStore connector with Hive backend, exercising all
+ * hive-specific tests inherited from {@link BaseHiveConnectorTest}.
  *
- * @see TestObjectStoreIcebergConnectorTest
- * @see TestObjectStoreHiveFeaturesConnectorTest
+ * @see TestObjectStoreHiveConnectorTest
+ * @see TestObjectStoreIcebergFeaturesConnectorTest
  * @see TestObjectStoreDeltaFeaturesConnectorTest
  */
-public class TestObjectStoreIcebergFeaturesConnectorTest
-        extends BaseIcebergConnectorTest
+public class TestObjectStoreHiveFeaturesConnectorTest
+        extends BaseHiveConnectorTest
 {
-    private static final ConnectorFeaturesTestHelper HELPER = new ConnectorFeaturesTestHelper(TestObjectStoreIcebergFeaturesConnectorTest.class, TestObjectStoreIcebergConnectorTest.class);
+    private static final ConnectorFeaturesTestHelper HELPER = new ConnectorFeaturesTestHelper(TestObjectStoreHiveFeaturesConnectorTest.class, TestObjectStoreHiveConnectorTest.class);
 
     private TestFramework testFramework;
-
-    protected TestObjectStoreIcebergFeaturesConnectorTest()
-    {
-        super(new IcebergConfig().getFileFormat());
-    }
 
     @Override
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        String catalog = "iceberg";
+        String catalog = HiveQueryRunner.HIVE_CATALOG;
         String schema = "tpch";
         DistributedQueryRunner queryRunner = DistributedQueryRunner.builder(
                         testSessionBuilder()
                                 .setCatalog(catalog)
                                 .setSchema(schema)
                                 .build())
+                // This is needed for e2e scale writers test otherwise 50% threshold of
+                // bufferSize won't get exceeded for scaling to happen (synced from BaseHiveConnectorTest)
+                .addExtraProperty("task.max-local-exchange-buffer-size", "32MB")
                 .build();
         try {
             queryRunner.installPlugin(new TpchPlugin());
@@ -81,18 +86,27 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
 
             queryRunner.installPlugin(new IcebergPlugin());
             queryRunner.installPlugin(new ObjectStorePlugin());
-            String metastoreDirectory = queryRunner.getCoordinator().getBaseDataDir().resolve("iceberg_data").toString();
-            queryRunner.createCatalog(catalog, "galaxy_objectstore", ImmutableMap.<String, String>builder()
+
+            String metastoreDirectory = queryRunner.getCoordinator().getBaseDataDir().resolve("hive_data").toString();
+            Map<String, String> objectStoreProperties = ImmutableMap.<String, String>builder()
                     // Hive
                     .put("HIVE__hive.metastore", "file")
                     .put("HIVE__hive.metastore.catalog.dir", metastoreDirectory)
                     .put("HIVE__galaxy.location-security.enabled", "false")
                     .put("HIVE__galaxy.account-url", "https://localhost:1234")
                     .put("HIVE__galaxy.catalog-id", "c-1234567890")
+                    // Hive setting synced from BaseHiveConnectorTest
+                    .put("HIVE__hive.allow-register-partition-procedure", "true")
+                    // Reduce writer sort buffer size to ensure SortingFileWriter gets used
+                    .put("HIVE__hive.writer-sort-buffer-size", "1MB")
+                    // Make weighted split scheduling more conservative to avoid OOMs in test
+                    .put("HIVE__hive.minimum-assigned-split-weight", "0.5")
+                    .put("HIVE__hive.partition-projection-enabled", "true")
+                    // Hive setting synced from HiveQueryRunner
+                    .put("HIVE__hive.max-partitions-per-scan", "1000")
+                    .put("HIVE__hive.max-partitions-for-eager-load", "1000")
                     // Iceberg
                     .put("ICEBERG__iceberg.catalog.type", "TESTING_FILE_METASTORE")
-                    // Allows testing the sorting writer flushing to the file system with smaller tables
-                    .put("ICEBERG__iceberg.writer-sort-buffer-size", "1MB")
                     .put("ICEBERG__hive.metastore.catalog.dir", metastoreDirectory)
                     .put("ICEBERG__galaxy.location-security.enabled", "false")
                     .put("ICEBERG__galaxy.account-url", "https://localhost:1234")
@@ -110,14 +124,45 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
                     .put("HUDI__galaxy.account-url", "https://localhost:1234")
                     .put("HUDI__galaxy.catalog-id", "c-1234567890")
                     // ObjectStore
-                    .put("OBJECTSTORE__object-store.table-type", TableType.ICEBERG.name())
+                    .put("OBJECTSTORE__object-store.table-type", TableType.HIVE.name())
                     .put("OBJECTSTORE__galaxy.location-security.enabled", "false")
                     .put("OBJECTSTORE__galaxy.account-url", "https://localhost:1234")
                     .put("OBJECTSTORE__galaxy.catalog-id", "c-1234567890")
-                    .buildOrThrow());
+                    .buildOrThrow();
+            queryRunner.createCatalog(catalog, "galaxy_objectstore", objectStoreProperties);
+
+            // Hive setting synced from HiveQueryRunner
+            Map<String, String> objectStoreBucketedProperties = new HashMap<>(objectStoreProperties);
+            objectStoreBucketedProperties.put("HIVE__hive.max-initial-split-size", "10kB"); // so that each bucket has multiple splits
+            objectStoreBucketedProperties.put("HIVE__hive.max-split-size", "10kB"); // so that each bucket has multiple splits
+            objectStoreBucketedProperties.put("HIVE__hive.storage-format", "TEXTFILE"); // so that there's no minimum split size for the file
+            objectStoreBucketedProperties.put("HIVE__hive.compression-codec", "NONE"); // so that the file is splittable
+            String bucketedCatalog = HiveQueryRunner.HIVE_BUCKETED_CATALOG;
+            queryRunner.createCatalog(bucketedCatalog, "galaxy_objectstore", objectStoreBucketedProperties);
 
             queryRunner.execute("CREATE SCHEMA %s.%s".formatted(catalog, schema));
             initializeTpchTables(queryRunner, REQUIRED_TPCH_TABLES);
+
+            String bucketedSchema = HiveQueryRunner.TPCH_BUCKETED_SCHEMA;
+            queryRunner.execute("CREATE SCHEMA %s.%s".formatted(bucketedCatalog, bucketedSchema));
+            copyTpchTablesBucketed(
+                    queryRunner,
+                    "tpch",
+                    "tiny",
+                    Session.builder(queryRunner.getDefaultSession())
+                            .setCatalog(bucketedCatalog)
+                            .setSchema(bucketedSchema)
+                            .build(),
+                    REQUIRED_TPCH_TABLES,
+                    SIMPLIFIED);
+
+            // extra catalog with NANOSECOND timestamp precision
+            Map<String, String> objectStoreHiveNanosProperties = new HashMap<>(objectStoreProperties);
+            objectStoreHiveNanosProperties.put("HIVE__hive.timestamp-precision", "NANOSECONDS");
+            queryRunner.createCatalog(
+                    "hive_timestamp_nanos",
+                    "galaxy_objectstore",
+                    objectStoreHiveNanosProperties);
 
             return queryRunner;
         }
@@ -127,12 +172,10 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
         }
     }
 
-    @BeforeClass
     @Override
-    public void initFileSystem()
+    protected boolean isObjectStore()
     {
-        ObjectStoreConnector objectStoreConnector = (ObjectStoreConnector) getDistributedQueryRunner().getCoordinator().getConnector(getSession().getCatalog().orElseThrow());
-        fileSystem = ((IcebergConnector) objectStoreConnector.getInjector().getInstance(DelegateConnectors.class).icebergConnector()).getInjector().getInstance(TrinoFileSystemFactory.class).create(SESSION);
+        return true;
     }
 
     @BeforeClass
@@ -148,40 +191,259 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    protected boolean isObjectStore()
+    protected HiveConnector getHiveConnector(String catalog)
     {
-        return true;
+        ObjectStoreConnector objectStoreConnector = (ObjectStoreConnector) getDistributedQueryRunner().getCoordinator().getConnector(catalog);
+        return (HiveConnector) objectStoreConnector.getInjector().getInstance(DelegateConnectors.class).hiveConnector();
     }
 
     @Override
-    protected boolean supportsIcebergFileStatistics(String typeName)
+    protected TableMetadata getTableMetadata(String catalog, String schema, String tableName)
     {
-        checkState(format == IcebergFileFormat.PARQUET, "The logic here is appropriate for PARQUET, got %s", format);
-        return true;
+        TableMetadata tableMetadata = super.getTableMetadata(catalog, schema, tableName);
+
+        // wrap it back
+        return new TableMetadata(
+                tableMetadata.getCatalogName(),
+                new ConnectorTableMetadata(
+                        tableMetadata.getMetadata().getTable(),
+                        tableMetadata.getMetadata().getColumns(),
+                        tableMetadata.getMetadata().getProperties().entrySet().stream()
+                                .map(entry -> entry(entry.getKey(), switch (entry.getKey()) {
+                                    case STORAGE_FORMAT_PROPERTY -> HiveStorageFormat.valueOf((String) entry.getValue());
+                                    default -> entry.getValue();
+                                }))
+                                .collect(toImmutableMap(Entry::getKey, Entry::getValue)),
+                        tableMetadata.getMetadata().getComment(),
+                        tableMetadata.getMetadata().getCheckConstraints()));
     }
 
     @Override
-    protected boolean supportsRowGroupStatistics(String typeName)
+    public void testCreateSchemaWithAuthorizationForUser()
     {
-        checkState(format == IcebergFileFormat.PARQUET, "The logic here is appropriate for PARQUET, got %s", format);
-        return !(typeName.equalsIgnoreCase("varbinary") ||
-                typeName.equalsIgnoreCase("time") ||
-                typeName.equalsIgnoreCase("time(6)") ||
-                typeName.equalsIgnoreCase("timestamp(3) with time zone") ||
-                typeName.equalsIgnoreCase("timestamp(6) with time zone"));
+        skipAuthorizationRelatedTest();
     }
 
     @Override
-    protected boolean isFileSorted(String path, String sortColumnName)
+    public void testCreateSchemaWithAuthorizationForRole()
     {
-        checkState(format == IcebergFileFormat.PARQUET, "The logic here is appropriate for PARQUET, got %s", format);
-        return checkParquetFileSorting(path, sortColumnName);
+        skipAuthorizationRelatedTest();
+    }
+
+    @Override
+    public void testCreateSchemaWithNonLowercaseOwnerName()
+    {
+        skipAuthorizationRelatedTest();
+    }
+
+    @Override
+    public void testSchemaAuthorization()
+    {
+        skipAuthorizationRelatedTest();
+    }
+
+    @Override
+    public void testSchemaAuthorizationForUser()
+    {
+        skipAuthorizationRelatedTest();
+    }
+
+    @Override
+    public void testSchemaAuthorizationForRole()
+    {
+        skipAuthorizationRelatedTest();
+    }
+
+    @Override
+    public void testTableAuthorization()
+    {
+        skipAuthorizationRelatedTest();
+    }
+
+    @Override
+    public void testTableAuthorizationForRole()
+    {
+        skipAuthorizationRelatedTest();
+    }
+
+    @Override
+    public void testViewAuthorization()
+    {
+        skipAuthorizationRelatedTest();
+    }
+
+    @Override
+    public void testViewAuthorizationForRole()
+    {
+        skipAuthorizationRelatedTest();
+    }
+
+    @Override
+    public void testViewAuthorizationSecurityDefiner()
+    {
+        skipAuthorizationRelatedTest();
+    }
+
+    @Override
+    public void testViewAuthorizationSecurityInvoker()
+    {
+        skipAuthorizationRelatedTest();
+    }
+
+    @Override
+    public void testShowTablePrivileges()
+    {
+        skipAuthorizationRelatedTest();
+    }
+
+    @Override
+    public void testShowColumnMetadata()
+    {
+        skipAuthorizationRelatedTest();
+    }
+
+    @Override
+    public void testCurrentUserInView()
+    {
+        // The test merit is not Galaxy specific, but the test structure is.
+        skipAuthorizationRelatedTest();
+    }
+
+    @Override
+    public void testShowCreateSchema()
+    {
+        // The test merit is not Galaxy specific, but the test structure is.
+        skipAuthorizationRelatedTest();
+    }
+
+    @Override
+    public void testExtraProperties()
+    {
+        // Arbitrary extra_properties currently not exposed in Galaxy
+        assertThatThrownBy(super::testExtraProperties)
+                .isInstanceOf(QueryFailedException.class)
+                .hasMessage("Catalog 'hive' table property 'extra_properties' does not exist");
+    }
+
+    @Override
+    public void testExtraPropertiesWithCtas()
+    {
+        // Arbitrary extra_properties currently not exposed in Galaxy
+        assertThatThrownBy(super::testExtraPropertiesWithCtas)
+                .isInstanceOf(QueryFailedException.class)
+                .hasMessage("Catalog 'hive' table property 'extra_properties' does not exist");
+    }
+
+    @Override
+    public void testShowCreateWithExtraProperties()
+    {
+        // Arbitrary extra_properties currently not exposed in Galaxy
+        assertThatThrownBy(super::testShowCreateWithExtraProperties)
+                .isInstanceOf(QueryFailedException.class)
+                .hasMessage("Catalog 'hive' table property 'extra_properties' does not exist");
+    }
+
+    @Override
+    public void testDuplicateExtraProperties()
+    {
+        // Arbitrary extra_properties currently not exposed in Galaxy
+        assertThatThrownBy(super::testDuplicateExtraProperties)
+                .hasMessageContaining("Catalog 'hive' table property 'extra_properties' does not exist");
+    }
+
+    @Override
+    public void testOverwriteExistingPropertyWithExtraProperties()
+    {
+        // Arbitrary extra_properties currently not exposed in Galaxy
+        assertThatThrownBy(super::testOverwriteExistingPropertyWithExtraProperties)
+                .hasMessageContaining("Catalog 'hive' table property 'extra_properties' does not exist");
+    }
+
+    @Override
+    public void testNullExtraProperty()
+    {
+        // Arbitrary extra_properties currently not exposed in Galaxy
+        assertThatThrownBy(super::testNullExtraProperty)
+                .hasMessageContaining("Catalog 'hive' table property 'extra_properties' does not exist");
+    }
+
+    @Override
+    public void testCollidingMixedCaseProperty()
+    {
+        // Arbitrary extra_properties currently not exposed in Galaxy
+        assertThatThrownBy(super::testCollidingMixedCaseProperty)
+                .isInstanceOf(QueryFailedException.class)
+                .hasMessage("Catalog 'hive' table property 'extra_properties' does not exist");
+    }
+
+    @Override
+    public void testCreateAndInsert()
+    {
+        assertThatThrownBy(super::testCreateAndInsert)
+                .isInstanceOf(QueryFailedException.class)
+                .hasMessage("Catalog only supports writes using autocommit: hive");
+    }
+
+    @Override
+    public void testDeleteAndInsert()
+    {
+        assertThatThrownBy(super::testDeleteAndInsert)
+                .isInstanceOf(QueryFailedException.class)
+                .hasMessage("Catalog only supports writes using autocommit: hive");
+    }
+
+    @Override
+    public void testInsertIntoPartitionedBucketedTableFromBucketedTable()
+    {
+        assertThatThrownBy(super::testInsertIntoPartitionedBucketedTableFromBucketedTable)
+                .isInstanceOf(QueryFailedException.class)
+                .hasMessage("Catalog only supports writes using autocommit: hive");
+    }
+
+    @Override
+    public void testMismatchedBucketing()
+    {
+        assertThatThrownBy(super::testMismatchedBucketing)
+                .hasStackTraceContaining("Not in a transaction");
+    }
+
+    @Override
+    public void testOptimize()
+    {
+        assertThatThrownBy(super::testOptimize)
+                .hasMessageContaining("Executing OPTIMIZE on Hive tables is not supported");
+    }
+
+    @Override
+    public void testOptimizeWithPartitioning()
+    {
+        assertThatThrownBy(super::testOptimizeWithPartitioning)
+                .hasMessageContaining("Executing OPTIMIZE on Hive tables is not supported");
+    }
+
+    @Override
+    public void testOptimizeWithBucketing()
+    {
+        assertThatThrownBy(super::testOptimizeWithBucketing)
+                .hasMessageContaining("Executing OPTIMIZE on Hive tables is not supported");
+    }
+
+    @Override
+    public void testOptimizeWithWriterScaling()
+    {
+        assertThatThrownBy(super::testOptimizeWithWriterScaling)
+                .hasMessageContaining("Executing OPTIMIZE on Hive tables is not supported");
     }
 
     @BeforeMethod(alwaysRun = true)
     public void preventDuplicatedTestCoverage(Method testMethod)
     {
         HELPER.preventDuplicatedTestCoverage(testMethod);
+    }
+
+    private void skipAuthorizationRelatedTest()
+    {
+        throw new SkipException("Test is disabled. Hive authorization & roles work differently in Galaxy");
     }
 
     @Override
@@ -196,27 +458,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     {
         // duplicate test, but still desired to run
         super.ensureTestNamingConvention();
-    }
-
-    @Override
-    public void testSerializableReadIsolation()
-    {
-        // HiveConnector has READ_UNCOMMITTED. When opening transaction in ObjectStore we don't know yet we which tables we will read from.
-        assertThatThrownBy(super::testSerializableReadIsolation)
-                .cause()
-                .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Connector supported isolation level READ UNCOMMITTED does not meet requested isolation level READ COMMITTED");
-    }
-
-    @Override
-    public void testTableChangesFunctionAfterSchemaChange()
-    {
-        // TODO (https://github.com/starburstdata/galaxy-trino/issues/1122) Support Iceberg system.table_changes CDF table function
-        assertThatThrownBy(super::testTableChangesFunctionAfterSchemaChange)
-                .hasMessageFindingMatch("^Execution of 'actual' query.* failed: .*TABLE\\(system.table_changes\\(")
-                .cause()
-                .isInstanceOf(QueryFailedException.class)
-                .hasMessage("line 1:107: Too many arguments. Expected at most 3 arguments, got 4 arguments");
     }
 
     private void skipDuplicateTestCoverage(String methodName, Class<?>... args)
@@ -239,6 +480,12 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     /////// ----------------------------------------- please put generated code below this line ----------------------------------------- ///////
     /////// ----------------------------------------- please put generated code also below this line ------------------------------------ ///////
     /////// ----------------------------------------- please put generated code below this line as well --------------------------------- ///////
+
+    @Override
+    public void testAddAndDropColumnName(String arg0)
+    {
+        skipDuplicateTestCoverage("testAddAndDropColumnName", String.class);
+    }
 
     @Override
     public void testAddColumn()
@@ -289,12 +536,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testAggregationOverUnknown()
-    {
-        skipDuplicateTestCoverage("testAggregationOverUnknown");
-    }
-
-    @Override
     public void testAlterTableAddLongColumnName()
     {
         skipDuplicateTestCoverage("testAlterTableAddLongColumnName");
@@ -307,15 +548,15 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testArithmeticNegation()
-    {
-        skipDuplicateTestCoverage("testArithmeticNegation");
-    }
-
-    @Override
     public void testCaseSensitiveDataMapping(BaseConnectorTest.DataMappingTestSetup arg0)
     {
         skipDuplicateTestCoverage("testCaseSensitiveDataMapping", BaseConnectorTest.DataMappingTestSetup.class);
+    }
+
+    @Override
+    public void testCharVarcharComparison()
+    {
+        skipDuplicateTestCoverage("testCharVarcharComparison");
     }
 
     @Override
@@ -391,27 +632,9 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testComplexQuery()
-    {
-        skipDuplicateTestCoverage("testComplexQuery");
-    }
-
-    @Override
     public void testConcurrentScans()
     {
         skipDuplicateTestCoverage("testConcurrentScans");
-    }
-
-    @Override
-    public void testCountAll()
-    {
-        skipDuplicateTestCoverage("testCountAll");
-    }
-
-    @Override
-    public void testCountColumn()
-    {
-        skipDuplicateTestCoverage("testCountColumn");
     }
 
     @Override
@@ -424,12 +647,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     public void testCreateSchemaWithLongName()
     {
         skipDuplicateTestCoverage("testCreateSchemaWithLongName");
-    }
-
-    @Override
-    public void testCreateSchemaWithNonLowercaseOwnerName()
-    {
-        skipDuplicateTestCoverage("testCreateSchemaWithNonLowercaseOwnerName");
     }
 
     @Override
@@ -535,45 +752,9 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testDelete()
-    {
-        skipDuplicateTestCoverage("testDelete");
-    }
-
-    @Override
     public void testDeleteAllDataFromTable()
     {
         skipDuplicateTestCoverage("testDeleteAllDataFromTable");
-    }
-
-    @Override
-    public void testDeleteWithComplexPredicate()
-    {
-        skipDuplicateTestCoverage("testDeleteWithComplexPredicate");
-    }
-
-    @Override
-    public void testDeleteWithLike()
-    {
-        skipDuplicateTestCoverage("testDeleteWithLike");
-    }
-
-    @Override
-    public void testDeleteWithSemiJoin()
-    {
-        skipDuplicateTestCoverage("testDeleteWithSemiJoin");
-    }
-
-    @Override
-    public void testDeleteWithSubquery()
-    {
-        skipDuplicateTestCoverage("testDeleteWithSubquery");
-    }
-
-    @Override
-    public void testDeleteWithVarcharPredicate()
-    {
-        skipDuplicateTestCoverage("testDeleteWithVarcharPredicate");
     }
 
     @Override
@@ -583,51 +764,9 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testDistinct()
-    {
-        skipDuplicateTestCoverage("testDistinct");
-    }
-
-    @Override
-    public void testDistinctHaving()
-    {
-        skipDuplicateTestCoverage("testDistinctHaving");
-    }
-
-    @Override
-    public void testDistinctLimit()
-    {
-        skipDuplicateTestCoverage("testDistinctLimit");
-    }
-
-    @Override
-    public void testDistinctMultipleFields()
-    {
-        skipDuplicateTestCoverage("testDistinctMultipleFields");
-    }
-
-    @Override
-    public void testDistinctWithOrderBy()
-    {
-        skipDuplicateTestCoverage("testDistinctWithOrderBy");
-    }
-
-    @Override
     public void testDropAmbiguousRowFieldCaseSensitivity()
     {
         skipDuplicateTestCoverage("testDropAmbiguousRowFieldCaseSensitivity");
-    }
-
-    @Override
-    public void testDropAndAddColumnWithSameName()
-    {
-        skipDuplicateTestCoverage("testDropAndAddColumnWithSameName");
-    }
-
-    @Override
-    public void testDropColumn()
-    {
-        skipDuplicateTestCoverage("testDropColumn");
     }
 
     @Override
@@ -658,6 +797,12 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     public void testDropRowFieldCaseSensitivity()
     {
         skipDuplicateTestCoverage("testDropRowFieldCaseSensitivity");
+    }
+
+    @Override
+    public void testDropRowFieldWhenDuplicates()
+    {
+        skipDuplicateTestCoverage("testDropRowFieldWhenDuplicates");
     }
 
     @Override
@@ -697,12 +842,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testExplainAnalyzeWithDeleteWithSubquery()
-    {
-        skipDuplicateTestCoverage("testExplainAnalyzeWithDeleteWithSubquery");
-    }
-
-    @Override
     public void testFederatedMaterializedView()
     {
         skipDuplicateTestCoverage("testFederatedMaterializedView");
@@ -715,39 +854,9 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testFilterPushdownWithAggregation()
-    {
-        skipDuplicateTestCoverage("testFilterPushdownWithAggregation");
-    }
-
-    @Override
-    public void testIn()
-    {
-        skipDuplicateTestCoverage("testIn");
-    }
-
-    @Override
     public void testInListPredicate()
     {
         skipDuplicateTestCoverage("testInListPredicate");
-    }
-
-    @Override
-    public void testInformationSchemaFiltering()
-    {
-        skipDuplicateTestCoverage("testInformationSchemaFiltering");
-    }
-
-    @Override
-    public void testInformationSchemaUppercaseName()
-    {
-        skipDuplicateTestCoverage("testInformationSchemaUppercaseName");
-    }
-
-    @Override
-    public void testInsert()
-    {
-        skipDuplicateTestCoverage("testInsert");
     }
 
     @Override
@@ -760,12 +869,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     public void testInsertForDefaultColumn()
     {
         skipDuplicateTestCoverage("testInsertForDefaultColumn");
-    }
-
-    @Override
-    public void testInsertHighestUnicodeCharacter()
-    {
-        skipDuplicateTestCoverage("testInsertHighestUnicodeCharacter");
     }
 
     @Override
@@ -799,12 +902,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testInsertUnicode()
-    {
-        skipDuplicateTestCoverage("testInsertUnicode");
-    }
-
-    @Override
     public void testIsNullPredicate()
     {
         skipDuplicateTestCoverage("testIsNullPredicate");
@@ -823,39 +920,9 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testLargeIn()
-    {
-        skipDuplicateTestCoverage("testLargeIn");
-    }
-
-    @Override
     public void testLikePredicate()
     {
         skipDuplicateTestCoverage("testLikePredicate");
-    }
-
-    @Override
-    public void testLimit()
-    {
-        skipDuplicateTestCoverage("testLimit");
-    }
-
-    @Override
-    public void testLimitInInlineView()
-    {
-        skipDuplicateTestCoverage("testLimitInInlineView");
-    }
-
-    @Override
-    public void testLimitMax()
-    {
-        skipDuplicateTestCoverage("testLimitMax");
-    }
-
-    @Override
-    public void testLimitWithAggregation()
-    {
-        skipDuplicateTestCoverage("testLimitWithAggregation");
     }
 
     @Override
@@ -1021,12 +1088,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testPredicate()
-    {
-        skipDuplicateTestCoverage("testPredicate");
-    }
-
-    @Override
     public void testPredicateOnRowTypeField()
     {
         skipDuplicateTestCoverage("testPredicateOnRowTypeField");
@@ -1090,12 +1151,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     public void testReadMetadataWithRelationsConcurrentModifications()
     {
         skipDuplicateTestCoverage("testReadMetadataWithRelationsConcurrentModifications");
-    }
-
-    @Override
-    public void testRenameColumn()
-    {
-        skipDuplicateTestCoverage("testRenameColumn");
     }
 
     @Override
@@ -1165,27 +1220,9 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testRepeatedAggregations()
-    {
-        skipDuplicateTestCoverage("testRepeatedAggregations");
-    }
-
-    @Override
     public void testRollback()
     {
         skipDuplicateTestCoverage("testRollback");
-    }
-
-    @Override
-    public void testRowLevelDelete()
-    {
-        skipDuplicateTestCoverage("testRowLevelDelete");
-    }
-
-    @Override
-    public void testRowLevelUpdate()
-    {
-        skipDuplicateTestCoverage("testRowLevelUpdate");
     }
 
     @Override
@@ -1222,12 +1259,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     public void testSelectVersionOfNonExistentTable()
     {
         skipDuplicateTestCoverage("testSelectVersionOfNonExistentTable");
-    }
-
-    @Override
-    public void testSelectWithComparison()
-    {
-        skipDuplicateTestCoverage("testSelectWithComparison");
     }
 
     @Override
@@ -1315,12 +1346,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testShowColumns()
-    {
-        skipDuplicateTestCoverage("testShowColumns");
-    }
-
-    @Override
     public void testShowCreateInformationSchema()
     {
         skipDuplicateTestCoverage("testShowCreateInformationSchema");
@@ -1345,45 +1370,9 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testShowSchemas()
-    {
-        skipDuplicateTestCoverage("testShowSchemas");
-    }
-
-    @Override
-    public void testShowSchemasFrom()
-    {
-        skipDuplicateTestCoverage("testShowSchemasFrom");
-    }
-
-    @Override
     public void testShowSchemasFromOther()
     {
         skipDuplicateTestCoverage("testShowSchemasFromOther");
-    }
-
-    @Override
-    public void testShowSchemasLike()
-    {
-        skipDuplicateTestCoverage("testShowSchemasLike");
-    }
-
-    @Override
-    public void testShowSchemasLikeWithEscape()
-    {
-        skipDuplicateTestCoverage("testShowSchemasLikeWithEscape");
-    }
-
-    @Override
-    public void testShowTables()
-    {
-        skipDuplicateTestCoverage("testShowTables");
-    }
-
-    @Override
-    public void testShowTablesLike()
-    {
-        skipDuplicateTestCoverage("testShowTablesLike");
     }
 
     @Override
@@ -1399,18 +1388,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testTableSampleBernoulli()
-    {
-        skipDuplicateTestCoverage("testTableSampleBernoulli");
-    }
-
-    @Override
-    public void testTableSampleBernoulliBoundaryValues()
-    {
-        skipDuplicateTestCoverage("testTableSampleBernoulliBoundaryValues");
-    }
-
-    @Override
     public void testTableSampleSystem()
     {
         skipDuplicateTestCoverage("testTableSampleSystem");
@@ -1420,18 +1397,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     public void testTableSampleWithFiltering()
     {
         skipDuplicateTestCoverage("testTableSampleWithFiltering");
-    }
-
-    @Override
-    public void testTopN()
-    {
-        skipDuplicateTestCoverage("testTopN");
-    }
-
-    @Override
-    public void testTopNByMultipleFields()
-    {
-        skipDuplicateTestCoverage("testTopNByMultipleFields");
     }
 
     @Override
@@ -1447,45 +1412,9 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testUnionAllAboveBroadcastJoin()
-    {
-        skipDuplicateTestCoverage("testUnionAllAboveBroadcastJoin");
-    }
-
-    @Override
-    public void testUpdate()
-    {
-        skipDuplicateTestCoverage("testUpdate");
-    }
-
-    @Override
-    public void testUpdateAllValues()
-    {
-        skipDuplicateTestCoverage("testUpdateAllValues");
-    }
-
-    @Override
     public void testUpdateNotNullColumn()
     {
         skipDuplicateTestCoverage("testUpdateNotNullColumn");
-    }
-
-    @Override
-    public void testUpdateRowConcurrently()
-    {
-        skipDuplicateTestCoverage("testUpdateRowConcurrently");
-    }
-
-    @Override
-    public void testUpdateRowType()
-    {
-        skipDuplicateTestCoverage("testUpdateRowType");
-    }
-
-    @Override
-    public void testUpdateWithPredicates()
-    {
-        skipDuplicateTestCoverage("testUpdateWithPredicates");
     }
 
     @Override
@@ -1552,17 +1481,5 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     public void verifySupportsRowLevelDeleteDeclaration()
     {
         skipDuplicateTestCoverage("verifySupportsRowLevelDeleteDeclaration");
-    }
-
-    @Override
-    public void verifySupportsRowLevelUpdateDeclaration()
-    {
-        skipDuplicateTestCoverage("verifySupportsRowLevelUpdateDeclaration");
-    }
-
-    @Override
-    public void verifySupportsUpdateDeclaration()
-    {
-        skipDuplicateTestCoverage("verifySupportsUpdateDeclaration");
     }
 }

@@ -74,9 +74,9 @@ public final class HiveQueryRunner
     private HiveQueryRunner() {}
 
     public static final String HIVE_CATALOG = "hive";
-    private static final String HIVE_BUCKETED_CATALOG = "hive_bucketed";
+    public static final String HIVE_BUCKETED_CATALOG = "hive_bucketed";
     public static final String TPCH_SCHEMA = "tpch";
-    private static final String TPCH_BUCKETED_SCHEMA = "tpch_bucketed";
+    public static final String TPCH_BUCKETED_SCHEMA = "tpch_bucketed";
     private static final DateTimeZone TIME_ZONE = DateTimeZone.forID("America/Bahia_Banderas");
 
     public static DistributedQueryRunner create()
@@ -365,7 +365,7 @@ public final class HiveQueryRunner
                 .build();
     }
 
-    private static void copyTpchTablesBucketed(
+    public static void copyTpchTablesBucketed(
             QueryRunner queryRunner,
             String sourceCatalog,
             String sourceSchema,

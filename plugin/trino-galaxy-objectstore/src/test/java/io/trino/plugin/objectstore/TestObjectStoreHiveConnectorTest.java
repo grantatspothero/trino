@@ -304,133 +304,133 @@ public class TestObjectStoreHiveConnectorTest
     @Override
     public void testUpdate()
     {
-        assertThatThrownBy(super::testUpdate).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testUpdate).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testUpdateRowType()
     {
-        assertThatThrownBy(super::testUpdateRowType).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testUpdateRowType).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testUpdateAllValues()
     {
-        assertThatThrownBy(super::testUpdateAllValues).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testUpdateAllValues).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testUpdateWithPredicates()
     {
-        assertThatThrownBy(super::testUpdateWithPredicates).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testUpdateWithPredicates).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testRowLevelUpdate()
     {
-        assertThatThrownBy(super::testRowLevelUpdate).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testRowLevelUpdate).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testMergeLarge()
     {
-        assertThatThrownBy(super::testMergeLarge).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testMergeLarge).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testMergeSimpleSelect()
     {
-        assertThatThrownBy(super::testMergeSimpleSelect).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testMergeSimpleSelect).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testMergeFruits()
     {
-        assertThatThrownBy(super::testMergeFruits).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testMergeFruits).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testMergeMultipleOperations()
     {
-        assertThatThrownBy(super::testMergeMultipleOperations).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testMergeMultipleOperations).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testMergeSimpleQuery()
     {
-        assertThatThrownBy(super::testMergeSimpleQuery).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testMergeSimpleQuery).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testMergeAllInserts()
     {
-        assertThatThrownBy(super::testMergeAllInserts).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testMergeAllInserts).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testMergeFalseJoinCondition()
     {
-        assertThatThrownBy(super::testMergeFalseJoinCondition).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testMergeFalseJoinCondition).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testMergeAllColumnsUpdated()
     {
-        assertThatThrownBy(super::testMergeAllColumnsUpdated).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testMergeAllColumnsUpdated).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testMergeAllMatchesDeleted()
     {
-        assertThatThrownBy(super::testMergeAllMatchesDeleted).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testMergeAllMatchesDeleted).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testMergeMultipleRowsMatchFails()
     {
-        assertThatThrownBy(super::testMergeAllMatchesDeleted).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testMergeAllMatchesDeleted).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testMergeQueryWithStrangeCapitalization()
     {
-        assertThatThrownBy(super::testMergeQueryWithStrangeCapitalization).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testMergeQueryWithStrangeCapitalization).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testMergeWithoutTablesAliases()
     {
-        assertThatThrownBy(super::testMergeWithoutTablesAliases).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testMergeWithoutTablesAliases).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testMergeWithUnpredictablePredicates()
     {
-        assertThatThrownBy(super::testMergeWithUnpredictablePredicates).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testMergeWithUnpredictablePredicates).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testMergeWithSimplifiedUnpredictablePredicates()
     {
-        assertThatThrownBy(super::testMergeWithSimplifiedUnpredictablePredicates).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testMergeWithSimplifiedUnpredictablePredicates).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testMergeCasts()
     {
-        assertThatThrownBy(super::testMergeCasts).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testMergeCasts).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     public void testMergeSubqueries()
     {
-        assertThatThrownBy(super::testMergeSubqueries).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThatThrownBy(super::testMergeSubqueries).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override
     protected void verifyConcurrentUpdateFailurePermissible(Exception e)
     {
-        assertThat(e).hasMessage("Row-level modifications are not supported for Hive tables");
+        assertThat(e).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
     @Override

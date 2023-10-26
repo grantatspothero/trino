@@ -1227,7 +1227,7 @@ public class ObjectStoreMetadata
         }
         catch (TrinoException e) {
             if (isError(e, NOT_SUPPORTED) && MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE.equals(e.getMessage())) {
-                throw new TrinoException(NOT_SUPPORTED, "Row-level modifications are not supported for Hive tables");
+                throw new TrinoException(NOT_SUPPORTED, "Modifying Hive table rows is constrained to deletes of whole partitions");
             }
             throw e;
         }
