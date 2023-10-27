@@ -15,6 +15,7 @@ package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableMap;
 import io.trino.plugin.iceberg.IcebergPlugin;
+import io.trino.spi.session.PropertyMetadata;
 import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
@@ -178,5 +179,26 @@ public class TestObjectStoreProperties
                         ('objectstore.use_parquet_column_names', 'true', 'boolean'),
                         ('objectstore.vacuum_min_retention', '7.00d', 'varchar'),
                         ('objectstore.validate_bucketing', 'true', 'boolean')""");
+    }
+
+    @Test
+    public void testHiddenSessionProperties()
+    {
+        ObjectStoreConnector objectStoreConnector = (ObjectStoreConnector) getDistributedQueryRunner().getCoordinator().getConnector(CATALOG);
+        ObjectStoreSessionProperties objectStoreSessionProperties = objectStoreConnector.getInjector().getInstance(ObjectStoreSessionProperties.class);
+
+        assertThat(objectStoreSessionProperties.getSessionProperties().stream()
+                .filter(PropertyMetadata::isHidden)
+                .map(property -> "%s %s %s".formatted(property.getName(), property.getDefaultValue(), property.getSqlType()))
+                .sorted())
+                .containsExactly(
+                        "delegate_transactional_managed_table_location_to_metastore false boolean",
+                        "delta_lake_catalog_name null varchar",
+                        "experimental_split_size null varchar",
+                        "hive_catalog_name null varchar",
+                        "hudi_catalog_name null varchar",
+                        "iceberg_catalog_name null varchar",
+                        "max_initial_split_size 32MB varchar",
+                        "max_split_size 64MB varchar");
     }
 }
