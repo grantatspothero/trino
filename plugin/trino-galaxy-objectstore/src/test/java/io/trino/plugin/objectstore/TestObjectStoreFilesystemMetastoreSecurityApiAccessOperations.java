@@ -45,13 +45,15 @@ import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.GalaxyQueryRunner;
 import io.trino.testing.QueryRunner;
 import org.intellij.lang.annotations.Language;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.URI;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -102,13 +104,14 @@ import static java.nio.file.Files.createTempDirectory;
 import static java.util.Collections.nCopies;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toCollection;
+import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
 /**
  * Test filesystem, metastore and portal's security API accesses when accessing data and metadata with ObjectStore connector.
  *
  * @see TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
  */
-@Test(singleThreaded = true) // metastore and filesystem invocation counters shares mutable state so can't be run from many threads simultaneously
+@Execution(SAME_THREAD) // metastore and filesystem invocation counters shares mutable state so can't be run from many threads simultaneously
 public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         extends AbstractTestQueryFramework
 {
@@ -174,7 +177,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         return queryRunner;
     }
 
-    @AfterMethod(alwaysRun = true)
+    @AfterEach
     public void cleanUp()
     {
         listTables("BASE TABLE").forEach(tableName -> query("DROP TABLE " + tableName));
@@ -188,7 +191,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 "table_schema = '" + SCHEMA_NAME + "'").getOnlyColumn();
     }
 
-    @Test(dataProvider = "tableTypeDataProvider")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
     public void testCreateTable(TableType type)
     {
         assertInvocations("CREATE TABLE test_create(id VARCHAR, age INT) WITH (type = '" + type + "')",
@@ -212,7 +216,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 });
     }
 
-    @Test(dataProvider = "tableTypeDataProvider")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
     public void testCreateTableAsSelect(TableType type)
     {
         // Prime the RelationTypeCache to make the test deterministic
@@ -252,7 +257,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 });
     }
 
-    @Test(dataProvider = "tableTypeDataProvider")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
     public void testCreateTableAsSelectFromDifferentCatalog(TableType type)
     {
         testCreateTableAsSelectFromDifferentCatalog(type, "SELECT * FROM tpch.tiny.nation", false);
@@ -356,7 +362,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                         .build());
     }
 
-    @Test(dataProvider = "tableTypeDataProvider")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
     public void testSelectFromEmpty(TableType type)
     {
         assertUpdate("CREATE TABLE test_select_from(id VARCHAR, age INT) WITH (type = '" + type + "')");
@@ -381,7 +388,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 });
     }
 
-    @Test(dataProvider = "tableTypeDataProvider")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
     public void testSelectPartitionedTable(TableType type)
     {
         String partitionProperty = type == ICEBERG ? "partitioning" : "partitioned_by";
@@ -466,7 +474,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 });
     }
 
-    @Test(dataProvider = "tableTypeDataProvider")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
     public void testSelectWithFilter(TableType type)
     {
         assertUpdate("CREATE TABLE test_select_from_where WITH (type = '" + type + "') AS SELECT 2 AS age", 1);
@@ -495,7 +504,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 });
     }
 
-    @Test(dataProvider = "tableTypeDataProvider")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
     public void testSelectFromView(TableType type)
     {
         assertUpdate("CREATE TABLE test_select_view_table(id VARCHAR, age INT) WITH (type = '" + type + "')");
@@ -521,7 +531,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 });
     }
 
-    @Test(dataProvider = "tableTypeDataProvider")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
     public void testSelectFromViewWithFilter(TableType type)
     {
         assertUpdate("CREATE TABLE test_select_view_where_table WITH (type = '" + type + "') AS SELECT 2 AS age", 1);
@@ -551,7 +562,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 });
     }
 
-    @Test(dataProvider = "tableTypeDataProvider")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
     public void testJoin(TableType type)
     {
         assertUpdate("CREATE TABLE test_join_t1 WITH (type = '" + type + "') AS SELECT 2 AS age, 'id1' AS id", 1);
@@ -583,7 +595,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 });
     }
 
-    @Test(dataProvider = "tableTypeDataProvider")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
     public void testSelfJoin(TableType type)
     {
         assertUpdate("CREATE TABLE test_self_join_table WITH (type = '" + type + "') AS SELECT 2 AS age, 0 parent, 3 AS id", 1);
@@ -614,7 +627,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 });
     }
 
-    @Test(dataProvider = "tableTypeDataProvider")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
     public void testExplainSelect(TableType type)
     {
         assertUpdate("CREATE TABLE test_explain WITH (type = '" + type + "') AS SELECT 2 AS age", 1);
@@ -642,7 +656,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 });
     }
 
-    @Test(dataProvider = "tableTypeDataProvider")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
     public void testShowStatsForTable(TableType type)
     {
         assertUpdate("CREATE TABLE test_show_stats WITH (type = '" + type + "') AS SELECT 2 AS age", 1);
@@ -670,7 +685,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 });
     }
 
-    @Test(dataProvider = "tableTypeDataProvider")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
     public void testShowStatsForTableWithFilter(TableType type)
     {
         assertUpdate("CREATE TABLE test_show_stats_with_filter AS SELECT 2 AS age", 1);
@@ -687,7 +703,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 });
     }
 
-    @Test(dataProvider = "tableTypeDataProvider")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
     public void testAnalyze(TableType type)
     {
         assertUpdate("CREATE TABLE test_analyze WITH (type = '" + type + "') AS SELECT 2 AS age", 1);
@@ -722,7 +739,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 });
     }
 
-    @Test(dataProvider = "tableTypeDataProvider")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
     public void testAnalyzePartitionedTable(TableType type)
     {
         String partitionProperty = type == ICEBERG ? "partitioning" : "partitioned_by";
@@ -796,7 +814,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 });
     }
 
-    @Test(dataProvider = "tableTypeDataProvider")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
     public void testDropStats(TableType type)
     {
         assertUpdate("CREATE TABLE drop_stats WITH (type = '" + type + "') AS SELECT 2 AS age", 1);
@@ -828,7 +847,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 });
     }
 
-    @Test(dataProvider = "tableTypeDataProvider")
+    @ParameterizedTest
+    @EnumSource(TableType.class)
     public void testDropStatsPartitionedTable(TableType type)
     {
         String partitionProperty = type == ICEBERG ? "partitioning" : "partitioned_by";
@@ -885,7 +905,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 });
     }
 
-    @Test(dataProvider = "metadataTestDataProvider")
+    @ParameterizedTest
+    @MethodSource("metadataTestDataProvider")
     public void testInformationSchemaColumns(TableType type, int tableBatches)
     {
         for (int i = 0; i < tableBatches; i++) {
@@ -1063,7 +1084,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                         .build());
     }
 
-    @Test(dataProvider = "metadataTestDataProvider")
+    @ParameterizedTest
+    @MethodSource("metadataTestDataProvider")
     public void testSystemMetadataTableComments(TableType type, int tableBatches)
     {
         for (int i = 0; i < tableBatches; i++) {
@@ -1117,11 +1139,11 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 });
     }
 
-    @DataProvider
     public Object[][] metadataTestDataProvider()
     {
         return DataProviders.cartesianProduct(
-                tableTypeDataProvider(),
+                Stream.of(TableType.values())
+                        .collect(toDataProvider()),
                 new Object[][] {
                         {3},
                         {MAX_PREFIXES_COUNT},
@@ -1168,13 +1190,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                         .build())
                                 .build())
                         .build());
-    }
-
-    @DataProvider
-    public Object[][] tableTypeDataProvider()
-    {
-        return Arrays.stream(TableType.values())
-                .collect(toDataProvider());
     }
 
     private void assertInvocations(@Language("SQL") String query, Multiset<CountingAccessHiveMetastore.Method> expectedMetastoreInvocations, Multiset<FileOperation> expectedFileAccesses)
