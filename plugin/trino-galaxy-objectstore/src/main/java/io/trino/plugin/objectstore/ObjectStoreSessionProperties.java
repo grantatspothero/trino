@@ -15,8 +15,10 @@ package io.trino.plugin.objectstore;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableTable;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Table;
 import com.google.inject.Inject;
 import io.trino.spi.connector.ConnectorSession;
@@ -33,7 +35,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.trino.plugin.objectstore.FeatureExposure.UNDEFINED;
+import static io.trino.plugin.objectstore.FeatureExposures.sessionExposureDecisions;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDefaultValue.IGNORE_DEFAULT_VALUE;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDefaultValue.VERIFY_DEFAULT_VALUE;
 import static io.trino.plugin.objectstore.PropertyMetadataValidation.VerifyDescription.IGNORE_DESCRIPTION;
@@ -44,6 +49,7 @@ import static java.util.Objects.requireNonNull;
 public class ObjectStoreSessionProperties
 {
     private final List<PropertyMetadata<?>> sessionProperties;
+    private final Multimap<String, TableType> maskedProperties;
     private final Table<String, TableType, Optional<Object>> defaultPropertyValue;
 
     @Inject
@@ -57,15 +63,24 @@ public class ObjectStoreSessionProperties
                 .build();
 
         Table<String, TableType, PropertyMetadata<?>> delegateProperties = HashBasedTable.create();
+        ImmutableMultimap.Builder<String, TableType> maskedProperties = ImmutableMultimap.builder();
+        ImmutableTable.Builder<String, TableType, Optional<Object>> defaultPropertyValue = ImmutableTable.builder();
+        Table<TableType, String, FeatureExposure> featureExposures = HashBasedTable.create(sessionExposureDecisions());
         delegates.byType().forEach((type, connector) -> {
-            // TODO (https://github.com/starburstdata/galaxy-trino/issues/919) Add feature exposures for session properties
             for (PropertyMetadata<?> property : connector.getSessionProperties()) {
-                delegateProperties.put(property.getName(), type, property);
+                String name = property.getName();
+                switch (firstNonNull(featureExposures.remove(type, name), UNDEFINED)) {
+                    case HIDDEN -> {
+                        maskedProperties.put(name, type);
+                        defaultPropertyValue.put(name, type, Optional.ofNullable(property.getDefaultValue()));
+                    }
+                    case UNDEFINED -> throw new IllegalStateException("Unknown session property provided by %s: %s".formatted(type, name));
+                    case EXPOSED -> delegateProperties.put(name, type, property);
+                }
             }
         });
 
         ImmutableList.Builder<PropertyMetadata<?>> sessionProperties = ImmutableList.builder();
-        ImmutableTable.Builder<String, TableType, Optional<Object>> defaultPropertyValue = ImmutableTable.builder();
         for (Map.Entry<String, Map<TableType, PropertyMetadata<?>>> propertyCandidatesEntry : delegateProperties.rowMap().entrySet()) {
             String name = propertyCandidatesEntry.getKey();
             Map<TableType, PropertyMetadata<?>> propertiesOfName = propertyCandidatesEntry.getValue();
@@ -114,6 +129,7 @@ public class ObjectStoreSessionProperties
                 .addAll(wrappedDelegateProperties)
                 .addAll(objectStoreProperties)
                 .build();
+        this.maskedProperties = maskedProperties.build();
         this.defaultPropertyValue = defaultPropertyValue.buildOrThrow();
     }
 
@@ -200,8 +216,11 @@ public class ObjectStoreSessionProperties
         @Override
         public <T> T getProperty(String name, Class<T> type)
         {
-            WrappedPropertyValue wrappedPropertyValue = baseSession.getProperty(name, WrappedPropertyValue.class);
-            Object connectorValue = wrappedPropertyValue.value();
+            Object connectorValue = null;
+            if (!maskedProperties.containsEntry(name, forType)) {
+                WrappedPropertyValue wrappedPropertyValue = baseSession.getProperty(name, WrappedPropertyValue.class);
+                connectorValue = wrappedPropertyValue.value();
+            }
             if (connectorValue == null) {
                 Optional<Object> defaultValue = defaultPropertyValue.row(name).getOrDefault(forType, Optional.empty());
                 connectorValue = defaultValue.orElse(null);
