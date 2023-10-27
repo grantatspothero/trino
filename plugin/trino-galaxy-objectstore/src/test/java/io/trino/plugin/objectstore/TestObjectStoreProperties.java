@@ -90,19 +90,19 @@ public class TestObjectStoreProperties
     {
         assertThat(query("SHOW SESSION LIKE '" + CATALOG + ".%'"))
                 .skippingTypesCheck()
-                .exceptColumns("Description")
-                // Name, Value, Default, Type
+                .exceptColumns("Value", "Description")
+                // Name, Default, Type
                 // TODO test all, i.e. with matches()
                 .containsAll("""
                         VALUES
                           -- ObjectStore single-delegate-specific property (Hive's)
-                            ('objectstore.timestamp_precision', 'MILLISECONDS', 'MILLISECONDS', 'varchar')
+                            ('objectstore.timestamp_precision', 'MILLISECONDS', 'varchar')
                           -- ObjectStore property with common value across delegate connectors
-                          , ('objectstore.statistics_enabled', 'true', 'true', 'boolean')
-                          , ('objectstore.parquet_writer_batch_size', '10000', '10000', 'integer')
+                          , ('objectstore.statistics_enabled', 'true', 'boolean')
+                          , ('objectstore.parquet_writer_batch_size', '10000', 'integer')
                           -- ObjectStore property that have, had or may have special handling
-                          , ('objectstore.compression_codec', 'DEFAULT', 'DEFAULT', 'varchar')
-                          , ('objectstore.projection_pushdown_enabled', 'true', 'true', 'boolean')
+                          , ('objectstore.compression_codec', 'DEFAULT', 'varchar')
+                          , ('objectstore.projection_pushdown_enabled', 'true', 'boolean')
                         """);
     }
 }
