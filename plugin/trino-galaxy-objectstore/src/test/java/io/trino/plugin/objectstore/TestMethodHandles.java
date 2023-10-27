@@ -13,7 +13,7 @@
  */
 package io.trino.plugin.objectstore;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.lang.invoke.MethodHandle;
 

@@ -35,9 +35,9 @@ import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import org.apache.hadoop.fs.Path;
 import org.apache.iceberg.BaseMetastoreTableOperations;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -112,7 +112,7 @@ public class TestReadCorruptedTables
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public void setUp()
     {
         s3 = AmazonS3ClientBuilder.standard()
@@ -120,7 +120,7 @@ public class TestReadCorruptedTables
                 .build();
     }
 
-    @BeforeClass
+    @BeforeAll
     public void registerTables()
     {
         String schema = getSession().getSchema().orElseThrow();
@@ -184,7 +184,7 @@ public class TestReadCorruptedTables
         }
     }
 
-    @AfterClass(alwaysRun = true)
+    @AfterAll
     public void tearDown()
     {
         if (s3 != null) {

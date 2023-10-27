@@ -14,7 +14,7 @@
 package io.trino.plugin.objectstore;
 
 import io.trino.spi.connector.SchemaTableName;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Optional;
