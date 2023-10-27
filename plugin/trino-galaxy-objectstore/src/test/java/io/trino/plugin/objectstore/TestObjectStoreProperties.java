@@ -193,11 +193,7 @@ public class TestObjectStoreProperties
                 .sorted())
                 .containsExactly(
                         "delegate_transactional_managed_table_location_to_metastore false boolean",
-                        "delta_lake_catalog_name null varchar",
                         "experimental_split_size null varchar",
-                        "hive_catalog_name null varchar",
-                        "hudi_catalog_name null varchar",
-                        "iceberg_catalog_name null varchar",
                         "max_initial_split_size 32MB varchar",
                         "max_split_size 64MB varchar");
     }
