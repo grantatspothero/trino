@@ -80,13 +80,6 @@ public class TestObjectStoreIcebergConnectorTest
         }
     }
 
-    @Override
-    protected boolean supportsPhysicalPushdown()
-    {
-        // https://github.com/trinodb/trino/issues/17156 is done for Parquet already and Parquet is now default file format for Iceberg
-        return true;
-    }
-
     @BeforeClass
     public void setUp()
             throws InterruptedException
