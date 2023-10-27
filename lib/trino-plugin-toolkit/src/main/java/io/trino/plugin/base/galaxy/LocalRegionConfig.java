@@ -15,7 +15,6 @@ package io.trino.plugin.base.galaxy;
 
 import com.google.common.collect.ImmutableList;
 import io.airlift.configuration.Config;
-import io.airlift.configuration.LegacyConfig;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
@@ -30,7 +29,6 @@ public class LocalRegionConfig
         return allowedIpAddresses;
     }
 
-    @LegacyConfig("galaxy.region-enforcement.allowed-ip-addresses")
     @Config("galaxy.local-region.allowed-ip-addresses")
     public LocalRegionConfig setAllowedIpAddresses(List<String> allowedIpAddresses)
     {

@@ -15,7 +15,6 @@ package io.trino.plugin.base.galaxy;
 
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;
-import io.airlift.configuration.LegacyConfig;
 import io.airlift.units.DataSize;
 import io.airlift.units.DataSize.Unit;
 import jakarta.validation.constraints.NotNull;
@@ -31,7 +30,6 @@ public class CrossRegionConfig
         return allowCrossRegionAccess;
     }
 
-    @LegacyConfig("galaxy.region-enforcement.allow-cross-region-access")
     @Config("galaxy.cross-region.allow-cross-region-access")
     public CrossRegionConfig setAllowCrossRegionAccess(boolean allowCrossRegionAccess)
     {
@@ -45,7 +43,6 @@ public class CrossRegionConfig
         return crossRegionReadLimit;
     }
 
-    @LegacyConfig("galaxy.region-enforcement.cross-region-read-limit")
     @Config("galaxy.cross-region.read-limit")
     @ConfigDescription("The maximum amount of data that can be read across regions per worker")
     public CrossRegionConfig setCrossRegionReadLimit(DataSize crossRegionReadLimit)
@@ -60,7 +57,6 @@ public class CrossRegionConfig
         return crossRegionWriteLimit;
     }
 
-    @LegacyConfig("galaxy.region-enforcement.cross-region-write-limit")
     @Config("galaxy.cross-region.write-limit")
     @ConfigDescription("The maximum amount of data that can be written across regions per worker")
     public CrossRegionConfig setCrossRegionWriteLimit(DataSize crossRegionWriteLimit)
