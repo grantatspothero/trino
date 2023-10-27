@@ -70,7 +70,7 @@ public class ObjectStoreSessionProperties
             for (PropertyMetadata<?> property : connector.getSessionProperties()) {
                 String name = property.getName();
                 switch (firstNonNull(featureExposures.remove(type, name), UNDEFINED)) {
-                    case HIDDEN -> {
+                    case INACCESSIBLE -> {
                         maskedProperties.put(name, type);
                         defaultPropertyValue.put(name, type, Optional.ofNullable(property.getDefaultValue()));
                     }

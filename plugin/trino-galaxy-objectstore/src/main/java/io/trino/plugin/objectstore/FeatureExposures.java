@@ -17,7 +17,7 @@ import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Table;
 
 import static io.trino.plugin.objectstore.FeatureExposure.EXPOSED;
-import static io.trino.plugin.objectstore.FeatureExposure.HIDDEN;
+import static io.trino.plugin.objectstore.FeatureExposure.INACCESSIBLE;
 import static io.trino.plugin.objectstore.TableType.DELTA;
 import static io.trino.plugin.objectstore.TableType.HIVE;
 import static io.trino.plugin.objectstore.TableType.HUDI;
@@ -197,17 +197,17 @@ public final class FeatureExposures
                 .put(HIVE, "create_empty_partition", EXPOSED)
                 .put(HIVE, "drop_stats", EXPOSED) // TODO similar to drop_extended_stats exposed by Delta
                 .put(DELTA, "drop_extended_stats", EXPOSED) // TODO similar to drop_stats exposed by hive and similar to DROP_EXTENDED_STATS *table procedure* exposed by Iceberg
-                .put(HIVE, "flush_metadata_cache", HIDDEN) // see ObjectStoreFlushMetadataCache
-                .put(DELTA, "flush_metadata_cache", HIDDEN) // see ObjectStoreFlushMetadataCache
-                .put(ICEBERG, "migrate", HIDDEN) // supported via ALTER TABLE SET PROPERTIES syntax
+                .put(HIVE, "flush_metadata_cache", INACCESSIBLE) // see ObjectStoreFlushMetadataCache
+                .put(DELTA, "flush_metadata_cache", INACCESSIBLE) // see ObjectStoreFlushMetadataCache
+                .put(ICEBERG, "migrate", INACCESSIBLE) // supported via ALTER TABLE SET PROPERTIES syntax
                 .put(HIVE, "register_partition", EXPOSED)
-                .put(DELTA, "register_table", HIDDEN) // see ObjectStoreRegisterTableProcedure
-                .put(ICEBERG, "register_table", HIDDEN) // see ObjectStoreRegisterTableProcedure
+                .put(DELTA, "register_table", INACCESSIBLE) // see ObjectStoreRegisterTableProcedure
+                .put(ICEBERG, "register_table", INACCESSIBLE) // see ObjectStoreRegisterTableProcedure
                 .put(ICEBERG, "rollback_to_snapshot", EXPOSED)
                 .put(HIVE, "sync_partition_metadata", EXPOSED)
                 .put(HIVE, "unregister_partition", EXPOSED)
-                .put(DELTA, "unregister_table", HIDDEN) // see ObjectStoreUnregisterTableProcedure
-                .put(ICEBERG, "unregister_table", HIDDEN) // see ObjectStoreUnregisterTableProcedure
+                .put(DELTA, "unregister_table", INACCESSIBLE) // see ObjectStoreUnregisterTableProcedure
+                .put(ICEBERG, "unregister_table", INACCESSIBLE) // see ObjectStoreUnregisterTableProcedure
                 .put(DELTA, "vacuum", EXPOSED)
                 .buildOrThrow();
     }
@@ -219,7 +219,7 @@ public final class FeatureExposures
                 .put(ICEBERG, "DROP_EXTENDED_STATS", EXPOSED) // TODO similar to drop_extended_stats *procedure* exposed by Delta
                 .put(ICEBERG, "EXPIRE_SNAPSHOTS", EXPOSED)
                 .put(ICEBERG, "REMOVE_ORPHAN_FILES", EXPOSED)
-                .put(HIVE, "OPTIMIZE", HIDDEN)
+                .put(HIVE, "OPTIMIZE", INACCESSIBLE)
                 .put(ICEBERG, "OPTIMIZE", EXPOSED)
                 .put(DELTA, "OPTIMIZE", EXPOSED)
                 .buildOrThrow();

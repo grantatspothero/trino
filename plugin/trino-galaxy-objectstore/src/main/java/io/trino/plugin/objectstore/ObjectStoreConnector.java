@@ -212,7 +212,7 @@ public class ObjectStoreConnector
             for (Procedure procedure : connector.getProcedures()) {
                 String name = procedure.getName();
                 switch (firstNonNull(featureExposures.remove(type, name), UNDEFINED)) {
-                    case HIDDEN -> { /* skipped */ }
+                    case INACCESSIBLE -> { /* skipped */ }
                     case UNDEFINED -> throw new IllegalStateException("Unknown procedure provided by %s: %s".formatted(type, name));
                     case EXPOSED -> {
                         Procedure boundProcedure = translateArguments(procedure.getMethodHandle(), ConnectorSession.class, session -> sessionProperties.unwrap(type, session))
@@ -251,7 +251,7 @@ public class ObjectStoreConnector
                 verify(name.equals(name.toUpperCase(Locale.ROOT)), "Procedure name is not uppercase: %s", name);
 
                 switch (firstNonNull(featureExposures.remove(type, name), UNDEFINED)) {
-                    case HIDDEN -> { /* skipped */ }
+                    case INACCESSIBLE -> { /* skipped */ }
                     case UNDEFINED -> throw new IllegalStateException("Unknown table procedure provided by %s: %s".formatted(type, name));
                     case EXPOSED -> {
                         TableProcedureMetadata existing = tableProcedures.putIfAbsent(name, procedure);

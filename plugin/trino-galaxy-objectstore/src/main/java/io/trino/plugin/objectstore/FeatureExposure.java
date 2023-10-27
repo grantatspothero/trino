@@ -17,5 +17,5 @@ public enum FeatureExposure
 {
     UNDEFINED,
     EXPOSED,
-    HIDDEN,
+    INACCESSIBLE,
 }
