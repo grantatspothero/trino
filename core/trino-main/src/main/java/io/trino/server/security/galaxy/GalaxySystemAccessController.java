@@ -124,10 +124,20 @@ public class GalaxySystemAccessController
         return toDispatchSession(identity).getAccountId();
     }
 
-    public Predicate<String> getSchemaVisibility(SystemSecurityContext context, CatalogId catalogId)
+    public Predicate<String> getVisibilityForSchemas(SystemSecurityContext context, CatalogId catalogId, Set<String> schemaNames)
     {
-        // This is only called once per query, so no need to cache
-        return accessControlClient.getSchemaVisibility(toDispatchSession(context.getIdentity()), catalogId)::isVisible;
+        // This is only called once per query, so no need to cache  TODO: I wonder if this is true?
+        checkArgument(!schemaNames.contains("information_schema"), "Unexpected schema names: %s", schemaNames);
+        if (schemaNames.isEmpty()) {
+            return schemaName -> {
+                throw new UnsupportedOperationException("Cannot provide visibility for schema when no schema names were provided: " + schemaName);
+            };
+        }
+        ContentsVisibility visibility = accessControlClient.getVisibilityForSchemas(toDispatchSession(context.getIdentity()), catalogId, schemaNames);
+        return schemaName -> {
+            checkArgument(schemaNames.contains(schemaName), "Invalid schema name consulted in predicate constructed for %s: %s", schemaNames, schemaName);
+            return visibility.isVisible(schemaName);
+        };
     }
 
     public Predicate<SchemaTableName> getTableVisibility(SystemSecurityContext context, CatalogId catalogId, Set<String> schemaNames)

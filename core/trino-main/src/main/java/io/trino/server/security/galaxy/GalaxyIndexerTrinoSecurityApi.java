@@ -75,6 +75,12 @@ public enum GalaxyIndexerTrinoSecurityApi
     }
 
     @Override
+    public ContentsVisibility getVisibilityForSchemas(DispatchSession session, CatalogId catalogId, Set<String> schemaNames)
+    {
+        return ALLOW_ALL;
+    }
+
+    @Override
     public Map<String, ContentsVisibility> getTableVisibility(DispatchSession session, CatalogId catalogId, Set<String> schemaNames)
     {
         return schemaNames.stream().collect(toImmutableMap(Function.identity(), ignore -> ALLOW_ALL));

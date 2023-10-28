@@ -15,7 +15,6 @@ package io.trino.server.security.galaxy;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import io.airlift.log.Logger;
 import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
 import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
 import io.starburst.stargate.accesscontrol.privilege.GalaxyPrivilegeInfo;
@@ -61,10 +60,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
-import static com.google.common.base.Suppliers.memoize;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
@@ -125,8 +122,6 @@ import static java.util.Objects.requireNonNull;
 public class GalaxyAccessControl
         implements SystemAccessControl
 {
-    private static final Logger log = Logger.get(GalaxyAccessControl.class);
-
     public static final String NAME = "galaxy";
 
     private static final int MAX_OUTSTANDING_BACKGROUND_TASKS = 8192;
@@ -284,17 +279,26 @@ public class GalaxyAccessControl
             return schemaNames;
         }
 
-        // Call getSchemaVisibility lazily, i.e. avoid call when not needed
-        Supplier<Predicate<String>> schemaVisibility = memoize(() -> getSchemaVisibility(context, catalogName));
+        Set<String> requestedSchemaNames = schemaNames.stream()
+                .filter(schemaName -> !isInformationSchema(schemaName))
+                .collect(toImmutableSet());
+
+        if (requestedSchemaNames.isEmpty()) {
+            return schemaNames;
+        }
+
+        Predicate<String> schemaVisibility = getVisibilityForSchemas(context, catalogName, requestedSchemaNames);
+
         return schemaNames.stream()
-                .filter(name -> isInformationSchema(name) || schemaVisibility.get().test(name))
+                .filter(name -> isInformationSchema(name) || schemaVisibility.test(name))
                 .collect(toImmutableSet());
     }
 
     @Override
     public void checkCanShowCreateSchema(SystemSecurityContext context, CatalogSchemaName schemaName)
     {
-        if (!isSystemOrInformationSchema(schemaName) && !isSchemaVisible(context, schemaName)) {
+        if (!isSystemOrInformationSchema(schemaName) &&
+                !(getVisibilityForSchemas(context, schemaName.getCatalogName(), ImmutableSet.of(schemaName.getSchemaName())).test(schemaName.getSchemaName()))) {
             denyShowCreateSchema(schemaName.toString(), entityIsNotVisible(context, "Schema", schemaName.toString()));
         }
     }
@@ -976,16 +980,16 @@ public class GalaxyAccessControl
 
     private boolean isSchemaVisible(SystemSecurityContext context, CatalogSchemaName schema)
     {
-        return getSchemaVisibility(context, schema.getCatalogName()).test(schema.getSchemaName());
+        return getVisibilityForSchemas(context, schema.getCatalogName(), ImmutableSet.of(schema.getSchemaName())).test(schema.getSchemaName());
     }
 
-    private Predicate<String> getSchemaVisibility(SystemSecurityContext context, String catalogName)
+    private Predicate<String> getVisibilityForSchemas(SystemSecurityContext context, String catalogName, Set<String> schemaNames)
     {
         Optional<CatalogId> catalogId = getSystemAccessController(context).getCatalogId(catalogName);
         if (catalogId.isEmpty()) {
             return ignored -> false;
         }
-        return getSystemAccessController(context).getSchemaVisibility(context, catalogId.get());
+        return getSystemAccessController(context).getVisibilityForSchemas(context, catalogId.get(), schemaNames);
     }
 
     private List<Identity> filterIdentitiesByPrivilegesAndRoles(Identity identity, Collection<Identity> identities)
