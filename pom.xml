@@ -205,7 +205,7 @@
         <!-- released from https://github.com/starburstdata/trino-buffer-service -->
         <dep.trino-buffer-service.version>427-trino-buffer-service-601-g76f8374</dep.trino-buffer-service.version>
         <!-- released form https://github.com/starburstdata/schema-discovery -->
-        <dep.schema-discovery.version>428.20231016-fded6c7</dep.schema-discovery.version>
+        <dep.schema-discovery.version>428.20231018-542c99f</dep.schema-discovery.version>
         <!-- released from https://github.com/starburstdata/starburst-dataframe -->
         <dep.starburst-dataframe.version>0.5.0.20231006-9161ca8</dep.starburst-dataframe.version>
         <!-- released from https://github.com/starburstdata/stargate -->
