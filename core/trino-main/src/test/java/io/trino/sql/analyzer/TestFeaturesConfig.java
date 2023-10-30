@@ -64,7 +64,7 @@ public class TestFeaturesConfig
                 .setLegacyMaterializedViewGracePeriod(false)
                 .setHideInaccessibleColumns(false)
                 .setForceSpillingJoin(false)
-                .setColumnarFilterEvaluationEnabled(false)
+                .setColumnarFilterEvaluationEnabled(true)
                 .setFaultTolerantExecutionExchangeEncryptionEnabled(true));
     }
 
@@ -100,7 +100,7 @@ public class TestFeaturesConfig
                 .put("legacy.materialized-view-grace-period", "true")
                 .put("hide-inaccessible-columns", "true")
                 .put("force-spilling-join-operator", "true")
-                .put("columnar-filter-evaluation.enabled", "true")
+                .put("columnar-filter-evaluation.enabled", "false")
                 .put("fault-tolerant-execution.exchange-encryption-enabled", "false")
                 .buildOrThrow();
 
@@ -133,7 +133,7 @@ public class TestFeaturesConfig
                 .setLegacyMaterializedViewGracePeriod(true)
                 .setHideInaccessibleColumns(true)
                 .setForceSpillingJoin(true)
-                .setColumnarFilterEvaluationEnabled(true)
+                .setColumnarFilterEvaluationEnabled(false)
                 .setFaultTolerantExecutionExchangeEncryptionEnabled(false);
         assertFullMapping(properties, expected);
     }

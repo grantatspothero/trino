@@ -107,7 +107,7 @@ public class FeaturesConfig
     private boolean hideInaccessibleColumns;
     private boolean forceSpillingJoin;
 
-    private boolean columnarFilterEvaluationEnabled;
+    private boolean columnarFilterEvaluationEnabled = true;
 
     private boolean faultTolerantExecutionExchangeEncryptionEnabled = true;
 
