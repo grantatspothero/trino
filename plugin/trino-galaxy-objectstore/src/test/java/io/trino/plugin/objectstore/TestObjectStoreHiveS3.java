@@ -111,8 +111,6 @@ public class TestObjectStoreHiveS3
 
         assertUpdate("CREATE TABLE " + qualifiedTableName + "(col_str varchar, col_int int)" + partitionQueryPart);
         String expectedTableLocation = (schemaLocation.endsWith("/") ? schemaLocation : schemaLocation + "/") + tableName;
-        // Hive normalizes double slash
-        expectedTableLocation = expectedTableLocation.replaceAll("(?<!(s3:))//", "/");
 
         String actualTableLocation = metastore.getMetastore().getTable(schemaName, tableName).orElseThrow().storage().location();
         assertThat(actualTableLocation).isEqualTo(expectedTableLocation);
