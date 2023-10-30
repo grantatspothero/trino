@@ -15,9 +15,14 @@ package io.trino.plugin.memory;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
+import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import com.google.inject.Singleton;
 import io.trino.spi.NodeManager;
+import io.trino.spi.cache.ConnectorCacheMetadata;
 import io.trino.spi.type.TypeManager;
+
+import java.util.Optional;
 
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static java.util.Objects.requireNonNull;
@@ -47,5 +52,15 @@ public class MemoryModule
         binder.bind(MemoryPageSourceProvider.class).in(Scopes.SINGLETON);
         binder.bind(MemoryPageSinkProvider.class).in(Scopes.SINGLETON);
         configBinder(binder).bindConfig(MemoryConfig.class);
+    }
+
+    @Provides
+    @Singleton
+    public static Optional<ConnectorCacheMetadata> cacheMetadata(MemoryConfig config)
+    {
+        if (config.isEnableCacheIds()) {
+            return Optional.of(new MemoryCacheMetadata());
+        }
+        return Optional.empty();
     }
 }

@@ -15,6 +15,7 @@ package io.trino.plugin.memory;
 
 import com.google.inject.Inject;
 import io.airlift.bootstrap.LifeCycleManager;
+import io.trino.spi.cache.ConnectorCacheMetadata;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorMetadata;
 import io.trino.spi.connector.ConnectorPageSinkProvider;
@@ -24,6 +25,8 @@ import io.trino.spi.connector.ConnectorSplitManager;
 import io.trino.spi.connector.ConnectorTransactionHandle;
 import io.trino.spi.transaction.IsolationLevel;
 
+import java.util.Optional;
+
 import static java.util.Objects.requireNonNull;
 
 public class MemoryConnector
@@ -32,6 +35,7 @@ public class MemoryConnector
     private final LifeCycleManager lifeCycleManager;
     private final MemoryMetadata metadata;
     private final MemorySplitManager splitManager;
+    private final Optional<ConnectorCacheMetadata> cacheMetadata;
     private final MemoryPageSourceProvider pageSourceProvider;
     private final MemoryPageSinkProvider pageSinkProvider;
 
@@ -40,12 +44,14 @@ public class MemoryConnector
             LifeCycleManager lifeCycleManager,
             MemoryMetadata metadata,
             MemorySplitManager splitManager,
+            Optional<ConnectorCacheMetadata> cacheMetadata,
             MemoryPageSourceProvider pageSourceProvider,
             MemoryPageSinkProvider pageSinkProvider)
     {
         this.lifeCycleManager = requireNonNull(lifeCycleManager, "lifeCycleManager is null");
         this.metadata = metadata;
         this.splitManager = splitManager;
+        this.cacheMetadata = requireNonNull(cacheMetadata, "cacheMetadata is null");
         this.pageSourceProvider = pageSourceProvider;
         this.pageSinkProvider = pageSinkProvider;
     }
@@ -66,6 +72,12 @@ public class MemoryConnector
     public ConnectorSplitManager getSplitManager()
     {
         return splitManager;
+    }
+
+    @Override
+    public ConnectorCacheMetadata getCacheMetadata()
+    {
+        return cacheMetadata.orElseGet(Connector.super::getCacheMetadata);
     }
 
     @Override

@@ -22,6 +22,7 @@ public class MemoryConfig
     private int splitsPerNode = Runtime.getRuntime().availableProcessors();
     private DataSize maxDataPerNode = DataSize.of(128, DataSize.Unit.MEGABYTE);
     private boolean enableLazyDynamicFiltering = true;
+    private boolean enableCacheIds;
 
     @NotNull
     public int getSplitsPerNode()
@@ -58,6 +59,18 @@ public class MemoryConfig
     public MemoryConfig setEnableLazyDynamicFiltering(boolean enableLazyDynamicFiltering)
     {
         this.enableLazyDynamicFiltering = enableLazyDynamicFiltering;
+        return this;
+    }
+
+    public boolean isEnableCacheIds()
+    {
+        return enableCacheIds;
+    }
+
+    @Config("memory.enable-cache-ids")
+    public MemoryConfig setEnableCacheIds(boolean enableCacheIds)
+    {
+        this.enableCacheIds = enableCacheIds;
         return this;
     }
 }
