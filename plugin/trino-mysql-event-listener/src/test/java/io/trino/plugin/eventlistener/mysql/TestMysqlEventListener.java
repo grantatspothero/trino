@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.eventlistener.mysql;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.reflect.TypeToken;
 import io.airlift.json.JsonCodecFactory;
@@ -81,7 +82,8 @@ public class TestMysqlEventListener
             Optional.of("jsonplan"),
             Optional.of("stageInfo"),
             Optional.empty(),
-            Optional.empty());
+            Optional.empty(),
+            ImmutableList.of());
 
     private static final QueryStatistics FULL_QUERY_STATISTICS = new QueryStatistics(
             ofMillis(101),
@@ -240,7 +242,8 @@ public class TestMysqlEventListener
             Optional.empty(),
             Optional.empty(),
             Optional.empty(),
-            Optional.empty());
+            Optional.empty(),
+            ImmutableList.of());
 
     private static final QueryStatistics MINIMAL_QUERY_STATISTICS = new QueryStatistics(
             ofMillis(101),

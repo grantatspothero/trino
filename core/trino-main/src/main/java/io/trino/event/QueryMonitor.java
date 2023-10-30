@@ -66,6 +66,7 @@ import io.trino.spi.eventlistener.QueryMetadata;
 import io.trino.spi.eventlistener.QueryOutputMetadata;
 import io.trino.spi.eventlistener.QueryStatistics;
 import io.trino.spi.eventlistener.StageCpuDistribution;
+import io.trino.spi.eventlistener.StageDetails;
 import io.trino.spi.eventlistener.StageOutputBufferUtilization;
 import io.trino.spi.metrics.Metrics;
 import io.trino.spi.resourcegroups.QueryType;
@@ -174,7 +175,8 @@ public class QueryMonitor
                                 Optional.empty(),
                                 Optional.empty(),
                                 Optional.empty(),
-                                Optional.empty())));
+                                Optional.empty(),
+                                ImmutableList.of())));
     }
 
     public void queryImmediateFailureEvent(BasicQueryInfo queryInfo, ExecutionFailureInfo failure)
@@ -194,7 +196,8 @@ public class QueryMonitor
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
-                        Optional.empty()),
+                        Optional.empty(),
+                        ImmutableList.of()),
                 new QueryStatistics(
                         ofMillis(0),
                         ofMillis(0),
@@ -278,6 +281,11 @@ public class QueryMonitor
     public QueryMetadata createQueryMetadata(QueryInfo queryInfo, boolean requiresAnonymizedPlan)
     {
         Anonymizer anonymizer = requiresAnonymizedPlan ? new CounterBasedAnonymizer() : new NoOpAnonymizer();
+        Optional<String> payloadJson = queryInfo.getOutputStage().flatMap(stage -> stageInfoCodec.toJsonWithLengthLimit(stage, maxJsonLimit));
+        // Pre-process stage details if StageInfo is dropped due to Kafka payload size limit
+        List<StageDetails> overflowStageDetails = payloadJson.isPresent()
+                ? ImmutableList.of()
+                : queryInfo.getOutputStage().stream().flatMap(stage -> GalaxyQueryHistoryProcessor.processStageDetails(stage).stream()).collect(toImmutableList());
         return new QueryMetadata(
                 queryInfo.getQueryId().toString(),
                 queryInfo.getSession().getTransactionId().map(TransactionId::toString),
@@ -290,9 +298,10 @@ public class QueryMonitor
                 queryInfo.getSelf(),
                 createTextQueryPlan(queryInfo, anonymizer),
                 createJsonQueryPlan(queryInfo, anonymizer),
-                queryInfo.getOutputStage().flatMap(stage -> stageInfoCodec.toJsonWithLengthLimit(stage, maxJsonLimit)),
+                payloadJson,
                 queryInfo.getResultsCacheResultStatus(),
-                queryInfo.getResultsCacheResultSize());
+                queryInfo.getResultsCacheResultSize(),
+                overflowStageDetails);
     }
 
     public QueryStatistics createQueryStatistics(QueryInfo queryInfo)
