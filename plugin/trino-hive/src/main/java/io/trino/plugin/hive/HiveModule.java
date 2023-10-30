@@ -24,7 +24,6 @@ import io.airlift.concurrent.BoundedExecutor;
 import io.airlift.concurrent.ExecutorServiceAdapter;
 import io.airlift.event.client.EventClient;
 import io.trino.hdfs.HdfsNamenodeStats;
-import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.hdfs.TrinoFileSystemCacheStats;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
@@ -33,6 +32,7 @@ import io.trino.plugin.hive.avro.AvroFileWriterFactory;
 import io.trino.plugin.hive.avro.AvroPageSourceFactory;
 import io.trino.plugin.hive.fs.CachingDirectoryLister;
 import io.trino.plugin.hive.fs.TransactionScopeCachingDirectoryListerFactory;
+import io.trino.plugin.hive.fs.TrinoFileSystemCache;
 import io.trino.plugin.hive.line.CsvFileWriterFactory;
 import io.trino.plugin.hive.line.CsvPageSourceFactory;
 import io.trino.plugin.hive.line.JsonFileWriterFactory;
@@ -138,9 +138,9 @@ public class HiveModule
         binder.bind(FileFormatDataSourceStats.class).in(Scopes.SINGLETON);
         newExporter(binder).export(FileFormatDataSourceStats.class).withGeneratedName();
 
-        binder.bind(TrinoFileSystemCacheStats.class).toInstance(TrinoFileSystemCache.INSTANCE.getFileSystemCacheStats());
+        binder.bind(TrinoFileSystemCacheStats.class).toInstance(TrinoFileSystemCacheStats.instance());
         newExporter(binder).export(TrinoFileSystemCacheStats.class)
-                .as(generator -> generator.generatedNameOf(io.trino.plugin.hive.fs.TrinoFileSystemCache.class));
+                .as(generator -> generator.generatedNameOf(TrinoFileSystemCache.class));
 
         binder.bind(HdfsNamenodeStats.class).in(Scopes.SINGLETON);
         newExporter(binder).export(HdfsNamenodeStats.class)
