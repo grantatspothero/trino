@@ -2910,11 +2910,6 @@
                     </excludes>
                 </configuration>
             </plugin>
-
-            <plugin>
-                <groupId>com.github.ekryd.sortpom</groupId>
-                <artifactId>sortpom-maven-plugin</artifactId>
-            </plugin>
         </plugins>
     </build>
 
