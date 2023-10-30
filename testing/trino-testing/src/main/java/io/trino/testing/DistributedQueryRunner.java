@@ -27,6 +27,7 @@ import io.airlift.units.Duration;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.trino.Session;
 import io.trino.Session.SessionBuilder;
+import io.trino.cache.CacheMetadata;
 import io.trino.cost.StatsCalculator;
 import io.trino.execution.FailureInjector.InjectedFailureType;
 import io.trino.execution.QueryManager;
@@ -352,6 +353,12 @@ public class DistributedQueryRunner
     public Metadata getMetadata()
     {
         return coordinator.getMetadata();
+    }
+
+    @Override
+    public CacheMetadata getCacheMetadata()
+    {
+        return coordinator.getCacheMetadata();
     }
 
     @Override

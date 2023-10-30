@@ -31,8 +31,6 @@ import io.trino.metadata.ResolvedFunction.ResolvedFunctionDecoder;
 import io.trino.spi.ErrorCode;
 import io.trino.spi.QueryId;
 import io.trino.spi.TrinoException;
-import io.trino.spi.cache.CacheColumnId;
-import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.AggregateFunction;
 import io.trino.spi.connector.AggregationApplicationResult;
 import io.trino.spi.connector.Assignment;
@@ -2502,27 +2500,6 @@ public final class MetadataManager
         CatalogMetadata catalogMetadata = catalog.get();
         CatalogHandle catalogHandle = catalogMetadata.getCatalogHandle();
         return catalogMetadata.getMetadata(session).getMaxWriterTasks(session.toConnectorSession(catalogHandle));
-    }
-
-    @Override
-    public Optional<CacheTableId> getCacheTableId(Session session, TableHandle tableHandle)
-    {
-        ConnectorMetadata metadata = getMetadata(session, tableHandle.getCatalogHandle());
-        return metadata.getCacheTableId(tableHandle.getConnectorHandle());
-    }
-
-    @Override
-    public Optional<CacheColumnId> getCacheColumnId(Session session, TableHandle tableHandle, ColumnHandle columnHandle)
-    {
-        ConnectorMetadata metadata = getMetadata(session, tableHandle.getCatalogHandle());
-        return metadata.getCacheColumnId(tableHandle.getConnectorHandle(), columnHandle);
-    }
-
-    @Override
-    public TableHandle getCanonicalTableHandle(Session session, TableHandle tableHandle)
-    {
-        ConnectorMetadata metadata = getMetadata(session, tableHandle.getCatalogHandle());
-        return new TableHandle(tableHandle.getCatalogHandle(), metadata.getCanonicalTableHandle(tableHandle.getConnectorHandle()), tableHandle.getTransaction());
     }
 
     @Override

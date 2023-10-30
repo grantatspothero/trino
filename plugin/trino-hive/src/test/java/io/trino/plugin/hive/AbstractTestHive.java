@@ -45,7 +45,6 @@ import io.trino.plugin.hive.fs.TrinoFileStatus;
 import io.trino.plugin.hive.fs.TrinoFileStatusRemoteIterator;
 import io.trino.plugin.hive.line.LinePageSource;
 import io.trino.plugin.hive.metastore.Column;
-import io.trino.plugin.hive.metastore.HiveCacheTableId;
 import io.trino.plugin.hive.metastore.HiveColumnStatistics;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hive.metastore.HiveMetastoreFactory;
@@ -905,8 +904,6 @@ public abstract class AbstractTestHive
                 new TransactionScopeCachingDirectoryListerFactory(hiveConfig.setPerTransactionFileStatusCacheMaxRetainedSize(DataSize.of(1, MEGABYTE))),
                 new PartitionProjectionService(hiveConfig, ImmutableMap.of(), new TestingTypeManager()),
                 true,
-                jsonCodec(HiveCacheTableId.class),
-                jsonCodec(HiveColumnHandle.class),
                 HiveTimestampPrecision.DEFAULT_PRECISION);
         transactionManager = new HiveTransactionManager(metadataFactory);
         splitManager = new HiveSplitManager(

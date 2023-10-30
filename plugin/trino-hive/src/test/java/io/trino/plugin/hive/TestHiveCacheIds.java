@@ -42,7 +42,6 @@ import io.trino.spi.block.Block;
 import io.trino.spi.block.TestingBlockJsonSerde;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.predicate.TupleDomain;
-import io.trino.spi.security.ConnectorIdentity;
 import io.trino.spi.type.TestingTypeManager;
 import io.trino.spi.type.Type;
 import io.trino.version.EmbedVersion;
@@ -74,7 +73,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestHiveCacheIds
 {
     private ScheduledExecutorService executorService;
-    private HiveMetadata metadata;
+    private HiveCacheMetadata metadata;
     private HiveSplitManager splitManager;
 
     @BeforeClass
@@ -111,10 +110,11 @@ public class TestHiveCacheIds
                 new FileSystemDirectoryLister(),
                 new TransactionScopeCachingDirectoryListerFactory(config),
                 new PartitionProjectionService(config, ImmutableMap.of(), new TestingTypeManager()),
-                createJsonCodec(HiveCacheTableId.class),
-                createJsonCodec(HiveColumnHandle.class),
                 true);
-        metadata = (HiveMetadata) metadataFactory.create(ConnectorIdentity.ofUser("user"), true);
+
+        metadata = new HiveCacheMetadata(
+                createJsonCodec(HiveCacheTableId.class),
+                createJsonCodec(HiveColumnHandle.class));
         splitManager = new HiveSplitManager(
                 config,
                 new HiveTransactionManager(metadataFactory),

@@ -17,10 +17,6 @@ import io.airlift.slice.Slice;
 import io.trino.spi.ErrorCode;
 import io.trino.spi.Experimental;
 import io.trino.spi.TrinoException;
-import io.trino.spi.cache.CacheColumnId;
-import io.trino.spi.cache.CacheManager;
-import io.trino.spi.cache.CacheSplitId;
-import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.expression.Call;
 import io.trino.spi.expression.ConnectorExpression;
 import io.trino.spi.expression.Constant;
@@ -1640,44 +1636,6 @@ public interface ConnectorMetadata
     default OptionalInt getMaxWriterTasks(ConnectorSession session)
     {
         return OptionalInt.empty();
-    }
-
-    /**
-     * Returns a table identifier for the purpose of caching with {@link CacheManager}.
-     * {@link CacheTableId} together with {@link CacheSplitId} and {@link CacheColumnId}s represents
-     * rows produced by {@link ConnectorPageSource} for a given split. Local table properties
-     * (e.g. rows order) must be part of {@link CacheTableId} if they are present. List of selected
-     * columns should not be part of {@link CacheTableId}. {@link CacheTableId} should not contain
-     * elements that can be derived from {@link CacheSplitId} such as predicate on partition column
-     * which can filter splits entirely.
-     */
-    default Optional<CacheTableId> getCacheTableId(ConnectorTableHandle tableHandle)
-    {
-        return Optional.empty();
-    }
-
-    /**
-     * Returns a column identifier for the purpose of caching with {@link CacheManager}.
-     * {@link CacheTableId} together with {@link CacheSplitId} and {@link CacheColumnId}s represents
-     * rows produced by {@link ConnectorPageSource} for a given split. {@link CacheColumnId} can represent
-     * simple, base column or more complex reference (e.g. map or array dereference expressions).
-     */
-    default Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
-    {
-        return Optional.empty();
-    }
-
-    /**
-     * Returns a canonical {@link ConnectorTableHandle}.
-     * If any property of {@link ConnectorTableHandle} affects final query result when underlying table
-     * is queried, then such property is considered canonical. Otherwise, the property is non-canonical.
-     * Canonical {@link ConnectorTableHandle}s allow to match more similar subqueries that
-     * are eligible for caching with {@link CacheManager}. Connector should convert provided
-     * {@link ConnectorTableHandle} into canonical one by pruning of every non-canonical field.
-     */
-    default ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle handle)
-    {
-        return handle;
     }
 
     /**

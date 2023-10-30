@@ -62,10 +62,10 @@ public final class CanonicalSubplanExtractor
     /**
      * Extracts a list of {@link CanonicalSubplan} for a given plan.
      */
-    public static List<CanonicalSubplan> extractCanonicalSubplans(Metadata metadata, Session session, PlanNode root)
+    public static List<CanonicalSubplan> extractCanonicalSubplans(Metadata metadata, CacheMetadata cacheMetadata, Session session, PlanNode root)
     {
         ImmutableList.Builder<CanonicalSubplan> canonicalSubplans = ImmutableList.builder();
-        root.accept(new Visitor(metadata, session, canonicalSubplans), null).ifPresent(canonicalSubplans::add);
+        root.accept(new Visitor(metadata, cacheMetadata, session, canonicalSubplans), null).ifPresent(canonicalSubplans::add);
         return canonicalSubplans.build();
     }
 
@@ -98,12 +98,14 @@ public final class CanonicalSubplanExtractor
             extends PlanVisitor<Optional<CanonicalSubplan>, Void>
     {
         private final Metadata metadata;
+        private final CacheMetadata cacheMetadata;
         private final Session session;
         private final ImmutableList.Builder<CanonicalSubplan> canonicalSubplans;
 
-        public Visitor(Metadata metadata, Session session, ImmutableList.Builder<CanonicalSubplan> canonicalSubplans)
+        public Visitor(Metadata metadata, CacheMetadata cacheMetadata, Session session, ImmutableList.Builder<CanonicalSubplan> canonicalSubplans)
         {
             this.metadata = requireNonNull(metadata, "metadata is null");
+            this.cacheMetadata = requireNonNull(cacheMetadata, "cacheMetadata is null");
             this.session = requireNonNull(session, "session is null");
             this.canonicalSubplans = requireNonNull(canonicalSubplans, "canonicalSubplans is null");
         }
@@ -411,8 +413,8 @@ public final class CanonicalSubplanExtractor
                 return Optional.empty();
             }
 
-            TableHandle canonicalTableHandle = metadata.getCanonicalTableHandle(session, node.getTable());
-            Optional<CacheTableId> tableId = metadata.getCacheTableId(session, canonicalTableHandle)
+            TableHandle canonicalTableHandle = cacheMetadata.getCanonicalTableHandle(session, node.getTable());
+            Optional<CacheTableId> tableId = cacheMetadata.getCacheTableId(session, canonicalTableHandle)
                     // prepend catalog id
                     .map(id -> new CacheTableId(node.getTable().getCatalogHandle().getId() + ":" + id));
             if (tableId.isEmpty()) {
@@ -424,7 +426,7 @@ public final class CanonicalSubplanExtractor
             Map<CacheColumnId, ColumnHandle> columnHandles = new LinkedHashMap<>();
             for (Symbol outputSymbol : node.getOutputSymbols()) {
                 ColumnHandle columnHandle = node.getAssignments().get(outputSymbol);
-                Optional<CacheColumnId> columnId = metadata.getCacheColumnId(session, node.getTable(), columnHandle)
+                Optional<CacheColumnId> columnId = cacheMetadata.getCacheColumnId(session, node.getTable(), columnHandle)
                         // Make connector ids always wrapped in '[]' so they are distinguishable from
                         // CacheColumnIds derived from complex expressions.
                         .map(id -> new CacheColumnId("[" + id + "]"));

@@ -23,8 +23,6 @@ import io.trino.Session;
 import io.trino.connector.system.GlobalSystemConnector;
 import io.trino.metadata.ResolvedFunction.ResolvedFunctionDecoder;
 import io.trino.spi.TrinoException;
-import io.trino.spi.cache.CacheColumnId;
-import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.AggregateFunction;
 import io.trino.spi.connector.AggregationApplicationResult;
 import io.trino.spi.connector.BeginTableExecuteResult;
@@ -958,24 +956,6 @@ public abstract class AbstractMockMetadata
 
     @Override
     public OptionalInt getMaxWriterTasks(Session session, String catalogName)
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Optional<CacheTableId> getCacheTableId(Session session, TableHandle tableHandle)
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Optional<CacheColumnId> getCacheColumnId(Session session, TableHandle tableHandle, ColumnHandle columnHandle)
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public TableHandle getCanonicalTableHandle(Session session, TableHandle tableHandle)
     {
         throw new UnsupportedOperationException();
     }

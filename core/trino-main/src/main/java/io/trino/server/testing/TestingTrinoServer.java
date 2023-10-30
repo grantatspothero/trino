@@ -41,6 +41,7 @@ import io.airlift.tracing.TracingModule;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.trino.cache.CacheManagerModule;
 import io.trino.cache.CacheManagerRegistry;
+import io.trino.cache.CacheMetadata;
 import io.trino.connector.CatalogManagerModule;
 import io.trino.connector.ConnectorName;
 import io.trino.connector.ConnectorServicesProvider;
@@ -163,6 +164,7 @@ public class TestingTrinoServer
     private final TransactionManager transactionManager;
     private final TablePropertyManager tablePropertyManager;
     private final Metadata metadata;
+    private final CacheMetadata cacheMetadata;
     private final TypeManager typeManager;
     private final QueryExplainer queryExplainer;
     private final SessionPropertyManager sessionPropertyManager;
@@ -357,6 +359,7 @@ public class TestingTrinoServer
         tablePropertyManager = injector.getInstance(TablePropertyManager.class);
         globalFunctionCatalog = injector.getInstance(GlobalFunctionCatalog.class);
         metadata = injector.getInstance(Metadata.class);
+        cacheMetadata = injector.getInstance(CacheMetadata.class);
         typeManager = injector.getInstance(TypeManager.class);
         functionManager = injector.getInstance(FunctionManager.class);
         accessControl = injector.getInstance(TestingAccessControlManager.class);
@@ -547,6 +550,11 @@ public class TestingTrinoServer
     public Metadata getMetadata()
     {
         return metadata;
+    }
+
+    public CacheMetadata getCacheMetadata()
+    {
+        return cacheMetadata;
     }
 
     public TypeManager getTypeManager()

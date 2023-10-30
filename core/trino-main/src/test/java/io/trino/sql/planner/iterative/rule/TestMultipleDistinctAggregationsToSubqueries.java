@@ -52,8 +52,6 @@ import io.trino.metadata.ViewInfo;
 import io.trino.plugin.tpch.TpchColumnHandle;
 import io.trino.plugin.tpch.TpchConnectorFactory;
 import io.trino.plugin.tpch.TpchTableHandle;
-import io.trino.spi.cache.CacheColumnId;
-import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.AggregateFunction;
 import io.trino.spi.connector.AggregationApplicationResult;
 import io.trino.spi.connector.BeginTableExecuteResult;
@@ -1995,24 +1993,6 @@ public class TestMultipleDistinctAggregationsToSubqueries
         public OptionalInt getMaxWriterTasks(Session session, String catalogName)
         {
             return metadata.getMaxWriterTasks(session, catalogName);
-        }
-
-        @Override
-        public Optional<CacheTableId> getCacheTableId(Session session, TableHandle tableHandle)
-        {
-            return metadata.getCacheTableId(session, tableHandle);
-        }
-
-        @Override
-        public Optional<CacheColumnId> getCacheColumnId(Session session, TableHandle tableHandle, ColumnHandle columnHandle)
-        {
-            return metadata.getCacheColumnId(session, tableHandle, columnHandle);
-        }
-
-        @Override
-        public TableHandle getCanonicalTableHandle(Session session, TableHandle handle)
-        {
-            return metadata.getCanonicalTableHandle(session, handle);
         }
 
         @Override

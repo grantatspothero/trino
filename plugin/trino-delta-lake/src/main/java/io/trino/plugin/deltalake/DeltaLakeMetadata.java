@@ -81,8 +81,6 @@ import io.trino.plugin.hive.security.AccessControlMetadata;
 import io.trino.spi.NodeManager;
 import io.trino.spi.TrinoException;
 import io.trino.spi.block.Block;
-import io.trino.spi.cache.CacheColumnId;
-import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.Assignment;
 import io.trino.spi.connector.BeginTableExecuteResult;
 import io.trino.spi.connector.CatalogSchemaTableName;
@@ -180,7 +178,6 @@ import static com.google.common.collect.Maps.filterKeys;
 import static com.google.common.collect.Sets.difference;
 import static com.google.common.primitives.Ints.max;
 import static io.trino.filesystem.Locations.appendPath;
-import static io.trino.plugin.base.cache.CacheUtils.normalizeTupleDomain;
 import static io.trino.plugin.base.projection.ApplyProjectionUtil.ProjectedColumnRepresentation;
 import static io.trino.plugin.base.projection.ApplyProjectionUtil.extractSupportedProjectedColumns;
 import static io.trino.plugin.base.projection.ApplyProjectionUtil.replaceWithNewVariables;
@@ -386,8 +383,6 @@ public class DeltaLakeMetadata
     private final boolean unsafeWritesEnabled;
     private final JsonCodec<DataFileInfo> dataFileInfoCodec;
     private final JsonCodec<DeltaLakeMergeResult> mergeResultJsonCodec;
-    private final JsonCodec<DeltaLakeCacheTableId> tableIdCodec;
-    private final JsonCodec<DeltaLakeColumnHandle> columnCodec;
     private final TransactionLogWriterFactory transactionLogWriterFactory;
     private final String nodeVersion;
     private final String nodeId;
@@ -427,8 +422,6 @@ public class DeltaLakeMetadata
             boolean unsafeWritesEnabled,
             JsonCodec<DataFileInfo> dataFileInfoCodec,
             JsonCodec<DeltaLakeMergeResult> mergeResultJsonCodec,
-            JsonCodec<DeltaLakeCacheTableId> tableIdCodec,
-            JsonCodec<DeltaLakeColumnHandle> columnCodec,
             TransactionLogWriterFactory transactionLogWriterFactory,
             NodeManager nodeManager,
             CheckpointWriterManager checkpointWriterManager,
@@ -461,8 +454,6 @@ public class DeltaLakeMetadata
         this.deleteSchemaLocationsFallback = deleteSchemaLocationsFallback;
         this.useUniqueTableLocation = useUniqueTableLocation;
         this.allowManagedTableRename = allowManagedTableRename;
-        this.tableIdCodec = requireNonNull(tableIdCodec, "tableIdCodec is null");
-        this.columnCodec = requireNonNull(columnCodec, "columnCodec is null");
     }
 
     public TableSnapshot getSnapshot(ConnectorSession session, SchemaTableName table, String tableLocation, long atVersion)
@@ -3488,60 +3479,6 @@ public class DeltaLakeMetadata
     public Optional<SystemTable> getSystemTable(ConnectorSession session, SchemaTableName tableName)
     {
         return getRawSystemTable(tableName).map(systemTable -> new ClassLoaderSafeSystemTable(systemTable, getClass().getClassLoader()));
-    }
-
-    @Override
-    public Optional<CacheTableId> getCacheTableId(ConnectorTableHandle tableHandle)
-    {
-        DeltaLakeTableHandle deltaLakeTableHandle = (DeltaLakeTableHandle) tableHandle;
-
-        // skip caching if it is UPDATE / INSERT query
-        if (((DeltaLakeTableHandle) tableHandle).getWriteType().isPresent()) {
-            return Optional.empty();
-        }
-
-        // skip caching of analyze queries
-        if (deltaLakeTableHandle.getAnalyzeHandle().isPresent()) {
-            return Optional.empty();
-        }
-
-        // Ensure cache id generation is revisited whenever handle classes change.
-        DeltaLakeTableHandle handle = new DeltaLakeTableHandle(
-                deltaLakeTableHandle.getSchemaName(),
-                deltaLakeTableHandle.getTableName(),
-                deltaLakeTableHandle.isManaged(),
-                deltaLakeTableHandle.getLocation(),
-                deltaLakeTableHandle.getMetadataEntry(),
-                deltaLakeTableHandle.getProtocolEntry(),
-                deltaLakeTableHandle.getEnforcedPartitionConstraint(),
-                deltaLakeTableHandle.getNonPartitionConstraint(),
-                deltaLakeTableHandle.getWriteType(),
-                deltaLakeTableHandle.getProjectedColumns(),
-                deltaLakeTableHandle.getUpdatedColumns(),
-                deltaLakeTableHandle.getUpdateRowIdColumns(),
-                deltaLakeTableHandle.getAnalyzeHandle(),
-                deltaLakeTableHandle.getReadVersion());
-
-        DeltaLakeCacheTableId tableId = new DeltaLakeCacheTableId(
-                handle.getSchemaName(),
-                handle.getTableName(),
-                handle.getLocation(),
-                normalizeTupleDomain(handle.getNonPartitionConstraint()
-                        .transformKeys(column -> getCacheColumnId(tableHandle, column).orElseThrow())),
-                handle.getMetadataEntry());
-        return Optional.of(new CacheTableId(tableIdCodec.toJson(tableId)));
-    }
-
-    @Override
-    public Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
-    {
-        return Optional.of(new CacheColumnId(columnCodec.toJson((DeltaLakeColumnHandle) columnHandle)));
-    }
-
-    @Override
-    public ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle handle)
-    {
-        return ((DeltaLakeTableHandle) handle).toCanonical();
     }
 
     private Optional<SystemTable> getRawSystemTable(SchemaTableName systemTableName)

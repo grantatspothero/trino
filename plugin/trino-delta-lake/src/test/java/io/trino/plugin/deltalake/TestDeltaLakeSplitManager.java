@@ -212,8 +212,6 @@ public class TestDeltaLakeSplitManager
                 new DeltaLakeConfig(),
                 JsonCodec.jsonCodec(DataFileInfo.class),
                 JsonCodec.jsonCodec(DeltaLakeMergeResult.class),
-                createJsonCodec(DeltaLakeCacheTableId.class),
-                createJsonCodec(DeltaLakeColumnHandle.class),
                 new TransactionLogWriterFactory(
                         new TransactionLogSynchronizerManager(ImmutableMap.of(), new NoIsolationSynchronizer(hdfsFileSystemFactory))),
                 new TestingNodeManager(),

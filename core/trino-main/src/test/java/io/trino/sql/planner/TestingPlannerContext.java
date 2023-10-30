@@ -14,6 +14,7 @@
 package io.trino.sql.planner;
 
 import io.trino.FeaturesConfig;
+import io.trino.cache.CacheMetadata;
 import io.trino.connector.CatalogServiceProvider;
 import io.trino.metadata.BlockEncodingManager;
 import io.trino.metadata.FunctionBundle;
@@ -44,6 +45,7 @@ import io.trino.type.TypeDeserializer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkState;
 import static io.airlift.tracing.Tracing.noopTracer;
@@ -140,8 +142,10 @@ public final class TestingPlannerContext
                     new JsonQueryFunction(functionManager, metadata, typeManager)));
             typeRegistry.addType(new JsonPath2016Type(new TypeDeserializer(typeManager), blockEncodingSerde));
 
+            CacheMetadata cacheMetadata = new CacheMetadata(catalogHandle -> Optional.empty());
             return new PlannerContext(
                     metadata,
+                    cacheMetadata,
                     typeOperators,
                     blockEncodingSerde,
                     typeManager,

@@ -17,8 +17,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import io.airlift.slice.Slice;
 import io.trino.Session;
 import io.trino.spi.TrinoException;
-import io.trino.spi.cache.CacheColumnId;
-import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.AggregateFunction;
 import io.trino.spi.connector.AggregationApplicationResult;
 import io.trino.spi.connector.BeginTableExecuteResult;
@@ -768,12 +766,6 @@ public interface Metadata
      * Note: It is ignored when retry policy is set to TASK
      */
     OptionalInt getMaxWriterTasks(Session session, String catalogName);
-
-    Optional<CacheTableId> getCacheTableId(Session session, TableHandle tableHandle);
-
-    Optional<CacheColumnId> getCacheColumnId(Session session, TableHandle tableHandle, ColumnHandle columnHandle);
-
-    TableHandle getCanonicalTableHandle(Session session, TableHandle handle);
 
     /**
      * @return whether connector supports reading a single column from the give tableHandle, without reading the entire table.

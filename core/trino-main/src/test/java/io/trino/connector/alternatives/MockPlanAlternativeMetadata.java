@@ -24,8 +24,6 @@ import io.trino.connector.alternatives.MockPlanAlternativeTableHandle.IsNull;
 import io.trino.connector.alternatives.MockPlanAlternativeTableHandle.Ranges;
 import io.trino.connector.alternatives.MockPlanAlternativeTableHandle.VarcharIn;
 import io.trino.spi.Experimental;
-import io.trino.spi.cache.CacheColumnId;
-import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.AggregateFunction;
 import io.trino.spi.connector.AggregationApplicationResult;
 import io.trino.spi.connector.BeginTableExecuteResult;
@@ -949,25 +947,6 @@ public class MockPlanAlternativeMetadata
     public OptionalInt getMaxWriterTasks(ConnectorSession session)
     {
         return delegate.getMaxWriterTasks(session);
-    }
-
-    @Override
-    public Optional<CacheTableId> getCacheTableId(ConnectorTableHandle tableHandle)
-    {
-        return delegate.getCacheTableId(getDelegate(tableHandle));
-    }
-
-    @Override
-    public Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
-    {
-        return delegate.getCacheColumnId(getDelegate(tableHandle), columnHandle);
-    }
-
-    @Override
-    public ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle handle)
-    {
-        ConnectorTableHandle delegateResult = delegate.getCanonicalTableHandle(getDelegate(handle));
-        return withDelegate(handle, delegateResult);
     }
 
     @Override

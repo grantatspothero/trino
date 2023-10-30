@@ -23,10 +23,12 @@ import com.google.common.collect.Table;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import io.airlift.bootstrap.LifeCycleManager;
+import io.trino.plugin.base.classloader.ClassLoaderSafeConnectorCacheMetadata;
 import io.trino.plugin.base.classloader.ClassLoaderSafeConnectorMetadata;
 import io.trino.plugin.hive.HiveConnector;
 import io.trino.plugin.hive.HiveTransactionHandle;
 import io.trino.plugin.iceberg.IcebergFileFormat;
+import io.trino.spi.cache.ConnectorCacheMetadata;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorCapabilities;
 import io.trino.spi.connector.ConnectorMetadata;
@@ -371,6 +373,20 @@ public class ObjectStoreConnector
     public ConnectorSplitManager getSplitManager()
     {
         return splitManager;
+    }
+
+    @Override
+    public ConnectorCacheMetadata getCacheMetadata()
+    {
+        ConnectorCacheMetadata hiveMetadata = hiveConnector.getCacheMetadata();
+        ConnectorCacheMetadata icebergMetadata = icebergConnector.getCacheMetadata();
+        ConnectorCacheMetadata deltaMetadata = deltaConnector.getCacheMetadata();
+        return new ClassLoaderSafeConnectorCacheMetadata(
+                new ObjectStoreCacheMetadata(
+                        ((ClassLoaderSafeConnectorCacheMetadata) hiveMetadata).unwrap(),
+                        ((ClassLoaderSafeConnectorCacheMetadata) icebergMetadata).unwrap(),
+                        ((ClassLoaderSafeConnectorCacheMetadata) deltaMetadata).unwrap()),
+                getClass().getClassLoader());
     }
 
     @Override

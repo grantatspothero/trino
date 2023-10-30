@@ -21,6 +21,7 @@ import io.trino.spi.Plugin;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheSplitId;
 import io.trino.spi.cache.CacheTableId;
+import io.trino.spi.cache.ConnectorCacheMetadata;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
@@ -47,6 +48,7 @@ import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import io.trino.testing.TestingMetadata;
 import io.trino.testing.TestingMetadata.TestingColumnHandle;
+import io.trino.testing.TestingMetadata.TestingTableHandle;
 import io.trino.testing.TestingPageSinkProvider;
 import io.trino.testing.TestingTransactionHandle;
 import org.intellij.lang.annotations.Language;
@@ -128,7 +130,7 @@ public class TestCacheDynamicFiltering
         {
             return ImmutableList.of(new ConnectorFactory()
             {
-                private final ConnectorMetadata metadata = new TestingMetadata()
+                private final ConnectorCacheMetadata metadata = new ConnectorCacheMetadata()
                 {
                     @Override
                     public Optional<CacheTableId> getCacheTableId(ConnectorTableHandle tableHandle)
@@ -152,7 +154,7 @@ public class TestCacheDynamicFiltering
                 @Override
                 public Connector create(String catalogName, Map<String, String> config, ConnectorContext context)
                 {
-                    return new TestConnector(metadata);
+                    return new TestConnector(new TestingMetadata(), metadata);
                 }
             });
         }
@@ -162,12 +164,14 @@ public class TestCacheDynamicFiltering
             implements Connector
     {
         private final ConnectorMetadata metadata;
+        private final ConnectorCacheMetadata cacheMetadata;
         private final AtomicLong splitCount = new AtomicLong();
         private volatile boolean finished;
 
-        private TestConnector(ConnectorMetadata metadata)
+        private TestConnector(ConnectorMetadata metadata, ConnectorCacheMetadata cacheMetadata)
         {
             this.metadata = requireNonNull(metadata, "metadata is null");
+            this.cacheMetadata = requireNonNull(cacheMetadata, "cacheMetadata is null");
         }
 
         @Override
@@ -180,6 +184,12 @@ public class TestCacheDynamicFiltering
         public ConnectorMetadata getMetadata(ConnectorSession session, ConnectorTransactionHandle transactionHandle)
         {
             return metadata;
+        }
+
+        @Override
+        public ConnectorCacheMetadata getCacheMetadata()
+        {
+            return cacheMetadata;
         }
 
         @Override

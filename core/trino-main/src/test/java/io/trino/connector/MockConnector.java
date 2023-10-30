@@ -30,6 +30,7 @@ import io.trino.spi.HostAddress;
 import io.trino.spi.Page;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheTableId;
+import io.trino.spi.cache.ConnectorCacheMetadata;
 import io.trino.spi.connector.AggregateFunction;
 import io.trino.spi.connector.AggregationApplicationResult;
 import io.trino.spi.connector.BeginTableExecuteResult;
@@ -310,6 +311,12 @@ public class MockConnector
     public ConnectorMetadata getMetadata(ConnectorSession session, ConnectorTransactionHandle transaction)
     {
         return metadataWrapper.apply(new MockConnectorMetadata());
+    }
+
+    @Override
+    public ConnectorCacheMetadata getCacheMetadata()
+    {
+        return new MockCacheMetadata();
     }
 
     @Override
@@ -894,24 +901,6 @@ public class MockConnector
         }
 
         @Override
-        public Optional<CacheTableId> getCacheTableId(ConnectorTableHandle tableHandle)
-        {
-            return getCacheTableId.apply(tableHandle);
-        }
-
-        @Override
-        public Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
-        {
-            return getCacheColumnId.apply(columnHandle);
-        }
-
-        @Override
-        public ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle tableHandle)
-        {
-            return getCanonicalTableHandle.apply(tableHandle);
-        }
-
-        @Override
         public BeginTableExecuteResult<ConnectorTableExecuteHandle, ConnectorTableHandle> beginTableExecute(ConnectorSession session, ConnectorTableExecuteHandle tableExecuteHandle, ConnectorTableHandle updatedSourceTableHandle)
         {
             return new BeginTableExecuteResult<>(tableExecuteHandle, updatedSourceTableHandle);
@@ -932,6 +921,28 @@ public class MockConnector
         private MockConnectorAccessControl getMockAccessControl()
         {
             return (MockConnectorAccessControl) getAccessControl();
+        }
+    }
+
+    private class MockCacheMetadata
+            implements ConnectorCacheMetadata
+    {
+        @Override
+        public Optional<CacheTableId> getCacheTableId(ConnectorTableHandle tableHandle)
+        {
+            return getCacheTableId.apply(tableHandle);
+        }
+
+        @Override
+        public Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
+        {
+            return getCacheColumnId.apply(columnHandle);
+        }
+
+        @Override
+        public ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle tableHandle)
+        {
+            return getCanonicalTableHandle.apply(tableHandle);
         }
     }
 

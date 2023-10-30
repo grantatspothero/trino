@@ -55,8 +55,6 @@ import io.trino.plugin.iceberg.procedure.IcebergTableExecuteHandle;
 import io.trino.spi.ErrorCode;
 import io.trino.spi.ErrorCodeSupplier;
 import io.trino.spi.TrinoException;
-import io.trino.spi.cache.CacheColumnId;
-import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.BeginTableExecuteResult;
 import io.trino.spi.connector.CatalogSchemaTableName;
 import io.trino.spi.connector.ColumnHandle;
@@ -1447,24 +1445,6 @@ public class ObjectStoreMetadata
     }
 
     @Override
-    public Optional<CacheTableId> getCacheTableId(ConnectorTableHandle tableHandle)
-    {
-        return delegate(tableType(tableHandle)).getCacheTableId(tableHandle);
-    }
-
-    @Override
-    public Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
-    {
-        return delegate(tableType(tableHandle)).getCacheColumnId(tableHandle, columnHandle);
-    }
-
-    @Override
-    public ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle tableHandle)
-    {
-        return delegate(tableType(tableHandle)).getCanonicalTableHandle(tableHandle);
-    }
-
-    @Override
     public boolean isColumnarTableScan(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
         return delegate(tableType(tableHandle)).isColumnarTableScan(session, tableHandle);
@@ -1510,7 +1490,7 @@ public class ObjectStoreMetadata
         }
     }
 
-    private ConnectorMetadata delegate(TableType tableType)
+    ConnectorMetadata delegate(TableType tableType)
     {
         return switch (tableType) {
             case HIVE -> hiveMetadata;
@@ -1520,7 +1500,7 @@ public class ObjectStoreMetadata
         };
     }
 
-    private static TableType tableType(ConnectorTableHandle handle)
+    static TableType tableType(ConnectorTableHandle handle)
     {
         if (handle instanceof HiveTableHandle) {
             return HIVE;

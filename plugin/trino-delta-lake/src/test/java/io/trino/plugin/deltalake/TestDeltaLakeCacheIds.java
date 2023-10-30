@@ -49,7 +49,6 @@ import io.trino.spi.block.Block;
 import io.trino.spi.block.TestingBlockEncodingSerde;
 import io.trino.spi.block.TestingBlockJsonSerde;
 import io.trino.spi.predicate.TupleDomain;
-import io.trino.spi.security.ConnectorIdentity;
 import io.trino.spi.type.TestingTypeManager;
 import io.trino.spi.type.Type;
 import io.trino.spi.type.TypeManager;
@@ -81,7 +80,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestDeltaLakeCacheIds
 {
     private static ScheduledExecutorService executorService = newScheduledThreadPool(1);
-    private DeltaLakeMetadata metadata;
+    private DeltaLakeCacheMetadata metadata;
     private DeltaLakeSplitManager splitManager;
 
     @BeforeClass
@@ -123,8 +122,6 @@ public class TestDeltaLakeCacheIds
                 config,
                 JsonCodec.jsonCodec(DataFileInfo.class),
                 JsonCodec.jsonCodec(DeltaLakeMergeResult.class),
-                createJsonCodec(DeltaLakeCacheTableId.class),
-                createJsonCodec(DeltaLakeColumnHandle.class),
                 new TransactionLogWriterFactory(
                         new TransactionLogSynchronizerManager(ImmutableMap.of(), new NoIsolationSynchronizer(hdfsFileSystemFactory))),
                 new TestingNodeManager(),
@@ -133,7 +130,9 @@ public class TestDeltaLakeCacheIds
                 new CachingExtendedStatisticsAccess(new MetaDirStatisticsAccess(HDFS_FILE_SYSTEM_FACTORY, new JsonCodecFactory().jsonCodec(ExtendedStatistics.class))),
                 true,
                 new NodeVersion("test_version"));
-        metadata = metadataFactory.create(ConnectorIdentity.ofUser("user"));
+        metadata = new DeltaLakeCacheMetadata(
+                createJsonCodec(DeltaLakeCacheTableId.class),
+                createJsonCodec(DeltaLakeColumnHandle.class));
         splitManager = new DeltaLakeSplitManager(
                 typeManager,
                 transactionLogAccess,

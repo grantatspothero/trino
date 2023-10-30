@@ -38,7 +38,6 @@ import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.Range;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.predicate.ValueSet;
-import io.trino.spi.security.ConnectorIdentity;
 import io.trino.spi.type.LongTimestampWithTimeZone;
 import io.trino.spi.type.TestingTypeManager;
 import io.trino.spi.type.Type;
@@ -78,7 +77,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestIcebergCacheIds
 {
     private static final String DATABASE_NAME = "iceberg_cache";
-    private IcebergMetadata icebergMetadata;
+    private IcebergCacheMetadata icebergMetadata;
     private IcebergSplitManager splitManager;
     private File tempDir;
     private static final AtomicInteger nextColumnId = new AtomicInteger(1);
@@ -95,8 +94,6 @@ public class TestIcebergCacheIds
                 TESTING_TYPE_MANAGER,
                 CatalogHandle.fromId("iceberg:NORMAL:v12345"),
                 createJsonCodec(CommitTaskData.class),
-                createJsonCodec(IcebergCacheTableId.class),
-                createJsonCodec(IcebergColumnHandle.class),
                 new TrinoHiveCatalogFactory(
                         icebergConfig,
                         new CatalogName("iceberg"),
@@ -114,7 +111,9 @@ public class TestIcebergCacheIds
                         new IcebergSecurityConfig()),
                 HDFS_FILE_SYSTEM_FACTORY,
                 new TableStatisticsWriter(new NodeVersion("test-version")));
-        icebergMetadata = icebergMetadataFactory.create(ConnectorIdentity.ofUser("user"));
+        icebergMetadata = new IcebergCacheMetadata(
+                createJsonCodec(IcebergCacheTableId.class),
+                createJsonCodec(IcebergColumnHandle.class));
         splitManager = new IcebergSplitManager(
                 new IcebergTransactionManager(icebergMetadataFactory),
                 TESTING_TYPE_MANAGER,

@@ -94,7 +94,8 @@ public class TestCanonicalSubplanExtractor
     private static final PlanNodeId SCAN_NODE_ID = new PlanNodeId("scan_id");
     private static final String CATALOG_ID = TEST_TABLE_HANDLE.getCatalogHandle().getId();
     private static final CacheTableId CATALOG_CACHE_TABLE_ID = new CacheTableId(CATALOG_ID + ":" + CACHE_TABLE_ID);
-    private static final Metadata TEST_METADATA = new TestMetadata();
+    private static final Metadata TEST_METADATA = new AbstractMockMetadata() {};
+    private static final CacheMetadata TEST_CACHE_METADATA = new TestCacheMetadata();
 
     private PlanBuilder planBuilder;
     private String tpchCatalogId;
@@ -333,6 +334,7 @@ public class TestCanonicalSubplanExtractor
         ProjectNode projectNode = createScanAndProjectNode();
         List<CanonicalSubplan> subplans = extractCanonicalSubplans(
                 TEST_METADATA,
+                TEST_CACHE_METADATA,
                 TEST_SESSION,
                 projectNode);
         assertThat(subplans).hasSize(1);
@@ -363,6 +365,7 @@ public class TestCanonicalSubplanExtractor
         ProjectNode projectNode = createFilterAndProjectNode();
         List<CanonicalSubplan> subplans = extractCanonicalSubplans(
                 TEST_METADATA,
+                TEST_CACHE_METADATA,
                 TEST_SESSION,
                 projectNode);
         assertThat(subplans).hasSize(1);
@@ -400,6 +403,7 @@ public class TestCanonicalSubplanExtractor
         FilterNode filterNode = createFilterNode();
         List<CanonicalSubplan> subplans = extractCanonicalSubplans(
                 TEST_METADATA,
+                TEST_CACHE_METADATA,
                 TEST_SESSION,
                 filterNode);
         assertThat(subplans).hasSize(1);
@@ -436,20 +440,23 @@ public class TestCanonicalSubplanExtractor
         // no cache id, therefore no canonical plan
         TableScanNode tableScanNode = createTableScan();
         assertThat(extractCanonicalSubplans(
-                new TestMetadata(Optional.empty(), handle -> Optional.of(new CacheColumnId(handle.getName()))),
+                TEST_METADATA,
+                new TestCacheMetadata(Optional.empty(), handle -> Optional.of(new CacheColumnId(handle.getName()))),
                 TEST_SESSION,
                 tableScanNode))
                 .isEmpty();
 
         // no column id, therefore no canonical plan
         assertThat(extractCanonicalSubplans(
-                new TestMetadata(Optional.of(CACHE_TABLE_ID), handle -> Optional.empty()),
+                TEST_METADATA,
+                new TestCacheMetadata(Optional.of(CACHE_TABLE_ID), handle -> Optional.empty()),
                 TEST_SESSION,
                 tableScanNode))
                 .isEmpty();
 
         List<CanonicalSubplan> subplans = extractCanonicalSubplans(
                 TEST_METADATA,
+                TEST_CACHE_METADATA,
                 TEST_SESSION,
                 tableScanNode);
         assertThat(subplans).hasSize(1);
@@ -514,7 +521,7 @@ public class TestCanonicalSubplanExtractor
 
     private void assertThatCanonicalSubplanIsForTableScan(PlanNode root)
     {
-        List<CanonicalSubplan> subplans = extractCanonicalSubplans(TEST_METADATA, TEST_SESSION, root);
+        List<CanonicalSubplan> subplans = extractCanonicalSubplans(TEST_METADATA, TEST_CACHE_METADATA, TEST_SESSION, root);
         assertThat(subplans).hasSize(1);
         assertThat(getOnlyElement(subplans).getOriginalPlanNode()).isInstanceOf(TableScanNode.class);
     }
@@ -534,7 +541,7 @@ public class TestCanonicalSubplanExtractor
                 Optional.empty(),
                 false,
                 Optional.of(false));
-        assertThat(extractCanonicalSubplans(TEST_METADATA, TEST_SESSION, tableScanNode)).isEmpty();
+        assertThat(extractCanonicalSubplans(TEST_METADATA, TEST_CACHE_METADATA, TEST_SESSION, tableScanNode)).isEmpty();
     }
 
     @Test
@@ -550,7 +557,8 @@ public class TestCanonicalSubplanExtractor
         // TableHandles will be turned into common canonical version
         TableHandle canonicalTableHandle = TestingHandles.createTestTableHandle(SchemaTableName.schemaTableName("schema", "common"));
         List<CanonicalSubplan> canonicalSubplans = extractCanonicalSubplans(
-                new TestMetadata(
+                TEST_METADATA,
+                new TestCacheMetadata(
                         handle -> Optional.of(new CacheColumnId(handle.getName())),
                         (tableHandle) -> canonicalTableHandle,
                         (tableHandle) -> Optional.of(new CacheTableId(tableHandle.getConnectorHandle().toString()))),
@@ -562,7 +570,9 @@ public class TestCanonicalSubplanExtractor
         assertThat(canonicalSubplans).allMatch(subplan -> subplan.getTable().equals(canonicalTableHandle));
 
         // TableHandles will not be turned into common canonical version
-        tableIds = extractCanonicalSubplans(new TestMetadata(
+        tableIds = extractCanonicalSubplans(
+                TEST_METADATA,
+                new TestCacheMetadata(
                         handle -> Optional.of(new CacheColumnId(handle.getName())),
                         (tableHandle) -> {
                             TestingMetadata.TestingTableHandle handle = (TestingMetadata.TestingTableHandle) tableHandle.getConnectorHandle();
@@ -588,7 +598,7 @@ public class TestCanonicalSubplanExtractor
         return queryRunner.inTransaction(session -> {
             // metadata.getCatalogHandle() registers the catalog for the transaction
             session.getCatalog().ifPresent(catalog -> queryRunner.getMetadata().getCatalogHandle(session, catalog));
-            return extractCanonicalSubplans(queryRunner.getMetadata(), session, plan.getRoot());
+            return extractCanonicalSubplans(queryRunner.getMetadata(), queryRunner.getCacheMetadata(), session, plan.getRoot());
         });
     }
 
@@ -708,31 +718,32 @@ public class TestCanonicalSubplanExtractor
                 Optional.of(false));
     }
 
-    private static class TestMetadata
-            extends AbstractMockMetadata
+    private static class TestCacheMetadata
+            extends CacheMetadata
     {
         private final Function<TableHandle, Optional<CacheTableId>> tableHandleCacheTableIdMapper;
 
         private final Function<TestingColumnHandle, Optional<CacheColumnId>> cacheColumnIdMapper;
         private final Function<TableHandle, TableHandle> canonicalizeTableHande;
 
-        private TestMetadata()
+        private TestCacheMetadata()
         {
             this(handle -> Optional.of(new CacheColumnId("cache_" + handle.getName())), Functions.identity(), (any) -> Optional.of(CACHE_TABLE_ID));
         }
 
-        private TestMetadata(
+        private TestCacheMetadata(
                 Optional<CacheTableId> cacheTableId,
                 Function<TestingColumnHandle, Optional<CacheColumnId>> cacheColumnIdMapper)
         {
             this(cacheColumnIdMapper, Function.identity(), (any) -> cacheTableId);
         }
 
-        private TestMetadata(
+        private TestCacheMetadata(
                 Function<TestingColumnHandle, Optional<CacheColumnId>> cacheColumnIdMapper,
                 Function<TableHandle, TableHandle> canonicalizeTableHande,
                 Function<TableHandle, Optional<CacheTableId>> tableHandleCacheTableIdMapper)
         {
+            super(catalogHandle -> Optional.empty());
             this.cacheColumnIdMapper = cacheColumnIdMapper;
             this.canonicalizeTableHande = canonicalizeTableHande;
             this.tableHandleCacheTableIdMapper = tableHandleCacheTableIdMapper;

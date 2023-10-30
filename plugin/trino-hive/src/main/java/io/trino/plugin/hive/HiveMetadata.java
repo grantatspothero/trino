@@ -45,7 +45,6 @@ import io.trino.plugin.hive.aws.athena.PartitionProjectionService;
 import io.trino.plugin.hive.fs.DirectoryLister;
 import io.trino.plugin.hive.metastore.Column;
 import io.trino.plugin.hive.metastore.Database;
-import io.trino.plugin.hive.metastore.HiveCacheTableId;
 import io.trino.plugin.hive.metastore.HiveColumnStatistics;
 import io.trino.plugin.hive.metastore.HivePrincipal;
 import io.trino.plugin.hive.metastore.Partition;
@@ -65,8 +64,6 @@ import io.trino.spi.Page;
 import io.trino.spi.StandardErrorCode;
 import io.trino.spi.TrinoException;
 import io.trino.spi.block.Block;
-import io.trino.spi.cache.CacheColumnId;
-import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.Assignment;
 import io.trino.spi.connector.BeginTableExecuteResult;
 import io.trino.spi.connector.CatalogSchemaTableName;
@@ -163,7 +160,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Iterables.concat;
 import static com.google.common.collect.Iterables.getOnlyElement;
-import static io.trino.plugin.base.cache.CacheUtils.normalizeTupleDomain;
 import static io.trino.plugin.base.projection.ApplyProjectionUtil.extractSupportedProjectedColumns;
 import static io.trino.plugin.base.projection.ApplyProjectionUtil.replaceWithNewVariables;
 import static io.trino.plugin.hive.HiveAnalyzeProperties.getColumnNames;
@@ -394,8 +390,6 @@ public class HiveMetadata
     private final PartitionProjectionService partitionProjectionService;
     private final boolean allowTableRename;
     private final long maxPartitionDropsPerQuery;
-    private final JsonCodec<HiveCacheTableId> tableIdCodec;
-    private final JsonCodec<HiveColumnHandle> columnHandleCodec;
     private final HiveTimestampPrecision hiveViewsTimestampPrecision;
 
     public HiveMetadata(
@@ -426,8 +420,6 @@ public class HiveMetadata
             PartitionProjectionService partitionProjectionService,
             boolean allowTableRename,
             long maxPartitionDropsPerQuery,
-            JsonCodec<HiveCacheTableId> tableIdCodec,
-            JsonCodec<HiveColumnHandle> columnHandleCodec,
             HiveTimestampPrecision hiveViewsTimestampPrecision)
     {
         this.locationAccessControl = requireNonNull(locationAccessControl, "locationAccessControl is null");
@@ -458,8 +450,6 @@ public class HiveMetadata
         this.allowTableRename = allowTableRename;
         this.maxPartitionDropsPerQuery = maxPartitionDropsPerQuery;
         this.hiveViewsTimestampPrecision = requireNonNull(hiveViewsTimestampPrecision, "hiveViewsTimestampPrecision is null");
-        this.tableIdCodec = requireNonNull(tableIdCodec, "tableIdCodec is null");
-        this.columnHandleCodec = requireNonNull(columnHandleCodec, "columnHandleCodec is null");
     }
 
     @Override
@@ -4004,75 +3994,5 @@ public class HiveMetadata
         // If query_partition_filter_required_schemas is empty then we would apply partition filter for all tables.
         return isQueryPartitionFilterRequired(session) &&
                 requiredSchemas.isEmpty() || requiredSchemas.contains(schemaTableName.getSchemaName());
-    }
-
-    @Override
-    public Optional<CacheTableId> getCacheTableId(ConnectorTableHandle tableHandle)
-    {
-        HiveTableHandle hiveTableHandle = (HiveTableHandle) tableHandle;
-
-        if (hiveTableHandle.isInAcidTransaction()) {
-            // skip caching of transactional tables as transaction affects how split rows are read
-            return Optional.empty();
-        }
-
-        if (hiveTableHandle.getAnalyzePartitionValues().isPresent()) {
-            // skip caching of analyze queries
-            return Optional.empty();
-        }
-
-        // Ensure cache id generation is revisited whenever handle classes change.
-        // Only fields that are sent to worker matter for CacheTableId.
-        // This constructor is used as JSON deserializer on worker nodes.
-        Set<HiveColumnHandle> partitionColumns = hiveTableHandle.getPartitionColumns().stream()
-                .collect(toImmutableSet());
-        hiveTableHandle = new HiveTableHandle(
-                hiveTableHandle.getSchemaName(),
-                hiveTableHandle.getTableName(),
-                // columns can be skipped from table id as they are obtained separately
-                ImmutableList.of(),
-                ImmutableList.of(),
-                // skip domains for partition columns as splits are entirely embedded within partitions
-                hiveTableHandle.getCompactEffectivePredicate()
-                        .filter((handle, domain) -> !partitionColumns.contains(handle)),
-                // enforced constraint is only enforced on partition columns, therefore it can be skipped
-                TupleDomain.all(),
-                hiveTableHandle.getBucketHandle(),
-                // skip bucket filter as splits are entirely embedded within buckets
-                Optional.empty(),
-                Optional.empty(),
-                NO_ACID_TRANSACTION);
-
-        HiveCacheTableId tableId = new HiveCacheTableId(
-                hiveTableHandle.getSchemaName(),
-                hiveTableHandle.getTableName(),
-                normalizeTupleDomain(hiveTableHandle.getCompactEffectivePredicate()
-                        .transformKeys(column -> getCacheColumnId(tableHandle, column).orElseThrow())),
-                hiveTableHandle.getBucketHandle());
-        return Optional.of(new CacheTableId(tableIdCodec.toJson(tableId)));
-    }
-
-    @Override
-    public Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
-    {
-        HiveColumnHandle hiveColumnHandle = (HiveColumnHandle) columnHandle;
-
-        // ensure cache id generation is revisited whenever handle classes change
-        HiveColumnHandle canonicalizedHandle = new HiveColumnHandle(
-                hiveColumnHandle.getBaseColumnName(),
-                hiveColumnHandle.getBaseHiveColumnIndex(),
-                hiveColumnHandle.getBaseHiveType(),
-                hiveColumnHandle.getBaseType(),
-                hiveColumnHandle.getHiveColumnProjectionInfo(),
-                hiveColumnHandle.getColumnType(),
-                // comment is irrelevant
-                Optional.empty());
-        return Optional.of(new CacheColumnId(columnHandleCodec.toJson(canonicalizedHandle)));
-    }
-
-    @Override
-    public ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle handle)
-    {
-        return ((HiveTableHandle) handle).toCanonical();
     }
 }

@@ -45,8 +45,6 @@ import io.trino.metadata.TableSchema;
 import io.trino.metadata.TableVersion;
 import io.trino.metadata.ViewDefinition;
 import io.trino.metadata.ViewInfo;
-import io.trino.spi.cache.CacheColumnId;
-import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.AggregateFunction;
 import io.trino.spi.connector.AggregationApplicationResult;
 import io.trino.spi.connector.BeginTableExecuteResult;
@@ -1379,33 +1377,6 @@ public class TracingMetadata
         Span span = startSpan("getMaxWriterTasks", catalogName);
         try (var ignored = scopedSpan(span)) {
             return delegate.getMaxWriterTasks(session, catalogName);
-        }
-    }
-
-    @Override
-    public Optional<CacheTableId> getCacheTableId(Session session, TableHandle tableHandle)
-    {
-        Span span = startSpan("getCacheTableId", tableHandle);
-        try (var ignored = scopedSpan(span)) {
-            return delegate.getCacheTableId(session, tableHandle);
-        }
-    }
-
-    @Override
-    public Optional<CacheColumnId> getCacheColumnId(Session session, TableHandle tableHandle, ColumnHandle columnHandle)
-    {
-        Span span = startSpan("getCacheColumnId", tableHandle);
-        try (var ignored = scopedSpan(span)) {
-            return delegate.getCacheColumnId(session, tableHandle, columnHandle);
-        }
-    }
-
-    @Override
-    public TableHandle getCanonicalTableHandle(Session session, TableHandle tableHandle)
-    {
-        Span span = startSpan("getCanonicalTableHandle", tableHandle);
-        try (var ignored = scopedSpan(span)) {
-            return delegate.getCanonicalTableHandle(session, tableHandle);
         }
     }
 

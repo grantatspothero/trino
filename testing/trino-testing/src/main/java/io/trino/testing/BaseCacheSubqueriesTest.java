@@ -21,6 +21,7 @@ import io.airlift.slice.Slices;
 import io.opentelemetry.api.trace.Span;
 import io.trino.Session;
 import io.trino.cache.CacheDataOperator;
+import io.trino.cache.CacheMetadata;
 import io.trino.cache.LoadCachedDataOperator;
 import io.trino.metadata.Metadata;
 import io.trino.metadata.QualifiedObjectName;
@@ -473,8 +474,9 @@ public abstract class BaseCacheSubqueriesTest
                 .singleStatement()
                 .execute(session, transactionSession -> {
                     Metadata metadata = runner.getMetadata();
+                    CacheMetadata cacheMetadata = runner.getCacheMetadata();
                     TableHandle tableHandle = metadata.getTableHandle(transactionSession, table).get();
-                    return new CacheColumnId("[" + metadata.getCacheColumnId(transactionSession, tableHandle, metadata.getColumnHandles(transactionSession, tableHandle).get(columnName)).get() + "]");
+                    return new CacheColumnId("[" + cacheMetadata.getCacheColumnId(transactionSession, tableHandle, metadata.getColumnHandles(transactionSession, tableHandle).get(columnName)).get() + "]");
                 });
     }
 
@@ -486,8 +488,9 @@ public abstract class BaseCacheSubqueriesTest
                 .singleStatement()
                 .execute(session, transactionSession -> {
                     Metadata metadata = runner.getMetadata();
+                    CacheMetadata cacheMetadata = runner.getCacheMetadata();
                     TableHandle tableHandle = metadata.getTableHandle(transactionSession, table).get();
-                    return metadata.getCacheTableId(transactionSession, tableHandle).get();
+                    return cacheMetadata.getCacheTableId(transactionSession, tableHandle).get();
                 });
     }
 
