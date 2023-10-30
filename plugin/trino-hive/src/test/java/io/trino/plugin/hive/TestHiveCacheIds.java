@@ -45,6 +45,7 @@ import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.type.TestingTypeManager;
 import io.trino.spi.type.Type;
 import io.trino.version.EmbedVersion;
+import org.apache.hadoop.conf.Configuration;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -56,7 +57,6 @@ import java.util.Properties;
 import java.util.concurrent.ScheduledExecutorService;
 
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
-import static io.trino.hadoop.ConfigurationInstantiator.newEmptyConfiguration;
 import static io.trino.plugin.hive.HiveColumnHandle.ColumnType.PARTITION_KEY;
 import static io.trino.plugin.hive.HiveColumnHandle.createBaseColumn;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_STATS;
@@ -81,7 +81,7 @@ public class TestHiveCacheIds
     {
         executorService = newScheduledThreadPool(1);
         HiveConfig config = new HiveConfig();
-        HdfsConfiguration hdfsConfiguration = (context, uri) -> newEmptyConfiguration();
+        HdfsConfiguration hdfsConfiguration = (context, uri) -> new Configuration(false);
         HdfsEnvironment hdfsEnvironment = new HdfsEnvironment(hdfsConfiguration, new HdfsConfig(), new NoHdfsAuthentication());
         HivePartitionManager hivePartitionManager = new HivePartitionManager(config);
         HiveMetadataFactory metadataFactory = new HiveMetadataFactory(
@@ -98,7 +98,7 @@ public class TestHiveCacheIds
                 executorService,
                 TESTING_TYPE_MANAGER,
                 NOOP_METADATA_PROVIDER,
-                new HiveLocationService(hdfsEnvironment, config),
+                new HiveLocationService(new HdfsFileSystemFactory(hdfsEnvironment, HDFS_FILE_SYSTEM_STATS), config),
                 JsonCodec.jsonCodec(PartitionUpdate.class),
                 new NodeVersion("test_version"),
                 new NoneHiveRedirectionsProvider(),

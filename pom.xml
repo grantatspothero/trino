@@ -47,7 +47,6 @@
         <module>lib/trino-filesystem-s3</module>
         <module>lib/trino-galaxy-kafka</module>
         <module>lib/trino-geospatial-toolkit</module>
-        <module>lib/trino-hadoop-toolkit</module>
         <module>lib/trino-hdfs</module>
         <module>lib/trino-hive-formats</module>
         <!-- TODO Remove whole module when Ignite is released -->
@@ -1360,12 +1359,6 @@
             <dependency>
                 <groupId>io.trino</groupId>
                 <artifactId>trino-grammar</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.trino</groupId>
-                <artifactId>trino-hadoop-toolkit</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
