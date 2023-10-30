@@ -82,6 +82,12 @@ public class TestHiveWithPlanAlternativesConnectorTest
     }
 
     @Override
+    public void testExplainAnalyzeColumnarFilter()
+    {
+        // Filter stats are not expected when connector uses an alternative in which the filter is subsumed
+    }
+
+    @Override
     @Test(dataProvider = "bucketFilteringDataTypesSetupProvider")
     public void testFilterOnBucketedTable(BucketedFilterTestSetup testSetup)
     {
