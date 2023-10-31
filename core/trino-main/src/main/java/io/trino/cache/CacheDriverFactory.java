@@ -38,6 +38,9 @@ import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 import static io.trino.cache.CacheCommonSubqueries.LOAD_PAGES_ALTERNATIVE;
@@ -61,15 +64,16 @@ public class CacheDriverFactory
     private final Supplier<StaticDynamicFilter> originalDynamicFilterSupplier;
     private final List<DriverFactory> alternatives;
     private final CacheMetrics cacheMetrics = new CacheMetrics();
+    private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
-    @GuardedBy("this")
+    @GuardedBy("lock")
     @Nullable
     private SplitCache splitCache;
-    @GuardedBy("this")
+    @GuardedBy("lock")
     @Nullable
     @VisibleForTesting
     private PlanSignature cachePlanSignature;
-    @GuardedBy("this")
+    @GuardedBy("lock")
     private boolean cachePlanSignatureComplete;
 
     public CacheDriverFactory(
@@ -147,19 +151,21 @@ public class CacheDriverFactory
         return alternatives.get(ORIGINAL_PLAN_ALTERNATIVE).createDriver(driverContext);
     }
 
-    public synchronized void closeSplitCache()
+    public void closeSplitCache()
     {
-        try {
-            if (splitCache != null) {
-                splitCache.close();
-                splitCache = null;
-                cachePlanSignature = null;
-                cachePlanSignatureComplete = false;
+        runWithLock(lock.writeLock(), () -> {
+            try {
+                if (splitCache != null) {
+                    splitCache.close();
+                    splitCache = null;
+                    cachePlanSignature = null;
+                    cachePlanSignatureComplete = false;
+                }
             }
-        }
-        catch (IOException exception) {
-            throw new UncheckedIOException(exception);
-        }
+            catch (IOException exception) {
+                throw new UncheckedIOException(exception);
+            }
+        });
     }
 
     @Nullable
@@ -186,43 +192,93 @@ public class CacheDriverFactory
         return commonDynamicFilter;
     }
 
-    private synchronized Optional<ConnectorPageSource> loadPages(
+    private Optional<ConnectorPageSource> loadPages(
             CacheSplitId splitId,
             PlanSignature planSignature,
             boolean planSignatureComplete)
     {
-        updateSplitCache(planSignature, planSignatureComplete);
-        return splitCache.loadPages(splitId);
+        return runWithLock(
+                () -> needsSplitCacheUpdate(planSignature, planSignatureComplete),
+                () -> updateSplitCache(planSignature, planSignatureComplete),
+                () -> splitCache.loadPages(splitId));
     }
 
-    private synchronized Optional<ConnectorPageSink> storePages(
+    private Optional<ConnectorPageSink> storePages(
             CacheSplitId splitId,
             PlanSignature planSignature,
             boolean planSignatureComplete)
     {
-        updateSplitCache(planSignature, planSignatureComplete);
-        return splitCache.storePages(splitId);
+        return runWithLock(
+                () -> needsSplitCacheUpdate(planSignature, planSignatureComplete),
+                () -> updateSplitCache(planSignature, planSignatureComplete),
+                () -> splitCache.storePages(splitId));
     }
 
     @VisibleForTesting
-    synchronized void updateSplitCache(PlanSignature planSignature, boolean planSignatureComplete)
+    void updateSplitCache(PlanSignature planSignature, boolean planSignatureComplete)
     {
-        if (splitCache != null) {
-            if (cachePlanSignatureComplete && planSignatureComplete) {
-                // plan signature cannot be enhanced further, no need to compare signatures or re-create SplitCache
-                return;
-            }
-
-            // do not re-create SplitCache if dynamic predicate hasn't changed
-            if (cachePlanSignature.getDynamicPredicate().equals(planSignature.getDynamicPredicate())) {
-                return;
-            }
+        if (!needsSplitCacheUpdate(planSignature, planSignatureComplete)) {
+            return;
         }
 
         closeSplitCache();
         splitCache = cacheManagerRegistry.getCacheManager().getSplitCache(planSignature);
         cachePlanSignature = planSignature;
         cachePlanSignatureComplete = planSignatureComplete;
+    }
+
+    private boolean needsSplitCacheUpdate(PlanSignature planSignature, boolean planSignatureComplete)
+    {
+        if (splitCache != null) {
+            if (cachePlanSignatureComplete && planSignatureComplete) {
+                // plan signature cannot be enhanced further, no need to compare signatures or re-create SplitCache
+                return false;
+            }
+
+            // do not re-create SplitCache if dynamic predicate hasn't changed
+            return !cachePlanSignature.getDynamicPredicate().equals(planSignature.getDynamicPredicate());
+        }
+
+        return true;
+    }
+
+    private <T> T runWithLock(
+            BooleanSupplier updateCondition,
+            Runnable updateAction,
+            Supplier<T> supplier)
+    {
+        return runWithLock(lock.readLock(), () -> {
+            if (updateCondition.getAsBoolean()) {
+                return Optional.<T>empty();
+            }
+
+            return Optional.of(supplier.get());
+        }).orElseGet(() -> runWithLock(lock.writeLock(), () -> {
+            updateAction.run();
+            return supplier.get();
+        }));
+    }
+
+    private static void runWithLock(Lock lock, Runnable runnable)
+    {
+        lock.lock();
+        try {
+            runnable.run();
+        }
+        finally {
+            lock.unlock();
+        }
+    }
+
+    private static <T> T runWithLock(Lock lock, Supplier<T> supplier)
+    {
+        lock.lock();
+        try {
+            return supplier.get();
+        }
+        finally {
+            lock.unlock();
+        }
     }
 
     public CacheMetrics getCacheMetrics()
