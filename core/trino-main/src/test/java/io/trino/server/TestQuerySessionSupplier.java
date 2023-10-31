@@ -22,6 +22,7 @@ import io.airlift.jaxrs.testing.GuavaMultivaluedMap;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.trino.Session;
+import io.trino.client.NodeVersion;
 import io.trino.connector.system.GlobalSystemConnector;
 import io.trino.eventlistener.EventListenerConfig;
 import io.trino.eventlistener.EventListenerManager;
@@ -252,7 +253,7 @@ public class TestQuerySessionSupplier
         return new QuerySessionSupplier(
                 metadata,
                 new AllowAllAccessControl(),
-                new AccessControlManager(transactionManager, new EventListenerManager(new EventListenerConfig()), new AccessControlConfig(), OpenTelemetry.noop(), "default"),
+                new AccessControlManager(NodeVersion.UNKNOWN, transactionManager, new EventListenerManager(new EventListenerConfig()), new AccessControlConfig(), OpenTelemetry.noop(), "default"),
                 new SessionPropertyManager(),
                 config);
     }
