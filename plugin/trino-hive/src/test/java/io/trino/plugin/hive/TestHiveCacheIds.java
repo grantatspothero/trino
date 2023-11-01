@@ -24,7 +24,6 @@ import io.trino.filesystem.memory.MemoryFileSystemFactory;
 import io.trino.hdfs.HdfsConfig;
 import io.trino.hdfs.HdfsConfiguration;
 import io.trino.hdfs.HdfsEnvironment;
-import io.trino.hdfs.HdfsNamenodeStats;
 import io.trino.hdfs.authentication.NoHdfsAuthentication;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.base.TypeDeserializer;
@@ -119,7 +118,6 @@ public class TestHiveCacheIds
                 new HiveTransactionManager(metadataFactory),
                 hivePartitionManager,
                 new MemoryFileSystemFactory(),
-                new HdfsNamenodeStats(),
                 executorService,
                 new EmbedVersion("test"),
                 new TestingTypeManager(),

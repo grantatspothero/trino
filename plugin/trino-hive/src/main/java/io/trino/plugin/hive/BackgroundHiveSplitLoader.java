@@ -29,7 +29,6 @@ import io.trino.filesystem.FileIterator;
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystem;
 import io.trino.filesystem.TrinoFileSystemFactory;
-import io.trino.hdfs.HdfsNamenodeStats;
 import io.trino.plugin.hive.HiveSplit.BucketConversion;
 import io.trino.plugin.hive.HiveSplit.BucketValidation;
 import io.trino.plugin.hive.fs.DirectoryLister;
@@ -150,7 +149,6 @@ public class BackgroundHiveSplitLoader
     private final long dynamicFilteringWaitTimeoutMillis;
     private final TypeManager typeManager;
     private final Optional<BucketSplitInfo> tableBucketInfo;
-    private final HdfsNamenodeStats hdfsNamenodeStats;
     private final DirectoryLister directoryLister;
     private final TrinoFileSystemFactory fileSystemFactory;
     private final int loaderConcurrency;
@@ -197,7 +195,6 @@ public class BackgroundHiveSplitLoader
             Optional<BucketSplitInfo> tableBucketInfo,
             ConnectorSession session,
             TrinoFileSystemFactory fileSystemFactory,
-            HdfsNamenodeStats hdfsNamenodeStats,
             DirectoryLister directoryLister,
             Executor executor,
             int loaderConcurrency,
@@ -217,7 +214,6 @@ public class BackgroundHiveSplitLoader
         checkArgument(loaderConcurrency > 0, "loaderConcurrency must be > 0, found: %s", loaderConcurrency);
         this.session = session;
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
-        this.hdfsNamenodeStats = hdfsNamenodeStats;
         this.directoryLister = directoryLister;
         this.recursiveDirWalkerEnabled = recursiveDirWalkerEnabled;
         this.ignoreAbsentPartitions = ignoreAbsentPartitions;
@@ -503,7 +499,7 @@ public class BackgroundHiveSplitLoader
     private List<TrinoFileStatus> listBucketFiles(TrinoFileSystem fs, Location location, String partitionName)
     {
         try {
-            HiveFileIterator fileIterator = new HiveFileIterator(table, location, fs, directoryLister, hdfsNamenodeStats, FAIL);
+            HiveFileIterator fileIterator = new HiveFileIterator(table, location, fs, directoryLister, FAIL);
             if (!fileIterator.hasNext() && !ignoreAbsentPartitions) {
                 checkPartitionLocationExists(fs, location);
             }
@@ -522,7 +518,7 @@ public class BackgroundHiveSplitLoader
         TrinoFileSystem trinoFileSystem = fileSystemFactory.create(session);
 
         Map<String, TrinoFileStatus> fileStatuses = new HashMap<>();
-        Iterator<TrinoFileStatus> fileStatusIterator = new HiveFileIterator(table, location, trinoFileSystem, directoryLister, hdfsNamenodeStats, RECURSE);
+        Iterator<TrinoFileStatus> fileStatusIterator = new HiveFileIterator(table, location, trinoFileSystem, directoryLister, RECURSE);
         if (!fileStatusIterator.hasNext()) {
             checkPartitionLocationExists(trinoFileSystem, location);
         }
@@ -641,7 +637,7 @@ public class BackgroundHiveSplitLoader
 
     private Iterator<InternalHiveSplit> createInternalHiveSplitIterator(TrinoFileSystem fileSystem, Location location, InternalHiveSplitFactory splitFactory, boolean splittable, Optional<AcidInfo> acidInfo)
     {
-        Iterator<TrinoFileStatus> iterator = new HiveFileIterator(table, location, fileSystem, directoryLister, hdfsNamenodeStats, recursiveDirWalkerEnabled ? RECURSE : IGNORED);
+        Iterator<TrinoFileStatus> iterator = new HiveFileIterator(table, location, fileSystem, directoryLister, recursiveDirWalkerEnabled ? RECURSE : IGNORED);
         if (!iterator.hasNext() && !ignoreAbsentPartitions) {
             checkPartitionLocationExists(fileSystem, location);
         }
