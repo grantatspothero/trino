@@ -189,7 +189,6 @@
         <dep.hudi.version>0.12.3</dep.hudi.version>
         <dep.protobuf.version>3.24.4</dep.protobuf.version>
         <dep.wire.version>4.5.0</dep.wire.version>
-        <dep.netty.version>4.1.100.Final</dep.netty.version>
         <dep.jna.version>5.13.0</dep.jna.version>
         <dep.okio.version>3.6.0</dep.okio.version>
         <dep.flyway.version>10.0.0</dep.flyway.version>
@@ -293,7 +292,7 @@
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-bom</artifactId>
-                <version>${dep.netty.version}</version>
+                <version>4.1.100.Final</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
