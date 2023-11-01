@@ -81,7 +81,7 @@ public class TrinoMeteorCatalog
             throw new TrinoException(NOT_SUPPORTED, "Only Trino queries from Starburst Galaxy is supported for this catalog");
         }
 
-        return apiClient.namespaceExists(session.getIdentity().getExtraCredentials().get("accountId"), catalogHandle.getVersion().toString(), namespace);
+        return apiClient.namespaceExists(session.getIdentity(), catalogHandle.getVersion().toString(), namespace);
     }
 
     @Override
@@ -91,7 +91,7 @@ public class TrinoMeteorCatalog
             throw new TrinoException(NOT_SUPPORTED, "Only Trino queries from Starburst Galaxy is supported for this catalog");
         }
 
-        return apiClient.listNamespaces(session.getIdentity().getExtraCredentials().get("accountId"), catalogHandle.getVersion().toString())
+        return apiClient.listNamespaces(session.getIdentity(), catalogHandle.getVersion().toString())
                 .stream()
                 .collect(toImmutableList());
     }
@@ -140,7 +140,7 @@ public class TrinoMeteorCatalog
             throw new TrinoException(NOT_SUPPORTED, "Only Trino queries from Starburst Galaxy is supported for this catalog");
         }
 
-        return apiClient.listTables(session.getIdentity().getExtraCredentials().get("accountId"), catalogHandle.getVersion().toString(), namespace);
+        return apiClient.listTables(session.getIdentity(), catalogHandle.getVersion().toString(), namespace);
     }
 
     @Override

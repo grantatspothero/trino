@@ -54,7 +54,7 @@ public class MeteorIcebergTableOperations
     protected String getRefreshedLocation(boolean invalidateCaches)
     {
         if (metadataLocation == null || invalidateCaches) {
-            metadataLocation = catalogClient.fetchMetadataLocation(session.getIdentity().getExtraCredentials().get("accountId"), catalogHandle.getVersion().toString(), new SchemaTableName(database, tableName));
+            metadataLocation = catalogClient.fetchMetadataLocation(session.getIdentity(), catalogHandle.getVersion().toString(), new SchemaTableName(database, tableName));
             if (metadataLocation == null) {
                 throw new TrinoException(ICEBERG_INVALID_METADATA, format("Failed to fetch table %s metadata location. Either it is not present or state server is not responding", getSchemaTableName()));
             }
