@@ -153,11 +153,6 @@
 
         <dependency>
             <groupId>io.trino</groupId>
-            <artifactId>trino-hdfs</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.trino</groupId>
             <artifactId>trino-hive</artifactId>
             <exclusions>
                 <exclusion>
@@ -382,6 +377,12 @@
             <version>1.3.0</version>
             <!-- The `all` classifier was accidentally added by Tabular. It should be removed with their next release. This is not a fat jar. -->
             <classifier>all</classifier>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-hdfs</artifactId>
             <scope>runtime</scope>
         </dependency>
 

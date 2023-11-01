@@ -21,6 +21,7 @@ import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import io.airlift.bootstrap.Bootstrap;
 import io.airlift.bootstrap.LifeCycleManager;
+import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.airlift.event.client.EventModule;
 import io.airlift.json.JsonModule;
 import io.opentelemetry.api.OpenTelemetry;
@@ -29,8 +30,6 @@ import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.filesystem.manager.FileSystemModule;
 import io.trino.hdfs.HdfsModule;
 import io.trino.hdfs.authentication.HdfsAuthenticationModule;
-import io.trino.hdfs.cos.HiveCosModule;
-import io.trino.hdfs.gcs.HiveGcsModule;
 import io.trino.hdfs.rubix.RubixEnabledConfig;
 import io.trino.hdfs.rubix.RubixModule;
 import io.trino.plugin.base.CatalogName;
@@ -116,15 +115,22 @@ public final class InternalHiveConnectorFactory
                     new HiveModule(),
                     new PartitionProjectionModule(),
                     new CachingDirectoryListerModule(directoryLister),
-                    new HdfsModule(),
-                    new HiveGcsModule(),
-                    new HiveCosModule(),
                     conditionalModule(RubixEnabledConfig.class, RubixEnabledConfig::isCacheEnabled, new RubixModule()),
                     new HiveMetastoreModule(metastore),
                     new HiveSecurityModule(),
-                    new HdfsAuthenticationModule(),
                     fileSystemFactory
-                            .map(factory -> (Module) binder -> binder.bind(TrinoFileSystemFactory.class).toInstance(factory))
+                            .map(factory -> (Module) new AbstractConfigurationAwareModule()
+                            {
+                                @Override
+                                protected void setup(Binder binder)
+                                {
+                                    //TODO(https://github.com/starburstdata/stargate/issues/13734): drop Hdfs* bindings when no longer needed by schema-discovery
+                                    super.install(new HdfsModule());
+                                    super.install(new HdfsAuthenticationModule());
+
+                                    binder.bind(TrinoFileSystemFactory.class).toInstance(factory);
+                                }
+                            })
                             .orElseGet(FileSystemModule::new),
                     new HiveProcedureModule(),
                     new MBeanServerModule(),
