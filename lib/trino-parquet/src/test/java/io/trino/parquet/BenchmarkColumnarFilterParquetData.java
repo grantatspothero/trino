@@ -227,8 +227,7 @@ public class BenchmarkColumnarFilterParquetData
                     new DriverYieldSignal(),
                     context,
                     new PageProcessorMetrics(),
-                    inputPage,
-                    false);
+                    inputPage);
             if (workProcessor.process() && !workProcessor.isFinished()) {
                 outputRows += workProcessor.getResult().getPositionCount();
             }

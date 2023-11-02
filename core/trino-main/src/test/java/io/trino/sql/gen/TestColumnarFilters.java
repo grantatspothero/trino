@@ -463,8 +463,7 @@ public class TestColumnarFilters
                     new DriverYieldSignal(),
                     context,
                     new PageProcessorMetrics(),
-                    inputPage,
-                    false);
+                    inputPage);
             if (workProcessor.process() && !workProcessor.isFinished()) {
                 outputPagesBuilder.add(workProcessor.getResult());
             }

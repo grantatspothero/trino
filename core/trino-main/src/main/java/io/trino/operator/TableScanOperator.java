@@ -21,7 +21,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import io.trino.cache.CacheDriverContext;
 import io.trino.memory.context.LocalMemoryContext;
-import io.trino.memory.context.MemoryTrackingContext;
 import io.trino.metadata.Split;
 import io.trino.metadata.TableHandle;
 import io.trino.operator.dynamicfiltering.DynamicRowFilteringPageSourceProvider;
@@ -50,7 +49,7 @@ public class TableScanOperator
         implements SourceOperator
 {
     public static class TableScanOperatorFactory
-            implements SourceOperatorFactory, WorkProcessorSourceOperatorFactory
+            implements SourceOperatorFactory
     {
         private final int operatorId;
         private final PlanNodeId sourceId;
@@ -80,53 +79,19 @@ public class TableScanOperator
         }
 
         @Override
-        public int getOperatorId()
-        {
-            return operatorId;
-        }
-
-        @Override
         public PlanNodeId getSourceId()
         {
             return sourceId;
         }
 
         @Override
-        public PlanNodeId getPlanNodeId()
-        {
-            return sourceId;
-        }
-
-        @Override
-        public String getOperatorType()
-        {
-            return TableScanOperator.class.getSimpleName();
-        }
-
-        @Override
         public SourceOperator createOperator(DriverContext driverContext)
         {
             checkState(!closed, "Factory is already closed");
-            OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, sourceId, getOperatorType());
+            OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, sourceId, TableScanOperator.class.getSimpleName());
             return new TableScanOperator(
                     operatorContext,
                     sourceId,
-                    TableAwarePageSourceProvider.create(operatorContext, table, pageSourceProvider, dynamicRowFilteringPageSourceProvider),
-                    columns,
-                    CacheDriverContext.getDynamicFilter(operatorContext, dynamicFilter));
-        }
-
-        @Override
-        public WorkProcessorSourceOperator create(
-                OperatorContext operatorContext,
-                MemoryTrackingContext memoryTrackingContext,
-                DriverYieldSignal yieldSignal,
-                WorkProcessor<Split> splits)
-        {
-            return new TableScanWorkProcessorOperator(
-                    operatorContext.getSession(),
-                    memoryTrackingContext,
-                    splits,
                     TableAwarePageSourceProvider.create(operatorContext, table, pageSourceProvider, dynamicRowFilteringPageSourceProvider),
                     columns,
                     CacheDriverContext.getDynamicFilter(operatorContext, dynamicFilter));

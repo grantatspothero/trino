@@ -107,7 +107,6 @@ import io.trino.operator.TopNRankingOperator;
 import io.trino.operator.ValuesOperator.ValuesOperatorFactory;
 import io.trino.operator.WindowFunctionDefinition;
 import io.trino.operator.WindowOperator.WindowOperatorFactory;
-import io.trino.operator.WorkProcessorPipelineSourceOperator;
 import io.trino.operator.aggregation.AccumulatorFactory;
 import io.trino.operator.aggregation.AggregatorFactory;
 import io.trino.operator.aggregation.DistinctAccumulatorFactory;
@@ -330,7 +329,6 @@ import static io.trino.SystemSessionProperties.isEnableCoordinatorDynamicFilters
 import static io.trino.SystemSessionProperties.isEnableLargeDynamicFilters;
 import static io.trino.SystemSessionProperties.isExchangeCompressionEnabled;
 import static io.trino.SystemSessionProperties.isForceSpillingOperator;
-import static io.trino.SystemSessionProperties.isLateMaterializationEnabled;
 import static io.trino.SystemSessionProperties.isSpillEnabled;
 import static io.trino.cache.CacheCommonSubqueries.getLoadCachedDataPlanNode;
 import static io.trino.cache.CacheCommonSubqueries.isCacheChooseAlternativeNode;
@@ -349,7 +347,6 @@ import static io.trino.operator.TableWriterOperator.ROW_COUNT_CHANNEL;
 import static io.trino.operator.TableWriterOperator.STATS_START_CHANNEL;
 import static io.trino.operator.TableWriterOperator.TableWriterOperatorFactory;
 import static io.trino.operator.WindowFunctionDefinition.window;
-import static io.trino.operator.WorkProcessorPipelineSourceOperator.toOperatorFactories;
 import static io.trino.operator.aggregation.AccumulatorCompiler.generateAccumulatorFactory;
 import static io.trino.operator.join.JoinUtils.isBuildSideReplicated;
 import static io.trino.operator.join.NestedLoopBuildOperator.NestedLoopBuildOperatorFactory;
@@ -752,29 +749,21 @@ public class LocalExecutionPlanner
         {
             boolean inputDriver = context.isInputDriver();
             OptionalInt driverInstances = context.getDriverInstanceCount();
-            List<OperatorFactoryWithTypes> operatorFactoriesWithTypes = physicalOperation.pipelineTail;
-            addLookupOuterDrivers(outputDriver, toOperatorFactories(operatorFactoriesWithTypes));
+            List<OperatorFactory> operatorFactories = physicalOperation.pipelineTail;
+            addLookupOuterDrivers(outputDriver, operatorFactories);
             if (physicalOperation.pipelineHeadAlternatives.isEmpty()) {
-                List<OperatorFactory> operatorFactories;
-                if (isLateMaterializationEnabled(taskContext.getSession())) {
-                    operatorFactories = handleLateMaterialization(operatorFactoriesWithTypes);
-                }
-                else {
-                    operatorFactories = toOperatorFactories(operatorFactoriesWithTypes);
-                }
                 addDriverFactory(inputDriver, outputDriver, operatorFactories, driverInstances);
             }
             else {
                 // we have alternatives, we need to extend them to the end of the pipeline and create AlternativesAwareDriverFactory
                 List<OperatorFactory> commonOperators = physicalOperation.pipelineTail.stream()
-                        .map(OperatorFactoryWithTypes::getOperatorFactory)
                         .map(SharedOperatorFactory::new)
                         .collect(toImmutableList());
                 int pipelineId = getNextPipelineId();
                 Map<TableHandle, DriverFactory> alternatives = Maps.transformValues(physicalOperation.pipelineHeadAlternatives,
                         alternative -> new DriverFactory(pipelineId, inputDriver, outputDriver,
                                 ImmutableList.<OperatorFactory>builder()
-                                        .addAll(toOperatorFactories(alternative))
+                                        .addAll(alternative)
                                         .addAll(commonOperators)
                                         .build(),
                                 driverInstances));
@@ -800,14 +789,6 @@ public class LocalExecutionPlanner
                         outputDriver,
                         driverInstances));
             }
-        }
-
-        private List<OperatorFactory> handleLateMaterialization(List<OperatorFactoryWithTypes> operatorFactories)
-        {
-            return WorkProcessorPipelineSourceOperator.convertOperators(
-                    operatorFactories,
-                    getFilterAndProjectMinOutputPageSize(taskContext.getSession()),
-                    getFilterAndProjectMinOutputPageRowCount(taskContext.getSession()));
         }
 
         private void addLookupOuterDrivers(boolean isOutputDriver, List<OperatorFactory> operatorFactories)
@@ -1029,28 +1010,6 @@ public class LocalExecutionPlanner
         public List<PlanNodeId> getPartitionedSourceOrder()
         {
             return partitionedSourceOrder;
-        }
-    }
-
-    public static class OperatorFactoryWithTypes
-    {
-        private final OperatorFactory operatorFactory;
-        private final List<Type> types;
-
-        public OperatorFactoryWithTypes(OperatorFactory operatorFactory, List<Type> types)
-        {
-            this.operatorFactory = requireNonNull(operatorFactory, "operatorFactory is null");
-            this.types = requireNonNull(types, "types is null");
-        }
-
-        public OperatorFactory getOperatorFactory()
-        {
-            return operatorFactory;
-        }
-
-        public List<Type> getTypes()
-        {
-            return types;
         }
     }
 
@@ -4497,8 +4456,8 @@ public class LocalExecutionPlanner
      */
     private static class PhysicalOperation
     {
-        private final List<OperatorFactoryWithTypes> pipelineTail;
-        private final Map<TableHandle, List<OperatorFactoryWithTypes>> pipelineHeadAlternatives;
+        private final List<OperatorFactory> pipelineTail;
+        private final Map<TableHandle, List<OperatorFactory>> pipelineHeadAlternatives;
         private final Map<Symbol, Integer> layout;
         private final List<Type> types;
         private final Optional<PlanNodeId> chooseAlternativePlanNodeId;
@@ -4541,9 +4500,9 @@ public class LocalExecutionPlanner
             this(
                     layout,
                     typeProvider,
-                    ImmutableList.<OperatorFactoryWithTypes>builder()
+                    ImmutableList.<OperatorFactory>builder()
                             .addAll(source.map(PhysicalOperation::getPipelineTail).orElse(ImmutableList.of()))
-                            .add(new OperatorFactoryWithTypes(operatorFactory, toTypes(layout, typeProvider)))
+                            .add(operatorFactory)
                             .build(),
                     source.map(operation -> operation.pipelineHeadAlternatives).orElse(ImmutableMap.of()),
                     source.flatMap(operation -> operation.chooseAlternativePlanNodeId));
@@ -4552,8 +4511,8 @@ public class LocalExecutionPlanner
         private PhysicalOperation(
                 Map<Symbol, Integer> layout,
                 TypeProvider typeProvider,
-                List<OperatorFactoryWithTypes> pipelineTail,
-                Map<TableHandle, List<OperatorFactoryWithTypes>> pipelineHeadAlternatives,
+                List<OperatorFactory> pipelineTail,
+                Map<TableHandle, List<OperatorFactory>> pipelineHeadAlternatives,
                 Optional<PlanNodeId> chooseAlternativePlanNodeId)
         {
             requireNonNull(layout, "layout is null");
@@ -4604,10 +4563,10 @@ public class LocalExecutionPlanner
         private List<OperatorFactory> getOperatorFactories()
         {
             checkArgument(pipelineHeadAlternatives.isEmpty());
-            return toOperatorFactories(pipelineTail);
+            return pipelineTail;
         }
 
-        private List<OperatorFactoryWithTypes> getPipelineTail()
+        private List<OperatorFactory> getPipelineTail()
         {
             return pipelineTail;
         }

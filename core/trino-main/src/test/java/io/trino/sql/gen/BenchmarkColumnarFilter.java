@@ -161,8 +161,7 @@ public class BenchmarkColumnarFilter
                     new DriverYieldSignal(),
                     context,
                     new PageProcessorMetrics(),
-                    inputPage,
-                    false);
+                    inputPage);
             if (workProcessor.process() && !workProcessor.isFinished()) {
                 outputRows += workProcessor.getResult().getPositionCount();
             }
