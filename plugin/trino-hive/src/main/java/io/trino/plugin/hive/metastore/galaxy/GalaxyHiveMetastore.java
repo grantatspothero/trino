@@ -748,12 +748,6 @@ public class GalaxyHiveMetastore
     }
 
     @Override
-    public Set<RoleGrant> listGrantedPrincipals(String role)
-    {
-        throw new TrinoException(NOT_SUPPORTED, "listGrantedPrincipals is not supported by Galaxy metastore");
-    }
-
-    @Override
     public Set<RoleGrant> listRoleGrants(HivePrincipal principal)
     {
         if (principal.getType() == USER) {

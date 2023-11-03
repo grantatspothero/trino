@@ -414,14 +414,6 @@ public class RecordingHiveMetastore
     }
 
     @Override
-    public Set<RoleGrant> listGrantedPrincipals(String role)
-    {
-        return recording.listGrantedPrincipals(
-                role,
-                () -> delegate.listGrantedPrincipals(role));
-    }
-
-    @Override
     public Set<RoleGrant> listRoleGrants(HivePrincipal principal)
     {
         return recording.listRoleGrants(
