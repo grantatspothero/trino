@@ -50,7 +50,7 @@ public class HiveCacheMetadata
     {
         HiveTableHandle hiveTableHandle = (HiveTableHandle) tableHandle;
 
-        if (hiveTableHandle.isInAcidTransaction()) {
+        if (hiveTableHandle.getTransaction().isAcidTransactionRunning()) {
             // skip caching of transactional tables as transaction affects how split rows are read
             return Optional.empty();
         }

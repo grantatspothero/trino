@@ -27,7 +27,6 @@ import io.trino.cost.HistoryBasedStatsCalculator;
 import io.trino.cost.StatsAndCosts;
 import io.trino.execution.QueryInfo;
 import io.trino.metadata.FunctionManager;
-import io.trino.metadata.InsertTableHandle;
 import io.trino.metadata.Metadata;
 import io.trino.metadata.QualifiedObjectName;
 import io.trino.metadata.TableHandle;
@@ -40,7 +39,6 @@ import io.trino.plugin.hive.metastore.Storage;
 import io.trino.plugin.hive.metastore.StorageFormat;
 import io.trino.plugin.hive.metastore.Table;
 import io.trino.spi.connector.CatalogSchemaTableName;
-import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.ColumnMetadata;
 import io.trino.spi.connector.Constraint;
 import io.trino.spi.security.Identity;
@@ -5655,7 +5653,7 @@ public abstract class BaseHiveConnectorTest
 
     private void testReadWithPartitionSchemaMismatch(Session session, HiveStorageFormat format)
     {
-        if (isMappingByName(session, format)) {
+        if (isMappingByName(format)) {
             testReadWithPartitionSchemaMismatchByName(session, format);
         }
         else {
@@ -5663,7 +5661,7 @@ public abstract class BaseHiveConnectorTest
         }
     }
 
-    private boolean isMappingByName(Session session, HiveStorageFormat format)
+    private boolean isMappingByName(HiveStorageFormat format)
     {
         return switch(format) {
             case PARQUET -> true;
@@ -8014,22 +8012,6 @@ public abstract class BaseHiveConnectorTest
                 "WHERE x < 0 AND cast(p AS int) > 0");
 
         assertUpdate("DROP TABLE test_prune_failure");
-    }
-
-    private HiveInsertTableHandle getHiveInsertTableHandle(Session session, String tableName)
-    {
-        Metadata metadata = getDistributedQueryRunner().getCoordinator().getMetadata();
-        return transaction(getQueryRunner().getTransactionManager(), getQueryRunner().getMetadata(), getQueryRunner().getAccessControl())
-                .execute(session, transactionSession -> {
-                    QualifiedObjectName objectName = new QualifiedObjectName(catalog, TPCH_SCHEMA, tableName);
-                    Optional<TableHandle> handle = metadata.getTableHandle(transactionSession, objectName);
-                    List<ColumnHandle> columns = ImmutableList.copyOf(metadata.getColumnHandles(transactionSession, handle.get()).values());
-                    InsertTableHandle insertTableHandle = metadata.beginInsert(transactionSession, handle.get(), columns);
-                    HiveInsertTableHandle hiveInsertTableHandle = (HiveInsertTableHandle) insertTableHandle.getConnectorHandle();
-
-                    metadata.finishInsert(transactionSession, insertTableHandle, ImmutableList.of(), ImmutableList.of());
-                    return hiveInsertTableHandle;
-                });
     }
 
     @Test
