@@ -1296,17 +1296,6 @@ public class CachingHiveMetastore
     }
 
     @Override
-    public void alterPartitions(String dbName, String tableName, List<Partition> partitions, long writeId)
-    {
-        try {
-            delegate.alterPartitions(dbName, tableName, partitions, writeId);
-        }
-        finally {
-            invalidatePartitionCache(dbName, tableName);
-        }
-    }
-
-    @Override
     public void addDynamicPartitions(String dbName, String tableName, List<String> partitionNames, long transactionId, long writeId, AcidOperation operation)
     {
         try {

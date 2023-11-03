@@ -439,16 +439,6 @@ public abstract class ForwardingHiveMetastore
     }
 
     @Override
-    public void alterPartitions(
-            String dbName,
-            String tableName,
-            List<Partition> partitions,
-            long writeId)
-    {
-        delegate.alterPartitions(dbName, tableName, partitions, writeId);
-    }
-
-    @Override
     public void addDynamicPartitions(
             String dbName,
             String tableName,
