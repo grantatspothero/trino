@@ -26,7 +26,7 @@ import io.trino.spi.type.TypeManager;
 
 import java.util.Optional;
 
-import static io.trino.plugin.hive.metastore.cache.CachingHiveMetastore.memoizeMetastore;
+import static io.trino.plugin.hive.metastore.cache.CachingHiveMetastore.createPerTransactionCache;
 import static java.util.Objects.requireNonNull;
 
 public class TrinoGalaxyCatalogFactory
@@ -65,7 +65,7 @@ public class TrinoGalaxyCatalogFactory
         return new TrinoGalaxyCatalog(
                 catalogName,
                 typeManager,
-                memoizeMetastore(metastoreFactory.createMetastore(Optional.empty()), 1000),
+                createPerTransactionCache(metastoreFactory.createMetastore(Optional.empty()), 1000),
                 fileSystemFactory,
                 tableOperationsProvider,
                 isUniqueTableLocation,
