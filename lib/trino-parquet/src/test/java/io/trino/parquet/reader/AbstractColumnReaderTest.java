@@ -23,6 +23,7 @@ import io.trino.parquet.DataPageV1;
 import io.trino.parquet.DataPageV2;
 import io.trino.parquet.DictionaryPage;
 import io.trino.parquet.Page;
+import io.trino.parquet.ParquetDataSourceId;
 import io.trino.parquet.ParquetEncoding;
 import io.trino.parquet.ParquetReaderOptions;
 import io.trino.parquet.PrimitiveField;
@@ -689,6 +690,7 @@ public abstract class AbstractColumnReaderTest
             pagesBuilder.add(dictionaryPage);
         }
         return new PageReader(
+                new ParquetDataSourceId("test"),
                 UNCOMPRESSED,
                 pagesBuilder.addAll(dataPages).build().iterator(),
                 dataPages.stream()

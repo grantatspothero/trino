@@ -15,6 +15,7 @@ package io.trino.parquet.reader;
 
 import io.airlift.slice.Slice;
 import io.trino.parquet.ParquetCompressionUtils;
+import io.trino.parquet.ParquetDataSourceId;
 import io.trino.parquet.ParquetReaderOptions;
 import org.apache.parquet.format.CompressionCodec;
 
@@ -31,9 +32,9 @@ public class Decompressor
         this.isNativeSnappyDecompressorEnabled = options.isNativeSnappyDecompressorEnabled();
     }
 
-    public Slice decompress(CompressionCodec codec, Slice input, int uncompressedSize)
+    public Slice decompress(ParquetDataSourceId dataSourceId, CompressionCodec codec, Slice input, int uncompressedSize)
             throws IOException
     {
-        return ParquetCompressionUtils.decompress(codec, input, uncompressedSize, isNativeZstdDecompressorEnabled, isNativeSnappyDecompressorEnabled);
+        return ParquetCompressionUtils.decompress(dataSourceId, codec, input, uncompressedSize, isNativeZstdDecompressorEnabled, isNativeSnappyDecompressorEnabled);
     }
 }

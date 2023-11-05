@@ -49,7 +49,7 @@ public final class ParquetCompressionUtils
 
     private ParquetCompressionUtils() {}
 
-    public static Slice decompress(CompressionCodec codec, Slice input, int uncompressedSize, boolean isNativeZstdDecompressorEnabled, boolean isNativeSnappyDecompressorEnabled)
+    public static Slice decompress(ParquetDataSourceId dataSourceId, CompressionCodec codec, Slice input, int uncompressedSize, boolean isNativeZstdDecompressorEnabled, boolean isNativeSnappyDecompressorEnabled)
             throws IOException
     {
         requireNonNull(input, "input is null");
@@ -80,7 +80,7 @@ public final class ParquetCompressionUtils
                 // unsupported
                 break;
         }
-        throw new ParquetCorruptionException("Codec not supported in Parquet: " + codec);
+        throw new ParquetCorruptionException(dataSourceId, "Codec not supported in Parquet: %s", codec);
     }
 
     private static Slice decompressJniSnappy(Slice input, int uncompressedSize)
