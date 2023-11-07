@@ -8771,6 +8771,7 @@ public abstract class BaseHiveConnectorTest
                     // this test works with DF when dynamic-filtering.small-partitioned.range-row-limit-per-driver is crossed, but that does not
                     // happen for sf1 so we disable DF completely since the above property cannot be changed per session
                     .setSystemProperty(ENABLE_DYNAMIC_FILTERING, "false")
+                    .setSystemProperty(HISTORY_BASED_STATISTICS_ENABLED, "true")
                     .build();
             assertQuerySucceeds("call system.system.flush_history_based_stats_cache()");
             String tableName = "orders_correlated" + randomNameSuffix();

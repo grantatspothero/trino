@@ -86,7 +86,7 @@ public class OptimizerConfig
     private boolean mergeProjectWithValues = true;
     private boolean forceSingleNodeOutput;
     private boolean useExactPartitioning;
-    private boolean historyBasedStatisticsEnabled = true;
+    private boolean historyBasedStatisticsEnabled;
     private boolean useCostBasedPartitioning = true;
     private boolean useSubPlanAlternatives;
     // adaptive partial aggregation
