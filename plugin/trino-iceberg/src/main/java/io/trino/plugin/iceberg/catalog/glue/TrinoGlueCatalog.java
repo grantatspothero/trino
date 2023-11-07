@@ -905,14 +905,7 @@ public class TrinoGlueCatalog
             String metadataLocation = parameters.get(METADATA_LOCATION_PROP);
             try {
                 // Cache the TableMetadata while we have the Table retrieved anyway
-                TableOperations operations = tableOperationsProvider.createTableOperations(
-                        this,
-                        session,
-                        schemaTableName.getSchemaName(),
-                        schemaTableName.getTableName(),
-                        Optional.empty(),
-                        Optional.empty());
-                FileIO io = operations.io();
+                ForwardingFileIo io = new ForwardingFileIo(fileSystemFactory.create(session));
                 tableMetadataCache.put(schemaTableName, TableMetadataParser.read(io, io.newInputFile(metadataLocation)));
             }
             catch (RuntimeException e) {
