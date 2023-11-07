@@ -113,7 +113,6 @@ public class TestObjectStoreProperties
                         ('objectstore.ignore_absent_partitions', 'false', 'boolean'),
                         ('objectstore.ignore_corrupted_statistics', 'false', 'boolean'),
                         ('objectstore.insert_existing_partitions_behavior', 'APPEND', 'varchar'),
-                        ('objectstore.legacy_create_table_with_existing_location_enabled', 'false', 'boolean'),
                         ('objectstore.max_outstanding_splits', '1000', 'integer'),
                         ('objectstore.max_splits_per_second', '2147483647', 'integer'),
                         ('objectstore.merge_manifests_on_write', 'true', 'boolean'),
