@@ -69,6 +69,6 @@ public class TestObjectStoreHudiSystemTables
                 "VALUES ('0', 'commit', 'COMPLETED')");
 
         assertQueryFails("SELECT timestamp, action, state FROM tpch.\"orders$timeline\"",
-                ".*Table 'objectstore.tpch.orders\\$timeline' does not exist");
+                ".*Table 'objectstore.tpch.\"orders\\$timeline\"' does not exist");
     }
 }
