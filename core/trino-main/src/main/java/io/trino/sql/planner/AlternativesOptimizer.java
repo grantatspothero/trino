@@ -17,17 +17,22 @@ import io.airlift.log.Logger;
 import io.airlift.units.Duration;
 import io.trino.Session;
 import io.trino.SystemSessionProperties;
+import io.trino.cost.CachingCostProvider;
+import io.trino.cost.CachingStatsProvider;
 import io.trino.cost.CostCalculator;
+import io.trino.cost.CostProvider;
 import io.trino.cost.StatsAndCosts;
 import io.trino.cost.StatsCalculator;
+import io.trino.cost.StatsProvider;
 import io.trino.cost.TableStatsProvider;
 import io.trino.execution.querystats.PlanOptimizersStatsCollector;
 import io.trino.execution.warnings.WarningCollector;
 import io.trino.matching.Capture;
 import io.trino.matching.Match;
 import io.trino.matching.Pattern;
+import io.trino.spi.TrinoException;
+import io.trino.spi.eventlistener.QueryPlanOptimizerStatistics;
 import io.trino.sql.PlannerContext;
-import io.trino.sql.planner.iterative.Context;
 import io.trino.sql.planner.iterative.GroupReference;
 import io.trino.sql.planner.iterative.Lookup;
 import io.trino.sql.planner.iterative.Memo;
@@ -53,11 +58,16 @@ import java.util.stream.Stream;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static io.trino.cache.CacheCommonSubqueries.isCacheChooseAlternativeNode;
+import static io.trino.execution.querystats.PlanOptimizersStatsCollector.createPlanOptimizersStatsCollector;
 import static io.trino.matching.Capture.newCapture;
+import static io.trino.spi.StandardErrorCode.OPTIMIZER_TIMEOUT;
 import static io.trino.sql.planner.optimizations.PlanNodeSearcher.searchFrom;
 import static io.trino.sql.planner.plan.ChooseAlternativeNode.FilteredTableScan;
+import static java.lang.String.format;
 import static java.lang.System.nanoTime;
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static java.util.stream.Collectors.joining;
 
 /**
  * Runs the given rules and creates ChooseAlternativeNodes with the received alternatives.
@@ -112,7 +122,7 @@ public class AlternativesOptimizer
         Lookup lookup = Lookup.from(planNode -> Stream.of(memo.resolve(planNode)));
 
         Duration timeout = SystemSessionProperties.getOptimizerTimeout(session);
-        Context context = new Context(statsCalculator, costCalculator, memo, lookup, idAllocator, symbolAllocator, nanoTime(), timeout.toMillis(), session, warningCollector, tableStatsProvider);
+        Context context = new Context(memo, lookup, idAllocator, symbolAllocator, nanoTime(), timeout.toMillis(), session, warningCollector, tableStatsProvider);
         exploreGroup(memo.getRootGroup(), context, Optional.empty());
         planOptimizersStatsCollector.add(context.getStatsCollector());
 
@@ -121,9 +131,9 @@ public class AlternativesOptimizer
 
     private void exploreGroup(int group, Context context, Optional<FilteredTableScan> preCalculatedOriginalScan)
     {
-        PlanNode node = context.getMemo().getNode(group);
+        PlanNode node = context.memo.getNode(group);
 
-        if (isCacheChooseAlternativeNode(node, context.getLookup())) {
+        if (isCacheChooseAlternativeNode(node, context.lookup)) {
             // skip split level cache alternatives
             return;
         }
@@ -175,18 +185,18 @@ public class AlternativesOptimizer
      */
     private void exploreNodeAlternatives(int group, FilteredTableScan originalTableScan, Context context)
     {
-        PlanNode node = context.getMemo().getNode(group);
+        PlanNode node = context.memo.getNode(group);
         if (!canCreateAlternatives(node)) {
             return;
         }
 
         List<PlanNode> alternatives = new ArrayList<>();
         PlanNode child = node.getSources().get(0);
-        PlanNode resolvedChild = context.getLookup().resolve(child);
+        PlanNode resolvedChild = context.lookup.resolve(child);
         if (resolvedChild instanceof ChooseAlternativeNode chooseAlternativeNode) {
             for (PlanNode alternative : chooseAlternativeNode.getSources()) {
                 // node is copied so plan won't contain several nodes with the same id
-                PlanNode branch = PlanCopier.copyPlan(node, context.getIdAllocator(), context.getLookup())
+                PlanNode branch = PlanCopier.copyPlan(node, context.idAllocator, context.lookup)
                         .replaceChildren(List.of(alternative));
 
                 List<PlanNode> newAlternatives = exploreNode(branch, originalTableScan, context);
@@ -203,9 +213,9 @@ public class AlternativesOptimizer
             alternatives = exploreNode(node, originalTableScan, context);
         }
         if (alternatives.size() > 1) {
-            context.getMemo().replace(
+            context.memo.replace(
                     group,
-                    new ChooseAlternativeNode(context.getIdAllocator().getNextId(), alternatives, originalTableScan),
+                    new ChooseAlternativeNode(context.idAllocator.getNextId(), alternatives, originalTableScan),
                     this.getClass().getName());
         }
     }
@@ -243,7 +253,7 @@ public class AlternativesOptimizer
             boolean invoked = false;
             boolean applied = false;
 
-            if (rule.isEnabled(context.getSession())) {
+            if (rule.isEnabled(context.session)) {
                 invoked = true;
                 List<PlanNode> currentAlternatives = transform(node, originalTableScan, rule, context);
                 timeEnd = nanoTime();
@@ -268,14 +278,14 @@ public class AlternativesOptimizer
 
         Capture<T> nodeCapture = newCapture();
         Pattern<T> pattern = rule.getPattern().capturedAs(nodeCapture);
-        Iterator<Match> matches = pattern.match(node, context.getLookup()).iterator();
+        Iterator<Match> matches = pattern.match(node, context.lookup).iterator();
         while (matches.hasNext()) {
             Match match = matches.next();
             long duration;
             Rule.Result result;
             try {
                 long start = nanoTime();
-                result = rule.apply(match.capture(nodeCapture), match.captures(), context.toRuleContext());
+                result = rule.apply(match.capture(nodeCapture), match.captures(), ruleContext(context));
 
                 if (!result.isEmpty()) {
                     alternatives.add(result.getMainAlternative().orElse(node));
@@ -304,7 +314,7 @@ public class AlternativesOptimizer
      */
     private Optional<TableScanNode> findTableScanInChain(PlanNode chain, Context context)
     {
-        return searchFrom(chain, context.getLookup())
+        return searchFrom(chain, context.lookup)
                 .recurseOnlyWhen(node -> node.getSources().size() < 2) // otherwise not a node chain
                 .where(node -> node instanceof TableScanNode)
                 .findFirst();
@@ -317,7 +327,7 @@ public class AlternativesOptimizer
     private Optional<FilteredTableScan> findFilteredScanInChain(PlanNode chain, Context context)
     {
         if (chain instanceof FilterNode filterNode) {
-            PlanNode source = context.getLookup().resolve(filterNode.getSource());
+            PlanNode source = context.lookup.resolve(filterNode.getSource());
             if (source instanceof TableScanNode tableScanNode) {
                 return Optional.of(new FilteredTableScan(tableScanNode, Optional.of(filterNode.getPredicate())));
             }
@@ -330,7 +340,7 @@ public class AlternativesOptimizer
             return Optional.empty();
         }
 
-        PlanNode child = context.getLookup().resolve(chain.getSources().get(0));
+        PlanNode child = context.lookup.resolve(chain.getSources().get(0));
         return findFilteredScanInChain(child, context);
     }
 
@@ -347,22 +357,153 @@ public class AlternativesOptimizer
                     rule.getClass().getName(),
                     PlanPrinter.textLogicalPlan(
                             node,
-                            context.getSymbolAllocator().getTypes(),
+                            context.symbolAllocator.getTypes(),
                             plannerContext.getMetadata(),
                             plannerContext.getFunctionManager(),
                             StatsAndCosts.empty(),
-                            context.getSession(),
+                            context.session,
                             0,
                             false),
                     PlanPrinter.textLogicalPlan(
                             new ChooseAlternativeNode(new PlanNodeId("<TRANSIENT>"), alternatives, originalTableScan),
-                            context.getSymbolAllocator().getTypes(),
+                            context.symbolAllocator.getTypes(),
                             plannerContext.getMetadata(),
                             plannerContext.getFunctionManager(),
                             StatsAndCosts.empty(),
-                            context.getSession(),
+                            context.session,
                             0,
                             false));
+        }
+    }
+
+    // Copied from io.trino.sql.planner.iterative.IterativeOptimizer
+    private Rule.Context ruleContext(Context context)
+    {
+        StatsProvider statsProvider = new CachingStatsProvider(statsCalculator, Optional.of(context.memo), context.lookup, context.session, context.symbolAllocator.getTypes(), context.tableStatsProvider);
+        CostProvider costProvider = new CachingCostProvider(costCalculator, statsProvider, Optional.of(context.memo), context.session, context.symbolAllocator.getTypes());
+
+        return new Rule.Context()
+        {
+            @Override
+            public Lookup getLookup()
+            {
+                return context.lookup;
+            }
+
+            @Override
+            public PlanNodeIdAllocator getIdAllocator()
+            {
+                return context.idAllocator;
+            }
+
+            @Override
+            public SymbolAllocator getSymbolAllocator()
+            {
+                return context.symbolAllocator;
+            }
+
+            @Override
+            public Session getSession()
+            {
+                return context.session;
+            }
+
+            @Override
+            public StatsProvider getStatsProvider()
+            {
+                return statsProvider;
+            }
+
+            @Override
+            public CostProvider getCostProvider()
+            {
+                return costProvider;
+            }
+
+            @Override
+            public void checkTimeoutNotExhausted()
+            {
+                context.checkTimeoutNotExhausted();
+            }
+
+            @Override
+            public WarningCollector getWarningCollector()
+            {
+                return context.warningCollector;
+            }
+        };
+    }
+
+    // Based on a similar class at io.trino.sql.planner.iterative.IterativeOptimizer
+    private static class Context
+    {
+        private final Memo memo;
+        private final Lookup lookup;
+        private final PlanNodeIdAllocator idAllocator;
+        private final SymbolAllocator symbolAllocator;
+        private final long startTimeInNanos;
+        private final long timeoutInMilliseconds;
+        private final Session session;
+        private final WarningCollector warningCollector;
+        private final TableStatsProvider tableStatsProvider;
+
+        private final PlanOptimizersStatsCollector statsCollector;
+
+        public Context(
+                Memo memo,
+                Lookup lookup,
+                PlanNodeIdAllocator idAllocator,
+                SymbolAllocator symbolAllocator,
+                long startTimeInNanos,
+                long timeoutInMilliseconds,
+                Session session,
+                WarningCollector warningCollector,
+                TableStatsProvider tableStatsProvider)
+        {
+            checkArgument(timeoutInMilliseconds >= 0, "Timeout has to be a non-negative number [milliseconds]");
+
+            this.memo = memo;
+            this.lookup = lookup;
+            this.idAllocator = idAllocator;
+            this.symbolAllocator = symbolAllocator;
+            this.startTimeInNanos = startTimeInNanos;
+            this.timeoutInMilliseconds = timeoutInMilliseconds;
+            this.session = session;
+            this.warningCollector = warningCollector;
+            this.statsCollector = createPlanOptimizersStatsCollector();
+            this.tableStatsProvider = tableStatsProvider;
+        }
+
+        public void checkTimeoutNotExhausted()
+        {
+            if ((NANOSECONDS.toMillis(nanoTime() - startTimeInNanos)) >= timeoutInMilliseconds) {
+                String message = format("The optimizer exhausted the time limit of %d ms", timeoutInMilliseconds);
+                List<QueryPlanOptimizerStatistics> topRulesByTime = statsCollector.getTopRuleStats(5);
+                if (topRulesByTime.isEmpty()) {
+                    message += ": no rules invoked";
+                }
+                else {
+                    message += ": Top rules: " + topRulesByTime.stream()
+                            .map(ruleStats -> format(
+                                    "%s: %s ms, %s invocations, %s applications",
+                                    ruleStats.rule(),
+                                    ruleStats.totalTime(),
+                                    ruleStats.invocations(),
+                                    ruleStats.applied()))
+                            .collect(joining(",\n\t\t", "{\n\t\t", " }"));
+                }
+                throw new TrinoException(OPTIMIZER_TIMEOUT, message);
+            }
+        }
+
+        public PlanOptimizersStatsCollector getStatsCollector()
+        {
+            return statsCollector;
+        }
+
+        void recordRuleInvocation(Rule<?> rule, boolean invoked, boolean applied, long elapsedNanos)
+        {
+            statsCollector.recordRule(rule, invoked, applied, elapsedNanos);
         }
     }
 }
