@@ -30,10 +30,7 @@ public interface ConnectorCacheMetadata
      * elements that can be derived from {@link CacheSplitId} such as predicate on partition column
      * which can filter splits entirely.
      */
-    default Optional<CacheTableId> getCacheTableId(ConnectorTableHandle tableHandle)
-    {
-        return Optional.empty();
-    }
+    Optional<CacheTableId> getCacheTableId(ConnectorTableHandle tableHandle);
 
     /**
      * Returns a column identifier for the purpose of caching with {@link CacheManager}.
@@ -41,10 +38,7 @@ public interface ConnectorCacheMetadata
      * rows produced by {@link ConnectorPageSource} for a given split. {@link CacheColumnId} can represent
      * simple, base column or more complex reference (e.g. map or array dereference expressions).
      */
-    default Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle)
-    {
-        return Optional.empty();
-    }
+    Optional<CacheColumnId> getCacheColumnId(ConnectorTableHandle tableHandle, ColumnHandle columnHandle);
 
     /**
      * Returns a canonical {@link ConnectorTableHandle}.
