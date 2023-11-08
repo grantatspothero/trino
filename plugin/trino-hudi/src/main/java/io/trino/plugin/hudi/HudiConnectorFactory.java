@@ -27,9 +27,6 @@ import static io.trino.plugin.base.Versions.checkStrictSpiVersionMatch;
 public class HudiConnectorFactory
         implements ConnectorFactory
 {
-    public HudiConnectorFactory()
-    {}
-
     @Override
     public String getName()
     {
@@ -41,6 +38,7 @@ public class HudiConnectorFactory
     {
         checkStrictSpiVersionMatch(context, this);
 
+        @SuppressWarnings("removal")
         ClassLoader classLoader = context.duplicatePluginClassLoader();
         try {
             return (Connector) classLoader.loadClass(InternalHudiConnectorFactory.class.getName())

@@ -41,6 +41,7 @@ public class ObjectStoreConnectorFactory
     @Override
     public Connector create(String catalogName, Map<String, String> config, ConnectorContext context)
     {
+        @SuppressWarnings("removal")
         ClassLoader classLoader = context.duplicatePluginClassLoader();
         try {
             // the module must be from the same classloader as InternalObjectStoreConnectorFactory
