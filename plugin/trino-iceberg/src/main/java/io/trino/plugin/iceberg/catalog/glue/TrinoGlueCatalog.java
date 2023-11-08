@@ -183,6 +183,7 @@ public class TrinoGlueCatalog
     private final AWSGlueAsync glueClient;
     private final GlueMetastoreStats stats;
     private final boolean hideMaterializedViewStorageTable;
+    private final boolean isUsingSystemSecurity;
 
     private final Cache<SchemaTableName, com.amazonaws.services.glue.model.Table> glueTableCache = EvictableCacheBuilder.newBuilder()
             // Even though this is query-scoped, this still needs to be bounded. information_schema queries can access large number of tables.
@@ -208,6 +209,7 @@ public class TrinoGlueCatalog
             String trinoVersion,
             AWSGlueAsync glueClient,
             GlueMetastoreStats stats,
+            boolean isUsingSystemSecurity,
             Optional<String> defaultSchemaLocation,
             boolean useUniqueTableLocation,
             boolean hideMaterializedViewStorageTable)
@@ -219,6 +221,7 @@ public class TrinoGlueCatalog
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.glueClient = requireNonNull(glueClient, "glueClient is null");
         this.stats = requireNonNull(stats, "stats is null");
+        this.isUsingSystemSecurity = isUsingSystemSecurity;
         this.defaultSchemaLocation = requireNonNull(defaultSchemaLocation, "defaultSchemaLocation is null");
         this.hideMaterializedViewStorageTable = hideMaterializedViewStorageTable;
     }
@@ -1256,7 +1259,7 @@ public class TrinoGlueCatalog
         TableInput materializedViewTableInput = getMaterializedViewTableInput(
                 viewName.getTableName(),
                 encodeMaterializedViewData(fromConnectorMaterializedViewDefinition(definition)),
-                session.getUser(),
+                isUsingSystemSecurity ? null : session.getUser(),
                 createMaterializedViewProperties(session, storageTable));
 
         if (existing.isPresent()) {
