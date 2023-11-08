@@ -21,7 +21,7 @@ import static java.lang.String.format;
 public final class ExtendedCockroachContainer
         extends CockroachContainer
 {
-    private static final String COCKROACH_VERSION = "22.2";
+    private static final String COCKROACH_VERSION = "23.1";
     private static final String COCKROACH_CONTAINER = format("cockroachdb/cockroach:latest-v%s", COCKROACH_VERSION);
     private static final String REGION = "us-east1";
     private static final String CLUSTER_ORGANIZATION = "Starburst Dev";
