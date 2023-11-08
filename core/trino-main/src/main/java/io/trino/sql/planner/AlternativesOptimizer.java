@@ -487,7 +487,7 @@ public class AlternativesOptimizer
                             .map(ruleStats -> format(
                                     "%s: %s ms, %s invocations, %s applications",
                                     ruleStats.rule(),
-                                    ruleStats.totalTime(),
+                                    NANOSECONDS.toMillis(ruleStats.totalTime()),
                                     ruleStats.invocations(),
                                     ruleStats.applied()))
                             .collect(joining(",\n\t\t", "{\n\t\t", " }"));
