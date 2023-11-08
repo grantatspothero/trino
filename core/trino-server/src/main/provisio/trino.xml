@@ -114,6 +114,9 @@
         <artifact id="${project.groupId}:trino-galaxy-objectstore:zip:${project.version}">
             <unpack />
         </artifact>
+        <artifact id="${project.groupId}:trino-hdfs:zip:${project.version}">
+            <unpack useRoot="true" />
+        </artifact>
     </artifactSet>
 
     <artifactSet to="plugin/galaxy-oracle">
@@ -172,6 +175,9 @@
     <artifactSet to="plugin/delta-lake">
         <artifact id="${project.groupId}:trino-delta-lake:zip:${project.version}">
             <unpack />
+        </artifact>
+        <artifact id="${project.groupId}:trino-hdfs:zip:${project.version}">
+            <unpack useRoot="true" />
         </artifact>
     </artifactSet>
 
@@ -233,6 +239,9 @@
         <artifact id="${project.groupId}:trino-hive-hadoop2:zip:${project.version}">
             <unpack />
         </artifact>
+        <artifact id="${project.groupId}:trino-hdfs:zip:${project.version}">
+            <unpack useRoot="true" />
+        </artifact>
     </artifactSet>
 
     <artifactSet to="plugin/http-event-listener">
@@ -245,11 +254,17 @@
         <artifact id="${project.groupId}:trino-hudi:zip:${project.version}">
             <unpack />
         </artifact>
+        <artifact id="${project.groupId}:trino-hdfs:zip:${project.version}">
+            <unpack useRoot="true" />
+        </artifact>
     </artifactSet>
 
     <artifactSet to="plugin/iceberg">
         <artifact id="${project.groupId}:trino-iceberg:zip:${project.version}">
             <unpack />
+        </artifact>
+        <artifact id="${project.groupId}:trino-hdfs:zip:${project.version}">
+            <unpack useRoot="true" />
         </artifact>
     </artifactSet>
 

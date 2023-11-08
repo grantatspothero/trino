@@ -115,12 +115,6 @@
 
         <dependency>
             <groupId>io.trino</groupId>
-            <artifactId>trino-hdfs</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.trino</groupId>
             <artifactId>trino-plugin-toolkit</artifactId>
             <scope>runtime</scope>
         </dependency>
@@ -153,6 +147,12 @@
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>testing</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-hdfs</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -191,6 +191,18 @@
         <dependency>
             <groupId>io.trino</groupId>
             <artifactId>trino-testing-services</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino.hadoop</groupId>
+            <artifactId>hadoop-apache</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino.hive</groupId>
+            <artifactId>hive-apache</artifactId>
             <scope>test</scope>
         </dependency>
 

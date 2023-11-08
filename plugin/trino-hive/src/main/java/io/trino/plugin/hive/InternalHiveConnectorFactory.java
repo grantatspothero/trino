@@ -127,7 +127,7 @@ public final class InternalHiveConnectorFactory
                                     binder.bind(TrinoFileSystemFactory.class).toInstance(factory);
                                 }
                             })
-                            .orElseGet(FileSystemModule::new),
+                            .orElseGet(() -> new FileSystemModule(catalogName, context.getNodeManager(), openTelemetry.orElse(context.getOpenTelemetry()))),
                     new HiveProcedureModule(),
                     new MBeanServerModule(),
                     binder -> {

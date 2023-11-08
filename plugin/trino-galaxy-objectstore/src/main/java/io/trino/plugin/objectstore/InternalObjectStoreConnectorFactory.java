@@ -118,7 +118,7 @@ public final class InternalObjectStoreConnectorFactory
                     connectorModule(ForHudi.class, hudiConnector),
                     new ObjectStoreModule(),
                     new GalaxyLocationSecurityModule(),
-                    new FileSystemModule(),
+                    new FileSystemModule(catalogName, context.getNodeManager(), context.getOpenTelemetry()),
                     binder -> {
                         binder.bind(TypeManager.class).toInstance(context.getTypeManager());
                         binder.bind(OpenTelemetry.class).toInstance(context.getOpenTelemetry());
