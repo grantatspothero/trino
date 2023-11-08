@@ -19,7 +19,7 @@ import io.trino.spi.connector.ConnectorFactory;
 import io.trino.testing.TestingConnectorContext;
 import io.varada.cloudvendors.configuration.CloudVendorConfiguration;
 import io.varada.tools.configuration.MultiPrefixConfigurationWrapper;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 

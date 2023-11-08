@@ -16,7 +16,7 @@ package io.trino.plugin.hive;
 import io.trino.Session;
 import io.trino.testing.QueryRunner;
 import org.intellij.lang.annotations.Language;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.regex.Pattern;
 
@@ -75,12 +75,14 @@ public class TestHiveWithPlanAlternativesConnectorTest
                 "Trino version: .*");
     }
 
+    @Test
     @Override
     public void testExplainAnalyzeScanFilterProjectWallTime()
     {
         // 'Filter CPU time' is not expected when connector uses an alternative in which the filter is subsumed
     }
 
+    @Test
     @Override
     public void testExplainAnalyzeColumnarFilter()
     {
@@ -121,66 +123,77 @@ public class TestHiveWithPlanAlternativesConnectorTest
         assertUpdate("DROP TABLE " + tableName);
     }
 
+    @Test
     @Override
     public void testMultipleWriters()
     {
         // Not applicable with plan alternatives
     }
 
+    @Test
     @Override
     public void testMultipleWritersWithSkewedData()
     {
         // Not applicable with plan alternatives
     }
 
+    @Test
     @Override
     public void testMultipleWritersWhenTaskScaleWritersIsEnabled()
     {
         // Not applicable with plan alternatives
     }
 
+    @Test
     @Override
     public void testTaskWritersDoesNotScaleWithLargeMinWriterSize()
     {
         // Not applicable with plan alternatives
     }
 
+    @Test
     @Override
     public void testWritersAcrossMultipleWorkersWhenScaleWritersIsEnabled()
     {
         // Not applicable with plan alternatives
     }
 
+    @Test
     @Override
     public void testWriterTasksCountLimitUnpartitioned(boolean scaleWriters, boolean redistributeWrites, int expectedFilesCount)
     {
         // Not applicable with plan alternatives
     }
 
+    @Test
     @Override
     public void testWriterTasksCountLimitPartitionedScaleWritersDisabled()
     {
         // Not applicable with plan alternatives
     }
 
+    @Test
     @Override
     public void testWriterTasksCountLimitPartitionedScaleWritersEnabled()
     {
         // Not applicable with plan alternatives
     }
 
+    @Test
     @Override
     public void testTargetMaxFileSize()
     {
         // Not applicable with plan alternatives
     }
 
+    @Test
     @Override
     public void testTargetMaxFileSizePartitioned()
     {
         // Not applicable with plan alternatives
     }
 
+    @Test
     @Override
     public void testTimestampWithTimeZone()
     {

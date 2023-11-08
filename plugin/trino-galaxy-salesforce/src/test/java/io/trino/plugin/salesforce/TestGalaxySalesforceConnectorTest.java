@@ -15,7 +15,7 @@ package io.trino.plugin.salesforce;
 
 import com.starburstdata.trino.plugins.salesforce.TestSalesforceConnectorTest;
 import io.trino.testing.MaterializedResult;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.trino.spi.type.VarcharType.VARCHAR;
 import static io.trino.testing.MaterializedResult.resultBuilder;

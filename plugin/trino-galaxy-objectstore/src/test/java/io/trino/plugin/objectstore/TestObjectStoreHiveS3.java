@@ -13,9 +13,9 @@
  */
 package io.trino.plugin.objectstore;
 
-import org.testng.SkipException;
-import org.testng.annotations.Parameters;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -25,14 +25,14 @@ import static io.trino.plugin.objectstore.TableType.HIVE;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.abort;
 
 public class TestObjectStoreHiveS3
         extends BaseObjectStoreS3Test
 {
-    @Parameters("s3.bucket")
-    public TestObjectStoreHiveS3(String bucketName)
+    public TestObjectStoreHiveS3()
     {
-        super(HIVE, "partitioned_by", "external_location", bucketName);
+        super(HIVE, "partitioned_by", "external_location");
     }
 
     @Override
@@ -67,7 +67,8 @@ public class TestObjectStoreHiveS3
     }
 
     @Override // Row-level modifications are not supported for Hive tables
-    @Test(dataProvider = "locationPatternsDataProvider")
+    @ParameterizedTest
+    @MethodSource("locationPatternsDataProvider")
     public void testBasicOperationsWithProvidedTableLocation(boolean partitioned, String locationPattern)
     {
         String tableName = "test_basic_operations_" + randomNameSuffix();
@@ -97,7 +98,8 @@ public class TestObjectStoreHiveS3
     }
 
     @Override // Row-level modifications are not supported for Hive tables
-    @Test(dataProvider = "locationPatternsDataProvider")
+    @ParameterizedTest
+    @MethodSource("locationPatternsDataProvider")
     public void testBasicOperationsWithProvidedSchemaLocation(boolean partitioned, String locationPattern)
     {
         String schemaName = "test_basic_operations_schema_" + randomNameSuffix();
@@ -129,13 +131,15 @@ public class TestObjectStoreHiveS3
     }
 
     @Override
-    @Test(dataProvider = "locationPatternsDataProvider")
+    @ParameterizedTest
+    @MethodSource("locationPatternsDataProvider")
     public void testMergeWithProvidedTableLocation(boolean partitioned, String locationPattern)
     {
         // Row-level modifications are not supported for Hive tables
     }
 
-    @Test(dataProvider = "locationPatternsDataProvider")
+    @ParameterizedTest
+    @MethodSource("locationPatternsDataProvider")
     public void testAnalyzeWithProvidedTableLocation(boolean partitioned, String locationPattern)
     {
         String tableName = "test_analyze_" + randomNameSuffix();
@@ -219,9 +223,10 @@ public class TestObjectStoreHiveS3
     }
 
     @Override
-    @Test(dataProvider = "locationPatternsDataProvider")
+    @ParameterizedTest
+    @MethodSource("locationPatternsDataProvider")
     public void testOptimizeWithProvidedTableLocation(boolean partitioned, String locationPattern)
     {
-        throw new SkipException("Objectstore connector does not support OPTIMIZE for Hive tables");
+        abort("Objectstore connector does not support OPTIMIZE for Hive tables");
     }
 }

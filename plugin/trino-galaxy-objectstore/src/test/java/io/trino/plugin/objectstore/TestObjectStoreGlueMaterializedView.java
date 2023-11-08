@@ -31,7 +31,7 @@ import io.trino.server.security.galaxy.GalaxyTestHelper;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.GalaxyQueryRunner;
 import io.trino.testing.QueryRunner;
-import org.testng.annotations.AfterClass;
+import org.junit.jupiter.api.AfterAll;
 
 import java.util.Collection;
 import java.util.Map;
@@ -110,7 +110,7 @@ public class TestObjectStoreGlueMaterializedView
         return true;
     }
 
-    @AfterClass(alwaysRun = true)
+    @AfterAll
     public void cleanup()
     {
         cleanUpSchema(schemaName);

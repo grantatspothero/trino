@@ -14,29 +14,30 @@
 package io.trino.plugin.oracle;
 
 import com.google.common.net.HostAndPort;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static com.google.common.net.HostAndPort.fromParts;
 import static io.trino.plugin.oracle.OracleConnectionUrlFormatUtils.buildSshTunnelConnectionUrl;
 import static io.trino.plugin.oracle.OracleConnectionUrlFormatUtils.getHostPort;
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestOracleConnectionUrlFormatUtils
 {
-    @Test(dataProvider = "hostPortProvider")
+    @ParameterizedTest
+    @MethodSource("hostPortProvider")
     public void testHostAndPort(String connectionUrl, HostAndPort expectedHostAndPort)
     {
-        assertEquals(getHostPort(connectionUrl), expectedHostAndPort);
+        assertThat(getHostPort(connectionUrl)).isEqualTo(expectedHostAndPort);
     }
 
-    @Test(dataProvider = "sshTunnelUrlProvider")
+    @ParameterizedTest
+    @MethodSource("sshTunnelUrlProvider")
     public void testSshTunnelConnectionUrl(String connectionUrl, int sshTunnelPort, String expectedSshTunnelConnectionUrl)
     {
-        assertEquals(buildSshTunnelConnectionUrl(connectionUrl, sshTunnelPort), expectedSshTunnelConnectionUrl);
+        assertThat(buildSshTunnelConnectionUrl(connectionUrl, sshTunnelPort)).isEqualTo(expectedSshTunnelConnectionUrl);
     }
 
-    @DataProvider
     public static Object[][] hostPortProvider()
     {
         return new Object[][] {
@@ -55,7 +56,6 @@ public class TestOracleConnectionUrlFormatUtils
         };
     }
 
-    @DataProvider
     public static Object[][] sshTunnelUrlProvider()
     {
         return new Object[][] {

@@ -25,8 +25,7 @@ import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.type.Type;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -42,10 +41,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestDeltaPageSourceProvider
 {
-    private DeltaLakePageSourceProvider pageSourceProvider;
+    private final DeltaLakePageSourceProvider pageSourceProvider;
 
-    @BeforeClass(alwaysRun = true)
-    public void setUp()
+    public TestDeltaPageSourceProvider()
             throws IOException
     {
         pageSourceProvider = new DeltaLakePageSourceProvider(

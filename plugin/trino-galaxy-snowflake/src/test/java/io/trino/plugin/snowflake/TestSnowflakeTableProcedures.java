@@ -20,8 +20,7 @@ import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.QueryRunner;
-import io.trino.testng.services.ManageTestResources;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
@@ -40,7 +39,6 @@ public class TestSnowflakeTableProcedures
     // Storage integration needs accountadmin privileges in Snowflake. So this has been pre-created using the role `arn:aws:iam::662260526581:role/galaxy_snowflake_storage_integration` in account `662260526581`.
     // The storage integration has access to the bucket `snowflake.test.s3.register.table.location` for `snowflake.test.server.role`
     private static final String STORAGE_INTEGRATION = requireNonNull(System.getProperty("snowflake.test.s3.storage.integration"), "snowflake.test.s3.storage.integration is not set");
-    @ManageTestResources.Suppress(because = "Mock to remote server")
     protected final SnowflakeServer server = new SnowflakeServer();
 
     @Override

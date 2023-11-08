@@ -13,16 +13,13 @@
  */
 package io.trino.plugin.objectstore;
 
-import org.testng.annotations.Parameters;
-
 import static io.trino.plugin.objectstore.TableType.HIVE;
 
 public class TestObjectStoreHiveS3Glue
         extends BaseObjectStoreS3GlueTest
 {
-    @Parameters("s3.bucket")
-    public TestObjectStoreHiveS3Glue(String bucketName)
+    public TestObjectStoreHiveS3Glue()
     {
-        super(HIVE, bucketName);
+        super(HIVE);
     }
 }

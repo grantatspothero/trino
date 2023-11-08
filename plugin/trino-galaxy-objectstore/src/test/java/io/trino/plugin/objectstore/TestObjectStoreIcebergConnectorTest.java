@@ -19,8 +19,8 @@ import io.trino.filesystem.TrinoFileSystem;
 import io.trino.testing.MaterializedResult;
 import io.trino.testing.TestingConnectorBehavior;
 import io.trino.testing.sql.TestTable;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.ZonedDateTime;
@@ -38,7 +38,6 @@ import static java.lang.String.format;
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.testng.Assert.assertTrue;
 
 /**
  * Tests ObjectStore connector with Iceberg backend.
@@ -83,7 +82,7 @@ public class TestObjectStoreIcebergConnectorTest
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public void setUp()
             throws InterruptedException
     {
@@ -149,6 +148,7 @@ public class TestObjectStoreIcebergConnectorTest
         assertThat(e).hasMessageMatching(".*(Cannot change column type|not supported for Iceberg|Not a primitive type|Cannot change type ).*");
     }
 
+    @Test
     @Override
     public void testCharVarcharComparison()
     {
@@ -251,6 +251,7 @@ public class TestObjectStoreIcebergConnectorTest
         return "NULL value not allowed for NOT NULL column: " + columnName;
     }
 
+    @Test
     @Override
     public void testHiveSpecificTableProperty()
     {
@@ -258,6 +259,7 @@ public class TestObjectStoreIcebergConnectorTest
                 .hasMessage("Table property 'auto_purge' not supported for Iceberg tables");
     }
 
+    @Test
     @Override
     public void testHiveSpecificColumnProperty()
     {
@@ -269,6 +271,7 @@ public class TestObjectStoreIcebergConnectorTest
                 .hasMessage("Iceberg tables do not support column properties [partition_projection_type, partition_projection_range]");
     }
 
+    @Test
     @Override
     public void testDeltaSpecificTableProperty()
     {
@@ -391,7 +394,7 @@ public class TestObjectStoreIcebergConnectorTest
             assertQuery("SELECT * FROM " + table.getName(), values.trim());
             TrinoFileSystem fileSystem = getTrinoFileSystem();
             for (Object filePath : computeActual("SELECT file_path from \"" + table.getName() + "$files\"").getOnlyColumnAsSet()) {
-                assertTrue(checkOrcFileSorting(fileSystem, Location.of((String) filePath), "name"));
+                assertThat(checkOrcFileSorting(fileSystem, Location.of((String) filePath), "name")).isTrue();
             }
         }
     }
@@ -407,6 +410,7 @@ public class TestObjectStoreIcebergConnectorTest
         super.testAddAndDropColumnName(columnName);
     }
 
+    @Test
     @Override
     public void testDropRowFieldWhenDuplicates()
     {
@@ -415,6 +419,7 @@ public class TestObjectStoreIcebergConnectorTest
                 .hasMessage("Invalid schema: multiple fields for name col.a: 2 and 3");
     }
 
+    @Test
     @Override
     public void testDropAmbiguousRowFieldCaseSensitivity()
     {

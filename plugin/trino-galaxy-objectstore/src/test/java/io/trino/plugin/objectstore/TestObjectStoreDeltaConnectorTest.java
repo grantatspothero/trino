@@ -22,8 +22,7 @@ import io.trino.testing.MaterializedResultWithQueryId;
 import io.trino.testing.TestingConnectorBehavior;
 import io.trino.testing.sql.TestTable;
 import org.intellij.lang.annotations.Language;
-import org.testng.SkipException;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
@@ -36,6 +35,7 @@ import static io.trino.testing.MaterializedResult.resultBuilder;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.abort;
 
 /**
  * @see TestObjectStoreDeltaFeaturesConnectorTest
@@ -156,9 +156,10 @@ public class TestObjectStoreDeltaConnectorTest
     @Override
     protected TestTable createTableWithDefaultColumns()
     {
-        throw new SkipException("Delta Lake does not support columns with a default value");
+        return abort("Delta Lake does not support columns with a default value");
     }
 
+    @Test
     @Override
     public void testCharVarcharComparison()
     {
@@ -205,6 +206,7 @@ public class TestObjectStoreDeltaConnectorTest
                         ")\\E");
     }
 
+    @Test
     @Override
     public void testHiveSpecificTableProperty()
     {
@@ -212,6 +214,7 @@ public class TestObjectStoreDeltaConnectorTest
                 .hasMessage("Table property 'auto_purge' not supported for Delta Lake tables");
     }
 
+    @Test
     @Override
     public void testHiveSpecificColumnProperty()
     {
@@ -223,6 +226,7 @@ public class TestObjectStoreDeltaConnectorTest
                 .hasMessage("Delta Lake tables do not support column properties [partition_projection_type, partition_projection_range]");
     }
 
+    @Test
     @Override
     public void testIcebergSpecificTableProperty()
     {
@@ -420,6 +424,7 @@ public class TestObjectStoreDeltaConnectorTest
                         "(null, null, null, null, 75.0, null, null)");
     }
 
+    @Test
     @Override
     public void testDropColumn()
     {
@@ -429,6 +434,7 @@ public class TestObjectStoreDeltaConnectorTest
                 .hasMessageContaining("Cannot drop column from table using column mapping mode NONE");
     }
 
+    @Test
     @Override
     public void testAddAndDropColumnName(String columnName)
     {
@@ -438,6 +444,7 @@ public class TestObjectStoreDeltaConnectorTest
                 .hasMessageContaining("Cannot drop column from table using column mapping mode NONE");
     }
 
+    @Test
     @Override
     public void testDropAndAddColumnWithSameName()
     {
@@ -447,6 +454,7 @@ public class TestObjectStoreDeltaConnectorTest
                 .hasMessageContaining("Cannot drop column from table using column mapping mode NONE");
     }
 
+    @Test
     @Override
     public void testRenameColumn()
     {
@@ -456,6 +464,7 @@ public class TestObjectStoreDeltaConnectorTest
                 .hasMessageContaining("Cannot rename column in table using column mapping mode NONE");
     }
 
+    @Test
     @Override
     public void testRenameColumnWithComment()
     {
@@ -465,6 +474,7 @@ public class TestObjectStoreDeltaConnectorTest
                 .hasMessageContaining("Cannot rename column in table using column mapping mode NONE");
     }
 
+    @Test
     @Override
     public void testAlterTableRenameColumnToLongName()
     {
@@ -474,6 +484,7 @@ public class TestObjectStoreDeltaConnectorTest
                 .hasMessageContaining("Cannot rename column in table using column mapping mode NONE");
     }
 
+    @Test
     @Override
     public void testRenameColumnName(String columnName)
     {
@@ -483,6 +494,7 @@ public class TestObjectStoreDeltaConnectorTest
                 .hasMessageContaining("Cannot rename column in table using column mapping mode NONE");
     }
 
+    @Test
     @Override
     public void testRenameRowField()
     {
@@ -498,6 +510,7 @@ public class TestObjectStoreDeltaConnectorTest
                         but did not.""");
     }
 
+    @Test
     @Override
     public void testSetFieldType()
     {

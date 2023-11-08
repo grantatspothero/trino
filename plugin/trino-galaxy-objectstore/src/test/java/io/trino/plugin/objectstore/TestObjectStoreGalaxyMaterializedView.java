@@ -27,8 +27,7 @@ import io.trino.server.security.galaxy.GalaxyTestHelper;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.GalaxyQueryRunner;
 import io.trino.testing.QueryRunner;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -103,13 +102,6 @@ public class TestObjectStoreGalaxyMaterializedView
                         false,
                         new SchemaId(galaxyTestHelper.getAccountClient().getOrCreateCatalog(TEST_CATALOG), "non_existent")));
         return queryRunner;
-    }
-
-    @AfterClass(alwaysRun = true)
-    public void cleanup()
-    {
-        galaxyTestHelper = null; // closed by closeAfterClass
-        minio = null; // closed by closeAfterClass
     }
 
     @Override

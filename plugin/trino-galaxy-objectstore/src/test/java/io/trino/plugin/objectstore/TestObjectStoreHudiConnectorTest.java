@@ -19,7 +19,6 @@ import io.trino.testing.MaterializedResult;
 import io.trino.testing.TestingConnectorBehavior;
 import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.Test;
-import org.testng.SkipException;
 
 import static com.google.common.base.Verify.verify;
 import static io.trino.plugin.objectstore.TableType.HUDI;
@@ -33,6 +32,7 @@ import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_UPDATE;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.abort;
 import static org.testng.Assert.assertFalse;
 
 public class TestObjectStoreHudiConnectorTest
@@ -95,6 +95,7 @@ public class TestObjectStoreHudiConnectorTest
         }
     }
 
+    @Test
     @Override
     public void testShowCreateTable()
     {
@@ -122,6 +123,7 @@ public class TestObjectStoreHudiConnectorTest
                 ")\\E");
     }
 
+    @Test
     @Override
     public void testDescribeTable()
     {
@@ -164,6 +166,7 @@ public class TestObjectStoreHudiConnectorTest
         assertThat(actual).isEqualTo(expected);
     }
 
+    @Test
     @Override
     public void testMaterializedView()
     {
@@ -182,6 +185,7 @@ public class TestObjectStoreHudiConnectorTest
                         at QueryAssertions$QueryAssert.\\E.*""");
     }
 
+    @Test
     @Override
     public void testCreateTable()
     {
@@ -189,6 +193,7 @@ public class TestObjectStoreHudiConnectorTest
                 "Table creation is not supported for Hudi");
     }
 
+    @Test
     @Override
     public void testCreateTableAsSelect()
     {
@@ -196,6 +201,7 @@ public class TestObjectStoreHudiConnectorTest
                 "Table creation is not supported for Hudi");
     }
 
+    @Test
     @Override
     public void testCreateTableAsSelectNegativeDate()
     {
@@ -203,42 +209,49 @@ public class TestObjectStoreHudiConnectorTest
         super.testCreateTableAsSelectNegativeDate();
     }
 
+    @Test
     @Override
     public void testCommentTable()
     {
         assertQueryFails("COMMENT ON TABLE nation IS 'new comment'", "Setting comments for Hudi tables is not supported");
     }
 
+    @Test
     @Override
     public void testCommentColumn()
     {
         assertQueryFails("COMMENT ON COLUMN nation.nationkey IS 'new comment'", "Setting column comments in Hudi tables is not supported");
     }
 
+    @Test
     @Override
     public void testAddColumn()
     {
         assertQueryFails("ALTER TABLE nation ADD COLUMN test_add_column bigint", "Adding columns to Hudi tables is not supported");
     }
 
+    @Test
     @Override
     public void testRenameColumn()
     {
         assertQueryFails("ALTER TABLE nation RENAME COLUMN nationkey TO test_rename_column", "Renaming columns in Hudi tables is not supported");
     }
 
+    @Test
     @Override
     public void testDropColumn()
     {
         assertQueryFails("ALTER TABLE nation DROP COLUMN nationkey", "Dropping columns from Hudi tables is not supported");
     }
 
+    @Test
     @Override
     public void testInsert()
     {
         assertQueryFails("INSERT INTO nation (nationkey) VALUES (42)", "Writes are not supported for Hudi tables");
     }
 
+    @Test
     @Override
     public void testInsertNegativeDate()
     {
@@ -246,12 +259,14 @@ public class TestObjectStoreHudiConnectorTest
         super.testInsertNegativeDate();
     }
 
+    @Test
     @Override
     public void testUpdate()
     {
         assertQueryFails("UPDATE nation SET nationkey = nationkey + regionkey WHERE regionkey < 1", "Writes are not supported for Hudi tables");
     }
 
+    @Test
     @Override
     public void testUpdateRowType()
     {
@@ -259,6 +274,7 @@ public class TestObjectStoreHudiConnectorTest
         assertQueryFails("UPDATE nation SET nationkey = nationkey + regionkey WHERE regionkey < 1", "Writes are not supported for Hudi tables");
     }
 
+    @Test
     @Override
     public void testUpdateWithPredicates()
     {
@@ -266,6 +282,7 @@ public class TestObjectStoreHudiConnectorTest
         super.testUpdateWithPredicates();
     }
 
+    @Test
     @Override
     public void testUpdateAllValues()
     {
@@ -273,15 +290,17 @@ public class TestObjectStoreHudiConnectorTest
         super.testUpdateAllValues();
     }
 
+    @Test
     @Override
     public void testMaterializedViewGracePeriod()
     {
         assertFalse(hasBehavior(SUPPORTS_CREATE_TABLE)); // remove override when true
         assertThatThrownBy(super::testMaterializedViewGracePeriod)
                 .hasMessage("Table creation is not supported for Hudi");
-        throw new SkipException("test not implemented");
+        abort("test not implemented");
     }
 
+    @Test
     @Override
     public void testMaterializedViewBaseTableGone(boolean initialized)
     {
@@ -289,6 +308,7 @@ public class TestObjectStoreHudiConnectorTest
         super.testMaterializedViewBaseTableGone(initialized);
     }
 
+    @Test
     @Override
     public void testCompatibleTypeChangeForView()
     {
@@ -296,6 +316,7 @@ public class TestObjectStoreHudiConnectorTest
         super.testCompatibleTypeChangeForView();
     }
 
+    @Test
     @Override
     public void testCompatibleTypeChangeForView2()
     {
@@ -303,6 +324,7 @@ public class TestObjectStoreHudiConnectorTest
         super.testCompatibleTypeChangeForView2();
     }
 
+    @Test
     @Override
     public void testDropNonEmptySchemaWithTable()
     {
@@ -310,6 +332,7 @@ public class TestObjectStoreHudiConnectorTest
         super.testDropNonEmptySchemaWithTable();
     }
 
+    @Test
     @Override
     public void testReadMetadataWithRelationsConcurrentModifications()
             throws Exception
@@ -325,6 +348,7 @@ public class TestObjectStoreHudiConnectorTest
                 .hasMessage("Table creation is not supported for Hudi");
     }
 
+    @Test
     @Override
     public void testHiveSpecificColumnProperty()
     {
@@ -332,6 +356,7 @@ public class TestObjectStoreHudiConnectorTest
                 .hasMessage("Table creation is not supported for Hudi");
     }
 
+    @Test
     @Override
     public void testIcebergSpecificTableProperty()
     {
@@ -339,6 +364,7 @@ public class TestObjectStoreHudiConnectorTest
                 .hasMessage("Table creation is not supported for Hudi");
     }
 
+    @Test
     @Override
     public void testDeltaSpecificTableProperty()
     {
@@ -346,6 +372,7 @@ public class TestObjectStoreHudiConnectorTest
                 .hasMessage("Table creation is not supported for Hudi");
     }
 
+    @Test
     @Override
     public void testRegisterTableProcedure()
     {
@@ -357,6 +384,7 @@ public class TestObjectStoreHudiConnectorTest
                 "Registering Hudi tables is unsupported");
     }
 
+    @Test
     @Override
     public void testRegisterTableProcedureIcebergSpecificArgument()
     {
@@ -365,6 +393,7 @@ public class TestObjectStoreHudiConnectorTest
                 .hasMessageContaining("Table creation is not supported for Hudi");
     }
 
+    @Test
     @Override
     public void testUnregisterTableProcedure()
     {
@@ -373,6 +402,7 @@ public class TestObjectStoreHudiConnectorTest
         assertQueryFails("CALL system.unregister_table(CURRENT_SCHEMA, 'region')", "Unsupported table type");
     }
 
+    @Test
     @Override
     public void testUnregisterTableAccessControl()
     {
@@ -384,6 +414,7 @@ public class TestObjectStoreHudiConnectorTest
                 privilege("region", DROP_TABLE));
     }
 
+    @Test
     @Override
     public void testMigrateToIcebergTable()
     {
@@ -393,6 +424,7 @@ public class TestObjectStoreHudiConnectorTest
                 "Changing table type from 'HUDI' to 'ICEBERG' is not supported");
     }
 
+    @Test
     @Override
     public void testMigrateToDeltaTable()
     {
@@ -402,6 +434,7 @@ public class TestObjectStoreHudiConnectorTest
                 "Changing table type from 'HUDI' to 'DELTA' is not supported");
     }
 
+    @Test
     @Override
     public void testMigrateToHiveTable()
     {
@@ -411,6 +444,7 @@ public class TestObjectStoreHudiConnectorTest
                 "Changing table type from 'HUDI' to 'HIVE' is not supported");
     }
 
+    @Test
     @Override
     public void testMigrateToHudiTable()
     {
@@ -420,18 +454,21 @@ public class TestObjectStoreHudiConnectorTest
                 "Changing table type from 'HUDI' to 'HUDI' is not supported");
     }
 
+    @Test
     @Override
     public void testSelectAll()
     {
-        throw new SkipException("Hudi returns extra columns");
+        abort("Hudi returns extra columns");
     }
 
+    @Test
     @Override
     public void testSelectInformationSchemaColumns()
     {
-        throw new SkipException("Hudi returns extra columns");
+        abort("Hudi returns extra columns");
     }
 
+    @Test
     @Override
     public void testDropTableCorruptStorage()
     {

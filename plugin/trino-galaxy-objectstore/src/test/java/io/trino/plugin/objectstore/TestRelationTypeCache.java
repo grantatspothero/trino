@@ -24,7 +24,7 @@ import static io.trino.plugin.objectstore.RelationType.MATERIALIZED_VIEW;
 import static io.trino.plugin.objectstore.RelationType.VIEW;
 import static io.trino.plugin.objectstore.TableType.DELTA;
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestRelationTypeCache
 {
@@ -64,11 +64,11 @@ public class TestRelationTypeCache
         SchemaTableName viewName = new SchemaTableName("some_schema", "view_name");
 
         relationTypeCache.record(viewName, VIEW);
-        assertEquals(relationTypeCache.getRelationType(viewName), Optional.of(VIEW));
+        assertThat(relationTypeCache.getRelationType(viewName)).isEqualTo(Optional.of(VIEW));
         assertAffinity(relationTypeCache, viewName, ICEBERG);
 
         relationTypeCache.record(viewName, DELTA);
-        assertEquals(relationTypeCache.getRelationType(viewName), Optional.of(DELTA_TABLE));
+        assertThat(relationTypeCache.getRelationType(viewName)).isEqualTo(Optional.of(DELTA_TABLE));
         assertAffinity(relationTypeCache, viewName, DELTA);
     }
 
@@ -79,18 +79,17 @@ public class TestRelationTypeCache
         SchemaTableName viewName = new SchemaTableName("some_schema", "materialized_view_name");
 
         relationTypeCache.record(viewName, MATERIALIZED_VIEW);
-        assertEquals(relationTypeCache.getRelationType(viewName), Optional.of(MATERIALIZED_VIEW));
+        assertThat(relationTypeCache.getRelationType(viewName)).isEqualTo(Optional.of(MATERIALIZED_VIEW));
         assertAffinity(relationTypeCache, viewName, ICEBERG);
 
         relationTypeCache.record(viewName, DELTA);
-        assertEquals(relationTypeCache.getRelationType(viewName), Optional.of(DELTA_TABLE));
+        assertThat(relationTypeCache.getRelationType(viewName)).isEqualTo(Optional.of(DELTA_TABLE));
         assertAffinity(relationTypeCache, viewName, DELTA);
     }
 
     private void assertAffinity(RelationTypeCache relationTypeCache, SchemaTableName schemaTableName, TableType expected)
     {
-        assertEquals(
-                relationTypeCache.getTableTypeAffinity(schemaTableName).get(0),
-                expected);
+        assertThat(relationTypeCache.getTableTypeAffinity(schemaTableName).get(0))
+                .isEqualTo(expected);
     }
 }

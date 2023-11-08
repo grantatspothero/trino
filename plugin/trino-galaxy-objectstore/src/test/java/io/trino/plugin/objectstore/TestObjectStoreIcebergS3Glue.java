@@ -13,16 +13,13 @@
  */
 package io.trino.plugin.objectstore;
 
-import org.testng.annotations.Parameters;
-
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
 
 public class TestObjectStoreIcebergS3Glue
         extends BaseObjectStoreS3GlueTest
 {
-    @Parameters("s3.bucket")
-    public TestObjectStoreIcebergS3Glue(String bucketName)
+    public TestObjectStoreIcebergS3Glue()
     {
-        super(ICEBERG, bucketName);
+        super(ICEBERG);
     }
 }

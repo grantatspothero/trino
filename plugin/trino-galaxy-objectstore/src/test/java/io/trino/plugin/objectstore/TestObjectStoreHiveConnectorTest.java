@@ -19,8 +19,7 @@ import io.trino.filesystem.TrinoFileSystem;
 import io.trino.testing.TestingConnectorBehavior;
 import io.trino.testing.sql.TestTable;
 import org.intellij.lang.annotations.Language;
-import org.testng.SkipException;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
@@ -37,7 +36,7 @@ import static io.trino.testing.QueryAssertions.assertEqualsIgnoreOrder;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.testng.Assert.assertTrue;
+import static org.junit.jupiter.api.Assumptions.abort;
 
 public class TestObjectStoreHiveConnectorTest
         extends BaseObjectStoreConnectorTest
@@ -124,9 +123,10 @@ public class TestObjectStoreHiveConnectorTest
     @Override
     protected TestTable createTableWithDefaultColumns()
     {
-        throw new SkipException("Hive connector does not support column default values");
+        return abort("Hive connector does not support column default values");
     }
 
+    @Test
     @Override
     public void testCreateTableWithLocation()
     {
@@ -141,6 +141,7 @@ public class TestObjectStoreHiveConnectorTest
                 "Access Denied: Role accountadmin is not allowed to use location: " + location + "/test_location_create");
     }
 
+    @Test
     @Override
     public void testCreateTableAsWithLocation()
     {
@@ -174,6 +175,7 @@ public class TestObjectStoreHiveConnectorTest
         assertUpdate("DROP TABLE " + tableName);
     }
 
+    @Test
     @Override
     public void testInsertIntoNotNullColumn()
     {
@@ -182,6 +184,7 @@ public class TestObjectStoreHiveConnectorTest
                 "Hive tables do not support NOT NULL columns");
     }
 
+    @Test
     @Override
     public void testDropAndAddColumnWithSameName()
     {
@@ -192,6 +195,7 @@ public class TestObjectStoreHiveConnectorTest
                             [1, 2]""");
     }
 
+    @Test
     @Override
     public void testAddNotNullColumnToEmptyTable()
     {
@@ -203,6 +207,7 @@ public class TestObjectStoreHiveConnectorTest
         }
     }
 
+    @Test
     @Override
     public void testDelete()
     {
@@ -210,6 +215,7 @@ public class TestObjectStoreHiveConnectorTest
                 .hasStackTraceContaining("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testDeleteWithLike()
     {
@@ -217,6 +223,7 @@ public class TestObjectStoreHiveConnectorTest
                 .hasStackTraceContaining("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testDeleteWithComplexPredicate()
     {
@@ -224,6 +231,7 @@ public class TestObjectStoreHiveConnectorTest
                 .hasStackTraceContaining("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testMergeDeleteWithCTAS()
     {
@@ -266,11 +274,12 @@ public class TestObjectStoreHiveConnectorTest
             assertQuery("SELECT * FROM " + table.getName(), values.trim());
             TrinoFileSystem fileSystem = getTrinoFileSystem();
             for (Object filePath : computeActual("SELECT DISTINCT \"$path\" FROM " + table.getName()).getOnlyColumnAsSet()) {
-                assertTrue(checkOrcFileSorting(fileSystem, Location.of((String) filePath), "name"));
+                assertThat(checkOrcFileSorting(fileSystem, Location.of((String) filePath), "name")).isTrue();
             }
         }
     }
 
+    @Test
     @Override
     public void testDeleteWithSemiJoin()
     {
@@ -278,6 +287,7 @@ public class TestObjectStoreHiveConnectorTest
                 .hasStackTraceContaining("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testDeleteWithSubquery()
     {
@@ -285,6 +295,7 @@ public class TestObjectStoreHiveConnectorTest
                 .hasStackTraceContaining("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testExplainAnalyzeWithDeleteWithSubquery()
     {
@@ -292,6 +303,7 @@ public class TestObjectStoreHiveConnectorTest
                 .hasStackTraceContaining("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testDeleteWithVarcharPredicate()
     {
@@ -299,6 +311,7 @@ public class TestObjectStoreHiveConnectorTest
                 .hasStackTraceContaining("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testRowLevelDelete()
     {
@@ -306,126 +319,147 @@ public class TestObjectStoreHiveConnectorTest
                 .hasStackTraceContaining("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testUpdate()
     {
         assertThatThrownBy(super::testUpdate).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testUpdateRowType()
     {
         assertThatThrownBy(super::testUpdateRowType).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testUpdateAllValues()
     {
         assertThatThrownBy(super::testUpdateAllValues).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testUpdateWithPredicates()
     {
         assertThatThrownBy(super::testUpdateWithPredicates).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testRowLevelUpdate()
     {
         assertThatThrownBy(super::testRowLevelUpdate).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testMergeLarge()
     {
         assertThatThrownBy(super::testMergeLarge).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testMergeSimpleSelect()
     {
         assertThatThrownBy(super::testMergeSimpleSelect).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testMergeFruits()
     {
         assertThatThrownBy(super::testMergeFruits).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testMergeMultipleOperations()
     {
         assertThatThrownBy(super::testMergeMultipleOperations).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testMergeSimpleQuery()
     {
         assertThatThrownBy(super::testMergeSimpleQuery).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testMergeAllInserts()
     {
         assertThatThrownBy(super::testMergeAllInserts).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testMergeFalseJoinCondition()
     {
         assertThatThrownBy(super::testMergeFalseJoinCondition).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testMergeAllColumnsUpdated()
     {
         assertThatThrownBy(super::testMergeAllColumnsUpdated).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testMergeAllMatchesDeleted()
     {
         assertThatThrownBy(super::testMergeAllMatchesDeleted).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testMergeMultipleRowsMatchFails()
     {
         assertThatThrownBy(super::testMergeAllMatchesDeleted).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testMergeQueryWithStrangeCapitalization()
     {
         assertThatThrownBy(super::testMergeQueryWithStrangeCapitalization).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testMergeWithoutTablesAliases()
     {
         assertThatThrownBy(super::testMergeWithoutTablesAliases).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testMergeWithUnpredictablePredicates()
     {
         assertThatThrownBy(super::testMergeWithUnpredictablePredicates).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testMergeWithSimplifiedUnpredictablePredicates()
     {
         assertThatThrownBy(super::testMergeWithSimplifiedUnpredictablePredicates).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testMergeCasts()
     {
         assertThatThrownBy(super::testMergeCasts).hasMessage("Modifying Hive table rows is constrained to deletes of whole partitions");
     }
 
+    @Test
     @Override
     public void testMergeSubqueries()
     {
@@ -460,6 +494,7 @@ public class TestObjectStoreHiveConnectorTest
                 ")");
     }
 
+    @Test
     @Override
     public void testIcebergSpecificTableProperty()
     {
@@ -467,6 +502,7 @@ public class TestObjectStoreHiveConnectorTest
                 .hasMessage("Table property 'partitioning' not supported for Hive tables");
     }
 
+    @Test
     @Override
     public void testDeltaSpecificTableProperty()
     {
@@ -480,6 +516,7 @@ public class TestObjectStoreHiveConnectorTest
         return 1.0;
     }
 
+    @Test
     @Override
     public void testRegisterTableProcedure()
     {
@@ -487,6 +524,7 @@ public class TestObjectStoreHiveConnectorTest
                 .hasMessage("Unsupported table type");
     }
 
+    @Test
     @Override
     public void testUnregisterTableProcedure()
     {
@@ -862,6 +900,7 @@ public class TestObjectStoreHiveConnectorTest
         }
     }
 
+    @Test
     @Override
     public void testRenameRowField()
     {
@@ -877,6 +916,7 @@ public class TestObjectStoreHiveConnectorTest
                         but did not.""");
     }
 
+    @Test
     @Override
     public void testSetFieldType()
     {

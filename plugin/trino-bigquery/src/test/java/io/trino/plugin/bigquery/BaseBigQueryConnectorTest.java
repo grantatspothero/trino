@@ -779,7 +779,7 @@ public abstract class BaseBigQueryConnectorTest
     @Test
     public void testCreateSchemaWithLongName()
     {
-        throw new SkipException("Dropping schema with long name causes BigQuery to return code 500");
+        abort("Dropping schema with long name causes BigQuery to return code 500");
     }
 
     @Override

@@ -13,8 +13,8 @@
  */
 package io.trino.plugin.objectstore;
 
-import org.testng.annotations.Parameters;
-import org.testng.annotations.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -27,10 +27,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestObjectStoreIcebergS3
         extends BaseObjectStoreS3Test
 {
-    @Parameters("s3.bucket")
-    public TestObjectStoreIcebergS3(String bucketName)
+    public TestObjectStoreIcebergS3()
     {
-        super(ICEBERG, "partitioning", "location", bucketName);
+        super(ICEBERG, "partitioning", "location");
     }
 
     @Override
@@ -83,7 +82,8 @@ public class TestObjectStoreIcebergS3
                 .collect(Collectors.toUnmodifiableSet());
     }
 
-    @Test(dataProvider = "locationPatternsDataProvider")
+    @ParameterizedTest
+    @MethodSource("locationPatternsDataProvider")
     public void testAnalyzeWithProvidedTableLocation(boolean partitioned, String locationPattern)
     {
         String tableName = "test_analyze_" + randomNameSuffix();

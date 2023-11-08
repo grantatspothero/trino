@@ -15,8 +15,8 @@ package io.trino.plugin.objectstore;
 
 import com.google.common.base.Stopwatch;
 import io.trino.Session;
-import org.testng.annotations.Parameters;
-import org.testng.annotations.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -34,10 +34,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestObjectStoreDeltaS3
         extends BaseObjectStoreS3Test
 {
-    @Parameters("s3.bucket")
-    public TestObjectStoreDeltaS3(String bucketName)
+    public TestObjectStoreDeltaS3()
     {
-        super(DELTA, "partitioned_by", "location", bucketName);
+        super(DELTA, "partitioned_by", "location");
     }
 
     @Override
@@ -94,7 +93,8 @@ public class TestObjectStoreDeltaS3
                 .collect(Collectors.toUnmodifiableSet()));
     }
 
-    @Test(dataProvider = "locationPatternsDataProvider")
+    @ParameterizedTest
+    @MethodSource("locationPatternsDataProvider")
     public void testAnalyzeWithProvidedTableLocation(boolean partitioned, String locationPattern)
     {
         String tableName = "test_analyze_" + randomNameSuffix();
@@ -144,7 +144,8 @@ public class TestObjectStoreDeltaS3
         assertUpdate("DROP TABLE " + tableName);
     }
 
-    @Test(dataProvider = "locationPatternsDataProvider")
+    @ParameterizedTest
+    @MethodSource("locationPatternsDataProvider")
     public void testVacuum(boolean partitioned, String locationPattern)
             throws Exception
     {

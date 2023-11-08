@@ -18,7 +18,7 @@ import io.trino.plugin.iceberg.BaseIcebergSystemTables;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.testing.DistributedQueryRunner;
-import org.testng.annotations.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 
 import static io.trino.plugin.iceberg.IcebergFileFormat.PARQUET;
 import static io.trino.plugin.objectstore.ObjectStoreQueryRunner.CATALOG;
@@ -60,7 +60,7 @@ public class TestObjectStoreIcebergSystemTables
     }
 
     @Override
-    @BeforeClass
+    @BeforeAll
     public void setUp()
     {
         super.setUp();

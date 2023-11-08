@@ -24,10 +24,11 @@ import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.QueryRunner;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,7 @@ import static io.trino.testing.DataProviders.cartesianProduct;
 import static io.trino.testing.DataProviders.trueFalse;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.lang.String.format;
+import static java.lang.System.getProperty;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -63,12 +65,12 @@ public abstract class BaseObjectStoreS3Test
 
     private AmazonS3 s3;
 
-    protected BaseObjectStoreS3Test(TableType tableType, String partitionByKeyword, String locationKeyword, String bucketName)
+    protected BaseObjectStoreS3Test(TableType tableType, String partitionByKeyword, String locationKeyword)
     {
         this.tableType = requireNonNull(tableType, "tableType is null");
         this.partitionByKeyword = requireNonNull(partitionByKeyword, "partitionByKeyword is null");
         this.locationKeyword = requireNonNull(locationKeyword, "locationKeyword is null");
-        this.bucketName = requireNonNull(bucketName, "bucketName is null");
+        this.bucketName = requireNonNull(getProperty("s3.bucket"), "s3.bucket is null");
     }
 
     @Override
@@ -95,23 +97,20 @@ public abstract class BaseObjectStoreS3Test
                 .build();
     }
 
-    @BeforeClass
+    @BeforeAll
     public void setUp()
     {
         s3 = AmazonS3ClientBuilder.standard().build();
     }
 
-    @AfterClass(alwaysRun = true)
+    @AfterAll
     public void tearDown()
     {
         if (s3 != null) {
             s3.shutdown();
-            s3 = null;
         }
-        metastore = null; // closed by closeAfterClass
     }
 
-    @DataProvider
     public Object[][] locationPatternsDataProvider()
     {
         Object[][] locationPatterns = new Object[][] {
@@ -127,7 +126,8 @@ public abstract class BaseObjectStoreS3Test
         return cartesianProduct(trueFalse(), locationPatterns);
     }
 
-    @Test(dataProvider = "locationPatternsDataProvider")
+    @ParameterizedTest
+    @MethodSource("locationPatternsDataProvider")
     public void testBasicOperationsWithProvidedTableLocation(boolean partitioned, String locationPattern)
     {
         String tableName = "test_basic_operations_" + randomNameSuffix();
@@ -157,7 +157,8 @@ public abstract class BaseObjectStoreS3Test
         validateFilesAfterDrop(location);
     }
 
-    @Test(dataProvider = "locationPatternsDataProvider")
+    @ParameterizedTest
+    @MethodSource("locationPatternsDataProvider")
     public void testBasicOperationsWithProvidedSchemaLocation(boolean partitioned, String locationPattern)
     {
         String schemaName = "test_basic_operations_schema_" + randomNameSuffix();
@@ -195,7 +196,8 @@ public abstract class BaseObjectStoreS3Test
         assertThat(getTableFiles(actualTableLocation)).isEmpty();
     }
 
-    @Test(dataProvider = "locationPatternsDataProvider")
+    @ParameterizedTest
+    @MethodSource("locationPatternsDataProvider")
     public void testMergeWithProvidedTableLocation(boolean partitioned, String locationPattern)
     {
         String tableName = "test_merge_" + randomNameSuffix();
@@ -227,7 +229,8 @@ public abstract class BaseObjectStoreS3Test
         validateFilesAfterDrop(location);
     }
 
-    @Test(dataProvider = "locationPatternsDataProvider")
+    @ParameterizedTest
+    @MethodSource("locationPatternsDataProvider")
     public void testOptimizeWithProvidedTableLocation(boolean partitioned, String locationPattern)
     {
         String tableName = "test_optimize_" + randomNameSuffix();

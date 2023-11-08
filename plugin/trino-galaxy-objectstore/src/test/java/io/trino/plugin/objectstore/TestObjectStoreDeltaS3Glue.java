@@ -13,16 +13,13 @@
  */
 package io.trino.plugin.objectstore;
 
-import org.testng.annotations.Parameters;
-
 import static io.trino.plugin.objectstore.TableType.DELTA;
 
 public class TestObjectStoreDeltaS3Glue
         extends BaseObjectStoreS3GlueTest
 {
-    @Parameters("s3.bucket")
-    public TestObjectStoreDeltaS3Glue(String bucketName)
+    public TestObjectStoreDeltaS3Glue()
     {
-        super(DELTA, bucketName);
+        super(DELTA);
     }
 }

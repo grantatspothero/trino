@@ -31,7 +31,8 @@ import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.GalaxyQueryRunner;
 import io.trino.testing.QueryRunner;
 import org.intellij.lang.annotations.Language;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
 
 import java.nio.file.Path;
 import java.util.Map;
@@ -50,6 +51,7 @@ import static io.trino.plugin.hive.metastore.CountingAccessHiveMetastore.Method.
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static java.nio.file.Files.createTempDirectory;
+import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
 /**
  * Similar to {@link io.trino.plugin.hive.metastore.thrift.TestHiveMetastoreMetadataQueriesAccessOperations},
@@ -59,7 +61,7 @@ import static java.nio.file.Files.createTempDirectory;
  *
  * @see TestObjectStoreFileAndMetastoreAccessOperations
  */
-@Test(singleThreaded = true) // metastore invocation counters shares mutable state so can't be run from many threads simultaneously
+@Execution(SAME_THREAD) // metastore invocation counters shares mutable state so can't be run from many threads simultaneously
 public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
         extends AbstractTestQueryFramework
 {

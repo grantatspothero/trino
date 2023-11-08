@@ -22,8 +22,8 @@ import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.function.Function;
@@ -46,7 +46,7 @@ public class TestGalaxyHiveConnectorTest
             throws Exception
     {
         GalaxyCockroachContainer cockroach = closeAfterClass(new GalaxyCockroachContainer());
-        testingGalaxyMetastore = new TestingGalaxyMetastore(cockroach);
+        testingGalaxyMetastore = closeAfterClass(new TestingGalaxyMetastore(cockroach));
 
         Function<DistributedQueryRunner, HiveMetastore> metastore = queryRunner -> {
             File baseDir = queryRunner.getCoordinator().getBaseDataDir().resolve("hive_data").toFile();
@@ -82,101 +82,112 @@ public class TestGalaxyHiveConnectorTest
         return queryRunner;
     }
 
-    @AfterClass(alwaysRun = true)
-    public void cleanUp()
-            throws Exception
-    {
-        if (testingGalaxyMetastore != null) {
-            testingGalaxyMetastore.close();
-            testingGalaxyMetastore = null;
-        }
-    }
-
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     // TODO (https://github.com/starburstdata/stargate/issues/9925) remove override
     public void testCreateSchemaWithLongName() {}
 
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     // TODO (https://github.com/starburstdata/stargate/issues/9925) remove override
     public void testRenameSchemaToLongName() {}
 
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     // TODO (https://github.com/starburstdata/stargate/issues/9925) remove override
     public void testCreateTableWithLongTableName() {}
 
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     // TODO (https://github.com/starburstdata/stargate/issues/9925) remove override
     public void testRenameTableToLongTableName() {}
 
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     // TODO (https://github.com/starburstdata/stargate/issues/9925) remove override
     public void testAlterTableAddLongColumnName() {}
 
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     public void testShowCreateSchema() {}
 
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     public void testSchemaAuthorizationForUser() {}
 
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     public void testSchemaAuthorizationForRole() {}
 
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     public void testCurrentUserInView() {}
 
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     public void testCreateSchemaWithAuthorizationForUser() {}
 
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     public void testCreateSchemaWithAuthorizationForRole() {}
 
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     public void testSchemaAuthorization() {}
 
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     public void testShowColumnMetadata() {}
 
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     public void testShowTablePrivileges() {}
 
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     public void testTableAuthorization() {}
 
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     public void testTableAuthorizationForRole() {}
 
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     public void testViewAuthorization() {}
 
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     public void testViewAuthorizationSecurityDefiner() {}
 
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     public void testViewAuthorizationSecurityInvoker() {}
 
-    @Test(enabled = false)
+    @Test
+    @Disabled
     @Override
     public void testViewAuthorizationForRole() {}
 
+    @Test
     @Override
     public void testCreateAcidTableUnsupported()
     {
@@ -193,6 +204,7 @@ public class TestGalaxyHiveConnectorTest
         assertQueryFails("CREATE TABLE acid_unsupported WITH (transactional = true) AS SELECT 123 x", "GalaxyHiveMetastore does not support ACID tables");
     }
 
+    @Test
     @Override
     public void testCreateFunction()
     {
@@ -201,6 +213,7 @@ public class TestGalaxyHiveConnectorTest
                 .hasMessageContaining("Catalog and schema must be specified when function schema is not configured");
     }
 
+    @Test
     @Override
     public void testCreateSchemaWithNonLowercaseOwnerName()
     {

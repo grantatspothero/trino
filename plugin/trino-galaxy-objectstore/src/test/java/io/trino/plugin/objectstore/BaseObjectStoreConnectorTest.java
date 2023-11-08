@@ -39,9 +39,7 @@ import io.trino.testing.TestingConnectorBehavior;
 import io.trino.testing.sql.TestTable;
 import org.assertj.core.api.AbstractThrowableAssert;
 import org.intellij.lang.annotations.Language;
-import org.testng.SkipException;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 import java.util.Comparator;
@@ -79,9 +77,8 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertTrue;
-import static org.testng.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.abort;
 
 public abstract class BaseObjectStoreConnectorTest
         extends BaseConnectorTest
@@ -160,13 +157,6 @@ public abstract class BaseObjectStoreConnectorTest
     @Override
     public void initMockCatalog() {}
 
-    @AfterClass(alwaysRun = true)
-    public void tearDown()
-    {
-        metastore = null; // closed by closeAfterClass
-        minio = null; // closed by closeAfterClass
-    }
-
     @Override
     protected abstract boolean hasBehavior(TestingConnectorBehavior connectorBehavior);
 
@@ -180,7 +170,7 @@ public abstract class BaseObjectStoreConnectorTest
     @Override
     protected TestTable createTableWithDefaultColumns()
     {
-        throw new SkipException("Connector does not support column default values");
+        return abort("Connector does not support column default values");
     }
 
     @Override
@@ -218,6 +208,7 @@ public abstract class BaseObjectStoreConnectorTest
     }
 
     // Override and disable the negative tests for long schema and table names, because galaxy metastore has no problems storing them
+    @Test
     @Override
     public void testCreateSchemaWithLongName()
     {
@@ -233,6 +224,7 @@ public abstract class BaseObjectStoreConnectorTest
         assertUpdate("DROP SCHEMA " + validSchemaName);
     }
 
+    @Test
     @Override
     public void testRenameSchemaToLongName()
     {
@@ -251,6 +243,7 @@ public abstract class BaseObjectStoreConnectorTest
         assertUpdate("DROP SCHEMA " + validTargetSchemaName);
     }
 
+    @Test
     @Override
     public void testCreateTableWithLongTableName()
     {
@@ -264,10 +257,11 @@ public abstract class BaseObjectStoreConnectorTest
 
         String validTableName = baseTableName + "z".repeat(maxLength - baseTableName.length());
         assertUpdate("CREATE TABLE " + validTableName + " (a bigint)");
-        assertTrue(getQueryRunner().tableExists(getSession(), validTableName));
+        assertThat(getQueryRunner().tableExists(getSession(), validTableName)).isTrue();
         assertUpdate("DROP TABLE " + validTableName);
     }
 
+    @Test
     @Override
     public void testRenameTableToLongTableName()
     {
@@ -285,7 +279,7 @@ public abstract class BaseObjectStoreConnectorTest
 
         String validTargetTableName = baseTableName + "z".repeat(maxLength - baseTableName.length());
         assertUpdate("ALTER TABLE " + sourceTableName + " RENAME TO " + validTargetTableName);
-        assertTrue(getQueryRunner().tableExists(getSession(), validTargetTableName));
+        assertThat(getQueryRunner().tableExists(getSession(), validTargetTableName)).isTrue();
         assertQuery("SELECT x FROM " + validTargetTableName, "VALUES 123");
         assertUpdate("DROP TABLE " + validTargetTableName);
     }
@@ -297,6 +291,7 @@ public abstract class BaseObjectStoreConnectorTest
         return OptionalInt.of(255 - UUID.randomUUID().toString().length());
     }
 
+    @Test
     @Override
     public void testCreateTableWithLongColumnName()
     {
@@ -311,10 +306,11 @@ public abstract class BaseObjectStoreConnectorTest
 
         String validColumnName = basColumnName + "z".repeat(maxLength - basColumnName.length());
         assertUpdate("CREATE TABLE " + tableName + " (" + validColumnName + " bigint)");
-        assertTrue(columnExists(tableName, validColumnName));
+        assertThat(columnExists(tableName, validColumnName)).isTrue();
         assertUpdate("DROP TABLE " + tableName);
     }
 
+    @Test
     @Override
     public void testAlterTableAddLongColumnName()
     {
@@ -330,11 +326,12 @@ public abstract class BaseObjectStoreConnectorTest
 
         String validTargetColumnName = basColumnName + "z".repeat(maxLength - basColumnName.length());
         assertUpdate("ALTER TABLE " + tableName + " ADD COLUMN " + validTargetColumnName + " int");
-        assertTrue(getQueryRunner().tableExists(getSession(), tableName));
+        assertThat(getQueryRunner().tableExists(getSession(), tableName)).isTrue();
         assertQuery("SELECT x FROM " + tableName, "VALUES 123");
         assertUpdate("DROP TABLE " + tableName);
     }
 
+    @Test
     @Override
     public void testAlterTableRenameColumnToLongName()
     {
@@ -868,10 +865,10 @@ public abstract class BaseObjectStoreConnectorTest
         String tableLocation = getTableLocation(tableName);
 
         assertUpdate("CALL system.register_table(CURRENT_SCHEMA, '" + unregisterTableName + "', '" + tableLocation + "')");
-        assertTrue(getQueryRunner().tableExists(getSession(), unregisterTableName));
+        assertThat(getQueryRunner().tableExists(getSession(), unregisterTableName)).isTrue();
 
         assertUpdate("CALL system.unregister_table(CURRENT_SCHEMA, '" + unregisterTableName + "')");
-        assertFalse(getQueryRunner().tableExists(getSession(), unregisterTableName));
+        assertThat(getQueryRunner().tableExists(getSession(), unregisterTableName)).isFalse();
 
         assertQuery("SELECT * FROM " + tableName, "VALUES 1");
 
@@ -910,7 +907,7 @@ public abstract class BaseObjectStoreConnectorTest
 
         // try to drop table
         assertUpdate("DROP TABLE " + tableName);
-        assertFalse(getQueryRunner().tableExists(getSession(), tableName));
+        assertThat(getQueryRunner().tableExists(getSession(), tableName)).isFalse();
     }
 
     protected String getTableLocation(String tableName)
@@ -925,6 +922,7 @@ public abstract class BaseObjectStoreConnectorTest
         throw new IllegalStateException("Location not found in SHOW CREATE TABLE result");
     }
 
+    @Test
     @Override // ObjectStore supports this partially, so has non-standard error message
     public void testSetColumnType()
     {
@@ -944,6 +942,7 @@ public abstract class BaseObjectStoreConnectorTest
         }
     }
 
+    @Test
     @Override // ObjectStore supports this partially, so has non-standard error message
     public void testAddRowField()
     {
@@ -977,6 +976,7 @@ public abstract class BaseObjectStoreConnectorTest
         assertUpdate("CALL system.flush_metadata_cache(schema_name => 'flush_metadata_cache_bogus_schema', table_name => 'flush_metadata_cache_non_existent')");
     }
 
+    @Test
     @Override
     public void testCreateViewSchemaNotFound()
     {
@@ -999,6 +999,7 @@ public abstract class BaseObjectStoreConnectorTest
                 .hasStackTraceContaining("at io.trino.server.security.galaxy.GalaxyAccessControl.checkCanCreateView");
     }
 
+    @Test
     @Override
     public void testCreateTableSchemaNotFound()
     {
@@ -1021,6 +1022,7 @@ public abstract class BaseObjectStoreConnectorTest
                 .hasStackTraceContaining("at io.trino.server.security.galaxy.GalaxyAccessControl.checkCanCreateTable");
     }
 
+    @Test
     @Override
     public void testCreateTableAsSelectSchemaNotFound()
     {

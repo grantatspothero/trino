@@ -15,7 +15,7 @@ package io.trino.plugin.snowflake;
 
 import com.google.common.collect.ImmutableMap;
 import io.starburst.stargate.id.CatalogId;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.Map;

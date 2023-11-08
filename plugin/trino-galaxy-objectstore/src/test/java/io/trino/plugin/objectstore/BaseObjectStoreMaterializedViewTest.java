@@ -15,6 +15,7 @@ package io.trino.plugin.objectstore;
 
 import io.trino.plugin.iceberg.BaseIcebergMaterializedViewTest;
 import io.trino.testing.QueryFailedException;
+import org.junit.jupiter.api.Test;
 
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -22,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 public abstract class BaseObjectStoreMaterializedViewTest
         extends BaseIcebergMaterializedViewTest
 {
+    @Test
     @Override
     public void testMaterializedViewOnTableRolledBack()
     {

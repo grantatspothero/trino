@@ -45,8 +45,9 @@ import io.trino.testing.GalaxyQueryRunner;
 import io.trino.testing.QueryRunner;
 import io.trino.transaction.TransactionBuilder;
 import org.intellij.lang.annotations.Language;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -92,6 +93,7 @@ import static java.util.Collections.nCopies;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toCollection;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
 /**
  * Like {@link TestIcebergGlueCatalogAccessOperations} but with ObjectStore.
@@ -100,7 +102,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * invocations (e.g. fewer) than ObjectStore when used solely with Iceberg tables, so it is important to
  * test this integration.
  */
-@Test(singleThreaded = true) // metastore invocation counters shares mutable state so can't be run from many threads simultaneously
+@Execution(SAME_THREAD) // metastore invocation counters shares mutable state so can't be run from many threads simultaneously
 public class TestObjectStoreIcebergGlueCatalogAccessOperations
         extends AbstractTestQueryFramework
 {
@@ -197,7 +199,7 @@ public class TestObjectStoreIcebergGlueCatalogAccessOperations
         return queryRunner;
     }
 
-    @AfterClass(alwaysRun = true)
+    @AfterAll
     public void cleanUpSchema()
     {
         getQueryRunner().execute("DROP SCHEMA " + testSchema);

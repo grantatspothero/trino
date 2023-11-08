@@ -29,8 +29,8 @@ import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.GalaxyQueryRunner;
 import io.trino.testing.QueryRunner;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.Map;
@@ -44,6 +44,7 @@ import static io.trino.plugin.hive.metastore.glue.AwsSdkUtil.getPaginatedResults
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.lang.String.format;
+import static java.lang.System.getProperty;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -59,11 +60,11 @@ public abstract class BaseObjectStoreS3GlueTest
     private final TableType tableType;
     private final String bucketName;
 
-    protected BaseObjectStoreS3GlueTest(TableType tableType, String bucketName)
+    protected BaseObjectStoreS3GlueTest(TableType tableType)
     {
         this.tableType = requireNonNull(tableType, "tableType is null");
         schemaName = "test_objectstore_s3_glue_" + tableType.name().toLowerCase(ENGLISH) + "_" + randomNameSuffix();
-        this.bucketName = requireNonNull(bucketName, "bucketName is null");
+        this.bucketName = requireNonNull(getProperty("s3.bucket"), "s3.bucket is null");
     }
 
     @Override
@@ -95,7 +96,7 @@ public abstract class BaseObjectStoreS3GlueTest
         return queryRunner;
     }
 
-    @AfterClass(alwaysRun = true)
+    @AfterAll
     public void cleanup()
     {
         cleanUpSchema(schemaName);

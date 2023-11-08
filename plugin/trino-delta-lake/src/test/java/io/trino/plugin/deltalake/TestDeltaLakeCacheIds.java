@@ -55,9 +55,11 @@ import io.trino.spi.type.TypeManager;
 import io.trino.testing.TestingConnectorContext;
 import io.trino.testing.TestingNodeManager;
 import org.apache.hadoop.conf.Configuration;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.parallel.Execution;
 
 import java.util.List;
 import java.util.Map;
@@ -76,14 +78,18 @@ import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.IntegerType.INTEGER;
 import static java.util.concurrent.Executors.newScheduledThreadPool;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+import static org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT;
 
+@TestInstance(PER_CLASS)
+@Execution(CONCURRENT)
 public class TestDeltaLakeCacheIds
 {
     private static ScheduledExecutorService executorService = newScheduledThreadPool(1);
     private DeltaLakeCacheMetadata metadata;
     private DeltaLakeSplitManager splitManager;
 
-    @BeforeClass
+    @BeforeAll
     public void setup()
     {
         DeltaLakeConfig config = new DeltaLakeConfig();
@@ -143,12 +149,11 @@ public class TestDeltaLakeCacheIds
                 new DeltaLakeTransactionManager(metadataFactory));
     }
 
-    @AfterClass(alwaysRun = true)
+    @AfterAll
     public void tearDown()
     {
         if (executorService != null) {
             executorService.shutdownNow();
-            executorService = null;
         }
     }
 

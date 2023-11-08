@@ -130,6 +130,7 @@ class ConnectorFeaturesTestHelper
                 .sorted(Comparator.comparing(Method::getName))
                 .map(method ->
                         """
+                                    @Test
                                     @Override
                                     public void %s(%s)
                                     {

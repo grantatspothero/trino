@@ -18,7 +18,7 @@ import io.trino.plugin.varada.configuration.GlobalConfiguration;
 import io.trino.plugin.varada.configuration.ProxiedConnectorConfiguration;
 import io.trino.spi.connector.ConnectorFactory;
 import io.trino.testing.TestingConnectorContext;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 

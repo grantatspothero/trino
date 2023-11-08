@@ -52,8 +52,8 @@ import io.trino.testing.LocalQueryRunner;
 import io.trino.testing.TestingHandles;
 import io.trino.testing.TestingMetadata;
 import org.intellij.lang.annotations.Language;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.AbstractMap.SimpleEntry;
 import java.util.List;
@@ -98,7 +98,7 @@ public class TestCanonicalSubplanExtractor
                 TASK_CONCURRENCY, "4"));
     }
 
-    @BeforeClass
+    @BeforeAll
     public void setup()
     {
         planBuilder = new PlanBuilder(new PlanNodeIdAllocator(), PLANNER_CONTEXT, TEST_SESSION);
