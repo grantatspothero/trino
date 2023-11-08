@@ -918,8 +918,8 @@ public class TrinoGlueCatalog
             }
 
             try {
-                createMaterializedViewDefinition(session, schemaTableName, table)
-                        .ifPresent(materializedView -> materializedViewCache.put(schemaTableName, materializedView));
+                ConnectorMaterializedViewDefinition materializedView = createMaterializedViewDefinition(session, schemaTableName, table);
+                materializedViewCache.put(schemaTableName, materializedView);
             }
             catch (RuntimeException e) {
                 LOG.warn(e, "Failed to cache materialized view from %s", schemaTableName);
@@ -1344,10 +1344,10 @@ public class TrinoGlueCatalog
             return Optional.empty();
         }
 
-        return createMaterializedViewDefinition(session, viewName, table);
+        return Optional.of(createMaterializedViewDefinition(session, viewName, table));
     }
 
-    private Optional<ConnectorMaterializedViewDefinition> createMaterializedViewDefinition(
+    private ConnectorMaterializedViewDefinition createMaterializedViewDefinition(
             ConnectorSession session,
             SchemaTableName viewName,
             com.amazonaws.services.glue.model.Table table)
@@ -1376,11 +1376,11 @@ public class TrinoGlueCatalog
         if (viewOriginalText == null) {
             throw new TrinoException(ICEBERG_BAD_DATA, "Materialized view did not have original text " + viewName);
         }
-        return Optional.of(getMaterializedViewDefinition(
+        return getMaterializedViewDefinition(
                 icebergTable,
                 Optional.ofNullable(table.getOwner()),
                 viewOriginalText,
-                storageTableName));
+                storageTableName);
     }
 
     @Override
