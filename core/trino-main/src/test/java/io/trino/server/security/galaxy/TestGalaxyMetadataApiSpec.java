@@ -1773,7 +1773,7 @@ public class TestGalaxyMetadataApiSpec
             // Show that we get the right error message from getViewRunAsIdentity()
             assertThatThrownBy(() -> securityApi.getViewRunAsIdentity(admin(), name))
                     .isInstanceOf(TrinoException.class)
-                    .hasMessageMatching(format("View '%s' is disabled until an explicit owner role is set.*", name));
+                    .hasMessageMatching(format("View '%s' does not have an explicit owner role, which is not allowed. Please define an explicit owner with an 'ALTER VIEW %s SET AUTHORIZATION ROLE' command. For more information, visit docs.starburst.io/starburst-galaxy/security/privileges.html*", name, name));
 
             // Show that we cqn set the view owner
             withNewRoleAndPrincipal(adminRoleId, (roleId, roleName, principal) -> {

@@ -339,7 +339,8 @@ public class GalaxySecurityMetadata
         DispatchSession dispatchSession = toDispatchSession(session);
         EntityPrivileges privileges = accessControlClient.getEntityPrivileges(dispatchSession, dispatchSession.getRoleId(), toTableEntity(viewName));
         if (!privileges.isExplicitOwner()) {
-            throw new TrinoException(INVALID_VIEW, format("View '%s' is disabled until an explicit owner role is set", viewName));
+            throw new TrinoException(INVALID_VIEW,
+                    format("View '%s' does not have an explicit owner role, which is not allowed. Please define an explicit owner with an 'ALTER VIEW %s SET AUTHORIZATION ROLE' command. For more information, visit docs.starburst.io/starburst-galaxy/security/privileges.html", viewName, viewName));
         }
         return Optional.of(createViewOwnerIdentity(session.getIdentity(), privileges.getOwner(), privileges.getOwnerId()));
     }
