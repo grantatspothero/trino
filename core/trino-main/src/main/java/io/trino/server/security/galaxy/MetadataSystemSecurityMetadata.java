@@ -170,7 +170,7 @@ public class MetadataSystemSecurityMetadata
     @Override
     public Optional<Identity> getViewRunAsIdentity(Session session, CatalogSchemaTableName viewName)
     {
-        return get(session).getViewRunAsIdentity(session, viewName);
+        return get(session).getMetadataViewRunAsIdentity(session, viewName);
     }
 
     @Override

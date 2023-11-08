@@ -345,6 +345,22 @@ public class GalaxySecurityMetadata
         return Optional.of(createViewOwnerIdentity(session.getIdentity(), privileges.getOwner(), privileges.getOwnerId()));
     }
 
+    /**
+     * Create an identity with the synthetic user name, the owner role in the credentials, and
+     * enabled roles set consisting only of the owner role IFF the view has an owner.
+     *
+     * Only to be used for metadata queries, as this could result in a privilege escalation when used for actual querying.
+     */
+    public Optional<Identity> getMetadataViewRunAsIdentity(Session session, CatalogSchemaTableName viewName)
+    {
+        DispatchSession dispatchSession = toDispatchSession(session);
+        EntityPrivileges privileges = accessControlClient.getEntityPrivileges(dispatchSession, dispatchSession.getRoleId(), toTableEntity(viewName));
+        if (!privileges.isExplicitOwner()) {
+            return Optional.empty();
+        }
+        return Optional.of(createViewOwnerIdentity(session.getIdentity(), privileges.getOwner(), privileges.getOwnerId()));
+    }
+
     @Override
     public void setViewOwner(Session session, CatalogSchemaTableName view, TrinoPrincipal principal)
     {
