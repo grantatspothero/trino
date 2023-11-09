@@ -16,6 +16,7 @@ package io.trino.server.security.galaxy;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.starburst.stargate.accesscontrol.cache.CacheKeyAndResult;
 import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
 import io.starburst.stargate.accesscontrol.client.CreateEntityPrivilege;
 import io.starburst.stargate.accesscontrol.client.CreateRoleGrant;
@@ -206,5 +207,17 @@ public enum GalaxyIndexerTrinoSecurityApi
     {
         // This method is only used by the `ResultsCacheAnalyzer`
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean canUseLocation(DispatchSession session, String location)
+    {
+        return true;
+    }
+
+    @Override
+    public List<CacheKeyAndResult> validateCachedResults(DispatchSession session, List<CacheKeyAndResult> cacheReferences)
+    {
+        return ImmutableList.of();
     }
 }
