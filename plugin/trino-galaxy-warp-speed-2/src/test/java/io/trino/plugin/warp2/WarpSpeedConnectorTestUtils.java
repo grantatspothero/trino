@@ -13,7 +13,6 @@
  */
 package io.trino.plugin.warp2;
 
-import io.opentelemetry.api.OpenTelemetry;
 import io.trino.plugin.varada.configuration.GlobalConfiguration;
 import io.trino.plugin.varada.configuration.ProxiedConnectorConfiguration;
 import io.trino.plugin.varada.di.VaradaStubsStorageEngineModule;
@@ -31,7 +30,7 @@ public abstract class WarpSpeedConnectorTestUtils
     public static Plugin getPlugin()
     {
         WarpSpeedPlugin warpSpeedPlugin = new WarpSpeedPlugin();
-        warpSpeedPlugin.withCloudVendorModule(new CloudVendorMockModule(ForWarp.class, Map.of(), OpenTelemetry::noop));
+        warpSpeedPlugin.withCloudVendorModule(new CloudVendorMockModule(ForWarp.class, Map.of()));
         warpSpeedPlugin.withStorageEngineModule(new VaradaStubsStorageEngineModule());
 
         return warpSpeedPlugin;
