@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.io.IOException;
 
-import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
+import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_FACTORY;
 import static io.trino.plugin.hive.HiveTestUtils.getHiveSessionProperties;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assumptions.abort;
@@ -79,7 +79,7 @@ public class TestGalaxyHiveMetastore
     @Override
     protected HiveMetastore createMetastore(File tempDir)
     {
-        return new GalaxyHiveMetastore(testingGalaxyMetastore.getMetastore(), HDFS_ENVIRONMENT, tempDir.getAbsolutePath(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
+        return new GalaxyHiveMetastore(testingGalaxyMetastore.getMetastore(), HDFS_FILE_SYSTEM_FACTORY, tempDir.getAbsolutePath(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
     }
 
     @Test

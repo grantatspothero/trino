@@ -18,7 +18,6 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import io.trino.plugin.deltalake.DeltaLakeMetadata;
 import io.trino.plugin.deltalake.DeltaLakeTableProperties;
 import io.trino.plugin.deltalake.metastore.HiveMetastoreBackedDeltaLakeMetastore;
-import io.trino.plugin.hive.HiveTestUtils;
 import io.trino.plugin.hive.metastore.Column;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hive.metastore.PrincipalPrivileges;
@@ -46,6 +45,7 @@ import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.trino.plugin.base.util.Closables.closeAllSuppress;
+import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_FACTORY;
 import static io.trino.plugin.hive.HiveType.HIVE_INT;
 import static io.trino.plugin.hive.TableType.EXTERNAL_TABLE;
 import static io.trino.plugin.objectstore.S3Assert.s3Path;
@@ -127,7 +127,7 @@ public class TestReadCorruptedTables
 
         HiveMetastore metastore = new GalaxyHiveMetastore(
                 galaxyMetastore.getMetastore(),
-                HiveTestUtils.HDFS_ENVIRONMENT,
+                HDFS_FILE_SYSTEM_FACTORY,
                 DEFAULT_DATA_DIRECTORY,
                 new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
 

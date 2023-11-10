@@ -49,7 +49,6 @@ import java.util.Optional;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.io.MoreFiles.deleteRecursively;
 import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
-import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_FACTORY;
 import static io.trino.plugin.hive.metastore.cache.CachingHiveMetastore.memoizeMetastore;
 import static io.trino.plugin.iceberg.IcebergTableProperties.LOCATION_PROPERTY;
@@ -74,7 +73,7 @@ public class TestTrinoGalaxyCatalog
         TrinoFileSystemFactory fileSystemFactory = HDFS_FILE_SYSTEM_FACTORY;
         GalaxyHiveMetastore metastore = new GalaxyHiveMetastore(
                 galaxyMetastore.getMetastore(),
-                HDFS_ENVIRONMENT,
+                HDFS_FILE_SYSTEM_FACTORY,
                 tempDir.toUri().toString(),
                 new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
         CachingHiveMetastore cachingHiveMetastore = memoizeMetastore(metastore, 1000);

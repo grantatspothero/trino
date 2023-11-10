@@ -15,7 +15,7 @@ package io.trino.plugin.hive.metastore.galaxy;
 
 import com.google.inject.Inject;
 import io.airlift.http.client.HttpClient;
-import io.trino.hdfs.HdfsEnvironment;
+import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hive.metastore.HiveMetastoreFactory;
 import io.trino.spi.security.ConnectorIdentity;
@@ -28,10 +28,10 @@ public class GalaxyHiveMetastoreFactory
     private final HiveMetastore metastore;
 
     @Inject
-    public GalaxyHiveMetastoreFactory(GalaxyHiveMetastoreConfig config, HdfsEnvironment hdfsEnvironment, @ForGalaxyMetastore HttpClient httpClient)
+    public GalaxyHiveMetastoreFactory(GalaxyHiveMetastoreConfig config, TrinoFileSystemFactory fileSystemFactory, @ForGalaxyMetastore HttpClient httpClient)
     {
         // Galaxy metastore does not support impersonation, so just create a single shared instance
-        metastore = new GalaxyHiveMetastore(config, hdfsEnvironment, httpClient);
+        metastore = new GalaxyHiveMetastore(config, fileSystemFactory, httpClient);
     }
 
     @Override

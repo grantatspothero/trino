@@ -29,7 +29,7 @@ import java.io.File;
 import java.util.function.Function;
 
 import static com.google.common.base.Verify.verify;
-import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
+import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_FACTORY;
 import static io.trino.tpch.TpchTable.CUSTOMER;
 import static io.trino.tpch.TpchTable.NATION;
 import static io.trino.tpch.TpchTable.ORDERS;
@@ -50,7 +50,7 @@ public class TestGalaxyHiveConnectorTest
 
         Function<DistributedQueryRunner, HiveMetastore> metastore = queryRunner -> {
             File baseDir = queryRunner.getCoordinator().getBaseDataDir().resolve("hive_data").toFile();
-            return new GalaxyHiveMetastore(testingGalaxyMetastore.getMetastore(), HDFS_ENVIRONMENT, baseDir.getAbsolutePath(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
+            return new GalaxyHiveMetastore(testingGalaxyMetastore.getMetastore(), HDFS_FILE_SYSTEM_FACTORY, baseDir.getAbsolutePath(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
         };
 
         // Use a compression codec that's fast and doesn't cause GCLocker

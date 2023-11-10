@@ -28,8 +28,9 @@ import io.starburst.stargate.metastore.client.Metastore;
 import io.starburst.stargate.metastore.client.MetastoreException;
 import io.starburst.stargate.metastore.client.PartitionName;
 import io.starburst.stargate.metastore.client.RestMetastore;
-import io.trino.hdfs.HdfsContext;
-import io.trino.hdfs.HdfsEnvironment;
+import io.trino.filesystem.Location;
+import io.trino.filesystem.TrinoFileSystem;
+import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.hive.HiveColumnStatisticType;
 import io.trino.plugin.hive.HivePartitionManager;
 import io.trino.plugin.hive.HiveType;
@@ -48,7 +49,6 @@ import io.trino.plugin.hive.metastore.PartitionWithStatistics;
 import io.trino.plugin.hive.metastore.PrincipalPrivileges;
 import io.trino.plugin.hive.metastore.Table;
 import io.trino.plugin.hive.metastore.thrift.ThriftMetastoreUtil;
-import io.trino.plugin.hive.util.HiveWriteUtils;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ColumnNotFoundException;
 import io.trino.spi.connector.ConnectorSession;
@@ -60,8 +60,8 @@ import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.security.ConnectorIdentity;
 import io.trino.spi.security.RoleGrant;
 import io.trino.spi.type.Type;
-import org.apache.hadoop.fs.Path;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -76,6 +76,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Streams.stream;
 import static io.trino.filesystem.Locations.appendPath;
+import static io.trino.plugin.hive.HiveErrorCode.HIVE_FILESYSTEM_ERROR;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_METASTORE_ERROR;
 import static io.trino.plugin.hive.HivePartitionManager.extractPartitionValues;
 import static io.trino.plugin.hive.TableType.MANAGED_TABLE;
@@ -105,26 +106,24 @@ public class GalaxyHiveMetastore
     private static final String DEFAULT_METASTORE_USER = "trino";
 
     private final Metastore metastore;
-    private final HdfsEnvironment hdfsEnvironment;
-    private final HdfsContext hdfsContext;
+    private final TrinoFileSystem fileSystem;
     private final String defaultDirectory;
     private final boolean batchMetadataFetch;
 
-    public GalaxyHiveMetastore(GalaxyHiveMetastoreConfig config, HdfsEnvironment hdfsEnvironment, HttpClient httpClient)
+    public GalaxyHiveMetastore(GalaxyHiveMetastoreConfig config, TrinoFileSystemFactory fileSystemFactory, HttpClient httpClient)
     {
         this(
                 new RestMetastore(config.getMetastoreId(), config.getSharedSecret(), config.getServerUri(), httpClient),
-                hdfsEnvironment,
+                fileSystemFactory,
                 config.getDefaultDataDirectory(),
                 config.isBatchMetadataFetch());
     }
 
-    public GalaxyHiveMetastore(Metastore metastore, HdfsEnvironment hdfsEnvironment, String defaultDirectory, boolean batchMetadataFetch)
+    public GalaxyHiveMetastore(Metastore metastore, TrinoFileSystemFactory fileSystemFactory, String defaultDirectory, boolean batchMetadataFetch)
     {
         this.metastore = requireNonNull(metastore, "metastore is null");
         this.defaultDirectory = requireNonNull(defaultDirectory, "defaultDirectory is null");
-        this.hdfsEnvironment = requireNonNull(hdfsEnvironment, "hdfsEnvironment is null");
-        this.hdfsContext = new HdfsContext(ConnectorIdentity.ofUser(DEFAULT_METASTORE_USER));
+        this.fileSystem = fileSystemFactory.create(ConnectorIdentity.ofUser(DEFAULT_METASTORE_USER));
         this.batchMetadataFetch = batchMetadataFetch;
     }
 
@@ -380,7 +379,15 @@ public class GalaxyHiveMetastore
             throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
         }
 
-        HiveWriteUtils.createDirectory(hdfsContext, hdfsEnvironment, new Path(database.getLocation().get()));
+        if (database.getLocation().isPresent()) {
+            Location location = Location.of(database.getLocation().get());
+            try {
+                fileSystem.createDirectory(location);
+            }
+            catch (IOException e) {
+                throw new TrinoException(HIVE_FILESYSTEM_ERROR, "Failed to create directory: " + location, e);
+            }
+        }
     }
 
     @Override
@@ -459,19 +466,17 @@ public class GalaxyHiveMetastore
             throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
         }
 
-        deleteLocation.ifPresent(location -> deleteDir(location, true));
+        deleteLocation.ifPresent(location -> deleteDir(Location.of(location)));
     }
 
-    private void deleteDir(String location, boolean recursive)
+    private void deleteDir(Location path)
     {
         try {
-            Path path = new Path(location);
-            hdfsEnvironment.getFileSystem(hdfsContext, path)
-                    .delete(path, recursive);
+            fileSystem.deleteDirectory(path);
         }
         catch (Exception e) {
             // don't fail if unable to delete path
-            log.warn(e, "Failed to delete path: " + location);
+            log.warn(e, "Failed to delete path: %s", path);
         }
     }
 
@@ -676,7 +681,7 @@ public class GalaxyHiveMetastore
             throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
         }
 
-        deleteLocation.ifPresent(location -> deleteDir(location, true));
+        deleteLocation.ifPresent(location -> deleteDir(Location.of(location)));
     }
 
     @Override

@@ -42,6 +42,7 @@ import java.util.Map;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.airlift.testing.Closeables.closeAllSuppress;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
+import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_FACTORY;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.plugin.tpch.TpchMetadata.TINY_SCHEMA_NAME;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
@@ -237,7 +238,7 @@ public final class ObjectStoreQueryRunner
     public static void initializeTpchTablesHudi(DistributedQueryRunner queryRunner, List<TpchTable<?>> tables, TestingGalaxyMetastore metastore)
     {
         String dataDir = queryRunner.getCoordinator().getBaseDataDir().resolve("data").toString();
-        HiveMetastore hiveMetastore = new GalaxyHiveMetastore(metastore.getMetastore(), HDFS_ENVIRONMENT, dataDir, new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
+        HiveMetastore hiveMetastore = new GalaxyHiveMetastore(metastore.getMetastore(), HDFS_FILE_SYSTEM_FACTORY, dataDir, new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
         TpchHudiTablesInitializer loader = new TpchHudiTablesInitializer(COPY_ON_WRITE, tables);
         loader.initializeTables(queryRunner, hiveMetastore, TPCH_SCHEMA, dataDir, HDFS_ENVIRONMENT);
         for (TpchTable<?> table : tables) {
