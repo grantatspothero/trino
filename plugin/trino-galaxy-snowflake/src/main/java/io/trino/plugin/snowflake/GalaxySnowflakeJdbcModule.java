@@ -67,7 +67,7 @@ public class GalaxySnowflakeJdbcModule
             LocalRegionConfig localRegionConfig,
             CrossRegionConfig crossRegionConfig)
     {
-        Properties properties = SnowflakeJdbcClientModule.getConnectionProperties(snowflakeConfig);
+        Properties properties = new SnowflakeJdbcClientModule.SnowflakeDefaultConnectionPropertiesProvider(snowflakeConfig).get();
 
         properties.setProperty("socketFactory", GalaxySqlSocketFactory.class.getName());
         RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(localRegionConfig, crossRegionConfig));
