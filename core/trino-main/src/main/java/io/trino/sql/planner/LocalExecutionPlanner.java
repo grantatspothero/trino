@@ -161,7 +161,7 @@ import io.trino.plugin.base.MappedRecordSet;
 import io.trino.spi.Page;
 import io.trino.spi.PageBuilder;
 import io.trino.spi.TrinoException;
-import io.trino.spi.block.SingleRowBlock;
+import io.trino.spi.block.SqlRow;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.PlanSignature;
 import io.trino.spi.connector.CatalogHandle;
@@ -2385,7 +2385,7 @@ public class LocalExecutionPlanner
                     Object result = new ExpressionInterpreter(row, plannerContext, session, types).evaluate();
                     for (int j = 0; j < outputTypes.size(); j++) {
                         // divide row into fields
-                        writeNativeValue(outputTypes.get(j), pageBuilder.getBlockBuilder(j), readNativeValue(outputTypes.get(j), (SingleRowBlock) result, j));
+                        writeNativeValue(outputTypes.get(j), pageBuilder.getBlockBuilder(j), readNativeValue(outputTypes.get(j), (SqlRow) result, j));
                     }
                 }
             }
