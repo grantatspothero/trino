@@ -16,6 +16,7 @@ package io.trino.plugin.hive;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import io.airlift.json.JsonCodec;
 import io.airlift.json.JsonCodecFactory;
 import io.airlift.json.ObjectMapperProvider;
@@ -27,7 +28,6 @@ import io.trino.hdfs.HdfsEnvironment;
 import io.trino.hdfs.authentication.NoHdfsAuthentication;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.base.TypeDeserializer;
-import io.trino.plugin.hive.aws.athena.PartitionProjectionService;
 import io.trino.plugin.hive.fs.FileSystemDirectoryLister;
 import io.trino.plugin.hive.fs.TransactionScopeCachingDirectoryListerFactory;
 import io.trino.plugin.hive.metastore.HiveCacheTableId;
@@ -107,7 +107,6 @@ public class TestHiveCacheIds
                 SqlStandardAccessControlMetadata::new,
                 new FileSystemDirectoryLister(),
                 new TransactionScopeCachingDirectoryListerFactory(config),
-                new PartitionProjectionService(config, ImmutableMap.of(), new TestingTypeManager()),
                 true);
 
         metadata = new HiveCacheMetadata(
@@ -286,7 +285,7 @@ public class TestHiveCacheIds
                 length,
                 10,
                 12,
-                schema,
+                Maps.fromProperties(schema),
                 ImmutableList.of(),
                 ImmutableList.of(),
                 readBucketNumber,

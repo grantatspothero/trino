@@ -27,7 +27,6 @@ import org.testng.annotations.Test;
 
 import java.util.Optional;
 import java.util.OptionalInt;
-import java.util.Properties;
 
 import static io.airlift.slice.Slices.utf8Slice;
 import static io.trino.plugin.hive.HiveColumnHandle.ColumnType.PARTITION_KEY;
@@ -77,7 +76,7 @@ public class TestHivePageSourceProvider
             100,
             10,
             12,
-            new Properties(),
+            ImmutableMap.of(),
             ImmutableList.of(new HivePartitionKey(PARTITION_COLUMN.getName(), PARTITION_NAME)),
             ImmutableList.of(),
             OptionalInt.empty(),
