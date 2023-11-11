@@ -14,6 +14,7 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableMap;
+import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.iceberg.BaseIcebergConnectorTest;
 import io.trino.plugin.iceberg.IcebergConfig;
@@ -179,7 +180,7 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     protected boolean isFileSorted(String path, String sortColumnName)
     {
         checkState(format == IcebergFileFormat.PARQUET, "The logic here is appropriate for PARQUET, got %s", format);
-        return checkParquetFileSorting(path, sortColumnName);
+        return checkParquetFileSorting(fileSystem.newInputFile(Location.of(path)), sortColumnName);
     }
 
     @BeforeMethod(alwaysRun = true)

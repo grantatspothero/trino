@@ -22,6 +22,7 @@ import io.trino.Session;
 import io.trino.execution.QueryInfo;
 import io.trino.plugin.deltalake.transactionlog.DeltaLakeSchemaSupport.ColumnMappingMode;
 import io.trino.plugin.hive.metastore.HiveMetastore;
+import io.trino.plugin.hive.metastore.HiveMetastoreFactory;
 import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.TableDeleteNode;
@@ -42,7 +43,6 @@ import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Path;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +66,6 @@ import static io.trino.plugin.deltalake.DeltaLakeQueryRunner.DELTA_CATALOG;
 import static io.trino.plugin.deltalake.transactionlog.TransactionLogUtil.TRANSACTION_LOG_DIRECTORY;
 import static io.trino.plugin.hive.TableType.EXTERNAL_TABLE;
 import static io.trino.plugin.hive.TableType.MANAGED_TABLE;
-import static io.trino.plugin.hive.metastore.file.TestingFileHiveMetastore.createTestingFileHiveMetastore;
 import static io.trino.plugin.tpch.TpchMetadata.TINY_SCHEMA_NAME;
 import static io.trino.spi.type.TimeZoneKey.getTimeZoneKey;
 import static io.trino.spi.type.VarcharType.VARCHAR;
@@ -95,7 +94,6 @@ public class TestDeltaLakeConnectorTest
 
     protected final String bucketName = "test-bucket-" + randomNameSuffix();
     protected MinioClient minioClient;
-    protected HiveMetastore metastore;
 
     @Override
     protected QueryRunner createQueryRunner()
@@ -111,8 +109,6 @@ public class TestDeltaLakeConnectorTest
                         .setSchema(SCHEMA)
                         .build())
                 .build();
-        Path metastoreDirectory = queryRunner.getCoordinator().getBaseDataDir().resolve("file-metastore");
-        metastore = createTestingFileHiveMetastore(metastoreDirectory.toFile());
         try {
             queryRunner.installPlugin(new TpchPlugin());
             queryRunner.createCatalog("tpch", "tpch");
@@ -120,7 +116,7 @@ public class TestDeltaLakeConnectorTest
             queryRunner.installPlugin(new DeltaLakePlugin());
             queryRunner.createCatalog(DELTA_CATALOG, DeltaLakeConnectorFactory.CONNECTOR_NAME, ImmutableMap.<String, String>builder()
                     .put("hive.metastore", "file")
-                    .put("hive.metastore.catalog.dir", metastoreDirectory.toString())
+                    .put("hive.metastore.catalog.dir", queryRunner.getCoordinator().getBaseDataDir().resolve("file-metastore").toString())
                     .put("hive.metastore.disable-location-checks", "true")
                     .put("hive.s3.aws-access-key", MINIO_ACCESS_KEY)
                     .put("hive.s3.aws-secret-key", MINIO_SECRET_KEY)
@@ -1865,6 +1861,9 @@ public class TestDeltaLakeConnectorTest
     @Test
     public void testCreateOrReplaceTableWithSameLocationForManagedTable()
     {
+        HiveMetastore metastore = TestingDeltaLakeUtils.getConnectorService(getDistributedQueryRunner(), HiveMetastoreFactory.class)
+                .createMetastore(Optional.empty());
+
         try (TestTable table = new TestTable(
                 getQueryRunner()::execute,
                 "create_or_replace_with_same_location_",
@@ -1986,6 +1985,8 @@ public class TestDeltaLakeConnectorTest
 
     protected void assertTableType(String schemaName, String tableName, String tableType)
     {
+        HiveMetastore metastore = TestingDeltaLakeUtils.getConnectorService(getDistributedQueryRunner(), HiveMetastoreFactory.class)
+                .createMetastore(Optional.empty());
         assertThat(metastore.getTable(schemaName, tableName).orElseThrow().getTableType()).isEqualTo(tableType);
     }
 
@@ -3694,6 +3695,10 @@ public class TestDeltaLakeConnectorTest
                 ",(5, BOOLEAN 'true', TINYINT '37')";
         assertUpdate("CREATE TABLE " + tableName + "(id, boolean, tinyint) WITH (location = '" + tableLocation + "') AS " + initialValues, 5);
         assertThat(query("SELECT * FROM " + tableName)).matches(initialValues);
+
+        DistributedQueryRunner queryRunner = (DistributedQueryRunner) getQueryRunner();
+        HiveMetastore metastore = TestingDeltaLakeUtils.getConnectorService(queryRunner, HiveMetastoreFactory.class)
+                .createMetastore(Optional.empty());
 
         metastore.dropTable(SCHEMA, tableName, false);
         for (String file : minioClient.listObjects(bucketName, SCHEMA + "/" + tableName)) {

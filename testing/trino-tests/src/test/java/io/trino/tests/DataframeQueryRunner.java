@@ -73,7 +73,7 @@ public class DataframeQueryRunner
                         .setOwnerType(Optional.of(PrincipalType.ROLE))
                         .build());
 
-        queryRunner.installPlugin(new TestingHivePlugin(metastore));
+        queryRunner.installPlugin(new TestingHivePlugin(baseDir.toPath(), metastore));
         ImmutableMap<String, String> hiveProperties = ImmutableMap.<String, String>builder()
                 .put("hive.allow-drop-table", "true")
                 .buildOrThrow();

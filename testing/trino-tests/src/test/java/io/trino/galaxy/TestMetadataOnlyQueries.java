@@ -144,7 +144,7 @@ public class TestMetadataOnlyQueries
                 .addExtraProperty("metadata.shutdown.exit-delay", "999m")
 
                 .addPlugin(new TpchPlugin())
-                .addPlugin(new TestingHivePlugin(metastore))
+                .addPlugin(new TestingHivePlugin(baseDir.toPath(), metastore))
                 .setNodeCount(1)
                 .setInstallSecurityModule(false)
                 .setUseLiveCatalogs(false)

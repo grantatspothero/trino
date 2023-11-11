@@ -104,6 +104,7 @@ public final class InternalObjectStoreConnectorFactory
             Connector hudiConnector = InternalHudiConnectorFactory.createConnector(
                     catalogName,
                     filteredConfig(config, "HUDI"),
+                    hiveMetastore,
                     context,
                     Optional.of(combine(
                             new ConfigureCachingMetastoreModule(),

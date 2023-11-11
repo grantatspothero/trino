@@ -16,11 +16,14 @@ package io.trino.plugin.iceberg;
 import com.google.common.collect.ImmutableSet;
 import io.trino.Session;
 import io.trino.filesystem.Location;
-import io.trino.filesystem.local.LocalFileSystem;
+import io.trino.filesystem.TrinoFileSystem;
+import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.iceberg.fileio.ForwardingFileIo;
 import io.trino.spi.QueryId;
+import io.trino.spi.security.ConnectorIdentity;
 import io.trino.sql.tree.ExplainType;
 import io.trino.testing.AbstractTestQueryFramework;
+import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.MaterializedRow;
 import org.apache.iceberg.PartitionField;
 import org.apache.iceberg.TableMetadata;
@@ -31,13 +34,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.parallel.Execution;
 
-import java.nio.file.Path;
 import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.trino.SystemSessionProperties.LEGACY_MATERIALIZED_VIEW_GRACE_PERIOD;
+import static io.trino.plugin.iceberg.IcebergTestUtils.getIcebergConnectorInjector;
 import static io.trino.testing.MaterializedResult.DEFAULT_PRECISION;
 import static io.trino.testing.TestingAccessControlManager.TestingPrivilegeType.DROP_MATERIALIZED_VIEW;
 import static io.trino.testing.TestingAccessControlManager.TestingPrivilegeType.REFRESH_MATERIALIZED_VIEW;
@@ -750,8 +753,11 @@ public abstract class BaseIcebergMaterializedViewTest
 
     protected TableMetadata getStorageTableMetadata(String materializedViewName)
     {
+        DistributedQueryRunner queryRunner = (DistributedQueryRunner) getQueryRunner();
+        TrinoFileSystem fileSystemFactory = getIcebergConnectorInjector(queryRunner).getInstance(TrinoFileSystemFactory.class)
+                .create(ConnectorIdentity.ofUser("test"));
         Location metadataLocation = Location.of(getStorageMetadataLocation(materializedViewName));
-        return TableMetadataParser.read(new ForwardingFileIo(new LocalFileSystem(Path.of(metadataLocation.parentDirectory().toString()))), "local:///" + metadataLocation);
+        return TableMetadataParser.read(new ForwardingFileIo(fileSystemFactory), metadataLocation.toString());
     }
 
     private long getLatestSnapshotId(String tableName)

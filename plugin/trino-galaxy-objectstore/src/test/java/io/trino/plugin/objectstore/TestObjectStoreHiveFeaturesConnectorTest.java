@@ -25,28 +25,41 @@ import io.trino.plugin.objectstore.ConnectorFeaturesTestHelper.TestFramework;
 import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.spi.connector.ConnectorTableMetadata;
 import io.trino.testing.DistributedQueryRunner;
+import io.trino.testing.MaterializedResult;
 import io.trino.testing.QueryFailedException;
 import io.trino.testing.QueryRunner;
+import io.trino.testing.sql.TestTable;
+import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.StringJoiner;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.io.MoreFiles.deleteRecursively;
+import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
 import static io.trino.plugin.base.util.Closables.closeAllSuppress;
 import static io.trino.plugin.hive.HiveQueryRunner.copyTpchTablesBucketed;
 import static io.trino.plugin.hive.HiveTableProperties.STORAGE_FORMAT_PROPERTY;
 import static io.trino.plugin.objectstore.ObjectStoreQueryRunner.initializeTpchTables;
 import static io.trino.plugin.tpch.ColumnNaming.SIMPLIFIED;
 import static io.trino.testing.TestingSession.testSessionBuilder;
+import static io.trino.testing.containers.TestContainers.getPathFromClassPathResource;
 import static io.trino.transaction.TransactionBuilder.transaction;
+import static java.lang.String.format;
+import static java.nio.file.Files.createTempDirectory;
+import static java.nio.file.Files.writeString;
 import static java.util.Map.entry;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assumptions.abort;
 
@@ -196,6 +209,66 @@ public class TestObjectStoreHiveFeaturesConnectorTest
         ObjectStoreConnector objectStoreConnector = transaction(getDistributedQueryRunner().getTransactionManager(), getDistributedQueryRunner().getMetadata(), getDistributedQueryRunner().getAccessControl())
                 .execute(getSession(), transactionSession -> (ObjectStoreConnector) getDistributedQueryRunner().getCoordinator().getConnector(transactionSession, catalog));
         return (HiveConnector) objectStoreConnector.getInjector().getInstance(DelegateConnectors.class).hiveConnector();
+    }
+
+    // TODO: fix the query runner instead to run on local filesystem https://github.com/starburstdata/galaxy-trino/issues/1588
+    @Override
+    protected void testCreateExternalTable(
+            String tableName,
+            String fileContents,
+            String expectedResults,
+            List<String> tableProperties)
+            throws Exception
+    {
+        java.nio.file.Path tempDir = createTempDirectory(null);
+        File dataFile = tempDir.resolve("test.txt").toFile();
+        writeString(dataFile.toPath(), fileContents);
+
+        // Table properties
+        StringJoiner propertiesSql = new StringJoiner(",\n   ");
+        propertiesSql.add(format("external_location = '%s'", tempDir.toUri().toASCIIString()));
+        propertiesSql.add("format = 'TEXTFILE'");
+        tableProperties.forEach(propertiesSql::add);
+
+        @Language("SQL") String createTableSql = format("" +
+                        "CREATE TABLE %s.%s.%s (\n" +
+                        "   col1 varchar,\n" +
+                        "   col2 varchar\n" +
+                        ")\n" +
+                        "WITH (\n" +
+                        "   %s" +
+                        (isObjectStore() ? ",\n   type = 'HIVE'\n" : "\n") +
+                        ")",
+                getSession().getCatalog().get(),
+                getSession().getSchema().get(),
+                tableName,
+                propertiesSql);
+
+        assertUpdate(createTableSql);
+        MaterializedResult actual = computeActual(format("SHOW CREATE TABLE %s", tableName));
+        assertThat(actual.getOnlyValue()).isEqualTo(createTableSql);
+
+        assertQuery(format("SELECT col1, col2 from %s", tableName), expectedResults);
+        assertUpdate(format("DROP TABLE %s", tableName));
+        deleteRecursively(tempDir, ALLOW_INSECURE);
+    }
+
+    // TODO: fix the query runner instead to run on local filesystem https://github.com/starburstdata/galaxy-trino/issues/1588
+    @Override
+    @Test
+    public void testSelectWithShortZoneId()
+            throws IOException
+    {
+        String resourceLocation = getPathFromClassPathResource("with_short_zone_id/data");
+
+        try (TestTable testTable = new TestTable(
+                getQueryRunner()::execute,
+                "test_select_with_short_zone_id_",
+                "(id INT, firstName VARCHAR, lastName VARCHAR) WITH (external_location = '%s')".formatted(resourceLocation))) {
+            assertThatThrownBy(() -> query("SELECT * FROM %s".formatted(testTable.getName())))
+                    .hasMessageMatching(".*Failed to read ORC file: .*")
+                    .hasStackTraceContaining("Unknown time-zone ID: EST");
+        }
     }
 
     @Override
