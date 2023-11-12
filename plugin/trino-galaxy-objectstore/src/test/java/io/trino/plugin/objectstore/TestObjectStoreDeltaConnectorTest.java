@@ -436,11 +436,11 @@ public class TestObjectStoreDeltaConnectorTest
 
     @Test
     @Override
-    public void testAddAndDropColumnName(String columnName)
+    public void testAddAndDropColumnName()
     {
         // Override because the connector doesn't support dropping columns with 'none' column mapping
         // There are some tests in in io.trino.tests.product.deltalake.TestDeltaLakeColumnMappingMode
-        assertThatThrownBy(() -> super.testAddAndDropColumnName(columnName))
+        assertThatThrownBy(super::testAddAndDropColumnName)
                 .hasMessageContaining("Cannot drop column from table using column mapping mode NONE");
     }
 
@@ -486,11 +486,11 @@ public class TestObjectStoreDeltaConnectorTest
 
     @Test
     @Override
-    public void testRenameColumnName(String columnName)
+    public void testRenameColumnName()
     {
         // Override because the connector doesn't support renaming columns with 'none' column mapping
         // There are some tests in in io.trino.tests.product.deltalake.TestDeltaLakeColumnMappingMode
-        assertThatThrownBy(() -> super.testRenameColumnName(columnName))
+        assertThatThrownBy(super::testRenameColumnName)
                 .hasMessageContaining("Cannot rename column in table using column mapping mode NONE");
     }
 

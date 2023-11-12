@@ -400,14 +400,14 @@ public class TestObjectStoreIcebergConnectorTest
     }
 
     @Override
-    public void testAddAndDropColumnName(String columnName)
+    protected void testAddAndDropColumnName(String columnName, boolean delimited)
     {
         if (columnName.equals("a.dot")) {
-            assertThatThrownBy(() -> super.testAddAndDropColumnName(columnName))
+            assertThatThrownBy(() -> super.testAddAndDropColumnName(columnName, delimited))
                     .hasMessageContaining("Cannot add column with ambiguous name");
             return;
         }
-        super.testAddAndDropColumnName(columnName);
+        super.testAddAndDropColumnName(columnName, delimited);
     }
 
     @Test

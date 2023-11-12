@@ -52,7 +52,6 @@ import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import org.intellij.lang.annotations.Language;
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.io.File;
@@ -1196,8 +1195,19 @@ public class TestEventListenerBasic
         assertThat(connectorMetrics).containsExactly(TEST_METRICS);
     }
 
-    @Test(dataProvider = "setOperator")
-    public void testOutputColumnsForSetOperations(String setOperator)
+    @Test
+    public void testOutputColumnsForSetOperations()
+            throws Exception
+    {
+        testOutputColumnsForSetOperations("UNION");
+        testOutputColumnsForSetOperations("UNION ALL");
+        testOutputColumnsForSetOperations("INTERSECT");
+        testOutputColumnsForSetOperations("INTERSECT ALL");
+        testOutputColumnsForSetOperations("EXCEPT");
+        testOutputColumnsForSetOperations("EXCEPT ALL");
+    }
+
+    private void testOutputColumnsForSetOperations(String setOperator)
             throws Exception
     {
         assertLineage(
@@ -1240,18 +1250,6 @@ public class TestEventListenerBasic
         assertThat(json)
                 .doesNotContain("\"digest\":")
                 .doesNotContain("\\\"digest\\\":");
-    }
-
-    @DataProvider
-    public Object[][] setOperator()
-    {
-        return new Object[][] {
-                {"UNION"},
-                {"UNION ALL"},
-                {"INTERSECT"},
-                {"INTERSECT ALL"},
-                {"EXCEPT"},
-                {"EXCEPT ALL"}};
     }
 
     @Test

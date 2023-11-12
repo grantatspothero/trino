@@ -18,6 +18,7 @@ import io.trino.testing.QueryRunner;
 import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.regex.Pattern;
 
 import static io.trino.SystemSessionProperties.USE_TABLE_SCAN_NODE_PARTITIONING;
@@ -90,8 +91,7 @@ public class TestHiveWithPlanAlternativesConnectorTest
     }
 
     @Override
-    @Test(dataProvider = "bucketFilteringDataTypesSetupProvider")
-    public void testFilterOnBucketedTable(BucketedFilterTestSetup testSetup)
+    protected void testFilterOnBucketedValue(String typeName, List<String> valueList, String filterValue, long expectedPhysicalInputRows, long expectedResult)
     {
         String tableName = "test_filter_on_bucketed_table_" + randomNameSuffix();
         assertUpdate(
@@ -101,12 +101,12 @@ public class TestHiveWithPlanAlternativesConnectorTest
                     format = 'TEXTFILE',
                     bucketed_by = ARRAY[ 'bucket_key' ],
                     bucket_count = 5)
-                """.formatted(tableName, testSetup.getTypeName()));
+                """.formatted(tableName, typeName));
 
-        String values = testSetup.getValues().stream()
+        String values = valueList.stream()
                 .map(value -> "(" + value + ", rand())")
                 .collect(joining(", "));
-        assertUpdate("INSERT INTO " + tableName + " VALUES " + values, testSetup.getValues().size());
+        assertUpdate("INSERT INTO " + tableName + " VALUES " + values, valueList.size());
 
         // It will only read data from a single bucket instead of all buckets,
         // so physicalInputPositions should be less than number of rows inserted (.
@@ -116,10 +116,10 @@ public class TestHiveWithPlanAlternativesConnectorTest
                 SELECT count(*)
                 FROM %s
                 WHERE bucket_key = %s
-                """.formatted(tableName, testSetup.getFilterValue()),
+                """.formatted(tableName, filterValue),
                 // might be less than expected when using an alternative in which the filter is subsumed
-                queryStats -> assertThat(queryStats.getPhysicalInputPositions()).isLessThanOrEqualTo(testSetup.getExpectedPhysicalInputRows()),
-                result -> assertThat(result.getOnlyValue()).isEqualTo(testSetup.getExpectedResult()));
+                queryStats -> assertThat(queryStats.getPhysicalInputPositions()).isLessThanOrEqualTo(expectedPhysicalInputRows),
+                result -> assertThat(result.getOnlyValue()).isEqualTo(expectedResult));
         assertUpdate("DROP TABLE " + tableName);
     }
 
@@ -160,7 +160,7 @@ public class TestHiveWithPlanAlternativesConnectorTest
 
     @Test
     @Override
-    public void testWriterTasksCountLimitUnpartitioned(boolean scaleWriters, boolean redistributeWrites, int expectedFilesCount)
+    public void testWriterTasksCountLimitUnpartitioned()
     {
         // Not applicable with plan alternatives
     }

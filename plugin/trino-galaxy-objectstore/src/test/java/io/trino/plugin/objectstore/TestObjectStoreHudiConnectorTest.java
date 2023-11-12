@@ -305,7 +305,7 @@ public class TestObjectStoreHudiConnectorTest
     public void testMaterializedViewBaseTableGone()
     {
         skipTestUnless(hasBehavior(SUPPORTS_CREATE_TABLE));
-        super.testMaterializedViewBaseTableGone(initialized);
+        super.testMaterializedViewBaseTableGone();
     }
 
     @Test
