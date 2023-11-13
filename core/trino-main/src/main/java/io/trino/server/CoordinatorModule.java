@@ -91,6 +91,7 @@ import io.trino.memory.TotalReservationOnBlockedNodesTaskLowMemoryKiller;
 import io.trino.metadata.Split;
 import io.trino.operator.ForScheduler;
 import io.trino.operator.OperatorStats;
+import io.trino.server.galaxy.GalaxyCustomerMetricsModule;
 import io.trino.server.galaxy.GalaxyEnabledConfig;
 import io.trino.server.protocol.ExecutingStatementResource;
 import io.trino.server.protocol.QueryInfoUrlFactory;
@@ -337,6 +338,8 @@ public class CoordinatorModule
         configBinder(binder).bindConfig(GalaxyTrinoAutoscalingConfig.class);
         binder.bind(WorkerRecommendationProvider.class).in(Scopes.SINGLETON);
         jaxrsBinder(binder).bind(GalaxyTrinoAutoscalingResource.class);
+
+        install(new GalaxyCustomerMetricsModule());
 
         // cleanup
         binder.bind(ExecutorCleanup.class).asEagerSingleton();
