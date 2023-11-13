@@ -636,8 +636,10 @@ type conversions.
 
 * - Data type
   - Converted to
+* - `BOOLEAN`
+  - `VARCHAR`
 * - `VARCHAR`
-  - `TINYINT`, `SMALLINT`, `INTEGER`, `BIGINT`, `TIMESTAMP`, `DATE`, as well as
+  - `TINYINT`, `SMALLINT`, `INTEGER`, `BIGINT`, `DOUBLE`, `TIMESTAMP`, `DATE`, as well as
     narrowing conversions for `VARCHAR`
 * - `CHAR`
   - narrowing conversions for `CHAR`
@@ -648,7 +650,7 @@ type conversions.
 * - `INTEGER`
   - `VARCHAR`, `BIGINT`, `DECIMAL`
 * - `BIGINT`
-  - `VARCHAR`, `DECIMAL`
+  - `VARCHAR`, `DOUBLE`, `DECIMAL`
 * - `REAL`
   - `DOUBLE`, `DECIMAL`
 * - `DOUBLE`
@@ -657,7 +659,7 @@ type conversions.
   - `DOUBLE`, `REAL`, `VARCHAR`, `TINYINT`, `SMALLINT`, `INTEGER`, `BIGINT`, as
     well as narrowing and widening conversions for `DECIMAL`
 * - `TIMESTAMP`
-  - `VARCHAR`
+  - `VARCHAR`, `DATE`
 :::
 
 Any conversion failure results in null, which is the same behavior
