@@ -14,6 +14,7 @@
 package io.trino.operator.dynamicfiltering;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import io.trino.operator.project.SelectedPositions;
 import io.trino.spi.block.Block;
@@ -43,7 +44,7 @@ import static java.util.function.Function.identity;
 
 public class DynamicPageFilter
 {
-    static final BlockFilter[] NONE_BLOCK_FILTER = new BlockFilter[] {new NoneBlockFilter()};
+    static final List<BlockFilter> NONE_BLOCK_FILTER = ImmutableList.of(new NoneBlockFilter());
 
     private final DynamicFilter dynamicFilter;
     private final Map<ColumnHandle, Integer> channelIndexes;
@@ -51,7 +52,7 @@ public class DynamicPageFilter
     private final IsolatedBlockFilterFactory isolatedBlockFilterFactory;
     private final Executor executor;
 
-    private final AtomicReference<BlockFilter[]> currentFilter = new AtomicReference<>();
+    private final AtomicReference<List<BlockFilter>> currentFilter = new AtomicReference<>();
 
     @Nullable
     @GuardedBy("this")
@@ -88,7 +89,7 @@ public class DynamicPageFilter
         return !isBlocked.isDone();
     }
 
-    public Optional<BlockFilter[]> getBlockFilters()
+    public Optional<List<BlockFilter>> getBlockFilters()
     {
         return Optional.ofNullable(currentFilter.get());
     }
@@ -129,7 +130,7 @@ public class DynamicPageFilter
     }
 
     @VisibleForTesting
-    static Optional<BlockFilter[]> createPageFilter(
+    static Optional<List<BlockFilter>> createPageFilter(
             TupleDomain<ColumnHandle> tupleDomain,
             Map<ColumnHandle, Integer> channelIndexes,
             TypeOperators typeOperators,
@@ -147,15 +148,13 @@ public class DynamicPageFilter
             return Optional.empty();
         }
 
-        BlockFilter[] channelBlockFilters = new BlockFilter[columnFilters.size()];
-        int index = 0;
+        ImmutableList.Builder<BlockFilter> channelBlockFilters = ImmutableList.builderWithExpectedSize(columnFilters.size());
         for (Map.Entry<ColumnHandle, TupleDomainFilter> entry : columnFilters.entrySet()) {
             TupleDomainFilter filter = entry.getValue();
             int channelIndex = requireNonNull(channelIndexes.get(entry.getKey()));
-            channelBlockFilters[index] = isolatedBlockFilterFactory.createIsolatedBlockFilter(filter, channelIndex);
-            index++;
+            channelBlockFilters.add(isolatedBlockFilterFactory.createIsolatedBlockFilter(filter, channelIndex));
         }
-        return Optional.of(channelBlockFilters);
+        return Optional.of(channelBlockFilters.build());
     }
 
     private static class NoneBlockFilter

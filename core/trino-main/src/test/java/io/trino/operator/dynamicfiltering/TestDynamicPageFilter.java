@@ -81,7 +81,7 @@ public class TestDynamicPageFilter
     @Test
     public void testNonePageFilter()
     {
-        Optional<DynamicPageFilter.BlockFilter[]> blockFilters = createBlockFilters(TupleDomain.none(), ImmutableMap.of());
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFilters = createBlockFilters(TupleDomain.none(), ImmutableMap.of());
         assertThat(blockFilters).isEqualTo(Optional.of(DynamicPageFilter.NONE_BLOCK_FILTER));
         // NONE_BLOCK_FILTER case is handled outside of DynamicRowFilteringPageSource#filterPage
         // It is verified in TestDynamicRowFilteringPageSource#testNoneDynamicFilter
@@ -91,7 +91,7 @@ public class TestDynamicPageFilter
     public void testUnsupportedTypePageFilter()
     {
         ColumnHandle column = new TestingColumnHandle("column");
-        Optional<DynamicPageFilter.BlockFilter[]> blockFilters = createBlockFilters(
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFilters = createBlockFilters(
                 TupleDomain.withColumnDomains(ImmutableMap.of(column, singleValue(VARBINARY, utf8Slice("abc")))),
                 ImmutableMap.of(column, 0));
         assertThat(blockFilters).isEmpty();
@@ -108,7 +108,7 @@ public class TestDynamicPageFilter
     public void testSliceBlockFilter()
     {
         ColumnHandle column = new TestingColumnHandle("column");
-        Optional<DynamicPageFilter.BlockFilter[]> blockFilters = createBlockFilters(
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFilters = createBlockFilters(
                 TupleDomain.withColumnDomains(ImmutableMap.of(column, onlyNull(VARCHAR))),
                 ImmutableMap.of(column, 0));
         assertThat(blockFilters).isPresent();
@@ -138,7 +138,7 @@ public class TestDynamicPageFilter
     public void testLongBlockFilter()
     {
         ColumnHandle column = new TestingColumnHandle("column");
-        Optional<DynamicPageFilter.BlockFilter[]> blockFilters = createBlockFilters(
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFilters = createBlockFilters(
                 TupleDomain.withColumnDomains(ImmutableMap.of(column, onlyNull(INTEGER))),
                 ImmutableMap.of(column, 0));
         assertThat(blockFilters).isPresent();
@@ -174,7 +174,7 @@ public class TestDynamicPageFilter
     public void testSelectivePageFilter()
     {
         ColumnHandle columnB = new TestingColumnHandle("columnB");
-        Optional<DynamicPageFilter.BlockFilter[]> blockFilters = createBlockFilters(
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFilters = createBlockFilters(
                 TupleDomain.withColumnDomains(
                         ImmutableMap.of(columnB, multipleValues(BIGINT, ImmutableList.of(-10L, 5L, 15L, 135L, 185L, 250L)))),
                 ImmutableMap.of(columnB, 1));
@@ -196,7 +196,7 @@ public class TestDynamicPageFilter
     {
         ColumnHandle columnB = new TestingColumnHandle("columnB");
         List<Long> filterValues = LongStream.range(-5, 205).boxed().collect(toImmutableList());
-        Optional<DynamicPageFilter.BlockFilter[]> blockFilters = createBlockFilters(
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFilters = createBlockFilters(
                 TupleDomain.withColumnDomains(
                         ImmutableMap.of(columnB, multipleValues(BIGINT, filterValues))),
                 ImmutableMap.of(columnB, 1));
@@ -221,7 +221,7 @@ public class TestDynamicPageFilter
     public void testPageFilterWithNullsAllowed()
     {
         ColumnHandle column = new TestingColumnHandle("column");
-        Optional<DynamicPageFilter.BlockFilter[]> blockFilters = createBlockFilters(
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFilters = createBlockFilters(
                 TupleDomain.withColumnDomains(
                         ImmutableMap.of(
                                 column,
@@ -250,7 +250,7 @@ public class TestDynamicPageFilter
     {
         ColumnHandle columnA = new TestingColumnHandle("columnA");
         ColumnHandle columnB = new TestingColumnHandle("columnB");
-        Optional<DynamicPageFilter.BlockFilter[]> blockFilters = createBlockFilters(
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFilters = createBlockFilters(
                 TupleDomain.withColumnDomains(
                         ImmutableMap.of(
                                 columnA, Domain.create(ValueSet.of(BIGINT, 1L, 2L, 3L), true),
@@ -272,7 +272,7 @@ public class TestDynamicPageFilter
     public void testPageFilterWithRealNaN()
     {
         ColumnHandle column = new TestingColumnHandle("column");
-        Optional<DynamicPageFilter.BlockFilter[]> blockFilters = createBlockFilters(
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFilters = createBlockFilters(
                 TupleDomain.withColumnDomains(
                         ImmutableMap.of(
                                 column,
@@ -292,7 +292,7 @@ public class TestDynamicPageFilter
     public void testBooleanPageFilter()
     {
         ColumnHandle column = new TestingColumnHandle("column");
-        Optional<DynamicPageFilter.BlockFilter[]> blockFilters = createBlockFilters(
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFilters = createBlockFilters(
                 TupleDomain.withColumnDomains(
                         ImmutableMap.of(column, singleValue(BOOLEAN, false))),
                 ImmutableMap.of(column, 0));
@@ -303,7 +303,7 @@ public class TestDynamicPageFilter
     public void testRleBlock()
     {
         ColumnHandle column = new TestingColumnHandle("column");
-        Optional<DynamicPageFilter.BlockFilter[]> blockFilters = createBlockFilters(
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFilters = createBlockFilters(
                 TupleDomain.withColumnDomains(
                         ImmutableMap.of(column, multipleValues(BIGINT, ImmutableList.of(-10L, 5L, 15L, 135L)))),
                 ImmutableMap.of(column, 0));
@@ -323,7 +323,7 @@ public class TestDynamicPageFilter
     public void testRleBlockWithNullsAllowed()
     {
         ColumnHandle column = new TestingColumnHandle("column");
-        Optional<DynamicPageFilter.BlockFilter[]> blockFilters = createBlockFilters(
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFilters = createBlockFilters(
                 TupleDomain.withColumnDomains(
                         ImmutableMap.of(column, Domain.create(ValueSet.of(BIGINT, 1L, 2L, 3L), true))),
                 ImmutableMap.of(column, 0));
@@ -344,7 +344,7 @@ public class TestDynamicPageFilter
     {
         ColumnHandle columnA = new TestingColumnHandle("columnA");
         ColumnHandle columnB = new TestingColumnHandle("columnB");
-        Optional<DynamicPageFilter.BlockFilter[]> blockFilters = createBlockFilters(
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFilters = createBlockFilters(
                 TupleDomain.withColumnDomains(ImmutableMap.of(
                         columnA, multipleValues(BIGINT, ImmutableList.of(-10L, 5L, 15L, 135L)),
                         columnB, multipleValues(BIGINT, ImmutableList.of(5L, 15L)))),
@@ -369,7 +369,7 @@ public class TestDynamicPageFilter
     {
         ColumnHandle columnA = new TestingColumnHandle("columnA");
         ColumnHandle columnB = new TestingColumnHandle("columnB");
-        Optional<DynamicPageFilter.BlockFilter[]> blockFilters = createBlockFilters(
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFilters = createBlockFilters(
                 TupleDomain.withColumnDomains(ImmutableMap.of(
                         columnA, multipleValues(BIGINT, ImmutableList.of(5L, 10L, 13L, 15L)),
                         columnB, multipleValues(BIGINT, ImmutableList.of(5L, 15L)))),
@@ -393,12 +393,12 @@ public class TestDynamicPageFilter
     public void testDictionaryBlock()
     {
         ColumnHandle column = new TestingColumnHandle("column");
-        Optional<DynamicPageFilter.BlockFilter[]> blockFiltersOptional = createBlockFilters(
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFiltersOptional = createBlockFilters(
                 TupleDomain.withColumnDomains(
                         ImmutableMap.of(column, multipleValues(BIGINT, ImmutableList.of(-10L, 5L, 12L, 135L)))),
                 ImmutableMap.of(column, 0));
         assertThat(blockFiltersOptional).isPresent();
-        DynamicPageFilter.BlockFilter[] blockFilters = blockFiltersOptional.get();
+        DynamicPageFilter.BlockFilter[] blockFilters = blockFiltersOptional.get().toArray(new DynamicPageFilter.BlockFilter[0]);
 
         DictionaryAwarePageFilter filter = new DictionaryAwarePageFilter(1);
         // DictionaryBlock will contain values from 0-9 repeated 6 times
@@ -437,12 +437,12 @@ public class TestDynamicPageFilter
     public void testDictionaryBlockWithNulls()
     {
         ColumnHandle column = new TestingColumnHandle("column");
-        Optional<DynamicPageFilter.BlockFilter[]> blockFiltersOptional = createBlockFilters(
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFiltersOptional = createBlockFilters(
                 TupleDomain.withColumnDomains(
                         ImmutableMap.of(column, multipleValues(VARCHAR, ImmutableList.of("bc", "cd")))),
                 ImmutableMap.of(column, 0));
         assertThat(blockFiltersOptional).isPresent();
-        DynamicPageFilter.BlockFilter[] blockFilters = blockFiltersOptional.get();
+        DynamicPageFilter.BlockFilter[] blockFilters = blockFiltersOptional.get().toArray(new DynamicPageFilter.BlockFilter[0]);
 
         DictionaryAwarePageFilter filter = new DictionaryAwarePageFilter(1);
         // DictionaryBlock will contain below values repeated 10 times
@@ -472,7 +472,7 @@ public class TestDynamicPageFilter
                         ValueSet.of(VARCHAR, utf8Slice("bc"), utf8Slice("cd")),
                         true))),
                 ImmutableMap.of(column, 0));
-        blockFilters = blockFiltersOptional.orElseThrow();
+        blockFilters = blockFiltersOptional.orElseThrow().toArray(new DynamicPageFilter.BlockFilter[0]);
         verifySelectedPositions(
                 filter.filterPage(new Page(dictionaryBlock), blockFilters, blockFilters.length).getPositions(),
                 new int[] {1, 2, 5, 6, 9, 10, 13, 14, 17, 18});
@@ -486,12 +486,12 @@ public class TestDynamicPageFilter
     public void testDictionaryProcessingEnableDisable()
     {
         ColumnHandle column = new TestingColumnHandle("column");
-        Optional<DynamicPageFilter.BlockFilter[]> blockFiltersOptional = createBlockFilters(
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFiltersOptional = createBlockFilters(
                 TupleDomain.withColumnDomains(
                         ImmutableMap.of(column, multipleValues(BIGINT, ImmutableList.of(-10L, 4L, 12L)))),
                 ImmutableMap.of(column, 0));
         assertThat(blockFiltersOptional).isPresent();
-        DynamicPageFilter.BlockFilter blockFilter = blockFiltersOptional.get()[0];
+        DynamicPageFilter.BlockFilter blockFilter = blockFiltersOptional.get().toArray(new DynamicPageFilter.BlockFilter[0])[0];
 
         SelectedPositions allPositions = positionsRange(0, 10);
         DictionaryAwareBlockFilter dictionaryAwareFilter = new DictionaryAwareBlockFilter();
@@ -550,14 +550,14 @@ public class TestDynamicPageFilter
     {
         ColumnHandle columnA = new TestingColumnHandle("columnA");
         ColumnHandle columnB = new TestingColumnHandle("columnB");
-        Optional<DynamicPageFilter.BlockFilter[]> blockFiltersOptional = createBlockFilters(
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFiltersOptional = createBlockFilters(
                 TupleDomain.withColumnDomains(
                         ImmutableMap.of(
                                 columnA, multipleValues(BIGINT, LongStream.range(3, 8).boxed().collect(toImmutableList())),
                                 columnB, singleValue(BIGINT, 5L))),
                 ImmutableMap.of(columnA, 0, columnB, 1));
         assertThat(blockFiltersOptional).isPresent();
-        DynamicPageFilter.BlockFilter[] blockFilters = blockFiltersOptional.get();
+        DynamicPageFilter.BlockFilter[] blockFilters = blockFiltersOptional.get().toArray(new DynamicPageFilter.BlockFilter[0]);
 
         DictionaryAwarePageFilter filter = new DictionaryAwarePageFilter(2);
         Page page = new Page(
@@ -581,7 +581,7 @@ public class TestDynamicPageFilter
         ColumnHandle columnA = new TestingColumnHandle("columnA");
         ColumnHandle columnB = new TestingColumnHandle("columnB");
         ColumnHandle columnC = new TestingColumnHandle("columnC");
-        Optional<DynamicPageFilter.BlockFilter[]> blockFilters = createBlockFilters(
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFilters = createBlockFilters(
                 TupleDomain.withColumnDomains(
                         ImmutableMap.of(
                                 columnA, multipleValues(BIGINT, ImmutableList.of(-10L, 5L, 15L, 35L, 50L, 85L, 95L, 105L)),
@@ -605,7 +605,7 @@ public class TestDynamicPageFilter
         ColumnHandle columnA = new TestingColumnHandle("columnA");
         ColumnHandle columnB = new TestingColumnHandle("columnB");
         ColumnHandle columnC = new TestingColumnHandle("columnC");
-        Optional<DynamicPageFilter.BlockFilter[]> blockFilters = createBlockFilters(
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFilters = createBlockFilters(
                 TupleDomain.withColumnDomains(
                         ImmutableMap.of(
                                 columnA, multipleValues(BIGINT, ImmutableList.of(-10L, 5L, 15L, 35L, 50L, 85L, 95L, 105L)),
@@ -642,7 +642,7 @@ public class TestDynamicPageFilter
 
         dynamicFilter.update(TupleDomain.withColumnDomains(
                 ImmutableMap.of(columnB, multipleValues(BIGINT, ImmutableList.of(131L, 142L)))));
-        Optional<DynamicPageFilter.BlockFilter[]> blockFilters = pageFilter.getBlockFilters();
+        Optional<List<DynamicPageFilter.BlockFilter>> blockFilters = pageFilter.getBlockFilters();
         assertThat(blockFilters).isPresent();
         Page page = new Page(
                 createLongSequenceBlock(0, 101),
@@ -663,14 +663,20 @@ public class TestDynamicPageFilter
         verifySelectedPositions(filterPage(page, blockFilters.get()).getPositions(), new int[] {31});
 
         dynamicFilter.update(TupleDomain.all());
-        assertThat(pageFilter.getBlockFilters()).isEqualTo(blockFilters);
+        assertThat(pageFilter.getBlockFilters().get()).isEqualTo(blockFilters.get());
     }
 
-    private static Optional<DynamicPageFilter.BlockFilter[]> createBlockFilters(
+    private static Optional<List<DynamicPageFilter.BlockFilter>> createBlockFilters(
             TupleDomain<ColumnHandle> tupleDomain,
             Map<ColumnHandle, Integer> channels)
     {
         return DynamicPageFilter.createPageFilter(tupleDomain, channels, TYPE_OPERATORS, BLOCK_FILTER_FACTORY);
+    }
+
+    private static SelectedPositionsWithStats filterPage(Page page, List<DynamicPageFilter.BlockFilter> blockFilters)
+    {
+        DynamicPageFilter.BlockFilter[] effectiveBlockFilters = blockFilters.toArray(new DynamicPageFilter.BlockFilter[0]);
+        return filterPage(page, effectiveBlockFilters);
     }
 
     private static SelectedPositionsWithStats filterPage(Page page, DynamicPageFilter.BlockFilter[] blockFilters)
