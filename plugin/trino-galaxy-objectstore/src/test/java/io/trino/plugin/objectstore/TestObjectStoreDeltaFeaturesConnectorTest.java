@@ -32,7 +32,6 @@ import io.trino.testing.QueryRunner;
 import io.trino.testing.minio.MinioClient;
 import io.trino.testing.sql.TestTable;
 import org.junit.jupiter.api.BeforeAll;
-import org.testng.annotations.AfterClass;
 import org.junit.jupiter.api.Test;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -122,14 +121,6 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     public void preventDuplicatedTestCoverage(Method testMethod)
     {
         HELPER.preventDuplicatedTestCoverage(testMethod);
-    }
-
-    @Override
-    @AfterClass(alwaysRun = true)
-    public void tearDown()
-    {
-        galaxyMetastore = null; // closed by closeAfterClass
-        super.tearDown();
     }
 
     @BeforeClass

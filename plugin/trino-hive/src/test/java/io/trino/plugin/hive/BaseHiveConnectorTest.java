@@ -73,8 +73,7 @@ import io.trino.testing.sql.TrinoSqlExecutor;
 import io.trino.type.TypeDeserializer;
 import org.assertj.core.api.AbstractLongAssert;
 import org.intellij.lang.annotations.Language;
-import org.testng.SkipException;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -201,6 +200,7 @@ import static java.util.stream.Collectors.toSet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.data.Offset.offset;
+import static org.junit.jupiter.api.Assumptions.abort;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
@@ -292,6 +292,7 @@ public abstract class BaseHiveConnectorTest
                 .execute(getSession(), transactionSession -> (HiveConnector) getDistributedQueryRunner().getCoordinator().getConnector(transactionSession, catalog));
     }
 
+    @Test
     @Override
     public void verifySupportsUpdateDeclaration()
     {
@@ -300,6 +301,7 @@ public abstract class BaseHiveConnectorTest
         }
     }
 
+    @Test
     @Override
     public void verifySupportsRowLevelUpdateDeclaration()
     {
@@ -321,6 +323,7 @@ public abstract class BaseHiveConnectorTest
                 .containsPattern("io.trino.spi.TrinoException: Cannot read from a table tpch.test_insert_select_\\w+ that was modified within transaction, you need to commit the transaction first");
     }
 
+    @Test
     @Override
     public void testDelete()
     {
@@ -328,6 +331,7 @@ public abstract class BaseHiveConnectorTest
                 .hasStackTraceContaining(MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE);
     }
 
+    @Test
     @Override
     public void testDeleteWithLike()
     {
@@ -335,6 +339,7 @@ public abstract class BaseHiveConnectorTest
                 .hasStackTraceContaining(MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE);
     }
 
+    @Test
     @Override
     public void testDeleteWithComplexPredicate()
     {
@@ -342,6 +347,7 @@ public abstract class BaseHiveConnectorTest
                 .hasStackTraceContaining(MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE);
     }
 
+    @Test
     @Override
     public void testDeleteWithSemiJoin()
     {
@@ -349,6 +355,7 @@ public abstract class BaseHiveConnectorTest
                 .hasStackTraceContaining(MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE);
     }
 
+    @Test
     @Override
     public void testDeleteWithSubquery()
     {
@@ -356,6 +363,7 @@ public abstract class BaseHiveConnectorTest
                 .hasStackTraceContaining(MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE);
     }
 
+    @Test
     @Override
     public void testUpdate()
     {
@@ -363,6 +371,7 @@ public abstract class BaseHiveConnectorTest
                 .hasMessage(MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE);
     }
 
+    @Test
     @Override
     public void testRowLevelUpdate()
     {
@@ -370,6 +379,7 @@ public abstract class BaseHiveConnectorTest
                 .hasMessage(MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE);
     }
 
+    @Test
     @Override
     public void testUpdateRowConcurrently()
             throws Exception
@@ -381,6 +391,7 @@ public abstract class BaseHiveConnectorTest
                 .hasMessage(MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE);
     }
 
+    @Test
     @Override
     public void testUpdateWithPredicates()
     {
@@ -388,6 +399,7 @@ public abstract class BaseHiveConnectorTest
                 .hasMessage(MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE);
     }
 
+    @Test
     @Override
     public void testUpdateRowType()
     {
@@ -395,6 +407,7 @@ public abstract class BaseHiveConnectorTest
                 .hasMessage(MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE);
     }
 
+    @Test
     @Override
     public void testUpdateAllValues()
     {
@@ -402,6 +415,7 @@ public abstract class BaseHiveConnectorTest
                 .hasMessage(MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE);
     }
 
+    @Test
     @Override
     public void testExplainAnalyzeWithDeleteWithSubquery()
     {
@@ -409,6 +423,7 @@ public abstract class BaseHiveConnectorTest
                 .hasStackTraceContaining(MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE);
     }
 
+    @Test
     @Override
     public void testDeleteWithVarcharPredicate()
     {
@@ -416,6 +431,7 @@ public abstract class BaseHiveConnectorTest
                 .hasStackTraceContaining(MODIFYING_NON_TRANSACTIONAL_TABLE_MESSAGE);
     }
 
+    @Test
     @Override
     public void testRowLevelDelete()
     {
@@ -760,6 +776,7 @@ public abstract class BaseHiveConnectorTest
         assertUpdate(admin, "DROP ROLE authorized_users IN hive");
     }
 
+    @Test
     @Override
     public void testCreateSchemaWithNonLowercaseOwnerName()
     {
@@ -2173,10 +2190,14 @@ public abstract class BaseHiveConnectorTest
                 .hasMessageMatching("Unsupported type .* for partition: a");
     }
 
-    @Test(expectedExceptions = RuntimeException.class, expectedExceptionsMessageRegExp = "Unsupported Hive type: varchar\\(65536\\)\\. Supported VARCHAR types: VARCHAR\\(<=65535\\), VARCHAR\\.")
+    @Test
     public void testCreateTableNonSupportedVarcharColumn()
     {
-        assertUpdate("CREATE TABLE test_create_table_non_supported_varchar_column (apple varchar(65536))");
+        assertThatThrownBy(() -> {
+            assertUpdate("CREATE TABLE test_create_table_non_supported_varchar_column (apple varchar(65536))");
+        })
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageMatching("Unsupported Hive type: varchar\\(65536\\)\\. Supported VARCHAR types: VARCHAR\\(<=65535\\), VARCHAR\\.");
     }
 
     @Test
@@ -3469,7 +3490,7 @@ public abstract class BaseHiveConnectorTest
     @Override
     public void testInsertHighestUnicodeCharacter()
     {
-        throw new SkipException("Covered by testInsertUnicode");
+        abort("Covered by testInsertUnicode");
     }
 
     @Test
@@ -5190,6 +5211,7 @@ public abstract class BaseHiveConnectorTest
         assertUpdate("DROP TABLE test_drop_column");
     }
 
+    @Test
     @Override
     public void testDropAndAddColumnWithSameName()
     {
@@ -9359,7 +9381,7 @@ public abstract class BaseHiveConnectorTest
     @Override
     protected TestTable createTableWithDefaultColumns()
     {
-        throw new SkipException("Hive connector does not support column default values");
+        return abort("Hive connector does not support column default values");
     }
 
     @Override

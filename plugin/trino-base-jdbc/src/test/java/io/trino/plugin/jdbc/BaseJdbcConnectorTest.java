@@ -46,9 +46,10 @@ import io.trino.testing.sql.SqlExecutor;
 import io.trino.testing.sql.TestTable;
 import io.trino.testing.sql.TestView;
 import org.intellij.lang.annotations.Language;
-import org.testng.SkipException;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -126,7 +127,10 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Fail.fail;
+import static org.junit.jupiter.api.Assumptions.abort;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
+@TestInstance(PER_CLASS)
 public abstract class BaseJdbcConnectorTest
         extends BaseConnectorTest
 {
@@ -134,7 +138,7 @@ public abstract class BaseJdbcConnectorTest
 
     protected abstract SqlExecutor onRemoteDatabase();
 
-    @AfterClass(alwaysRun = true)
+    @AfterAll
     public void afterClass()
     {
         executor.shutdownNow();
@@ -177,7 +181,7 @@ public abstract class BaseJdbcConnectorTest
     protected TestTable createTableWithUnsupportedColumn()
     {
         // TODO throw new UnsupportedOperationException();
-        throw new SkipException("Not implemented");
+        return abort("Not implemented");
     }
 
     // TODO move common tests from connector-specific classes here
@@ -611,7 +615,7 @@ public abstract class BaseJdbcConnectorTest
     public void testCountDistinctWithStringTypes()
     {
         if (!(hasBehavior(SUPPORTS_CREATE_TABLE) && hasBehavior(SUPPORTS_INSERT))) {
-            throw new SkipException("Unable to CREATE TABLE to test count distinct");
+            abort("Unable to CREATE TABLE to test count distinct");
         }
 
         List<String> rows = Stream.of("a", "b", "A", "B", " a ", "a", "b", " b ", "ą")
@@ -702,7 +706,7 @@ public abstract class BaseJdbcConnectorTest
         String schemaName = getSession().getSchema().orElseThrow();
         if (!hasBehavior(SUPPORTS_AGGREGATION_PUSHDOWN_STDDEV)) {
             if (!hasBehavior(SUPPORTS_CREATE_TABLE)) {
-                throw new SkipException("Unable to CREATE TABLE to test aggregation pushdown");
+                abort("Unable to CREATE TABLE to test aggregation pushdown");
             }
 
             try (TestTable testTable = createTableWithDoubleAndRealColumns(schemaName + ".test_stddev_pushdown", ImmutableList.of())) {
@@ -753,7 +757,7 @@ public abstract class BaseJdbcConnectorTest
         String schemaName = getSession().getSchema().orElseThrow();
         if (!hasBehavior(SUPPORTS_AGGREGATION_PUSHDOWN_VARIANCE)) {
             if (!hasBehavior(SUPPORTS_CREATE_TABLE)) {
-                throw new SkipException("Unable to CREATE TABLE to test aggregation pushdown");
+                abort("Unable to CREATE TABLE to test aggregation pushdown");
             }
 
             try (TestTable testTable = createTableWithDoubleAndRealColumns(schemaName + ".test_var_pushdown", ImmutableList.of())) {
@@ -797,7 +801,7 @@ public abstract class BaseJdbcConnectorTest
         String schemaName = getSession().getSchema().orElseThrow();
         if (!hasBehavior(SUPPORTS_AGGREGATION_PUSHDOWN_COVARIANCE)) {
             if (!hasBehavior(SUPPORTS_CREATE_TABLE)) {
-                throw new SkipException("Unable to CREATE TABLE to test aggregation pushdown");
+                abort("Unable to CREATE TABLE to test aggregation pushdown");
             }
 
             try (TestTable testTable = createTableWithDoubleAndRealColumns(schemaName + ".test_covar_pushdown", ImmutableList.of())) {
@@ -834,7 +838,7 @@ public abstract class BaseJdbcConnectorTest
         String schemaName = getSession().getSchema().orElseThrow();
         if (!hasBehavior(SUPPORTS_AGGREGATION_PUSHDOWN_CORRELATION)) {
             if (!hasBehavior(SUPPORTS_CREATE_TABLE)) {
-                throw new SkipException("Unable to CREATE TABLE to test aggregation pushdown");
+                abort("Unable to CREATE TABLE to test aggregation pushdown");
             }
 
             try (TestTable testTable = createTableWithDoubleAndRealColumns(schemaName + ".test_corr_pushdown", ImmutableList.of())) {
@@ -867,7 +871,7 @@ public abstract class BaseJdbcConnectorTest
         String schemaName = getSession().getSchema().orElseThrow();
         if (!hasBehavior(SUPPORTS_AGGREGATION_PUSHDOWN_REGRESSION)) {
             if (!hasBehavior(SUPPORTS_CREATE_TABLE)) {
-                throw new SkipException("Unable to CREATE TABLE to test aggregation pushdown");
+                abort("Unable to CREATE TABLE to test aggregation pushdown");
             }
 
             try (TestTable testTable = createTableWithDoubleAndRealColumns(schemaName + ".test_regr_pushdown", ImmutableList.of())) {
@@ -1713,12 +1717,13 @@ public abstract class BaseJdbcConnectorTest
                 .matches("VALUES ('customer', NULL), ('nation', NULL)");
     }
 
-    @Test(timeOut = 60_000)
+    @Test
+    @Timeout(60)
     public void testCancellation()
             throws Exception
     {
         if (!hasBehavior(SUPPORTS_CANCELLATION)) {
-            throw new SkipException("Cancellation is not supported by given connector");
+            abort("Cancellation is not supported by given connector");
         }
 
         try (TestView sleepingView = createSleepingView(new Duration(1, MINUTES))) {
@@ -1770,6 +1775,7 @@ public abstract class BaseJdbcConnectorTest
         throw new UnsupportedOperationException();
     }
 
+    @Test
     @Override
     public void testUpdateNotNullColumn()
     {
@@ -1796,6 +1802,7 @@ public abstract class BaseJdbcConnectorTest
         }
     }
 
+    @Test
     @Override
     public void testUpdateRowType()
     {
@@ -1813,6 +1820,7 @@ public abstract class BaseJdbcConnectorTest
         }
     }
 
+    @Test
     @Override
     public void testUpdateRowConcurrently()
             throws Exception
@@ -1829,6 +1837,7 @@ public abstract class BaseJdbcConnectorTest
         }
     }
 
+    @Test
     @Override
     public void testUpdateAllValues()
     {
@@ -1844,6 +1853,7 @@ public abstract class BaseJdbcConnectorTest
         }
     }
 
+    @Test
     @Override
     public void testUpdateWithPredicates()
     {
@@ -2002,6 +2012,7 @@ public abstract class BaseJdbcConnectorTest
         }
     }
 
+    @Test
     @Override
     public void testDeleteWithComplexPredicate()
     {
@@ -2014,6 +2025,7 @@ public abstract class BaseJdbcConnectorTest
                 .hasStackTraceContaining("TrinoException: " + MODIFYING_ROWS_MESSAGE);
     }
 
+    @Test
     @Override
     public void testDeleteWithSubquery()
     {
@@ -2026,6 +2038,7 @@ public abstract class BaseJdbcConnectorTest
                 .hasStackTraceContaining("TrinoException: " + MODIFYING_ROWS_MESSAGE);
     }
 
+    @Test
     @Override
     public void testExplainAnalyzeWithDeleteWithSubquery()
     {
@@ -2038,6 +2051,7 @@ public abstract class BaseJdbcConnectorTest
                 .hasStackTraceContaining("TrinoException: " + MODIFYING_ROWS_MESSAGE);
     }
 
+    @Test
     @Override
     public void testDeleteWithSemiJoin()
     {
@@ -2050,17 +2064,18 @@ public abstract class BaseJdbcConnectorTest
                 .hasStackTraceContaining("TrinoException: " + MODIFYING_ROWS_MESSAGE);
     }
 
+    @Test
     @Override
     public void testDeleteWithVarcharPredicate()
     {
-        throw new SkipException("This is implemented by testDeleteWithVarcharEqualityPredicate");
+        abort("This is implemented by testDeleteWithVarcharEqualityPredicate");
     }
 
     @Test
     public void testInsertWithoutTemporaryTable()
     {
         if (!hasBehavior(SUPPORTS_CREATE_TABLE)) {
-            throw new SkipException("CREATE TABLE is required for testing non-transactional write support");
+            abort("CREATE TABLE is required for testing non-transactional write support");
         }
         Session session = Session.builder(getSession())
                 .setCatalogSessionProperty(getSession().getCatalog().orElseThrow(), "non_transactional_insert", "false")
@@ -2090,7 +2105,7 @@ public abstract class BaseJdbcConnectorTest
     private void testWriteBatchSizeSessionProperty(int batchSize, int numberOfRows)
     {
         if (!hasBehavior(SUPPORTS_CREATE_TABLE)) {
-            throw new SkipException("CREATE TABLE is required for write_batch_size test but is not supported");
+            abort("CREATE TABLE is required for write_batch_size test but is not supported");
         }
         Session session = Session.builder(getSession())
                 .setCatalogSessionProperty(getSession().getCatalog().orElseThrow(), "write_batch_size", Integer.toString(batchSize))
@@ -2119,7 +2134,7 @@ public abstract class BaseJdbcConnectorTest
     private void testWriteTaskParallelismSessionProperty(int parallelism, int numberOfRows)
     {
         if (!hasBehavior(SUPPORTS_CREATE_TABLE)) {
-            throw new SkipException("CREATE TABLE is required for write_parallelism test but is not supported");
+            abort("CREATE TABLE is required for write_parallelism test but is not supported");
         }
 
         Session session = Session.builder(getSession())

@@ -17,7 +17,7 @@ import com.google.common.collect.ImmutableMap;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
 import io.trino.testing.QueryRunner;
-import org.testng.annotations.AfterClass;
+import org.junit.jupiter.api.Test;
 
 import static io.trino.plugin.mongodb.MongoAtlasQueryRunner.createMongoAtlasQueryRunner;
 import static io.trino.plugin.mongodb.TestingMongoAtlasInfoProvider.getConnectionString;
@@ -34,17 +34,8 @@ public class TestMongoWithAtlasConnectorTest
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        client = MongoClients.create(getConnectionString());
+        client = closeAfterClass(MongoClients.create(getConnectionString()));
         return createMongoAtlasQueryRunner(getConnectionString(), ImmutableMap.of(), REQUIRED_TPCH_TABLES);
-    }
-
-    // Overridden as this class does not have to close server of type MongoServer as added in the super.destroy
-    @Override
-    @AfterClass(alwaysRun = true)
-    public void destroy()
-    {
-        client.close();
-        client = null;
     }
 
     @Override
@@ -55,6 +46,7 @@ public class TestMongoWithAtlasConnectorTest
 
     // Overridden as max length of the table name is different from the one returned by TestMongoConnectorTest#maxTableNameLength and
     // the message is different from the return value of TestMongoConnectorTest#verifyTableNameLengthFailurePermissible
+    @Test
     @Override
     public void testCreateTableWithLongTableName()
     {
@@ -72,6 +64,7 @@ public class TestMongoWithAtlasConnectorTest
     }
 
     // Overridden to create fewer tables
+    @Test
     @Override
     public void testListTablesFromSchemaWithBigAmountOfTables()
     {
