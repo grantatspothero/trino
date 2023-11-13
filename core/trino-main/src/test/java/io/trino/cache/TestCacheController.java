@@ -36,8 +36,8 @@ import java.util.Optional;
 import java.util.Set;
 
 import static io.trino.SystemSessionProperties.CACHE_AGGREGATIONS_ENABLED;
+import static io.trino.SystemSessionProperties.CACHE_COMMON_SUBQUERIES_ENABLED;
 import static io.trino.SystemSessionProperties.CACHE_PROJECTIONS_ENABLED;
-import static io.trino.SystemSessionProperties.CACHE_SUBQUERIES_ENABLED;
 import static io.trino.cache.CacheController.toSubplanKey;
 import static io.trino.spi.connector.CatalogHandle.createRootCatalogHandle;
 import static io.trino.sql.planner.iterative.rule.test.PlanBuilder.expression;
@@ -124,7 +124,7 @@ public class TestCacheController
     private Session cacheProperties(boolean cacheSubqueries, boolean cacheAggregations, boolean cacheProjections)
     {
         return testSessionBuilder()
-                .setSystemProperty(CACHE_SUBQUERIES_ENABLED, Boolean.toString(cacheSubqueries))
+                .setSystemProperty(CACHE_COMMON_SUBQUERIES_ENABLED, Boolean.toString(cacheSubqueries))
                 .setSystemProperty(CACHE_AGGREGATIONS_ENABLED, Boolean.toString(cacheAggregations))
                 .setSystemProperty(CACHE_PROJECTIONS_ENABLED, Boolean.toString(cacheProjections))
                 .build();

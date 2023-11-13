@@ -211,7 +211,7 @@ public final class SystemSessionProperties
     public static final String USE_COST_BASED_PARTITIONING = "use_cost_based_partitioning";
     public static final String USE_SUB_PLAN_ALTERNATIVES = "use_sub_plan_alternatives";
     public static final String FORCE_SPILLING_JOIN = "force_spilling_join";
-    public static final String CACHE_SUBQUERIES_ENABLED = "cache_subqueries_enabled";
+    public static final String CACHE_COMMON_SUBQUERIES_ENABLED = "cache_common_subqueries_enabled";
     public static final String CACHE_AGGREGATIONS_ENABLED = "cache_aggregations_enabled";
     public static final String CACHE_PROJECTIONS_ENABLED = "cache_projections_enabled";
     public static final String CACHE_MAX_SPLIT_SIZE = "cache_max_split_size";
@@ -1096,9 +1096,9 @@ public final class SystemSessionProperties
                         featuresConfig.isForceSpillingJoin(),
                         false),
                 booleanProperty(
-                        CACHE_SUBQUERIES_ENABLED,
-                        "Enables caching of subqueries when running a single query",
-                        cacheConfig.isEnabled() && cacheConfig.isCacheSubqueriesEnabled(),
+                        CACHE_COMMON_SUBQUERIES_ENABLED,
+                        "Enables caching of common subqueries when running a single query",
+                        cacheConfig.isEnabled() && cacheConfig.isCacheCommonSubqueriesEnabled(),
                         true),
                 booleanProperty(
                         CACHE_AGGREGATIONS_ENABLED,
@@ -1997,9 +1997,9 @@ public final class SystemSessionProperties
         return session.getSystemProperty(FORCE_SPILLING_JOIN, Boolean.class);
     }
 
-    public static boolean isCacheSubqueriesEnabled(Session session)
+    public static boolean isCacheCommonSubqueriesEnabled(Session session)
     {
-        return session.getSystemProperty(CACHE_SUBQUERIES_ENABLED, Boolean.class);
+        return session.getSystemProperty(CACHE_COMMON_SUBQUERIES_ENABLED, Boolean.class);
     }
 
     public static boolean isCacheAggregationsEnabled(Session session)

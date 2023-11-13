@@ -62,7 +62,7 @@ public class TestCachingHiveTpcdsCostBasedPlan
                 .withNodeCountForStats(8)
                 .withCacheConfig(new CacheConfig()
                         .setEnabled(true)
-                        .setCacheSubqueriesEnabled(true))
+                        .setCacheCommonSubqueriesEnabled(true))
                 .build();
         queryRunner.createCatalog(
                 CATALOG_NAME,

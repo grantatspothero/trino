@@ -89,8 +89,8 @@ import java.util.function.Function;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.trino.SystemSessionProperties.CACHE_AGGREGATIONS_ENABLED;
+import static io.trino.SystemSessionProperties.CACHE_COMMON_SUBQUERIES_ENABLED;
 import static io.trino.SystemSessionProperties.CACHE_PROJECTIONS_ENABLED;
-import static io.trino.SystemSessionProperties.CACHE_SUBQUERIES_ENABLED;
 import static io.trino.SystemSessionProperties.JOIN_REORDERING_STRATEGY;
 import static io.trino.SystemSessionProperties.OPTIMIZE_HASH_GENERATION;
 import static io.trino.SystemSessionProperties.SMALL_DYNAMIC_FILTER_MAX_ROW_COUNT;
@@ -141,7 +141,7 @@ public class TestCommonSubqueriesExtractor
     private static final Session TEST_SESSION = testSessionBuilder()
             .setCatalog(TEST_CATALOG_NAME)
             .setSchema(TEST_SCHEMA)
-            .setSystemProperty(CACHE_SUBQUERIES_ENABLED, "true")
+            .setSystemProperty(CACHE_COMMON_SUBQUERIES_ENABLED, "true")
             .build();
     private static final Session TPCH_SESSION = testSessionBuilder()
             .setCatalog("tpch")
@@ -1487,7 +1487,7 @@ public class TestCommonSubqueriesExtractor
     private CommonSubqueries extractTpchCommonSubqueries(@Language("SQL") String query, boolean cacheSubqueries, boolean cacheAggregations, boolean cacheProjections)
     {
         Session tpchSession = Session.builder(TPCH_SESSION)
-                .setSystemProperty(CACHE_SUBQUERIES_ENABLED, Boolean.toString(cacheSubqueries))
+                .setSystemProperty(CACHE_COMMON_SUBQUERIES_ENABLED, Boolean.toString(cacheSubqueries))
                 .setSystemProperty(CACHE_AGGREGATIONS_ENABLED, Boolean.toString(cacheAggregations))
                 .setSystemProperty(CACHE_PROJECTIONS_ENABLED, Boolean.toString(cacheProjections))
                 .build();

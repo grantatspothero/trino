@@ -92,7 +92,7 @@ public class TestCacheCommonSubqueries
         LocalQueryRunner queryRunner = LocalQueryRunner.builder(TEST_SESSION)
                 .withCacheConfig(new CacheConfig()
                         .setEnabled(true)
-                        .setCacheSubqueriesEnabled(true))
+                        .setCacheCommonSubqueriesEnabled(true))
                 .build();
 
         queryRunner.createCatalog(queryRunner.getDefaultSession().getCatalog().get(),

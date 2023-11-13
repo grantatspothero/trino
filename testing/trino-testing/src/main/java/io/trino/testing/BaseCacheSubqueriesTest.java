@@ -68,8 +68,8 @@ import java.util.stream.LongStream;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.airlift.concurrent.MoreFutures.getFutureValue;
 import static io.trino.SystemSessionProperties.CACHE_AGGREGATIONS_ENABLED;
+import static io.trino.SystemSessionProperties.CACHE_COMMON_SUBQUERIES_ENABLED;
 import static io.trino.SystemSessionProperties.CACHE_PROJECTIONS_ENABLED;
-import static io.trino.SystemSessionProperties.CACHE_SUBQUERIES_ENABLED;
 import static io.trino.cost.StatsCalculator.noopStatsCalculator;
 import static io.trino.metadata.FunctionManager.createTestingFunctionManager;
 import static io.trino.spi.connector.Constraint.alwaysTrue;
@@ -548,7 +548,7 @@ public abstract class BaseCacheSubqueriesTest
     protected Session withCacheEnabled()
     {
         return Session.builder(getSession())
-                .setSystemProperty(CACHE_SUBQUERIES_ENABLED, "true")
+                .setSystemProperty(CACHE_COMMON_SUBQUERIES_ENABLED, "true")
                 .setSystemProperty(CACHE_AGGREGATIONS_ENABLED, "true")
                 .setSystemProperty(CACHE_PROJECTIONS_ENABLED, "true")
                 .build();
@@ -557,7 +557,7 @@ public abstract class BaseCacheSubqueriesTest
     protected Session withCacheDisabled()
     {
         return Session.builder(getSession())
-                .setSystemProperty(CACHE_SUBQUERIES_ENABLED, "false")
+                .setSystemProperty(CACHE_COMMON_SUBQUERIES_ENABLED, "false")
                 .setSystemProperty(CACHE_AGGREGATIONS_ENABLED, "false")
                 .setSystemProperty(CACHE_PROJECTIONS_ENABLED, "false")
                 .build();

@@ -34,8 +34,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.trino.SystemSessionProperties.isCacheAggregationsEnabled;
+import static io.trino.SystemSessionProperties.isCacheCommonSubqueriesEnabled;
 import static io.trino.SystemSessionProperties.isCacheProjectionsEnabled;
-import static io.trino.SystemSessionProperties.isCacheSubqueriesEnabled;
 
 public class CacheController
 {
@@ -64,7 +64,7 @@ public class CacheController
 
         ImmutableList.Builder<CacheCandidate> cacheCandidates = ImmutableList.builder();
 
-        if (isCacheSubqueriesEnabled(session)) {
+        if (isCacheCommonSubqueriesEnabled(session)) {
             cacheCandidates.addAll(commonSubplans);
         }
 

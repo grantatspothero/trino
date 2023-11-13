@@ -52,7 +52,7 @@ public class TestHiveCacheSubqueries
     @Test(groups = HIVE_CACHE_SUBQUERIES)
     public void testCacheIsActuallyEnabled()
     {
-        onTrino().executeQuery("set session cache_subqueries_enabled=true");
+        onTrino().executeQuery("set session cache_common_subqueries_enabled=true");
         QueryResult result = onTrino().executeQuery(
                 """
                         explain analyze
@@ -66,14 +66,14 @@ public class TestHiveCacheSubqueries
     @Test(groups = HIVE_CACHE_SUBQUERIES)
     public void testQueryResulIsValidWhenCacheSubqueriesIsEnabled()
     {
-        onTrino().executeQuery("set session cache_subqueries_enabled=false");
+        onTrino().executeQuery("set session cache_common_subqueries_enabled=false");
         QueryResult expectedResult = onTrino().executeQuery(
                 """
                         select count(o_orderkey) from hive.tpch.orders_part where o_orderpriority = '3-MEDIUM'
                         union all
                         select count(o_orderkey) from hive.tpch.orders_part where o_orderpriority = '3-MEDIUM'
                     """);
-        onTrino().executeQuery("set session cache_subqueries_enabled=true");
+        onTrino().executeQuery("set session cache_common_subqueries_enabled=true");
 
         // cache data
         onTrino().executeQuery(
@@ -102,7 +102,7 @@ public class TestHiveCacheSubqueries
                 .stream()
                 .filter(line -> !line.startsWith("--"))
                 .collect(toImmutableList());
-        onTrino().executeQuery("set session cache_subqueries_enabled=true");
+        onTrino().executeQuery("set session cache_common_subqueries_enabled=true");
         onTrino().executeQuery("use hive.tpch");
         // we run it twice to test "warm" and "cold" cache cases
         assertResults(expected, query);
@@ -118,7 +118,7 @@ public class TestHiveCacheSubqueries
                 .stream()
                 .filter(line -> !line.startsWith("--"))
                 .collect(toImmutableList());
-        onTrino().executeQuery("set session cache_subqueries_enabled=true");
+        onTrino().executeQuery("set session cache_common_subqueries_enabled=true");
         onTrino().executeQuery("use hive.tpcds");
 
         // we run it twice to test "warm" and "cold" cache cases
