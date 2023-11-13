@@ -145,7 +145,6 @@ public class SqlQueryExecution
     private final SqlTaskManager coordinatorTaskManager;
     private final ExchangeManagerRegistry exchangeManagerRegistry;
     private final EventDrivenTaskSourceFactory eventDrivenTaskSourceFactory;
-    private final CacheConfig cacheConfig;
     private final TaskDescriptorStorage taskDescriptorStorage;
     private final PlanOptimizersStatsCollector planOptimizersStatsCollector;
     private final Optional<ResultsCacheState> resultsCacheState;
@@ -186,7 +185,6 @@ public class SqlQueryExecution
             ExchangeManagerRegistry exchangeManagerRegistry,
             EventDrivenTaskSourceFactory eventDrivenTaskSourceFactory,
             ResultsCacheAnalyzerFactory resultsCacheAnalyzerFactory,
-            CacheConfig cacheConfig,
             TaskDescriptorStorage taskDescriptorStorage)
     {
         try (SetThreadName ignored = new SetThreadName("Query-%s", stateMachine.getQueryId())) {
@@ -245,7 +243,6 @@ public class SqlQueryExecution
             this.coordinatorTaskManager = requireNonNull(coordinatorTaskManager, "coordinatorTaskManager is null");
             this.exchangeManagerRegistry = requireNonNull(exchangeManagerRegistry, "exchangeManagerRegistry is null");
             this.eventDrivenTaskSourceFactory = requireNonNull(eventDrivenTaskSourceFactory, "taskSourceFactory is null");
-            this.cacheConfig = requireNonNull(cacheConfig, "cacheConfig is null");
             this.taskDescriptorStorage = requireNonNull(taskDescriptorStorage, "taskDescriptorStorage is null");
             this.planOptimizersStatsCollector = requireNonNull(planOptimizersStatsCollector, "planOptimizersStatsCollector is null");
 
@@ -532,7 +529,6 @@ public class SqlQueryExecution
                 typeAnalyzer,
                 statsCalculator,
                 costCalculator,
-                cacheConfig,
                 stateMachine.getWarningCollector(),
                 planOptimizersStatsCollector);
         Plan plan = logicalPlanner.plan(analysis);
@@ -955,7 +951,6 @@ public class SqlQueryExecution
                     exchangeManagerRegistry,
                     eventDrivenTaskSourceFactory,
                     resultsCacheAnalyzerFactory,
-                    cacheConfig,
                     taskDescriptorStorage);
         }
     }

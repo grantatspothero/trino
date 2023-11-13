@@ -22,7 +22,6 @@ import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.context.Context;
 import io.trino.Session;
 import io.trino.cache.CacheCommonSubqueries;
-import io.trino.cache.CacheConfig;
 import io.trino.cache.CacheController;
 import io.trino.cost.CachingCostProvider;
 import io.trino.cost.CachingStatsProvider;
@@ -131,6 +130,7 @@ import static com.google.common.collect.Streams.forEachPair;
 import static com.google.common.collect.Streams.zip;
 import static io.trino.SystemSessionProperties.getMaxWriterTaskCount;
 import static io.trino.SystemSessionProperties.getRetryPolicy;
+import static io.trino.SystemSessionProperties.isCacheEnabled;
 import static io.trino.SystemSessionProperties.isCollectPlanStatisticsForAllQueries;
 import static io.trino.SystemSessionProperties.isUsePreferredWritePartitioning;
 import static io.trino.SystemSessionProperties.isUseSubPlanAlternatives;
@@ -203,11 +203,10 @@ public class LogicalPlanner
             TypeAnalyzer typeAnalyzer,
             StatsCalculator statsCalculator,
             CostCalculator costCalculator,
-            CacheConfig cacheConfig,
             WarningCollector warningCollector,
             PlanOptimizersStatsCollector planOptimizersStatsCollector)
     {
-        this(session, planOptimizers, alternativeOptimizers, DISTRIBUTED_PLAN_SANITY_CHECKER, idAllocator, plannerContext, typeAnalyzer, statsCalculator, costCalculator, cacheConfig, warningCollector, planOptimizersStatsCollector);
+        this(session, planOptimizers, alternativeOptimizers, DISTRIBUTED_PLAN_SANITY_CHECKER, idAllocator, plannerContext, typeAnalyzer, statsCalculator, costCalculator, warningCollector, planOptimizersStatsCollector);
     }
 
     public LogicalPlanner(
@@ -220,7 +219,6 @@ public class LogicalPlanner
             TypeAnalyzer typeAnalyzer,
             StatsCalculator statsCalculator,
             CostCalculator costCalculator,
-            CacheConfig cacheConfig,
             WarningCollector warningCollector,
             PlanOptimizersStatsCollector planOptimizersStatsCollector)
     {
@@ -236,9 +234,8 @@ public class LogicalPlanner
         this.statisticsAggregationPlanner = new StatisticsAggregationPlanner(symbolAllocator, plannerContext, session);
         this.statsCalculator = requireNonNull(statsCalculator, "statsCalculator is null");
         this.costCalculator = requireNonNull(costCalculator, "costCalculator is null");
-        this.cacheEnabled = requireNonNull(cacheConfig, "cacheConfig is null").isEnabled();
+        this.cacheEnabled = isCacheEnabled(session);
         this.cacheCommonSubqueries = new CacheCommonSubqueries(
-                cacheConfig,
                 new CacheController(),
                 plannerContext,
                 session,

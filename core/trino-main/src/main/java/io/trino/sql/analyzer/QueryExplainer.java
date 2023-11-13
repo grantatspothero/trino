@@ -14,7 +14,6 @@
 package io.trino.sql.analyzer;
 
 import io.trino.Session;
-import io.trino.cache.CacheConfig;
 import io.trino.client.NodeVersion;
 import io.trino.cost.CostCalculator;
 import io.trino.cost.StatsCalculator;
@@ -68,7 +67,6 @@ public class QueryExplainer
     private final StatementAnalyzerFactory statementAnalyzerFactory;
     private final StatsCalculator statsCalculator;
     private final CostCalculator costCalculator;
-    private final CacheConfig cacheConfig;
     private final NodeVersion version;
 
     QueryExplainer(
@@ -80,7 +78,6 @@ public class QueryExplainer
             StatementAnalyzerFactory statementAnalyzerFactory,
             StatsCalculator statsCalculator,
             CostCalculator costCalculator,
-            CacheConfig cacheConfig,
             NodeVersion version)
     {
         this.planOptimizers = requireNonNull(planOptimizersFactory.get(), "planOptimizers is null");
@@ -91,7 +88,6 @@ public class QueryExplainer
         this.statementAnalyzerFactory = requireNonNull(statementAnalyzerFactory, "statementAnalyzerFactory is null");
         this.statsCalculator = requireNonNull(statsCalculator, "statsCalculator is null");
         this.costCalculator = requireNonNull(costCalculator, "costCalculator is null");
-        this.cacheConfig = requireNonNull(cacheConfig, "cacheConfig is null");
         this.version = requireNonNull(version, "version is null");
     }
 
@@ -182,7 +178,6 @@ public class QueryExplainer
                 new TypeAnalyzer(plannerContext, statementAnalyzerFactory),
                 statsCalculator,
                 costCalculator,
-                cacheConfig,
                 warningCollector,
                 planOptimizersStatsCollector);
         return logicalPlanner.plan(analysis, OPTIMIZED_AND_VALIDATED, true);

@@ -32,6 +32,7 @@ import io.trino.sql.planner.plan.SimplePlanRewriter;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static io.trino.SystemSessionProperties.isCacheEnabled;
 import static io.trino.cache.CommonSubqueriesExtractor.extractCommonSubqueries;
 import static io.trino.sql.planner.iterative.Lookup.noLookup;
 import static java.util.Objects.requireNonNull;
@@ -58,7 +59,6 @@ public class CacheCommonSubqueries
     private final TypeAnalyzer typeAnalyzer;
 
     public CacheCommonSubqueries(
-            CacheConfig cacheConfig,
             CacheController cacheController,
             PlannerContext plannerContext,
             Session session,
@@ -66,13 +66,13 @@ public class CacheCommonSubqueries
             SymbolAllocator symbolAllocator,
             TypeAnalyzer typeAnalyzer)
     {
-        this.cacheEnabled = requireNonNull(cacheConfig, "cacheConfig is null").isEnabled();
         this.cacheController = requireNonNull(cacheController, "cacheController is null");
         this.plannerContext = requireNonNull(plannerContext, "plannerContext is null");
         this.session = requireNonNull(session, "session is null");
         this.idAllocator = requireNonNull(idAllocator, "idAllocator is null");
         this.symbolAllocator = requireNonNull(symbolAllocator, "symbolAllocator is null");
         this.typeAnalyzer = requireNonNull(typeAnalyzer, "typeAnalyzer is null");
+        this.cacheEnabled = isCacheEnabled(session);
     }
 
     public PlanNode cacheSubqueries(PlanNode node)

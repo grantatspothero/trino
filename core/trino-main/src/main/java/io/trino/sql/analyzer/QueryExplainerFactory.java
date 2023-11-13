@@ -14,7 +14,6 @@
 package io.trino.sql.analyzer;
 
 import com.google.inject.Inject;
-import io.trino.cache.CacheConfig;
 import io.trino.client.NodeVersion;
 import io.trino.cost.CostCalculator;
 import io.trino.cost.StatsCalculator;
@@ -34,7 +33,6 @@ public class QueryExplainerFactory
     private final StatementAnalyzerFactory statementAnalyzerFactory;
     private final StatsCalculator statsCalculator;
     private final CostCalculator costCalculator;
-    private final CacheConfig cacheConfig;
     private final NodeVersion version;
 
     @Inject
@@ -46,7 +44,6 @@ public class QueryExplainerFactory
             StatementAnalyzerFactory statementAnalyzerFactory,
             StatsCalculator statsCalculator,
             CostCalculator costCalculator,
-            CacheConfig cacheConfig,
             NodeVersion version)
     {
         this.planOptimizersFactory = requireNonNull(planOptimizersFactory, "planOptimizersFactory is null");
@@ -56,7 +53,6 @@ public class QueryExplainerFactory
         this.statementAnalyzerFactory = requireNonNull(statementAnalyzerFactory, "statementAnalyzerFactory is null");
         this.statsCalculator = requireNonNull(statsCalculator, "statsCalculator is null");
         this.costCalculator = requireNonNull(costCalculator, "costCalculator is null");
-        this.cacheConfig = requireNonNull(cacheConfig, "cacheConfig is null");
         this.version = requireNonNull(version, "version is null");
     }
 
@@ -71,7 +67,6 @@ public class QueryExplainerFactory
                 statementAnalyzerFactory,
                 statsCalculator,
                 costCalculator,
-                cacheConfig,
                 version);
     }
 }

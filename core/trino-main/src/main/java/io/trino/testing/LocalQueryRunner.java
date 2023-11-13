@@ -329,7 +329,6 @@ public class LocalQueryRunner
     private final CacheManagerRegistry cacheManagerRegistry;
 
     private final TaskManagerConfig taskManagerConfig;
-    private final CacheConfig cacheConfig;
     private final boolean alwaysRevokeMemory;
     private final DataSize maxSpillPerNode;
     private final DataSize queryMaxSpillPerNode;
@@ -369,7 +368,6 @@ public class LocalQueryRunner
 
         Tracer tracer = noopTracer();
         this.taskManagerConfig = new TaskManagerConfig().setTaskConcurrency(4);
-        this.cacheConfig = requireNonNull(cacheConfig, "cacheConfig is null");
         requireNonNull(nodeSpillConfig, "nodeSpillConfig is null");
         this.maxSpillPerNode = nodeSpillConfig.getMaxSpillPerNode();
         this.queryMaxSpillPerNode = nodeSpillConfig.getQueryMaxSpillPerNode();
@@ -1181,7 +1179,6 @@ public class LocalQueryRunner
                 new TypeAnalyzer(plannerContext, statementAnalyzerFactory),
                 statsCalculator,
                 costCalculator,
-                cacheConfig,
                 warningCollector,
                 planOptimizersStatsCollector);
 
@@ -1200,7 +1197,6 @@ public class LocalQueryRunner
                 statementAnalyzerFactory,
                 statsCalculator,
                 costCalculator,
-                cacheConfig,
                 new NodeVersion("test"));
     }
 
