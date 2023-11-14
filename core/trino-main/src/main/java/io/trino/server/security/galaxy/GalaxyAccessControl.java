@@ -15,6 +15,7 @@ package io.trino.server.security.galaxy;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
 import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
 import io.starburst.stargate.accesscontrol.privilege.GalaxyPrivilegeInfo;
@@ -363,17 +364,7 @@ public class GalaxyAccessControl
     @Override
     public Set<SchemaTableName> filterTables(SystemSecurityContext context, String catalogName, Set<SchemaTableName> tableNames)
     {
-        if (isSystemCatalog(catalogName)) {
-            return tableNames;
-        }
-
-        Set<String> schemaNames = tableNames.stream()
-                .map(SchemaTableName::getSchemaName)
-                .filter(schema -> !isInformationSchema(schema))
-                .collect(toImmutableSet());
-
-        // getTableVisibility is no-op when schemaNames.isEmpty, i.e. only information_schema schema
-        Predicate<SchemaTableName> tableVisibility = getTableVisibility(context, catalogName, schemaNames);
+        Predicate<SchemaTableName> tableVisibility = getTableVisibility(context, catalogName, tableNames);
         return tableNames.stream()
                 .filter(name -> isInformationSchema(name.getSchemaName()) || tableVisibility.test(name))
                 .collect(toImmutableSet());
@@ -1013,17 +1004,45 @@ public class GalaxyAccessControl
 
     private boolean isTableVisible(SystemSecurityContext context, CatalogSchemaTableName tableName)
     {
-        return getTableVisibility(context, tableName.getCatalogName(), ImmutableSet.of(tableName.getSchemaTableName().getSchemaName()))
+        return getTableVisibility(context, tableName.getCatalogName(), ImmutableSet.of(tableName.getSchemaTableName()))
                 .test(tableName.getSchemaTableName());
     }
 
-    private Predicate<SchemaTableName> getTableVisibility(SystemSecurityContext context, String catalogName, Set<String> schemaNames)
+    private Predicate<SchemaTableName> getTableVisibility(SystemSecurityContext context, String catalogName, Set<SchemaTableName> tableNames)
     {
-        Optional<CatalogId> catalogId = getSystemAccessController(context).getCatalogId(catalogName);
-        if (catalogId.isEmpty()) {
+        if (isSystemCatalog(catalogName)) {
+            return ignored -> true;
+        }
+        Optional<CatalogId> optionalCatalogId = getSystemAccessController(context).getCatalogId(catalogName);
+        if (optionalCatalogId.isEmpty()) {
             return ignored -> false;
         }
-        return getSystemAccessController(context).getTableVisibility(context, catalogId.get(), schemaNames);
+        CatalogId catalogId = optionalCatalogId.get();
+
+        Set<String> schemaNames = tableNames.stream()
+                .map(SchemaTableName::getSchemaName)
+                .filter(schema -> !isInformationSchema(schema))
+                .collect(toImmutableSet());
+
+        // getTableVisibility is no-op when schemaNames.isEmpty, i.e. only information_schema schema
+        if (schemaNames.isEmpty()) {
+            return ignored -> true;
+        }
+
+        // If there is only one schemaName and ten or fewer table names,
+        // use the (presumably) faster method getVisbilityForTables.    We think
+        // that if there are more tables, it might be faster to call
+        // getTableVisiblity.
+        if (tableNames.size() <= 10 && schemaNames.size() == 1) {
+            GalaxySystemAccessController controller = controllerSupplier.apply(context.getIdentity());
+            Set<String> tableNameStrings = tableNames.stream().map(SchemaTableName::getTableName).collect(toImmutableSet());
+            ContentsVisibility visibility = controllerSupplier.apply(context.getIdentity())
+                    .getVisibilityForTables(context, catalogId, Iterables.getOnlyElement(schemaNames), tableNameStrings);
+            return tableName -> isInformationSchema(tableName.getSchemaName()) || visibility.isVisible(tableName.getTableName());
+        }
+
+        // Otherwise find visibility for all the schemaNames
+        return getSystemAccessController(context).getTableVisibility(context, catalogId, schemaNames);
     }
 
     private boolean isEntityOwner(GalaxySystemAccessController controller, SystemSecurityContext context, Optional<? extends EntityId> entity)

@@ -100,6 +100,7 @@ public class GalaxyPermissionsCache
         private final Set<String> impliedCatalogVisibility = new HashSet<>();
         // It's a cache only for convenience to use loading cache's bulk loading capability
         private final LoadingCache<TableVisibilityKey, ContentsVisibility> tableVisibility;
+        private final LoadingCache<VisibilityForTablesKey, ContentsVisibility> visibilityForTables;
 
         public GalaxyQueryPermissions(TrinoSecurityApi trinoSecurityApi, DispatchSession session)
         {
@@ -133,6 +134,10 @@ public class GalaxyPermissionsCache
                         return visibility.entrySet().stream()
                                 .collect(toImmutableMap(entry -> new TableVisibilityKey(catalogId, entry.getKey()), Entry::getValue));
                     }));
+
+            visibilityForTables = buildNonEvictableCache(
+                    CacheBuilder.newBuilder(),
+                    CacheLoader.from(key -> trinoSecurityApi.getVisibilityForTables(session, key.catalogId(), key.schemaName(), key.tableNames())));
         }
 
         public EntityPrivileges getEntityPrivileges(RoleId roleId, EntityId entity)
@@ -198,6 +203,28 @@ public class GalaxyPermissionsCache
                             Entry::getValue));
         }
 
+        public ContentsVisibility getVisibilityForTables(CatalogId catalogId, String schemaName, Set<String> tableNames)
+        {
+            if (tableNames.isEmpty()) {
+                return ContentsVisibility.DENY_ALL;
+            }
+
+            // If we have already computed visibility using getTableVisibility, return it.
+            ContentsVisibility visibility = tableVisibility.asMap().get(new TableVisibilityKey(catalogId, schemaName));
+            if (visibility != null) {
+                return visibility;
+            }
+
+            // Otherwise check the visibilityForTables cache.
+            VisibilityForTablesKey cacheKey = new VisibilityForTablesKey(catalogId, schemaName, tableNames);
+            try {
+                return visibilityForTables.get(cacheKey);
+            }
+            catch (ExecutionException e) { // Impossible, the cache loader does not currently throw checked exceptions
+                throw new RuntimeException(e);
+            }
+        }
+
         private record EntityPrivilegesKey(RoleId roleId, EntityId entity)
         {
             EntityPrivilegesKey
@@ -213,6 +240,16 @@ public class GalaxyPermissionsCache
             {
                 requireNonNull(catalogId, "catalogId is null");
                 requireNonNull(schemaName, "schemaName is null");
+            }
+        }
+
+        private record VisibilityForTablesKey(CatalogId catalogId, String schemaName, Set<String> tableNames)
+        {
+            VisibilityForTablesKey
+            {
+                requireNonNull(catalogId, "catalogId is null");
+                requireNonNull(schemaName, "schemaName is null");
+                tableNames = ImmutableSet.copyOf(requireNonNull(tableNames, "tableNames is null"));
             }
         }
     }

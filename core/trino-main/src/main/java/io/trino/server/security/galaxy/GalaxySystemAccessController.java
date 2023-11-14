@@ -151,7 +151,7 @@ public class GalaxySystemAccessController
 
     public ContentsVisibility getVisibilityForTables(SystemSecurityContext context, CatalogId catalogId, String schemaName, Set<String> tableNames)
     {
-        return accessControlClient.getVisibilityForTables(toDispatchSession(context.getIdentity()), catalogId, schemaName, tableNames);
+        return getCache(context).getVisibilityForTables(catalogId, schemaName, tableNames);
     }
 
     public String getRoleDisplayName(Identity identity, RoleId roleId)
