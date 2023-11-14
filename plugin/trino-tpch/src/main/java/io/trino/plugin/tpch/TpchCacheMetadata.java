@@ -55,4 +55,10 @@ public class TpchCacheMetadata
 
         return Optional.of(new CacheColumnId(handle.getColumnName() + ":" + handle.getType()));
     }
+
+    @Override
+    public ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle handle)
+    {
+        return handle;
+    }
 }

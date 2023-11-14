@@ -48,8 +48,5 @@ public interface ConnectorCacheMetadata
      * are eligible for caching with {@link CacheManager}. Connector should convert provided
      * {@link ConnectorTableHandle} into canonical one by pruning of every non-canonical field.
      */
-    default ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle handle)
-    {
-        return handle;
-    }
+    ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle handle);
 }

@@ -35,4 +35,10 @@ public class MemoryCacheMetadata
     {
         return Optional.of(new CacheColumnId(tableHandle.toString() + ":" + columnHandle.toString()));
     }
+
+    @Override
+    public ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle handle)
+    {
+        return handle;
+    }
 }

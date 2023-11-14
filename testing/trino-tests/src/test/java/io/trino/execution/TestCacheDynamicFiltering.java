@@ -143,6 +143,12 @@ public class TestCacheDynamicFiltering
                     {
                         return Optional.of(new CacheColumnId(((TestingColumnHandle) columnHandle).getName()));
                     }
+
+                    @Override
+                    public ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle handle)
+                    {
+                        return handle;
+                    }
                 };
 
                 @Override

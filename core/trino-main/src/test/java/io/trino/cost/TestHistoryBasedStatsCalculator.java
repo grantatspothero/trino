@@ -148,6 +148,12 @@ public class TestHistoryBasedStatsCalculator
         {
             return Optional.of(new CacheColumnId(columnHandle.toString()));
         }
+
+        @Override
+        public ConnectorTableHandle getCanonicalTableHandle(ConnectorTableHandle handle)
+        {
+            return handle;
+        }
     };
     private static final CacheMetadata CACHE_METADATA = new CacheMetadata(catalogHandle -> Optional.of(CONNECTOR_CACHE_METADATA));
     private static final AbstractMockMetadata METADATA = new AbstractMockMetadata()
