@@ -41,6 +41,7 @@ import io.trino.orc.TupleDomainOrcPredicate;
 import io.trino.orc.TupleDomainOrcPredicate.TupleDomainOrcPredicateBuilder;
 import io.trino.orc.metadata.OrcType;
 import io.trino.parquet.BloomFilterStore;
+import io.trino.parquet.Column;
 import io.trino.parquet.Field;
 import io.trino.parquet.ParquetCorruptionException;
 import io.trino.parquet.ParquetDataSource;
@@ -1145,7 +1146,7 @@ public class IcebergPageSourceProvider
             ParquetPageSource.Builder pageSourceBuilder = ParquetPageSource.builder();
             int parquetSourceChannel = 0;
 
-            ImmutableList.Builder<Field> parquetColumnFieldsBuilder = ImmutableList.builder();
+            ImmutableList.Builder<Column> parquetColumnFieldsBuilder = ImmutableList.builder();
             for (int columnIndex = 0; columnIndex < readBaseColumns.size(); columnIndex++) {
                 IcebergColumnHandle column = readBaseColumns.get(columnIndex);
                 if (column.isIsDeletedColumn()) {
@@ -1190,7 +1191,7 @@ public class IcebergPageSourceProvider
                         pageSourceBuilder.addNullColumn(trinoType);
                         continue;
                     }
-                    parquetColumnFieldsBuilder.add(field.get());
+                    parquetColumnFieldsBuilder.add(new Column(parquetField.getName(), field.get()));
                     pageSourceBuilder.addSourceColumn(parquetSourceChannel);
                     parquetSourceChannel++;
                 }
