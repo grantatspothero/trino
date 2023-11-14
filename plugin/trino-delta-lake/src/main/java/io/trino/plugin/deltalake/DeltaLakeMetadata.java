@@ -602,17 +602,22 @@ public class DeltaLakeMetadata
         String tableLocation = HiveMetastoreBackedDeltaLakeMetastore.getTableLocation(table);
         SchemaTableName tableName = table.getSchemaTableName();
         return MaybeLazy.ofLazy(() -> {
-            TableSnapshot tableSnapshot = getSnapshot(session, tableName, tableLocation, Optional.empty());
-            Map<Class<?>, Object> logEntries = transactionLogAccess.getTransactionLogEntries(
-                    session,
-                    tableSnapshot,
-                    ImmutableSet.of(METADATA, PROTOCOL),
-                    entryStream -> entryStream
-                            .filter(entry -> entry.getMetaData() != null || entry.getProtocol() != null)
-                            .map(entry -> firstNonNull(entry.getMetaData(), entry.getProtocol())));
-            MetadataEntry metadataEntry = (MetadataEntry) logEntries.get(MetadataEntry.class);
-            ProtocolEntry protocolEntry = (ProtocolEntry) logEntries.get(ProtocolEntry.class);
-            return getTableColumnMetadata(metadataEntry, protocolEntry);
+            try {
+                TableSnapshot tableSnapshot = transactionLogAccess.loadSnapshot(session, tableName, tableLocation);
+                Map<Class<?>, Object> logEntries = transactionLogAccess.getTransactionLogEntries(
+                        session,
+                        tableSnapshot,
+                        ImmutableSet.of(METADATA, PROTOCOL),
+                        entryStream -> entryStream
+                                .filter(entry -> entry.getMetaData() != null || entry.getProtocol() != null)
+                                .map(entry -> firstNonNull(entry.getMetaData(), entry.getProtocol())));
+                MetadataEntry metadataEntry = (MetadataEntry) logEntries.get(MetadataEntry.class);
+                ProtocolEntry protocolEntry = (ProtocolEntry) logEntries.get(ProtocolEntry.class);
+                return getTableColumnMetadata(metadataEntry, protocolEntry);
+            }
+            catch (IOException e) {
+                throw new TrinoException(DELTA_LAKE_INVALID_SCHEMA, "Error getting snapshot for " + table, e);
+            }
         });
     }
 
@@ -622,9 +627,14 @@ public class DeltaLakeMetadata
         String tableLocation = HiveMetastoreBackedDeltaLakeMetastore.getTableLocation(table);
         SchemaTableName tableName = table.getSchemaTableName();
         return MaybeLazy.ofLazy(() -> {
-            TableSnapshot tableSnapshot = getSnapshot(session, tableName, tableLocation, Optional.empty());
-            MetadataEntry metadataEntry = transactionLogAccess.getMetadataEntry(tableSnapshot, session);
-            return Optional.ofNullable(metadataEntry.getDescription());
+            try {
+                TableSnapshot tableSnapshot = transactionLogAccess.loadSnapshot(session, tableName, tableLocation);
+                MetadataEntry metadataEntry = transactionLogAccess.getMetadataEntry(tableSnapshot, session);
+                return Optional.ofNullable(metadataEntry.getDescription());
+            }
+            catch (IOException e) {
+                throw new TrinoException(DELTA_LAKE_INVALID_SCHEMA, "Error getting snapshot for " + table, e);
+            }
         });
     }
 
@@ -805,7 +815,7 @@ public class DeltaLakeMetadata
                             return Stream.of();
                         }
                         String tableLocation = metastoreTable.get().location();
-                        TableSnapshot snapshot = getSnapshot(session, table, tableLocation, Optional.empty());
+                        TableSnapshot snapshot = transactionLogAccess.loadSnapshot(session, table, tableLocation);
                         MetadataEntry metadata = transactionLogAccess.getMetadataEntry(snapshot, session);
                         ProtocolEntry protocol = transactionLogAccess.getProtocolEntry(session, snapshot);
                         Map<String, String> columnComments = getColumnComments(metadata);
@@ -816,7 +826,7 @@ public class DeltaLakeMetadata
                                 .collect(toImmutableList());
                         return Stream.of(TableColumnsMetadata.forTable(table, columnMetadata));
                     }
-                    catch (NotADeltaLakeTableException e) {
+                    catch (NotADeltaLakeTableException | IOException e) {
                         return Stream.empty();
                     }
                     catch (RuntimeException e) {
