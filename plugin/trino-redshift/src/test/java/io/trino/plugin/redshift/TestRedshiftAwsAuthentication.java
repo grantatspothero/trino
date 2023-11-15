@@ -21,7 +21,7 @@ import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import org.jdbi.v3.core.HandleConsumer;
 import org.jdbi.v3.core.Jdbi;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.Map;
