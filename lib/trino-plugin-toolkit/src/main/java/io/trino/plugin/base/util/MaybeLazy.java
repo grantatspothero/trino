@@ -14,6 +14,7 @@
 package io.trino.plugin.base.util;
 
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -40,5 +41,13 @@ public record MaybeLazy<T>(
     public T getOrCompute()
     {
         return value.orElseGet(() -> lazy.orElseThrow().get());
+    }
+
+    public <U> MaybeLazy<U> transform(Function<T, U> function)
+    {
+        if (value.isPresent()) {
+            return MaybeLazy.ofValue(function.apply(value.orElseThrow()));
+        }
+        return MaybeLazy.ofLazy(() -> function.apply(lazy.orElseThrow().get()));
     }
 }

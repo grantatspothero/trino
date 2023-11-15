@@ -39,6 +39,7 @@ import io.trino.plugin.hive.HiveTableHandle;
 import io.trino.plugin.hive.HiveViewNotSupportedException;
 import io.trino.plugin.hive.TransactionalMetadata;
 import io.trino.plugin.hive.ViewReaderUtil;
+import io.trino.plugin.hive.metastore.Table;
 import io.trino.plugin.hive.procedure.OptimizeTableProcedure;
 import io.trino.plugin.hive.util.HiveUtil;
 import io.trino.plugin.hudi.HudiTableHandle;
@@ -113,6 +114,7 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
@@ -586,9 +588,125 @@ public class ObjectStoreMetadata
         ConnectorSession icebergSession = unwrap(ICEBERG, session);
         ConnectorSession deltaSession = unwrap(DELTA, session);
 
-        ImmutableList.Builder<RelationColumnsMetadata> unfilteredResult = ImmutableList.builder();
-        ImmutableList.Builder<RelationColumnsMetadata> filteredResult = ImmutableList.builder();
-        Map<SchemaTableName, Supplier<List<ColumnMetadata>>> unprocessedTables = new HashMap<>();
+        return streamRelationMetadata(
+                session,
+                schemaName,
+                relationFilter,
+                "columns",
+                (relation, table) -> {
+                    boolean trinoMaterializedView = isTrinoMaterializedView(table);
+                    boolean trinoView = isTrinoView(table);
+                    boolean hiveView = isHiveView(table);
+
+                    if (trinoView) {
+                        ConnectorViewDefinition viewDefinition = ViewReaderUtil.PrestoViewReader.decodeViewData(table.getViewOriginalText().orElseThrow());
+                        return Optional.of(MaybeLazy.ofValue(RelationColumnsMetadata.forView(relation, viewDefinition.getColumns())));
+                    }
+                    if (trinoMaterializedView) {
+                        IcebergMaterializedViewDefinition materializedViewDefinition = decodeMaterializedViewData(table.getViewOriginalText().orElseThrow());
+                        return Optional.of(MaybeLazy.ofValue(RelationColumnsMetadata.forMaterializedView(relation, toSpiMaterializedViewColumns(materializedViewDefinition.getColumns()))));
+                    }
+                    if (hiveView) {
+                        try {
+                            Optional<ConnectorViewDefinition> viewDefinition = hiveMetadata.getView(hiveSession, relation);
+                            if (viewDefinition.isEmpty()) {
+                                // Disappeared
+                                return Optional.empty();
+                            }
+                            return Optional.of(MaybeLazy.ofValue(RelationColumnsMetadata.forView(relation, viewDefinition.get().getColumns())));
+                        }
+                        catch (HiveViewNotSupportedException ignore) {
+                            // Hive view translation is not enabled, treat it as if it was a table
+                        }
+                    }
+
+                    boolean icebergTable = isIcebergTable(table);
+                    boolean deltaLakeTable = isDeltaLakeTable(table);
+                    boolean hudiTable = isHudiTable(table);
+                    boolean hiveTable = !(hiveView || icebergTable || deltaLakeTable || hudiTable);
+
+                    MaybeLazy<List<ColumnMetadata>> tableColumnsMetadata;
+                    if (hiveTable || hiveView || hudiTable) {
+                        // TODO: this is probably incorrect for Hudi wrt timestamp precision, but that's what we used to be doing so far.
+                        tableColumnsMetadata = MaybeLazy.ofValue(HiveUtil.getTableColumnMetadata(hiveSession, table, typeManager));
+                    }
+                    else if (icebergTable) {
+                        tableColumnsMetadata = icebergMetadata.getTableColumnMetadata(icebergSession, table);
+                    }
+                    else if (deltaLakeTable) {
+                        tableColumnsMetadata = deltaMetadata.getTableColumnMetadata(deltaSession, table);
+                    }
+                    else {
+                        throw new UnsupportedOperationException("Unreachable");
+                    }
+
+                    return Optional.of(tableColumnsMetadata.transform(columnMetadata -> RelationColumnsMetadata.forTable(relation, columnMetadata)));
+                });
+    }
+
+    @Override
+    public Iterator<RelationCommentMetadata> streamRelationComments(ConnectorSession session, Optional<String> schemaName, UnaryOperator<Set<SchemaTableName>> relationFilter)
+    {
+        ConnectorSession icebergSession = unwrap(ICEBERG, session);
+        ConnectorSession deltaSession = unwrap(DELTA, session);
+
+        return streamRelationMetadata(
+                session,
+                schemaName,
+                relationFilter,
+                "comments",
+                (relation, table) -> {
+                    boolean trinoMaterializedView = isTrinoMaterializedView(table);
+                    boolean trinoView = isTrinoView(table);
+                    boolean hiveView = isHiveView(table);
+
+                    if (trinoView) {
+                        ConnectorViewDefinition viewDefinition = ViewReaderUtil.PrestoViewReader.decodeViewData(table.getViewOriginalText().orElseThrow());
+                        return Optional.of(MaybeLazy.ofValue(RelationCommentMetadata.forRelation(relation, viewDefinition.getComment())));
+                    }
+                    if (trinoMaterializedView) {
+                        IcebergMaterializedViewDefinition materializedViewDefinition = decodeMaterializedViewData(table.getViewOriginalText().orElseThrow());
+                        return Optional.of(MaybeLazy.ofValue(RelationCommentMetadata.forRelation(relation, materializedViewDefinition.getComment())));
+                    }
+                    if (hiveView) {
+                        return Optional.of(MaybeLazy.ofValue(RelationCommentMetadata.forRelation(relation, Optional.ofNullable(table.getParameters().get(TABLE_COMMENT)))));
+                    }
+
+                    boolean icebergTable = isIcebergTable(table);
+                    boolean deltaLakeTable = isDeltaLakeTable(table);
+                    boolean hudiTable = isHudiTable(table);
+                    boolean hiveTable = !(icebergTable || deltaLakeTable || hudiTable);
+
+                    MaybeLazy<Optional<String>> tableComment;
+                    if (hiveTable || hudiTable) {
+                        tableComment = MaybeLazy.ofValue(Optional.ofNullable(table.getParameters().get(TABLE_COMMENT)));
+                    }
+                    else if (icebergTable) {
+                        tableComment = icebergMetadata.getTableComment(icebergSession, table);
+                    }
+                    else if (deltaLakeTable) {
+                        tableComment = deltaMetadata.getTableComment(deltaSession, table);
+                    }
+                    else {
+                        throw new UnsupportedOperationException("Unreachable");
+                    }
+
+                    return Optional.of(tableComment.transform(comment -> RelationCommentMetadata.forRelation(relation, comment)));
+                });
+    }
+
+    private <MetadataType> Iterator<MetadataType> streamRelationMetadata(
+            ConnectorSession session,
+            Optional<String> schemaName,
+            UnaryOperator<Set<SchemaTableName>> relationFilter,
+            String metadataTypeName,
+            BiFunction<SchemaTableName, Table, Optional<MaybeLazy<MetadataType>>> metadataReader)
+    {
+        ConnectorSession hiveSession = unwrap(HIVE, session);
+
+        ImmutableMap.Builder<SchemaTableName, MetadataType> unfilteredResult = ImmutableMap.builder();
+        ImmutableList.Builder<MetadataType> filteredResult = ImmutableList.builder();
+        Map<SchemaTableName, Supplier<MetadataType>> unprocessedTables = new HashMap<>();
 
         List<String> schemas = schemaName.map(List::of)
                 // TODO filter schemas: limit to those accessible to the user
@@ -597,82 +715,30 @@ public class ObjectStoreMetadata
         for (String schema : schemas) {
             hiveMetadata.getMetastore().streamTables(hiveSession, schema).forEachRemaining(table -> {
                 SchemaTableName relation = new SchemaTableName(schema, table.getTableName());
-
-                boolean trinoMaterializedView = isTrinoMaterializedView(table);
-                boolean trinoView = isTrinoView(table);
-                boolean hiveView = isHiveView(table);
-
-                if (trinoView) {
-                    ConnectorViewDefinition viewDefinition = ViewReaderUtil.PrestoViewReader.decodeViewData(table.getViewOriginalText().orElseThrow());
-                    unfilteredResult.add(RelationColumnsMetadata.forView(relation, viewDefinition.getColumns()));
-                    return;
+                Optional<MaybeLazy<MetadataType>> optionalRelationMetadata;
+                try {
+                    optionalRelationMetadata = metadataReader.apply(relation, table);
                 }
-                if (trinoMaterializedView) {
-                    IcebergMaterializedViewDefinition materializedViewDefinition = decodeMaterializedViewData(table.getViewOriginalText().orElseThrow());
-                    unfilteredResult.add(RelationColumnsMetadata.forMaterializedView(relation, toSpiMaterializedViewColumns(materializedViewDefinition.getColumns())));
-                    return;
+                catch (RuntimeException e) {
+                    // E.g. a table declared as Iceberg table but lacking metadata_location, etc.
+                    log.warn(e, "Failed to process metadata of table %s [%s] during streaming table %s for %s", relation, table, metadataTypeName, schemaName);
+                    return; // Exclude from response
                 }
-                if (hiveView) {
-                    try {
-                        Optional<ConnectorViewDefinition> viewDefinition = hiveMetadata.getView(hiveSession, relation);
-                        if (viewDefinition.isEmpty()) {
-                            // Disappeared
-                            return;
-                        }
-                        unfilteredResult.add(RelationColumnsMetadata.forView(relation, viewDefinition.get().getColumns()));
-                        return;
-                    }
-                    catch (HiveViewNotSupportedException ignore) {
-                        // Hive view translation is not enabled, treat it as if it was a table
-                    }
-                }
-
-                boolean icebergTable = isIcebergTable(table);
-                boolean deltaLakeTable = isDeltaLakeTable(table);
-                boolean hudiTable = isHudiTable(table);
-                boolean hiveTable = !(hiveView || icebergTable || deltaLakeTable || hudiTable);
-
-                MaybeLazy<List<ColumnMetadata>> tableColumnsMetadata;
-                if (hiveTable || hiveView || hudiTable) {
-                    // TODO: this is probably incorrect for Hudi wrt timestamp precision, but that's what we used to be doing so far.
-                    tableColumnsMetadata = MaybeLazy.ofValue(HiveUtil.getTableColumnMetadata(hiveSession, table, typeManager));
-                }
-                else if (icebergTable) {
-                    try {
-                        tableColumnsMetadata = icebergMetadata.getTableColumnMetadata(icebergSession, table);
-                    }
-                    catch (RuntimeException e) {
-                        // E.g. a table declared as Iceberg table but lacking metadata_location
-                        log.warn(e, "Failed to process metadata of Iceberg table %s during streaming table columns for %s", table, schemaName);
-                        return; // Exclude from response
-                    }
-                }
-                else if (deltaLakeTable) {
-                    try {
-                        tableColumnsMetadata = deltaMetadata.getTableColumnMetadata(deltaSession, table);
-                    }
-                    catch (RuntimeException e) {
-                        log.warn(e, "Failed to process metadata of Delta table %s during streaming table columns for %s", table, schemaName);
-                        return; // Exclude from response
-                    }
-                }
-                else {
-                    throw new UnsupportedOperationException("Unreachable");
-                }
-                tableColumnsMetadata.value().ifPresentOrElse(
-                        columnMetadata -> unfilteredResult.add(RelationColumnsMetadata.forTable(relation, columnMetadata)),
-                        // lazy computation ties up little memory (basically table/metadata location), so no need for explicit bound on unprocessedTables≥
-                        () -> unprocessedTables.put(relation, tableColumnsMetadata.lazy().orElseThrow()));
+                optionalRelationMetadata.ifPresent(relationMetadata ->
+                        relationMetadata.value().ifPresentOrElse(
+                                value -> unfilteredResult.put(relation, value),
+                                // lazy computation ties up little memory (basically table/metadata location), so no need for explicit bound on unprocessedTables
+                                () -> unprocessedTables.put(relation, relationMetadata.lazy().orElseThrow())));
             });
         }
 
         Context context = Context.current();
         relationFilter.apply(unprocessedTables.keySet()).stream()
                 .map(tableName -> {
-                    Supplier<List<ColumnMetadata>> metadataSupplier = unprocessedTables.get(tableName);
+                    Supplier<MetadataType> metadataSupplier = unprocessedTables.get(tableName);
                     return parallelInformationSchemaQueryingExecutor.submit(() -> {
                         try (Scope ignore = context.makeCurrent()) {
-                            return Optional.of(RelationColumnsMetadata.forTable(tableName, metadataSupplier.get()));
+                            return Optional.of(metadataSupplier.get());
                         }
                         catch (Exception e) {
                             boolean silent = false;
@@ -689,136 +755,25 @@ public class ObjectStoreMetadata
                                         errorCode.getType() == EXTERNAL;
                             }
                             if (silent) {
-                                log.debug(e, "Failed to access metadata of table %s during streaming table columns for %s", tableName, schemaName);
+                                log.debug(e, "Failed to access metadata of table %s during streaming table %s for %s", tableName, metadataTypeName, schemaName);
                             }
                             else {
-                                log.warn(e, "Failed to access metadata of table %s during streaming table columns for %s", tableName, schemaName);
+                                log.warn(e, "Failed to access metadata of table %s during streaming table %s for %s", tableName, metadataTypeName, schemaName);
                             }
-                            return Optional.<RelationColumnsMetadata>empty();
+                            return Optional.<MetadataType>empty();
                         }
                     });
                 })
                 .collect(toImmutableList())
                 .forEach(future -> getFutureValue(future).ifPresent(filteredResult::add));
 
-        List<RelationColumnsMetadata> unfilteredResultList = unfilteredResult.build();
-        Set<SchemaTableName> availableNames = relationFilter.apply(unfilteredResultList.stream()
-                .map(RelationColumnsMetadata::name)
-                .collect(toImmutableSet()));
+        Map<SchemaTableName, MetadataType> unfilteredResultMap = unfilteredResult.buildOrThrow();
+        Set<SchemaTableName> availableNames = relationFilter.apply(unfilteredResultMap.keySet());
 
         return Stream.concat(
-                        unfilteredResultList.stream()
-                                .filter(commentMetadata -> availableNames.contains(commentMetadata.name())),
-                        filteredResult.build().stream())
-                .iterator();
-    }
-
-    @Override
-    public Iterator<RelationCommentMetadata> streamRelationComments(ConnectorSession session, Optional<String> schemaName, UnaryOperator<Set<SchemaTableName>> relationFilter)
-    {
-        ConnectorSession hiveSession = unwrap(HIVE, session);
-        ConnectorSession icebergSession = unwrap(ICEBERG, session);
-        ConnectorSession deltaSession = unwrap(DELTA, session);
-
-        ImmutableList.Builder<RelationCommentMetadata> unfilteredResult = ImmutableList.builder();
-        ImmutableList.Builder<RelationCommentMetadata> filteredResult = ImmutableList.builder();
-        Map<SchemaTableName, Supplier<Optional<String>>> unprocessedTables = new HashMap<>();
-
-        List<String> schemas = schemaName.map(List::of)
-                // TODO filter schemas: limit to those accessible to the user
-                .orElseGet(() -> listSchemaNames(session));
-
-        for (String schema : schemas) {
-            hiveMetadata.getMetastore().streamTables(hiveSession, schema).forEachRemaining(table -> {
-                SchemaTableName relation = new SchemaTableName(schema, table.getTableName());
-
-                boolean trinoMaterializedView = isTrinoMaterializedView(table);
-                boolean trinoView = isTrinoView(table);
-                boolean hiveView = isHiveView(table);
-
-                if (trinoView) {
-                    ConnectorViewDefinition viewDefinition = ViewReaderUtil.PrestoViewReader.decodeViewData(table.getViewOriginalText().orElseThrow());
-                    unfilteredResult.add(RelationCommentMetadata.forRelation(relation, viewDefinition.getComment()));
-                    return;
-                }
-                if (trinoMaterializedView) {
-                    IcebergMaterializedViewDefinition materializedViewDefinition = decodeMaterializedViewData(table.getViewOriginalText().orElseThrow());
-                    unfilteredResult.add(RelationCommentMetadata.forRelation(relation, materializedViewDefinition.getComment()));
-                    return;
-                }
-                if (hiveView) {
-                    unfilteredResult.add(RelationCommentMetadata.forRelation(relation, Optional.ofNullable(table.getParameters().get(TABLE_COMMENT))));
-                    return;
-                }
-
-                boolean icebergTable = isIcebergTable(table);
-                boolean deltaLakeTable = isDeltaLakeTable(table);
-                boolean hudiTable = isHudiTable(table);
-                boolean hiveTable = !(icebergTable || deltaLakeTable || hudiTable);
-
-                MaybeLazy<Optional<String>> tableComment;
-                if (hiveTable || hudiTable) {
-                    tableComment = MaybeLazy.ofValue(Optional.ofNullable(table.getParameters().get(TABLE_COMMENT)));
-                }
-                else if (icebergTable) {
-                    try {
-                        tableComment = icebergMetadata.getTableComment(icebergSession, table);
-                    }
-                    catch (RuntimeException e) {
-                        // E.g. a table declared as Iceberg table but lacking metadata_location
-                        log.warn(e, "Failed to process metadata of Iceberg table %s during streaming table comments for %s", table, schemaName);
-                        return; // Exclude from response
-                    }
-                }
-                else if (deltaLakeTable) {
-                    try {
-                        tableComment = deltaMetadata.getTableComment(deltaSession, table);
-                    }
-                    catch (RuntimeException e) {
-                        log.warn(e, "Failed to process metadata of Delta table %s during streaming table comments for %s", table, schemaName);
-                        return; // Exclude from response
-                    }
-                }
-                else {
-                    throw new UnsupportedOperationException("Unreachable");
-                }
-                tableComment.value().ifPresentOrElse(
-                        columnMetadata -> unfilteredResult.add(RelationCommentMetadata.forRelation(relation, columnMetadata)),
-                        // lazy computation ties up little memory (basically table/metadata location), so no need for explicit bound on unprocessedTables≥
-                        () -> unprocessedTables.put(relation, tableComment.lazy().orElseThrow()));
-            });
-        }
-
-        Context context = Context.current();
-        relationFilter.apply(unprocessedTables.keySet()).stream()
-                .map(tableName -> {
-                    Supplier<Optional<String>> commentSupplier = unprocessedTables.get(tableName);
-                    return parallelInformationSchemaQueryingExecutor.submit(() -> {
-                        try (Scope ignore = context.makeCurrent()) {
-                            return Optional.of(RelationCommentMetadata.forRelation(tableName, commentSupplier.get()));
-                        }
-                        catch (Exception e) {
-                            if (AbstractIcebergTableOperations.isNotFoundException(e)) {
-                                log.debug(e, "Not found when accessing metadata for table %s during streaming table comments for %s", tableName, schemaName);
-                            }
-                            else {
-                                log.warn(e, "Failed to access metadata of table %s during streaming table comments for %s", tableName, schemaName);
-                            }
-                            return Optional.<RelationCommentMetadata>empty();
-                        }
-                    });
-                })
-                .collect(toImmutableList())
-                .forEach(future -> getFutureValue(future).ifPresent(filteredResult::add));
-
-        List<RelationCommentMetadata> unfilteredResultList = unfilteredResult.build();
-        Set<SchemaTableName> availableNames = relationFilter.apply(unfilteredResultList.stream()
-                .map(RelationCommentMetadata::name)
-                .collect(toImmutableSet()));
-
-        return Stream.concat(
-                        unfilteredResultList.stream()
-                                .filter(commentMetadata -> availableNames.contains(commentMetadata.name())),
+                        unfilteredResultMap.entrySet().stream()
+                                .filter(entry -> availableNames.contains(entry.getKey()))
+                                .map(Map.Entry::getValue),
                         filteredResult.build().stream())
                 .iterator();
     }
