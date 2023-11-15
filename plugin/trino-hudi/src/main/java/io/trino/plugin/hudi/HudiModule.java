@@ -68,7 +68,6 @@ public class HudiModule
         configBinder(binder).bindConfig(ParquetReaderConfig.class);
         configBinder(binder).bindConfig(ParquetWriterConfig.class);
 
-        binder.bind(HudiPartitionManager.class).in(Scopes.SINGLETON);
         binder.bind(HudiMetadataFactory.class).in(Scopes.SINGLETON);
 
         configBinder(binder).bindConfig(LocalRegionConfig.class);
