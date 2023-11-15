@@ -27,7 +27,6 @@ import io.trino.sql.query.QueryAssertions;
 import io.trino.testing.DistributedQueryRunner;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.util.Set;
@@ -44,6 +43,7 @@ public class TestRevokeOnSchema
     private static final Session admin = sessionOf("admin");
     private static final Session userWithAllPrivileges = sessionOf(randomUsername());
     private static final Session userWithCreate = sessionOf(randomUsername());
+    private static final Session userWithSelect = sessionOf(randomUsername());
     private static final Set<Privilege> SCHEMA_PRIVILEGES = ImmutableSet.of(Privilege.CREATE);
 
     private DistributedQueryRunner queryRunner;
@@ -58,6 +58,7 @@ public class TestRevokeOnSchema
         schemaGrants.grant(new TrinoPrincipal(USER, admin.getUser()), "default", SCHEMA_PRIVILEGES, true);
         schemaGrants.grant(new TrinoPrincipal(USER, userWithAllPrivileges.getUser()), "default", SCHEMA_PRIVILEGES, true);
         schemaGrants.grant(new TrinoPrincipal(USER, userWithCreate.getUser()), "default", SCHEMA_PRIVILEGES, true);
+        schemaGrants.grant(new TrinoPrincipal(USER, userWithSelect.getUser()), "default", ImmutableSet.of(Privilege.SELECT), true);
         MockConnectorFactory connectorFactory = MockConnectorFactory.builder()
                 .withListSchemaNames(session -> ImmutableList.of("information_schema", "default"))
                 .withSchemaGrants(schemaGrants)
@@ -75,8 +76,14 @@ public class TestRevokeOnSchema
         queryRunner = null; // closed by assertions.close
     }
 
-    @Test(dataProvider = "privilegesAndUsers")
-    public void testRevokeOnSchema(String privilege, Session user)
+    @Test
+    public void testRevokeOnSchema()
+    {
+        testRevokeOnSchema("SELECT", userWithSelect);
+        testRevokeOnSchema("ALL PRIVILEGES", userWithAllPrivileges);
+    }
+
+    private void testRevokeOnSchema(String privilege, Session user)
     {
         assertThat(assertions.query(user, "SHOW SCHEMAS FROM local")).matches("VALUES (VARCHAR 'information_schema'), (VARCHAR 'default')");
 
@@ -85,45 +92,33 @@ public class TestRevokeOnSchema
         assertThat(assertions.query(user, "SHOW SCHEMAS FROM local")).matches("VALUES (VARCHAR 'information_schema')");
     }
 
-    @Test(dataProvider = "privilegesAndUsers")
-    public void testRevokeOnNonExistingCatalog(String privilege, Session user)
+    @Test
+    public void testRevokeOnNonExistingCatalog()
     {
-        assertThatThrownBy(() -> queryRunner.execute(admin, format("REVOKE %s ON SCHEMA missing_catalog.missing_schema FROM %s", privilege, user.getUser())))
+        assertThatThrownBy(() -> queryRunner.execute(admin, format("REVOKE SELECT ON SCHEMA missing_catalog.missing_schema FROM %s", userWithSelect.getUser())))
+                .hasMessageContaining("Schema 'missing_catalog.missing_schema' does not exist");
+        assertThatThrownBy(() -> queryRunner.execute(admin, format("REVOKE ALL PRIVILEGES ON SCHEMA missing_catalog.missing_schema FROM %s", userWithAllPrivileges.getUser())))
                 .hasMessageContaining("Schema 'missing_catalog.missing_schema' does not exist");
     }
 
-    @Test(dataProvider = "privilegesAndUsers")
-    public void testRevokeOnNonExistingSchema(String privilege, Session user)
+    @Test
+    public void testRevokeOnNonExistingSchema()
     {
-        assertThatThrownBy(() -> queryRunner.execute(admin, format("REVOKE %s ON SCHEMA missing_schema FROM %s", privilege, user.getUser())))
+        assertThatThrownBy(() -> queryRunner.execute(admin, format("REVOKE SELECT ON SCHEMA missing_schema FROM %s", userWithSelect.getUser())))
+                .hasMessageContaining("Schema 'local.missing_schema' does not exist");
+        assertThatThrownBy(() -> queryRunner.execute(admin, format("REVOKE ALL PRIVILEGES ON SCHEMA missing_schema FROM %s", userWithAllPrivileges.getUser())))
                 .hasMessageContaining("Schema 'local.missing_schema' does not exist");
     }
 
-    @Test(dataProvider = "privileges")
-    public void testAccessDenied(String privilege)
+    @Test
+    public void testAccessDenied()
     {
-        assertThatThrownBy(() -> queryRunner.execute(sessionOf(randomUsername()), format("REVOKE %s ON SCHEMA default FROM %s", privilege, randomUsername())))
-                .hasMessageContaining(
-                        "Access Denied: Cannot revoke privilege %s on schema default",
-                        privilege.equals("ALL PRIVILEGES") ? "CREATE" : privilege);
-    }
-
-    @DataProvider(name = "privilegesAndUsers")
-    public static Object[][] privilegesAndUsers()
-    {
-        return new Object[][] {
-                {"CREATE", userWithCreate},
-                {"ALL PRIVILEGES", userWithAllPrivileges}
-        };
-    }
-
-    @DataProvider(name = "privileges")
-    public static Object[][] privileges()
-    {
-        return new Object[][] {
-                {"CREATE"},
-                {"ALL PRIVILEGES"}
-        };
+        assertThatThrownBy(() -> queryRunner.execute(sessionOf(randomUsername()), format("REVOKE CREATE ON SCHEMA default FROM %s", randomUsername())))
+                .hasMessageContaining("Access Denied: Cannot revoke privilege CREATE on schema default");
+        assertThatThrownBy(() -> queryRunner.execute(sessionOf(randomUsername()), format("REVOKE SELECT ON SCHEMA default FROM %s", randomUsername())))
+                .hasMessageContaining("Access Denied: Cannot revoke privilege SELECT on schema default");
+        assertThatThrownBy(() -> queryRunner.execute(sessionOf(randomUsername()), format("REVOKE ALL PRIVILEGES ON SCHEMA default FROM %s", randomUsername())))
+                .hasMessageContaining("Access Denied: Cannot revoke privilege CREATE on schema default");
     }
 
     private static Session sessionOf(String username)
