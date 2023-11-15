@@ -3006,7 +3006,7 @@ public class HiveMetadata
             unenforcedConstraint = partitionResult.getEffectivePredicate().filter((column, domain) -> !partitionColumns.contains(column));
         }
 
-        return Optional.of(new ConstraintApplicationResult<>(newHandle, unenforcedConstraint, false));
+        return Optional.of(new ConstraintApplicationResult<>(newHandle, unenforcedConstraint, constraint.getExpression(), false));
     }
 
     @Override
