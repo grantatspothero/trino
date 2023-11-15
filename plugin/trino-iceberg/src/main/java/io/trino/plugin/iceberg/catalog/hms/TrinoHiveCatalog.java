@@ -389,6 +389,7 @@ public class TrinoHiveCatalog
     public void unregisterTable(ConnectorSession session, SchemaTableName schemaTableName)
     {
         dropTableFromMetastore(schemaTableName);
+        invalidateTableCache(schemaTableName);
     }
 
     @Override
@@ -445,6 +446,7 @@ public class TrinoHiveCatalog
             log.warn(e, "Failed to delete table data referenced by metadata");
         }
         deleteTableDirectory(fileSystemFactory.create(session), schemaTableName, metastoreTable.getStorage().getLocation());
+        invalidateTableCache(schemaTableName);
     }
 
     @Override
@@ -452,6 +454,7 @@ public class TrinoHiveCatalog
     {
         io.trino.plugin.hive.metastore.Table table = dropTableFromMetastore(schemaTableName);
         deleteTableDirectory(fileSystemFactory.create(session), schemaTableName, table.getStorage().getLocation());
+        invalidateTableCache(schemaTableName);
     }
 
     private io.trino.plugin.hive.metastore.Table dropTableFromMetastore(SchemaTableName schemaTableName)
@@ -473,6 +476,7 @@ public class TrinoHiveCatalog
     public void renameTable(ConnectorSession session, SchemaTableName from, SchemaTableName to)
     {
         metastore.renameTable(from.getSchemaName(), from.getTableName(), to.getSchemaName(), to.getTableName());
+        invalidateTableCache(from);
     }
 
     @Override
@@ -916,5 +920,11 @@ public class TrinoHiveCatalog
             return Optional.of(new CatalogSchemaTableName(hiveCatalogName, tableName));
         }
         return Optional.empty();
+    }
+
+    @Override
+    protected void invalidateTableCache(SchemaTableName schemaTableName)
+    {
+        tableMetadataCache.remove(schemaTableName);
     }
 }
