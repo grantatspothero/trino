@@ -13,10 +13,13 @@
  */
 package io.trino.plugin.iceberg.catalog.hms;
 
+import com.google.common.cache.Cache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.UncheckedExecutionException;
 import io.airlift.log.Logger;
+import io.trino.cache.EvictableCacheBuilder;
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystem;
 import io.trino.filesystem.TrinoFileSystemFactory;
@@ -70,14 +73,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Throwables.throwIfUnchecked;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.trino.cache.CacheUtils.uncheckedCacheGet;
 import static io.trino.filesystem.Locations.appendPath;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_DATABASE_LOCATION_ERROR;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_INVALID_METADATA;
@@ -126,6 +130,7 @@ public class TrinoHiveCatalog
         extends AbstractTrinoCatalog
 {
     private static final Logger log = Logger.get(TrinoHiveCatalog.class);
+    private static final int PER_QUERY_CACHE_SIZE = 1000;
     public static final String DEPENDS_ON_TABLES = "dependsOnTables";
     // Value should be ISO-8601 formatted time instant
     public static final String TRINO_QUERY_START_TIME = "trino-query-start-time";
@@ -138,7 +143,9 @@ public class TrinoHiveCatalog
     private final boolean deleteSchemaLocationsFallback;
     private final boolean hideMaterializedViewStorageTable;
 
-    private final Map<SchemaTableName, TableMetadata> tableMetadataCache = new ConcurrentHashMap<>();
+    private final Cache<SchemaTableName, TableMetadata> tableMetadataCache = EvictableCacheBuilder.newBuilder()
+            .maximumSize(PER_QUERY_CACHE_SIZE)
+            .build();
 
     public TrinoHiveCatalog(
             CatalogName catalogName,
@@ -482,9 +489,17 @@ public class TrinoHiveCatalog
     @Override
     public Table loadTable(ConnectorSession session, SchemaTableName schemaTableName)
     {
-        TableMetadata metadata = tableMetadataCache.computeIfAbsent(
-                schemaTableName,
-                ignore -> ((BaseTable) loadIcebergTable(this, tableOperationsProvider, session, schemaTableName)).operations().current());
+        TableMetadata metadata;
+        try {
+            metadata = uncheckedCacheGet(
+                    tableMetadataCache,
+                    schemaTableName,
+                    () -> ((BaseTable) loadIcebergTable(this, tableOperationsProvider, session, schemaTableName)).operations().current());
+        }
+        catch (UncheckedExecutionException e) {
+            throwIfUnchecked(e.getCause());
+            throw e;
+        }
 
         return getIcebergTableWithMetadata(this, tableOperationsProvider, session, schemaTableName, metadata);
     }
@@ -492,7 +507,7 @@ public class TrinoHiveCatalog
     @Override
     public Optional<TableMetadata> getCachedTableMetadata(SchemaTableName schemaTableName)
     {
-        return Optional.of(tableMetadataCache.get(schemaTableName));
+        return Optional.ofNullable(tableMetadataCache.getIfPresent(schemaTableName));
     }
 
     @Override
@@ -868,7 +883,7 @@ public class TrinoHiveCatalog
 
     private TableMetadata getMaterializedViewTableMetadata(ConnectorSession session, SchemaTableName storageTableName, io.trino.plugin.hive.metastore.Table materializedView)
     {
-        return tableMetadataCache.computeIfAbsent(storageTableName, ignored -> {
+        return uncheckedCacheGet(tableMetadataCache, storageTableName, () -> {
             String storageMetadataLocation = materializedView.getParameters().get(METADATA_LOCATION_PROP);
             checkState(storageMetadataLocation != null, "Storage location missing in definition of materialized view " + materializedView.getTableName());
             TrinoFileSystem fileSystem = fileSystemFactory.create(session);
@@ -925,6 +940,6 @@ public class TrinoHiveCatalog
     @Override
     protected void invalidateTableCache(SchemaTableName schemaTableName)
     {
-        tableMetadataCache.remove(schemaTableName);
+        tableMetadataCache.invalidate(schemaTableName);
     }
 }

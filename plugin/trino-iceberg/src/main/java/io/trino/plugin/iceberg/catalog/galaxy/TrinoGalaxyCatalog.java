@@ -14,9 +14,12 @@
 package io.trino.plugin.iceberg.catalog.galaxy;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.cache.Cache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.UncheckedExecutionException;
 import io.airlift.log.Logger;
+import io.trino.cache.EvictableCacheBuilder;
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystem;
 import io.trino.filesystem.TrinoFileSystemFactory;
@@ -70,16 +73,17 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Throwables.throwIfUnchecked;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.base.Verify.verifyNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.trino.cache.CacheUtils.uncheckedCacheGet;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_DATABASE_LOCATION_ERROR;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_INVALID_METADATA;
 import static io.trino.plugin.hive.HiveMetadata.STORAGE_TABLE;
@@ -125,6 +129,7 @@ public class TrinoGalaxyCatalog
         extends AbstractTrinoCatalog
 {
     private static final Logger log = Logger.get(TrinoGalaxyCatalog.class);
+    private static final int PER_QUERY_CACHE_SIZE = 1000;
 
     private final TypeManager typeManager;
     private final CachingHiveMetastore metastore;
@@ -133,7 +138,9 @@ public class TrinoGalaxyCatalog
     private final boolean cacheTableMetadata;
     private final boolean hideMaterializedViewStorageTable;
 
-    private final Map<SchemaTableName, TableMetadata> tableMetadataCache = new ConcurrentHashMap<>();
+    private final Cache<SchemaTableName, TableMetadata> tableMetadataCache = EvictableCacheBuilder.newBuilder()
+            .maximumSize(PER_QUERY_CACHE_SIZE)
+            .build();
 
     public TrinoGalaxyCatalog(
             CatalogName catalogName,
@@ -368,9 +375,17 @@ public class TrinoGalaxyCatalog
     @Override
     public Table loadTable(ConnectorSession session, SchemaTableName schemaTableName)
     {
-        TableMetadata metadata = tableMetadataCache.computeIfAbsent(
-                schemaTableName,
-                ignore -> ((BaseTable) loadIcebergTable(this, tableOperationsProvider, session, schemaTableName)).operations().current());
+        TableMetadata metadata;
+        try {
+            metadata = uncheckedCacheGet(
+                    tableMetadataCache,
+                    schemaTableName,
+                    () -> ((BaseTable) loadIcebergTable(this, tableOperationsProvider, session, schemaTableName)).operations().current());
+        }
+        catch (UncheckedExecutionException e) {
+            throwIfUnchecked(e.getCause());
+            throw e;
+        }
 
         return getIcebergTableWithMetadata(this, tableOperationsProvider, session, schemaTableName, metadata);
     }
@@ -378,7 +393,7 @@ public class TrinoGalaxyCatalog
     @Override
     public Optional<TableMetadata> getCachedTableMetadata(SchemaTableName schemaTableName)
     {
-        return Optional.of(tableMetadataCache.get(schemaTableName));
+        return Optional.ofNullable(tableMetadataCache.getIfPresent(schemaTableName));
     }
 
     @Override
@@ -854,6 +869,12 @@ public class TrinoGalaxyCatalog
                         throw new MaterializedViewMayBeBeingRemovedException(e);
                     }
                 });
+    }
+
+    @Override
+    protected void invalidateTableCache(SchemaTableName schemaTableName)
+    {
+        tableMetadataCache.invalidate(schemaTableName);
     }
 
     @Override

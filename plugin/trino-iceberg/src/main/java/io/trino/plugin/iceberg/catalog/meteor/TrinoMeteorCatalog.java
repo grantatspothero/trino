@@ -333,6 +333,12 @@ public class TrinoMeteorCatalog
     }
 
     @Override
+    public Optional<BaseTable> getMaterializedViewStorageTable(ConnectorSession session, SchemaTableName viewName)
+    {
+        return Optional.empty();
+    }
+
+    @Override
     public void renameMaterializedView(ConnectorSession session, SchemaTableName source, SchemaTableName target)
     {
         throw new TrinoException(NOT_SUPPORTED, "Operation not supported by Meteor Catalog");
