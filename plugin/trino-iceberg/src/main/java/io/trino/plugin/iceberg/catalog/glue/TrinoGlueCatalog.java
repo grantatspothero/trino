@@ -121,6 +121,7 @@ import static io.trino.plugin.hive.metastore.glue.converter.GlueToTrinoConverter
 import static io.trino.plugin.hive.metastore.glue.converter.GlueToTrinoConverter.getTableParameters;
 import static io.trino.plugin.hive.metastore.glue.converter.GlueToTrinoConverter.getTableType;
 import static io.trino.plugin.hive.metastore.glue.converter.GlueToTrinoConverter.getTableTypeNullable;
+import static io.trino.plugin.hive.util.HiveUtil.escapeSchemaName;
 import static io.trino.plugin.hive.util.HiveUtil.isHiveSystemSchema;
 import static io.trino.plugin.hive.util.HiveUtil.isIcebergTable;
 import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_BAD_DATA;
@@ -953,7 +954,7 @@ public class TrinoGlueCatalog
                                 schemaTableName.getSchemaName()));
             }
             String schemaDirectoryName = schemaTableName.getSchemaName() + ".db";
-            databaseLocation = appendPath(defaultSchemaLocation.get(), schemaDirectoryName);
+            databaseLocation = appendPath(defaultSchemaLocation.get(), escapeSchemaName(schemaDirectoryName));
         }
 
         return appendPath(databaseLocation, tableName);
