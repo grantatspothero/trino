@@ -68,6 +68,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.filesystem.Locations.appendPath;
 import static io.trino.plugin.hive.HiveMetadata.TABLE_COMMENT;
+import static io.trino.plugin.hive.util.HiveUtil.escapeTableName;
 import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_CATALOG_ERROR;
 import static io.trino.plugin.iceberg.IcebergUtil.quotedTableName;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
@@ -352,7 +353,7 @@ public class TrinoRestCatalog
 
     private String createLocationForTable(String baseTableName)
     {
-        String tableName = baseTableName;
+        String tableName = escapeTableName(baseTableName);
         if (useUniqueTableLocation) {
             tableName += "-" + randomUUID().toString().replace("-", "");
         }
