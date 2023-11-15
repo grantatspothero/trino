@@ -28,8 +28,7 @@ import io.trino.testing.TestingConnectorBehavior;
 import io.trino.tpch.TpchTable;
 import org.assertj.core.api.Assertions;
 import org.bson.Document;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
@@ -40,7 +39,6 @@ import static io.trino.testing.MaterializedResult.resultBuilder;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.testng.Assert.assertTrue;
 
 public class TestMongoFederatedDatabaseConnectorTest
         extends BaseConnectorTest
@@ -151,6 +149,7 @@ public class TestMongoFederatedDatabaseConnectorTest
     }
 
     // Overridden as the failure message is different
+    @Test
     @Override
     public void testAddColumn()
     {
@@ -158,6 +157,7 @@ public class TestMongoFederatedDatabaseConnectorTest
     }
 
     // Overridden as the failure message is different
+    @Test
     @Override
     public void testCommentColumn()
     {
@@ -165,6 +165,7 @@ public class TestMongoFederatedDatabaseConnectorTest
     }
 
     // Overridden as the failure message is different
+    @Test
     @Override
     public void testCommentTable()
     {
@@ -172,6 +173,7 @@ public class TestMongoFederatedDatabaseConnectorTest
     }
 
     // Overridden as the failure message is different
+    @Test
     @Override
     public void testCreateSchema()
     {
@@ -179,6 +181,7 @@ public class TestMongoFederatedDatabaseConnectorTest
     }
 
     // Overridden as the failure message is different
+    @Test
     @Override
     public void testCreateTable()
     {
@@ -186,6 +189,7 @@ public class TestMongoFederatedDatabaseConnectorTest
     }
 
     // Overridden as the failure message is different
+    @Test
     @Override
     public void testCreateTableAsSelect()
     {
@@ -193,12 +197,14 @@ public class TestMongoFederatedDatabaseConnectorTest
     }
 
     // Overridden as the failure message is different
+    @Test
     @Override
     public void testDropColumn()
     {
         assertQueryFails("ALTER TABLE nation DROP COLUMN nationkey", "Dropping columns is not supported on Atlas data federation");
     }
 
+    @Test
     @Override
     public void testRenameColumn()
     {
@@ -206,6 +212,7 @@ public class TestMongoFederatedDatabaseConnectorTest
     }
 
     // Overridden as the failure message is different
+    @Test
     @Override
     public void testInsert()
     {
@@ -213,6 +220,7 @@ public class TestMongoFederatedDatabaseConnectorTest
     }
 
     // Overridden as the failure message is different
+    @Test
     @Override
     public void testInsertNegativeDate()
     {
@@ -220,6 +228,7 @@ public class TestMongoFederatedDatabaseConnectorTest
     }
 
     // Overridden as the failure message is different
+    @Test
     @Override
     public void testSetColumnType()
     {
@@ -227,6 +236,7 @@ public class TestMongoFederatedDatabaseConnectorTest
     }
 
     // Overridden as the data types are different for few columns
+    @Test
     @Override
     public void testShowCreateTable()
     {
@@ -271,7 +281,7 @@ public class TestMongoFederatedDatabaseConnectorTest
 
     // Overridden as the data types are different for few columns
     @Override
-    @org.junit.jupiter.api.Test
+    @Test
     public void testShowColumns()
     {
         MaterializedResult actual = computeActual("SHOW COLUMNS FROM orders");
@@ -287,7 +297,9 @@ public class TestMongoFederatedDatabaseConnectorTest
                 .row("shippriority", "bigint", "", "") // Changed from integer to bigint
                 .row("comment", "varchar", "", "")
                 .build();
-        assertTrue(expectedUnparametrizedVarchar.equals(actual), format("%s does not match %s", actual, expectedUnparametrizedVarchar));
+        assertThat(expectedUnparametrizedVarchar)
+                .as(format("%s does not match %s", actual, expectedUnparametrizedVarchar))
+                .isEqualTo(actual);
     }
 
     @Test
@@ -314,8 +326,15 @@ public class TestMongoFederatedDatabaseConnectorTest
                 "Delete is not supported on Atlas data federation");
     }
 
-    @Test(dataProvider = "predicatePushdownProvider")
-    public void testPredicatePushdown(String tableName, String columnValue)
+    @Test
+    public void testPredicatePushdown()
+    {
+        for (Object[] predicatePushdown : predicatePushdownProvider()) {
+            testPredicatePushdown((String) predicatePushdown[0], (String) predicatePushdown[1]);
+        }
+    }
+
+    private void testPredicatePushdown(String tableName, String columnValue)
     {
         String predicatePushdownDatabase = "test";
         createPredicatePushdownTable(predicatePushdownDatabase, tableName, columnValue);
@@ -353,7 +372,6 @@ public class TestMongoFederatedDatabaseConnectorTest
         }
     }
 
-    @DataProvider
     public static Object[][] predicatePushdownProvider()
     {
         // Any changes in the returned object format should be reflected in TestMongoAtlasInstanceCleaner.RETAINED_COLLECTIONS

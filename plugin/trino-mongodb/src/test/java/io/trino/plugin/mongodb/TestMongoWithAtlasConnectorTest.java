@@ -24,8 +24,6 @@ import static io.trino.plugin.mongodb.TestingMongoAtlasInfoProvider.getConnectio
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertTrue;
 
 public class TestMongoWithAtlasConnectorTest
         extends TestMongoConnectorTest
@@ -54,13 +52,13 @@ public class TestMongoWithAtlasConnectorTest
         int maxLength = 255 - "tpch.".length(); // Length is different from value returned by TestMongoConnectorTest#maxTableNameLength
         String validTableName = baseTableName + "z".repeat(maxLength - baseTableName.length());
         assertUpdate("CREATE TABLE " + validTableName + " (a bigint)");
-        assertTrue(getQueryRunner().tableExists(getSession(), validTableName));
+        assertThat(getQueryRunner().tableExists(getSession(), validTableName)).isTrue();
         assertUpdate("DROP TABLE " + validTableName);
 
         String invalidTableName = validTableName + "z";
         assertThatThrownBy(() -> assertUpdate("CREATE TABLE " + invalidTableName + " (a bigint)"))
                 .satisfies((e) -> assertThat(e).hasMessageMatching(".*Fully qualified namespace is too long.*")); // Message is different compared to TestMongoConnectorTest#verifyTableNameLengthFailurePermissible
-        assertFalse(getQueryRunner().tableExists(getSession(), validTableName));
+        assertThat(getQueryRunner().tableExists(getSession(), validTableName)).isFalse();
     }
 
     // Overridden to create fewer tables

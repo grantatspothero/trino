@@ -30,9 +30,11 @@ import io.trino.spi.security.Privilege;
 import io.trino.spi.security.TrinoPrincipal;
 import io.trino.sql.query.QueryAssertions;
 import io.trino.testing.DistributedQueryRunner;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.parallel.Execution;
 
 import java.util.Set;
 
@@ -44,8 +46,11 @@ import static java.lang.String.format;
 import static java.util.Locale.ROOT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
-@Test(singleThreaded = true)
+@TestInstance(PER_CLASS)
+@Execution(SAME_THREAD)
 public class TestDenyOnSchema
 {
     private static final Set<Privilege> SCHEMA_PRIVILEGES = ImmutableSet.of(Privilege.CREATE);
@@ -62,7 +67,7 @@ public class TestDenyOnSchema
     private TrinoPrincipal expectedGrantee;
     private boolean denyCalled;
 
-    @BeforeClass
+    @BeforeAll
     public void initClass()
             throws Exception
     {
@@ -98,7 +103,7 @@ public class TestDenyOnSchema
         tableGrants.grant(new TrinoPrincipal(USER, "admin"), table, TABLE_PRIVILEGES, true);
     }
 
-    @AfterClass(alwaysRun = true)
+    @AfterAll
     public void teardown()
     {
         assertions.close();

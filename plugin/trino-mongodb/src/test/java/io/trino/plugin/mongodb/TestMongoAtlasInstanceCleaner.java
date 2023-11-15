@@ -23,9 +23,7 @@ import io.airlift.log.Logger;
 import io.trino.tpch.TpchTable;
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -49,21 +47,13 @@ public class TestMongoAtlasInstanceCleaner
             .putAll("test", Arrays.stream(TestMongoFederatedDatabaseConnectorTest.predicatePushdownProvider()).map(element -> (String) element[0]).collect(Collectors.toList()))
             .put("galaxy_integration_tests_db", "galaxy_integration_tests_collection") // Used by Galaxy integration test
             .build();
-    private MongoClient client;
+    private final MongoClient client;
 
-    @BeforeClass
-    public void setup()
+    public TestMongoAtlasInstanceCleaner()
     {
         String connectionString = getConnectionString().getConnectionString();
         checkArgument(connectionString.matches("^mongodb(\\+srv)?://.*"));
         this.client = MongoClients.create(connectionString);
-    }
-
-    @AfterClass(alwaysRun = true)
-    public void destroy()
-    {
-        client.close();
-        client = null;
     }
 
     /**
