@@ -167,6 +167,14 @@ public abstract class BaseObjectStoreConnectorTest
         // skip test since we only support auto-commit
     }
 
+    @Test
+    @Override // Override because the error message is different from "This connector does not support creating functions"
+    public void testCreateFunction()
+    {
+        assertThatThrownBy(super::testCreateFunction)
+                .hasMessageContaining("Access Denied: Cannot create function");
+    }
+
     @Override
     protected TestTable createTableWithDefaultColumns()
     {
