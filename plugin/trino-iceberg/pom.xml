@@ -607,7 +607,7 @@
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-admin-client-jakarta</artifactId>
-            <version>${dep.keycloak.version}</version>
+            <version>21.1.2</version>
             <scope>test</scope>
             <exclusions>
                 <exclusion>
@@ -624,7 +624,7 @@
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-core</artifactId>
-            <version>${dep.keycloak.version}</version>
+            <version>22.0.5</version>
             <scope>test</scope>
         </dependency>
 
