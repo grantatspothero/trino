@@ -22,8 +22,6 @@ import com.google.inject.Module;
 import io.airlift.discovery.server.testing.TestingDiscoveryServer;
 import io.airlift.log.Logger;
 import io.airlift.log.Logging;
-import io.airlift.testing.Assertions;
-import io.airlift.units.Duration;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.trino.Session;
 import io.trino.Session.SessionBuilder;
@@ -80,6 +78,7 @@ import java.util.function.Function;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Throwables.throwIfUnchecked;
+import static com.google.common.base.Verify.verify;
 import static com.google.inject.util.Modules.EMPTY_MODULE;
 import static io.airlift.log.Level.DEBUG;
 import static io.airlift.log.Level.ERROR;
@@ -90,8 +89,6 @@ import static io.trino.execution.querystats.PlanOptimizersStatsCollector.createP
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.System.getenv;
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class DistributedQueryRunner
         implements QueryRunner
@@ -139,14 +136,15 @@ public class DistributedQueryRunner
     {
         requireNonNull(defaultSession, "defaultSession is null");
 
+        long start = System.nanoTime();
         setupLogging();
 
         try {
-            long start = System.nanoTime();
+            long discoveryStart = System.nanoTime();
             discoveryServer = new TestingDiscoveryServer(environment);
             closer.register(() -> closeUnchecked(discoveryServer));
             closer.register(() -> extraCloseables.forEach(DistributedQueryRunner::closeUnchecked));
-            log.info("Created TestingDiscoveryServer in %s", nanosSince(start).convertToMostSuccinctTimeUnit());
+            log.info("Created TestingDiscoveryServer in %s", nanosSince(discoveryStart));
 
             registerNewWorker = () -> createServer(false, extraProperties, environment, additionalModule, baseDataDir, spanProcessor, Optional.empty(), Optional.of(ImmutableList.of()), ImmutableList.of());
 
@@ -200,7 +198,8 @@ public class DistributedQueryRunner
         defaultSession = defaultSession.toSessionRepresentation().toSession(coordinator.getSessionPropertyManager(), defaultSession.getIdentity().getExtraCredentials(), defaultSession.getExchangeEncryptionKey());
         this.trinoClient = closer.register(testingTrinoClientFactory.create(coordinator, defaultSession));
 
-        waitForAllNodesGloballyVisible();
+        ensureNodesGloballyVisible();
+        log.info("Created DistributedQueryRunner in %s", nanosSince(start));
     }
 
     private TestingTrinoServer createServer(
@@ -296,36 +295,20 @@ public class DistributedQueryRunner
     }
 
     public void addServers(int nodeCount)
-            throws Exception
     {
         for (int i = 0; i < nodeCount; i++) {
             registerNewWorker.run();
         }
-        waitForAllNodesGloballyVisible();
+        ensureNodesGloballyVisible();
     }
 
-    private void waitForAllNodesGloballyVisible()
-            throws InterruptedException
-    {
-        long start = System.nanoTime();
-        while (!allNodesGloballyVisible()) {
-            // TODO node announcement should be propagated faster when new node starts
-            Assertions.assertLessThan(nanosSince(start), new Duration(30, SECONDS));
-            MILLISECONDS.sleep(10);
-        }
-        log.info("Announced servers in %s", nanosSince(start).convertToMostSuccinctTimeUnit());
-    }
-
-    private boolean allNodesGloballyVisible()
+    private void ensureNodesGloballyVisible()
     {
         for (TestingTrinoServer server : servers) {
-            AllNodes allNodes = server.refreshNodes();
-            if (!allNodes.getInactiveNodes().isEmpty() ||
-                    (allNodes.getActiveNodes().size() != servers.size())) {
-                return false;
-            }
+            AllNodes nodes = server.refreshNodes();
+            verify(nodes.getInactiveNodes().isEmpty(), "Node manager has inactive nodes");
+            verify(nodes.getActiveNodes().size() == servers.size(), "Node manager has wrong active node count");
         }
-        return true;
     }
 
     public TestingTrinoClient getClient()
