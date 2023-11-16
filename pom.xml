@@ -173,7 +173,7 @@
         <dep.tcnative.version>2.0.62.Final</dep.tcnative.version>
         <dep.aws-sdk.version>1.12.590</dep.aws-sdk.version>
         <dep.jsonwebtoken.version>0.12.3</dep.jsonwebtoken.version>
-        <dep.oracle.version>21.9.0.0</dep.oracle.version>
+        <dep.oracle.version>21.11.0.0</dep.oracle.version>
         <dep.drift.version>1.21</dep.drift.version>
         <dep.tempto.version>201</dep.tempto.version>
         <dep.swagger.version>1.6.12</dep.swagger.version>
