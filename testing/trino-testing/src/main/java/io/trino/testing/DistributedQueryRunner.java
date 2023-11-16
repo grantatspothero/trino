@@ -26,6 +26,7 @@ import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.trino.Session;
 import io.trino.Session.SessionBuilder;
 import io.trino.cache.CacheMetadata;
+import io.trino.connector.CoordinatorDynamicCatalogManager;
 import io.trino.cost.StatsCalculator;
 import io.trino.execution.FailureInjector.InjectedFailureType;
 import io.trino.execution.QueryManager;
@@ -38,6 +39,7 @@ import io.trino.metadata.Metadata;
 import io.trino.metadata.QualifiedObjectName;
 import io.trino.metadata.SessionPropertyManager;
 import io.trino.server.BasicQueryInfo;
+import io.trino.server.PluginManager;
 import io.trino.server.SessionPropertyDefaults;
 import io.trino.server.testing.FactoryConfiguration;
 import io.trino.server.testing.TestingTrinoServer;
@@ -237,6 +239,9 @@ public class DistributedQueryRunner
         logging.setLevel("org.glassfish", ERROR);
         logging.setLevel("org.eclipse.jetty.server", WARN);
         logging.setLevel("io.trino.execution.scheduler.faulttolerant", DEBUG);
+        logging.setLevel("org.hibernate.validator.internal.util.Version", WARN);
+        logging.setLevel(PluginManager.class.getName(), WARN);
+        logging.setLevel(CoordinatorDynamicCatalogManager.class.getName(), WARN);
     }
 
     private static TestingTrinoServer createTestingTrinoServer(
@@ -441,9 +446,7 @@ public class DistributedQueryRunner
     public void installPlugin(Plugin plugin)
     {
         plugins.add(plugin);
-        long start = System.nanoTime();
         servers.forEach(server -> server.installPlugin(plugin));
-        log.info("Installed plugin %s in %s", plugin.getClass().getSimpleName(), nanosSince(start).convertToMostSuccinctTimeUnit());
     }
 
     @Override
