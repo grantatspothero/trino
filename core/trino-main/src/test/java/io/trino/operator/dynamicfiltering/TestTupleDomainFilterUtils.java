@@ -96,7 +96,7 @@ public class TestTupleDomainFilterUtils
         assertThat(filter).isInstanceOf(TupleDomainFilter.LongHashSetFilter.class);
         verifyFilterContainsValues(filter, ImmutableSet.copyOf(values), type);
 
-        assertThat(testContains(filter, -0L)).isTrue();
+        assertThat(testContains(filter, -0L, type)).isTrue();
         long minValue;
         long maxValue;
         if (type == DATE) {
@@ -107,8 +107,8 @@ public class TestTupleDomainFilterUtils
             minValue = (long) type.getRange().map(Type.Range::getMin).orElse(Long.MIN_VALUE);
             maxValue = (long) type.getRange().map(Type.Range::getMax).orElse(Long.MAX_VALUE);
         }
-        assertThat(testContains(filter, minValue)).isFalse();
-        assertThat(testContains(filter, maxValue)).isFalse();
+        assertThat(testContains(filter, minValue, type)).isFalse();
+        assertThat(testContains(filter, maxValue, type)).isFalse();
 
         long min = values.get(0);
         long max = min;
@@ -116,10 +116,10 @@ public class TestTupleDomainFilterUtils
             min = Math.min(min, values.get(i));
             max = Math.max(max, values.get(i));
         }
-        assertThat(testContains(filter, min - 1)).isFalse();
-        assertThat(testContains(filter, max + 1)).isFalse();
-        assertThat(testContains(filter, min + 1)).isFalse();
-        assertThat(testContains(filter, max - 1)).isFalse();
+        assertThat(testContains(filter, min - 1, type)).isFalse();
+        assertThat(testContains(filter, max + 1, type)).isFalse();
+        assertThat(testContains(filter, min + 1, type)).isFalse();
+        assertThat(testContains(filter, max - 1, type)).isFalse();
     }
 
     @DataProvider
@@ -218,7 +218,7 @@ public class TestTupleDomainFilterUtils
     public void testAlwaysFalseFilter()
     {
         TupleDomainFilter filter = new TupleDomainFilter.AlwaysFalse(INTEGER);
-        assertThat(testContains(filter, 123)).isFalse();
+        assertThat(testContains(filter, 123, BIGINT)).isFalse();
         filter = new TupleDomainFilter.AlwaysFalse(VARCHAR);
         assertThat(testContains(filter, utf8Slice("123"))).isFalse();
         assertThat(filter.isNullAllowed()).isFalse();
@@ -228,7 +228,7 @@ public class TestTupleDomainFilterUtils
     public void testIsNullFilter()
     {
         TupleDomainFilter filter = new TupleDomainFilter.IsNullFilter(INTEGER);
-        assertThat(testContains(filter, 123)).isFalse();
+        assertThat(testContains(filter, 123, BIGINT)).isFalse();
         filter = new TupleDomainFilter.IsNullFilter(VARCHAR);
         assertThat(testContains(filter, utf8Slice("123"))).isFalse();
         assertThat(filter.isNullAllowed()).isTrue();
@@ -238,7 +238,7 @@ public class TestTupleDomainFilterUtils
     public void testIsNotNullFilter()
     {
         TupleDomainFilter filter = new TupleDomainFilter.IsNotNullFilter(INTEGER);
-        assertThat(testContains(filter, 123)).isTrue();
+        assertThat(testContains(filter, 123, BIGINT)).isTrue();
         filter = new TupleDomainFilter.IsNotNullFilter(VARCHAR);
         assertThat(testContains(filter, utf8Slice("123"))).isTrue();
         assertThat(filter.isNullAllowed()).isFalse();
@@ -290,9 +290,9 @@ public class TestTupleDomainFilterUtils
         TupleDomainFilter filter = filters.get(column);
         assertThat(filter).isInstanceOf(TupleDomainFilter.LongCustomHashSetFilter.class);
         verifyFilterContainsValues(filter, ImmutableSet.copyOf(values), REAL);
-        assertThat(testContains(filter, floatToRawIntBits(POSITIVE_INFINITY))).isFalse();
-        assertThat(testContains(filter, floatToRawIntBits(-0.0f))).isTrue();
-        assertThat(testContains(filter, floatToRawIntBits(0.1f))).isFalse();
+        assertThat(testContains(filter, floatToRawIntBits(POSITIVE_INFINITY), REAL)).isFalse();
+        assertThat(testContains(filter, floatToRawIntBits(-0.0f), REAL)).isTrue();
+        assertThat(testContains(filter, floatToRawIntBits(0.1f), REAL)).isFalse();
     }
 
     @Test
@@ -409,9 +409,9 @@ public class TestTupleDomainFilterUtils
         TupleDomainFilter.LongRangeFilter rangeFilter = new TupleDomainFilter.LongRangeFilter(false, BIGINT, 1L, Long.MAX_VALUE);
         assertThat(filters).isEqualTo(ImmutableMap.of(column, rangeFilter));
         assertThat(rangeFilter.isNullAllowed()).isFalse();
-        assertThat(testContains(rangeFilter, 0)).isFalse();
-        assertThat(testContains(rangeFilter, 1)).isTrue();
-        assertThat(testContains(rangeFilter, Long.MAX_VALUE)).isTrue();
+        assertThat(testContains(rangeFilter, 0, BIGINT)).isFalse();
+        assertThat(testContains(rangeFilter, 1, BIGINT)).isTrue();
+        assertThat(testContains(rangeFilter, Long.MAX_VALUE, BIGINT)).isTrue();
 
         // lessThan range
         filters = TupleDomainFilterUtils.createTupleDomainFilters(
@@ -421,9 +421,9 @@ public class TestTupleDomainFilterUtils
                 TYPE_OPERATORS);
         rangeFilter = new TupleDomainFilter.LongRangeFilter(false, BIGINT, Long.MIN_VALUE, 99L);
         assertThat(filters).isEqualTo(ImmutableMap.of(column, rangeFilter));
-        assertThat(testContains(rangeFilter, 100)).isFalse();
-        assertThat(testContains(rangeFilter, 99)).isTrue();
-        assertThat(testContains(rangeFilter, Long.MIN_VALUE)).isTrue();
+        assertThat(testContains(rangeFilter, 100, BIGINT)).isFalse();
+        assertThat(testContains(rangeFilter, 99, BIGINT)).isTrue();
+        assertThat(testContains(rangeFilter, Long.MIN_VALUE, BIGINT)).isTrue();
 
         // [low, high] inclusive range
         filters = TupleDomainFilterUtils.createTupleDomainFilters(
@@ -434,7 +434,7 @@ public class TestTupleDomainFilterUtils
         rangeFilter = new TupleDomainFilter.LongRangeFilter(false, INTEGER, 5L, 10L);
         assertThat(filters).isEqualTo(ImmutableMap.of(column, rangeFilter));
         for (int i = 5; i <= 10; i++) {
-            assertThat(testContains(rangeFilter, i)).isTrue();
+            assertThat(testContains(rangeFilter, i, INTEGER)).isTrue();
         }
 
         // (low, high) exclusive range
@@ -445,11 +445,11 @@ public class TestTupleDomainFilterUtils
                 TYPE_OPERATORS);
         rangeFilter = new TupleDomainFilter.LongRangeFilter(true, INTEGER, 6L, 9L);
         assertThat(filters).isEqualTo(ImmutableMap.of(column, rangeFilter));
-        assertThat(testContains(rangeFilter, 5)).isFalse();
-        assertThat(testContains(rangeFilter, 10)).isFalse();
+        assertThat(testContains(rangeFilter, 5, INTEGER)).isFalse();
+        assertThat(testContains(rangeFilter, 10, INTEGER)).isFalse();
         assertThat(rangeFilter.isNullAllowed()).isTrue();
         for (int i = 6; i <= 9; i++) {
-            assertThat(testContains(rangeFilter, i)).isTrue();
+            assertThat(testContains(rangeFilter, i, INTEGER)).isTrue();
         }
 
         // empty range with null allowed
@@ -578,10 +578,10 @@ public class TestTupleDomainFilterUtils
                 .hasMessageContaining("Values range 2147483649 is outside integer range");
     }
 
-    private static boolean testContains(TupleDomainFilter filter, long value)
+    private static boolean testContains(TupleDomainFilter filter, long value, Type type)
     {
-        BlockBuilder blockBuilder = BIGINT.createBlockBuilder(null, 1);
-        BIGINT.writeLong(blockBuilder, value);
+        BlockBuilder blockBuilder = type.createBlockBuilder(null, 1);
+        type.writeLong(blockBuilder, value);
         return filter.testContains(blockBuilder.build(), 0);
     }
 
@@ -595,7 +595,7 @@ public class TestTupleDomainFilterUtils
     private static void verifyFilterValues(List<Long> values, TupleDomainFilter filter, int start, int end)
     {
         Set<Long> valuesSet = ImmutableSet.copyOf(values);
-        Block block = createLongSequenceBlock(start, end);
+        Block block = createLongSequenceBlock(start, end, filter.getType());
         for (long i = 0; i < block.getPositionCount(); i++) {
             assertThat(filter.testContains(block, toIntExact(i))).isEqualTo(valuesSet.contains(i));
         }
