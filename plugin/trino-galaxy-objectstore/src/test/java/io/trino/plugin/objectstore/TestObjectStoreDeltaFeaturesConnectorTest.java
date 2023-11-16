@@ -261,21 +261,9 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
-    public void testAggregationOverUnknown()
-    {
-        skipDuplicateTestCoverage("testAggregationOverUnknown");
-    }
-
-    @Override
     public void testAlterTableAddLongColumnName()
     {
         skipDuplicateTestCoverage("testAlterTableAddLongColumnName");
-    }
-
-    @Override
-    public void testArithmeticNegation()
-    {
-        skipDuplicateTestCoverage("testArithmeticNegation");
     }
 
     @Override
@@ -357,27 +345,15 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
-    public void testComplexQuery()
-    {
-        skipDuplicateTestCoverage("testComplexQuery");
-    }
-
-    @Override
     public void testConcurrentScans()
     {
         skipDuplicateTestCoverage("testConcurrentScans");
     }
 
     @Override
-    public void testCountAll()
+    public void testCreateFunction()
     {
-        skipDuplicateTestCoverage("testCountAll");
-    }
-
-    @Override
-    public void testCountColumn()
-    {
-        skipDuplicateTestCoverage("testCountColumn");
+        skipDuplicateTestCoverage("testCreateFunction");
     }
 
     @Override
@@ -591,36 +567,6 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
-    public void testDistinct()
-    {
-        skipDuplicateTestCoverage("testDistinct");
-    }
-
-    @Override
-    public void testDistinctHaving()
-    {
-        skipDuplicateTestCoverage("testDistinctHaving");
-    }
-
-    @Override
-    public void testDistinctLimit()
-    {
-        skipDuplicateTestCoverage("testDistinctLimit");
-    }
-
-    @Override
-    public void testDistinctMultipleFields()
-    {
-        skipDuplicateTestCoverage("testDistinctMultipleFields");
-    }
-
-    @Override
-    public void testDistinctWithOrderBy()
-    {
-        skipDuplicateTestCoverage("testDistinctWithOrderBy");
-    }
-
-    @Override
     public void testDropAmbiguousRowFieldCaseSensitivity()
     {
         skipDuplicateTestCoverage("testDropAmbiguousRowFieldCaseSensitivity");
@@ -711,33 +657,9 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
-    public void testFilterPushdownWithAggregation()
-    {
-        skipDuplicateTestCoverage("testFilterPushdownWithAggregation");
-    }
-
-    @Override
-    public void testIn()
-    {
-        skipDuplicateTestCoverage("testIn");
-    }
-
-    @Override
     public void testInListPredicate()
     {
         skipDuplicateTestCoverage("testInListPredicate");
-    }
-
-    @Override
-    public void testInformationSchemaFiltering()
-    {
-        skipDuplicateTestCoverage("testInformationSchemaFiltering");
-    }
-
-    @Override
-    public void testInformationSchemaUppercaseName()
-    {
-        skipDuplicateTestCoverage("testInformationSchemaUppercaseName");
     }
 
     @Override
@@ -819,39 +741,9 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
-    public void testLargeIn()
-    {
-        skipDuplicateTestCoverage("testLargeIn");
-    }
-
-    @Override
     public void testLikePredicate()
     {
         skipDuplicateTestCoverage("testLikePredicate");
-    }
-
-    @Override
-    public void testLimit()
-    {
-        skipDuplicateTestCoverage("testLimit");
-    }
-
-    @Override
-    public void testLimitInInlineView()
-    {
-        skipDuplicateTestCoverage("testLimitInInlineView");
-    }
-
-    @Override
-    public void testLimitMax()
-    {
-        skipDuplicateTestCoverage("testLimitMax");
-    }
-
-    @Override
-    public void testLimitWithAggregation()
-    {
-        skipDuplicateTestCoverage("testLimitWithAggregation");
     }
 
     @Override
@@ -1017,12 +909,6 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
-    public void testPredicate()
-    {
-        skipDuplicateTestCoverage("testPredicate");
-    }
-
-    @Override
     public void testPredicateOnRowTypeField()
     {
         skipDuplicateTestCoverage("testPredicateOnRowTypeField");
@@ -1143,12 +1029,6 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
-    public void testRepeatedAggregations()
-    {
-        skipDuplicateTestCoverage("testRepeatedAggregations");
-    }
-
-    @Override
     public void testRollback()
     {
         skipDuplicateTestCoverage("testRollback");
@@ -1200,12 +1080,6 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     public void testSelectVersionOfNonExistentTable()
     {
         skipDuplicateTestCoverage("testSelectVersionOfNonExistentTable");
-    }
-
-    @Override
-    public void testSelectWithComparison()
-    {
-        skipDuplicateTestCoverage("testSelectWithComparison");
     }
 
     @Override
@@ -1293,12 +1167,6 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
-    public void testShowColumns()
-    {
-        skipDuplicateTestCoverage("testShowColumns");
-    }
-
-    @Override
     public void testShowCreateInformationSchema()
     {
         skipDuplicateTestCoverage("testShowCreateInformationSchema");
@@ -1323,45 +1191,9 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
-    public void testShowSchemas()
-    {
-        skipDuplicateTestCoverage("testShowSchemas");
-    }
-
-    @Override
-    public void testShowSchemasFrom()
-    {
-        skipDuplicateTestCoverage("testShowSchemasFrom");
-    }
-
-    @Override
     public void testShowSchemasFromOther()
     {
         skipDuplicateTestCoverage("testShowSchemasFromOther");
-    }
-
-    @Override
-    public void testShowSchemasLike()
-    {
-        skipDuplicateTestCoverage("testShowSchemasLike");
-    }
-
-    @Override
-    public void testShowSchemasLikeWithEscape()
-    {
-        skipDuplicateTestCoverage("testShowSchemasLikeWithEscape");
-    }
-
-    @Override
-    public void testShowTables()
-    {
-        skipDuplicateTestCoverage("testShowTables");
-    }
-
-    @Override
-    public void testShowTablesLike()
-    {
-        skipDuplicateTestCoverage("testShowTablesLike");
     }
 
     @Override
@@ -1377,18 +1209,6 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
-    public void testTableSampleBernoulli()
-    {
-        skipDuplicateTestCoverage("testTableSampleBernoulli");
-    }
-
-    @Override
-    public void testTableSampleBernoulliBoundaryValues()
-    {
-        skipDuplicateTestCoverage("testTableSampleBernoulliBoundaryValues");
-    }
-
-    @Override
     public void testTableSampleSystem()
     {
         skipDuplicateTestCoverage("testTableSampleSystem");
@@ -1401,18 +1221,6 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     }
 
     @Override
-    public void testTopN()
-    {
-        skipDuplicateTestCoverage("testTopN");
-    }
-
-    @Override
-    public void testTopNByMultipleFields()
-    {
-        skipDuplicateTestCoverage("testTopNByMultipleFields");
-    }
-
-    @Override
     public void testTruncateTable()
     {
         skipDuplicateTestCoverage("testTruncateTable");
@@ -1422,12 +1230,6 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     public void testTrySelectTableVersion()
     {
         skipDuplicateTestCoverage("testTrySelectTableVersion");
-    }
-
-    @Override
-    public void testUnionAllAboveBroadcastJoin()
-    {
-        skipDuplicateTestCoverage("testUnionAllAboveBroadcastJoin");
     }
 
     @Override
