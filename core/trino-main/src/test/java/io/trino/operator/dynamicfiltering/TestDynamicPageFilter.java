@@ -50,6 +50,7 @@ import static io.trino.block.BlockAssertions.createLongsBlock;
 import static io.trino.block.BlockAssertions.createRepeatedValuesBlock;
 import static io.trino.block.BlockAssertions.createSlicesBlock;
 import static io.trino.block.BlockAssertions.createStringsBlock;
+import static io.trino.block.BlockAssertions.createTypedLongsBlock;
 import static io.trino.operator.dynamicfiltering.DictionaryAwarePageFilter.BlockFilterStats;
 import static io.trino.operator.dynamicfiltering.DictionaryAwarePageFilter.SelectedPositionsWithStats;
 import static io.trino.operator.project.SelectedPositions.positionsRange;
@@ -143,8 +144,8 @@ public class TestDynamicPageFilter
                 ImmutableMap.of(column, 0));
         assertThat(blockFilters).isPresent();
         Page page = new Page(
-                createLongsBlock(1L, 2L, null, 5L, null),
-                createLongsBlock(null, 102L, 135L, null, 3L));
+                createTypedLongsBlock(INTEGER, 1L, 2L, null, 5L, null),
+                createTypedLongsBlock(INTEGER, null, 102L, 135L, null, 3L));
         verifySelectedPositions(
                 filterPage(page, blockFilters.get()).getPositions(),
                 new int[] {2, 4});
@@ -229,17 +230,17 @@ public class TestDynamicPageFilter
                 ImmutableMap.of(column, 0));
         assertThat(blockFilters).isPresent();
 
-        Block blockWithNulls = createLongsBlock(3L, null, 4L);
+        Block blockWithNulls = createTypedLongsBlock(INTEGER, 3L, null, 4L);
         verifySelectedPositions(
                 filterPage(new Page(blockWithNulls), blockFilters.get()).getPositions(),
                 new int[] {0, 1});
 
         // select all values in block
         verifySelectedPositions(
-                filterPage(new Page(createLongsBlock(3L, null, 1L)), blockFilters.get()).getPositions(),
+                filterPage(new Page(createTypedLongsBlock(INTEGER, 3L, null, 1L)), blockFilters.get()).getPositions(),
                 3);
 
-        Block blockWithoutNulls = createLongsBlock(3, 4, 5);
+        Block blockWithoutNulls = createTypedLongsBlock(INTEGER, 3L, 4L, 5L);
         verifySelectedPositions(
                 filterPage(new Page(blockWithoutNulls), blockFilters.get()).getPositions(),
                 new int[] {0});
