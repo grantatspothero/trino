@@ -305,7 +305,6 @@ public class TestIcebergFileOperations
                         .add(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM))
                         .add(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH))
                         .add(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM))
-                        .addCopies(new FileOperation(DATA, INPUT_FILE_NEW_STREAM), 4)
                         .build());
 
         // Read partition column only, one partition only
@@ -317,7 +316,6 @@ public class TestIcebergFileOperations
                         .add(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM))
                         .add(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH))
                         .add(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM))
-                        .addCopies(new FileOperation(DATA, INPUT_FILE_NEW_STREAM), 2)
                         .build());
 
         // Read partition and synthetic columns
