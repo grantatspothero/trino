@@ -40,6 +40,7 @@ import static com.google.common.math.DoubleMath.log2;
 import static io.trino.block.BlockAssertions.createLongSequenceBlock;
 import static io.trino.block.BlockAssertions.createLongsBlock;
 import static io.trino.block.BlockAssertions.createStringSequenceBlock;
+import static io.trino.block.BlockAssertions.createTypedLongsBlock;
 import static io.trino.operator.GroupByHash.createGroupByHash;
 import static io.trino.operator.UpdateMemory.NOOP;
 import static io.trino.spi.type.BigintType.BIGINT;
@@ -175,7 +176,7 @@ public class TestGroupByHash
         for (GroupByHashType groupByHashType : GroupByHashType.values()) {
             for (Type hashType : getHashTypes(groupByHashType)) {
                 GroupByHash groupByHash = groupByHashType.createGroupByHash(hashType);
-                Block block = BlockAssertions.createLongsBlock(0L, 1L);
+                Block block = BlockAssertions.createTypedLongsBlock(hashType, 0L, 1L);
                 Block hashBlock = TypeTestUtils.getHashBlock(ImmutableList.of(hashType), block);
                 int[] ids = new int[] {0, 0, 1, 1};
                 Page page = new Page(
@@ -242,7 +243,7 @@ public class TestGroupByHash
                 GroupByHash groupByHash = groupByHashType.createGroupByHash(hashType);
                 for (int tries = 0; tries < 2; tries++) {
                     for (int value = 0; value < groupByHashType.getMaxGroupId(hashType); value++) {
-                        Block block = BlockAssertions.createLongsBlock(value);
+                        Block block = BlockAssertions.createTypedLongsBlock(hashType, (long) value);
                         Block hashBlock = TypeTestUtils.getHashBlock(ImmutableList.of(hashType), block);
                         Page page = new Page(block, hashBlock);
                         for (int addValuesTries = 0; addValuesTries < 10; addValuesTries++) {
@@ -263,7 +264,7 @@ public class TestGroupByHash
     {
         for (GroupByHashType groupByHashType : GroupByHashType.values()) {
             for (Type hashType : getHashTypes(groupByHashType)) {
-                Block valuesBlock = BlockAssertions.createLongSequenceBlock(0, 100);
+                Block valuesBlock = BlockAssertions.createLongSequenceBlock(0, 100, hashType);
                 Block hashBlock = TypeTestUtils.getHashBlock(ImmutableList.of(hashType), valuesBlock);
                 GroupByHash groupByHash = groupByHashType.createGroupByHash(hashType);
 
@@ -299,7 +300,7 @@ public class TestGroupByHash
                 for (long i = 0; i < 100; i++) {
                     values.add(i % 50);
                 }
-                Block valuesBlock = createLongsBlock(values);
+                Block valuesBlock = createTypedLongsBlock(hashType, values);
                 Block hashBlock = TypeTestUtils.getHashBlock(ImmutableList.of(hashType), valuesBlock);
 
                 GroupByHash groupByHash = groupByHashType.createGroupByHash(hashType);
@@ -313,7 +314,7 @@ public class TestGroupByHash
                 }
                 Page outputPage = pageBuilder.build();
                 assertEquals(outputPage.getPositionCount(), 50);
-                BlockAssertions.assertBlockEquals(hashType, outputPage.getBlock(0), BlockAssertions.createLongSequenceBlock(0, 50));
+                BlockAssertions.assertBlockEquals(hashType, outputPage.getBlock(0), BlockAssertions.createLongSequenceBlock(0, 50, hashType));
             }
         }
     }
@@ -324,7 +325,7 @@ public class TestGroupByHash
         for (GroupByHashType groupByHashType : GroupByHashType.values()) {
             for (Type hashType : getHashTypes(groupByHashType)) {
                 // Create a page with positionCount >> expected size of groupByHash
-                Block valuesBlock = BlockAssertions.createLongSequenceBlock(0, 100);
+                Block valuesBlock = BlockAssertions.createLongSequenceBlock(0, 100, hashType);
                 Block hashBlock = TypeTestUtils.getHashBlock(ImmutableList.of(hashType), valuesBlock);
 
                 // Create group by hash with extremely small size
