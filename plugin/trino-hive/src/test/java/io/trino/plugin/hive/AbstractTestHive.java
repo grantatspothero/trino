@@ -899,7 +899,7 @@ public abstract class AbstractTestHive
                 countingDirectoryLister,
                 // TODO remove .setPerTransactionFileStatusCacheMaxRetainedSize once Galaxy has this enabled by default
                 new TransactionScopeCachingDirectoryListerFactory(hiveConfig.setPerTransactionFileStatusCacheMaxRetainedSize(DataSize.of(1, MEGABYTE))),
-                new PartitionProjectionService(hiveConfig, ImmutableMap.of(), new TestingTypeManager()),
+                new PartitionProjectionService(hiveConfig, new TestingTypeManager()),
                 true,
                 HiveTimestampPrecision.DEFAULT_PRECISION);
         transactionManager = new HiveTransactionManager(metadataFactory);
