@@ -18,6 +18,7 @@ import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.MaterializedResult;
 import io.trino.testing.TestingConnectorBehavior;
 import org.intellij.lang.annotations.Language;
+import org.junit.jupiter.api.Test;
 import org.testng.SkipException;
 
 import static com.google.common.base.Verify.verify;
@@ -130,6 +131,7 @@ public class TestObjectStoreHudiConnectorTest
     }
 
     @Override
+    @Test
     public void testShowColumns()
     {
         // The Hudi connector includes additional metadata columns which are not hidden. This means the nation table does not have the expected schema.

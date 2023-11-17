@@ -19,6 +19,7 @@ import io.trino.plugin.jdbc.BaseJdbcConnectorSmokeTest;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import io.trino.testing.TestingConnectorBehavior;
+import org.junit.jupiter.api.Test;
 
 import static io.trino.plugin.stargate.GalaxyStargateQueryRunner.createRemoteStarburstQueryRunnerWithStarburstEnterprise;
 import static java.util.Objects.requireNonNull;
@@ -65,6 +66,7 @@ public abstract class BaseStargateWithStarburstEnterpriseConnectorSmokeTest
     }
 
     @Override // Required because Stargate connector adds additional `Query failed (...):` prefix to the error message
+    @Test
     public void testCreateSchema()
     {
         assertThatThrownBy(super::testCreateSchema)
@@ -72,6 +74,7 @@ public abstract class BaseStargateWithStarburstEnterpriseConnectorSmokeTest
     }
 
     @Override // Required because Stargate connector adds additional `Query failed (...):` prefix to the error message
+    @Test
     public void testRenameSchema()
     {
         assertThatThrownBy(super::testRenameSchema)

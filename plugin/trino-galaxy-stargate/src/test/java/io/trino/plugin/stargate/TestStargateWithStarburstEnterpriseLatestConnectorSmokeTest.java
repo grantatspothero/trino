@@ -13,6 +13,8 @@
  */
 package io.trino.plugin.stargate;
 
+import org.junit.jupiter.api.Test;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestStargateWithStarburstEnterpriseLatestConnectorSmokeTest
@@ -24,6 +26,7 @@ public class TestStargateWithStarburstEnterpriseLatestConnectorSmokeTest
     }
 
     @Override // Column definitions contain NOT NULL constraint in newer Starburst Enterprise
+    @Test
     public void testShowCreateTable()
     {
         assertThat((String) computeScalar("SHOW CREATE TABLE region"))

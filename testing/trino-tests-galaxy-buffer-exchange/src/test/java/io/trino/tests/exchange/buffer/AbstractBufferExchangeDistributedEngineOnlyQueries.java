@@ -24,7 +24,8 @@ import io.trino.testing.FaultTolerantExecutionConnectorTestHelper;
 import io.trino.testing.QueryRunner;
 import io.trino.tpch.TpchTable;
 import org.assertj.core.api.Assertions;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import static io.airlift.testing.Closeables.closeAllSuppress;
 
@@ -84,7 +85,8 @@ public abstract class AbstractBufferExchangeDistributedEngineOnlyQueries
     }
 
     @Override
-    @Test(enabled = false)
+    @Test
+    @Disabled
     public void testSelectiveLimit()
     {
         // FTE mode does not terminate query when limit is reached
