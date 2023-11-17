@@ -3335,7 +3335,7 @@ public abstract class AbstractTestHive
 
     protected void testUpdateTableStatistics(SchemaTableName tableName, PartitionStatistics initialStatistics, PartitionStatistics... statistics)
     {
-        HiveMetastoreClosure metastoreClient = new HiveMetastoreClosure(getMetastoreClient());
+        HiveMetastoreClosure metastoreClient = new HiveMetastoreClosure(getMetastoreClient(), TESTING_TYPE_MANAGER, false);
         assertThat(metastoreClient.getTableStatistics(tableName.getSchemaName(), tableName.getTableName(), Optional.empty()))
                 .isEqualTo(initialStatistics);
 
@@ -3421,7 +3421,7 @@ public abstract class AbstractTestHive
             throws Exception
     {
         SchemaTableName tableName = temporaryTable("test_column_properties");
-        HiveMetastoreClosure metastoreClient = new HiveMetastoreClosure(getMetastoreClient());
+        HiveMetastoreClosure metastoreClient = new HiveMetastoreClosure(getMetastoreClient(), TESTING_TYPE_MANAGER, false);
         try {
             doCreateEmptyTable(tableName, ORC, List.of(new ColumnMetadata("id", BIGINT), new ColumnMetadata("part_key", createVarcharType(256))));
 
@@ -3464,7 +3464,7 @@ public abstract class AbstractTestHive
             throws Exception
     {
         SchemaTableName tableName = temporaryTable("test_column_properties");
-        HiveMetastoreClosure metastoreClient = new HiveMetastoreClosure(getMetastoreClient());
+        HiveMetastoreClosure metastoreClient = new HiveMetastoreClosure(getMetastoreClient(), TESTING_TYPE_MANAGER, false);
         try {
             doCreateEmptyTable(tableName, ORC, List.of(new ColumnMetadata("id", BIGINT), new ColumnMetadata("part_key", createVarcharType(256))));
 
@@ -3630,7 +3630,7 @@ public abstract class AbstractTestHive
     {
         doCreateEmptyTable(tableName, ORC, columns);
 
-        HiveMetastoreClosure metastoreClient = new HiveMetastoreClosure(getMetastoreClient());
+        HiveMetastoreClosure metastoreClient = new HiveMetastoreClosure(getMetastoreClient(), TESTING_TYPE_MANAGER, false);
         Table table = metastoreClient.getTable(tableName.getSchemaName(), tableName.getTableName())
                 .orElseThrow(() -> new TableNotFoundException(tableName));
 
@@ -3660,7 +3660,7 @@ public abstract class AbstractTestHive
         String firstPartitionName = "ds=2016-01-01";
         String secondPartitionName = "ds=2016-01-02";
 
-        HiveMetastoreClosure metastoreClient = new HiveMetastoreClosure(getMetastoreClient());
+        HiveMetastoreClosure metastoreClient = new HiveMetastoreClosure(getMetastoreClient(), TESTING_TYPE_MANAGER, false);
         assertThat(metastoreClient.getPartitionStatistics(tableName.getSchemaName(), tableName.getTableName(), ImmutableSet.of(firstPartitionName, secondPartitionName)))
                 .isEqualTo(ImmutableMap.of(firstPartitionName, initialStatistics, secondPartitionName, initialStatistics));
 
@@ -3717,7 +3717,7 @@ public abstract class AbstractTestHive
         try {
             doCreateEmptyTable(tableName, ORC, columns);
 
-            HiveMetastoreClosure metastoreClient = new HiveMetastoreClosure(getMetastoreClient());
+            HiveMetastoreClosure metastoreClient = new HiveMetastoreClosure(getMetastoreClient(), TESTING_TYPE_MANAGER, false);
             Table table = metastoreClient.getTable(tableName.getSchemaName(), tableName.getTableName())
                     .orElseThrow(() -> new TableNotFoundException(tableName));
 
@@ -3818,7 +3818,7 @@ public abstract class AbstractTestHive
 
         try {
             createDummyPartitionedTable(tableName, columns);
-            HiveMetastoreClosure metastoreClient = new HiveMetastoreClosure(getMetastoreClient());
+            HiveMetastoreClosure metastoreClient = new HiveMetastoreClosure(getMetastoreClient(), TESTING_TYPE_MANAGER, false);
             metastoreClient.updatePartitionStatistics(tableName.getSchemaName(), tableName.getTableName(), "ds=2016-01-01", actualStatistics -> statistics);
             metastoreClient.updatePartitionStatistics(tableName.getSchemaName(), tableName.getTableName(), "ds=2016-01-02", actualStatistics -> statistics);
 
