@@ -16,6 +16,7 @@ package io.trino.plugin.hive.s3;
 import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.airlift.log.Logger;
+import io.airlift.log.Logging;
 import io.airlift.units.Duration;
 import io.trino.plugin.hive.HiveQueryRunner;
 import io.trino.plugin.hive.containers.HiveMinioDataLake;
@@ -39,6 +40,10 @@ import static java.util.Objects.requireNonNull;
 
 public final class S3HiveQueryRunner
 {
+    static {
+        Logging.initialize();
+    }
+
     private S3HiveQueryRunner() {}
 
     public static DistributedQueryRunner create(
