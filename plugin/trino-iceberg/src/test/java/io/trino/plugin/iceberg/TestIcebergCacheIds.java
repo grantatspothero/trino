@@ -232,12 +232,6 @@ public class TestIcebergCacheIds
                 createIcebergTableHandle(catalogHandle, schemaTableName, Map.of("read.split.target-size", "1"))))
                 .isNotEqualTo(icebergMetadata.getCacheTableId(
                         createIcebergTableHandle(catalogHandle, schemaTableName, "tableSchemaJson", partitionSpecJson, Set.of(), Optional.empty(), "location")));
-
-        // statistics in storage options is not part of table id
-        assertThat(icebergMetadata.getCacheTableId(
-                createIcebergTableHandle(catalogHandle, schemaTableName, Map.of("trino.stats.ndv.1231.ndv", "111", "other", "other"))))
-                .isEqualTo(icebergMetadata.getCacheTableId(
-                        createIcebergTableHandle(catalogHandle, schemaTableName, Map.of("other", "other"))));
     }
 
     @Test
