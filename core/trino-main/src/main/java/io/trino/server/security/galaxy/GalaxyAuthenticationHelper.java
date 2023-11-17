@@ -31,11 +31,13 @@ import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.PublicKey;
+import java.util.Base64;
 import java.util.Optional;
 
 import static com.google.common.hash.Hashing.sha256;
 import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType;
 import static io.trino.server.security.jwt.JwtUtil.newJwtParserBuilder;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 public final class GalaxyAuthenticationHelper
@@ -61,12 +63,20 @@ public final class GalaxyAuthenticationHelper
     public static Optional<String> parseClaimsWithoutValidation(String jws)
     {
         try {
-            String value = jws.substring(0, jws.lastIndexOf('.') + 1);
-            return Optional.of(newJwtParserBuilder().build().parse(value).getBody().toString());
+            return Optional.of(newJwtParserBuilder().unsecured().build().parseUnsecuredClaims(unsecuredToken(jws)).getPayload().toString());
         }
         catch (RuntimeException ignored) {
             return Optional.empty();
         }
+    }
+
+    private static String unsecuredToken(String jws)
+    {
+        String unsecureHeader = Base64.getEncoder().encodeToString("""
+                {"alg":"none","typ":"JWT"}""".getBytes(UTF_8));
+
+        // Replace header alg to none and drop the signature
+        return unsecureHeader + '.' + jws.substring(jws.indexOf('.') + 1, jws.lastIndexOf('.') + 1);
     }
 
     public static Optional<String> extractToken(ContainerRequestContext request)

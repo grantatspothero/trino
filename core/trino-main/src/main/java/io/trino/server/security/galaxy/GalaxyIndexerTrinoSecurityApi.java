@@ -88,6 +88,12 @@ public enum GalaxyIndexerTrinoSecurityApi
     }
 
     @Override
+    public ContentsVisibility getVisibilityForTables(DispatchSession session, CatalogId catalogId, String schemaName, Set<String> tableNames)
+    {
+        return ALLOW_ALL;
+    }
+
+    @Override
     public EntityPrivileges getEntityPrivileges(DispatchSession session, RoleId roleId, EntityId entityId)
     {
         // return EntityPrivileges with explicitOwner set to true. This is needed so that any checks for querying/inspecting will pass

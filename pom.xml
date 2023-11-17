@@ -170,7 +170,7 @@
         <dep.takari.version>2.1.1</dep.takari.version>
         <dep.aws-sdk.version>1.12.561</dep.aws-sdk.version>
         <dep.aws-sdk-v2.version>2.20.158</dep.aws-sdk-v2.version>
-        <dep.jsonwebtoken.version>0.11.5</dep.jsonwebtoken.version>
+        <dep.jsonwebtoken.version>0.12.3</dep.jsonwebtoken.version>
         <dep.oracle.version>21.9.0.0</dep.oracle.version>
         <dep.drift.version>1.21</dep.drift.version>
         <dep.tempto.version>201</dep.tempto.version>
@@ -208,7 +208,7 @@
         <!-- released from https://github.com/starburstdata/starburst-dataframe -->
         <dep.starburst-dataframe.version>0.5.0.20231006-9161ca8</dep.starburst-dataframe.version>
         <!-- released from https://github.com/starburstdata/stargate -->
-        <dep.stargate.version>stargate-12080-geec4210ef</dep.stargate.version>
+        <dep.stargate.version>stargate-12204-g6307c3180c</dep.stargate.version>
         <!-- released from https://github.com/starburstdata/starburst-trino-plugins -->
         <dep.starburst-trino-plugins.version>429</dep.starburst-trino-plugins.version>
         <dep.cloudevents.version>2.2.0</dep.cloudevents.version>

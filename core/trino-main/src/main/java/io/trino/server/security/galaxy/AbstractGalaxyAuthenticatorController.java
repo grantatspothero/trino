@@ -31,6 +31,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.jsonwebtoken.ClaimJwtException.INCORRECT_EXPECTED_CLAIM_MESSAGE_TEMPLATE;
 import static io.jsonwebtoken.ClaimJwtException.MISSING_EXPECTED_CLAIM_MESSAGE_TEMPLATE;
 import static io.jsonwebtoken.Claims.AUDIENCE;
@@ -69,7 +70,7 @@ public abstract class AbstractGalaxyAuthenticatorController
         }
         AccountId accountId;
         try {
-            accountId = new AccountId(claims.getAudience());
+            accountId = new AccountId(getOnlyElement(claims.getAudience()));
         }
         catch (IllegalArgumentException e) {
             throw new AuthenticationException("Invalid audience", "Galaxy");
@@ -89,12 +90,12 @@ public abstract class AbstractGalaxyAuthenticatorController
         }
         else {
             if (!audiences.isEmpty()) {
-                if (claims.getAudience() == null) {
+                if (claims.getAudience() == null || claims.getAudience().isEmpty()) {
                     String msg = String.format(MISSING_EXPECTED_CLAIM_MESSAGE_TEMPLATE,
                             AUDIENCE, audiences);
                     throw new AuthenticationException(msg, "Galaxy");
                 }
-                if (!audiences.contains(claims.getAudience())) {
+                if (!audiences.contains(getOnlyElement(claims.getAudience()))) {
                     String msg = String.format(INCORRECT_EXPECTED_CLAIM_MESSAGE_TEMPLATE,
                             AUDIENCE, audiences, claims.getAudience());
                     throw new AuthenticationException(msg, "Galaxy");
