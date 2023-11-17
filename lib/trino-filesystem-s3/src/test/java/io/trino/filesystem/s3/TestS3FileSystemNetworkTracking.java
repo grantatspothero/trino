@@ -19,6 +19,7 @@ import io.airlift.slice.Slice;
 import io.airlift.slice.Slices;
 import io.airlift.units.DataSize;
 import io.airlift.units.DataSize.Unit;
+import io.opentelemetry.api.OpenTelemetry;
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystem;
 import io.trino.filesystem.TrinoInputFile;
@@ -215,11 +216,12 @@ public class TestS3FileSystemNetworkTracking
 
     private S3FileSystemFactory createS3FileSystemFactory(String catalogId, DataSize crossRegionReadLimit, DataSize crossRegionWriteLimit)
     {
-        return new S3FileSystemFactory(new S3FileSystemConfig()
-                .setAwsAccessKey(accessKey)
-                .setAwsSecretKey(secretKey)
-                .setRegion(region)
-                .setStreamingPartSize(DataSize.valueOf("5.5MB")),
+        return new S3FileSystemFactory(
+                OpenTelemetry.noop(),
+                new S3FileSystemConfig()
+                        .setAwsAccessKey(accessKey)
+                        .setAwsSecretKey(secretKey).setRegion(region)
+                        .setStreamingPartSize(DataSize.valueOf("5.5MB")),
                 CatalogHandle.fromId(catalogId),
                 new LocalRegionConfig()
                         // forces network traffic to be cross-region

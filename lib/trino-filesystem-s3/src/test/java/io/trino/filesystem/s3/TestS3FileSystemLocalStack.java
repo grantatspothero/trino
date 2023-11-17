@@ -14,6 +14,7 @@
 package io.trino.filesystem.s3;
 
 import io.airlift.units.DataSize;
+import io.opentelemetry.api.OpenTelemetry;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.spi.connector.CatalogHandle;
@@ -65,7 +66,7 @@ public class TestS3FileSystemLocalStack
     @Override
     protected S3FileSystemFactory createS3FileSystemFactory()
     {
-        return new S3FileSystemFactory(new S3FileSystemConfig()
+        return new S3FileSystemFactory(OpenTelemetry.noop(), new S3FileSystemConfig()
                 .setAwsAccessKey(LOCALSTACK.getAccessKey())
                 .setAwsSecretKey(LOCALSTACK.getSecretKey())
                 .setEndpoint(LOCALSTACK.getEndpointOverride(Service.S3).toString())
