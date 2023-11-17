@@ -50,11 +50,9 @@ import static io.airlift.testing.Assertions.assertEqualsIgnoreOrder;
 import static io.trino.metadata.NodeState.ACTIVE;
 import static io.trino.metadata.NodeState.INACTIVE;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotSame;
-import static org.testng.Assert.assertTrue;
 
 @TestInstance(PER_METHOD)
 public class TestDiscoveryNodeManager
@@ -111,15 +109,15 @@ public class TestDiscoveryNodeManager
             AllNodes allNodes = manager.getAllNodes();
 
             Set<InternalNode> connectorNodes = manager.getActiveCatalogNodes(GlobalSystemConnector.CATALOG_HANDLE);
-            assertEquals(connectorNodes.size(), 4);
-            assertTrue(connectorNodes.stream().anyMatch(InternalNode::isCoordinator));
+            assertThat(connectorNodes.size()).isEqualTo(4);
+            assertThat(connectorNodes.stream().anyMatch(InternalNode::isCoordinator)).isTrue();
 
             Set<InternalNode> activeNodes = allNodes.getActiveNodes();
             assertEqualsIgnoreOrder(activeNodes, this.activeNodes);
 
             for (InternalNode actual : activeNodes) {
                 for (InternalNode expected : this.activeNodes) {
-                    assertNotSame(actual, expected);
+                    assertThat(actual).isNotSameAs(expected);
                 }
             }
 
@@ -130,7 +128,7 @@ public class TestDiscoveryNodeManager
 
             for (InternalNode actual : inactiveNodes) {
                 for (InternalNode expected : this.inactiveNodes) {
-                    assertNotSame(actual, expected);
+                    assertThat(actual).isNotSameAs(expected);
                 }
             }
 
@@ -156,7 +154,7 @@ public class TestDiscoveryNodeManager
                 testHttpClient,
                 internalCommunicationConfig);
         try {
-            assertEquals(manager.getCurrentNode(), currentNode);
+            assertThat(manager.getCurrentNode()).isEqualTo(currentNode);
         }
         finally {
             manager.stop();
@@ -174,7 +172,7 @@ public class TestDiscoveryNodeManager
                 testHttpClient,
                 internalCommunicationConfig);
         try {
-            assertEquals(manager.getCoordinators(), ImmutableSet.of(coordinator));
+            assertThat(manager.getCoordinators()).isEqualTo(ImmutableSet.of(coordinator));
         }
         finally {
             manager.stop();
@@ -212,18 +210,18 @@ public class TestDiscoveryNodeManager
             BlockingQueue<AllNodes> notifications = new ArrayBlockingQueue<>(100);
             manager.addNodeChangeListener(notifications::add);
             AllNodes allNodes = notifications.take();
-            assertEquals(allNodes.getActiveNodes(), activeNodes);
-            assertEquals(allNodes.getInactiveNodes(), inactiveNodes);
+            assertThat(allNodes.getActiveNodes()).isEqualTo(activeNodes);
+            assertThat(allNodes.getInactiveNodes()).isEqualTo(inactiveNodes);
 
             selector.announceNodes(ImmutableSet.of(currentNode), ImmutableSet.of(coordinator));
             allNodes = notifications.take();
-            assertEquals(allNodes.getActiveNodes(), ImmutableSet.of(currentNode, coordinator));
-            assertEquals(allNodes.getActiveCoordinators(), ImmutableSet.of(coordinator));
+            assertThat(allNodes.getActiveNodes()).isEqualTo(ImmutableSet.of(currentNode, coordinator));
+            assertThat(allNodes.getActiveCoordinators()).isEqualTo(ImmutableSet.of(coordinator));
 
             selector.announceNodes(activeNodes, inactiveNodes);
             allNodes = notifications.take();
-            assertEquals(allNodes.getActiveNodes(), activeNodes);
-            assertEquals(allNodes.getInactiveNodes(), inactiveNodes);
+            assertThat(allNodes.getActiveNodes()).isEqualTo(activeNodes);
+            assertThat(allNodes.getInactiveNodes()).isEqualTo(inactiveNodes);
         }
         finally {
             manager.stop();

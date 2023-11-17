@@ -151,13 +151,9 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.offset;
 import static org.junit.jupiter.api.Assumptions.abort;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNotEquals;
-import static org.testng.Assert.assertNull;
-import static org.testng.Assert.assertTrue;
 
 @TestInstance(PER_CLASS)
 public abstract class BaseIcebergConnectorTest
@@ -240,13 +236,13 @@ public abstract class BaseIcebergConnectorTest
         try (TestTable table = new TestTable(getQueryRunner()::execute,
                 "test_add_row_field_case_insensitivity_",
                 "AS SELECT CAST(row(row(2)) AS row(\"CHILD\" row(grandchild_1 integer))) AS col")) {
-            assertEquals(getColumnType(table.getName(), "col"), "row(CHILD row(grandchild_1 integer))");
+            assertThat(getColumnType(table.getName(), "col")).isEqualTo("row(CHILD row(grandchild_1 integer))");
 
             assertUpdate("ALTER TABLE " + table.getName() + " ADD COLUMN col.child.grandchild_2 integer");
-            assertEquals(getColumnType(table.getName(), "col"), "row(CHILD row(grandchild_1 integer, grandchild_2 integer))");
+            assertThat(getColumnType(table.getName(), "col")).isEqualTo("row(CHILD row(grandchild_1 integer, grandchild_2 integer))");
 
             assertUpdate("ALTER TABLE " + table.getName() + " ADD COLUMN col.CHILD.grandchild_3 integer");
-            assertEquals(getColumnType(table.getName(), "col"), "row(CHILD row(grandchild_1 integer, grandchild_2 integer, grandchild_3 integer))");
+            assertThat(getColumnType(table.getName(), "col")).isEqualTo("row(CHILD row(grandchild_1 integer, grandchild_2 integer, grandchild_3 integer))");
         }
     }
 
@@ -1071,9 +1067,7 @@ public abstract class BaseIcebergConnectorTest
                         "FROM tpch.tiny.orders",
                 "SELECT count(*) from orders");
 
-        assertEquals(
-                computeScalar("SHOW CREATE TABLE test_create_partitioned_table_as"),
-                format(
+        assertThat(computeScalar("SHOW CREATE TABLE test_create_partitioned_table_as")).isEqualTo(format(
                         "CREATE TABLE %s.%s.%s (\n" +
                                 "   \"order key\" bigint,\n" +
                                 "   ship_priority integer,\n" +
@@ -1311,10 +1305,10 @@ public abstract class BaseIcebergConnectorTest
             for (Object filePath : computeActual("SELECT file_path from \"" + table.getName() + "$files\"").getOnlyColumnAsSet()) {
                 String path = (String) filePath;
                 if (sortedByComment.contains(path)) {
-                    assertTrue(isFileSorted(path, "comment"));
+                    assertThat(isFileSorted(path, "comment")).isTrue();
                 }
                 else {
-                    assertTrue(isFileSorted(path, "name"));
+                    assertThat(isFileSorted(path, "name")).isTrue();
                 }
             }
             assertQuery("SELECT * FROM " + table.getName(), "SELECT * FROM nation UNION ALL SELECT * FROM nation");
@@ -1333,7 +1327,7 @@ public abstract class BaseIcebergConnectorTest
                 "WITH (sorted_by = ARRAY['comment']) AS SELECT * FROM nation WITH NO DATA")) {
             assertUpdate(withSortingDisabled, "INSERT INTO " + table.getName() + " SELECT * FROM nation", 25);
             for (Object filePath : computeActual("SELECT file_path from \"" + table.getName() + "$files\"").getOnlyColumnAsSet()) {
-                assertFalse(isFileSorted((String) filePath, "comment"));
+                assertThat(isFileSorted((String) filePath, "comment")).isFalse();
             }
             assertQuery("SELECT * FROM " + table.getName(), "SELECT * FROM nation");
         }
@@ -1355,7 +1349,7 @@ public abstract class BaseIcebergConnectorTest
             assertUpdate(withSingleWriterPerTask(withSmallRowGroups), "ALTER TABLE " + table.getName() + " EXECUTE optimize");
 
             for (Object filePath : computeActual("SELECT file_path from \"" + table.getName() + "$files\"").getOnlyColumnAsSet()) {
-                assertTrue(isFileSorted((String) filePath, "comment"));
+                assertThat(isFileSorted((String) filePath, "comment")).isTrue();
             }
             assertQuery("SELECT * FROM " + table.getName(), "SELECT * FROM nation");
         }
@@ -1380,7 +1374,7 @@ public abstract class BaseIcebergConnectorTest
                     "SELECT orderkey, partkey, suppkey, linenumber, quantity, extendedprice, discount, tax, returnflag, linestatus, shipdate, " +
                             "commitdate, receiptdate, shipinstruct, shipmode, substring(comment, 2) FROM lineitem");
             for (Object filePath : computeActual("SELECT file_path from \"" + table.getName() + "$files\"").getOnlyColumnAsSet()) {
-                assertTrue(isFileSorted((String) filePath, "comment"));
+                assertThat(isFileSorted((String) filePath, "comment")).isTrue();
             }
         }
     }
@@ -1444,17 +1438,17 @@ public abstract class BaseIcebergConnectorTest
                 ")";
         String createTableSql = format(createTableTemplate, "test table comment", format);
         assertUpdate(createTableSql);
-        assertEquals(computeScalar("SHOW CREATE TABLE test_table_comments"), createTableSql);
+        assertThat(computeScalar("SHOW CREATE TABLE test_table_comments")).isEqualTo(createTableSql);
 
         assertUpdate("COMMENT ON TABLE test_table_comments IS 'different test table comment'");
-        assertEquals(computeScalar("SHOW CREATE TABLE test_table_comments"), format(createTableTemplate, "different test table comment", format));
+        assertThat(computeScalar("SHOW CREATE TABLE test_table_comments")).isEqualTo(format(createTableTemplate, "different test table comment", format));
 
         assertUpdate("COMMENT ON TABLE test_table_comments IS NULL");
-        assertEquals(computeScalar("SHOW CREATE TABLE test_table_comments"), createTableWithoutComment);
+        assertThat(computeScalar("SHOW CREATE TABLE test_table_comments")).isEqualTo(createTableWithoutComment);
         dropTable("iceberg.tpch.test_table_comments");
 
         assertUpdate(createTableWithoutComment);
-        assertEquals(computeScalar("SHOW CREATE TABLE test_table_comments"), createTableWithoutComment);
+        assertThat(computeScalar("SHOW CREATE TABLE test_table_comments")).isEqualTo(createTableWithoutComment);
 
         dropTable("iceberg.tpch.test_table_comments");
     }
@@ -1480,7 +1474,7 @@ public abstract class BaseIcebergConnectorTest
         assertQuery("SELECT * FROM test_rollback ORDER BY col0", "VALUES (123, CAST(987 AS BIGINT))");
 
         assertUpdate(format("CALL system.rollback_to_snapshot('tpch', 'test_rollback', %s)", afterCreateTableId));
-        assertEquals((long) computeActual("SELECT COUNT(*) FROM test_rollback").getOnlyValue(), 0);
+        assertThat((long) computeActual("SELECT COUNT(*) FROM test_rollback").getOnlyValue()).isEqualTo(0);
 
         assertUpdate("INSERT INTO test_rollback (col0, col1) VALUES (789, CAST(987 AS BIGINT))", 1);
         long afterSecondInsertId = getCurrentSnapshotId("test_rollback");
@@ -1678,9 +1672,7 @@ public abstract class BaseIcebergConnectorTest
         // For this reason the source and the copied table will share the same directory.
         // This test does not drop intentionally the created tables to avoid affecting the source table or the information_schema.
         assertUpdate(format("CREATE TABLE test_create_table_like_original (col1 INTEGER, aDate DATE) WITH(format = '%s', location = '%s', partitioning = ARRAY['aDate'])", format, tempDirPath));
-        assertEquals(
-                getTablePropertiesString("test_create_table_like_original"),
-                format(
+        assertThat(getTablePropertiesString("test_create_table_like_original")).isEqualTo(format(
                         """
                                 WITH (
                                    format = '%s',
@@ -1697,9 +1689,7 @@ public abstract class BaseIcebergConnectorTest
         assertQuery("SELECT * from test_create_table_like_copy0", "VALUES(1, CAST('1950-06-28' AS DATE), 3)");
 
         assertUpdate("CREATE TABLE test_create_table_like_copy1 (LIKE test_create_table_like_original)");
-        assertEquals(
-                getTablePropertiesString("test_create_table_like_copy1"),
-                format(
+        assertThat(getTablePropertiesString("test_create_table_like_copy1")).isEqualTo(format(
                         """
                                 WITH (
                                    format = '%s',
@@ -1711,9 +1701,7 @@ public abstract class BaseIcebergConnectorTest
                         (isObjectStore() ? ",\n   type = 'ICEBERG'" : "")));
 
         assertUpdate("CREATE TABLE test_create_table_like_copy2 (LIKE test_create_table_like_original EXCLUDING PROPERTIES)");
-        assertEquals(
-                getTablePropertiesString("test_create_table_like_copy2"),
-                format(
+        assertThat(getTablePropertiesString("test_create_table_like_copy2")).isEqualTo(format(
                         """
                                 WITH (
                                    format = '%s',
@@ -1723,6 +1711,17 @@ public abstract class BaseIcebergConnectorTest
                         format,
                         getTableLocation("test_create_table_like_copy2"),
                         (isObjectStore() ? ",\n   type = 'ICEBERG'" : "")));
+
+        assertThat(getTablePropertiesString("test_create_table_like_copy2")).isEqualTo(format(
+                """
+                WITH (
+                   format = '%s',
+                   format_version = 2,
+                   location = '%s'%s
+                )""",
+                format,
+                getTableLocation("test_create_table_like_copy2"),
+                (isObjectStore() ? ",\n   type = 'ICEBERG'" : "")));
         dropTable("test_create_table_like_copy2");
 
         assertQueryFails("CREATE TABLE test_create_table_like_copy3 (LIKE test_create_table_like_original INCLUDING PROPERTIES)",
@@ -3661,34 +3660,34 @@ public abstract class BaseIcebergConnectorTest
         assertUpdate("INSERT INTO test_partitioned_table_statistics VALUES (100, 10)", 1);
 
         MaterializedResult result = computeActual("SHOW STATS FOR iceberg.tpch.test_partitioned_table_statistics");
-        assertEquals(result.getRowCount(), 3);
+        assertThat(result.getRowCount()).isEqualTo(3);
 
         MaterializedRow row0 = result.getMaterializedRows().get(0);
-        assertEquals(row0.getField(0), "col1");
-        assertEquals(row0.getField(3), 0.0);
+        assertThat(row0.getField(0)).isEqualTo("col1");
+        assertThat(row0.getField(3)).isEqualTo(0.0);
         if (format != AVRO) {
-            assertEquals(row0.getField(5), "-10.0");
-            assertEquals(row0.getField(6), "100.0");
+            assertThat(row0.getField(5)).isEqualTo("-10.0");
+            assertThat(row0.getField(6)).isEqualTo("100.0");
         }
         else {
-            assertNull(row0.getField(5));
-            assertNull(row0.getField(6));
+            assertThat(row0.getField(5)).isNull();
+            assertThat(row0.getField(6)).isNull();
         }
 
         MaterializedRow row1 = result.getMaterializedRows().get(1);
-        assertEquals(row1.getField(0), "col2");
-        assertEquals(row1.getField(3), 0.0);
+        assertThat(row1.getField(0)).isEqualTo("col2");
+        assertThat(row1.getField(3)).isEqualTo(0.0);
         if (format != AVRO) {
-            assertEquals(row1.getField(5), "-1");
-            assertEquals(row1.getField(6), "10");
+            assertThat(row1.getField(5)).isEqualTo("-1");
+            assertThat(row1.getField(6)).isEqualTo("10");
         }
         else {
-            assertNull(row0.getField(5));
-            assertNull(row0.getField(6));
+            assertThat(row0.getField(5)).isNull();
+            assertThat(row0.getField(6)).isNull();
         }
 
         MaterializedRow row2 = result.getMaterializedRows().get(2);
-        assertEquals(row2.getField(4), 2.0);
+        assertThat(row2.getField(4)).isEqualTo(2.0);
 
         assertUpdate("INSERT INTO test_partitioned_table_statistics VALUES " + IntStream.rangeClosed(1, 5)
                 .mapToObj(i -> format("(%d, 10)", i + 100))
@@ -3699,35 +3698,35 @@ public abstract class BaseIcebergConnectorTest
                 .collect(joining(", ")), 5);
 
         result = computeActual("SHOW STATS FOR iceberg.tpch.test_partitioned_table_statistics");
-        assertEquals(result.getRowCount(), 3);
+        assertThat(result.getRowCount()).isEqualTo(3);
         row0 = result.getMaterializedRows().get(0);
-        assertEquals(row0.getField(0), "col1");
+        assertThat(row0.getField(0)).isEqualTo("col1");
         if (format != AVRO) {
-            assertEquals((double) row0.getField(3), 5.0 / 12.0, 1e-10);
-            assertEquals(row0.getField(5), "-10.0");
-            assertEquals(row0.getField(6), "105.0");
+            assertThat((double) row0.getField(3)).isCloseTo(5.0 / 12.0, offset(1e-10));
+            assertThat(row0.getField(5)).isEqualTo("-10.0");
+            assertThat(row0.getField(6)).isEqualTo("105.0");
         }
         else {
-            assertEquals(row0.getField(3), 0.1);
-            assertNull(row0.getField(5));
-            assertNull(row0.getField(6));
+            assertThat(row0.getField(3)).isEqualTo(0.1);
+            assertThat(row0.getField(5)).isNull();
+            assertThat(row0.getField(6)).isNull();
         }
 
         row1 = result.getMaterializedRows().get(1);
-        assertEquals(row1.getField(0), "col2");
+        assertThat(row1.getField(0)).isEqualTo("col2");
         if (format != AVRO) {
-            assertEquals(row1.getField(3), 0.0);
-            assertEquals(row1.getField(5), "-1");
-            assertEquals(row1.getField(6), "10");
+            assertThat(row1.getField(3)).isEqualTo(0.0);
+            assertThat(row1.getField(5)).isEqualTo("-1");
+            assertThat(row1.getField(6)).isEqualTo("10");
         }
         else {
-            assertEquals(row0.getField(3), 0.1);
-            assertNull(row0.getField(5));
-            assertNull(row0.getField(6));
+            assertThat(row0.getField(3)).isEqualTo(0.1);
+            assertThat(row0.getField(5)).isNull();
+            assertThat(row0.getField(6)).isNull();
         }
 
         row2 = result.getMaterializedRows().get(2);
-        assertEquals(row2.getField(4), 12.0);
+        assertThat(row2.getField(4)).isEqualTo(12.0);
 
         assertUpdate("INSERT INTO test_partitioned_table_statistics VALUES " + IntStream.rangeClosed(6, 10)
                 .mapToObj(i -> "(100, NULL)")
@@ -3735,33 +3734,33 @@ public abstract class BaseIcebergConnectorTest
 
         result = computeActual("SHOW STATS FOR iceberg.tpch.test_partitioned_table_statistics");
         row0 = result.getMaterializedRows().get(0);
-        assertEquals(row0.getField(0), "col1");
+        assertThat(row0.getField(0)).isEqualTo("col1");
         if (format != AVRO) {
-            assertEquals(row0.getField(3), 5.0 / 17.0);
-            assertEquals(row0.getField(5), "-10.0");
-            assertEquals(row0.getField(6), "105.0");
+            assertThat(row0.getField(3)).isEqualTo(5.0 / 17.0);
+            assertThat(row0.getField(5)).isEqualTo("-10.0");
+            assertThat(row0.getField(6)).isEqualTo("105.0");
         }
         else {
-            assertEquals(row0.getField(3), 0.1);
-            assertNull(row0.getField(5));
-            assertNull(row0.getField(6));
+            assertThat(row0.getField(3)).isEqualTo(0.1);
+            assertThat(row0.getField(5)).isNull();
+            assertThat(row0.getField(6)).isNull();
         }
 
         row1 = result.getMaterializedRows().get(1);
-        assertEquals(row1.getField(0), "col2");
+        assertThat(row1.getField(0)).isEqualTo("col2");
         if (format != AVRO) {
-            assertEquals(row1.getField(3), 5.0 / 17.0);
-            assertEquals(row1.getField(5), "-1");
-            assertEquals(row1.getField(6), "10");
+            assertThat(row1.getField(3)).isEqualTo(5.0 / 17.0);
+            assertThat(row1.getField(5)).isEqualTo("-1");
+            assertThat(row1.getField(6)).isEqualTo("10");
         }
         else {
-            assertEquals(row0.getField(3), 0.1);
-            assertNull(row0.getField(5));
-            assertNull(row0.getField(6));
+            assertThat(row0.getField(3)).isEqualTo(0.1);
+            assertThat(row0.getField(5)).isNull();
+            assertThat(row0.getField(6)).isNull();
         }
 
         row2 = result.getMaterializedRows().get(2);
-        assertEquals(row2.getField(4), 17.0);
+        assertThat(row2.getField(4)).isEqualTo(17.0);
 
         dropTable("iceberg.tpch.test_partitioned_table_statistics");
     }
@@ -3928,20 +3927,16 @@ public abstract class BaseIcebergConnectorTest
 
             Optional<ConstraintApplicationResult<TableHandle>> result = metadata.applyFilter(session, table, new Constraint(domains));
 
-            assertEquals((expectedUnenforcedPredicate == null && expectedEnforcedPredicate == null), result.isEmpty());
+            assertThat((expectedUnenforcedPredicate == null && expectedEnforcedPredicate == null)).isEqualTo(result.isEmpty());
 
             if (result.isPresent()) {
                 IcebergTableHandle newTable = (IcebergTableHandle) result.get().getHandle().getConnectorHandle();
 
-                assertEquals(
-                        newTable.getEnforcedPredicate(),
-                        TupleDomain.withColumnDomains(expectedEnforcedPredicate.entrySet().stream()
-                                .collect(toImmutableMap(entry -> columns.get(entry.getKey()), Map.Entry::getValue))));
+                assertThat(newTable.getEnforcedPredicate()).isEqualTo(TupleDomain.withColumnDomains(expectedEnforcedPredicate.entrySet().stream()
+                        .collect(toImmutableMap(entry -> columns.get(entry.getKey()), Map.Entry::getValue))));
 
-                assertEquals(
-                        newTable.getUnenforcedPredicate(),
-                        TupleDomain.withColumnDomains(expectedUnenforcedPredicate.entrySet().stream()
-                                .collect(toImmutableMap(entry -> columns.get(entry.getKey()), Map.Entry::getValue))));
+                assertThat(newTable.getUnenforcedPredicate()).isEqualTo(TupleDomain.withColumnDomains(expectedUnenforcedPredicate.entrySet().stream()
+                        .collect(toImmutableMap(entry -> columns.get(entry.getKey()), Map.Entry::getValue))));
             }
         });
     }
@@ -3976,7 +3971,7 @@ public abstract class BaseIcebergConnectorTest
                         " (CAST(ROW(null, 'this is a random value') AS ROW(int, varchar))), " +
                         " DATE '2021-07-24'",
                 1);
-        assertEquals(computeActual("SELECT * from test_nested_table_1").getRowCount(), 1);
+        assertThat(computeActual("SELECT * from test_nested_table_1").getRowCount()).isEqualTo(1);
 
         if (format != AVRO) {
             assertThat(query("SHOW STATS FOR test_nested_table_1"))
@@ -4040,7 +4035,7 @@ public abstract class BaseIcebergConnectorTest
                         "map(array[1,2], array[array['ek', 'one'], array['don', 'do', 'two']]), CAST(1.0 as DECIMAL(5,2)), " +
                         "CAST(ROW(1, 'this is a random value', null) AS ROW(int, varchar, array(int))), 'one'",
                 1);
-        assertEquals(computeActual("SELECT * from test_nested_table_2").getRowCount(), 1);
+        assertThat(computeActual("SELECT * from test_nested_table_2").getRowCount()).isEqualTo(1);
 
         if (format != AVRO) {
             assertThat(query("SHOW STATS FOR test_nested_table_2"))
@@ -4075,7 +4070,7 @@ public abstract class BaseIcebergConnectorTest
 
         assertUpdate("CREATE TABLE test_nested_table_3 WITH (partitioning = ARRAY['int']) AS SELECT * FROM test_nested_table_2", 1);
 
-        assertEquals(computeActual("SELECT * FROM test_nested_table_3").getRowCount(), 1);
+        assertThat(computeActual("SELECT * FROM test_nested_table_3").getRowCount()).isEqualTo(1);
 
         assertThat(query("SHOW STATS FOR test_nested_table_3"))
                 .matches("SHOW STATS FOR test_nested_table_2");
@@ -4115,7 +4110,7 @@ public abstract class BaseIcebergConnectorTest
     {
         Session session = getSession();
         assertUpdate(session, "DROP TABLE " + table);
-        assertFalse(getQueryRunner().tableExists(session, table));
+        assertThat(getQueryRunner().tableExists(session, table)).isFalse();
     }
 
     @Test
@@ -4184,7 +4179,7 @@ public abstract class BaseIcebergConnectorTest
 
         // Get manifest file
         MaterializedResult result = computeActual("SELECT path FROM \"test_iceberg_file_size$manifests\"");
-        assertEquals(result.getRowCount(), 1);
+        assertThat(result.getRowCount()).isEqualTo(1);
         String manifestFile = (String) result.getOnlyValue();
 
         // Read manifest file
@@ -4197,13 +4192,14 @@ public abstract class BaseIcebergConnectorTest
                 entry = dataFileReader.next();
                 recordCount++;
             }
-            assertEquals(recordCount, 1);
+            assertThat(recordCount).isEqualTo(1);
         }
 
         // Alter data file entry to store incorrect file size
         GenericData.Record dataFile = (GenericData.Record) entry.get("data_file");
         long alteredValue = 50L;
-        assertNotEquals(dataFile.get("file_size_in_bytes"), alteredValue);
+        assertThat(dataFile.get("file_size_in_bytes"))
+                .isNotEqualTo(alteredValue);
         dataFile.put("file_size_in_bytes", alteredValue);
 
         // Write altered metadata
@@ -5484,7 +5480,8 @@ public abstract class BaseIcebergConnectorTest
             storageTimePrecision.sleep(1);
             assertUpdate("INSERT INTO " + table.getName() + " VALUES (2)", 1);
             ZonedDateTime anotherFileModifiedTime = (ZonedDateTime) computeScalar("SELECT max(\"$file_modified_time\") FROM " + table.getName());
-            assertNotEquals(fileModifiedTime, anotherFileModifiedTime);
+            assertThat(fileModifiedTime)
+                    .isNotEqualTo(anotherFileModifiedTime);
             assertThat(anotherFileModifiedTime).isAfter(fileModifiedTime); // to detect potential clock backward adjustment
 
             assertThat(query("SELECT col FROM " + table.getName() + " WHERE \"$file_modified_time\" = from_iso8601_timestamp('" + fileModifiedTime.format(ISO_OFFSET_DATE_TIME) + "')"))
@@ -6833,12 +6830,16 @@ public abstract class BaseIcebergConnectorTest
 
         // Delete current metadata file
         fileSystem.deleteFile(metadataLocation);
-        assertFalse(fileSystem.newInputFile(metadataLocation).exists(), "Current metadata file should not exist");
+        assertThat(fileSystem.newInputFile(metadataLocation).exists())
+                .describedAs("Current metadata file should not exist")
+                .isFalse();
 
         // try to drop table
         assertUpdate("DROP TABLE " + tableName);
-        assertFalse(getQueryRunner().tableExists(getSession(), tableName));
-        assertFalse(fileSystem.listFiles(Location.of(tableLocation)).hasNext(), "Table location should not exist");
+        assertThat(getQueryRunner().tableExists(getSession(), tableName)).isFalse();
+        assertThat(fileSystem.listFiles(Location.of(tableLocation)).hasNext())
+                .describedAs("Table location should not exist")
+                .isFalse();
     }
 
     @Test
@@ -6855,12 +6856,16 @@ public abstract class BaseIcebergConnectorTest
 
         // Delete current snapshot file
         fileSystem.deleteFile(currentSnapshotFile);
-        assertFalse(fileSystem.newInputFile(currentSnapshotFile).exists(), "Current snapshot file should not exist");
+        assertThat(fileSystem.newInputFile(currentSnapshotFile).exists())
+                .describedAs("Current snapshot file should not exist")
+                .isFalse();
 
         // try to drop table
         assertUpdate("DROP TABLE " + tableName);
-        assertFalse(getQueryRunner().tableExists(getSession(), tableName));
-        assertFalse(fileSystem.listFiles(Location.of(tableLocation)).hasNext(), "Table location should not exist");
+        assertThat(getQueryRunner().tableExists(getSession(), tableName)).isFalse();
+        assertThat(fileSystem.listFiles(Location.of(tableLocation)).hasNext())
+                .describedAs("Table location should not exist")
+                .isFalse();
     }
 
     @Test
@@ -6878,12 +6883,16 @@ public abstract class BaseIcebergConnectorTest
 
         // Delete Manifest List file
         fileSystem.deleteFile(manifestListFile);
-        assertFalse(fileSystem.newInputFile(manifestListFile).exists(), "Manifest list file should not exist");
+        assertThat(fileSystem.newInputFile(manifestListFile).exists())
+                .describedAs("Manifest list file should not exist")
+                .isFalse();
 
         // try to drop table
         assertUpdate("DROP TABLE " + tableName);
-        assertFalse(getQueryRunner().tableExists(getSession(), tableName));
-        assertFalse(fileSystem.listFiles(Location.of(tableLocation)).hasNext(), "Table location should not exist");
+        assertThat(getQueryRunner().tableExists(getSession(), tableName)).isFalse();
+        assertThat(fileSystem.listFiles(Location.of(tableLocation)).hasNext())
+                .describedAs("Table location should not exist")
+                .isFalse();
     }
 
     @Test
@@ -6897,17 +6906,21 @@ public abstract class BaseIcebergConnectorTest
         Location tableLocation = Location.of(getTableLocation(tableName));
         Location tableDataPath = tableLocation.appendPath("data");
         FileIterator fileIterator = fileSystem.listFiles(tableDataPath);
-        assertTrue(fileIterator.hasNext());
+        assertThat(fileIterator.hasNext()).isTrue();
         Location dataFile = fileIterator.next().location();
 
         // Delete data file
         fileSystem.deleteFile(dataFile);
-        assertFalse(fileSystem.newInputFile(dataFile).exists(), "Data file should not exist");
+        assertThat(fileSystem.newInputFile(dataFile).exists())
+                .describedAs("Data file should not exist")
+                .isFalse();
 
         // try to drop table
         assertUpdate("DROP TABLE " + tableName);
-        assertFalse(getQueryRunner().tableExists(getSession(), tableName));
-        assertFalse(fileSystem.listFiles(tableLocation).hasNext(), "Table location should not exist");
+        assertThat(getQueryRunner().tableExists(getSession(), tableName)).isFalse();
+        assertThat(fileSystem.listFiles(tableLocation).hasNext())
+                .describedAs("Table location should not exist")
+                .isFalse();
     }
 
     @Test
@@ -6922,11 +6935,13 @@ public abstract class BaseIcebergConnectorTest
 
         // Delete table location
         fileSystem.deleteDirectory(tableLocation);
-        assertFalse(fileSystem.listFiles(tableLocation).hasNext(), "Table location should not exist");
+        assertThat(fileSystem.listFiles(tableLocation).hasNext())
+                .describedAs("Table location should not exist")
+                .isFalse();
 
         // try to drop table
         assertUpdate("DROP TABLE " + tableName);
-        assertFalse(getQueryRunner().tableExists(getSession(), tableName));
+        assertThat(getQueryRunner().tableExists(getSession(), tableName)).isFalse();
     }
 
     @Test
@@ -6943,7 +6958,9 @@ public abstract class BaseIcebergConnectorTest
 
         // break the table by deleting all metadata files
         fileSystem.deleteDirectory(metadataLocation);
-        assertFalse(fileSystem.listFiles(metadataLocation).hasNext(), "Metadata location should not exist");
+        assertThat(fileSystem.listFiles(metadataLocation).hasNext())
+                .describedAs("Metadata location should not exist")
+                .isFalse();
 
         // Assert queries fail cleanly
         assertQueryFails("TABLE " + tableName, "Metadata not found in metadata location for table " + schemaTableName);
@@ -6981,8 +6998,10 @@ public abstract class BaseIcebergConnectorTest
 
         // DROP TABLE should succeed so that users can remove their corrupted table
         assertQuerySucceeds("DROP TABLE " + tableName);
-        assertFalse(getQueryRunner().tableExists(getSession(), tableName));
-        assertFalse(fileSystem.listFiles(tableLocation).hasNext(), "Table location should not exist");
+        assertThat(getQueryRunner().tableExists(getSession(), tableName)).isFalse();
+        assertThat(fileSystem.listFiles(tableLocation).hasNext())
+                .describedAs("Table location should not exist")
+                .isFalse();
     }
 
     @Test
@@ -7032,12 +7051,16 @@ public abstract class BaseIcebergConnectorTest
 
         // break the table by deleting all metadata files
         fileSystem.deleteDirectory(metadataLocation);
-        assertFalse(fileSystem.listFiles(metadataLocation).hasNext(), "Metadata location should not exist");
+        assertThat(fileSystem.listFiles(metadataLocation).hasNext())
+                .describedAs("Metadata location should not exist")
+                .isFalse();
 
         // DROP TABLE should succeed using hive redirection
         queryRunner.execute("DROP TABLE " + hiveTableName);
-        assertFalse(queryRunner.tableExists(getSession(), icebergTableName));
-        assertFalse(fileSystem.listFiles(tableLocation).hasNext(), "Table location should not exist");
+        assertThat(queryRunner.tableExists(getSession(), icebergTableName)).isFalse();
+        assertThat(fileSystem.listFiles(tableLocation).hasNext())
+                .describedAs("Table location should not exist")
+                .isFalse();
     }
 
     @Test
@@ -7368,7 +7391,7 @@ public abstract class BaseIcebergConnectorTest
                     getQueryRunner()::execute,
                     "test_coercion_show_create_table",
                     format("AS SELECT %s a", setup.sourceValueLiteral))) {
-                assertEquals(getColumnType(testTable.getName(), "a"), setup.newColumnType);
+                assertThat(getColumnType(testTable.getName(), "a")).isEqualTo(setup.newColumnType);
                 assertQuery(
                         format("SELECT * FROM %s", testTable.getName()),
                         format("VALUES (%s)", setup.newValueLiteral));
@@ -7384,7 +7407,7 @@ public abstract class BaseIcebergConnectorTest
                     getQueryRunner()::execute,
                     "test_coercion_show_create_table",
                     format("AS SELECT %s a WITH NO DATA", setup.sourceValueLiteral))) {
-                assertEquals(getColumnType(testTable.getName(), "a"), setup.newColumnType);
+                assertThat(getColumnType(testTable.getName(), "a")).isEqualTo(setup.newColumnType);
             }
         }
     }
@@ -7484,7 +7507,7 @@ public abstract class BaseIcebergConnectorTest
                 getQueryRunner()::execute,
                 "test_coercion_show_create_table",
                 format("AS SELECT %s a", inputType))) {
-            assertEquals(getColumnType(testTable.getName(), "a"), tableType);
+            assertThat(getColumnType(testTable.getName(), "a")).isEqualTo(tableType);
             assertQuery(
                     format("SELECT * FROM %s", testTable.getName()),
                     format("VALUES (%s)", tableValue));
@@ -7527,7 +7550,7 @@ public abstract class BaseIcebergConnectorTest
                 getQueryRunner()::execute,
                 "test_coercion_show_create_table",
                 format("AS SELECT %s a WITH NO DATA", inputType))) {
-            assertEquals(getColumnType(testTable.getName(), "a"), tableType);
+            assertThat(getColumnType(testTable.getName(), "a")).isEqualTo(tableType);
         }
     }
 

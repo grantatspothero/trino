@@ -55,7 +55,6 @@ import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.util.Files.newTemporaryFile;
-import static org.testng.Assert.assertEquals;
 
 public abstract class BaseFileBasedSystemAccessControlTest
 {
@@ -514,24 +513,18 @@ public abstract class BaseFileBasedSystemAccessControlTest
     {
         SystemAccessControl accessControl = newFileBasedSystemAccessControl("file-based-system-access-table.json");
 
-        assertEquals(
-                accessControl.filterColumns(
-                        ALICE,
-                        new CatalogSchemaTableName("some-catalog", "bobschema", "bobcolumns"),
-                        ImmutableSet.of("private", "a", "restricted", "b")),
-                ImmutableSet.of("private", "a", "restricted", "b"));
-        assertEquals(
-                accessControl.filterColumns(
-                        BOB,
-                        new CatalogSchemaTableName("some-catalog", "bobschema", "bobcolumns"),
-                        ImmutableSet.of("private", "a", "restricted", "b")),
-                ImmutableSet.of("private", "a", "restricted", "b"));
-        assertEquals(
-                accessControl.filterColumns(
-                        CHARLIE,
-                        new CatalogSchemaTableName("some-catalog", "bobschema", "bobcolumns"),
-                        ImmutableSet.of("private", "a", "restricted", "b")),
-                ImmutableSet.of("a", "b"));
+        assertThat(accessControl.filterColumns(
+                ALICE,
+                new CatalogSchemaTableName("some-catalog", "bobschema", "bobcolumns"),
+                ImmutableSet.of("private", "a", "restricted", "b"))).isEqualTo(ImmutableSet.of("private", "a", "restricted", "b"));
+        assertThat(accessControl.filterColumns(
+                BOB,
+                new CatalogSchemaTableName("some-catalog", "bobschema", "bobcolumns"),
+                ImmutableSet.of("private", "a", "restricted", "b"))).isEqualTo(ImmutableSet.of("private", "a", "restricted", "b"));
+        assertThat(accessControl.filterColumns(
+                CHARLIE,
+                new CatalogSchemaTableName("some-catalog", "bobschema", "bobcolumns"),
+                ImmutableSet.of("private", "a", "restricted", "b"))).isEqualTo(ImmutableSet.of("a", "b"));
     }
 
     @Test
@@ -547,15 +540,15 @@ public abstract class BaseFileBasedSystemAccessControlTest
                 .add(new SchemaTableName("bobschema", "any"))
                 .add(new SchemaTableName("any", "any"))
                 .build();
-        assertEquals(accessControl.filterTables(ALICE, "any", tables), ImmutableSet.<SchemaTableName>builder()
+        assertThat(accessControl.filterTables(ALICE, "any", tables)).isEqualTo(ImmutableSet.<SchemaTableName>builder()
                 .add(new SchemaTableName("aliceschema", "any"))
                 .add(new SchemaTableName("aliceschema", "bobtable"))
                 .build());
-        assertEquals(accessControl.filterTables(BOB, "any", tables), ImmutableSet.<SchemaTableName>builder()
+        assertThat(accessControl.filterTables(BOB, "any", tables)).isEqualTo(ImmutableSet.<SchemaTableName>builder()
                 .add(new SchemaTableName("aliceschema", "bobtable"))
                 .add(new SchemaTableName("bobschema", "bob_any"))
                 .build());
-        assertEquals(accessControl.filterTables(ADMIN, "any", tables), ImmutableSet.<SchemaTableName>builder()
+        assertThat(accessControl.filterTables(ADMIN, "any", tables)).isEqualTo(ImmutableSet.<SchemaTableName>builder()
                 .add(new SchemaTableName("secret", "any"))
                 .add(new SchemaTableName("aliceschema", "any"))
                 .add(new SchemaTableName("aliceschema", "bobtable"))
@@ -575,17 +568,15 @@ public abstract class BaseFileBasedSystemAccessControlTest
                 .add(new SchemaTableName("secret", "any"))
                 .add(new SchemaTableName("any", "any"))
                 .build();
-        assertEquals(accessControl.filterTables(ALICE, "any", tables), ImmutableSet.of());
-        assertEquals(accessControl.filterTables(BOB, "any", tables), ImmutableSet.of());
+        assertThat(accessControl.filterTables(ALICE, "any", tables)).isEqualTo(ImmutableSet.of());
+        assertThat(accessControl.filterTables(BOB, "any", tables)).isEqualTo(ImmutableSet.of());
     }
 
     @Test
     public void testTableRulesForFilterColumnsWithNoAccess()
     {
         SystemAccessControl accessControl = newFileBasedSystemAccessControl("file-based-system-no-access.json");
-        assertEquals(
-                accessControl.filterColumns(BOB, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable"), ImmutableSet.of("a")),
-                ImmutableSet.of());
+        assertThat(accessControl.filterColumns(BOB, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable"), ImmutableSet.of("a"))).isEqualTo(ImmutableSet.of());
     }
 
     @Test
@@ -757,13 +748,11 @@ public abstract class BaseFileBasedSystemAccessControlTest
         SystemSecurityContext userGroup2 = new SystemSecurityContext(Identity.forUser("user_2")
                 .withGroups(ImmutableSet.of("group2")).build(), queryId, queryStart);
 
-        assertEquals(
-                accessControl.getColumnMask(
-                        userGroup1Group2,
-                        new CatalogSchemaTableName("some-catalog", "my_schema", "my_table"),
-                        "col_a",
-                        VARCHAR),
-                Optional.empty());
+        assertThat(accessControl.getColumnMask(
+                userGroup1Group2,
+                new CatalogSchemaTableName("some-catalog", "my_schema", "my_table"),
+                "col_a",
+                VARCHAR)).isEqualTo(Optional.empty());
 
         assertViewExpressionEquals(
                 accessControl.getColumnMask(
@@ -782,16 +771,14 @@ public abstract class BaseFileBasedSystemAccessControlTest
         SystemSecurityContext userGroup3 = new SystemSecurityContext(Identity.forUser("user_3")
                 .withGroups(ImmutableSet.of("group3")).build(), queryId, queryStart);
 
-        assertEquals(
-                accessControl.getRowFilters(
-                        userGroup1Group3,
-                        new CatalogSchemaTableName("some-catalog", "my_schema", "my_table")),
-                ImmutableList.of());
+        assertThat(accessControl.getRowFilters(
+                userGroup1Group3,
+                new CatalogSchemaTableName("some-catalog", "my_schema", "my_table"))).isEqualTo(ImmutableList.of());
 
         List<ViewExpression> rowFilters = accessControl.getRowFilters(
                 userGroup3,
                 new CatalogSchemaTableName("some-catalog", "my_schema", "my_table"));
-        assertEquals(rowFilters.size(), 1);
+        assertThat(rowFilters.size()).isEqualTo(1);
         assertViewExpressionEquals(
                 rowFilters.get(0),
                 ViewExpression.builder()
@@ -868,12 +855,12 @@ public abstract class BaseFileBasedSystemAccessControlTest
 
         accessControlManager.checkCanExecuteQuery(admin);
         accessControlManager.checkCanViewQueryOwnedBy(admin, any);
-        assertEquals(accessControlManager.filterViewQueryOwnedBy(admin, ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b"))), ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b")));
+        assertThat(accessControlManager.filterViewQueryOwnedBy(admin, ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b")))).isEqualTo(ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b")));
         accessControlManager.checkCanKillQueryOwnedBy(admin, any);
 
         accessControlManager.checkCanExecuteQuery(alice);
         accessControlManager.checkCanViewQueryOwnedBy(alice, any);
-        assertEquals(accessControlManager.filterViewQueryOwnedBy(alice, ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b"))), ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b")));
+        assertThat(accessControlManager.filterViewQueryOwnedBy(alice, ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b")))).isEqualTo(ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b")));
         assertAccessDenied(
                 () -> accessControlManager.checkCanKillQueryOwnedBy(alice, any),
                 "Cannot view query");
@@ -884,14 +871,13 @@ public abstract class BaseFileBasedSystemAccessControlTest
         assertAccessDenied(
                 () -> accessControlManager.checkCanViewQueryOwnedBy(bob, any),
                 "Cannot view query");
-        assertEquals(accessControlManager.filterViewQueryOwnedBy(bob, ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b"))), ImmutableSet.of());
+        assertThat(accessControlManager.filterViewQueryOwnedBy(bob, ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b")))).isEqualTo(ImmutableSet.of());
         accessControlManager.checkCanKillQueryOwnedBy(bob, any);
 
         accessControlManager.checkCanExecuteQuery(dave);
         accessControlManager.checkCanViewQueryOwnedBy(dave, alice);
         accessControlManager.checkCanViewQueryOwnedBy(dave, dave);
-        assertEquals(accessControlManager.filterViewQueryOwnedBy(dave, ImmutableSet.of(Identity.ofUser("alice"), Identity.ofUser("bob"), Identity.ofUser("dave"), Identity.ofUser("admin"))),
-                ImmutableSet.of(Identity.ofUser("alice"), Identity.ofUser("dave")));
+        assertThat(accessControlManager.filterViewQueryOwnedBy(dave, ImmutableSet.of(Identity.ofUser("alice"), Identity.ofUser("bob"), Identity.ofUser("dave"), Identity.ofUser("admin")))).isEqualTo(ImmutableSet.of(Identity.ofUser("alice"), Identity.ofUser("dave")));
         assertAccessDenied(
                 () -> accessControlManager.checkCanKillQueryOwnedBy(dave, alice),
                 "Cannot view query");
@@ -914,7 +900,7 @@ public abstract class BaseFileBasedSystemAccessControlTest
 
         accessControlManager.checkCanExecuteQuery(nonAsciiUser);
         accessControlManager.checkCanViewQueryOwnedBy(nonAsciiUser, any);
-        assertEquals(accessControlManager.filterViewQueryOwnedBy(nonAsciiUser, ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b"))), ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b")));
+        assertThat(accessControlManager.filterViewQueryOwnedBy(nonAsciiUser, ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b")))).isEqualTo(ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b")));
         accessControlManager.checkCanKillQueryOwnedBy(nonAsciiUser, any);
     }
 
@@ -932,7 +918,7 @@ public abstract class BaseFileBasedSystemAccessControlTest
 
         accessControlManager.checkCanExecuteQuery(bob);
         accessControlManager.checkCanViewQueryOwnedBy(bob, any);
-        assertEquals(accessControlManager.filterViewQueryOwnedBy(bob, ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b"))), ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b")));
+        assertThat(accessControlManager.filterViewQueryOwnedBy(bob, ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b")))).isEqualTo(ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b")));
         accessControlManager.checkCanKillQueryOwnedBy(bob, any);
     }
 
@@ -944,21 +930,21 @@ public abstract class BaseFileBasedSystemAccessControlTest
 
         accessControlManager.checkCanExecuteQuery(admin);
         accessControlManager.checkCanViewQueryOwnedBy(admin, any);
-        assertEquals(accessControlManager.filterViewQueryOwnedBy(admin, ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b"))), ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b")));
+        assertThat(accessControlManager.filterViewQueryOwnedBy(admin, ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b")))).isEqualTo(ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b")));
         accessControlManager.checkCanKillQueryOwnedBy(admin, any);
 
         accessControlManager.checkCanExecuteQuery(alice);
         assertAccessDenied(
                 () -> accessControlManager.checkCanViewQueryOwnedBy(alice, any),
                 "Cannot view query");
-        assertEquals(accessControlManager.filterViewQueryOwnedBy(alice, ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b"))), ImmutableSet.of());
+        assertThat(accessControlManager.filterViewQueryOwnedBy(alice, ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b")))).isEqualTo(ImmutableSet.of());
         accessControlManager.checkCanKillQueryOwnedBy(alice, any);
 
         accessControlManager.checkCanExecuteQuery(alice);
         assertAccessDenied(
                 () -> accessControlManager.checkCanViewQueryOwnedBy(bob, any),
                 "Cannot view query");
-        assertEquals(accessControlManager.filterViewQueryOwnedBy(bob, ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b"))), ImmutableSet.of());
+        assertThat(accessControlManager.filterViewQueryOwnedBy(bob, ImmutableSet.of(Identity.ofUser("a"), Identity.ofUser("b")))).isEqualTo(ImmutableSet.of());
         assertAccessDenied(
                 () -> accessControlManager.checkCanKillQueryOwnedBy(bob, any),
                 "Cannot view query");
@@ -966,8 +952,7 @@ public abstract class BaseFileBasedSystemAccessControlTest
         accessControlManager.checkCanExecuteQuery(dave);
         accessControlManager.checkCanViewQueryOwnedBy(dave, alice);
         accessControlManager.checkCanViewQueryOwnedBy(dave, dave);
-        assertEquals(accessControlManager.filterViewQueryOwnedBy(dave, ImmutableSet.of(Identity.ofUser("alice"), Identity.ofUser("bob"), Identity.ofUser("dave"), Identity.ofUser("admin"))),
-                ImmutableSet.of(Identity.ofUser("alice"), Identity.ofUser("dave")));
+        assertThat(accessControlManager.filterViewQueryOwnedBy(dave, ImmutableSet.of(Identity.ofUser("alice"), Identity.ofUser("bob"), Identity.ofUser("dave"), Identity.ofUser("admin")))).isEqualTo(ImmutableSet.of(Identity.ofUser("alice"), Identity.ofUser("dave")));
         assertAccessDenied(
                 () -> accessControlManager.checkCanKillQueryOwnedBy(dave, alice),
                 "Cannot view query");
@@ -1122,13 +1107,13 @@ public abstract class BaseFileBasedSystemAccessControlTest
                 "unknown",
                 "ptf-catalog");
 
-        assertEquals(accessControl.filterCatalogs(ADMIN, allCatalogs), Sets.difference(allCatalogs, ImmutableSet.of("blocked-catalog")));
+        assertThat(accessControl.filterCatalogs(ADMIN, allCatalogs)).isEqualTo(Sets.difference(allCatalogs, ImmutableSet.of("blocked-catalog")));
         Set<String> aliceCatalogs = ImmutableSet.of("specific-catalog", "alice-catalog", "ptf-catalog");
-        assertEquals(accessControl.filterCatalogs(ALICE, allCatalogs), aliceCatalogs);
+        assertThat(accessControl.filterCatalogs(ALICE, allCatalogs)).isEqualTo(aliceCatalogs);
         Set<String> bobCatalogs = ImmutableSet.of("specific-catalog", "alice-catalog", "bob-catalog");
-        assertEquals(accessControl.filterCatalogs(BOB, allCatalogs), bobCatalogs);
+        assertThat(accessControl.filterCatalogs(BOB, allCatalogs)).isEqualTo(bobCatalogs);
         Set<String> charlieCatalogs = ImmutableSet.of("specific-catalog");
-        assertEquals(accessControl.filterCatalogs(CHARLIE, allCatalogs), charlieCatalogs);
+        assertThat(accessControl.filterCatalogs(CHARLIE, allCatalogs)).isEqualTo(charlieCatalogs);
     }
 
     @Test
@@ -1186,55 +1171,55 @@ public abstract class BaseFileBasedSystemAccessControlTest
     {
         SystemAccessControl accessControl = newFileBasedSystemAccessControl("file-based-system-access-visibility.json");
 
-        assertEquals(accessControl.filterSchemas(ADMIN, "specific-catalog", ImmutableSet.of("specific-schema", "unknown")), ImmutableSet.of("specific-schema", "unknown"));
-        assertEquals(accessControl.filterSchemas(ALICE, "specific-catalog", ImmutableSet.of("specific-schema", "unknown")), ImmutableSet.of("specific-schema"));
-        assertEquals(accessControl.filterSchemas(BOB, "specific-catalog", ImmutableSet.of("specific-schema")), ImmutableSet.of("specific-schema"));
-        assertEquals(accessControl.filterSchemas(CHARLIE, "specific-catalog", ImmutableSet.of("specific-schema", "unknown")), ImmutableSet.of("specific-schema"));
+        assertThat(accessControl.filterSchemas(ADMIN, "specific-catalog", ImmutableSet.of("specific-schema", "unknown"))).isEqualTo(ImmutableSet.of("specific-schema", "unknown"));
+        assertThat(accessControl.filterSchemas(ALICE, "specific-catalog", ImmutableSet.of("specific-schema", "unknown"))).isEqualTo(ImmutableSet.of("specific-schema"));
+        assertThat(accessControl.filterSchemas(BOB, "specific-catalog", ImmutableSet.of("specific-schema"))).isEqualTo(ImmutableSet.of("specific-schema"));
+        assertThat(accessControl.filterSchemas(CHARLIE, "specific-catalog", ImmutableSet.of("specific-schema", "unknown"))).isEqualTo(ImmutableSet.of("specific-schema"));
 
-        assertEquals(accessControl.filterSchemas(ADMIN, "alice-catalog", ImmutableSet.of("alice-schema", "bob-schema", "unknown")), ImmutableSet.of("alice-schema", "bob-schema", "unknown"));
-        assertEquals(accessControl.filterSchemas(ALICE, "alice-catalog", ImmutableSet.of("alice-schema", "bob-schema", "unknown")), ImmutableSet.of("alice-schema"));
-        assertEquals(accessControl.filterSchemas(BOB, "alice-catalog", ImmutableSet.of("alice-schema", "bob-schema", "unknown")), ImmutableSet.of("bob-schema"));
-        assertEquals(accessControl.filterSchemas(CHARLIE, "alice-catalog", ImmutableSet.of("alice-schema", "bob-schema", "unknown")), ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(ADMIN, "alice-catalog", ImmutableSet.of("alice-schema", "bob-schema", "unknown"))).isEqualTo(ImmutableSet.of("alice-schema", "bob-schema", "unknown"));
+        assertThat(accessControl.filterSchemas(ALICE, "alice-catalog", ImmutableSet.of("alice-schema", "bob-schema", "unknown"))).isEqualTo(ImmutableSet.of("alice-schema"));
+        assertThat(accessControl.filterSchemas(BOB, "alice-catalog", ImmutableSet.of("alice-schema", "bob-schema", "unknown"))).isEqualTo(ImmutableSet.of("bob-schema"));
+        assertThat(accessControl.filterSchemas(CHARLIE, "alice-catalog", ImmutableSet.of("alice-schema", "bob-schema", "unknown"))).isEqualTo(ImmutableSet.of());
 
-        assertEquals(accessControl.filterSchemas(ADMIN, "bob-catalog", ImmutableSet.of("bob-schema", "unknown")), ImmutableSet.of("bob-schema", "unknown"));
-        assertEquals(accessControl.filterSchemas(ALICE, "bob-catalog", ImmutableSet.of("bob-schema", "unknown")), ImmutableSet.of());
-        assertEquals(accessControl.filterSchemas(BOB, "bob-catalog", ImmutableSet.of("bob-schema", "unknown")), ImmutableSet.of("bob-schema"));
-        assertEquals(accessControl.filterSchemas(CHARLIE, "bob-catalog", ImmutableSet.of("bob-schema", "unknown")), ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(ADMIN, "bob-catalog", ImmutableSet.of("bob-schema", "unknown"))).isEqualTo(ImmutableSet.of("bob-schema", "unknown"));
+        assertThat(accessControl.filterSchemas(ALICE, "bob-catalog", ImmutableSet.of("bob-schema", "unknown"))).isEqualTo(ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(BOB, "bob-catalog", ImmutableSet.of("bob-schema", "unknown"))).isEqualTo(ImmutableSet.of("bob-schema"));
+        assertThat(accessControl.filterSchemas(CHARLIE, "bob-catalog", ImmutableSet.of("bob-schema", "unknown"))).isEqualTo(ImmutableSet.of());
 
-        assertEquals(accessControl.filterSchemas(ADMIN, "secret", ImmutableSet.of("unknown")), ImmutableSet.of("unknown"));
-        assertEquals(accessControl.filterSchemas(ALICE, "secret", ImmutableSet.of("unknown")), ImmutableSet.of());
-        assertEquals(accessControl.filterSchemas(BOB, "secret", ImmutableSet.of("unknown")), ImmutableSet.of());
-        assertEquals(accessControl.filterSchemas(CHARLIE, "secret", ImmutableSet.of("unknown")), ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(ADMIN, "secret", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of("unknown"));
+        assertThat(accessControl.filterSchemas(ALICE, "secret", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(BOB, "secret", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(CHARLIE, "secret", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of());
 
-        assertEquals(accessControl.filterSchemas(ADMIN, "hidden", ImmutableSet.of("unknown")), ImmutableSet.of("unknown"));
-        assertEquals(accessControl.filterSchemas(ALICE, "hidden", ImmutableSet.of("unknown")), ImmutableSet.of());
-        assertEquals(accessControl.filterSchemas(BOB, "hidden", ImmutableSet.of("unknown")), ImmutableSet.of());
-        assertEquals(accessControl.filterSchemas(CHARLIE, "hidden", ImmutableSet.of("unknown")), ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(ADMIN, "hidden", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of("unknown"));
+        assertThat(accessControl.filterSchemas(ALICE, "hidden", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(BOB, "hidden", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(CHARLIE, "hidden", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of());
 
-        assertEquals(accessControl.filterSchemas(ADMIN, "open-to-all", ImmutableSet.of("unknown")), ImmutableSet.of("unknown"));
-        assertEquals(accessControl.filterSchemas(ALICE, "open-to-all", ImmutableSet.of("unknown")), ImmutableSet.of());
-        assertEquals(accessControl.filterSchemas(BOB, "open-to-all", ImmutableSet.of("unknown")), ImmutableSet.of());
-        assertEquals(accessControl.filterSchemas(CHARLIE, "open-to-all", ImmutableSet.of("unknown")), ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(ADMIN, "open-to-all", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of("unknown"));
+        assertThat(accessControl.filterSchemas(ALICE, "open-to-all", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(BOB, "open-to-all", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(CHARLIE, "open-to-all", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of());
 
-        assertEquals(accessControl.filterSchemas(ADMIN, "blocked-catalog", ImmutableSet.of("unknown")), ImmutableSet.of());
-        assertEquals(accessControl.filterSchemas(ALICE, "blocked-catalog", ImmutableSet.of("unknown")), ImmutableSet.of());
-        assertEquals(accessControl.filterSchemas(BOB, "blocked-catalog", ImmutableSet.of("unknown")), ImmutableSet.of());
-        assertEquals(accessControl.filterSchemas(CHARLIE, "blocked-catalog", ImmutableSet.of("unknown")), ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(ADMIN, "blocked-catalog", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(ALICE, "blocked-catalog", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(BOB, "blocked-catalog", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(CHARLIE, "blocked-catalog", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of());
 
-        assertEquals(accessControl.filterSchemas(ADMIN, "unknown", ImmutableSet.of("unknown")), ImmutableSet.of("unknown"));
-        assertEquals(accessControl.filterSchemas(ALICE, "unknown", ImmutableSet.of("unknown")), ImmutableSet.of());
-        assertEquals(accessControl.filterSchemas(BOB, "unknown", ImmutableSet.of("unknown")), ImmutableSet.of());
-        assertEquals(accessControl.filterSchemas(CHARLIE, "unknown", ImmutableSet.of("unknown")), ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(ADMIN, "unknown", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of("unknown"));
+        assertThat(accessControl.filterSchemas(ALICE, "unknown", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(BOB, "unknown", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(CHARLIE, "unknown", ImmutableSet.of("unknown"))).isEqualTo(ImmutableSet.of());
 
-        assertEquals(accessControl.filterSchemas(ADMIN, "session-catalog", ImmutableSet.of("session-schema", "unknown")), ImmutableSet.of("session-schema", "unknown"));
-        assertEquals(accessControl.filterSchemas(ALICE, "session-catalog", ImmutableSet.of("session-schema", "unknown")), ImmutableSet.of());
-        assertEquals(accessControl.filterSchemas(BOB, "session-catalog", ImmutableSet.of("session-schema", "unknown")), ImmutableSet.of());
-        assertEquals(accessControl.filterSchemas(CHARLIE, "session-catalog", ImmutableSet.of("session-schema", "unknown")), ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(ADMIN, "session-catalog", ImmutableSet.of("session-schema", "unknown"))).isEqualTo(ImmutableSet.of("session-schema", "unknown"));
+        assertThat(accessControl.filterSchemas(ALICE, "session-catalog", ImmutableSet.of("session-schema", "unknown"))).isEqualTo(ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(BOB, "session-catalog", ImmutableSet.of("session-schema", "unknown"))).isEqualTo(ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(CHARLIE, "session-catalog", ImmutableSet.of("session-schema", "unknown"))).isEqualTo(ImmutableSet.of());
 
-        assertEquals(accessControl.filterSchemas(ADMIN, "ptf-catalog", ImmutableSet.of("ptf_schema")), ImmutableSet.of("ptf_schema"));
-        assertEquals(accessControl.filterSchemas(ALICE, "ptf-catalog", ImmutableSet.of("ptf_schema")), ImmutableSet.of("ptf_schema"));
-        assertEquals(accessControl.filterSchemas(BOB, "ptf-catalog", ImmutableSet.of("ptf_schema")), ImmutableSet.of());
-        assertEquals(accessControl.filterSchemas(CHARLIE, "ptf-catalog", ImmutableSet.of("ptf_schema")), ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(ADMIN, "ptf-catalog", ImmutableSet.of("ptf_schema"))).isEqualTo(ImmutableSet.of("ptf_schema"));
+        assertThat(accessControl.filterSchemas(ALICE, "ptf-catalog", ImmutableSet.of("ptf_schema"))).isEqualTo(ImmutableSet.of("ptf_schema"));
+        assertThat(accessControl.filterSchemas(BOB, "ptf-catalog", ImmutableSet.of("ptf_schema"))).isEqualTo(ImmutableSet.of());
+        assertThat(accessControl.filterSchemas(CHARLIE, "ptf-catalog", ImmutableSet.of("ptf_schema"))).isEqualTo(ImmutableSet.of());
     }
 
     @Test
@@ -1340,13 +1325,11 @@ public abstract class BaseFileBasedSystemAccessControlTest
     {
         SystemAccessControl accessControl = newFileBasedSystemAccessControl("file-based-system-access-table.json");
 
-        assertEquals(
-                accessControl.getColumnMask(
-                        ALICE,
-                        new CatalogSchemaTableName("some-catalog", "bobschema", "bobcolumns"),
-                        "masked",
-                        VARCHAR),
-                Optional.empty());
+        assertThat(accessControl.getColumnMask(
+                ALICE,
+                new CatalogSchemaTableName("some-catalog", "bobschema", "bobcolumns"),
+                "masked",
+                VARCHAR)).isEqualTo(Optional.empty());
 
         assertViewExpressionEquals(
                 accessControl.getColumnMask(
@@ -1379,12 +1362,10 @@ public abstract class BaseFileBasedSystemAccessControlTest
     {
         SystemAccessControl accessControl = newFileBasedSystemAccessControl("file-based-system-access-table.json");
 
-        assertEquals(
-                accessControl.getRowFilters(ALICE, new CatalogSchemaTableName("some-catalog", "bobschema", "bobcolumns")),
-                ImmutableList.of());
+        assertThat(accessControl.getRowFilters(ALICE, new CatalogSchemaTableName("some-catalog", "bobschema", "bobcolumns"))).isEqualTo(ImmutableList.of());
 
         List<ViewExpression> rowFilters = accessControl.getRowFilters(CHARLIE, new CatalogSchemaTableName("some-catalog", "bobschema", "bobcolumns"));
-        assertEquals(rowFilters.size(), 1);
+        assertThat(rowFilters.size()).isEqualTo(1);
         assertViewExpressionEquals(
                 rowFilters.get(0),
                 ViewExpression.builder()
@@ -1394,7 +1375,7 @@ public abstract class BaseFileBasedSystemAccessControlTest
                         .build());
 
         rowFilters = accessControl.getRowFilters(CHARLIE, new CatalogSchemaTableName("some-catalog", "bobschema", "bobcolumns_with_grant"));
-        assertEquals(rowFilters.size(), 1);
+        assertThat(rowFilters.size()).isEqualTo(1);
         assertViewExpressionEquals(
                 rowFilters.get(0),
                 ViewExpression.builder()
@@ -1407,11 +1388,21 @@ public abstract class BaseFileBasedSystemAccessControlTest
 
     private static void assertViewExpressionEquals(ViewExpression actual, ViewExpression expected)
     {
-        assertEquals(actual.getSecurityIdentity(), expected.getSecurityIdentity(), "Identity");
-        assertEquals(actual.getCatalog(), expected.getCatalog(), "Catalog");
-        assertEquals(actual.getSchema(), expected.getSchema(), "Schema");
-        assertEquals(actual.getExpression(), expected.getExpression(), "Expression");
-        assertEquals(actual.getPath(), expected.getPath(), "Path");
+        assertThat(actual.getSecurityIdentity())
+                .describedAs("Identity")
+                .isEqualTo(expected.getSecurityIdentity());
+        assertThat(actual.getCatalog())
+                .describedAs("Catalog")
+                .isEqualTo(expected.getCatalog());
+        assertThat(actual.getSchema())
+                .describedAs("Schema")
+                .isEqualTo(expected.getSchema());
+        assertThat(actual.getExpression())
+                .describedAs("Expression")
+                .isEqualTo(expected.getExpression());
+        assertThat(actual.getPath())
+                .describedAs("Path")
+                .isEqualTo(expected.getPath());
     }
 
     @Test
@@ -1676,15 +1667,15 @@ public abstract class BaseFileBasedSystemAccessControlTest
                 .add(new SchemaFunctionName("bobschema", "any"))
                 .add(new SchemaFunctionName("any", "any"))
                 .build();
-        assertEquals(accessControl.filterFunctions(ALICE, "any", functions), ImmutableSet.<SchemaFunctionName>builder()
+        assertThat(accessControl.filterFunctions(ALICE, "any", functions)).isEqualTo(ImmutableSet.<SchemaFunctionName>builder()
                 .add(new SchemaFunctionName("aliceschema", "any"))
                 .add(new SchemaFunctionName("aliceschema", "bobfunction"))
                 .build());
-        assertEquals(accessControl.filterFunctions(BOB, "any", functions), ImmutableSet.<SchemaFunctionName>builder()
+        assertThat(accessControl.filterFunctions(BOB, "any", functions)).isEqualTo(ImmutableSet.<SchemaFunctionName>builder()
                 .add(new SchemaFunctionName("aliceschema", "bobfunction"))
                 .add(new SchemaFunctionName("bobschema", "bob_any"))
                 .build());
-        assertEquals(accessControl.filterFunctions(ADMIN, "any", functions), ImmutableSet.<SchemaFunctionName>builder()
+        assertThat(accessControl.filterFunctions(ADMIN, "any", functions)).isEqualTo(ImmutableSet.<SchemaFunctionName>builder()
                 .add(new SchemaFunctionName("secret", "any"))
                 .add(new SchemaFunctionName("aliceschema", "any"))
                 .add(new SchemaFunctionName("aliceschema", "bobfunction"))
@@ -1704,8 +1695,8 @@ public abstract class BaseFileBasedSystemAccessControlTest
                 .add(new SchemaFunctionName("secret", "any"))
                 .add(new SchemaFunctionName("any", "any"))
                 .build();
-        assertEquals(accessControl.filterFunctions(ALICE, "any", functions), ImmutableSet.of());
-        assertEquals(accessControl.filterFunctions(BOB, "any", functions), ImmutableSet.of());
+        assertThat(accessControl.filterFunctions(ALICE, "any", functions)).isEqualTo(ImmutableSet.of());
+        assertThat(accessControl.filterFunctions(BOB, "any", functions)).isEqualTo(ImmutableSet.of());
     }
 
     @Test

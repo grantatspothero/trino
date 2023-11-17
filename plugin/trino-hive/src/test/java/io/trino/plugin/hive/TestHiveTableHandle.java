@@ -28,6 +28,7 @@ import static io.trino.plugin.hive.HiveColumnHandle.ColumnType.PARTITION_KEY;
 import static io.trino.plugin.hive.HiveColumnHandle.createBaseColumn;
 import static io.trino.plugin.hive.HiveType.HIVE_STRING;
 import static io.trino.spi.type.VarcharType.VARCHAR;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.testng.Assert.assertEquals;
 
 public class TestHiveTableHandle
@@ -42,7 +43,7 @@ public class TestHiveTableHandle
         String json = codec.toJson(expected);
         HiveTableHandle actual = codec.fromJson(json);
 
-        assertEquals(actual.getSchemaTableName(), expected.getSchemaTableName());
+        assertThat(actual.getSchemaTableName()).isEqualTo(expected.getSchemaTableName());
     }
 
     @Test

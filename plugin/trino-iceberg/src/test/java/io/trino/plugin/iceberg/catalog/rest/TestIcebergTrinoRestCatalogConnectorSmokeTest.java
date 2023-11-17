@@ -269,7 +269,7 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
     public void testDropTableWithMissingManifestListFile()
     {
         assertThatThrownBy(super::testDropTableWithMissingManifestListFile)
-                .hasMessageContaining("Table location should not exist expected [false] but found [true]");
+                .hasMessageContaining("Table location should not exist");
     }
 
     @Test
@@ -277,7 +277,7 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
     public void testDropTableWithMissingDataFile()
     {
         assertThatThrownBy(super::testDropTableWithMissingDataFile)
-                .hasMessageContaining("Table location should not exist expected [false] but found [true]");
+                .hasMessageContaining("Table location should not exist");
     }
 
     @Test
