@@ -22,6 +22,7 @@ import com.azure.storage.file.datalake.DataLakeFileSystemClient;
 import com.azure.storage.file.datalake.DataLakeFileSystemClientBuilder;
 import com.azure.storage.file.datalake.models.PathItem;
 import com.azure.storage.file.datalake.options.DataLakePathDeleteOptions;
+import io.opentelemetry.api.OpenTelemetry;
 import io.trino.filesystem.AbstractTestTrinoFileSystem;
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystem;
@@ -87,7 +88,13 @@ public abstract class AbstractTestAzureFileSystem
         // this will fail if the container already exists, which is what we want
         blobContainerClient.create();
 
-        fileSystem = new AzureFileSystemFactory(new AzureAuthAccessKey(accountKey), new AzureFileSystemConfig(), CatalogHandle.fromId("catalog:normal:1"), new LocalRegionConfig(), new CrossRegionConfig()).create(ConnectorIdentity.ofUser("test"));
+        fileSystem = new AzureFileSystemFactory(
+                OpenTelemetry.noop(),
+                new AzureAuthAccessKey(accountKey),
+                new AzureFileSystemConfig(),
+                CatalogHandle.fromId("catalog:normal:1"),
+                new LocalRegionConfig(),
+                new CrossRegionConfig()).create(ConnectorIdentity.ofUser("test"));
 
         cleanupFiles();
     }

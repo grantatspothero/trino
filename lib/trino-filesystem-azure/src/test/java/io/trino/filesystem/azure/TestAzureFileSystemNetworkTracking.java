@@ -27,6 +27,7 @@ import io.airlift.slice.Slice;
 import io.airlift.slice.Slices;
 import io.airlift.units.DataSize;
 import io.airlift.units.DataSize.Unit;
+import io.opentelemetry.api.OpenTelemetry;
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystem;
 import io.trino.filesystem.TrinoInputFile;
@@ -107,6 +108,7 @@ public class TestAzureFileSystemNetworkTracking
         blobContainerClient.create();
 
         fileSystem = new AzureFileSystemFactory(
+                OpenTelemetry.noop(),
                 new AzureAuthAccessKey(accountKey),
                 new AzureFileSystemConfig(),
                 CatalogHandle.fromId(CATALOG_ID),

@@ -14,10 +14,13 @@
 package io.trino.filesystem.azure;
 
 import com.azure.core.http.HttpClient;
+import com.azure.core.tracing.opentelemetry.OpenTelemetryTracingOptions;
 import com.azure.core.util.ConfigurationBuilder;
 import com.azure.core.util.HttpClientOptions;
+import com.azure.core.util.TracingOptions;
 import com.google.inject.Inject;
 import io.airlift.units.DataSize;
+import io.opentelemetry.api.OpenTelemetry;
 import io.trino.filesystem.TrinoFileSystem;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.filesystem.azure.galaxy.GalaxyOkHttpAsyncClientProvider;
@@ -39,17 +42,19 @@ public class AzureFileSystemFactory
     private final DataSize writeBlockSize;
     private final int maxWriteConcurrency;
     private final DataSize maxSingleUploadSize;
+    private final TracingOptions tracingOptions;
     private final HttpClient httpClient;
 
     @Inject
     public AzureFileSystemFactory(
+            OpenTelemetry openTelemetry,
             AzureAuth azureAuth,
             AzureFileSystemConfig config,
             CatalogHandle catalogHandle,
             LocalRegionConfig localRegionConfig,
             CrossRegionConfig crossRegionConfig)
     {
-        this(
+        this(openTelemetry,
                 azureAuth,
                 config.getReadBlockSize(),
                 config.getWriteBlockSize(),
@@ -61,6 +66,7 @@ public class AzureFileSystemFactory
     }
 
     public AzureFileSystemFactory(
+            OpenTelemetry openTelemetry,
             AzureAuth azureAuth,
             DataSize readBlockSize,
             DataSize writeBlockSize,
@@ -84,15 +90,16 @@ public class AzureFileSystemFactory
                 .withTlsEnabled(true);
         CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(configurationBuilder::putProperty, catalogNetworkMonitorProperties);
 
-        HttpClientOptions httpClientOptions = new HttpClientOptions()
+        this.tracingOptions = new OpenTelemetryTracingOptions().setOpenTelemetry(openTelemetry);
+        this.httpClient = HttpClient.createDefault((HttpClientOptions) new HttpClientOptions()
                 .setHttpClientProvider(GalaxyOkHttpAsyncClientProvider.class)
-                .setConfiguration(configurationBuilder.build());
-        this.httpClient = HttpClient.createDefault(httpClientOptions);
+                .setConfiguration(configurationBuilder.build())
+                .setTracingOptions(tracingOptions));
     }
 
     @Override
     public TrinoFileSystem create(ConnectorIdentity identity)
     {
-        return new AzureFileSystem(httpClient, auth, readBlockSize, writeBlockSize, maxWriteConcurrency, maxSingleUploadSize);
+        return new AzureFileSystem(httpClient, tracingOptions, auth, readBlockSize, writeBlockSize, maxWriteConcurrency, maxSingleUploadSize);
     }
 }
