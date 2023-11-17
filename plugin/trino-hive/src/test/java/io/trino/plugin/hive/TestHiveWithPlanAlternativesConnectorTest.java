@@ -160,21 +160,21 @@ public class TestHiveWithPlanAlternativesConnectorTest
 
     @Test
     @Override
-    public void testWriterTasksCountLimitUnpartitioned()
+    public void testWriterTaskCountLimitUnpartitioned()
     {
         // Not applicable with plan alternatives
     }
 
     @Test
     @Override
-    public void testWriterTasksCountLimitPartitionedScaleWritersDisabled()
+    public void testWriterTaskCountLimitPartitionedScaleWritersDisabled()
     {
         // Not applicable with plan alternatives
     }
 
     @Test
     @Override
-    public void testWriterTasksCountLimitPartitionedScaleWritersEnabled()
+    public void testWriterTaskCountLimitPartitionedScaleWritersEnabled()
     {
         // Not applicable with plan alternatives
     }
