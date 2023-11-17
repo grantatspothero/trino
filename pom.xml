@@ -75,6 +75,7 @@
         <module>plugin/trino-example-jdbc</module>
         <module>plugin/trino-exchange-filesystem</module>
         <module>plugin/trino-exchange-hdfs</module>
+        <module>plugin/trino-galaxy-dynamodb</module>
         <module>plugin/trino-galaxy-kafka-event-listener</module>
         <module>plugin/trino-galaxy-objectstore</module>
         <module>plugin/trino-galaxy-oracle</module>
@@ -209,7 +210,7 @@
         <!-- released from https://github.com/starburstdata/stargate -->
         <dep.stargate.version>stargate-12263-gb2e6aac831</dep.stargate.version>
         <!-- released from https://github.com/starburstdata/starburst-trino-plugins -->
-        <dep.starburst-trino-plugins.version>432.2</dep.starburst-trino-plugins.version>
+        <dep.starburst-trino-plugins.version>432.5</dep.starburst-trino-plugins.version>
         <dep.cloudevents.version>2.2.0</dep.cloudevents.version>
 
         <!--
@@ -654,6 +655,19 @@
                 <groupId>com.starburstdata.dataframe</groupId>
                 <artifactId>starburst-dataframe-api</artifactId>
                 <version>${dep.starburst-dataframe.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.starburstdata.trino.plugins</groupId>
+                <artifactId>starburst-dynamodb</artifactId>
+                <version>${dep.starburst-trino-plugins.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.starburstdata.trino.plugins</groupId>
+                <artifactId>starburst-dynamodb</artifactId>
+                <version>${dep.starburst-trino-plugins.version}</version>
+                <type>test-jar</type>
             </dependency>
 
             <dependency>

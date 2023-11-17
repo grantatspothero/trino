@@ -182,6 +182,12 @@
         </artifact>
     </artifactSet>
 
+    <artifactSet to="plugin/galaxy-dynamodb">
+        <artifact id="${project.groupId}:trino-galaxy-dynamodb:zip:${project.version}">
+            <unpack />
+        </artifact>
+    </artifactSet>
+
     <artifactSet to="plugin/galaxy-kafka-event-listener">
         <artifact id="${project.groupId}:trino-galaxy-kafka-event-listener:zip:${project.version}">
             <unpack />
