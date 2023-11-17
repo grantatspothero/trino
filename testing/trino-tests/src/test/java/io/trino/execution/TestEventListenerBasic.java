@@ -1310,7 +1310,6 @@ public class TestEventListenerBasic
                                 "inputPreSortedBy", "[]"),
                         ImmutableList.of(typedSymbol("symbol_1", DOUBLE)),
                         ImmutableList.of(),
-                        ImmutableList.of(),
                         ImmutableList.of(new PlanNodeStatsAndCostSummary(10., 90., 90., 0., 0.)),
                         ImmutableList.of(new JsonRenderedNode(
                                 "0",
