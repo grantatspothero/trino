@@ -53,13 +53,6 @@ public class MockPlanAlternativeConnector
     }
 
     @Override
-    @Deprecated
-    public ConnectorTransactionHandle beginTransaction(IsolationLevel isolationLevel, boolean readOnly)
-    {
-        return delegate.beginTransaction(isolationLevel, readOnly);
-    }
-
-    @Override
     public ConnectorTransactionHandle beginTransaction(IsolationLevel isolationLevel, boolean readOnly, boolean autoCommit)
     {
         return delegate.beginTransaction(isolationLevel, readOnly, autoCommit);
@@ -69,13 +62,6 @@ public class MockPlanAlternativeConnector
     public ConnectorMetadata getMetadata(ConnectorSession session, ConnectorTransactionHandle transactionHandle)
     {
         return new MockPlanAlternativeMetadata(delegate.getMetadata(session, transactionHandle));
-    }
-
-    @Override
-    @Deprecated
-    public ConnectorMetadata getMetadata(ConnectorTransactionHandle transactionHandle)
-    {
-        return new MockPlanAlternativeMetadata(delegate.getMetadata(transactionHandle));
     }
 
     @Override

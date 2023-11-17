@@ -32,15 +32,6 @@ import static java.util.Collections.emptySet;
 public interface Connector
 {
     /**
-     * @deprecated use {@link #beginTransaction(IsolationLevel, boolean, boolean)}
-     */
-    @Deprecated
-    default ConnectorTransactionHandle beginTransaction(IsolationLevel isolationLevel, boolean readOnly)
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
      * Start a new transaction and return a handle for it. The engine will call
      * {@link #getMetadata} to fetch the metadata instance for the transaction.
      * The engine will later call exactly one of {@link #commit} or {@link #rollback}
@@ -57,7 +48,7 @@ public interface Connector
      */
     default ConnectorTransactionHandle beginTransaction(IsolationLevel isolationLevel, boolean readOnly, boolean autoCommit)
     {
-        return beginTransaction(isolationLevel, readOnly);
+        throw new UnsupportedOperationException();
     }
 
     /**
@@ -65,18 +56,6 @@ public interface Connector
      * in a single threaded context.
      */
     default ConnectorMetadata getMetadata(ConnectorSession session, ConnectorTransactionHandle transactionHandle)
-    {
-        return getMetadata(transactionHandle);
-    }
-
-    /**
-     * Guaranteed to be called at most once per transaction. The returned metadata will only be accessed
-     * in a single threaded context.
-     *
-     * @deprecated use {@link #getMetadata(ConnectorSession, ConnectorTransactionHandle)}
-     */
-    @Deprecated
-    default ConnectorMetadata getMetadata(ConnectorTransactionHandle transactionHandle)
     {
         throw new UnsupportedOperationException();
     }
