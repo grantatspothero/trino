@@ -36,6 +36,7 @@ import org.junit.jupiter.api.parallel.Execution;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
@@ -798,8 +799,8 @@ public class TestHiveMetastoreMetadataQueriesAccessOperations
                     .setDatabaseName(databaseName)
                     .setTableName(tableName)
                     .setDataColumns(ImmutableList.of(
-                            new Column("id", HiveType.HIVE_INT, Optional.empty()),
-                            new Column("name", HiveType.HIVE_STRING, Optional.empty())))
+                            new Column("id", HiveType.HIVE_INT, Optional.empty(), Map.of()),
+                            new Column("name", HiveType.HIVE_STRING, Optional.empty(), Map.of())))
                     .setOwner(Optional.empty())
                     .setTableType(MANAGED_TABLE.name())
                     .withStorage(storage ->
