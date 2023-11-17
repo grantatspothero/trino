@@ -20,6 +20,8 @@ import io.airlift.json.JsonCodec;
 import io.trino.Session;
 import io.trino.connector.MockConnectorFactory;
 import io.trino.connector.MockConnectorTableHandle;
+import io.trino.cost.PlanNodeStatsAndCostSummary;
+import io.trino.cost.StatsAndCosts;
 import io.trino.execution.EventsAwaitingQueries.MaterializedResultWithEvents;
 import io.trino.execution.EventsCollector.QueryEvents;
 import io.trino.execution.TestEventListenerPlugin.TestingEventListenerPlugin;
@@ -69,6 +71,7 @@ import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.collect.MoreCollectors.toOptional;
 import static com.google.common.io.Resources.getResource;
 import static com.google.common.util.concurrent.MoreExecutors.shutdownAndAwaitTermination;
+import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.airlift.json.JsonCodec.mapJsonCodec;
 import static io.trino.connector.MockConnectorEntities.TPCH_NATION_DATA;
 import static io.trino.connector.MockConnectorEntities.TPCH_NATION_SCHEMA;
@@ -80,6 +83,7 @@ import static io.trino.spi.type.VarcharType.createVarcharType;
 import static io.trino.sql.planner.planprinter.JsonRenderer.JsonRenderedNode;
 import static io.trino.sql.planner.planprinter.NodeRepresentation.TypedSymbol.typedSymbol;
 import static io.trino.testing.TestingSession.testSessionBuilder;
+import static java.lang.Double.NaN;
 import static java.lang.String.format;
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -92,6 +96,7 @@ public class TestEventListenerBasic
         extends AbstractTestQueryFramework
 {
     private static final JsonCodec<Map<String, JsonRenderedNode>> ANONYMIZED_PLAN_JSON_CODEC = mapJsonCodec(String.class, JsonRenderedNode.class);
+    private static final JsonCodec<StatsAndCosts> STATS_AND_COSTS_JSON_CODEC = jsonCodec(StatsAndCosts.class);
     private static final String IGNORE_EVENT_MARKER = " -- ignore_generated_event";
     private static final String VARCHAR_TYPE = "varchar(15)";
     private static final String BIGINT_TYPE = BIGINT.getDisplayName();
@@ -1250,6 +1255,17 @@ public class TestEventListenerBasic
     }
 
     @Test
+    public void testTableStats()
+            throws Exception
+    {
+        QueryEvents queryEvents = queries.runQueryAndWaitForEvents("SELECT l.name FROM nation l, nation r WHERE l.nationkey = r.nationkey", getSession(), true).getQueryEvents();
+        QueryCompletedEvent event = queryEvents.getQueryCompletedEvent();
+        assertThat(event.getStatistics().getPlanNodeStatsAndCosts()).isPresent();
+        StatsAndCosts statsAndCosts = STATS_AND_COSTS_JSON_CODEC.fromJson(event.getStatistics().getPlanNodeStatsAndCosts().get());
+        assertThat(statsAndCosts.getStats().values()).allMatch(stats -> stats.getOutputRowCount() == 25.0);
+    }
+
+    @Test
     public void testAnonymizedJsonPlan()
             throws Exception
     {
@@ -1262,14 +1278,14 @@ public class TestEventListenerBasic
                         ImmutableMap.of("columnNames", "[column_1]"),
                         ImmutableList.of(typedSymbol("symbol_1", DOUBLE)),
                         ImmutableList.of(),
-                        ImmutableList.of(),
+                        ImmutableList.of(new PlanNodeStatsAndCostSummary(10., 90., 0., 0., 0.)),
                         ImmutableList.of(new JsonRenderedNode(
                                 "98",
                                 "Limit",
                                 ImmutableMap.of("count", "10", "withTies", "", "inputPreSortedBy", "[]"),
                                 ImmutableList.of(typedSymbol("symbol_1", DOUBLE)),
                                 ImmutableList.of(),
-                                ImmutableList.of(),
+                                ImmutableList.of(new PlanNodeStatsAndCostSummary(10., 90., 90., 0., 0.)),
                                 ImmutableList.of(new JsonRenderedNode(
                                         "171",
                                         "LocalExchange",
@@ -1280,7 +1296,7 @@ public class TestEventListenerBasic
                                                 "arguments", "[]"),
                                         ImmutableList.of(typedSymbol("symbol_1", DOUBLE)),
                                         ImmutableList.of(),
-                                        ImmutableList.of(),
+                                        ImmutableList.of(new PlanNodeStatsAndCostSummary(10., 90., 0., 0., 0.)),
                                         ImmutableList.of(new JsonRenderedNode(
                                                 "138",
                                                 "RemoteSource",
@@ -1298,7 +1314,7 @@ public class TestEventListenerBasic
                                 "inputPreSortedBy", "[]"),
                         ImmutableList.of(typedSymbol("symbol_1", DOUBLE)),
                         ImmutableList.of(),
-                        ImmutableList.of(),
+                        ImmutableList.of(new PlanNodeStatsAndCostSummary(10., 90., 90., 0., 0.)),
                         ImmutableList.of(new JsonRenderedNode(
                                 "0",
                                 "TableScan",
@@ -1306,7 +1322,7 @@ public class TestEventListenerBasic
                                         "table", "[table = catalog_1.schema_1.table_1, connector = tpch]"),
                                 ImmutableList.of(typedSymbol("symbol_1", DOUBLE)),
                                 ImmutableList.of("symbol_1 := column_2"),
-                                ImmutableList.of(),
+                                ImmutableList.of(new PlanNodeStatsAndCostSummary(NaN, NaN, NaN, 0., 0.)),
                                 ImmutableList.of()))));
         assertThat(event.getMetadata().getJsonPlan())
                 .isEqualTo(Optional.of(ANONYMIZED_PLAN_JSON_CODEC.toJson(anonymizedPlan)));
