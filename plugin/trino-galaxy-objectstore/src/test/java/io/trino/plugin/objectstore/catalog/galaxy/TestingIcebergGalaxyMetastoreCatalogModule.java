@@ -20,7 +20,7 @@ import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.airlift.units.Duration;
 import io.trino.plugin.base.session.SessionPropertiesProvider;
 import io.trino.plugin.hive.AllowHiveTableRename;
-import io.trino.plugin.hive.metastore.DecoratedHiveMetastoreModule;
+import io.trino.plugin.hive.metastore.CachingHiveMetastoreModule;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hive.metastore.HiveMetastoreFactory;
 import io.trino.plugin.hive.metastore.RawHiveMetastoreFactory;
@@ -65,7 +65,7 @@ public class TestingIcebergGalaxyMetastoreCatalogModule
         binder.bind(IcebergTableOperationsProvider.class).to(GalaxyMetastoreOperationsProvider.class).in(Scopes.SINGLETON);
         binder.bind(TrinoCatalogFactory.class).to(TrinoGalaxyCatalogFactory.class).in(Scopes.SINGLETON);
         binder.bind(MetastoreValidator.class).asEagerSingleton();
-        install(new DecoratedHiveMetastoreModule(false));
+        install(new CachingHiveMetastoreModule(false));
 
         configBinder(binder).bindConfigDefaults(CachingHiveMetastoreConfig.class, config -> {
             // ensure caching metastore wrapper isn't created, as it's not leveraged by Iceberg

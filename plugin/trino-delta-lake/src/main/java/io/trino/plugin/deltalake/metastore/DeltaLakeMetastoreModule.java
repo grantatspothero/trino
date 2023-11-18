@@ -22,7 +22,7 @@ import io.trino.plugin.deltalake.metastore.galaxy.DeltaLakeGalaxyMetastoreModule
 import io.trino.plugin.deltalake.metastore.glue.DeltaLakeGlueMetastoreModule;
 import io.trino.plugin.deltalake.metastore.thrift.DeltaLakeThriftMetastoreModule;
 import io.trino.plugin.hive.HideDeltaLakeTables;
-import io.trino.plugin.hive.metastore.DecoratedHiveMetastoreModule;
+import io.trino.plugin.hive.metastore.CachingHiveMetastoreModule;
 import io.trino.plugin.hive.metastore.MetastoreTypeConfig;
 
 import static io.airlift.configuration.ConditionalModule.conditionalModule;
@@ -39,7 +39,7 @@ public class DeltaLakeMetastoreModule
         bindMetastoreModule("glue", new DeltaLakeGlueMetastoreModule());
         bindMetastoreModule("galaxy", new DeltaLakeGalaxyMetastoreModule());
 
-        install(new DecoratedHiveMetastoreModule(false));
+        install(new CachingHiveMetastoreModule(false));
     }
 
     private void bindMetastoreModule(String name, Module module)
