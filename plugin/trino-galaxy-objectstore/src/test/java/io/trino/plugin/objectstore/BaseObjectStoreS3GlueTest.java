@@ -22,7 +22,7 @@ import com.amazonaws.services.glue.model.GetTablesResult;
 import com.amazonaws.services.glue.model.Table;
 import com.google.common.collect.ImmutableMap;
 import io.trino.filesystem.Location;
-import io.trino.plugin.hive.aws.AwsApiCallStats;
+import io.trino.plugin.hive.metastore.glue.AwsApiCallStats;
 import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.server.security.galaxy.GalaxyTestHelper;
 import io.trino.testing.AbstractTestQueryFramework;

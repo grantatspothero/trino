@@ -39,7 +39,7 @@ import io.trino.hdfs.TrinoHdfsFileSystemStats;
 import io.trino.hdfs.authentication.NoHdfsAuthentication;
 import io.trino.hdfs.s3.HiveS3Config;
 import io.trino.hdfs.s3.TrinoS3ConfigurationInitializer;
-import io.trino.plugin.hive.aws.AwsApiCallStats;
+import io.trino.plugin.hive.metastore.glue.AwsApiCallStats;
 import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.plugin.iceberg.fileio.ForwardingFileIo;
 import io.trino.plugin.tpch.TpchPlugin;
