@@ -98,6 +98,7 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
             accountClient.grantFunctionPrivilege(new GrantDetails(Privilege.EXECUTE, accountClient.getAdminRoleId(), GrantKind.ALLOW, false, functionId));
 
             initializeTpchTables(queryRunner, REQUIRED_TPCH_TABLES);
+            queryRunner.execute("CREATE SCHEMA schemawithoutunderscore"); // needed for testShowSchemasLikeWithEscape
 
             return queryRunner;
         }
