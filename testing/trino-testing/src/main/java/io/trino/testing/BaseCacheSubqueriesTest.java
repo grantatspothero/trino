@@ -39,6 +39,7 @@ import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.cache.PlanSignature;
 import io.trino.spi.cache.SignatureKey;
 import io.trino.spi.connector.ColumnHandle;
+import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorPageSourceProvider;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.ConnectorSplit;
@@ -49,6 +50,7 @@ import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.predicate.ValueSet;
 import io.trino.spi.type.TypeOperators;
 import io.trino.spi.type.VarcharType;
+import io.trino.split.AlternativeChooserPageSourceProvider;
 import io.trino.split.SplitSource;
 import io.trino.sql.planner.Plan;
 import io.trino.sql.planner.assertions.PlanAssert;
@@ -88,6 +90,8 @@ import static io.trino.tpch.TpchTable.CUSTOMER;
 import static io.trino.tpch.TpchTable.LINE_ITEM;
 import static io.trino.tpch.TpchTable.ORDERS;
 import static io.trino.transaction.TransactionBuilder.transaction;
+import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public abstract class BaseCacheSubqueriesTest
@@ -399,7 +403,7 @@ public abstract class BaseCacheSubqueriesTest
                     ColumnHandle dataColumn = coordinator.getMetadata().getColumnHandles(transactionSession, handle.get()).get("orderkey");
                     assertThat(dataColumn).isNotNull();
 
-                    ConnectorPageSourceProvider pageSourceProvider = worker.getConnector(coordinator.getCatalogHandle(transactionSession, catalog)).getPageSourceProvider();
+                    ConnectorPageSourceProvider pageSourceProvider = getPageSourceProvider(worker.getConnector(coordinator.getCatalogHandle(transactionSession, catalog)));
                     DynamicRowFilteringPageSourceProvider dynamicRowFilteringPageSourceProvider = new DynamicRowFilteringPageSourceProvider(new DynamicPageFilterCache(new TypeOperators()));
                     VarcharType type = VarcharType.createVarcharType(4);
 
@@ -455,7 +459,7 @@ public abstract class BaseCacheSubqueriesTest
                             handle.get().getConnectorHandle(),
                             TupleDomain.withColumnDomains(ImmutableMap.of(dataColumn, dataDomain))))
                             .isEqualTo(TupleDomain.withColumnDomains(ImmutableMap.of(dataColumn, dataDomain)));
-                    if (isDynamicRowFilteringEnabled) {
+                    if (isDynamicRowFilteringEnabled || simplifyIsPrune()) {
                         // simplifyPredicate should not prune or simplify data column
                         assertThat(dynamicRowFilteringPageSourceProvider.simplifyPredicate(
                                 pageSourceProvider,
@@ -477,6 +481,24 @@ public abstract class BaseCacheSubqueriesTest
                     }
                 });
         assertUpdate("drop table " + tableName);
+    }
+
+    private ConnectorPageSourceProvider getPageSourceProvider(Connector workerConnector)
+    {
+        ConnectorPageSourceProvider pageSourceProvider = null;
+        try {
+            pageSourceProvider = workerConnector.getPageSourceProvider();
+        }
+        catch (UnsupportedOperationException ignored) {
+        }
+
+        try {
+            pageSourceProvider = new AlternativeChooserPageSourceProvider(workerConnector.getAlternativeChooser());
+        }
+        catch (UnsupportedOperationException ignored) {
+        }
+        requireNonNull(pageSourceProvider, format("Connector '%s' returned a null page source provider", workerConnector));
+        return pageSourceProvider;
     }
 
     private TupleDomain<ColumnHandle> simplifyPredicate(
@@ -507,6 +529,11 @@ public abstract class BaseCacheSubqueriesTest
                     TableHandle tableHandle = metadata.getTableHandle(transactionSession, table).get();
                     return new CacheColumnId("[" + cacheMetadata.getCacheColumnId(transactionSession, tableHandle, metadata.getColumnHandles(transactionSession, tableHandle).get(columnName)).get() + "]");
                 });
+    }
+
+    protected boolean simplifyIsPrune()
+    {
+        return false;
     }
 
     protected CacheTableId getCacheTableId(Session session, String tableName)

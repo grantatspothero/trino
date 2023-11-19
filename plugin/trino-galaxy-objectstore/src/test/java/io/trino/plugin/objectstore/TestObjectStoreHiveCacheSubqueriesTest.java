@@ -18,6 +18,7 @@ import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
+import io.trino.spi.Plugin;
 import io.trino.testing.BaseCacheSubqueriesTest;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
@@ -25,6 +26,7 @@ import org.intellij.lang.annotations.Language;
 import org.testng.annotations.AfterClass;
 
 import java.util.List;
+import java.util.Map;
 
 import static io.trino.plugin.objectstore.TableType.HIVE;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
@@ -48,6 +50,16 @@ public class TestObjectStoreHiveCacheSubqueriesTest
     protected QueryRunner createQueryRunner()
             throws Exception
     {
+        return createQueryRunner(
+                Map.of(),
+                Map.of());
+    }
+
+    protected final QueryRunner createQueryRunner(
+            Map<String, String> coordinatorProperties,
+            Map<String, String> extraObjectStoreProperties)
+            throws Exception
+    {
         closeAfterClass(TrinoFileSystemCache.INSTANCE::closeAll);
 
         GalaxyCockroachContainer galaxyCockroachContainer = closeAfterClass(new GalaxyCockroachContainer());
@@ -66,7 +78,9 @@ public class TestObjectStoreHiveCacheSubqueriesTest
                 .withHiveS3Config(minio.getHiveS3Config())
                 .withMetastore(metastore)
                 .withLocationSecurityServer(locationSecurityServer)
-                .withPlugin(new ObjectStorePlugin())
+                .withPlugin(getObjectStorePlugin())
+                .withCoordinatorProperties(coordinatorProperties)
+                .withExtraObjectStoreProperties(extraObjectStoreProperties)
                 .withExtraProperties(EXTRA_PROPERTIES)
                 .build();
 
@@ -93,5 +107,10 @@ public class TestObjectStoreHiveCacheSubqueriesTest
         return Session.builder(session)
                 .setSystemProperty("objectstore.projection_pushdown_enabled", String.valueOf(projectionPushdownEnabled))
                 .build();
+    }
+
+    protected Plugin getObjectStorePlugin()
+    {
+        return new ObjectStorePlugin();
     }
 }
