@@ -13,6 +13,7 @@
  */
 package io.trino.spi.connector;
 
+import com.google.errorprone.annotations.FormatMethod;
 import io.trino.spi.expression.ConnectorExpression;
 import io.trino.spi.predicate.TupleDomain;
 
@@ -129,6 +130,7 @@ public class ConstraintApplicationResult<T>
         return alternatives.get(0);
     }
 
+    @FormatMethod
     private static void checkArgument(boolean condition, String message, Object... messageArgs)
     {
         if (!condition) {
