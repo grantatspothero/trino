@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.inject.Inject;
+import io.trino.spi.TrinoException;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.session.PropertyMetadata;
 import io.trino.spi.type.ArrayType;
@@ -38,6 +39,7 @@ import static io.trino.plugin.objectstore.TableType.DELTA;
 import static io.trino.plugin.objectstore.TableType.HIVE;
 import static io.trino.plugin.objectstore.TableType.HUDI;
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
+import static io.trino.spi.StandardErrorCode.INVALID_TABLE_PROPERTY;
 import static io.trino.spi.session.PropertyMetadata.enumProperty;
 import static io.trino.spi.session.PropertyMetadata.stringProperty;
 import static io.trino.spi.type.VarcharType.VARCHAR;
@@ -196,7 +198,7 @@ public final class ObjectStoreTableProperties
         }
         PropertyMetadata<?> property = properties.get(name);
         if ((property == null) || !value.equals(property.getDefaultValue())) {
-            throw new VerifyException("Table property '%s' not supported for %s tables".formatted(name, tableType.displayName()));
+            throw new TrinoException(INVALID_TABLE_PROPERTY, "Table property '%s' not supported for %s tables".formatted(name, tableType.displayName()));
         }
         return false;
     }
