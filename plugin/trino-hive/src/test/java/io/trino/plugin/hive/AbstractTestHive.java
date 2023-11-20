@@ -1102,8 +1102,8 @@ public abstract class AbstractTestHive
         try (Transaction transaction = newTransaction()) {
             ConnectorMetadata metadata = transaction.getMetadata();
             Map<SchemaTableName, List<ColumnMetadata>> allColumns = listTableColumns(metadata, newSession(), new SchemaTablePrefix());
-            assertThat(allColumns.containsKey(tablePartitionFormat)).isTrue();
-            assertThat(allColumns.containsKey(tableUnpartitioned)).isTrue();
+            assertThat(allColumns).containsKey(tablePartitionFormat);
+            assertThat(allColumns).containsKey(tableUnpartitioned);
         }
     }
 
@@ -1113,8 +1113,8 @@ public abstract class AbstractTestHive
         try (Transaction transaction = newTransaction()) {
             ConnectorMetadata metadata = transaction.getMetadata();
             Map<SchemaTableName, List<ColumnMetadata>> allColumns = listTableColumns(metadata, newSession(), new SchemaTablePrefix(database));
-            assertThat(allColumns.containsKey(tablePartitionFormat)).isTrue();
-            assertThat(allColumns.containsKey(tableUnpartitioned)).isTrue();
+            assertThat(allColumns).containsKey(tablePartitionFormat);
+            assertThat(allColumns).containsKey(tableUnpartitioned);
         }
     }
 
@@ -3590,7 +3590,7 @@ public abstract class AbstractTestHive
         try (Transaction transaction = newTransaction()) {
             ConnectorMetadata metadata = transaction.getMetadata();
             Map<SchemaTableName, List<ColumnMetadata>> allColumns = listTableColumns(metadata, newSession(), new SchemaTablePrefix(schemaTableName.getSchemaName()));
-            assertThat(allColumns.containsKey(schemaTableName)).isTrue();
+            assertThat(allColumns).containsKey(schemaTableName);
         }
         finally {
             dropTable(schemaTableName);
@@ -3985,7 +3985,7 @@ public abstract class AbstractTestHive
 
         for (String variable : expectedAssignments.keySet()) {
             Type expectedType = expectedAssignments.get(variable);
-            assertThat(actualAssignments.containsKey(variable)).isTrue();
+            assertThat(actualAssignments).containsKey(variable);
             assertThat(actualAssignments.get(variable).getType()).isEqualTo(expectedType);
             assertThat(((HiveColumnHandle) actualAssignments.get(variable).getColumn()).getType()).isEqualTo(expectedType);
         }
@@ -5536,7 +5536,7 @@ public abstract class AbstractTestHive
 
     private static void assertPrimitiveField(Map<String, ColumnMetadata> map, String name, Type type, boolean partitionKey)
     {
-        assertThat(map.containsKey(name)).isTrue();
+        assertThat(map).containsKey(name);
         ColumnMetadata column = map.get(name);
         assertThat(column.getType())
                 .describedAs(name)
