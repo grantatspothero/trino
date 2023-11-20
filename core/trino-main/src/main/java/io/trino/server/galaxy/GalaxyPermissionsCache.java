@@ -25,6 +25,7 @@ import io.airlift.jmx.CacheStatsMBean;
 import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
+import io.starburst.stargate.accesscontrol.privilege.GrantKind;
 import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.EntityId;
 import io.starburst.stargate.id.RoleId;
@@ -100,7 +101,7 @@ public class GalaxyPermissionsCache
         private final Set<String> impliedCatalogVisibility = new HashSet<>();
         // It's a cache only for convenience to use loading cache's bulk loading capability
         private final LoadingCache<TableVisibilityKey, ContentsVisibility> tableVisibility;
-        private final LoadingCache<VisibilityForTablesKey, ContentsVisibility> visibilityForTables;
+        private final LoadingCache<VisibilityForTablesKey, Boolean> visibilityForTables;
 
         public GalaxyQueryPermissions(TrinoSecurityApi trinoSecurityApi, DispatchSession session)
         {
@@ -137,7 +138,24 @@ public class GalaxyPermissionsCache
 
             visibilityForTables = buildNonEvictableCache(
                     CacheBuilder.newBuilder(),
-                    CacheLoader.from(key -> trinoSecurityApi.getVisibilityForTables(session, key.catalogId(), key.schemaName(), key.tableNames())));
+                    BulkOnlyLoader.of(keys -> {
+                        CatalogId catalogId = stream(keys)
+                                .map(VisibilityForTablesKey::catalogId)
+                                .distinct()
+                                // The cache is never invoked for different catalogs at once
+                                .collect(onlyElement());
+                        String schemaName = stream(keys)
+                                .map(VisibilityForTablesKey::schemaName)
+                                .distinct()
+                                // The cache is never invoked for different schemas at once
+                                .collect(onlyElement());
+                        Set<String> tableNames = stream(keys)
+                                .map(VisibilityForTablesKey::tableName)
+                                .collect(toImmutableSet());
+                        ContentsVisibility visibility = trinoSecurityApi.getVisibilityForTables(session, catalogId, schemaName, tableNames);
+                        return tableNames.stream()
+                                .collect(toImmutableMap(tableName -> new VisibilityForTablesKey(catalogId, schemaName, tableName), tableName -> visibility.isVisible(tableName)));
+                    }));
         }
 
         public EntityPrivileges getEntityPrivileges(RoleId roleId, EntityId entity)
@@ -215,14 +233,23 @@ public class GalaxyPermissionsCache
                 return visibility;
             }
 
+            List<VisibilityForTablesKey> cacheKeys = tableNames.stream()
+                    .map(tableName -> new VisibilityForTablesKey(catalogId, schemaName, tableName))
+                    .collect(toImmutableList());
+
+            Map<VisibilityForTablesKey, Boolean> loaded;
             // Otherwise check the visibilityForTables cache.
-            VisibilityForTablesKey cacheKey = new VisibilityForTablesKey(catalogId, schemaName, tableNames);
+
             try {
-                return visibilityForTables.get(cacheKey);
+                loaded = visibilityForTables.getAll(cacheKeys);
             }
             catch (ExecutionException e) { // Impossible, the cache loader does not currently throw checked exceptions
                 throw new RuntimeException(e);
             }
+            return new ContentsVisibility(GrantKind.DENY, loaded.entrySet().stream()
+                    .filter(entry -> entry.getValue())
+                    .map(entry -> entry.getKey().tableName())
+                    .collect(toImmutableSet()));
         }
 
         private record EntityPrivilegesKey(RoleId roleId, EntityId entity)
@@ -243,13 +270,13 @@ public class GalaxyPermissionsCache
             }
         }
 
-        private record VisibilityForTablesKey(CatalogId catalogId, String schemaName, Set<String> tableNames)
+        private record VisibilityForTablesKey(CatalogId catalogId, String schemaName, String tableName)
         {
             VisibilityForTablesKey
             {
                 requireNonNull(catalogId, "catalogId is null");
                 requireNonNull(schemaName, "schemaName is null");
-                tableNames = ImmutableSet.copyOf(requireNonNull(tableNames, "tableNames is null"));
+                requireNonNull(tableName, "tableName is null");
             }
         }
     }

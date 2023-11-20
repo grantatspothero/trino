@@ -952,7 +952,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                         // TODO (https://github.com/starburstdata/stargate/issues/12879) if information_schema.columns privileges are no longer asked for,
                                         //  remove hot-sharing for them from GalaxyPermissionsCache
                                         .add("galaxy-access-control POST /api/v1/galaxy/security/trino/catalogVisibility")
-                                        .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
+                                        .addCopies("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/schema/c-xxx/test_schema/tableVisibility", tableBatches == 3 ? 1 : 0)
+                                        .addCopies("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility", tableBatches == 3 ? 0 : 1)
                                         .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns__/privileges/r-xxx", tableBatches)
                                         // TODO AccessControl is consulted even for tables filtered out by the query LIKE predicate (test_other_select_i_s_columns...)
                                         .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_other_select_i_s_columns__/privileges/r-xxx", tableBatches)
@@ -977,7 +978,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                 .setExpected(ImmutableMultiset.<String>builder()
                                         // TODO (https://github.com/starburstdata/stargate/issues/12879) if information_schema.columns privileges are no longer asked for,
                                         //  remove hot-sharing for them from GalaxyPermissionsCache
-                                        .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
+                                        .addCopies("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/schema/c-xxx/test_schema/tableVisibility", tableBatches == 3 ? 1 : 0)
+                                        .addCopies("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility", tableBatches == 3 ? 0 : 1)
                                         .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_select_i_s_columns__/privileges/r-xxx", tableBatches)
                                         // TODO AccessControl is consulted even for tables filtered out by the query LIKE predicate (test_other_select_i_s_columns...)
                                         .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_other_select_i_s_columns__/privileges/r-xxx", tableBatches)
@@ -1004,6 +1006,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/role")
                                         .add("galaxy-access-control POST /api/v1/galaxy/security/trino/catalogVisibility")
                                         .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/catalog/c-xxx/tableVisibility")
+                                        .addCopies("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/schema/c-xxx/test_schema/tableVisibility", tableBatches == 3 ? 1 : 0)
                                         .addCopies("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/table-xxx/privileges/r-xxx", allTables)
                                         .build())
                                 .build())
