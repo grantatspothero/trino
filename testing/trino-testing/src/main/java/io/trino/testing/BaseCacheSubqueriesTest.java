@@ -41,6 +41,8 @@ import io.trino.spi.cache.SignatureKey;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.ConnectorPageSourceProvider;
 import io.trino.spi.connector.ConnectorSession;
+import io.trino.spi.connector.ConnectorSplit;
+import io.trino.spi.connector.ConnectorTableHandle;
 import io.trino.spi.connector.DynamicFilter;
 import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.TupleDomain;
@@ -395,6 +397,7 @@ public abstract class BaseCacheSubqueriesTest
                     assertThat(dataColumn).isNotNull();
 
                     ConnectorPageSourceProvider pageSourceProvider = server.getConnector(catalog).getPageSourceProvider();
+                    DynamicRowFilteringPageSourceProvider dynamicRowFilteringPageSourceProvider = new DynamicRowFilteringPageSourceProvider(new DynamicPageFilterCache(new TypeOperators()));
                     VarcharType type = VarcharType.createVarcharType(4);
 
                     // simplifyPredicate and prunePredicate should return none if predicate is exclusive on partition column
@@ -409,7 +412,11 @@ public abstract class BaseCacheSubqueriesTest
                             handle.get().getConnectorHandle(),
                             TupleDomain.withColumnDomains(ImmutableMap.of(partitionColumn, nonPartitionDomain))))
                             .matches(TupleDomain::isNone);
-                    assertThat(pageSourceProvider.simplifyPredicate(
+                    assertThat(simplifyPredicate(
+                            dynamicRowFilteringPageSourceProvider,
+                            pageSourceProvider,
+                            isDynamicRowFilteringEnabled,
+                            session,
                             connectorSession,
                             split.getConnectorSplit(),
                             handle.get().getConnectorHandle(),
@@ -424,7 +431,11 @@ public abstract class BaseCacheSubqueriesTest
                             handle.get().getConnectorHandle(),
                             TupleDomain.withColumnDomains(ImmutableMap.of(partitionColumn, partitionDomain))))
                             .matches(TupleDomain::isAll);
-                    assertThat(pageSourceProvider.simplifyPredicate(
+                    assertThat(simplifyPredicate(
+                            dynamicRowFilteringPageSourceProvider,
+                            pageSourceProvider,
+                            isDynamicRowFilteringEnabled,
+                            session,
                             connectorSession,
                             split.getConnectorSplit(),
                             handle.get().getConnectorHandle(),
@@ -442,7 +453,6 @@ public abstract class BaseCacheSubqueriesTest
                             TupleDomain.withColumnDomains(ImmutableMap.of(dataColumn, dataDomain))))
                             .isEqualTo(TupleDomain.withColumnDomains(ImmutableMap.of(dataColumn, dataDomain)));
                     if (isDynamicRowFilteringEnabled) {
-                        DynamicRowFilteringPageSourceProvider dynamicRowFilteringPageSourceProvider = new DynamicRowFilteringPageSourceProvider(new DynamicPageFilterCache(new TypeOperators()));
                         // simplifyPredicate should not prune or simplify data column
                         assertThat(dynamicRowFilteringPageSourceProvider.simplifyPredicate(
                                 pageSourceProvider,
@@ -464,6 +474,22 @@ public abstract class BaseCacheSubqueriesTest
                     }
                 });
         assertUpdate("drop table " + tableName);
+    }
+
+    private TupleDomain<ColumnHandle> simplifyPredicate(
+            DynamicRowFilteringPageSourceProvider dynamicRowFilteringPageSourceProvider,
+            ConnectorPageSourceProvider pageSourceProvider,
+            boolean isDynamicRowFilteringEnabled,
+            Session session,
+            ConnectorSession connectorSession,
+            ConnectorSplit split,
+            ConnectorTableHandle table,
+            TupleDomain<ColumnHandle> predicate)
+    {
+        if (isDynamicRowFilteringEnabled) {
+            return dynamicRowFilteringPageSourceProvider.simplifyPredicate(pageSourceProvider, session, connectorSession, split, table, predicate);
+        }
+        return pageSourceProvider.simplifyPredicate(connectorSession, split, table, predicate);
     }
 
     protected CacheColumnId getCacheColumnId(Session session, String tableName, String columnName)
