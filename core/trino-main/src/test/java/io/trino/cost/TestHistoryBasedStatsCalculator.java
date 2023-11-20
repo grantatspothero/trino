@@ -36,7 +36,6 @@ import io.trino.execution.TaskId;
 import io.trino.execution.TaskInfo;
 import io.trino.metadata.AbstractMockMetadata;
 import io.trino.metadata.ResolvedFunction;
-import io.trino.metadata.SessionPropertyManager;
 import io.trino.metadata.TableHandle;
 import io.trino.operator.OperatorStats;
 import io.trino.operator.PipelineStats;
@@ -895,7 +894,6 @@ public class TestHistoryBasedStatsCalculator
     private static HistoryBasedStatsCalculator createStatsCalculator()
     {
         return new HistoryBasedStatsCalculator(
-                new SessionPropertyManager(),
                 METADATA,
                 CACHE_METADATA,
                 new ComposableStatsCalculator(ImmutableList.of()),

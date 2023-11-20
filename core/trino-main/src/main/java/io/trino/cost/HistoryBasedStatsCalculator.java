@@ -29,7 +29,6 @@ import io.trino.execution.QueryInfo;
 import io.trino.execution.QueryState;
 import io.trino.execution.StageInfo;
 import io.trino.metadata.Metadata;
-import io.trino.metadata.SessionPropertyManager;
 import io.trino.server.DynamicFilterService;
 import io.trino.spi.QueryId;
 import io.trino.spi.cache.CacheColumnId;
@@ -94,7 +93,6 @@ public class HistoryBasedStatsCalculator
     private static final BiConsumer<PlanNodeId, StatsCachePlanSignature> NO_OP = (planNodeId, statsCachePlanSignature) -> {};
     // row count per sub plan signature
     private final Cache<StatsCachePlanSignature, Long> rowCountCache;
-    private final SessionPropertyManager sessionPropertyManager;
     private final Metadata metadata;
     private final CacheMetadata cacheMetadata;
     private final ComposableStatsCalculator delegate;
@@ -106,13 +104,11 @@ public class HistoryBasedStatsCalculator
 
     @Inject
     public HistoryBasedStatsCalculator(
-            SessionPropertyManager sessionPropertyManager,
             Metadata metadata,
             CacheMetadata cacheMetadata,
             ComposableStatsCalculator delegate,
             StatsNormalizer statsNormalizer)
     {
-        this.sessionPropertyManager = requireNonNull(sessionPropertyManager, "sessionPropertyManager is null");
         this.metadata = requireNonNull(metadata, "metadata is null");
         this.cacheMetadata = requireNonNull(cacheMetadata, "cacheMetadata is null");
         this.delegate = requireNonNull(delegate, "delegate is null");
