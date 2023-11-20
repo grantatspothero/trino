@@ -14,20 +14,81 @@
 package io.trino.server;
 
 import io.airlift.configuration.Config;
+import io.airlift.configuration.ConfigDescription;
+import io.airlift.units.Duration;
+
+import java.util.concurrent.TimeUnit;
 
 public class GalaxyTrinoAutoscalingConfig
 {
-    private int targetQueriesPerNode = 20;
+    private Duration nodeStartupTime = Duration.succinctDuration(60, TimeUnit.SECONDS);
+    private Duration remainingTimeScaleUpThreshold = Duration.succinctDuration(120, TimeUnit.SECONDS);
+    private Duration remainingTimeScaleDownThreshold = Duration.succinctDuration(30, TimeUnit.SECONDS);
+    private double scaleDownRatio = 0.8;
+    private double scaleUpRatio = 1.5;
 
-    public int getTargetQueriesPerNode()
+    public Duration getNodeStartupTime()
     {
-        return targetQueriesPerNode;
+        return nodeStartupTime;
     }
 
-    @Config("galaxy.autoscaling.target-queries-per-node")
-    public GalaxyTrinoAutoscalingConfig setTargetQueriesPerNode(int targetQueriesPerNode)
+    @Config("galaxy.autoscaling.node-startup-time")
+    @ConfigDescription("Time required to bring new worker online")
+    public GalaxyTrinoAutoscalingConfig setNodeStartupTime(Duration nodeStartupTime)
     {
-        this.targetQueriesPerNode = targetQueriesPerNode;
+        this.nodeStartupTime = nodeStartupTime;
+        return this;
+    }
+
+    public Duration getRemainingTimeScaleUpThreshold()
+    {
+        return remainingTimeScaleUpThreshold;
+    }
+
+    @Config("galaxy.autoscaling.remaining-time-scale-up-threshold")
+    @ConfigDescription("Minimal remaining time to keep resized cluster busy - before considering scaleup")
+    public GalaxyTrinoAutoscalingConfig setRemainingTimeScaleUpThreshold(Duration remainingTimeScaleUpThreshold)
+    {
+        this.remainingTimeScaleUpThreshold = remainingTimeScaleUpThreshold;
+        return this;
+    }
+
+    public Duration getRemainingTimeScaleDownThreshold()
+    {
+        return remainingTimeScaleDownThreshold;
+    }
+
+    @Config("galaxy.autoscaling.remaining-time-scale-down-threshold")
+    @ConfigDescription("The lower bound for a running time before considering scaledown.")
+    public GalaxyTrinoAutoscalingConfig setRemainingTimeScaleDownThreshold(Duration remainingTimeScaleDownThreshold)
+    {
+        this.remainingTimeScaleDownThreshold = remainingTimeScaleDownThreshold;
+        return this;
+    }
+
+    public double getScaleDownRatio()
+    {
+        return scaleDownRatio;
+    }
+
+    @Config("galaxy.autoscaling.scale-down-ratio")
+    @ConfigDescription("Defines how big the single step of resize is when down scaling, new-nodes = current-nodes * scale-down-ratio")
+    public GalaxyTrinoAutoscalingConfig setScaleDownRatio(double scaleDownRatio)
+    {
+        this.scaleDownRatio = scaleDownRatio;
+        return this;
+    }
+
+    public double getScaleUpRatio()
+    {
+        return scaleUpRatio;
+    }
+
+    @Config("galaxy.autoscaling.scale-up-ratio")
+    @ConfigDescription("Defines how big the single step of resize is when up scaling, new-nodes = current-nodes * scale-up-ratio")
+    public GalaxyTrinoAutoscalingConfig setScaleUpRatio(double scaleUpRatio)
+    {
+        this.scaleUpRatio = scaleUpRatio;
         return this;
     }
 }
