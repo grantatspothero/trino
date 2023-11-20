@@ -1624,7 +1624,7 @@ public abstract class BaseTestHiveOnDataLake
                             (null, null, null, null, 5.0, null, null)
                         """);
         // TODO (https://github.com/trinodb/trino/issues/15998) fix selective ANALYZE for table with non-canonical partition values
-        assertQueryFails("ANALYZE " + getFullyQualifiedTestTableName(externalTableName) + " WITH (partitions = ARRAY[ARRAY['4']])", "Partition no longer exists: month=4");
+        assertQueryFails("ANALYZE " + getFullyQualifiedTestTableName(externalTableName) + " WITH (partitions = ARRAY[ARRAY['4']])", ".*Partition.*not found.*");
 
         assertUpdate("DROP TABLE " + getFullyQualifiedTestTableName(externalTableName));
         assertUpdate("DROP TABLE " + getFullyQualifiedTestTableName(tableName));
