@@ -185,7 +185,7 @@ public class TestGalaxyMetadataOnlyQueries
     {
         assertThat(queryMetadata("SELECT table_name, table_type FROM tpch.information_schema.tables LIMIT 1"))
                 .skippingTypesCheck()
-                .matches(matchResult("columns", "BASE TABLE"));
+                .matches(matchResult("applicable_roles", "BASE TABLE"));
     }
 
     @Test

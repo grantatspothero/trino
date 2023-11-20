@@ -61,6 +61,8 @@ public class TestObjectStoreMetadata
                         .collect(toImmutableList()))
                 // Supported in HiveMetadata only, but only with extension point that Galaxy does not use
                 .add(ConnectorMetadata.class.getMethod("refreshMaterializedView", ConnectorSession.class, SchemaTableName.class))
+                // TODO https://github.com/starburstdata/galaxy-trino/issues/1432 Implement getRelationTypes method in ObjectStoreMetadata
+                .add(ConnectorMetadata.class.getMethod("getRelationTypes", ConnectorSession.class, Optional.class))
                 // Not implemented, not applicable in Galaxy
                 .add(ConnectorMetadata.class.getMethod("listRoles", ConnectorSession.class))
                 .add(ConnectorMetadata.class.getMethod("listApplicableRoles", ConnectorSession.class, TrinoPrincipal.class))
