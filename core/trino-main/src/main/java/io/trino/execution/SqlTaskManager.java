@@ -533,11 +533,15 @@ public class SqlTaskManager
                     Set<CatalogHandle> catalogHandles = activeCatalogs.stream()
                             .map(CatalogProperties::getCatalogHandle)
                             .collect(toImmutableSet());
-                    if (sqlTask.setCatalogs(catalogHandles)) {
+                    // .areCatalogsLoaded() helps block the http update call on a second calling that happens while the catalogs are being loaded
+                    // this stops the second update call from succeeding before catalogs are loaded
+                    // TODO To be replaced by something like https://github.com/trinodb/trino/pull/19962 in the future
+                    if (sqlTask.setCatalogs(catalogHandles) || !sqlTask.areCatalogsLoaded()) {
                         ReentrantReadWriteLock.ReadLock catalogInitLock = catalogsLock.readLock();
                         catalogInitLock.lock();
                         try {
                             connectorServicesProvider.ensureCatalogsLoaded(session, activeCatalogs);
+                            sqlTask.setCatalogsLoaded();
                         }
                         finally {
                             catalogInitLock.unlock();
