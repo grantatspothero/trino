@@ -1058,7 +1058,7 @@ public abstract class AbstractTestHive
         try (Transaction transaction = newTransaction()) {
             ConnectorMetadata metadata = transaction.getMetadata();
             List<String> databases = metadata.listSchemaNames(newSession());
-            assertThat(databases.contains(database)).isTrue();
+            assertThat(databases).contains(database);
         }
     }
 
@@ -1068,8 +1068,8 @@ public abstract class AbstractTestHive
         try (Transaction transaction = newTransaction()) {
             ConnectorMetadata metadata = transaction.getMetadata();
             List<SchemaTableName> tables = metadata.listTables(newSession(), Optional.of(database));
-            assertThat(tables.contains(tablePartitionFormat)).isTrue();
-            assertThat(tables.contains(tableUnpartitioned)).isTrue();
+            assertThat(tables).contains(tablePartitionFormat);
+            assertThat(tables).contains(tableUnpartitioned);
         }
     }
 
@@ -1079,8 +1079,8 @@ public abstract class AbstractTestHive
         try (Transaction transaction = newTransaction()) {
             ConnectorMetadata metadata = transaction.getMetadata();
             List<SchemaTableName> tables = metadata.listTables(newSession(), Optional.empty());
-            assertThat(tables.contains(tablePartitionFormat)).isTrue();
-            assertThat(tables.contains(tableUnpartitioned)).isTrue();
+            assertThat(tables).contains(tablePartitionFormat);
+            assertThat(tables).contains(tableUnpartitioned);
         }
     }
 
@@ -4182,7 +4182,7 @@ public abstract class AbstractTestHive
             assertThat(views.size()).isEqualTo(1);
             assertThat(views.get(viewName).getOriginalSql()).isEqualTo(definition.getOriginalSql());
 
-            assertThat(metadata.listViews(newSession(), Optional.of(viewName.getSchemaName())).contains(viewName)).isTrue();
+            assertThat(metadata.listViews(newSession(), Optional.of(viewName.getSchemaName()))).contains(viewName);
         }
     }
 

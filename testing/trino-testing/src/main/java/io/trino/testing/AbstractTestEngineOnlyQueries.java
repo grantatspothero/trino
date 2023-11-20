@@ -6123,7 +6123,7 @@ public abstract class AbstractTestEngineOnlyQueries
     public void testShowCatalogs()
     {
         MaterializedResult result = computeActual("SHOW CATALOGS");
-        assertThat(result.getOnlyColumnAsSet().contains(getSession().getCatalog().get())).isTrue();
+        assertThat(result.getOnlyColumnAsSet()).contains(getSession().getCatalog().get());
     }
 
     @Test
