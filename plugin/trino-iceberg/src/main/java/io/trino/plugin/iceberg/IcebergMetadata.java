@@ -502,7 +502,7 @@ public class IcebergMetadata
                 false,
                 Optional.empty(),
                 ImmutableSet.of(),
-                Optional.empty());
+                Optional.of(false));
     }
 
     private static long getSnapshotIdFromVersion(ConnectorSession session, Table table, ConnectorTableVersion version)
@@ -747,7 +747,7 @@ public class IcebergMetadata
     public void validateScan(ConnectorSession session, ConnectorTableHandle handle)
     {
         IcebergTableHandle table = (IcebergTableHandle) handle;
-        if (isQueryPartitionFilterRequired(session) && table.getEnforcedPredicate().isAll() && table.getAnalyzeColumns().isEmpty()) {
+        if (isQueryPartitionFilterRequired(session) && table.getEnforcedPredicate().isAll() && !table.getForAnalyze().orElseThrow()) {
             Schema schema = SchemaParser.fromJson(table.getTableSchemaJson());
             Optional<PartitionSpec> partitionSpec = table.getPartitionSpecJson()
                     .map(partitionSpecJson -> PartitionSpecParser.fromJson(schema, partitionSpecJson));
@@ -2169,7 +2169,7 @@ public class IcebergMetadata
                 });
 
         return new ConnectorAnalyzeMetadata(
-                handle.withAnalyzeColumns(analyzeColumnNames.or(() -> Optional.of(ImmutableSet.of()))),
+                handle.forAnalyze(),
                 getStatisticsCollectionMetadata(
                         tableMetadata,
                         analyzeColumnNames,
@@ -2525,7 +2525,7 @@ public class IcebergMetadata
                 table.isRecordScannedFiles(),
                 table.getMaxScannedFileSize(),
                 table.getConstraintColumns(),
-                table.getAnalyzeColumns());
+                table.getForAnalyze());
 
         return Optional.of(new LimitApplicationResult<>(table, false, false));
     }
@@ -2624,8 +2624,8 @@ public class IcebergMetadata
                         table.getStorageProperties(),
                         table.isRecordScannedFiles(),
                         table.getMaxScannedFileSize(),
-                        newConstraintColumns,
-                        table.getAnalyzeColumns()),
+                        Sets.union(table.getConstraintColumns(), newConstraintColumns),
+                        table.getForAnalyze()),
                 remainingConstraint.transformKeys(ColumnHandle.class::cast),
                 extractionResult.remainingExpression(),
                 false));
@@ -2776,7 +2776,7 @@ public class IcebergMetadata
                         originalHandle.isRecordScannedFiles(),
                         originalHandle.getMaxScannedFileSize(),
                         originalHandle.getConstraintColumns(),
-                        originalHandle.getAnalyzeColumns()),
+                        originalHandle.getForAnalyze()),
                 handle -> {
                     Table icebergTable = catalog.loadTable(session, handle.getSchemaTableName());
                     return TableStatisticsReader.getTableStatistics(typeManager, session, handle, icebergTable);
