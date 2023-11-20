@@ -13,7 +13,6 @@
  */
 package io.trino.server.metadataonly;
 
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -26,7 +25,6 @@ import io.airlift.units.Duration;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.context.Scope;
 import io.starburst.stargate.catalog.EncryptedSecret;
 import io.starburst.stargate.catalog.QueryCatalog;
 import io.starburst.stargate.crypto.SecretEncryptionContext;
@@ -81,11 +79,8 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.StreamingOutput;
 import jakarta.ws.rs.core.UriInfo;
 
-import java.io.IOException;
-import java.io.OutputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -93,8 +88,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -115,37 +108,17 @@ import static io.trino.server.security.galaxy.MetadataAccessControllerSupplier.T
 import static io.trino.spi.StandardErrorCode.EXCEEDED_TIME_LIMIT;
 import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.trino.spi.StandardErrorCode.SERIALIZATION_ERROR;
-import static io.trino.tracing.ScopedSpan.scopedSpan;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN_TYPE;
 import static jakarta.ws.rs.core.Response.Status.BAD_REQUEST;
 import static jakarta.ws.rs.core.Response.Status.FORBIDDEN;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.MINUTES;
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 @Path("/galaxy/metadata/v1")
 public class MetadataOnlyStatementResource
 {
     private static final URI INFO_URI = URI.create("info:/");
-
-    private static final Duration POST_STATEMENT_TIMEOUT = Duration.succinctDuration(30, MINUTES);
-    private static final Duration WHITESPACE_CHUNK_SENDING_INTERVAL = Duration.succinctDuration(29, SECONDS);
-    private static final int WHITESPACE_CHUNK_SIZE = 16 * 1024; // 16k was determined experimentally as big enough for Jetty to output chunk on the connection handling request
-    private static final byte[] WHITESPACE_CHUNK;
-
-    static {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < WHITESPACE_CHUNK_SIZE; i++) {
-            // New lines should not matter here but having those makes it easier for human being
-            // to analyze the contents if that ends up needed; e.g. when looking at network dump in Wireshark.
-            sb.append(i % 100 == 0 ? '\n' : ' ');
-        }
-        WHITESPACE_CHUNK = sb.toString().getBytes(UTF_8);
-    }
 
     private final Duration maxWaitTime;
 
@@ -159,8 +132,6 @@ public class MetadataOnlyStatementResource
     private final SecretSealer secretSealer;
     private final TrinoPlaneId trinoPlaneId;
     private final MetadataOnlySystemState systemState;
-    private final JsonCodec<QueryResults> queryResultsJsonCodec;
-    private final ExecutorService executorService;
 
     @Inject
     public MetadataOnlyStatementResource(
@@ -188,8 +159,6 @@ public class MetadataOnlyStatementResource
         trinoPlaneId = config.getTrinoPlaneId();
         this.maxWaitTime = queryManagerConfig.getClientTimeout();
         this.systemState = requireNonNull(systemState, "systemState is null");
-        this.queryResultsJsonCodec = requireNonNull(queryResultsJsonCodec, "queryResultsJsonCodec is null");
-        this.executorService = newCachedThreadPool();
     }
 
     /**
@@ -238,100 +207,6 @@ public class MetadataOnlyStatementResource
         }
         finally {
             systemState.decrementAndGetActiveRequests();
-        }
-    }
-
-    @ResourceSecurity(AUTHENTICATED_USER)
-    @POST
-    @Path("statementchunked")
-    @Consumes(APPLICATION_JSON)
-    @Produces(APPLICATION_JSON)
-    public Response postStatementChunked(
-            StatementRequest request,
-            @Context HttpServletRequest servletRequest,
-            @Context HttpHeaders httpHeaders,
-            @Context UriInfo uriInfo)
-    {
-        if (systemState.isShuttingDown()) {
-            throw new WebApplicationException(Response.Status.SERVICE_UNAVAILABLE);
-        }
-
-        String statement = request.statement();
-        if (isNullOrEmpty(statement)) {
-            throw badRequest(BAD_REQUEST, "SQL statement is empty");
-        }
-
-        TransactionId transactionId = TransactionId.create();
-        Optional<String> remoteAddress = Optional.ofNullable(servletRequest.getRemoteAddr());
-        Optional<Identity> identity = Optional.ofNullable((Identity) servletRequest.getAttribute(AUTHENTICATED_IDENTITY))
-                .map(i -> Identity.from(i)
-                        .withAdditionalExtraCredentials(ImmutableMap.of(TRANSACTION_ID_KEY, transactionId.toString()))
-                        .build());
-        if (identity.flatMap(Identity::getPrincipal).map(InternalPrincipal.class::isInstance).orElse(false)) {
-            throw badRequest(FORBIDDEN, "Internal communication can not be used to start a query");
-        }
-
-        MultivaluedMap<String, String> headers = httpHeaders.getRequestHeaders();
-
-        SessionContext sessionContext = sessionContextFactory.createSessionContext(headers, Optional.empty(), remoteAddress, identity);
-        List<QueryCatalog> decryptedCatalogs = request.catalogs().stream().map(queryCatalog -> decryptCatalog(request.accountId(), queryCatalog)).collect(toImmutableList());
-
-        Stopwatch stopwatch = Stopwatch.createStarted();
-        io.opentelemetry.context.Context tracingContext = io.opentelemetry.context.Context.current();
-        QueryId queryId = dispatchManager.createQueryId();
-        StreamingOutput stream = output -> {
-            systemState.incrementActiveRequests();
-            try {
-                Future<QueryResults> future = executorService.submit(() -> {
-                    try (Scope ignore = tracingContext.makeCurrent()) {
-                        return executeQuery(queryId, request.accountId(), transactionId, statement, sessionContext, decryptedCatalogs, request.serviceProperties());
-                    }
-                });
-                while (true) {
-                    try {
-                        QueryResults queryResults = future.get(WHITESPACE_CHUNK_SENDING_INTERVAL.toMillis(), MILLISECONDS);
-                        output.write(queryResultsJsonCodec.toJsonBytes(queryResults));
-                        break;
-                    }
-                    catch (TimeoutException e) {
-                        if (stopwatch.elapsed(MILLISECONDS) > POST_STATEMENT_TIMEOUT.toMillis()) {
-                            // cancel query in progress (best effort)
-                            future.cancel(true);
-                            throw new RuntimeException("timeout");
-                        }
-
-                        // write enough data to output so empty HTTP chunk is send over network. Without regular network traffic we observed TCP
-                        // connection lost.
-                        try (Scope ignore = tracingContext.makeCurrent()) {
-                            writeWhitespaceChunk(output, queryId);
-                        }
-                    }
-                    catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        throw new RuntimeException("interrupted", e);
-                    }
-                    catch (ExecutionException e) {
-                        throw new RuntimeException(e.getCause());
-                    }
-                }
-            }
-            finally {
-                systemState.decrementAndGetActiveRequests();
-            }
-        };
-        return Response.ok(stream).build();
-    }
-
-    private void writeWhitespaceChunk(OutputStream outputStream, QueryId queryId)
-            throws IOException
-    {
-        Span span = tracer.spanBuilder("write-whitespace-chunk")
-                .setAttribute(TrinoAttributes.QUERY_ID, queryId.toString())
-                .startSpan();
-        try (var ignored = scopedSpan(span)) {
-            // write some data
-            outputStream.write(WHITESPACE_CHUNK);
-            outputStream.flush();
         }
     }
 
