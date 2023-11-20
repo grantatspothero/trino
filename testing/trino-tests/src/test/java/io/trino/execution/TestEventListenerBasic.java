@@ -1239,7 +1239,7 @@ public class TestEventListenerBasic
     @DataProvider
     public Object[][] setOperator()
     {
-        return new Object[][]{
+        return new Object[][] {
                 {"UNION"},
                 {"UNION ALL"},
                 {"INTERSECT"},
