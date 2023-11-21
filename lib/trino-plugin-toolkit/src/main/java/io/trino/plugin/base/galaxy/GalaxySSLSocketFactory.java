@@ -11,11 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.plugin.bigquery.galaxy;
-
-import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
-import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
-import io.trino.plugin.base.galaxy.RegionVerifierProperties;
+package io.trino.plugin.base.galaxy;
 
 import javax.net.ssl.SSLSocketFactory;
 
@@ -24,7 +20,7 @@ import java.net.Socket;
 import java.util.Properties;
 
 public class GalaxySSLSocketFactory
-            extends SSLSocketFactory
+        extends SSLSocketFactory
 {
     private final GalaxySqlSocketFactory socketFactory;
 
