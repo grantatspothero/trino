@@ -671,10 +671,19 @@ public class TestingTrinoServer
 
     public Connector getConnector(String catalogName)
     {
+        return getConnector(getCatalogHandle(catalogName));
+    }
+
+    public CatalogHandle getCatalogHandle(String catalogName)
+    {
         checkState(coordinator, "not a coordinator");
-        CatalogHandle catalogHandle = catalogManager.orElseThrow().getCatalog(catalogName)
+        return catalogManager.orElseThrow().getCatalog(catalogName)
                 .orElseThrow(() -> new IllegalArgumentException("Catalog does not exist: " + catalogName))
                 .getCatalogHandle();
+    }
+
+    public Connector getConnector(CatalogHandle catalogHandle)
+    {
         return injector.getInstance(ConnectorServicesProvider.class)
                 .getConnectorServices(catalogHandle)
                 .getConnector();

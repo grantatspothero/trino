@@ -67,6 +67,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.LongStream;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.airlift.concurrent.MoreFutures.getFutureValue;
 import static io.trino.SystemSessionProperties.CACHE_AGGREGATIONS_ENABLED;
@@ -381,27 +382,29 @@ public abstract class BaseCacheSubqueriesTest
         transaction(runner.getTransactionManager(), runner.getMetadata(), runner.getAccessControl())
                 .singleStatement()
                 .execute(session, transactionSession -> {
-                    TestingTrinoServer server = runner.getCoordinator();
+                    TestingTrinoServer coordinator = runner.getCoordinator();
+                    TestingTrinoServer worker = runner.getServers().get(0);
+                    checkState(!worker.isCoordinator());
                     String catalog = transactionSession.getCatalog().orElseThrow();
-                    Optional<TableHandle> handle = server.getMetadata().getTableHandle(
+                    Optional<TableHandle> handle = coordinator.getMetadata().getTableHandle(
                             transactionSession,
                             new QualifiedObjectName(catalog, transactionSession.getSchema().orElseThrow(), tableName));
                     assertThat(handle).isPresent();
 
-                    SplitSource splitSource = server.getSplitManager().getSplits(transactionSession, Span.current(), handle.get(), DynamicFilter.EMPTY, alwaysTrue());
+                    SplitSource splitSource = coordinator.getSplitManager().getSplits(transactionSession, Span.current(), handle.get(), DynamicFilter.EMPTY, alwaysTrue());
                     Split split = getFutureValue(splitSource.getNextBatch(1000)).getSplits().get(0);
 
-                    ColumnHandle partitionColumn = server.getMetadata().getColumnHandles(transactionSession, handle.get()).get("orderpriority");
+                    ColumnHandle partitionColumn = coordinator.getMetadata().getColumnHandles(transactionSession, handle.get()).get("orderpriority");
                     assertThat(partitionColumn).isNotNull();
-                    ColumnHandle dataColumn = server.getMetadata().getColumnHandles(transactionSession, handle.get()).get("orderkey");
+                    ColumnHandle dataColumn = coordinator.getMetadata().getColumnHandles(transactionSession, handle.get()).get("orderkey");
                     assertThat(dataColumn).isNotNull();
 
-                    ConnectorPageSourceProvider pageSourceProvider = server.getConnector(catalog).getPageSourceProvider();
+                    ConnectorPageSourceProvider pageSourceProvider = worker.getConnector(coordinator.getCatalogHandle(catalog)).getPageSourceProvider();
                     DynamicRowFilteringPageSourceProvider dynamicRowFilteringPageSourceProvider = new DynamicRowFilteringPageSourceProvider(new DynamicPageFilterCache(new TypeOperators()));
                     VarcharType type = VarcharType.createVarcharType(4);
 
                     // simplifyPredicate and prunePredicate should return none if predicate is exclusive on partition column
-                    ConnectorSession connectorSession = transactionSession.toConnectorSession(server.getMetadata().getCatalogHandle(transactionSession, catalog).orElseThrow());
+                    ConnectorSession connectorSession = transactionSession.toConnectorSession(coordinator.getMetadata().getCatalogHandle(transactionSession, catalog).orElseThrow());
                     Domain nonPartitionDomain = Domain.multipleValues(type, Streams.concat(LongStream.range(0, 9_000), LongStream.of(9_999))
                             .boxed()
                             .map(value -> Slices.utf8Slice(value.toString()))
