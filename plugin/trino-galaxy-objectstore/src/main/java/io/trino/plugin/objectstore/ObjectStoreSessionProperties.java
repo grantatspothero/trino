@@ -60,6 +60,7 @@ public class ObjectStoreSessionProperties
                 .add("projection_pushdown_enabled")
                 .add("timestamp_precision")
                 .add("minimum_assigned_split_weight")
+                .add("query_partition_filter_required")
                 .build();
 
         Table<String, TableType, PropertyMetadata<?>> delegateProperties = HashBasedTable.create();

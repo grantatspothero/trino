@@ -192,6 +192,7 @@ public final class FeatureExposures
                 .put(HUDI, "split_generator_parallelism", EXPOSED)
                 .put(HUDI, "standard_split_weight_size", EXPOSED)
                 .put(HUDI, "use_parquet_column_names", EXPOSED)
+                .put(HUDI, "query_partition_filter_required", EXPOSED)
                 .buildOrThrow();
     }
 
