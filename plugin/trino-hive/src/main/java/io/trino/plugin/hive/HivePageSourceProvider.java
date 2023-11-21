@@ -221,7 +221,7 @@ public class HivePageSourceProvider
         // Exclude prefilled columns because such columns won't be used
         // to filter split data when reading files.
         return predicate
-                .filter(((columnHandle, domain) -> !prefilledColumns.contains(columnHandle)));
+                .filter((columnHandle, domain) -> !prefilledColumns.contains(columnHandle));
     }
 
     @Override

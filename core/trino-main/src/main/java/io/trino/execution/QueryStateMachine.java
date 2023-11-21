@@ -685,7 +685,7 @@ public class QueryStateMachine
 
             PlanFragment plan = stageInfo.getPlan();
             // ChooseAlternativeNode is put into partitionedSources to link SplitSource to AlternativesAwareDriverFactory
-            if (plan != null && (plan.getPartitionedSourceNodes().stream().anyMatch(node -> node instanceof TableScanNode || node instanceof ChooseAlternativeNode))) {
+            if (plan != null && plan.getPartitionedSourceNodes().stream().anyMatch(node -> node instanceof TableScanNode || node instanceof ChooseAlternativeNode)) {
                 rawInputDataSize += stageStats.getRawInputDataSize().toBytes();
                 failedRawInputDataSize += stageStats.getFailedRawInputDataSize().toBytes();
                 rawInputPositions += stageStats.getRawInputPositions();

@@ -97,7 +97,6 @@ import static io.trino.spi.connector.FixedSplitSource.emptySplitSource;
 import static java.lang.Math.min;
 import static java.lang.String.format;
 import static java.util.Collections.emptyIterator;
-import static java.util.Comparator.comparing;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 
@@ -358,8 +357,8 @@ public class HiveSplitManager
                 hiveSplit.getBucketValidation(),
                 // order schema keys to canonicalize schema map
                 hiveSplit.getSchema().entrySet().stream()
-                        .sorted(comparing(entry -> (entry.getKey().toString())))
-                        .collect(toImmutableMap(entry -> entry.getKey().toString(), entry -> entry.getValue().toString()))))));
+                        .sorted(Map.Entry.comparingByKey())
+                        .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue))))));
     }
 
     @Managed

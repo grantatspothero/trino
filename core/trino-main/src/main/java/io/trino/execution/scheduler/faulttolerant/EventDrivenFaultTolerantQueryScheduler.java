@@ -2001,7 +2001,7 @@ public class EventDrivenFaultTolerantQueryScheduler
                     initialMemoryRequirements,
                     maxTaskExecutionAttempts);
             checkState(partitions.putIfAbsent(partitionId, partition) == null, "partition with id %s already exist in stage %s", partitionId, stage.getStageId());
-            getSourceOutputSelectors().forEach((partition::updateExchangeSourceOutputSelector));
+            getSourceOutputSelectors().forEach(partition::updateExchangeSourceOutputSelector);
             remainingPartitions.add(partitionId);
         }
 

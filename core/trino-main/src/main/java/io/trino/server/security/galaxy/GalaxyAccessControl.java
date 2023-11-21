@@ -303,7 +303,7 @@ public class GalaxyAccessControl
     public void checkCanShowCreateSchema(SystemSecurityContext context, CatalogSchemaName schemaName)
     {
         if (!isSystemOrInformationSchema(schemaName) &&
-                !(getVisibilityForSchemas(context, schemaName.getCatalogName(), ImmutableSet.of(schemaName.getSchemaName())).test(schemaName.getSchemaName()))) {
+                !getVisibilityForSchemas(context, schemaName.getCatalogName(), ImmutableSet.of(schemaName.getSchemaName())).test(schemaName.getSchemaName())) {
             denyShowCreateSchema(schemaName.toString(), entityIsNotVisible(context, "Schema", schemaName.toString()));
         }
     }

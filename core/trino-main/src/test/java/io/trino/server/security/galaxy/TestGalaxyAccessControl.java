@@ -1185,7 +1185,7 @@ public class TestGalaxyAccessControl
         try {
             // accountadmin, fearless_leader and lackey_follower all succeed, and public, which doesn't have the privilege, fails
             checkAccessMatching(messageWithTable, ImmutableList.of(adminContext(), fearlessContext(), lackeyContext()), ImmutableList.of(publicContext()),
-                    (context -> consumer.accept(context, name)));
+                    context -> consumer.accept(context, name));
         }
         finally {
             // Remove the grant
@@ -1204,7 +1204,7 @@ public class TestGalaxyAccessControl
         try {
             // accountadmin, fearless_leader and lackey_follower all succeed, and public, which doesn't have the privilege, fails
             checkAccessMatching(messageWithTable, ImmutableList.of(adminContext(), fearlessContext(), lackeyContext()), ImmutableList.of(publicContext()),
-                    (context -> consumer.accept(context, name)));
+                    context -> consumer.accept(context, name));
 
             // Grant a DENY privilege to fearless_leader
             securityMetadata.denyTablePrivileges(adminSession(), objectName, ImmutableSet.of(privilege), trinoPrincipal(FEARLESS_LEADER));
@@ -1212,7 +1212,7 @@ public class TestGalaxyAccessControl
             try {
                 // only lackey_follower has the privilege now
                 checkAccessMatching(messageWithTable, ImmutableList.of(lackeyContext()), ImmutableList.of(adminContext(), fearlessContext(), publicContext()),
-                        (context -> consumer.accept(context, name)));
+                        context -> consumer.accept(context, name));
             }
             finally {
                 securityMetadata.revokeTablePrivileges(adminSession(), objectName, ImmutableSet.of(privilege), trinoPrincipal(FEARLESS_LEADER), false);
@@ -1220,7 +1220,7 @@ public class TestGalaxyAccessControl
 
             // accountadmin, fearless_leader and lackey_follower all succeed, and public, which doesn't have the privilege, fails
             checkAccessMatching(messageWithTable, ImmutableList.of(adminContext(), fearlessContext(), lackeyContext()), ImmutableList.of(publicContext()),
-                    (context -> consumer.accept(context, name)));
+                    context -> consumer.accept(context, name));
         }
         finally {
             securityMetadata.revokeTablePrivileges(adminSession(), schemaWildcard, ImmutableSet.of(privilege), trinoPrincipal(LACKEY_FOLLOWER), false);
@@ -1235,7 +1235,7 @@ public class TestGalaxyAccessControl
         try {
             // accountadmin, fearless_leader and lackey_follower all succeed, and public, which doesn't have the privilege, fails
             checkAccessMatching(messageWithTable, ImmutableList.of(adminContext(), fearlessContext(), lackeyContext()), ImmutableList.of(publicContext()),
-                    (context -> consumer.accept(context, name)));
+                    context -> consumer.accept(context, name));
 
             // Grant a DENY privilege to fearless_leader
             securityMetadata.denyTablePrivileges(adminSession(), objectName, ImmutableSet.of(privilege), trinoPrincipal(FEARLESS_LEADER));
@@ -1243,7 +1243,7 @@ public class TestGalaxyAccessControl
             try {
                 // only lackey_follower has the privilege now
                 checkAccessMatching(messageWithTable, ImmutableList.of(lackeyContext()), ImmutableList.of(adminContext(), fearlessContext(), publicContext()),
-                        (context -> consumer.accept(context, name)));
+                        context -> consumer.accept(context, name));
             }
             finally {
                 securityMetadata.revokeTablePrivileges(adminSession(), objectName, ImmutableSet.of(privilege), trinoPrincipal(FEARLESS_LEADER), false);
@@ -1251,7 +1251,7 @@ public class TestGalaxyAccessControl
 
             // accountadmin, fearless_leader and lackey_follower all succeed, and public, which doesn't have the privilege, fails
             checkAccessMatching(messageWithTable, ImmutableList.of(adminContext(), fearlessContext(), lackeyContext()), ImmutableList.of(publicContext()),
-                    (context -> consumer.accept(context, name)));
+                    context -> consumer.accept(context, name));
         }
         finally {
             securityMetadata.revokeTablePrivileges(adminSession(), catalogWildcard, ImmutableSet.of(privilege), trinoPrincipal(LACKEY_FOLLOWER), false);

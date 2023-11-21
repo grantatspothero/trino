@@ -476,7 +476,7 @@ public class AlternativesOptimizer
 
         public void checkTimeoutNotExhausted()
         {
-            if ((NANOSECONDS.toMillis(nanoTime() - startTimeInNanos)) >= timeoutInMilliseconds) {
+            if (NANOSECONDS.toMillis(nanoTime() - startTimeInNanos) >= timeoutInMilliseconds) {
                 String message = format("The optimizer exhausted the time limit of %d ms", timeoutInMilliseconds);
                 List<QueryPlanOptimizerStatistics> topRulesByTime = statsCollector.getTopRuleStats(5);
                 if (topRulesByTime.isEmpty()) {

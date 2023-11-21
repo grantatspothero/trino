@@ -331,7 +331,7 @@ public class DeltaLakePageSourceProvider
             return TupleDomain.none();
         }
 
-        return predicate.filter(((columnHandle, domain) -> ((DeltaLakeColumnHandle) columnHandle).getColumnType() != PARTITION_KEY));
+        return predicate.filter((columnHandle, domain) -> ((DeltaLakeColumnHandle) columnHandle).getColumnType() != PARTITION_KEY);
     }
 
     @Override
