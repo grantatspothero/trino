@@ -80,7 +80,7 @@ public class GalaxyTransportChannelProviderConfigurer
         builder.setTransportChannelProvider(InstantiatingGrpcChannelProvider.newBuilder()
                 .setMaxInboundMessageSize(Integer.MAX_VALUE)
                 .setChannelConfigurator(channelBuilder -> {
-                    checkState(channelBuilder instanceof NettyChannelBuilder, "Expected ManagedChannelBuilder to be provider by Netty");
+                    checkState(channelBuilder instanceof NettyChannelBuilder, "Expected ManagedChannelBuilder to be an instance of NettyChannelBuilder");
                     NettyChannelBuilder nettyChannelBuilder = (NettyChannelBuilder) channelBuilder;
                     nettyChannelBuilder.channelFactory(new GalaxyForwardingChannelFactory(regionVerifierProperties, catalogNetworkMonitorProperties));
                     nettyChannelBuilder.eventLoopGroup(new NioEventLoopGroup(0, new DefaultThreadFactory("grpc-nio-worker-ELG", true)));
