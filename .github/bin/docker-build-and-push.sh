@@ -98,6 +98,7 @@ elasticsearch
 exchange-buffer
 exchange-fallbacking-buffer
 exchange-filesystem
+galaxy-dynamodb
 galaxy-kafka-event-listener
 galaxy-query-monitor-event-listener
 galaxy-objectstore
