@@ -16,7 +16,11 @@ package io.trino.filesystem.gcs;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
+import com.google.inject.multibindings.Multibinder;
+import io.trino.filesystem.gcs.galaxy.GalaxyTransportOptionsConfigurer;
+import io.trino.filesystem.gcs.galaxy.StorageOptionsConfigurer;
 
+import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 
 public class GcsFileSystemModule
@@ -28,5 +32,7 @@ public class GcsFileSystemModule
         configBinder(binder).bindConfig(GcsFileSystemConfig.class);
         binder.bind(GcsStorageFactory.class).in(Scopes.SINGLETON);
         binder.bind(GcsFileSystemFactory.class).in(Scopes.SINGLETON);
+        Multibinder<StorageOptionsConfigurer> optionsConfigurers = newSetBinder(binder, StorageOptionsConfigurer.class);
+        optionsConfigurers.addBinding().to(GalaxyTransportOptionsConfigurer.class).in(Scopes.SINGLETON);
     }
 }

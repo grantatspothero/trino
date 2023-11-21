@@ -20,6 +20,7 @@ import com.google.cloud.storage.StorageOptions;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import io.trino.filesystem.gcs.galaxy.StorageOptionsConfigurer;
 import io.trino.spi.security.ConnectorIdentity;
 import org.threeten.bp.Duration;
 
@@ -30,15 +31,18 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static com.google.cloud.storage.StorageRetryStrategy.getUniformStorageRetryStrategy;
 import static com.google.common.base.Strings.nullToEmpty;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 
 public class GcsStorageFactory
 {
     public static final String GCS_OAUTH_KEY = "gcs.oauth";
     public static final List<String> DEFAULT_SCOPES = ImmutableList.of("https://www.googleapis.com/auth/cloud-platform");
+    private final Set<StorageOptionsConfigurer> optionsConfigurers;
     private final String projectId;
     private final boolean useGcsAccessToken;
     private final Optional<GoogleCredentials> jsonGoogleCredential;
@@ -49,9 +53,10 @@ public class GcsStorageFactory
     private final Duration maxBackoffDelay;
 
     @Inject
-    public GcsStorageFactory(GcsFileSystemConfig config)
+    public GcsStorageFactory(Set<StorageOptionsConfigurer> optionsConfigurers, GcsFileSystemConfig config)
             throws IOException
     {
+        this.optionsConfigurers = requireNonNull(optionsConfigurers, "optionsConfigurers is null");
         config.validate();
         projectId = config.getProjectId();
         useGcsAccessToken = config.isUseGcsAccessToken();
@@ -94,6 +99,9 @@ public class GcsStorageFactory
             StorageOptions.Builder storageOptionsBuilder = StorageOptions.newBuilder();
             if (projectId != null) {
                 storageOptionsBuilder.setProjectId(projectId);
+            }
+            for (StorageOptionsConfigurer configurer : optionsConfigurers) {
+                configurer.configure(storageOptionsBuilder);
             }
             // Note: without uniform strategy we cannot retry idempotent operations.
             // The trino-filesystem api does not violate the conditions for idempotency, see https://cloud.google.com/storage/docs/retry-strategy#java for details.

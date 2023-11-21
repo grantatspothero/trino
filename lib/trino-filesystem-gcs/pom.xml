@@ -46,6 +46,25 @@
 
         <dependency>
             <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-core-http</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.httpcomponents</groupId>
+                    <artifactId>httpclient</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.httpcomponents</groupId>
+                    <artifactId>httpcore</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.cloud</groupId>
             <artifactId>google-cloud-storage</artifactId>
             <exclusions>
                 <exclusion>
@@ -116,6 +135,11 @@
         <dependency>
             <groupId>io.trino</groupId>
             <artifactId>trino-memory-context</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-plugin-toolkit</artifactId>
         </dependency>
 
         <dependency>
@@ -192,6 +216,7 @@
                         <configuration>
                             <excludes>
                                 <exclude>**/TestGcsFileSystemGcs.java</exclude>
+                                <exclude>**/TestGcsFileSystemNetworkTracking.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -209,6 +234,7 @@
                         <configuration>
                             <includes>
                                 <include>**/TestGcsFileSystemGcs.java</include>
+                                <include>**/TestGcsFileSystemNetworkTracking.java</include>
                             </includes>
                         </configuration>
                     </plugin>
