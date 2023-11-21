@@ -197,7 +197,7 @@ public final class InternalHiveConnectorFactory
                     hiveMaterializedViewPropertiesProvider.getMaterializedViewProperties(),
                     hiveAccessControl,
                     injector.getInstance(Key.get(new TypeLiteral<Set<ConnectorTableFunction>>() {})),
-                    injector.getInstance(Key.get(new TypeLiteral<Optional<FunctionProvider>>() {})),
+                    injector.getInstance(FunctionProvider.class),
                     injector.getInstance(HiveConfig.class).isSingleStatementWritesOnly(),
                     classLoader);
         }

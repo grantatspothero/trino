@@ -19,7 +19,6 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
-import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;
 import io.airlift.concurrent.BoundedExecutor;
 import io.airlift.concurrent.ExecutorServiceAdapter;
@@ -69,7 +68,6 @@ import io.trino.spi.connector.ConnectorSplitManager;
 import io.trino.spi.function.FunctionProvider;
 import io.trino.spi.function.table.ConnectorTableFunction;
 
-import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -180,7 +178,7 @@ public class HiveModule
         jsonBinder(binder).addSerializerBinding(Block.class).to(BlockJsonSerde.Serializer.class);
         jsonBinder(binder).addDeserializerBinding(Block.class).to(BlockJsonSerde.Deserializer.class);
 
-        newOptionalBinder(binder, new TypeLiteral<Optional<FunctionProvider>>(){}).setDefault().toInstance(Optional.empty());
+        newOptionalBinder(binder, FunctionProvider.class).setDefault().toInstance(new NoopFunctionProvider());
         newSetBinder(binder, ConnectorTableFunction.class);
     }
 

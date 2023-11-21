@@ -74,7 +74,7 @@ public class HiveConnector
 
     private final HiveTransactionManager transactionManager;
     private final Set<ConnectorTableFunction> connectorTableFunctions;
-    private final Optional<FunctionProvider> functionProvider;
+    private final FunctionProvider functionProvider;
     private final boolean singleStatementWritesOnly;
 
     public HiveConnector(
@@ -99,7 +99,7 @@ public class HiveConnector
             List<PropertyMetadata<?>> materializedViewProperties,
             Optional<ConnectorAccessControl> accessControl,
             Set<ConnectorTableFunction> connectorTableFunctions,
-            Optional<FunctionProvider> functionProvider,
+            FunctionProvider functionProvider,
             boolean singleStatementWritesOnly,
             ClassLoader classLoader)
     {
@@ -269,7 +269,7 @@ public class HiveConnector
     @Override
     public Optional<FunctionProvider> getFunctionProvider()
     {
-        return functionProvider;
+        return Optional.of(functionProvider);
     }
 
     @Override
