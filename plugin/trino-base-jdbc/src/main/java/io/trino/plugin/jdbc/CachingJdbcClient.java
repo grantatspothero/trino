@@ -115,24 +115,6 @@ public class CachingJdbcClient
             Set<SessionPropertiesProvider> sessionPropertiesProviders,
             IdentityCacheMapping identityMapping,
             Duration metadataCachingTtl,
-            boolean cacheMissing,
-            long cacheMaximumSize)
-    {
-        this(delegate,
-                sessionPropertiesProviders,
-                identityMapping,
-                metadataCachingTtl,
-                metadataCachingTtl,
-                metadataCachingTtl,
-                cacheMissing,
-                cacheMaximumSize);
-    }
-
-    public CachingJdbcClient(
-            JdbcClient delegate,
-            Set<SessionPropertiesProvider> sessionPropertiesProviders,
-            IdentityCacheMapping identityMapping,
-            Duration metadataCachingTtl,
             Duration schemaNamesCachingTtl,
             Duration tableNamesCachingTtl,
             boolean cacheMissing,
