@@ -24,7 +24,7 @@ import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.trino.connector.CatalogManagerConfig;
 import io.trino.metadata.SystemSecurityMetadata;
 import io.trino.server.galaxy.GalaxyConfig;
-import io.trino.server.galaxy.catalogs.CatalogIds;
+import io.trino.server.galaxy.catalogs.CatalogResolver;
 import io.trino.server.galaxy.catalogs.LiveCatalogsTransactionManager;
 
 import java.net.URI;
@@ -50,11 +50,11 @@ public class GalaxySecurityModule
         CatalogManagerConfig.CatalogMangerKind kind = buildConfigObject(CatalogManagerConfig.class).getCatalogMangerKind();
         if (kind == LIVE) {
             binder.bind(LiveCatalogsTransactionManager.class).in(SINGLETON);
-            binder.bind(CatalogIds.class).to(LiveCatalogsTransactionManager.class).in(SINGLETON);
+            binder.bind(CatalogResolver.class).to(LiveCatalogsTransactionManager.class).in(SINGLETON);
         }
         else {
-            binder.bind(StaticCatalogIds.class).in(SINGLETON);
-            binder.bind(CatalogIds.class).to(StaticCatalogIds.class).in(SINGLETON);
+            binder.bind(StaticCatalogResolver.class).in(SINGLETON);
+            binder.bind(CatalogResolver.class).to(StaticCatalogResolver.class).in(SINGLETON);
         }
         configBinder(binder).bindConfig(GalaxyAccessControlConfig.class);
 

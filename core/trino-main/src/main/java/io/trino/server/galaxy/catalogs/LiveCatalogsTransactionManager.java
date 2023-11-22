@@ -109,7 +109,7 @@ import static java.util.stream.Collectors.toList;
  * This class is designed for multi-tenet use and separates account resources.
  */
 public class LiveCatalogsTransactionManager
-        implements TransactionManager, ConnectorServicesProvider, CatalogManager, CatalogIds
+        implements TransactionManager, ConnectorServicesProvider, CatalogManager, CatalogResolver
 {
     private static final Logger log = Logger.get(LiveCatalogsTransactionManager.class);
 
@@ -341,14 +341,20 @@ public class LiveCatalogsTransactionManager
     @Override
     public Set<String> getCatalogNames()
     {
-        // Function not needed
+        // usage in addConnectorEventListeners which is a system that is not supported for Galaxy/Galaxy Plugins
+        // Tagged with "TODO: remove connector event listeners or add support for dynamic loading from connector"
+        // Also used in updateConnectorIds which is tagged with "TODO: remove this huge hack"
+        // other usages are testing or internal
         throw new UnsupportedOperationException("Cannot get all catalog names in live catalog mode");
     }
 
     @Override
     public Optional<Catalog> getCatalog(String catalogName)
     {
-        // Function not needed
+        // usage in addConnectorEventListeners which is a system that is not supported for Galaxy/Galaxy Plugins
+        // Tagged with "TODO: remove connector event listeners or add support for dynamic loading from connector"
+        // Also used in updateConnectorIds which is tagged with "TODO: remove this huge hack"
+        // other usages are testing or internal
         throw new UnsupportedOperationException("Cannot get catalog by name in live catalog mode");
     }
 

@@ -153,7 +153,7 @@ public class TestGalaxyMetadataApiSpec
         fearlessRoleId = requireNonNull(roles.get(new RoleName(FEARLESS_LEADER)), "Didn't find fearless_leader");
         lackeyRoleId = requireNonNull(roles.get(new RoleName(LACKEY_FOLLOWER)), "Didn't find lackey_follower");
         publicCatalogNames = accessControl.filterCatalogs(publicContext(), helper.getAccountClient().getAllCatalogNames());
-        catalogNames = helper.getCatalogIds().getCatalogNames().stream().sorted().collect(toImmutableList());
+        catalogNames = helper.getCatalogResolver().getCatalogNames().stream().sorted().collect(toImmutableList());
     }
 
     @AfterClass(alwaysRun = true)

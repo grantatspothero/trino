@@ -189,8 +189,8 @@ public final class GalaxyQueryRunner
             URI deploymentUri = URI.create("https://test-sample.trino.local.gate0.net:8888");
 
             Set<String> catalogNames = catalogs.build().stream().map(CatalogInit::catalogName).collect(toImmutableSet());
-            Map<String, CatalogId> catalogIds = catalogNames.stream().collect(toImmutableMap(Function.identity(), accountClient::getOrCreateCatalog));
-            String catalogIdStrings = catalogIds.entrySet().stream()
+            Map<String, CatalogId> catalogIdMap = catalogNames.stream().collect(toImmutableMap(Function.identity(), accountClient::getOrCreateCatalog));
+            String catalogIdStrings = catalogIdMap.entrySet().stream()
                     .map(entry -> entry.getKey() + "->" + entry.getValue())
                     .collect(joining(","));
 
@@ -231,7 +231,7 @@ public final class GalaxyQueryRunner
                 addCoordinatorProperty("galaxy.catalog-configuration-uri", accountUri.toString());
                 addCoordinatorProperty("galaxy.testing.query.runner", "true");
                 amendSession(sessionBuilder ->
-                        sessionBuilder.setQueryCatalogs(catalogIds.values().stream().map(id -> new CatalogVersion(id, new Version(1))).collect(toImmutableList())));
+                        sessionBuilder.setQueryCatalogs(catalogIdMap.values().stream().map(id -> new CatalogVersion(id, new Version(1))).collect(toImmutableList())));
             }
 
             super.setAdditionalModule(new AbstractConfigurationAwareModule()
@@ -247,10 +247,10 @@ public final class GalaxyQueryRunner
                     if (useLiveCatalogs && buildConfigObject(ServerConfig.class).isCoordinator()) {
                         catalogs.build()
                                 .forEach(catalogInit -> galaxyCatalogInfoSupplier.addCatalog(
-                                        new GalaxyCatalogArgs(accountId, new CatalogVersion(catalogIds.get(catalogInit.catalogName()), new Version(1))),
+                                        new GalaxyCatalogArgs(accountId, new CatalogVersion(catalogIdMap.get(catalogInit.catalogName()), new Version(1))),
                                         new GalaxyCatalogInfo(
                                                 new CatalogProperties(
-                                                        toCatalogHandle(catalogInit.catalogName(), new CatalogVersion(catalogIds.get(catalogInit.catalogName()), new Version(1))),
+                                                        toCatalogHandle(catalogInit.catalogName(), new CatalogVersion(catalogIdMap.get(catalogInit.catalogName()), new Version(1))),
                                                         new ConnectorName(catalogInit.connectorName()),
                                                         catalogInit.properties()),
                                                 catalogInit.readOnly())));

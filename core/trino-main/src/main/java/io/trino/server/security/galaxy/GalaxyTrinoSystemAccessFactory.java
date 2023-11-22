@@ -21,7 +21,7 @@ import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.trino.server.galaxy.GalaxyPermissionsCache;
-import io.trino.server.galaxy.catalogs.CatalogIds;
+import io.trino.server.galaxy.catalogs.CatalogResolver;
 import io.trino.spi.security.SystemAccessControl;
 import io.trino.spi.security.SystemAccessControlFactory;
 
@@ -74,7 +74,7 @@ public class GalaxyTrinoSystemAccessFactory
 
                     // TODO GalaxyAccessControlConfig and CatalogIds are bound in main Guice context too, but currently are given different configuration.
                     //  Only here we're provided with `galaxy.read-only-catalogs` values.
-                    binder.bind(CatalogIds.class).to(StaticCatalogIds.class);
+                    binder.bind(CatalogResolver.class).to(StaticCatalogResolver.class);
                     configBinder(binder).bindConfig(GalaxyAccessControlConfig.class);
 
                     binder.bind(TrinoSecurityApi.class).toInstance(trinoSecurityApi);

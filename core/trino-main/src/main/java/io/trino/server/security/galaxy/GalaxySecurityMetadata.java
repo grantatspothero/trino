@@ -36,7 +36,7 @@ import io.trino.Session;
 import io.trino.metadata.QualifiedObjectName;
 import io.trino.metadata.QualifiedTablePrefix;
 import io.trino.metadata.SystemSecurityMetadata;
-import io.trino.server.galaxy.catalogs.CatalogIds;
+import io.trino.server.galaxy.catalogs.CatalogResolver;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogSchemaName;
 import io.trino.spi.connector.CatalogSchemaTableName;
@@ -86,13 +86,13 @@ public class GalaxySecurityMetadata
     private static final TrinoPrincipal PUBLIC_ROLE = new TrinoPrincipal(ROLE, "public");
 
     private final TrinoSecurityApi accessControlClient;
-    private final CatalogIds catalogIds;
+    private final CatalogResolver catalogResolver;
 
     @Inject
-    public GalaxySecurityMetadata(TrinoSecurityApi accessControlClient, CatalogIds catalogIds)
+    public GalaxySecurityMetadata(TrinoSecurityApi accessControlClient, CatalogResolver catalogResolver)
     {
         this.accessControlClient = requireNonNull(accessControlClient, "accessControlClient is null");
-        this.catalogIds = requireNonNull(catalogIds, "catalogIds is null");
+        this.catalogResolver = requireNonNull(catalogResolver, "catalogResolver is null");
     }
 
     @Override
@@ -514,7 +514,7 @@ public class GalaxySecurityMetadata
         if (isSystemCatalog(catalogName)) {
             throw new TrinoException(NOT_SUPPORTED, "System catalog is read-only");
         }
-        return catalogIds.getCatalogId(transactionId, catalogName)
+        return catalogResolver.getCatalogId(transactionId, catalogName)
                 .orElseThrow(() -> new TrinoException(CATALOG_NOT_FOUND, format("Catalog '%s' does not exist", catalogName)));
     }
 

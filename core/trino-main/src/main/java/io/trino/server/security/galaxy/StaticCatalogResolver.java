@@ -18,26 +18,26 @@ import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import io.starburst.stargate.id.CatalogId;
-import io.trino.server.galaxy.catalogs.CatalogIds;
+import io.trino.server.galaxy.catalogs.CatalogResolver;
 import io.trino.transaction.TransactionId;
 
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-public class StaticCatalogIds
-        implements CatalogIds
+public class StaticCatalogResolver
+        implements CatalogResolver
 {
     private final BiMap<String, CatalogId> catalogNamesToIds;
     private final Set<String> readOnlyCatalogs;
 
     @Inject
-    public StaticCatalogIds(GalaxyAccessControlConfig config)
+    public StaticCatalogResolver(GalaxyAccessControlConfig config)
     {
         this(config.getCatalogNames(), config.getReadOnlyCatalogs());
     }
 
-    public StaticCatalogIds(Map<String, CatalogId> catalogNamesToIds, Set<String> readOnlyCatalogs)
+    public StaticCatalogResolver(Map<String, CatalogId> catalogNamesToIds, Set<String> readOnlyCatalogs)
     {
         this.catalogNamesToIds = ImmutableBiMap.copyOf(catalogNamesToIds);
         this.readOnlyCatalogs = ImmutableSet.copyOf(readOnlyCatalogs);

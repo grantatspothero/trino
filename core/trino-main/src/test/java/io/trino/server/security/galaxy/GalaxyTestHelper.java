@@ -77,7 +77,7 @@ public class GalaxyTestHelper
     private GalaxyAccessControl accessControl;
     private GalaxySecurityMetadata metadataApi;
     private TrinoSecurityApi client;
-    private StaticCatalogIds catalogIds;
+    private StaticCatalogResolver catalogResolver;
 
     private final AtomicInteger queryIds = new AtomicInteger();
 
@@ -100,14 +100,14 @@ public class GalaxyTestHelper
                 .mapToObj(index -> "catalog" + index)
                 .collect(toImmutableMap(Function.identity(), accountClient::getOrCreateCatalog));
 
-        catalogIds = new StaticCatalogIds(ImmutableBiMap.copyOf(catalogs), ImmutableSet.of());
+        catalogResolver = new StaticCatalogResolver(ImmutableBiMap.copyOf(catalogs), ImmutableSet.of());
         client = accountClient.getTrinoSecurityApi();
         GalaxyPermissionsCache permissionsCache = new GalaxyPermissionsCache(new GalaxySystemAccessControlConfig());
-        accessController = new GalaxySystemAccessController(client, catalogIds, permissionsCache);
+        accessController = new GalaxySystemAccessController(client, catalogResolver, permissionsCache);
         accessControl = new GalaxyAccessControl(
                 new GalaxySystemAccessControlConfig().getBackgroundProcessingThreads(),
                 ignore -> accessController);
-        metadataApi = new GalaxySecurityMetadata(client, catalogIds);
+        metadataApi = new GalaxySecurityMetadata(client, catalogResolver);
 
         // Make the roles
         metadataApi.createRole(adminSession(), FEARLESS_LEADER, Optional.empty());
@@ -158,14 +158,14 @@ public class GalaxyTestHelper
         return metadataApi;
     }
 
-    public StaticCatalogIds getCatalogIds()
+    public StaticCatalogResolver getCatalogResolver()
     {
-        return catalogIds;
+        return catalogResolver;
     }
 
     public CatalogId getCatalogId(String catalogName)
     {
-        return catalogIds.getCatalogId(Optional.empty(), catalogName).orElseThrow(() -> new IllegalArgumentException("Unknown catalog " + catalogName));
+        return catalogResolver.getCatalogId(Optional.empty(), catalogName).orElseThrow(() -> new IllegalArgumentException("Unknown catalog " + catalogName));
     }
 
     public SystemSecurityContext context(RoleId roleId)
@@ -321,7 +321,7 @@ public class GalaxyTestHelper
 
     public String getAnyCatalogName()
     {
-        return catalogIds.getCatalogNames().stream()
+        return catalogResolver.getCatalogNames().stream()
                 .findAny()
                 .orElseThrow(() -> new IllegalStateException("Could not find a catalog name"));
     }

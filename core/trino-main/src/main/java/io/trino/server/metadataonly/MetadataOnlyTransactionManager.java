@@ -49,7 +49,7 @@ import io.trino.server.security.galaxy.GalaxySecurityMetadata;
 import io.trino.server.security.galaxy.GalaxySystemAccessController;
 import io.trino.server.security.galaxy.MetadataAccessControllerSupplier;
 import io.trino.server.security.galaxy.MetadataSystemSecurityMetadata;
-import io.trino.server.security.galaxy.StaticCatalogIds;
+import io.trino.server.security.galaxy.StaticCatalogResolver;
 import io.trino.spi.QueryId;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogHandle;
@@ -431,10 +431,10 @@ public class MetadataOnlyTransactionManager
             GalaxyAccessControlConfig galaxyAccessControlConfig = new GalaxyAccessControlConfig()
                     .setCatalogNames(requiredServiceProperty(serviceProperties, "galaxy.catalog-names"))
                     .setReadOnlyCatalogs(requiredServiceProperty(serviceProperties, "galaxy.read-only-catalogs"));
-            StaticCatalogIds catalogIds = new StaticCatalogIds(galaxyAccessControlConfig);
+            StaticCatalogResolver catalogResolver = new StaticCatalogResolver(galaxyAccessControlConfig);
 
-            galaxyMetadataAccessControl.addController(transactionId, new GalaxySystemAccessController(securityClient, catalogIds, permissionsCache, Optional.of(transactionId)));
-            securityMetadata.add(transactionId, new GalaxySecurityMetadata(securityClient, catalogIds));
+            galaxyMetadataAccessControl.addController(transactionId, new GalaxySystemAccessController(securityClient, catalogResolver, permissionsCache, Optional.of(transactionId)));
+            securityMetadata.add(transactionId, new GalaxySecurityMetadata(securityClient, catalogResolver));
         }
 
         public void checkOpenTransaction()

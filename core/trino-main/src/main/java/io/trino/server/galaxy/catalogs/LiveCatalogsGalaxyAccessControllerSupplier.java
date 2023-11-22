@@ -27,20 +27,20 @@ public class LiveCatalogsGalaxyAccessControllerSupplier
         implements GalaxyAccessControllerSupplier
 {
     private final TrinoSecurityApi accessControlClient;
-    private final CatalogIds catalogIds;
+    private final CatalogResolver catalogResolver;
     private final GalaxyPermissionsCache galaxyPermissionsCache;
 
     @Inject
-    public LiveCatalogsGalaxyAccessControllerSupplier(TrinoSecurityApi accessControlClient, CatalogIds catalogIds, GalaxyPermissionsCache galaxyPermissionsCache)
+    public LiveCatalogsGalaxyAccessControllerSupplier(TrinoSecurityApi accessControlClient, CatalogResolver catalogResolver, GalaxyPermissionsCache galaxyPermissionsCache)
     {
         this.accessControlClient = requireNonNull(accessControlClient, "accessControlClient is null");
-        this.catalogIds = requireNonNull(catalogIds, "catalogIds is null");
+        this.catalogResolver = requireNonNull(catalogResolver, "catalogResolver is null");
         this.galaxyPermissionsCache = requireNonNull(galaxyPermissionsCache, "galaxyPermissionsCache is null");
     }
 
     @Override
     public GalaxySystemAccessController apply(Identity identity)
     {
-        return new GalaxySystemAccessController(accessControlClient, catalogIds, galaxyPermissionsCache, extractTransactionId(identity));
+        return new GalaxySystemAccessController(accessControlClient, catalogResolver, galaxyPermissionsCache, extractTransactionId(identity));
     }
 }

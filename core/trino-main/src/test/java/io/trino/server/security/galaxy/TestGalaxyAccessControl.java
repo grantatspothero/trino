@@ -171,39 +171,39 @@ public class TestGalaxyAccessControl
     @Test
     public void testFilterCatalogs()
     {
-        StaticCatalogIds catalogIds = helper.getCatalogIds();
+        StaticCatalogResolver catalogResolver = helper.getCatalogResolver();
         // accountadmin can access all the catalogs
-        assertThat(accessControl.filterCatalogs(adminContext(), catalogIds.getCatalogNames())).isEqualTo(catalogIds.getCatalogNames());
+        assertThat(accessControl.filterCatalogs(adminContext(), catalogResolver.getCatalogNames())).isEqualTo(catalogResolver.getCatalogNames());
 
         // But all other roles see none of the catalogs
         for (SystemSecurityContext context : ImmutableList.of(fearlessContext(), lackeyContext(), publicContext())) {
-            assertThat(accessControl.filterCatalogs(context, catalogIds.getCatalogNames())).isEmpty();
+            assertThat(accessControl.filterCatalogs(context, catalogResolver.getCatalogNames())).isEmpty();
         }
         Set<String> usedCatalogNames = new HashSet<>();
-        List<String> catalogNamesToShow = ImmutableList.copyOf(catalogIds.getCatalogNames()).subList(0, 2);
+        List<String> catalogNamesToShow = ImmutableList.copyOf(catalogResolver.getCatalogNames()).subList(0, 2);
 
         // Grant a catalog privilege
 
         for (String catalogName : catalogNamesToShow) {
             usedCatalogNames.add(catalogName);
-            CatalogId catalogId = catalogIds.getCatalogId(Optional.empty(), catalogName).orElseThrow();
+            CatalogId catalogId = catalogResolver.getCatalogId(Optional.empty(), catalogName).orElseThrow();
             securityApi.addEntityPrivileges(toDispatchSession(adminSession()), catalogId, ImmutableSet.of(new CreateEntityPrivilege(CREATE_SCHEMA, ALLOW, new RoleName(FEARLESS_LEADER), false)));
 
             // accoundadmin still sees all catalogs
-            assertThat(accessControl.filterCatalogs(adminContext(), catalogIds.getCatalogNames())).isEqualTo(catalogIds.getCatalogNames());
+            assertThat(accessControl.filterCatalogs(adminContext(), catalogResolver.getCatalogNames())).isEqualTo(catalogResolver.getCatalogNames());
 
             // fearless_leader sees all the catalogs for which privileges exist
-            assertThat(accessControl.filterCatalogs(fearlessContext(), catalogIds.getCatalogNames())).isEqualTo(usedCatalogNames);
+            assertThat(accessControl.filterCatalogs(fearlessContext(), catalogResolver.getCatalogNames())).isEqualTo(usedCatalogNames);
 
             // lackey_follower and public get no catalogs
             for (SystemSecurityContext context : ImmutableList.of(lackeyContext(), publicContext())) {
-                assertThat(accessControl.filterCatalogs(context, catalogIds.getCatalogNames())).isEmpty();
+                assertThat(accessControl.filterCatalogs(context, catalogResolver.getCatalogNames())).isEmpty();
             }
         }
 
         // Remove the catalog privilege
         for (String catalogName : catalogNamesToShow) {
-            CatalogId catalogId = catalogIds.getCatalogId(Optional.empty(), catalogName).orElseThrow();
+            CatalogId catalogId = catalogResolver.getCatalogId(Optional.empty(), catalogName).orElseThrow();
             securityApi.revokeEntityPrivileges(toDispatchSession(adminSession()), catalogId, ImmutableSet.of(new RevokeEntityPrivilege(CREATE_SCHEMA, new RoleName(FEARLESS_LEADER), false)));
         }
 
@@ -216,24 +216,24 @@ public class TestGalaxyAccessControl
             usedCatalogNames.add(catalogName);
             CatalogSchemaName newName = new CatalogSchemaName(catalogName, newSchemaName());
             usedSchemaNames.add(newName);
-            SchemaId schemaId = new SchemaId(catalogIds.getCatalogId(Optional.empty(), catalogName).orElseThrow(), newName.getSchemaName());
+            SchemaId schemaId = new SchemaId(catalogResolver.getCatalogId(Optional.empty(), catalogName).orElseThrow(), newName.getSchemaName());
             securityApi.addEntityPrivileges(toDispatchSession(adminSession()), schemaId, ImmutableSet.of(new CreateEntityPrivilege(CREATE_TABLE, ALLOW, new RoleName(FEARLESS_LEADER), false)));
 
             // accoundadmin still sees all catalogs
-            assertThat(accessControl.filterCatalogs(adminContext(), catalogIds.getCatalogNames())).isEqualTo(catalogIds.getCatalogNames());
+            assertThat(accessControl.filterCatalogs(adminContext(), catalogResolver.getCatalogNames())).isEqualTo(catalogResolver.getCatalogNames());
 
             // fearless_leader sees all the catalogs for which privileges exist
-            assertThat(accessControl.filterCatalogs(fearlessContext(), catalogIds.getCatalogNames())).isEqualTo(usedCatalogNames);
+            assertThat(accessControl.filterCatalogs(fearlessContext(), catalogResolver.getCatalogNames())).isEqualTo(usedCatalogNames);
 
             // lackey_follower and public get no catalogs
             for (SystemSecurityContext context : ImmutableList.of(lackeyContext(), publicContext())) {
-                assertThat(accessControl.filterCatalogs(context, catalogIds.getCatalogNames())).isEmpty();
+                assertThat(accessControl.filterCatalogs(context, catalogResolver.getCatalogNames())).isEmpty();
             }
         }
 
         // Remove the schema privileges
         for (CatalogSchemaName schemaName : usedSchemaNames) {
-            SchemaId schemaId = new SchemaId(catalogIds.getCatalogId(Optional.empty(), schemaName.getCatalogName()).orElseThrow(), schemaName.getSchemaName());
+            SchemaId schemaId = new SchemaId(catalogResolver.getCatalogId(Optional.empty(), schemaName.getCatalogName()).orElseThrow(), schemaName.getSchemaName());
             securityApi.revokeEntityPrivileges(toDispatchSession(adminSession()), schemaId, ImmutableSet.of(new RevokeEntityPrivilege(CREATE_TABLE, new RoleName(FEARLESS_LEADER), false)));
         }
 
@@ -249,14 +249,14 @@ public class TestGalaxyAccessControl
             usedCatalogNames.add(catalogName);
 
             // accoundadmin still sees all catalogs
-            assertThat(accessControl.filterCatalogs(adminContext(), catalogIds.getCatalogNames())).isEqualTo(catalogIds.getCatalogNames());
+            assertThat(accessControl.filterCatalogs(adminContext(), catalogResolver.getCatalogNames())).isEqualTo(catalogResolver.getCatalogNames());
 
             // fearless_leader sees all the catalogs for which privileges exist
-            assertThat(accessControl.filterCatalogs(fearlessContext(), catalogIds.getCatalogNames())).isEqualTo(usedCatalogNames);
+            assertThat(accessControl.filterCatalogs(fearlessContext(), catalogResolver.getCatalogNames())).isEqualTo(usedCatalogNames);
 
             // lackey_follower and public get no catalogs
             for (SystemSecurityContext context : ImmutableList.of(lackeyContext(), publicContext())) {
-                assertThat(accessControl.filterCatalogs(context, catalogIds.getCatalogNames())).isEmpty();
+                assertThat(accessControl.filterCatalogs(context, catalogResolver.getCatalogNames())).isEmpty();
             }
         }
 
@@ -269,10 +269,10 @@ public class TestGalaxyAccessControl
     @Test
     public void testCheckCanCreateSchema()
     {
-        StaticCatalogIds catalogIds = helper.getCatalogIds();
-        List<String> catalogNames = ImmutableList.copyOf(catalogIds.getCatalogNames());
+        StaticCatalogResolver catalogResolver = helper.getCatalogResolver();
+        List<String> catalogNames = ImmutableList.copyOf(catalogResolver.getCatalogNames());
         CatalogSchemaName schemaName = new CatalogSchemaName(catalogNames.get(0), newSchemaName());
-        SchemaId schemaId = new SchemaId(catalogIds.getCatalogId(Optional.empty(), schemaName.getCatalogName()).orElseThrow(), schemaName.getSchemaName());
+        SchemaId schemaId = new SchemaId(catalogResolver.getCatalogId(Optional.empty(), schemaName.getCatalogName()).orElseThrow(), schemaName.getSchemaName());
         String message = format("Access Denied: Cannot create schema %s.%s:.*", schemaName.getCatalogName(), schemaName.getSchemaName());
         // Before CREATE_SCHEMA is granted, only account admin role can create schemas
         checkAccessMatching(message,

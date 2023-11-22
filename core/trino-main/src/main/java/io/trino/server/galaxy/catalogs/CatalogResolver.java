@@ -18,7 +18,7 @@ import io.trino.transaction.TransactionId;
 
 import java.util.Optional;
 
-public interface CatalogIds
+public interface CatalogResolver
 {
     boolean isReadOnlyCatalog(Optional<TransactionId> transactionId, String catalogName);
 
