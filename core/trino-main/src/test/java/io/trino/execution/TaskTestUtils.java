@@ -40,6 +40,7 @@ import io.trino.operator.PagesIndex;
 import io.trino.operator.dynamicfiltering.DynamicPageFilterCache;
 import io.trino.operator.dynamicfiltering.DynamicRowFilteringPageSourceProvider;
 import io.trino.operator.index.IndexJoinLookupStats;
+import io.trino.spi.block.TestingBlockEncodingSerde;
 import io.trino.spi.connector.CatalogHandle;
 import io.trino.spiller.GenericSpillerFactory;
 import io.trino.split.AlternativeChooser;
@@ -196,7 +197,7 @@ public final class TaskTestUtils
                 PLANNER_CONTEXT.getTypeOperators(),
                 new TableExecuteContextManager(),
                 new ExchangeManagerRegistry(),
-                new CacheManagerRegistry(new CacheConfig(), new LocalMemoryManager(new NodeMemoryConfig())),
+                new CacheManagerRegistry(new CacheConfig(), new LocalMemoryManager(new NodeMemoryConfig()), new TestingBlockEncodingSerde()),
                 new NodeVersion("test"),
                 new CompilerConfig());
     }

@@ -21,6 +21,7 @@ import io.trino.execution.TaskId;
 import io.trino.memory.LocalMemoryManager;
 import io.trino.memory.NodeMemoryConfig;
 import io.trino.spi.NodeManager;
+import io.trino.spi.block.TestingBlockEncodingSerde;
 import io.trino.spi.cache.CacheManager;
 import io.trino.spi.cache.CacheManagerContext;
 import io.trino.spi.cache.CacheManagerFactory;
@@ -55,7 +56,7 @@ public class TestCacheManagerRegistry
                 .setMaxQueryMemoryPerNode(DataSize.of(100, MEGABYTE));
 
         memoryManager = new LocalMemoryManager(config, DataSize.of(110, MEGABYTE).toBytes());
-        registry = new CacheManagerRegistry(new CacheConfig(), memoryManager, newDirectExecutorService());
+        registry = new CacheManagerRegistry(new CacheConfig(), memoryManager, newDirectExecutorService(), new TestingBlockEncodingSerde());
         registry.addCacheManagerFactory(new TestCacheManagerFactory());
         registry.loadCacheManager(TEST_CACHE_MANAGER, ImmutableMap.of());
     }
@@ -105,6 +106,9 @@ public class TestCacheManagerRegistry
         @Override
         public CacheManager create(Map<String, String> config, CacheManagerContext context)
         {
+            requireNonNull(context, "context is null");
+            requireNonNull(context.revocableMemoryAllocator(), "revocableMemoryAllocator is null");
+            requireNonNull(context.blockEncodingSerde(), "revocableMemoryAllocator is null");
             cacheManager = new TestCacheManager(context.revocableMemoryAllocator());
             return cacheManager;
         }

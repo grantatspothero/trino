@@ -15,7 +15,11 @@ package io.trino.plugin.memory;
 
 import com.google.common.collect.ImmutableMap;
 import io.trino.spi.Plugin;
+import io.trino.spi.block.BlockEncodingSerde;
+import io.trino.spi.block.TestingBlockEncodingSerde;
+import io.trino.spi.cache.CacheManagerContext;
 import io.trino.spi.cache.CacheManagerFactory;
+import io.trino.spi.cache.MemoryAllocator;
 import org.testng.annotations.Test;
 
 import static com.google.common.collect.Iterables.getOnlyElement;
@@ -27,6 +31,21 @@ public class TestMemoryCachePlugin
     {
         Plugin plugin = new MemoryCachePlugin();
         CacheManagerFactory factory = getOnlyElement(plugin.getCacheManagerFactories());
-        factory.create(ImmutableMap.of(), () -> null);
+        factory.create(
+                ImmutableMap.of(),
+                new CacheManagerContext()
+                {
+                    @Override
+                    public MemoryAllocator revocableMemoryAllocator()
+                    {
+                        return null;
+                    }
+
+                    @Override
+                    public BlockEncodingSerde blockEncodingSerde()
+                    {
+                        return new TestingBlockEncodingSerde();
+                    }
+                });
     }
 }

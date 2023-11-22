@@ -25,9 +25,11 @@ import io.trino.memory.context.LocalMemoryContext;
 import io.trino.memory.context.MemoryReservationHandler;
 import io.trino.plugin.memory.MemoryCacheManagerFactory;
 import io.trino.spi.TrinoException;
+import io.trino.spi.block.BlockEncodingSerde;
 import io.trino.spi.cache.CacheManager;
 import io.trino.spi.cache.CacheManagerContext;
 import io.trino.spi.cache.CacheManagerFactory;
+import io.trino.spi.cache.MemoryAllocator;
 import io.trino.spi.classloader.ThreadContextClassLoader;
 import org.weakref.jmx.Managed;
 import org.weakref.jmx.Nested;
@@ -74,6 +76,7 @@ public class CacheManagerRegistry
     private final double revokingTarget;
     private final Map<String, CacheManagerFactory> cacheManagerFactories = new ConcurrentHashMap<>();
     private final ExecutorService executor;
+    private final BlockEncodingSerde blockEncodingSerde;
     private final AtomicBoolean revokeRequested = new AtomicBoolean();
     private final Distribution sizeOfRevokedMemoryDistribution = new Distribution();
     private final AtomicInteger nonEmptyRevokeCount = new AtomicInteger();
@@ -81,22 +84,24 @@ public class CacheManagerRegistry
     private volatile CacheManager cacheManager;
 
     @Inject
-    public CacheManagerRegistry(CacheConfig cacheConfig, LocalMemoryManager localMemoryManager)
+    public CacheManagerRegistry(CacheConfig cacheConfig, LocalMemoryManager localMemoryManager, BlockEncodingSerde blockEncodingSerde)
     {
-        this(cacheConfig, localMemoryManager, newSingleThreadExecutor(daemonThreadsNamed("cache-manager-registry")));
+        this(cacheConfig, localMemoryManager, newSingleThreadExecutor(daemonThreadsNamed("cache-manager-registry")), blockEncodingSerde);
     }
 
     @VisibleForTesting
-    CacheManagerRegistry(CacheConfig cacheConfig, LocalMemoryManager localMemoryManager, ExecutorService executor)
+    CacheManagerRegistry(CacheConfig cacheConfig, LocalMemoryManager localMemoryManager, ExecutorService executor, BlockEncodingSerde blockEncodingSerde)
     {
         requireNonNull(cacheConfig, "cacheConfig is null");
         requireNonNull(localMemoryManager, "localMemoryManager is null");
         requireNonNull(executor, "executor is null");
+        requireNonNull(blockEncodingSerde, "blockEncodingSerde is null");
         this.enabled = cacheConfig.isEnabled();
         this.revokingThreshold = cacheConfig.getRevokingThreshold();
         this.revokingTarget = cacheConfig.getRevokingTarget();
         this.memoryPool = localMemoryManager.getMemoryPool();
         this.executor = executor;
+        this.blockEncodingSerde = blockEncodingSerde;
     }
 
     public void addCacheManagerFactory(CacheManagerFactory factory)
@@ -152,7 +157,20 @@ public class CacheManagerRegistry
                     return memoryPool.tryReserveRevocable(bytes);
                 }, memoryPool::freeRevocable), 0)
                 .newLocalMemoryContext("CacheManager");
-        CacheManagerContext context = () -> revocableMemoryContext::trySetBytes;
+        CacheManagerContext context = new CacheManagerContext()
+        {
+            @Override
+            public MemoryAllocator revocableMemoryAllocator()
+            {
+                return revocableMemoryContext::trySetBytes;
+            }
+
+            @Override
+            public BlockEncodingSerde blockEncodingSerde()
+            {
+                return blockEncodingSerde;
+            }
+        };
         CacheManager cacheManager;
         try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(factory.getClass().getClassLoader())) {
             cacheManager = factory.create(properties, context);

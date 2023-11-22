@@ -15,10 +15,14 @@ package io.trino.plugin.memory;
 
 import io.trino.spi.Page;
 import io.trino.spi.block.Block;
+import io.trino.spi.block.BlockEncodingSerde;
 import io.trino.spi.block.IntArrayBlock;
+import io.trino.spi.block.TestingBlockEncodingSerde;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheManager;
+import io.trino.spi.cache.CacheManagerContext;
 import io.trino.spi.cache.CacheSplitId;
+import io.trino.spi.cache.MemoryAllocator;
 import io.trino.spi.cache.PlanSignature;
 import io.trino.spi.cache.SignatureKey;
 import io.trino.spi.connector.ConnectorPageSink;
@@ -67,7 +71,22 @@ public class BenchmarkMemoryCacheManager
         private boolean changeSignatures;
 
         private final MemoryCacheManager memoryCacheManager = new MemoryCacheManager(bytes -> bytes <= 4_000_000_000L, true);
-        private final ConcurrentCacheManager concurrentCacheManager = new ConcurrentCacheManager(() -> bytes -> bytes <= 4_000_000_000L, true);
+        private final ConcurrentCacheManager concurrentCacheManager = new ConcurrentCacheManager(
+                new CacheManagerContext()
+                {
+                    @Override
+                    public MemoryAllocator revocableMemoryAllocator()
+                    {
+                        return bytes -> bytes <= 4_000_000_000L;
+                    }
+
+                    @Override
+                    public BlockEncodingSerde blockEncodingSerde()
+                    {
+                        return new TestingBlockEncodingSerde();
+                    }
+                },
+                true);
         private final CacheSplitId splitId = new CacheSplitId("split");
         private final List<CacheColumnId> columnIds = IntStream.range(0, 64)
                 .mapToObj(i -> new CacheColumnId("column" + i))

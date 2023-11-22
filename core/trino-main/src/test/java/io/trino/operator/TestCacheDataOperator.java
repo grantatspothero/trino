@@ -30,6 +30,7 @@ import io.trino.memory.NodeMemoryConfig;
 import io.trino.metadata.Split;
 import io.trino.metadata.TableHandle;
 import io.trino.spi.Page;
+import io.trino.spi.block.TestingBlockEncodingSerde;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheManager;
 import io.trino.spi.cache.CacheSplitId;
@@ -91,7 +92,7 @@ public class TestCacheDataOperator
         LocalMemoryManager memoryManager = new LocalMemoryManager(config, DataSize.of(110, MEGABYTE).toBytes());
         CacheConfig cacheConfig = new CacheConfig();
         cacheConfig.setEnabled(true);
-        registry = new CacheManagerRegistry(cacheConfig, memoryManager);
+        registry = new CacheManagerRegistry(cacheConfig, memoryManager, new TestingBlockEncodingSerde());
         registry.loadCacheManager();
     }
 

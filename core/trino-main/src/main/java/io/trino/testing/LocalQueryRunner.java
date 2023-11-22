@@ -507,7 +507,7 @@ public class LocalQueryRunner
                 nodeManager);
 
         exchangeManagerRegistry = new ExchangeManagerRegistry();
-        cacheManagerRegistry = new CacheManagerRegistry(cacheConfig, new LocalMemoryManager(new NodeMemoryConfig()));
+        cacheManagerRegistry = new CacheManagerRegistry(cacheConfig, new LocalMemoryManager(new NodeMemoryConfig()), plannerContext.getBlockEncodingSerde());
         this.pluginManager = new PluginManager(
                 (loader, createClassLoader) -> {},
                 catalogFactory,

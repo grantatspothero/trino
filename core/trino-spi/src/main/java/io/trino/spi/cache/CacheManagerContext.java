@@ -13,6 +13,8 @@
  */
 package io.trino.spi.cache;
 
+import io.trino.spi.block.BlockEncodingSerde;
+
 public interface CacheManagerContext
 {
     /**
@@ -20,4 +22,9 @@ public interface CacheManagerContext
      * from the engine.
      */
     MemoryAllocator revocableMemoryAllocator();
+
+    /**
+     * @return {@link BlockEncodingSerde} that {@link CacheManager} can use to compress cached data.
+     */
+    BlockEncodingSerde blockEncodingSerde();
 }

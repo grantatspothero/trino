@@ -25,7 +25,6 @@ import io.trino.spi.block.IntArrayBlock;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheManager.PreferredAddressProvider;
 import io.trino.spi.cache.CacheManager.SplitCache;
-import io.trino.spi.cache.CacheManagerContext;
 import io.trino.spi.cache.CacheSplitId;
 import io.trino.spi.cache.PlanSignature;
 import io.trino.spi.cache.SignatureKey;
@@ -77,15 +76,16 @@ public class TestMemoryCacheManager
         oneMegabytePage = createOneMegaBytePage();
         allocatedRevocableMemory = 0;
         memoryLimit = Long.MAX_VALUE;
-        CacheManagerContext context = () -> bytes -> {
-            checkArgument(bytes >= 0);
-            if (bytes > memoryLimit) {
-                return false;
-            }
-            allocatedRevocableMemory = bytes;
-            return true;
-        };
-        cacheManager = new MemoryCacheManager(context.revocableMemoryAllocator(), false);
+        cacheManager = new MemoryCacheManager(
+                bytes -> {
+                    checkArgument(bytes >= 0);
+                    if (bytes > memoryLimit) {
+                        return false;
+                    }
+                    allocatedRevocableMemory = bytes;
+                    return true;
+                },
+                false);
     }
 
     @Test

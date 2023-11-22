@@ -27,6 +27,7 @@ import io.trino.operator.DevNullOperator;
 import io.trino.operator.Driver;
 import io.trino.operator.DriverContext;
 import io.trino.operator.DriverFactory;
+import io.trino.spi.block.TestingBlockEncodingSerde;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheSplitId;
 import io.trino.spi.cache.PlanSignature;
@@ -90,7 +91,7 @@ public class TestCacheDriverFactory
                 .setMaxQueryMemoryPerNode(DataSize.of(32, MEGABYTE));
         CacheConfig cacheConfig = new CacheConfig();
         cacheConfig.setEnabled(true);
-        registry = new CacheManagerRegistry(cacheConfig, new LocalMemoryManager(config, DataSize.of(1024, MEGABYTE).toBytes()));
+        registry = new CacheManagerRegistry(cacheConfig, new LocalMemoryManager(config, DataSize.of(1024, MEGABYTE).toBytes()), new TestingBlockEncodingSerde());
         registry.loadCacheManager();
         scheduledExecutor = Executors.newScheduledThreadPool(1);
     }
