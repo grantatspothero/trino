@@ -20,6 +20,7 @@ import io.trino.plugin.varada.dispatcher.ProxiedConnectorInitializer;
 import io.trino.plugin.warp.proxiedconnector.deltalake.DeltaLakeProxiedConnectorTransformer;
 import io.trino.plugin.warp.proxiedconnector.hive.HiveProxiedConnectorTransformer;
 import io.trino.plugin.warp.proxiedconnector.hudi.HudiProxiedConnectorTransformer;
+import io.trino.plugin.warp.proxiedconnector.iceberg.IcebergProxiedConnectorTransformer;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
 
@@ -43,7 +44,7 @@ public class ObjectStoreProxyConnectorInitializer
 
                     binder.bind(DeltaLakeProxiedConnectorTransformer.class);
                     binder.bind(HiveProxiedConnectorTransformer.class);
-                    binder.bind(GalaxyIcebergProxiedConnectorTransformer.class);
+                    binder.bind(IcebergProxiedConnectorTransformer.class);
                     binder.bind(HudiProxiedConnectorTransformer.class);
                 });
     }
