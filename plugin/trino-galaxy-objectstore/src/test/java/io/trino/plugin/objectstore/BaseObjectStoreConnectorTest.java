@@ -1053,23 +1053,6 @@ public abstract class BaseObjectStoreConnectorTest
                 .hasStackTraceContaining("at io.trino.server.security.galaxy.GalaxyAccessControl.checkCanCreateTable");
     }
 
-    // increased timeout to be able to handle galaxy security RTT addition
-    // TODO improve tests' speed, decrease the timeout back
-    @Test(timeOut = 280_000)
-    @Override
-    public void testReadMetadataWithRelationsConcurrentModifications()
-            throws Exception
-    {
-        if (!hasBehavior(SUPPORTS_CREATE_TABLE)) {
-            throw new SkipException("Cannot test");
-        }
-
-        int readIterations = 5;
-        int testTimeoutSeconds = 260;
-
-        testReadMetadataWithRelationsConcurrentModifications(readIterations, testTimeoutSeconds);
-    }
-
     @Test
     @Override
     public void testSelectInTransaction()

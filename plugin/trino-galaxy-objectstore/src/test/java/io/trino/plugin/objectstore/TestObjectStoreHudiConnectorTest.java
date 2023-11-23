@@ -334,14 +334,6 @@ public class TestObjectStoreHudiConnectorTest
 
     @Test
     @Override
-    public void testReadMetadataWithRelationsConcurrentModifications()
-            throws Exception
-    {
-        skipTestUnless(hasBehavior(SUPPORTS_CREATE_TABLE));
-        super.testReadMetadataWithRelationsConcurrentModifications();
-    }
-
-    @Override
     public void testHiveSpecificTableProperty()
     {
         assertThatThrownBy(super::testHiveSpecificTableProperty)
