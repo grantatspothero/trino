@@ -32,6 +32,7 @@ import org.junit.jupiter.api.parallel.Execution;
 import static io.trino.spi.exchange.ExchangeSourceOutputSelector.Selection.EXCLUDED;
 import static io.trino.spi.exchange.ExchangeSourceOutputSelector.Selection.INCLUDED;
 import static io.trino.spi.exchange.ExchangeSourceOutputSelector.Selection.UNKNOWN;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT;
@@ -195,6 +196,20 @@ public class TestExchangeSourceOutputSelector
         assertThatThrownBy(() -> builder.exclude(EXCHANGE_ID_1, 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("decision for partition 0 is already made: 0");
+    }
+
+    @Test
+    public void testToString()
+    {
+        ExchangeSourceOutputSelector selector = ExchangeSourceOutputSelector.builder(ImmutableSet.of(EXCHANGE_ID_1, EXCHANGE_ID_2))
+                .include(EXCHANGE_ID_1, 0, 1)
+                .exclude(EXCHANGE_ID_1, 1)
+                .include(EXCHANGE_ID_1, 2, 0)
+                .exclude(EXCHANGE_ID_2, 3)
+                .setPartitionCount(EXCHANGE_ID_2, 4)
+                .build();
+
+        assertThat(selector).hasToString("ExchangeSourceOutputSelector[version=0, values={exchange_1=[0=1,1=E,2=0], exchange_2=[0=U,1=U,2=U,3=E]}, finalSelector=false]");
     }
 
     private ExchangeSourceOutputSelector serializeDeserialize(ExchangeSourceOutputSelector selector)

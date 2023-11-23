@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
@@ -69,6 +70,15 @@ public class BufferingSplitSource
     public Optional<List<Object>> getTableExecuteSplitsInfo()
     {
         return source.getTableExecuteSplitsInfo();
+    }
+
+    @Override
+    public String toString()
+    {
+        return toStringHelper(this)
+                .add("bufferSize", bufferSize)
+                .add("source", source)
+                .toString();
     }
 
     private static class GetNextBatch
