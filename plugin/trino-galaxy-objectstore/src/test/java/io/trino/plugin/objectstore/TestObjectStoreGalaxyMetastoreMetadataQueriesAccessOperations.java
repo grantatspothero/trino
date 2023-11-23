@@ -405,11 +405,13 @@ public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
         assertMetastoreInvocations("SELECT * FROM system.jdbc.columns WHERE table_name = 'test_table_0'",
                 ImmutableMultiset.builder()
                         .add(GET_ALL_DATABASES)
+                        .add(GET_ALL_TABLES_FROM_DATABASE)
                         .addCopies(GET_TABLE, 2)
                         .build());
         assertMetastoreInvocations("SELECT * FROM system.jdbc.columns WHERE table_name LIKE 'test\\_table\\_0' ESCAPE '\\'",
                 ImmutableMultiset.builder()
                         .add(GET_ALL_DATABASES)
+                        .add(GET_ALL_TABLES_FROM_DATABASE)
                         .addCopies(GET_TABLE, 2)
                         .build());
         assertMetastoreInvocations("SELECT * FROM system.jdbc.columns WHERE table_name LIKE 'test_table_0' ESCAPE '\\'",
