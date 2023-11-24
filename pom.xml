@@ -169,7 +169,7 @@
         <dep.arrow.version>14.0.1</dep.arrow.version>
         <dep.avro.version>1.11.3</dep.avro.version>
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
-        <dep.takari.version>2.1.1</dep.takari.version>
+        <dep.takari.version>2.1.2</dep.takari.version>
         <dep.tcnative.version>2.0.62.Final</dep.tcnative.version>
         <dep.aws-sdk.version>1.12.595</dep.aws-sdk.version>
         <dep.jsonwebtoken.version>0.12.3</dep.jsonwebtoken.version>
