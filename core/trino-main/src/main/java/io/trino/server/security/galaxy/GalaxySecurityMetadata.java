@@ -28,6 +28,7 @@ import io.starburst.stargate.accesscontrol.privilege.GrantKind;
 import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.ColumnId;
 import io.starburst.stargate.id.EntityId;
+import io.starburst.stargate.id.FunctionId;
 import io.starburst.stargate.id.RoleName;
 import io.starburst.stargate.id.SchemaId;
 import io.starburst.stargate.id.TableId;
@@ -39,6 +40,7 @@ import io.trino.metadata.SystemSecurityMetadata;
 import io.trino.server.galaxy.catalogs.CatalogResolver;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogSchemaName;
+import io.trino.spi.connector.CatalogSchemaRoutineName;
 import io.trino.spi.connector.CatalogSchemaTableName;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.function.CatalogSchemaFunctionName;
@@ -57,9 +59,10 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.starburst.stargate.accesscontrol.privilege.GrantKind.ALLOW;
 import static io.starburst.stargate.accesscontrol.privilege.GrantKind.DENY;
-import static io.trino.server.security.galaxy.GalaxyIdentity.createViewOwnerIdentity;
+import static io.trino.server.security.galaxy.GalaxyIdentity.createViewOrFunctionOwnerIdentity;
 import static io.trino.server.security.galaxy.GalaxyIdentity.toDispatchSession;
 import static io.trino.spi.StandardErrorCode.CATALOG_NOT_FOUND;
+import static io.trino.spi.StandardErrorCode.FUNCTION_NOT_FOUND;
 import static io.trino.spi.StandardErrorCode.INVALID_VIEW;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.connector.SchemaTableName.schemaTableName;
@@ -345,7 +348,7 @@ public class GalaxySecurityMetadata
             throw new TrinoException(INVALID_VIEW,
                     format("View '%s' does not have an explicit owner role, which is not allowed. Please define an explicit owner with an 'ALTER VIEW %s SET AUTHORIZATION ROLE' command. For more information, visit docs.starburst.io/starburst-galaxy/security/privileges.html", viewName, viewName));
         }
-        return Optional.of(createViewOwnerIdentity(session.getIdentity(), privileges.getOwner(), privileges.getOwnerId()));
+        return Optional.of(createViewOrFunctionOwnerIdentity(session.getIdentity(), privileges.getOwner(), privileges.getOwnerId()));
     }
 
     /**
@@ -361,7 +364,7 @@ public class GalaxySecurityMetadata
         if (!privileges.isExplicitOwner()) {
             return Optional.empty();
         }
-        return Optional.of(createViewOwnerIdentity(session.getIdentity(), privileges.getOwner(), privileges.getOwnerId()));
+        return Optional.of(createViewOrFunctionOwnerIdentity(session.getIdentity(), privileges.getOwner(), privileges.getOwnerId()));
     }
 
     @Override
@@ -373,8 +376,16 @@ public class GalaxySecurityMetadata
     @Override
     public Optional<Identity> getFunctionRunAsIdentity(Session session, CatalogSchemaFunctionName functionName)
     {
-        // TODO(https://github.com/starburstdata/galaxy-trino/issues/1306)
-        return Optional.empty();
+        // This method is only called for SECURITY DEFINER functions, so return the identity of the function owner
+        if (!GalaxyAccessControl.isInGalaxyFunctionsSchema(new CatalogSchemaRoutineName(functionName.getCatalogName(), functionName.getSchemaName(), functionName.getFunctionName()))) {
+            throw new TrinoException(FUNCTION_NOT_FOUND, "SECURITY DEFINER Function %s must be in schema galaxy.functions".formatted(functionName));
+        }
+        DispatchSession dispatchSession = toDispatchSession(session);
+        EntityPrivileges privileges = accessControlClient.getEntityPrivileges(dispatchSession, dispatchSession.getRoleId(), toFunctionEntity(session.getTransactionId(), functionName));
+        if (!privileges.isExplicitOwner()) {
+            return Optional.empty();
+        }
+        return Optional.of(createViewOrFunctionOwnerIdentity(session.getIdentity(), privileges.getOwner(), privileges.getOwnerId()));
     }
 
     @Override
@@ -505,6 +516,11 @@ public class GalaxySecurityMetadata
     public TableId toTableEntity(Optional<TransactionId> transactionId, CatalogSchemaTableName table)
     {
         return new TableId(translateCatalogNameToId(transactionId, table.getCatalogName()), table.getSchemaTableName().getSchemaName(), table.getSchemaTableName().getTableName());
+    }
+
+    public FunctionId toFunctionEntity(Optional<TransactionId> transactionId, CatalogSchemaFunctionName table)
+    {
+        return new FunctionId(translateCatalogNameToId(transactionId, table.getCatalogName()), table.getSchemaName(), table.getFunctionName());
     }
 
     private ColumnId toColumnEntity(Optional<TransactionId> transactionId, QualifiedObjectName table, String columnName)

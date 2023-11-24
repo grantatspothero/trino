@@ -210,7 +210,7 @@ public final class GalaxyIdentity
                 crypto.decryptToUtf8(parts.get(4)));
     }
 
-    public static Identity createViewOwnerIdentity(Identity identity, RoleName viewOwnerRoleName, RoleId viewOwnerId)
+    public static Identity createViewOrFunctionOwnerIdentity(Identity identity, RoleName viewOwnerRoleName, RoleId viewOwnerId)
     {
         // Return an Identity with the synthetic user, the updated credentials, and enabled
         // roles consisting only of the viewOwnerId

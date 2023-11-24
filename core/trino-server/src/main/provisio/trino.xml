@@ -188,6 +188,12 @@
         </artifact>
     </artifactSet>
 
+    <artifactSet to="plugin/galaxy-catalog">
+        <artifact id="${project.groupId}:trino-galaxy-catalog:zip:${project.version}">
+            <unpack />
+        </artifact>
+    </artifactSet>
+
     <artifactSet to="plugin/galaxy-kafka-event-listener">
         <artifact id="${project.groupId}:trino-galaxy-kafka-event-listener:zip:${project.version}">
             <unpack />

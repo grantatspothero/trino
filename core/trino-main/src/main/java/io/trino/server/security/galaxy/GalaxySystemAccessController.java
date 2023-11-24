@@ -16,6 +16,7 @@ package io.trino.server.security.galaxy;
 import com.google.inject.Inject;
 import io.starburst.stargate.accesscontrol.client.ColumnMaskExpression;
 import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
+import io.starburst.stargate.accesscontrol.client.GalaxyLanguageFunctionDetails;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
 import io.starburst.stargate.id.AccountId;
@@ -178,6 +179,11 @@ public class GalaxySystemAccessController
         return accessControlClient.canExecuteFunction(toDispatchSession(context.getIdentity()), functionId);
     }
 
+    public boolean canExecuteUserDefinedFunction(SystemSecurityContext context, FunctionId functionId)
+    {
+        return getAvailableFunctions(context).stream().anyMatch(function -> functionId.equals(function.functionId()));
+    }
+
     public List<ViewExpression> getRowFilters(SystemSecurityContext context, TableId tableId)
     {
         return getEntityPrivileges(context, tableId).getRowFilters().stream()
@@ -220,6 +226,11 @@ public class GalaxySystemAccessController
         return Optional.of(builder.schema(tableId.getSchemaName())
                 .expression(columnMask.expression())
                 .build());
+    }
+
+    public Set<GalaxyLanguageFunctionDetails> getAvailableFunctions(SystemSecurityContext context)
+    {
+        return getCache(context).getAvailableFunctions(getContextRoleId(context.getIdentity()));
     }
 
     private GalaxyQueryPermissions getCache(SystemSecurityContext context)

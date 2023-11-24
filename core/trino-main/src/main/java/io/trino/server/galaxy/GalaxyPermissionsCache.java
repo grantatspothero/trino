@@ -23,6 +23,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import io.airlift.jmx.CacheStatsMBean;
 import io.starburst.stargate.accesscontrol.client.ContentsVisibility;
+import io.starburst.stargate.accesscontrol.client.GalaxyLanguageFunctionDetails;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
 import io.starburst.stargate.accesscontrol.privilege.GrantKind;
@@ -102,6 +103,7 @@ public class GalaxyPermissionsCache
         // It's a cache only for convenience to use loading cache's bulk loading capability
         private final LoadingCache<TableVisibilityKey, ContentsVisibility> tableVisibility;
         private final LoadingCache<VisibilityForTablesKey, Boolean> visibilityForTables;
+        private final LoadingCache<RoleId, Set<GalaxyLanguageFunctionDetails>> functions;
 
         public GalaxyQueryPermissions(TrinoSecurityApi trinoSecurityApi, DispatchSession session)
         {
@@ -156,6 +158,10 @@ public class GalaxyPermissionsCache
                         return tableNames.stream()
                                 .collect(toImmutableMap(tableName -> new VisibilityForTablesKey(catalogId, schemaName, tableName), tableName -> visibility.isVisible(tableName)));
                     }));
+
+            functions = buildNonEvictableCache(
+                    CacheBuilder.newBuilder(),
+                    CacheLoader.from(key -> trinoSecurityApi.getAvailableFunctions(session)));
         }
 
         public EntityPrivileges getEntityPrivileges(RoleId roleId, EntityId entity)
@@ -250,6 +256,16 @@ public class GalaxyPermissionsCache
                     .filter(entry -> entry.getValue())
                     .map(entry -> entry.getKey().tableName())
                     .collect(toImmutableSet()));
+        }
+
+        public Set<GalaxyLanguageFunctionDetails> getAvailableFunctions(RoleId roleId)
+        {
+            try {
+                return functions.get(roleId);
+            }
+            catch (ExecutionException e) { // Impossible, the cache loader does not currently throw checked exceptions
+                throw new RuntimeException(e);
+            }
         }
 
         private record EntityPrivilegesKey(RoleId roleId, EntityId entity)

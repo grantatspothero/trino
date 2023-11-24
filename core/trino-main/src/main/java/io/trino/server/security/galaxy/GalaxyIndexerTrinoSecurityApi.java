@@ -22,6 +22,7 @@ import io.starburst.stargate.accesscontrol.client.CreateEntityPrivilege;
 import io.starburst.stargate.accesscontrol.client.CreateRoleGrant;
 import io.starburst.stargate.accesscontrol.client.EntityAlreadyExistsException;
 import io.starburst.stargate.accesscontrol.client.EntityNotFoundException;
+import io.starburst.stargate.accesscontrol.client.GalaxyLanguageFunctionDetails;
 import io.starburst.stargate.accesscontrol.client.GalaxyPrincipal;
 import io.starburst.stargate.accesscontrol.client.OperationNotAllowedException;
 import io.starburst.stargate.accesscontrol.client.RevokeEntityPrivilege;
@@ -219,6 +220,12 @@ public enum GalaxyIndexerTrinoSecurityApi
     public boolean canUseLocation(DispatchSession session, String location)
     {
         return true;
+    }
+
+    @Override
+    public Set<GalaxyLanguageFunctionDetails> getAvailableFunctions(DispatchSession session)
+    {
+        return ImmutableSet.of();
     }
 
     @Override

@@ -15,6 +15,7 @@ package io.trino.server.galaxy;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import io.airlift.node.NodeInfo;
 import io.airlift.openmetrics.MetricsConfig;
 import io.airlift.openmetrics.MetricsResource;
 import io.trino.server.security.ResourceSecurity;
@@ -39,9 +40,10 @@ public class GalaxyCustomerMetricsResource
     public GalaxyCustomerMetricsResource(
             MBeanServer mbeanServer,
             @ForCustomerMetrics MBeanExporter mbeanExporter,
-            MetricsConfig metricsConfig)
+            MetricsConfig metricsConfig,
+            NodeInfo nodeInfo)
     {
-        super(mbeanServer, mbeanExporter, metricsConfig);
+        super(mbeanServer, mbeanExporter, metricsConfig, nodeInfo);
     }
 
     @Override

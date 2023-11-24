@@ -46,6 +46,7 @@ import io.trino.spi.security.SystemSecurityContext;
 import io.trino.spi.security.TrinoPrincipal;
 import io.trino.spi.security.ViewExpression;
 import io.trino.spi.type.Type;
+import jakarta.ws.rs.NotFoundException;
 
 import java.security.Principal;
 import java.util.Collection;
@@ -67,6 +68,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.starburst.stargate.accesscontrol.client.OperationNotAllowedException.operationNotAllowed;
+import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_FUNCTION;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_SCHEMA;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_TABLE;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.DELETE;
@@ -84,6 +86,7 @@ import static io.trino.spi.security.AccessDeniedException.denyAddColumn;
 import static io.trino.spi.security.AccessDeniedException.denyCommentColumn;
 import static io.trino.spi.security.AccessDeniedException.denyCommentTable;
 import static io.trino.spi.security.AccessDeniedException.denyCreateCatalog;
+import static io.trino.spi.security.AccessDeniedException.denyCreateFunction;
 import static io.trino.spi.security.AccessDeniedException.denyCreateMaterializedView;
 import static io.trino.spi.security.AccessDeniedException.denyCreateSchema;
 import static io.trino.spi.security.AccessDeniedException.denyCreateTable;
@@ -92,6 +95,7 @@ import static io.trino.spi.security.AccessDeniedException.denyCreateViewWithSele
 import static io.trino.spi.security.AccessDeniedException.denyDeleteTable;
 import static io.trino.spi.security.AccessDeniedException.denyDropCatalog;
 import static io.trino.spi.security.AccessDeniedException.denyDropColumn;
+import static io.trino.spi.security.AccessDeniedException.denyDropFunction;
 import static io.trino.spi.security.AccessDeniedException.denyDropMaterializedView;
 import static io.trino.spi.security.AccessDeniedException.denyDropSchema;
 import static io.trino.spi.security.AccessDeniedException.denyDropTable;
@@ -679,11 +683,19 @@ public class GalaxyAccessControl
             return true;
         }
         GalaxySystemAccessController controller = getSystemAccessController(context);
+
         Optional<CatalogId> catalogId = controller.getCatalogId(function.getCatalogName());
         if (catalogId.isEmpty()) {
             return false;
         }
-        return controller.canExecuteFunction(context, new FunctionId(catalogId.get(), function.getSchemaName(), function.getRoutineName()));
+        FunctionId functionId = new FunctionId(catalogId.get(), function.getSchemaName(), function.getRoutineName());
+
+        if (isInGalaxyFunctionsSchema(function)) {
+            return controller.canExecuteUserDefinedFunction(context, functionId);
+        }
+
+        // Otherwise it might be a table function
+        return controller.canExecuteFunction(context, functionId);
     }
 
     @Override
@@ -748,17 +760,28 @@ public class GalaxyAccessControl
     }
 
     @Override
-    public void checkCanCreateFunction(SystemSecurityContext systemSecurityContext, CatalogSchemaRoutineName functionName)
+    public void checkCanCreateFunction(SystemSecurityContext context, CatalogSchemaRoutineName functionName)
     {
-        // todo
-        SystemAccessControl.super.checkCanCreateFunction(systemSecurityContext, functionName);
+        if (!isInGalaxyFunctionsSchema(functionName) || !hasAccountPrivilege(context.getIdentity(), CREATE_FUNCTION)) {
+            denyCreateFunction(functionName.getRoutineName());
+        }
     }
 
     @Override
-    public void checkCanDropFunction(SystemSecurityContext systemSecurityContext, CatalogSchemaRoutineName functionName)
+    public void checkCanDropFunction(SystemSecurityContext context, CatalogSchemaRoutineName functionName)
     {
-        // todo
-        SystemAccessControl.super.checkCanDropFunction(systemSecurityContext, functionName);
+        if (!isInGalaxyFunctionsSchema(functionName)) {
+            denyDropFunction(functionName.getRoutineName());
+        }
+        if (hasAccountPrivilege(context.getIdentity(), CREATE_FUNCTION)) {
+            return;
+        }
+        CatalogId catalogId = getSystemAccessController(context.getIdentity()).getCatalogId(functionName.getCatalogName())
+                .orElseThrow(NotFoundException::new);
+        FunctionId functionId = new FunctionId(catalogId, functionName.getSchemaName(), functionName.getRoutineName());
+        if (!isEntityOwner(controllerSupplier.apply(context.getIdentity()), context, Optional.of(functionId))) {
+            denyDropFunction(functionName.getRoutineName());
+        }
     }
 
     // Helper methods that provide explanations for denied access
@@ -1146,5 +1169,10 @@ public class GalaxyAccessControl
         return isSystemCatalog(catalogSchemaRoutineName.getCatalogName()) &&
                 BUILTIN_SCHEMA.equals(catalogSchemaRoutineName.getSchemaName()) &&
                 SYSTEM_BUILTIN_FUNCTIONS.contains(catalogSchemaRoutineName.getRoutineName());
+    }
+
+    public static boolean isInGalaxyFunctionsSchema(CatalogSchemaRoutineName routineName)
+    {
+        return routineName.getCatalogName().equals("galaxy") && routineName.getSchemaName().equals("functions");
     }
 }
