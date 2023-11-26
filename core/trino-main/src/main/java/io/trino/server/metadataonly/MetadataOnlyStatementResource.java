@@ -198,7 +198,7 @@ public class MetadataOnlyStatementResource
 
         QueryId queryId = dispatchManager.createQueryId();
 
-        SessionContext sessionContext = sessionContextFactory.createSessionContext(headers, Optional.empty(), remoteAddress, identity);
+        SessionContext sessionContext = sessionContextFactory.createSessionContext(headers, remoteAddress, identity);
         List<QueryCatalog> decryptedCatalogs;
         Span decryptedCatalogsSpan = tracer.spanBuilder("metadata-decrypt-catalogs")
                 .setAttribute(TrinoAttributes.QUERY_ID, queryId.toString())
