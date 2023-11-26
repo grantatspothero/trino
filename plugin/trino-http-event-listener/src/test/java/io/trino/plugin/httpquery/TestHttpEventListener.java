@@ -262,7 +262,7 @@ class TestHttpEventListener
         server.enqueue(new MockResponse()
                 .setResponseCode(200));
 
-        EventListener eventListener = factory.create(Map.of(
+        EventListener eventListener = createEventListener(Map.of(
                 "http-event-listener.connect-ingest-uri", server.url("/").toString()));
 
         eventListener.queryCreated(null);
@@ -276,7 +276,7 @@ class TestHttpEventListener
     void testAllLoggingEnabledShouldSendCorrectEvent()
             throws Exception
     {
-        EventListener eventListener = factory.create(Map.of(
+        EventListener eventListener = createEventListener(Map.of(
                 "http-event-listener.connect-ingest-uri", server.url("/").toString(),
                 "http-event-listener.log-completed", "true",
                 "http-event-listener.log-created", "true",
@@ -300,7 +300,7 @@ class TestHttpEventListener
     void testContentTypeDefaultHeaderShouldAlwaysBeSet()
             throws Exception
     {
-        EventListener eventListener = factory.create(Map.of(
+        EventListener eventListener = createEventListener(Map.of(
                 "http-event-listener.connect-ingest-uri", server.url("/").toString(),
                 "http-event-listener.log-completed", "true"));
 
@@ -317,7 +317,7 @@ class TestHttpEventListener
     void testHttpHeadersShouldBePresent()
             throws Exception
     {
-        EventListener eventListener = factory.create(Map.of(
+        EventListener eventListener = createEventListener(Map.of(
                 "http-event-listener.connect-ingest-uri", server.url("/").toString(),
                 "http-event-listener.log-completed", "true",
                 "http-event-listener.connect-http-headers", "Authorization: Trust Me!, Cache-Control: no-cache"));
@@ -338,7 +338,7 @@ class TestHttpEventListener
         setupServerTLSCertificate();
         server.enqueue(new MockResponse().setResponseCode(200));
 
-        EventListener eventListener = factory.create(Map.of(
+        EventListener eventListener = createEventListener(Map.of(
                 "http-event-listener.connect-ingest-uri", server.url("/").toString(),
                 "http-event-listener.log-completed", "true",
                 "http-event-listener.http-client.key-store-path", "src/test/resources/trino-httpquery-test.p12",
@@ -363,7 +363,7 @@ class TestHttpEventListener
         setupServerTLSCertificate();
         server.enqueue(new MockResponse().setResponseCode(200));
 
-        EventListener eventListener = factory.create(Map.of(
+        EventListener eventListener = createEventListener(Map.of(
                 "http-event-listener.connect-ingest-uri", server.url("/").toString(),
                 "http-event-listener.log-completed", "true",
                 "http-event-listener.http-client.key-store-path", "src/test/resources/trino-httpquery-test2.p12",
@@ -383,7 +383,7 @@ class TestHttpEventListener
     {
         server.enqueue(new MockResponse().setResponseCode(200));
 
-        EventListener eventListener = factory.create(Map.of(
+        EventListener eventListener = createEventListener(Map.of(
                 "http-event-listener.connect-ingest-uri", "https://%s:%s/".formatted(server.getHostName(), server.getPort()),
                 "http-event-listener.log-completed", "true",
                 "http-event-listener.http-client.key-store-path", "src/test/resources/trino-httpquery-test.p12",
@@ -410,7 +410,7 @@ class TestHttpEventListener
     private void testServerShouldRetry(int responseCode)
             throws Exception
     {
-        EventListener eventListener = factory.create(Map.of(
+        EventListener eventListener = createEventListener(Map.of(
                 "http-event-listener.connect-ingest-uri", server.url("/").toString(),
                 "http-event-listener.log-completed", "true",
                 "http-event-listener.connect-retry-count", "1"));
@@ -428,7 +428,7 @@ class TestHttpEventListener
     void testServerDisconnectShouldRetry()
             throws Exception
     {
-        EventListener eventListener = factory.create(Map.of(
+        EventListener eventListener = createEventListener(Map.of(
                 "http-event-listener.connect-ingest-uri", server.url("/").toString(),
                 "http-event-listener.log-completed", "true",
                 "http-event-listener.connect-retry-count", "1",
@@ -448,7 +448,7 @@ class TestHttpEventListener
     void testServerDelayDoesNotBlock()
             throws Exception
     {
-        EventListener eventListener = factory.create(Map.of(
+        EventListener eventListener = createEventListener(Map.of(
                 "http-event-listener.connect-ingest-uri", server.url("/").toString(),
                 "http-event-listener.log-completed", "true"));
 
@@ -516,5 +516,13 @@ class TestHttpEventListener
 
         SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
         server.useHttps(sslSocketFactory, false);
+    }
+
+    private EventListener createEventListener(Map<String, String> config)
+    {
+        return factory.create(ImmutableMap.<String, String>builder()
+                .putAll(config)
+                .put("bootstrap.quiet", "true")
+                .buildOrThrow());
     }
 }
