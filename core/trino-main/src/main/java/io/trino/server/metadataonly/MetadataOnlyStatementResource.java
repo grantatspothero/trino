@@ -95,7 +95,7 @@ import static io.airlift.concurrent.MoreFutures.whenAnyComplete;
 import static io.trino.SystemSessionProperties.getRetryPolicy;
 import static io.trino.execution.QueryState.FAILED;
 import static io.trino.memory.context.AggregatedMemoryContext.newSimpleAggregatedMemoryContext;
-import static io.trino.server.HttpRequestSessionContextFactory.AUTHENTICATED_IDENTITY;
+import static io.trino.server.ServletSecurityUtils.authenticatedIdentity;
 import static io.trino.server.galaxy.catalogs.SecretDecryption.decryptCatalog;
 import static io.trino.server.protocol.ProtocolUtil.createColumns;
 import static io.trino.server.protocol.ProtocolUtil.toQueryError;
@@ -186,7 +186,7 @@ public class MetadataOnlyStatementResource
 
         TransactionId transactionId = TransactionId.create();
         Optional<String> remoteAddress = Optional.ofNullable(servletRequest.getRemoteAddr());
-        Optional<Identity> identity = Optional.ofNullable((Identity) servletRequest.getAttribute(AUTHENTICATED_IDENTITY))
+        Optional<Identity> identity = authenticatedIdentity(servletRequest)
                 .map(i -> Identity.from(i)
                         .withAdditionalExtraCredentials(ImmutableMap.of(TRANSACTION_ID_KEY, transactionId.toString()))
                         .build());

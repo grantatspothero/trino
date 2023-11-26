@@ -105,7 +105,8 @@ import static io.trino.client.DrainState.CLUSTER_START_TIME_HEADER;
 import static io.trino.client.DrainState.IF_IDLE_FOR_HEADER;
 import static io.trino.execution.QueryState.FAILED;
 import static io.trino.execution.QueryState.QUEUED;
-import static io.trino.server.HttpRequestSessionContextFactory.AUTHENTICATED_IDENTITY;
+import static io.trino.server.ServletSecurityUtils.authenticatedIdentity;
+import static io.trino.server.ServletSecurityUtils.clearAuthenticatedIdentity;
 import static io.trino.server.protocol.QueryInfoUrlFactory.getQueryInfoUri;
 import static io.trino.server.protocol.Slug.Context.EXECUTING_QUERY;
 import static io.trino.server.protocol.Slug.Context.QUEUED_QUERY;
@@ -238,7 +239,7 @@ public class QueuedStatementResource
     private Query registerQueryIfNeeded(HttpServletRequest servletRequest, HttpHeaders httpHeaders, Function<SessionContext, Query> queryFactory)
     {
         Optional<String> remoteAddress = Optional.ofNullable(servletRequest.getRemoteAddr());
-        Optional<Identity> identity = Optional.ofNullable((Identity) servletRequest.getAttribute(AUTHENTICATED_IDENTITY));
+        Optional<Identity> identity = authenticatedIdentity(servletRequest);
         if (identity.flatMap(Identity::getPrincipal).map(InternalPrincipal.class::isInstance).orElse(false)) {
             throw badRequest(FORBIDDEN, "Internal communication can not be used to start a query");
         }
@@ -250,7 +251,7 @@ public class QueuedStatementResource
                 .orElseThrow(() -> badRequest(GONE, "Server is shutting down"));
 
         // let authentication filter know that identity lifecycle has been handed off
-        servletRequest.setAttribute(AUTHENTICATED_IDENTITY, null);
+        clearAuthenticatedIdentity(servletRequest);
 
         return query;
     }

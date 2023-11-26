@@ -67,7 +67,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.airlift.testing.Closeables.closeAllSuppress;
-import static io.trino.server.HttpRequestSessionContextFactory.AUTHENTICATED_IDENTITY;
+import static io.trino.server.ServletSecurityUtils.authenticatedIdentity;
 import static io.trino.server.ServletSecurityUtils.setAuthenticatedIdentity;
 import static io.trino.server.galaxy.catalogs.CatalogVersioningUtils.toCatalogHandle;
 import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.PORTAL;
@@ -309,8 +309,8 @@ public final class GalaxyQueryRunner
                 return;
             }
 
-            Identity existingIdentity = (Identity) request.getProperty(AUTHENTICATED_IDENTITY);
-            if (existingIdentity == null) {
+            Optional<Identity> existingIdentity = authenticatedIdentity(request);
+            if (existingIdentity.isEmpty()) {
                 return;
             }
 
@@ -327,7 +327,7 @@ public final class GalaxyQueryRunner
                     new RoleId(getRequiredExtraCredential(extraCredentials, "roleId")));
 
             Identity identity = createIdentity(
-                    existingIdentity.getUser(),
+                    existingIdentity.get().getUser(),
                     dispatchSession.getAccountId(),
                     dispatchSession.getUserId(),
                     dispatchSession.getRoleId(),

@@ -62,6 +62,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.net.HttpHeaders.USER_AGENT;
 import static io.starburst.stargate.id.CatalogVersion.GALAXY_CATALOGS_HEADER;
 import static io.trino.client.ProtocolHeaders.detectProtocol;
+import static io.trino.server.ServletSecurityUtils.authenticatedIdentity;
 import static io.trino.spi.security.AccessDeniedException.denySetRole;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -71,7 +72,6 @@ import static java.util.Objects.requireNonNull;
 public class HttpRequestSessionContextFactory
 {
     private static final Splitter DOT_SPLITTER = Splitter.on('.');
-    public static final String AUTHENTICATED_IDENTITY = "trino.authenticated-identity";
 
     private final PreparedStatementEncoder preparedStatementEncoder;
     private final Metadata metadata;
@@ -199,9 +199,7 @@ public class HttpRequestSessionContextFactory
 
     public Identity extractAuthorizedIdentity(HttpServletRequest servletRequest, HttpHeaders httpHeaders)
     {
-        return extractAuthorizedIdentity(
-                Optional.ofNullable((Identity) servletRequest.getAttribute(AUTHENTICATED_IDENTITY)),
-                httpHeaders.getRequestHeaders());
+        return extractAuthorizedIdentity(authenticatedIdentity(servletRequest), httpHeaders.getRequestHeaders());
     }
 
     public Identity extractAuthorizedIdentity(Optional<Identity> optionalAuthenticatedIdentity, MultivaluedMap<String, String> headers)
