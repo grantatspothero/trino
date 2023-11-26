@@ -31,7 +31,7 @@ import io.trino.parquet.reader.MetadataReader;
 import io.trino.plugin.hive.FileFormatDataSourceStats;
 import io.trino.plugin.hive.parquet.TrinoParquetDataSource;
 import io.trino.testing.DistributedQueryRunner;
-import io.trino.transaction.TransactionBuilder;
+import io.trino.testing.TransactionBuilder;
 import org.apache.parquet.hadoop.metadata.BlockMetaData;
 import org.apache.parquet.hadoop.metadata.ColumnChunkMetaData;
 import org.apache.parquet.hadoop.metadata.ParquetMetadata;

@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import static io.trino.plugin.base.util.Closables.closeAllSuppress;
 import static io.trino.testing.TestingSession.testSessionBuilder;
-import static io.trino.transaction.TransactionBuilder.transaction;
+import static io.trino.testing.TransactionBuilder.transaction;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestObjectStoreProperties

@@ -21,7 +21,7 @@ import io.trino.plugin.deltalake.transactionlog.TransactionLogAccess;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.LocalQueryRunner;
-import io.trino.transaction.TransactionBuilder;
+import io.trino.testing.TransactionBuilder;
 
 import java.io.IOException;
 import java.nio.file.Files;
