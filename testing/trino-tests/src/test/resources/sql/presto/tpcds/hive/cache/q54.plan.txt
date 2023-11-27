@@ -10,8 +10,8 @@ local exchange (GATHER, SINGLE, [])
                                     local exchange (GATHER, SINGLE, [])
                                         remote exchange (REPARTITION, HASH, ["ss_customer_sk"])
                                             partial aggregation over (ss_customer_sk)
-                                                join (LEFT, REPLICATED):
-                                                    join (LEFT, REPLICATED):
+                                                cross join:
+                                                    cross join:
                                                         join (INNER, REPLICATED):
                                                             join (INNER, REPLICATED):
                                                                 alternatives
@@ -88,9 +88,11 @@ local exchange (GATHER, SINGLE, [])
                                                             local exchange (GATHER, SINGLE, [])
                                                                 remote exchange (REPLICATE, BROADCAST, [])
                                                                     alternatives
-                                                                        scan date_dim
-                                                                        cache data
+                                                                        dynamic filter (await ["d_month_seq_24", "d_month_seq_24"])
                                                                             scan date_dim
+                                                                        cache data
+                                                                            dynamic filter (await ["d_month_seq_24", "d_month_seq_24"])
+                                                                                scan date_dim
                                                                         load from cache
                                                         local exchange (GATHER, SINGLE, [])
                                                             remote exchange (REPLICATE, BROADCAST, [])

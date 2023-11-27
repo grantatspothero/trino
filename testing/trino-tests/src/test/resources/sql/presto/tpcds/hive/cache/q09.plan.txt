@@ -1,51 +1,18 @@
-join (LEFT, REPLICATED):
-    join (LEFT, REPLICATED):
-        join (LEFT, REPLICATED):
-            join (LEFT, REPLICATED):
-                join (LEFT, REPLICATED):
-                    join (LEFT, REPLICATED):
-                        join (LEFT, REPLICATED):
-                            join (RIGHT, PARTITIONED):
-                                remote exchange (REPARTITION, HASH, [])
-                                    final aggregation over ()
-                                        local exchange (GATHER, SINGLE, [])
-                                            remote exchange (GATHER, SINGLE, [])
-                                                alternatives
-                                                    partial aggregation over ()
-                                                        scan store_sales
-                                                    cache data
-                                                        partial aggregation over ()
-                                                            scan store_sales
-                                                    load from cache
-                                local exchange (GATHER, SINGLE, [])
-                                    join (RIGHT, PARTITIONED):
-                                        remote exchange (REPARTITION, HASH, [])
-                                            final aggregation over ()
-                                                local exchange (GATHER, SINGLE, [])
-                                                    remote exchange (GATHER, SINGLE, [])
-                                                        alternatives
-                                                            partial aggregation over ()
-                                                                scan store_sales
-                                                            cache data
-                                                                partial aggregation over ()
-                                                                    scan store_sales
-                                                            load from cache
-                                        local exchange (GATHER, SINGLE, [])
-                                            join (RIGHT, PARTITIONED):
-                                                remote exchange (REPARTITION, HASH, [])
-                                                    final aggregation over ()
-                                                        local exchange (GATHER, SINGLE, [])
-                                                            remote exchange (GATHER, SINGLE, [])
-                                                                alternatives
-                                                                    partial aggregation over ()
-                                                                        scan store_sales
-                                                                    cache data
-                                                                        partial aggregation over ()
-                                                                            scan store_sales
-                                                                    load from cache
-                                                local exchange (GATHER, SINGLE, [])
-                                                    join (RIGHT, PARTITIONED):
-                                                        remote exchange (REPARTITION, HASH, [])
+cross join:
+    cross join:
+        cross join:
+            cross join:
+                cross join:
+                    cross join:
+                        cross join:
+                            cross join:
+                                cross join:
+                                    cross join:
+                                        cross join:
+                                            cross join:
+                                                cross join:
+                                                    cross join:
+                                                        cross join:
                                                             final aggregation over ()
                                                                 local exchange (GATHER, SINGLE, [])
                                                                     remote exchange (GATHER, SINGLE, [])
@@ -56,67 +23,63 @@ join (LEFT, REPLICATED):
                                                                                 partial aggregation over ()
                                                                                     scan store_sales
                                                                             load from cache
+                                                            local exchange (GATHER, SINGLE, [])
+                                                                remote exchange (GATHER, SINGLE, [])
+                                                                    alternatives
+                                                                        scan reason
+                                                                        cache data
+                                                                            scan reason
+                                                                        load from cache
+                                                        final aggregation over ()
+                                                            local exchange (GATHER, SINGLE, [])
+                                                                remote exchange (GATHER, SINGLE, [])
+                                                                    alternatives
+                                                                        partial aggregation over ()
+                                                                            scan store_sales
+                                                                        cache data
+                                                                            partial aggregation over ()
+                                                                                scan store_sales
+                                                                        load from cache
+                                                    final aggregation over ()
                                                         local exchange (GATHER, SINGLE, [])
-                                                            join (RIGHT, PARTITIONED):
-                                                                remote exchange (REPARTITION, HASH, [])
-                                                                    final aggregation over ()
-                                                                        local exchange (GATHER, SINGLE, [])
-                                                                            remote exchange (GATHER, SINGLE, [])
-                                                                                alternatives
-                                                                                    partial aggregation over ()
-                                                                                        scan store_sales
-                                                                                    cache data
-                                                                                        partial aggregation over ()
-                                                                                            scan store_sales
-                                                                                    load from cache
-                                                                local exchange (GATHER, SINGLE, [])
-                                                                    join (RIGHT, PARTITIONED):
-                                                                        remote exchange (REPARTITION, HASH, [])
-                                                                            final aggregation over ()
-                                                                                local exchange (GATHER, SINGLE, [])
-                                                                                    remote exchange (GATHER, SINGLE, [])
-                                                                                        alternatives
-                                                                                            partial aggregation over ()
-                                                                                                scan store_sales
-                                                                                            cache data
-                                                                                                partial aggregation over ()
-                                                                                                    scan store_sales
-                                                                                            load from cache
-                                                                        local exchange (GATHER, SINGLE, [])
-                                                                            join (RIGHT, PARTITIONED):
-                                                                                remote exchange (REPARTITION, HASH, [])
-                                                                                    final aggregation over ()
-                                                                                        local exchange (GATHER, SINGLE, [])
-                                                                                            remote exchange (GATHER, SINGLE, [])
-                                                                                                alternatives
-                                                                                                    partial aggregation over ()
-                                                                                                        scan store_sales
-                                                                                                    cache data
-                                                                                                        partial aggregation over ()
-                                                                                                            scan store_sales
-                                                                                                    load from cache
-                                                                                local exchange (GATHER, SINGLE, [])
-                                                                                    join (RIGHT, PARTITIONED):
-                                                                                        remote exchange (REPARTITION, HASH, [])
-                                                                                            final aggregation over ()
-                                                                                                local exchange (GATHER, SINGLE, [])
-                                                                                                    remote exchange (GATHER, SINGLE, [])
-                                                                                                        alternatives
-                                                                                                            partial aggregation over ()
-                                                                                                                scan store_sales
-                                                                                                            cache data
-                                                                                                                partial aggregation over ()
-                                                                                                                    scan store_sales
-                                                                                                            load from cache
-                                                                                        local exchange (GATHER, SINGLE, [])
-                                                                                            remote exchange (REPARTITION, HASH, [])
-                                                                                                alternatives
-                                                                                                    scan reason
-                                                                                                    cache data
-                                                                                                        scan reason
-                                                                                                    load from cache
-                            local exchange (GATHER, SINGLE, [])
-                                remote exchange (REPLICATE, BROADCAST, [])
+                                                            remote exchange (GATHER, SINGLE, [])
+                                                                alternatives
+                                                                    partial aggregation over ()
+                                                                        scan store_sales
+                                                                    cache data
+                                                                        partial aggregation over ()
+                                                                            scan store_sales
+                                                                    load from cache
+                                                final aggregation over ()
+                                                    local exchange (GATHER, SINGLE, [])
+                                                        remote exchange (GATHER, SINGLE, [])
+                                                            alternatives
+                                                                partial aggregation over ()
+                                                                    scan store_sales
+                                                                cache data
+                                                                    partial aggregation over ()
+                                                                        scan store_sales
+                                                                load from cache
+                                            final aggregation over ()
+                                                local exchange (GATHER, SINGLE, [])
+                                                    remote exchange (GATHER, SINGLE, [])
+                                                        alternatives
+                                                            partial aggregation over ()
+                                                                scan store_sales
+                                                            cache data
+                                                                partial aggregation over ()
+                                                                    scan store_sales
+                                                            load from cache
+                                        final aggregation over ()
+                                            local exchange (GATHER, SINGLE, [])
+                                                remote exchange (GATHER, SINGLE, [])
+                                                    alternatives
+                                                        partial aggregation over ()
+                                                            scan store_sales
+                                                        cache data
+                                                            partial aggregation over ()
+                                                                scan store_sales
+                                                        load from cache
                                     final aggregation over ()
                                         local exchange (GATHER, SINGLE, [])
                                             remote exchange (GATHER, SINGLE, [])
@@ -127,8 +90,6 @@ join (LEFT, REPLICATED):
                                                         partial aggregation over ()
                                                             scan store_sales
                                                     load from cache
-                        local exchange (GATHER, SINGLE, [])
-                            remote exchange (REPLICATE, BROADCAST, [])
                                 final aggregation over ()
                                     local exchange (GATHER, SINGLE, [])
                                         remote exchange (GATHER, SINGLE, [])
@@ -139,8 +100,6 @@ join (LEFT, REPLICATED):
                                                     partial aggregation over ()
                                                         scan store_sales
                                                 load from cache
-                    local exchange (GATHER, SINGLE, [])
-                        remote exchange (REPLICATE, BROADCAST, [])
                             final aggregation over ()
                                 local exchange (GATHER, SINGLE, [])
                                     remote exchange (GATHER, SINGLE, [])
@@ -151,8 +110,6 @@ join (LEFT, REPLICATED):
                                                 partial aggregation over ()
                                                     scan store_sales
                                             load from cache
-                local exchange (GATHER, SINGLE, [])
-                    remote exchange (REPLICATE, BROADCAST, [])
                         final aggregation over ()
                             local exchange (GATHER, SINGLE, [])
                                 remote exchange (GATHER, SINGLE, [])
@@ -163,8 +120,6 @@ join (LEFT, REPLICATED):
                                             partial aggregation over ()
                                                 scan store_sales
                                         load from cache
-            local exchange (GATHER, SINGLE, [])
-                remote exchange (REPLICATE, BROADCAST, [])
                     final aggregation over ()
                         local exchange (GATHER, SINGLE, [])
                             remote exchange (GATHER, SINGLE, [])
@@ -175,8 +130,6 @@ join (LEFT, REPLICATED):
                                         partial aggregation over ()
                                             scan store_sales
                                     load from cache
-        local exchange (GATHER, SINGLE, [])
-            remote exchange (REPLICATE, BROADCAST, [])
                 final aggregation over ()
                     local exchange (GATHER, SINGLE, [])
                         remote exchange (GATHER, SINGLE, [])
@@ -187,8 +140,6 @@ join (LEFT, REPLICATED):
                                     partial aggregation over ()
                                         scan store_sales
                                 load from cache
-    local exchange (GATHER, SINGLE, [])
-        remote exchange (REPLICATE, BROADCAST, [])
             final aggregation over ()
                 local exchange (GATHER, SINGLE, [])
                     remote exchange (GATHER, SINGLE, [])
@@ -199,3 +150,23 @@ join (LEFT, REPLICATED):
                                 partial aggregation over ()
                                     scan store_sales
                             load from cache
+        final aggregation over ()
+            local exchange (GATHER, SINGLE, [])
+                remote exchange (GATHER, SINGLE, [])
+                    alternatives
+                        partial aggregation over ()
+                            scan store_sales
+                        cache data
+                            partial aggregation over ()
+                                scan store_sales
+                        load from cache
+    final aggregation over ()
+        local exchange (GATHER, SINGLE, [])
+            remote exchange (GATHER, SINGLE, [])
+                alternatives
+                    partial aggregation over ()
+                        scan store_sales
+                    cache data
+                        partial aggregation over ()
+                            scan store_sales
+                    load from cache
