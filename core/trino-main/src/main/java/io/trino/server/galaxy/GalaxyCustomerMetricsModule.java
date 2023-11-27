@@ -22,6 +22,8 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
+import io.airlift.node.NodeConfig;
+import io.airlift.node.NodeInfo;
 import io.trino.dispatcher.DispatchManager;
 import io.trino.execution.QueryExecutionMBean;
 import io.trino.server.PrefixObjectNameGeneratorModule.PrefixObjectNameGenerator;
@@ -72,5 +74,16 @@ public class GalaxyCustomerMetricsModule
         mbeans.forEach(mBeanExporter::exportWithGeneratedName);
         checkState(Sets.intersection(defaultMbeanExporter.getManagedClasses().keySet(), mBeanExporter.getManagedClasses().keySet()).isEmpty(), "Duplicate object names exported");
         return mBeanExporter;
+    }
+
+    @ForCustomerMetrics
+    @Singleton
+    @Provides
+    public NodeInfo createNodeInfo()
+    {
+        NodeConfig nodeConfig = new NodeConfig();
+        // Not used in customer metrics resource
+        nodeConfig.setEnvironment("ignored");
+        return new NodeInfo(nodeConfig);
     }
 }
