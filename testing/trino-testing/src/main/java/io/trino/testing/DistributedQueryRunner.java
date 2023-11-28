@@ -238,6 +238,7 @@ public class DistributedQueryRunner
         logging.setLevel("org.glassfish", ERROR);
         logging.setLevel("org.eclipse.jetty.server", WARN);
         logging.setLevel("io.trino.plugin.hive.util.RetryDriver", DEBUG);
+        logging.setLevel("io.trino.execution.scheduler.faulttolerant", DEBUG);
     }
 
     private static TestingTrinoServer createTestingTrinoServer(
