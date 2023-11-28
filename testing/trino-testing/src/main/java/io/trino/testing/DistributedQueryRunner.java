@@ -242,6 +242,7 @@ public class DistributedQueryRunner
         logging.setLevel("org.hibernate.validator.internal.util.Version", WARN);
         logging.setLevel(PluginManager.class.getName(), WARN);
         logging.setLevel(CoordinatorDynamicCatalogManager.class.getName(), WARN);
+        logging.setLevel("io.trino.execution.scheduler.faulttolerant", DEBUG);
     }
 
     private static TestingTrinoServer createTestingTrinoServer(
