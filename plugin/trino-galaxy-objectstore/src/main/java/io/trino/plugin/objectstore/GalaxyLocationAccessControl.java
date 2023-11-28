@@ -25,7 +25,7 @@ import io.trino.spi.security.ConnectorIdentity;
 
 import java.util.Map.Entry;
 
-import static io.trino.plugin.objectstore.GalaxyIdentity.toDispatchSession;
+import static io.trino.plugin.base.galaxy.GalaxyIdentity.toDispatchSession;
 import static java.util.Objects.requireNonNull;
 
 public class GalaxyLocationAccessControl

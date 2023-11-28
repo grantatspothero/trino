@@ -41,8 +41,8 @@ import java.lang.invoke.MethodHandle;
 import java.util.stream.Stream;
 
 import static com.google.common.collect.MoreCollectors.onlyElement;
+import static io.trino.plugin.base.galaxy.GalaxyIdentity.toDispatchSession;
 import static io.trino.plugin.base.util.Procedures.checkProcedureArgument;
-import static io.trino.plugin.objectstore.GalaxyIdentity.toDispatchSession;
 import static io.trino.plugin.objectstore.TableType.DELTA;
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
