@@ -22,9 +22,10 @@ import io.airlift.http.server.HttpServerInfo;
 import io.airlift.http.server.TheServlet;
 import io.airlift.http.server.testing.TestingHttpServerModule;
 import io.airlift.node.testing.TestingNodeModule;
-import io.trino.hive.thrift.metastore.Database;
 import io.trino.hive.thrift.metastore.NoSuchObjectException;
 import io.trino.hive.thrift.metastore.ThriftHiveMetastore;
+import io.trino.plugin.hive.metastore.Database;
+import io.trino.plugin.hive.metastore.file.FileHiveMetastore;
 import jakarta.servlet.Servlet;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -56,7 +57,7 @@ public class TestingThriftHttpMetastoreServer
     private final LifeCycleManager lifeCycleManager;
     private final URI baseUri;
 
-    public TestingThriftHttpMetastoreServer(InMemoryThriftMetastore delegate, Consumer<HttpServletRequest> requestInterceptor)
+    public TestingThriftHttpMetastoreServer(FileHiveMetastore delegate, Consumer<HttpServletRequest> requestInterceptor)
     {
         ThriftHiveMetastore.Iface mockThriftHandler = proxyHandler(delegate, ThriftHiveMetastore.Iface.class);
         TProcessor processor = new ThriftHiveMetastore.Processor<>(mockThriftHandler);
@@ -78,7 +79,7 @@ public class TestingThriftHttpMetastoreServer
         baseUri = httpServerInfo.getHttpUri();
     }
 
-    public static <T> T proxyHandler(InMemoryThriftMetastore delegate, Class<T> iface)
+    public static <T> T proxyHandler(FileHiveMetastore delegate, Class<T> iface)
     {
         return newProxy(iface, (proxy, method, args) -> {
             switch (method.getName()) {

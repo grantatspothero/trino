@@ -17,8 +17,12 @@ import com.google.common.collect.Lists;
 import io.airlift.testing.Closeables;
 import io.airlift.units.Duration;
 import io.opentelemetry.api.OpenTelemetry;
-import io.trino.hive.thrift.metastore.Database;
+import io.trino.filesystem.local.LocalFileSystemFactory;
 import io.trino.hive.thrift.metastore.NoSuchObjectException;
+import io.trino.plugin.hive.NodeVersion;
+import io.trino.plugin.hive.metastore.Database;
+import io.trino.plugin.hive.metastore.file.FileHiveMetastore;
+import io.trino.plugin.hive.metastore.file.FileHiveMetastoreConfig;
 import io.trino.sshtunnel.SshTunnelConfig;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.http.HttpHeaders;
@@ -46,7 +50,7 @@ public class TestThriftHttpMetastoreClient
     private static final String httpToken = "test-token";
     private final HiveMetastoreAuthentication noAuthentication = new NoHiveMetastoreAuthentication();
     private final Duration timeout = new Duration(20, SECONDS);
-    private static InMemoryThriftMetastore delegate;
+    private static FileHiveMetastore delegate;
 
     private static final String testDbName = "testdb";
 
@@ -57,7 +61,18 @@ public class TestThriftHttpMetastoreClient
         requestHeaderInterceptor = new TestRequestHeaderInterceptor();
         File tempDir = Files.createTempDirectory(null).toFile();
         tempDir.deleteOnExit();
-        delegate = new InMemoryThriftMetastore(new File(tempDir, "/metastore"), new ThriftMetastoreConfig());
+
+        LocalFileSystemFactory fileSystemFactory = new LocalFileSystemFactory(tempDir.toPath());
+
+        delegate = new FileHiveMetastore(
+                new NodeVersion("testversion"),
+                fileSystemFactory,
+                false,
+                new FileHiveMetastoreConfig()
+                        .setCatalogDirectory("local:///")
+                        .setMetastoreUser("test")
+                        .setDisableLocationChecks(true));
+
         metastoreServer = new TestingThriftHttpMetastoreServer(delegate, requestHeaderInterceptor);
     }
 
@@ -73,8 +88,11 @@ public class TestThriftHttpMetastoreClient
     public void testHttpThriftConnection()
             throws Exception
     {
-        Database db = new Database();
-        db.setName(testDbName);
+        Database.Builder database = Database.builder()
+                .setDatabaseName(testDbName)
+                .setOwnerName(Optional.empty())
+                .setOwnerType(Optional.empty());
+        Database db = database.build();
         delegate.createDatabase(db);
 
         ThriftMetastoreClientFactory factory = new DefaultThriftMetastoreClientFactory(
