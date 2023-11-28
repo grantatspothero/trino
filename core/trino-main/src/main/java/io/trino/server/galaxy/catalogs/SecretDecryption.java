@@ -23,6 +23,7 @@ import io.starburst.stargate.id.AccountId;
 import io.starburst.stargate.id.TrinoPlaneId;
 
 import java.util.Map;
+import java.util.Optional;
 
 import static com.google.common.collect.Maps.transformValues;
 
@@ -42,7 +43,7 @@ public final class SecretDecryption
             String decryptedPropertyValue = propertyValue;
             for (EncryptedSecret secret : queryCatalog.secrets().orElseGet(ImmutableSet::of)) {
                 if (decryptedPropertyValue.contains(secret.placeholderText())) {
-                    Map<String, String> metadataEncryptionContext = SecretEncryptionContext.forMetadata(accountId, trinoPlaneId, queryCatalog.catalogName(), secret.secretName());
+                    Map<String, String> metadataEncryptionContext = SecretEncryptionContext.forVerifier(accountId, trinoPlaneId, Optional.of(queryCatalog.catalogName()), secret.secretName());
                     String decryptedValue = secretSealer.unsealSecret(SecretSealer.SealedSecret.fromString(secret.encryptedValue()), metadataEncryptionContext);
                     decryptedPropertyValue = decryptedPropertyValue.replace(secret.placeholderText(), decryptedValue);
                 }
