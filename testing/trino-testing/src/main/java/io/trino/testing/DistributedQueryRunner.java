@@ -188,24 +188,19 @@ public class DistributedQueryRunner
                     systemAccessControls,
                     eventListeners);
 
-            if (backupCoordinatorProperties.isPresent()) {
-                Map<String, String> extraBackupCoordinatorProperties = new HashMap<>();
-                extraBackupCoordinatorProperties.putAll(extraProperties);
-                extraBackupCoordinatorProperties.putAll(backupCoordinatorProperties.get());
-                backupCoordinator = Optional.of(createServer(
-                        true,
-                        extraBackupCoordinatorProperties,
-                        environment,
-                        additionalModule,
-                        baseDataDir,
-                        spanProcessor,
-                        systemAccessControlConfiguration,
-                        systemAccessControls,
-                        eventListeners));
-            }
-            else {
-                backupCoordinator = Optional.empty();
-            }
+            backupCoordinator = backupCoordinatorProperties.map(properties -> createServer(
+                    true,
+                    ImmutableMap.<String, String>builder()
+                            .putAll(extraProperties)
+                            .putAll(properties)
+                            .buildOrThrow(),
+                    environment,
+                    additionalModule,
+                    baseDataDir,
+                    spanProcessor,
+                    systemAccessControlConfiguration,
+                    systemAccessControls,
+                    eventListeners));
         }
         catch (Exception e) {
             try {
