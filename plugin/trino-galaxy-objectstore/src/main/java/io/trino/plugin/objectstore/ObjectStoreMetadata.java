@@ -412,9 +412,21 @@ public class ObjectStoreMetadata
     }
 
     @Override
-    public void createMaterializedView(ConnectorSession session, SchemaTableName viewName, ConnectorMaterializedViewDefinition definition, boolean replace, boolean ignoreExisting)
+    public void createMaterializedView(
+            ConnectorSession session,
+            SchemaTableName viewName,
+            ConnectorMaterializedViewDefinition definition,
+            Map<String, Object> materializedViewProperties,
+            boolean replace,
+            boolean ignoreExisting)
     {
-        icebergMetadata.createMaterializedView(unwrap(ICEBERG, session), viewName, withProperties(definition, materializedViewProperties.addIcebergPropertyOverrides(definition.getProperties())), replace, ignoreExisting);
+        icebergMetadata.createMaterializedView(
+                unwrap(ICEBERG, session),
+                viewName,
+                definition,
+                ObjectStoreMaterializedViewProperties.addIcebergPropertyOverrides(materializedViewProperties),
+                replace,
+                ignoreExisting);
         relationTypeCache.record(viewName, MATERIALIZED_VIEW);
         flushMetadataCache(viewName);
     }
@@ -475,12 +487,18 @@ public class ObjectStoreMetadata
 
     private Optional<ConnectorMaterializedViewDefinition> doGetMaterializedView(ConnectorSession session, SchemaTableName viewName)
     {
-        Optional<ConnectorMaterializedViewDefinition> materializedViewDefinition = icebergMetadata.getMaterializedView(unwrap(ICEBERG, session), viewName)
-                .map(definition -> withProperties(definition, materializedViewProperties.removeOverriddenOrRemovedIcebergProperties(definition.getProperties())));
+        Optional<ConnectorMaterializedViewDefinition> materializedViewDefinition = icebergMetadata.getMaterializedView(unwrap(ICEBERG, session), viewName);
         if (materializedViewDefinition.isPresent()) {
             relationTypeCache.record(viewName, MATERIALIZED_VIEW);
         }
         return materializedViewDefinition;
+    }
+
+    @Override
+    public Map<String, Object> getMaterializedViewProperties(ConnectorSession session, SchemaTableName viewName, ConnectorMaterializedViewDefinition materializedViewDefinition)
+    {
+        return ObjectStoreMaterializedViewProperties.removeOverriddenOrRemovedIcebergProperties(
+                icebergMetadata.getMaterializedViewProperties(unwrap(ICEBERG, session), viewName, materializedViewDefinition));
     }
 
     @Override
@@ -1680,20 +1698,5 @@ public class ObjectStoreMetadata
     private static ConnectorTableMetadata withProperties(ConnectorTableMetadata metadata, Map<String, Object> properties)
     {
         return new ConnectorTableMetadata(metadata.getTable(), metadata.getColumns(), properties, metadata.getComment());
-    }
-
-    private static ConnectorMaterializedViewDefinition withProperties(ConnectorMaterializedViewDefinition definition, Map<String, Object> properties)
-    {
-        return new ConnectorMaterializedViewDefinition(
-                definition.getOriginalSql(),
-                definition.getStorageTable(),
-                definition.getCatalog(),
-                definition.getSchema(),
-                definition.getColumns(),
-                definition.getGracePeriod(),
-                definition.getComment(),
-                definition.getOwner(),
-                definition.getPath(),
-                properties);
     }
 }

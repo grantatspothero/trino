@@ -63,7 +63,7 @@ public class ObjectStoreMaterializedViewProperties
         return this.properties.values().asList();
     }
 
-    public Map<String, Object> addIcebergPropertyOverrides(Map<String, Object> properties)
+    public static Map<String, Object> addIcebergPropertyOverrides(Map<String, Object> properties)
     {
         return ImmutableMap.<String, Object>builder()
                 .putAll(properties)
@@ -71,7 +71,7 @@ public class ObjectStoreMaterializedViewProperties
                 .buildOrThrow();
     }
 
-    public Map<String, Object> removeOverriddenOrRemovedIcebergProperties(Map<String, Object> properties)
+    public static Map<String, Object> removeOverriddenOrRemovedIcebergProperties(Map<String, Object> properties)
     {
         return properties.entrySet()
                 .stream()

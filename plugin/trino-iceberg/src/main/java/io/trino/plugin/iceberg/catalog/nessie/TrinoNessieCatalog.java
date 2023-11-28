@@ -426,6 +426,7 @@ public class TrinoNessieCatalog
             ConnectorSession session,
             SchemaTableName schemaViewName,
             ConnectorMaterializedViewDefinition definition,
+            Map<String, Object> materializedViewProperties,
             boolean replace,
             boolean ignoreExisting)
     {
@@ -448,6 +449,12 @@ public class TrinoNessieCatalog
     public Optional<ConnectorMaterializedViewDefinition> getMaterializedView(ConnectorSession session, SchemaTableName schemaViewName)
     {
         return Optional.empty();
+    }
+
+    @Override
+    public Map<String, Object> getMaterializedViewProperties(ConnectorSession session, SchemaTableName viewName, ConnectorMaterializedViewDefinition definition)
+    {
+        throw new TrinoException(NOT_SUPPORTED, "The Iceberg Nessie catalog does not support materialized views");
     }
 
     @Override
