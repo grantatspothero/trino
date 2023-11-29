@@ -13,7 +13,6 @@
  */
 package io.trino.plugin.dynamodb;
 
-import com.starburstdata.trino.plugins.dynamodb.DynamoDbModule;
 import com.starburstdata.trino.plugins.dynamodb.EnableWrites;
 import com.starburstdata.trino.plugins.license.LicenseManager;
 import io.trino.plugin.jdbc.JdbcConnectorFactory;
@@ -36,7 +35,7 @@ public class GalaxyDynamoDbPlugin
                 "dynamodb",
                 combine(
                         binder -> binder.bind(Boolean.class).annotatedWith(EnableWrites.class).toInstance(false),
-                        new DynamoDbModule(new NoopLicenseManager()))));
+                        new GalaxyDynamoDbModule(new NoopLicenseManager()))));
     }
 
     private static class NoopLicenseManager

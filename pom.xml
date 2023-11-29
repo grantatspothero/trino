@@ -210,7 +210,7 @@
         <!-- released from https://github.com/starburstdata/stargate -->
         <dep.stargate.version>stargate-12263-gb2e6aac831</dep.stargate.version>
         <!-- released from https://github.com/starburstdata/starburst-trino-plugins -->
-        <dep.starburst-trino-plugins.version>432.5</dep.starburst-trino-plugins.version>
+        <dep.starburst-trino-plugins.version>432.6</dep.starburst-trino-plugins.version>
         <dep.cloudevents.version>2.2.0</dep.cloudevents.version>
 
         <!--
