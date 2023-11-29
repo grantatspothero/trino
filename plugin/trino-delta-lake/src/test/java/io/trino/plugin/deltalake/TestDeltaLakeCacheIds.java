@@ -262,12 +262,12 @@ public class TestDeltaLakeCacheIds
                 .isNotEqualTo(splitManager.getCacheSplitId(createDeltaLakeSplit(SplitWeight.standard(), TupleDomain.all(), ImmutableMap.of())));
 
         // different split weight should not make ids different
-        assertThat(splitManager.getCacheSplitId(createDeltaLakeSplit(SplitWeight.fromRawValue(10), TupleDomain.all(), ImmutableMap.of())))
-                .isEqualTo(splitManager.getCacheSplitId(createDeltaLakeSplit(SplitWeight.fromRawValue(11), TupleDomain.all(), ImmutableMap.of())));
+        assertThat(splitManager.getCacheSplitId(createDeltaLakeSplit(SplitWeight.fromProportion(10), TupleDomain.all(), ImmutableMap.of())))
+                .isEqualTo(splitManager.getCacheSplitId(createDeltaLakeSplit(SplitWeight.fromProportion(11), TupleDomain.all(), ImmutableMap.of())));
 
         // different row count should make ids different
-        assertThat(splitManager.getCacheSplitId(createDeltaLakeSplit(SplitWeight.fromRawValue(10), TupleDomain.all(), ImmutableMap.of(), Optional.of(10L), Optional.empty())))
-                .isNotEqualTo(splitManager.getCacheSplitId(createDeltaLakeSplit(SplitWeight.fromRawValue(10), TupleDomain.all(), ImmutableMap.of(), Optional.of(11L), Optional.empty())));
+        assertThat(splitManager.getCacheSplitId(createDeltaLakeSplit(SplitWeight.fromProportion(10), TupleDomain.all(), ImmutableMap.of(), Optional.of(10L), Optional.empty())))
+                .isNotEqualTo(splitManager.getCacheSplitId(createDeltaLakeSplit(SplitWeight.fromProportion(10), TupleDomain.all(), ImmutableMap.of(), Optional.of(11L), Optional.empty())));
 
         // different deletion vector should make ids different
         assertThat(splitManager.getCacheSplitId(createDeltaLakeSplit(SplitWeight.standard(), TupleDomain.all(), ImmutableMap.of(), Optional.of(10L), Optional.of(new DeletionVectorEntry("", "", OptionalInt.of(10), 0, 0L)))))
