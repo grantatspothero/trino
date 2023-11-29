@@ -45,8 +45,15 @@ public class TestObjectStoreHudiConnectorTest
 
     @Override
     protected void initializeTpchTables(DistributedQueryRunner queryRunner, TestingGalaxyMetastore metastore)
+            throws Exception
     {
-        ObjectStoreQueryRunner.initializeTpchTablesHudi(queryRunner, REQUIRED_TPCH_TABLES, metastore);
+        // this cannot live in warp-speed modules because it creates a dependency hell on trino-hive and trino-filesystem
+        if (getObjectStorePlugin().getClass().getName().equals("io.trino.plugin.warp2.WarpSpeedPlugin") || getObjectStorePlugin().getClass().getName().equals("io.trino.plugin.warp.WarpSpeedPlugin")) {
+            ObjectStoreQueryRunner.initializeWarpSpeedTpchTablesHudi(queryRunner, getTrinoFileSystem(), metastore, REQUIRED_TPCH_TABLES);
+        }
+        else {
+            ObjectStoreQueryRunner.initializeTpchTablesHudi(queryRunner, REQUIRED_TPCH_TABLES);
+        }
     }
 
     @Override
@@ -118,7 +125,7 @@ public class TestObjectStoreHudiConnectorTest
                 "   _uuid varchar\n" +
                 ")\n" +
                 "WITH (\n" +
-                "   location = '\\E.*\\Q/data/orders',\n" +
+                "   location = '\\E.*\\Q/data/tpch/orders',\n" +
                 "   type = 'HUDI'\n" +
                 ")\\E");
     }

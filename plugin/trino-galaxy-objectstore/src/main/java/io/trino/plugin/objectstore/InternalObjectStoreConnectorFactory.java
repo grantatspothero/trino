@@ -105,8 +105,6 @@ public final class InternalObjectStoreConnectorFactory
                     catalogName,
                     filteredConfig(config, "HUDI"),
                     context,
-                    hiveMetastore,
-                    fileSystemFactory,
                     Optional.of(combine(
                             new ConfigureCachingMetastoreModule(),
                             new GalaxyLocationSecurityModule())));

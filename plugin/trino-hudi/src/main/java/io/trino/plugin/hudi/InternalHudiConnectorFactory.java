@@ -24,7 +24,6 @@ import io.airlift.event.client.EventModule;
 import io.airlift.json.JsonModule;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;
-import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.filesystem.manager.FileSystemModule;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.base.classloader.ClassLoaderSafeConnectorPageSourceProvider;
@@ -33,7 +32,6 @@ import io.trino.plugin.base.classloader.ClassLoaderSafeNodePartitioningProvider;
 import io.trino.plugin.base.jmx.MBeanServerModule;
 import io.trino.plugin.base.session.SessionPropertiesProvider;
 import io.trino.plugin.hive.NodeVersion;
-import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hive.metastore.HiveMetastoreModule;
 import io.trino.spi.NodeManager;
 import io.trino.spi.classloader.ThreadContextClassLoader;
@@ -60,8 +58,6 @@ public final class InternalHudiConnectorFactory
             String catalogName,
             Map<String, String> config,
             ConnectorContext context,
-            Optional<HiveMetastore> metastore,
-            Optional<TrinoFileSystemFactory> fileSystemFactory,
             Optional<Module> module)
     {
         ClassLoader classLoader = InternalHudiConnectorFactory.class.getClassLoader();
@@ -71,12 +67,11 @@ public final class InternalHudiConnectorFactory
                     new MBeanModule(),
                     new JsonModule(),
                     new HudiModule(),
-                    new HiveMetastoreModule(metastore),
-                    fileSystemFactory
-                            .map(factory -> (Module) binder -> binder.bind(TrinoFileSystemFactory.class).toInstance(factory))
-                            .orElseGet(() -> new FileSystemModule(catalogName, context.getNodeManager(), context.getOpenTelemetry())),
+                    new HiveMetastoreModule(Optional.empty()),
+                    new FileSystemModule(catalogName, context.getNodeManager(), context.getOpenTelemetry()),
                     new MBeanServerModule(),
                     binder -> {
+                        module.ifPresent(binder::install);
                         binder.bind(OpenTelemetry.class).toInstance(context.getOpenTelemetry());
                         binder.bind(Tracer.class).toInstance(context.getTracer());
                         binder.bind(NodeVersion.class).toInstance(new NodeVersion(context.getNodeManager().getCurrentNode().getVersion()));

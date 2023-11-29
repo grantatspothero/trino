@@ -14,16 +14,19 @@
 package io.trino.plugin.hudi;
 
 import com.google.common.collect.ImmutableMap;
+import io.trino.filesystem.Location;
+import io.trino.filesystem.TrinoFileSystemFactory;
+import io.trino.filesystem.TrinoInputFile;
 import io.trino.plugin.hudi.testing.ResourceHudiTablesInitializer;
+import io.trino.spi.security.ConnectorIdentity;
 import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.QueryRunner;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.ZonedDateTime;
 
 import static io.trino.plugin.hudi.HudiQueryRunner.createHudiQueryRunner;
+import static io.trino.plugin.hudi.testing.HudiTestUtils.getConnectorService;
 import static io.trino.plugin.hudi.testing.ResourceHudiTablesInitializer.TestingTable.HUDI_COW_PT_TBL;
 import static io.trino.plugin.hudi.testing.ResourceHudiTablesInitializer.TestingTable.HUDI_NON_PART_COW;
 import static io.trino.plugin.hudi.testing.ResourceHudiTablesInitializer.TestingTable.STOCK_TICKS_COW;
@@ -132,9 +135,10 @@ public class TestHudiSmokeTest
 
     @Test
     public void testPathColumn()
+            throws Exception
     {
         String path = (String) computeScalar("SELECT \"$path\" FROM " + HUDI_COW_PT_TBL + " WHERE id = 1");
-        assertThat(toPath(path)).exists();
+        assertThat(toInputFile(path).exists()).isTrue();
     }
 
     @Test
@@ -143,7 +147,7 @@ public class TestHudiSmokeTest
     {
         String path = (String) computeScalar("SELECT \"$path\" FROM " + HUDI_COW_PT_TBL + " WHERE id = 1");
         long fileSize = (long) computeScalar("SELECT \"$file_size\" FROM " + HUDI_COW_PT_TBL + " WHERE id = 1");
-        assertThat(fileSize).isEqualTo(Files.size(toPath(path)));
+        assertThat(fileSize).isEqualTo(toInputFile(path).length());
     }
 
     @Test
@@ -153,7 +157,7 @@ public class TestHudiSmokeTest
         String path = (String) computeScalar("SELECT \"$path\" FROM " + HUDI_COW_PT_TBL + " WHERE id = 1");
         ZonedDateTime fileModifiedTime = (ZonedDateTime) computeScalar("SELECT \"$file_modified_time\" FROM " + HUDI_COW_PT_TBL + " WHERE id = 1");
         assertThat(fileModifiedTime.toInstant().toEpochMilli())
-                .isEqualTo(Files.getLastModifiedTime(toPath(path)).toInstant().toEpochMilli());
+                .isEqualTo(toInputFile(path).lastModified().toEpochMilli());
     }
 
     @Test
@@ -165,9 +169,10 @@ public class TestHudiSmokeTest
         assertQueryFails("SELECT \"$partition\" FROM " + HUDI_NON_PART_COW, ".* Column '\\$partition' cannot be resolved");
     }
 
-    private static Path toPath(String path)
+    private TrinoInputFile toInputFile(String path)
     {
-        // Remove leading 'file:' because path column returns 'file:/path-to-file' in case of local file system
-        return Path.of(path.replaceFirst("^file:", ""));
+        return getConnectorService(getDistributedQueryRunner(), TrinoFileSystemFactory.class)
+                .create(ConnectorIdentity.ofUser("test"))
+                .newInputFile(Location.of(path));
     }
 }

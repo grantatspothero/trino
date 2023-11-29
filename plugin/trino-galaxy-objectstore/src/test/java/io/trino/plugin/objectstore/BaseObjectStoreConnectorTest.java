@@ -163,6 +163,7 @@ public abstract class BaseObjectStoreConnectorTest
     }
 
     protected void initializeTpchTables(DistributedQueryRunner queryRunner, TestingGalaxyMetastore metastore)
+            throws Exception
     {
         ObjectStoreQueryRunner.initializeTpchTables(queryRunner, REQUIRED_TPCH_TABLES);
     }

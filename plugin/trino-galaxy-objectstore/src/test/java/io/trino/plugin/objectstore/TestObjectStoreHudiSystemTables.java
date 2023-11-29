@@ -52,7 +52,7 @@ public class TestObjectStoreHudiSystemTables
                 .withPlugin(new ObjectStorePlugin())
                 .build();
 
-        ObjectStoreQueryRunner.initializeTpchTablesHudi(queryRunner, ImmutableList.of(NATION), metastore);
+        ObjectStoreQueryRunner.initializeTpchTablesHudi(queryRunner, ImmutableList.of(NATION));
         queryRunner.execute("GRANT SELECT ON objectstore.tpch.\"*\" TO ROLE " + ACCOUNT_ADMIN);
         return queryRunner;
     }

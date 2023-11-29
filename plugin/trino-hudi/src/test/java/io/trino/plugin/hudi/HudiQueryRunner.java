@@ -18,22 +18,19 @@ import io.airlift.log.Level;
 import io.airlift.log.Logger;
 import io.airlift.log.Logging;
 import io.trino.Session;
-import io.trino.plugin.hive.SchemaAlreadyExistsException;
+import io.trino.filesystem.Location;
 import io.trino.plugin.hive.metastore.Database;
-import io.trino.plugin.hive.metastore.HiveMetastore;
+import io.trino.plugin.hive.metastore.HiveMetastoreFactory;
 import io.trino.plugin.hudi.testing.HudiTablesInitializer;
 import io.trino.plugin.hudi.testing.ResourceHudiTablesInitializer;
 import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.spi.security.PrincipalType;
 import io.trino.testing.DistributedQueryRunner;
 
-import java.io.File;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 
-import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
-import static io.trino.plugin.hive.metastore.file.TestingFileHiveMetastore.createTestingFileHiveMetastore;
+import static io.trino.plugin.hudi.testing.HudiTestUtils.getConnectorService;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 
 public final class HudiQueryRunner
@@ -61,28 +58,19 @@ public final class HudiQueryRunner
         queryRunner.installPlugin(new TpchPlugin());
         queryRunner.createCatalog("tpch", "tpch", ImmutableMap.of());
 
-        Path coordinatorBaseDir = queryRunner.getCoordinator().getBaseDataDir();
-        File catalogDir = coordinatorBaseDir.resolve("catalog").toFile();
-        HiveMetastore metastore = createTestingFileHiveMetastore(catalogDir);
-
-        // create testing database
-        Database database = Database.builder()
-                .setDatabaseName(SCHEMA_NAME)
-                .setOwnerName(Optional.of("public"))
-                .setOwnerType(Optional.of(PrincipalType.ROLE))
-                .build();
-        try {
-            metastore.createDatabase(database);
-        }
-        catch (SchemaAlreadyExistsException e) {
-            // do nothing if database already exists
-        }
-
-        queryRunner.installPlugin(new TestingHudiPlugin(Optional.of(metastore)));
+        queryRunner.installPlugin(new TestingHudiPlugin(queryRunner.getCoordinator().getBaseDataDir().resolve("hudi_data")));
         queryRunner.createCatalog("hudi", "hudi", connectorProperties);
 
-        String dataDir = coordinatorBaseDir.resolve("data").toString();
-        dataLoader.initializeTables(queryRunner, metastore, SCHEMA_NAME, dataDir, HDFS_ENVIRONMENT);
+        // Hudi connector does not support creating schema or any other write operations
+        getConnectorService(queryRunner, HiveMetastoreFactory.class)
+                .createMetastore(Optional.empty())
+                .createDatabase(Database.builder()
+                        .setDatabaseName(SCHEMA_NAME)
+                        .setOwnerName(Optional.of("public"))
+                        .setOwnerType(Optional.of(PrincipalType.ROLE))
+                        .build());
+
+        dataLoader.initializeTables(queryRunner, Location.of("local:///"), SCHEMA_NAME);
         return queryRunner;
     }
 

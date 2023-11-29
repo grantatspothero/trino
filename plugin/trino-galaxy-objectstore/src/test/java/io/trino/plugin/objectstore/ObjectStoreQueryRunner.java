@@ -21,13 +21,14 @@ import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
 import io.starburst.stargate.id.RoleId;
 import io.trino.connector.MockConnectorFactory;
 import io.trino.connector.MockConnectorPlugin;
-import io.trino.plugin.hive.metastore.HiveMetastore;
+import io.trino.filesystem.Location;
+import io.trino.filesystem.TrinoFileSystem;
 import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastore;
 import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastoreConfig;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
-import io.trino.plugin.hudi.testing.TpchHudiTablesInitializer;
 import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.plugin.tpch.TpchPlugin;
+import io.trino.plugin.warp2.TpchWarpSpeedObjectStoreHudiTablesInitializer;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.DockerTestingAccountFactory;
 import io.trino.server.security.galaxy.TestingAccountFactory;
@@ -36,12 +37,12 @@ import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.GalaxyQueryRunner;
 import io.trino.tpch.TpchTable;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.airlift.testing.Closeables.closeAllSuppress;
-import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_FACTORY;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.plugin.tpch.TpchMetadata.TINY_SCHEMA_NAME;
@@ -235,12 +236,30 @@ public final class ObjectStoreQueryRunner
                 tables);
     }
 
-    public static void initializeTpchTablesHudi(DistributedQueryRunner queryRunner, List<TpchTable<?>> tables, TestingGalaxyMetastore metastore)
+    public static void initializeTpchTablesHudi(DistributedQueryRunner queryRunner, List<TpchTable<?>> tables)
+            throws Exception
     {
         String dataDir = queryRunner.getCoordinator().getBaseDataDir().resolve("data").toString();
-        HiveMetastore hiveMetastore = new GalaxyHiveMetastore(metastore.getMetastore(), HDFS_FILE_SYSTEM_FACTORY, dataDir, new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
-        TpchHudiTablesInitializer loader = new TpchHudiTablesInitializer(COPY_ON_WRITE, tables);
-        loader.initializeTables(queryRunner, hiveMetastore, TPCH_SCHEMA, dataDir, HDFS_ENVIRONMENT);
+        TpchObjectStoreHudiTablesInitializer loader = new TpchObjectStoreHudiTablesInitializer(COPY_ON_WRITE, tables);
+        loader.initializeTables(queryRunner, Location.of(dataDir), TPCH_SCHEMA);
+        grantPrivileges(queryRunner, tables);
+    }
+
+    public static void initializeWarpSpeedTpchTablesHudi(DistributedQueryRunner queryRunner, TrinoFileSystem trinoFileSystem, TestingGalaxyMetastore metastore, List<TpchTable<?>> tables)
+            throws Exception
+    {
+        Path basePath = queryRunner.getCoordinator().getBaseDataDir().resolve("data");
+        String dataDir = basePath.toString();
+        GalaxyHiveMetastore hiveMetastore = new GalaxyHiveMetastore(metastore.getMetastore(), HDFS_FILE_SYSTEM_FACTORY, basePath.toFile().getAbsolutePath(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
+        // TpchObjectStoreHudiTablesInitializer wont work here because it cannot cast CoordinatorDispatcherConnector to ObjectStoreConnector.
+        // It is not-trivial to expose the injector or any other internal component of the connector (even just for testing). So TpchWarpSpeedObjectStoreHudiTablesInitializer stays with using the old approach of getting a metastore
+        TpchWarpSpeedObjectStoreHudiTablesInitializer loader = new TpchWarpSpeedObjectStoreHudiTablesInitializer(hiveMetastore, trinoFileSystem, COPY_ON_WRITE, tables);
+        loader.initializeTables(queryRunner, Location.of(dataDir), TPCH_SCHEMA);
+        grantPrivileges(queryRunner, tables);
+    }
+
+    private static void grantPrivileges(DistributedQueryRunner queryRunner, List<TpchTable<?>> tables)
+    {
         for (TpchTable<?> table : tables) {
             queryRunner.execute(format("GRANT SELECT ON objectstore.tpch.%s TO ROLE %s WITH GRANT OPTION", table.getTableName(), ACCOUNT_ADMIN));
             queryRunner.execute(format("GRANT UPDATE ON objectstore.tpch.%s TO ROLE %s WITH GRANT OPTION", table.getTableName(), ACCOUNT_ADMIN));
@@ -319,7 +338,7 @@ public final class ObjectStoreQueryRunner
 
         switch (tableType) {
             case HIVE, ICEBERG, DELTA -> initializeTpchTables(queryRunner, TpchTable.getTables());
-            case HUDI -> initializeTpchTablesHudi(queryRunner, TpchTable.getTables(), metastore);
+            case HUDI -> initializeTpchTablesHudi(queryRunner, TpchTable.getTables());
         }
 
         Logger log = Logger.get(ObjectStoreQueryRunner.class);
