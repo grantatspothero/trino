@@ -185,7 +185,8 @@ public abstract class BaseJdbcClient
     }
 
     @Override
-    public final List<SchemaTableName> getTableNames(ConnectorSession session, Optional<String> schema)
+    public List<SchemaTableName> getTableNames(ConnectorSession session, Optional<String> schema)
+//    public final List<SchemaTableName> getTableNames(ConnectorSession session, Optional<String> schema) // TODO make this method final through https://github.com/starburstdata/galaxy-trino/issues/1346
     {
         // getAllTableComments is currently Galaxy specific.
         // getTableNames is replaced with getAllTableComments to ensure consistency with new changes
