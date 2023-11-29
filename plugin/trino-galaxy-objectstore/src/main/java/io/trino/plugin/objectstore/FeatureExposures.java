@@ -148,6 +148,7 @@ public final class FeatureExposures
                 .put(ICEBERG, "statistics_enabled", EXPOSED)
                 .put(ICEBERG, "target_max_file_size", EXPOSED)
                 .put(ICEBERG, "use_file_size_from_metadata", EXPOSED)
+                .put(DELTA, "checkpoint_filtering_enabled", EXPOSED)
                 .put(DELTA, "compression_codec", EXPOSED)
                 .put(DELTA, "dynamic_filtering_wait_timeout", EXPOSED)
                 .put(DELTA, "dynamic_row_filtering_enabled", EXPOSED)

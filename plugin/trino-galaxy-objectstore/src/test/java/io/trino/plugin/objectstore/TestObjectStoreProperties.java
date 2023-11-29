@@ -100,6 +100,7 @@ public class TestObjectStoreProperties
                         ('objectstore.collect_column_statistics_on_write', 'true', 'boolean'),
                         ('objectstore.collect_extended_statistics_on_write', 'true', 'boolean'),
                         ('objectstore.columns_to_hide', '[]', 'array(varchar)'),
+                        ('objectstore.checkpoint_filtering_enabled', 'false', 'boolean'),
                         ('objectstore.compression_codec', 'DEFAULT', 'varchar'),
                         ('objectstore.create_empty_bucket_files', 'false', 'boolean'),
                         ('objectstore.dynamic_filtering_wait_timeout', '0.00m', 'varchar'),
