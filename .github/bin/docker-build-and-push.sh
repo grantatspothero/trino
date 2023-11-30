@@ -54,7 +54,7 @@ shift $((OPTIND - 1))
 
 function temurin_jdk_link() {
   JDK_VERSION="${1}"
-  versionsUrl="https://api.adoptium.net/v3/info/release_names?heap_size=normal&image_type=jdk&os=linux&page=0&page_size=20&project=jdk&release_type=ga&semver=false&sort_method=DEFAULT&sort_order=ASC&vendor=eclipse&version=%5B${JDK_VERSION}%2C%29"
+  versionsUrl="https://api.adoptium.net/v3/info/release_names?heap_size=normal&image_type=jdk&os=linux&page=0&page_size=20&project=jdk&release_type=ga&semver=false&sort_method=DATE&sort_order=DESC&vendor=eclipse&version=%5B${JDK_VERSION}%2C%29"
   if ! result=$(curl -fLs "$versionsUrl" -H 'accept: application/json'); then
     echo >&2 "Failed to fetch release names for JDK version [${JDK_VERSION}, ) from Temurin API : $result"
     exit 1
