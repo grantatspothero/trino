@@ -24,6 +24,7 @@ import io.trino.plugin.varada.objectstore.di.WarpSpeedObjectStoreModule;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
 import io.trino.spi.connector.ConnectorFactory;
+import io.varada.tools.configuration.MultiPrefixConfigurationWrapper;
 
 import java.util.List;
 import java.util.Map;
@@ -59,17 +60,17 @@ public class WarpSpeedConnectorFactory
     {
         Optional<List<Class<? extends InitializationModule>>> optionalModules = Optional.of(List.of(WarpSpeedObjectStoreModule.class, DummyTaskExecutorModule.class));
 
-        String proxyConnectorName = config.getOrDefault(ProxiedConnectorConfiguration.PROXIED_CONNECTOR,
+        String proxyConnectorName = new MultiPrefixConfigurationWrapper(config).getOrDefault(ProxiedConnectorConfiguration.PROXIED_CONNECTOR,
                 ObjectStoreProxyConnectorInitializer.CONNECTOR_NAME);
 
         if (proxyConnectorName.equals(ProxiedConnectorConfiguration.ICEBERG_CONNECTOR_NAME)) {
             // support for Tabular which should act as warp-speed iceberg.
             ImmutableMap.Builder<String, String> strippedConfig = ImmutableMap.builder();
             strippedConfig.putAll(config);
-
+            Map<String, String> strippedConfigMap = new MultiPrefixConfigurationWrapper(strippedConfig.buildOrThrow());
             return dispatcherConnectorFactory.create(
                     catalogName,
-                    strippedConfig.buildOrThrow(),
+                    strippedConfigMap,
                     context,
                     optionalModules,
                     Map.of(ProxiedConnectorConfiguration.ICEBERG_CONNECTOR_NAME,
@@ -79,15 +80,16 @@ public class WarpSpeedConnectorFactory
         else {
             Map<String, String> strippedConfig =
                     Stream.of(config.entrySet(),
-                                    Map.of(ProxiedConnectorConfiguration.PROXIED_CONNECTOR, "galaxy_objectstore").entrySet())
+                                    Map.of(MultiPrefixConfigurationWrapper.WARP_SPEED_PREFIX + ProxiedConnectorConfiguration.PROXIED_CONNECTOR, "galaxy_objectstore").entrySet())
                             .flatMap(Set::stream)
                             .collect(toImmutableMap(
                                     entry -> entry.getKey().startsWith(WARP_PREFIX) ? entry.getKey().substring(WARP_PREFIX.length()) : entry.getKey(),
                                     Map.Entry::getValue));
 
+            Map<String, String> strippedConfigMap = new MultiPrefixConfigurationWrapper(strippedConfig);
             return dispatcherConnectorFactory.create(
                     catalogName,
-                    strippedConfig,
+                    strippedConfigMap,
                     context,
                     optionalModules,
                     Map.of(ObjectStoreProxyConnectorInitializer.CONNECTOR_NAME,

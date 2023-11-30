@@ -20,7 +20,7 @@
         <air.test.thread-count>1</air.test.thread-count>
         <air.test.jvm.additional-arguments>${extraJavaVectorArgs}</air.test.jvm.additional-arguments>
         <!-- overide warp version to use new FS-->
-        <dep.warp-speed.version>432.0.1-cand</dep.warp-speed.version>
+        <dep.warp-speed.version>432.0.0</dep.warp-speed.version>
     </properties>
 
     <dependencies>
@@ -56,6 +56,11 @@
                     <artifactId>jaxb-runtime</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.starburstdata.presto</groupId>
+            <artifactId>starburst-warp-speed-tools</artifactId>
+            <version>${dep.warp-speed.version}</version>
         </dependency>
         <dependency>
             <groupId>com.starburstdata.presto</groupId>

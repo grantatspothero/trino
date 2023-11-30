@@ -18,6 +18,7 @@ import io.trino.plugin.varada.configuration.ProxiedConnectorConfiguration;
 import io.trino.spi.connector.ConnectorFactory;
 import io.trino.testing.TestingConnectorContext;
 import io.varada.cloudvendors.configuration.CloudVendorConfiguration;
+import io.varada.tools.configuration.MultiPrefixConfigurationWrapper;
 import org.testng.annotations.Test;
 
 import java.util.Map;
@@ -66,9 +67,9 @@ public class TestWarpSpeedPlugin
         factory.create(
                         "test",
                         Map.of(
-                                CloudVendorConfiguration.STORE_PATH, "s3://some-bucket/some-folder",
-                                ProxiedConnectorConfiguration.PASS_THROUGH_DISPATCHER, "hive,hudi,delta-lake,iceberg",
-                                ProxiedConnectorConfiguration.PROXIED_CONNECTOR, ProxiedConnectorConfiguration.ICEBERG_CONNECTOR_NAME,
+                                MultiPrefixConfigurationWrapper.WARP_SPEED_PREFIX + CloudVendorConfiguration.STORE_PATH, "s3://some-bucket/some-folder",
+                                MultiPrefixConfigurationWrapper.WARP_SPEED_PREFIX + ProxiedConnectorConfiguration.PASS_THROUGH_DISPATCHER, "hive,hudi,delta-lake,iceberg",
+                                MultiPrefixConfigurationWrapper.WARP_SPEED_PREFIX + ProxiedConnectorConfiguration.PROXIED_CONNECTOR, ProxiedConnectorConfiguration.ICEBERG_CONNECTOR_NAME,
                                 "hive.metastore.uri", "thrift://foo:1234"),
                         new TestingConnectorContext())
                 .shutdown();

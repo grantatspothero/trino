@@ -20,6 +20,7 @@ import io.trino.plugin.varada.dispatcher.ForWarp;
 import io.trino.spi.Plugin;
 import io.varada.cloudvendors.CloudVendorMockModule;
 import io.varada.cloudvendors.configuration.CloudVendorConfiguration;
+import io.varada.tools.configuration.MultiPrefixConfigurationWrapper;
 
 import java.util.Map;
 
@@ -39,9 +40,9 @@ public abstract class WarpSpeedConnectorTestUtils
     public static Map<String, String> getProperties()
     {
         return Map.of(
-                WARP_PREFIX + CloudVendorConfiguration.STORE_PATH, "s3://some-bucket/some-folder",
-                WARP_PREFIX + GlobalConfiguration.LOCAL_STORE_PATH, "/tmp/",
-                WARP_PREFIX + ProxiedConnectorConfiguration.PASS_THROUGH_DISPATCHER, "hive,hudi,delta-lake,iceberg");
+                WARP_PREFIX + MultiPrefixConfigurationWrapper.WARP_SPEED_PREFIX + CloudVendorConfiguration.STORE_PATH, "s3://some-bucket/some-folder",
+                WARP_PREFIX + MultiPrefixConfigurationWrapper.WARP_SPEED_PREFIX + GlobalConfiguration.LOCAL_STORE_PATH, "/tmp/",
+                WARP_PREFIX + MultiPrefixConfigurationWrapper.WARP_SPEED_PREFIX + ProxiedConnectorConfiguration.PASS_THROUGH_DISPATCHER, "hive,hudi,delta-lake,iceberg");
     }
 
     public static Map<String, String> getCoordinatorProperties()
