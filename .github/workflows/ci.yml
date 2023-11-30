@@ -126,8 +126,10 @@ jobs:
         with:
           platforms: arm64
       - uses: docker/setup-buildx-action@v1
-      - name: Build and Push Docker Images
-        run: .github/bin/docker-build-and-push.sh -t "${IMAGE_TAG}" -p
+      - name: Build and Push Docker Images [JDK 19]
+        run: .github/bin/docker-build-and-push.sh -t "${IMAGE_TAG}" -j 19 -p
+      - name: Build and Push Docker Images [JDK 21]
+        run: .github/bin/docker-build-and-push.sh -t "${IMAGE_TAG}-jdk21" -j 21 -p
       - name: Tag release commit
         if: github.event_name == 'push'
         run: |
