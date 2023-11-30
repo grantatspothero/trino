@@ -10,15 +10,23 @@ Builds the Galaxy-Trino Docker image
 -h       Display help
 -a       Build the specified comma-separated architectures, defaults to amd64,arm64
 -t       Tag for docker images, defaults to latest
+-j       JDK version to install in the Docker image
 -p       If specified, perform push after docker build
 EOF
 }
 
+SOURCE_DIR="../.."
+
+# Retrieve the script directory.
+SCRIPT_DIR="${BASH_SOURCE%/*}"
+cd ${SCRIPT_DIR}/../../core/docker
+
 PERFORM_PUSH="--load"
 IMAGE_TAG="latest"
 ARCHITECTURES=(amd64 arm64)
+JDK_VERSION=$(cat "${SOURCE_DIR}/.java-version")
 
-while getopts ":a:t:ph" o; do
+while getopts ":a:t:j:ph" o; do
     case "${o}" in
         a)
             IFS=, read -ra ARCHITECTURES <<< "$OPTARG"
@@ -28,6 +36,9 @@ while getopts ":a:t:ph" o; do
             ;;
         p)
             PERFORM_PUSH="--push"
+            ;;
+        j)
+            JDK_VERSION=${OPTARG}
             ;;
         h)
             usage
@@ -41,17 +52,9 @@ while getopts ":a:t:ph" o; do
 done
 shift $((OPTIND - 1))
 
-SOURCE_DIR="../.."
-
-# Retrieve the script directory.
-SCRIPT_DIR="${BASH_SOURCE%/*}"
-cd ${SCRIPT_DIR}/../../core/docker
-
-JDK_VERSION=$(cat "${SOURCE_DIR}/.java-version")
-
 function temurin_jdk_link() {
   JDK_VERSION="${1}"
-  versionsUrl="https://api.adoptium.net/v3/info/release_names?heap_size=normal&image_type=jdk&lts=false&os=linux&page=0&page_size=20&project=jdk&release_type=ga&semver=false&sort_method=DEFAULT&sort_order=ASC&vendor=eclipse&version=%5B${JDK_VERSION}%2C%29"
+  versionsUrl="https://api.adoptium.net/v3/info/release_names?heap_size=normal&image_type=jdk&os=linux&page=0&page_size=20&project=jdk&release_type=ga&semver=false&sort_method=DEFAULT&sort_order=ASC&vendor=eclipse&version=%5B${JDK_VERSION}%2C%29"
   if ! result=$(curl -fLs "$versionsUrl" -H 'accept: application/json'); then
     echo >&2 "Failed to fetch release names for JDK version [${JDK_VERSION}, ) from Temurin API : $result"
     exit 1
