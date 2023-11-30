@@ -13,47 +13,41 @@
  */
 package io.trino.plugin.hive.metastore.galaxy;
 
-import com.google.common.collect.ImmutableList;
-import io.trino.plugin.hive.AbstractTestHiveLocal;
-import io.trino.plugin.hive.metastore.HiveMetastore;
+import io.trino.plugin.hive.metastore.AbstractTestHiveMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
-import io.trino.spi.connector.ConnectorSession;
-import io.trino.spi.session.PropertyMetadata;
-import io.trino.testing.TestingConnectorSession;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
+import static com.google.common.io.MoreFiles.deleteRecursively;
+import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_FACTORY;
-import static io.trino.plugin.hive.HiveTestUtils.getHiveSessionProperties;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assumptions.abort;
+import static java.nio.file.Files.createTempDirectory;
 
 public class TestGalaxyHiveMetastore
-        extends AbstractTestHiveLocal
+        extends AbstractTestHiveMetastore
 {
     private GalaxyCockroachContainer cockroach;
     private TestingGalaxyMetastore testingGalaxyMetastore;
+    private Path tempDir;
 
     @BeforeAll
-    @Override
     public void initialize()
             throws Exception
     {
+        tempDir = createTempDirectory("test");
+        tempDir.toFile().mkdirs();
         cockroach = new GalaxyCockroachContainer();
         testingGalaxyMetastore = new TestingGalaxyMetastore(cockroach);
-        super.initialize();
+        setMetastore(new GalaxyHiveMetastore(testingGalaxyMetastore.getMetastore(), HDFS_FILE_SYSTEM_FACTORY, tempDir.toUri().toString(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch()));
     }
 
     @AfterAll
-    @Override
     public void cleanup()
             throws IOException
     {
-        super.cleanup();
         if (testingGalaxyMetastore != null) {
             testingGalaxyMetastore.close();
             testingGalaxyMetastore = null;
@@ -62,43 +56,6 @@ public class TestGalaxyHiveMetastore
             cockroach.close();
             cockroach = null;
         }
-    }
-
-    @Override
-    protected ConnectorSession newSession()
-    {
-        return TestingConnectorSession.builder()
-                .setPropertyMetadata(
-                        ImmutableList.<PropertyMetadata<?>>builder()
-                                .addAll(getHiveSessionProperties(getHiveConfig()).getSessionProperties())
-                                .addAll(new GalaxyMetastoreSessionProperties().getSessionProperties())
-                                .build())
-                .build();
-    }
-
-    @Override
-    protected HiveMetastore createMetastore(File tempDir)
-    {
-        return new GalaxyHiveMetastore(testingGalaxyMetastore.getMetastore(), HDFS_FILE_SYSTEM_FACTORY, tempDir.getAbsolutePath(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
-    }
-
-    @Test
-    @Override
-    public void testHideDeltaLakeTables()
-    {
-        assertThatThrownBy(super::testHideDeltaLakeTables)
-                .hasMessageMatching("(?s)\n" +
-                        "Expecting\n" +
-                        "  \\[.*\\b(\\w+.tmp_trino_test_trino_delta_lake_table_\\w+)\\b.*]\n" +
-                        "not to contain\n" +
-                        "  \\[\\1]\n" +
-                        "but found.*");
-    }
-
-    @Test
-    @Override
-    public void testPartitionSchemaMismatch()
-    {
-        abort("tests using existing tables are not supported");
+        deleteRecursively(tempDir, ALLOW_INSECURE);
     }
 }

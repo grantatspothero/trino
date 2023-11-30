@@ -79,6 +79,7 @@ import static com.google.common.collect.Streams.stream;
 import static io.trino.filesystem.Locations.appendPath;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_FILESYSTEM_ERROR;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_METASTORE_ERROR;
+import static io.trino.plugin.hive.HiveMetadata.TRINO_QUERY_ID_NAME;
 import static io.trino.plugin.hive.HivePartitionManager.extractPartitionValues;
 import static io.trino.plugin.hive.TableType.MANAGED_TABLE;
 import static io.trino.plugin.hive.metastore.MetastoreUtil.makePartitionName;
@@ -396,7 +397,20 @@ public class GalaxyHiveMetastore
             metastore.createDatabase(toGalaxyDatabase(database));
         }
         catch (EntityAlreadyExistsException e) {
-            throw new SchemaNotFoundException(database.getDatabaseName());
+            // Ignore SchemaAlreadyExistsException when this query has already created the database.
+            // This may happen when an actually successful metastore create call is retried,
+            // because of a timeout on our side.
+            String expectedQueryId = database.getParameters().get(TRINO_QUERY_ID_NAME);
+            if (expectedQueryId != null) {
+                String existingQueryId = getDatabase(database.getDatabaseName())
+                        .map(Database::getParameters)
+                        .map(parameters -> parameters.get(TRINO_QUERY_ID_NAME))
+                        .orElse(null);
+                if (expectedQueryId.equals(existingQueryId)) {
+                    return;
+                }
+            }
+            throw new SchemaAlreadyExistsException(database.getDatabaseName());
         }
         catch (MetastoreException e) {
             throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
@@ -451,6 +465,19 @@ public class GalaxyHiveMetastore
             metastore.createTable(toGalaxyTable(table));
         }
         catch (EntityAlreadyExistsException e) {
+            // Do not throw TableAlreadyExistsException if this query has already created the table.
+            // This may happen when an actually successful metastore create call is retried,
+            // because of a timeout on our side.
+            String expectedQueryId = table.getParameters().get(TRINO_QUERY_ID_NAME);
+            if (expectedQueryId != null) {
+                String existingQueryId = getTable(table.getDatabaseName(), table.getTableName())
+                        .map(Table::getParameters)
+                        .map(parameters -> parameters.get(TRINO_QUERY_ID_NAME))
+                        .orElse(null);
+                if (expectedQueryId.equals(existingQueryId)) {
+                    return;
+                }
+            }
             throw new TableAlreadyExistsException(table.getSchemaTableName());
         }
         catch (EntityNotFoundException e) {
