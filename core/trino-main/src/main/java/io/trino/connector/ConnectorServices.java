@@ -76,7 +76,6 @@ public class ConnectorServices
     private final Tracer tracer;
     private final CatalogHandle catalogHandle;
     private final Connector connector;
-    private final Runnable afterShutdown;
     private final Set<SystemTable> systemTables;
     private final CatalogProcedures procedures;
     private final CatalogTableProcedures tableProcedures;
@@ -102,12 +101,11 @@ public class ConnectorServices
 
     private final AtomicBoolean shutdown = new AtomicBoolean();
 
-    public ConnectorServices(Tracer tracer, CatalogHandle catalogHandle, Connector connector, Runnable afterShutdown, CatalogMangerKind catalogMangerKind)
+    public ConnectorServices(Tracer tracer, CatalogHandle catalogHandle, Connector connector, CatalogMangerKind catalogMangerKind)
     {
         this.tracer = requireNonNull(tracer, "tracer is null");
         this.catalogHandle = requireNonNull(catalogHandle, "catalogHandle is null");
         this.connector = requireNonNull(connector, "connector is null");
-        this.afterShutdown = requireNonNull(afterShutdown, "afterShutdown is null");
         this.catalogMangerKind = requireNonNull(catalogMangerKind, "catalogMangerKind is null");
 
         Set<SystemTable> systemTables = connector.getSystemTables();
@@ -384,9 +382,6 @@ public class ConnectorServices
         }
         catch (Throwable t) {
             log.error(t, "Error shutting down catalog: %s", catalogHandle);
-        }
-        finally {
-            afterShutdown.run();
         }
     }
 

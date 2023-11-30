@@ -19,12 +19,11 @@ import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorFactory;
 
 import java.util.Optional;
-import java.util.function.Function;
 
 @ThreadSafe
 public interface CatalogFactory
 {
-    void addConnectorFactory(ConnectorFactory connectorFactory, Function<CatalogHandle, ClassLoader> duplicatePluginClassLoaderFactory);
+    void addConnectorFactory(ConnectorFactory connectorFactory);
 
     CatalogConnector createCatalog(CatalogProperties catalogProperties);
 

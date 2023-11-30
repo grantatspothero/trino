@@ -452,7 +452,7 @@ public class TestingTrinoServer
 
     public void installPlugin(Plugin plugin)
     {
-        pluginInstaller.installPlugin(plugin, ignored -> plugin.getClass().getClassLoader());
+        pluginInstaller.installPlugin(plugin);
     }
 
     public DispatchManager getDispatchManager()

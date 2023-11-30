@@ -31,7 +31,8 @@ final class TemporaryMemoryLeakHacks
     // reset various caches/etc. to unload anything stuck in the PluginClassLoader - temporary fix until Plugin-specific classloaders are removed from Trino
     static void clearLeaks(ClassLoader connectorClassLoader)
     {
-        if (!(connectorClassLoader instanceof PluginClassLoader pluginClassLoader) || !pluginClassLoader.isDuplicate()) {
+        // TODO: can we remove this hack now?
+        if (!(connectorClassLoader instanceof PluginClassLoader pluginClassLoader)) {
             // we only care about duplicated PluginClassLoaders that are held in the system currently, thus causing memory leaks
             return;
         }

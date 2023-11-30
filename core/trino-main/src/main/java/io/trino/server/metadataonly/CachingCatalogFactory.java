@@ -33,7 +33,6 @@ import io.trino.spi.connector.ConnectorFactory;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
@@ -95,9 +94,9 @@ public class CachingCatalogFactory
     }
 
     @Override
-    public void addConnectorFactory(ConnectorFactory connectorFactory, Function<CatalogHandle, ClassLoader> duplicatePluginClassLoaderFactory)
+    public void addConnectorFactory(ConnectorFactory connectorFactory)
     {
-        catalogFactory.addConnectorFactory(connectorFactory, duplicatePluginClassLoaderFactory);
+        catalogFactory.addConnectorFactory(connectorFactory);
     }
 
     @Override

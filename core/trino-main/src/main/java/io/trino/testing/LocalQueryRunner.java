@@ -420,12 +420,9 @@ public class LocalQueryRunner
         this.accessControl = new TestingAccessControlManager(transactionManager, eventListenerManager);
         accessControl.loadSystemAccessControl(AllowAllSystemAccessControl.NAME, ImmutableMap.of());
 
-        HandleResolver handleResolver = new HandleResolver();
-
         NodeInfo nodeInfo = new NodeInfo("test");
         catalogFactory.setCatalogFactory(new DefaultCatalogFactory(
                 metadata,
-                handleResolver,
                 nodeManager,
                 pageSorter,
                 pageIndexerFactory,
@@ -523,7 +520,7 @@ public class LocalQueryRunner
                 new SessionPropertyDefaults(nodeInfo, accessControl),
                 typeRegistry,
                 blockEncodingManager,
-                handleResolver,
+                new HandleResolver(),
                 exchangeManagerRegistry,
                 cacheManagerRegistry);
 
@@ -800,19 +797,19 @@ public class LocalQueryRunner
 
     public void createCatalog(String catalogName, ConnectorFactory connectorFactory, Map<String, String> properties)
     {
-        catalogFactory.addConnectorFactory(connectorFactory, ignored -> connectorFactory.getClass().getClassLoader());
+        catalogFactory.addConnectorFactory(connectorFactory);
         catalogManager.createCatalog(catalogName, new ConnectorName(connectorFactory.getName()), properties, false);
     }
 
     public void registerCatalogFactory(ConnectorFactory connectorFactory)
     {
-        catalogFactory.addConnectorFactory(connectorFactory, ignored -> connectorFactory.getClass().getClassLoader());
+        catalogFactory.addConnectorFactory(connectorFactory);
     }
 
     @Override
     public void installPlugin(Plugin plugin)
     {
-        pluginManager.installPlugin(plugin, ignored -> plugin.getClass().getClassLoader());
+        pluginManager.installPlugin(plugin);
     }
 
     @Override
