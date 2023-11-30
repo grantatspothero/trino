@@ -2048,6 +2048,7 @@ public class EventDrivenFaultTolerantQueryScheduler
             }
 
             if (remainingPartitions.isEmpty()) {
+                log.debug("noMorePartitions called for %s when remainingPartitions is empty", stage.getStageId());
                 finish();
             }
         }
