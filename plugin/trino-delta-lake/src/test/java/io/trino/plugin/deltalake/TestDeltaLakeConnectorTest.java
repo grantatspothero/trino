@@ -1823,13 +1823,13 @@ public class TestDeltaLakeConnectorTest
         }
     }
 
-    private void assertLatestTableOperation(String tableName, String operation)
+    protected void assertLatestTableOperation(String tableName, String operation)
     {
         assertQuery("SELECT operation FROM \"%s$history\" ORDER BY version DESC LIMIT 1".formatted(tableName),
                 "VALUES '%s'".formatted(operation));
     }
 
-    private void assertTableType(String schemaName, String tableName, String tableType)
+    protected void assertTableType(String schemaName, String tableName, String tableType)
     {
         assertThat(metastore.getTable(schemaName, tableName).orElseThrow().getTableType()).isEqualTo(tableType);
     }

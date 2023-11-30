@@ -559,7 +559,7 @@ public class TestDeltaLakeMetadata
                 ImmutableList.of(),
                 true,
                 NONE);
-        deltaLakeMetadata.createTable(SESSION, tableMetadata, false);
+        deltaLakeMetadata.createTable(SESSION, tableMetadata, FAIL);
         DeltaLakeTableHandle tableHandle = (DeltaLakeTableHandle) deltaLakeMetadata.getTableHandle(SESSION, tableMetadata.getTable());
 
         assertThat(deltaLakeMetadata.getInfo(tableHandle)).isEqualTo(Optional.of(
@@ -605,7 +605,7 @@ public class TestDeltaLakeMetadata
                 ImmutableList.of(),
                 false,
                 NAME);
-        deltaLakeMetadata.createTable(SESSION, tableMetadata, false);
+        deltaLakeMetadata.createTable(SESSION, tableMetadata, FAIL);
         DeltaLakeTableHandle tableHandle = (DeltaLakeTableHandle) deltaLakeMetadata.getTableHandle(SESSION, tableMetadata.getTable());
         assertThat(deltaLakeMetadata.getInfo(tableHandle)).isEqualTo(Optional.of(
                 new DeltaLakeInputInfoBuilder()

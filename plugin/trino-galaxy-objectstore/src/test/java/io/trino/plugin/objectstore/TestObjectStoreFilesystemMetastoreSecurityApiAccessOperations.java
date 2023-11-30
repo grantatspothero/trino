@@ -200,7 +200,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
                         .add(GET_DATABASE)
                         .add(CREATE_TABLE)
-                        .add(GET_TABLE)
+                        .addCopies(GET_TABLE, occurrences(type, 1, 1, 2))
                         .addCopies(UPDATE_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .build(),
                 switch (type) {

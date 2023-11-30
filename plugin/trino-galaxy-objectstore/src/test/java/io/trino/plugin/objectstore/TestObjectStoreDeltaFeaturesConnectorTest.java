@@ -30,6 +30,7 @@ import io.trino.testing.BaseConnectorTest;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import io.trino.testing.minio.MinioClient;
+import io.trino.testing.sql.TestTable;
 import org.junit.jupiter.api.BeforeAll;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -39,6 +40,8 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 
 import static io.trino.plugin.base.util.Closables.closeAllSuppress;
+import static io.trino.plugin.deltalake.DeltaLakeMetadata.CREATE_OR_REPLACE_TABLE_AS_OPERATION;
+import static io.trino.plugin.hive.TableType.MANAGED_TABLE;
 import static io.trino.plugin.objectstore.ObjectStoreQueryRunner.initializeTpchTables;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
@@ -190,6 +193,77 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
         assertThat(query("SELECT * FROM " + tableName)).matches(newValues);
 
         assertUpdate("DROP TABLE " + tableName);
+    }
+
+    @Override
+    // Override as the original tests depend on SHOW CREATE TABLE output specific to Objectstore
+    public void testCreateOrReplaceTableChangeUnpartitionedTableIntoPartitioned()
+    {
+        try (TestTable table = new TestTable(getQueryRunner()::execute, "test_create_or_replace_", " AS SELECT BIGINT '22' a, CAST('some data' AS VARCHAR) b")) {
+            assertUpdate("CREATE OR REPLACE TABLE " + table.getName() + " WITH (partitioned_by=ARRAY['a']) AS SELECT BIGINT '42' a, 'some data' b UNION ALL SELECT BIGINT '43' a, 'another data' b", 2);
+            assertThat(query("SELECT * FROM " + table.getName()))
+                    .matches("VALUES (BIGINT '42', CAST('some data' AS VARCHAR)), (BIGINT '43', CAST('another data' AS VARCHAR))");
+
+            assertLatestTableOperation(table.getName(), CREATE_OR_REPLACE_TABLE_AS_OPERATION);
+
+            assertThat((String) computeScalar("SHOW CREATE TABLE " + table.getName()))
+                    .matches("CREATE TABLE delta.test_schema.%s \\(\n".formatted(table.getName()) +
+                            "   a bigint,\n" +
+                            "   b varchar\n" +
+                            "\\)\n" +
+                            "WITH \\(\n" +
+                            "   location = '.*',\n" +
+                            "   partitioned_by = ARRAY\\['a'],\n" +
+                            "   type = 'DELTA'\n" +
+                            "\\)");
+        }
+    }
+
+    @Override
+    // Override as the original tests depend on SHOW CREATE TABLE output specific to Objectstore
+    public void testCreateOrReplaceTableChangePartitionedTableIntoUnpartitioned()
+    {
+        try (TestTable table = new TestTable(
+                getQueryRunner()::execute,
+                "test_create_or_replace_",
+                "  WITH (partitioned_by=ARRAY['a']) AS SELECT BIGINT '42' a, 'some data' b UNION ALL SELECT BIGINT '43' a, 'another data' b")) {
+            assertUpdate("CREATE OR REPLACE TABLE " + table.getName() + " AS SELECT BIGINT '42' a, 'some data' b UNION ALL SELECT BIGINT '43' a, 'another data' b", 2);
+            assertThat(query("SELECT * FROM " + table.getName()))
+                    .matches("VALUES (BIGINT '42', CAST('some data' AS VARCHAR)), (BIGINT '43', CAST('another data' AS VARCHAR))");
+
+            assertLatestTableOperation(table.getName(), CREATE_OR_REPLACE_TABLE_AS_OPERATION);
+
+            assertThat((String) computeScalar("SHOW CREATE TABLE " + table.getName()))
+                    .matches("CREATE TABLE delta.test_schema.%s \\(\n".formatted(table.getName()) +
+                            "   a bigint,\n" +
+                            "   b varchar\n" +
+                            "\\)\n" +
+                            "WITH \\(\n" +
+                            "   location = '.*',\n" +
+                            "   type = 'DELTA'\n" +
+                            "\\)");
+        }
+    }
+
+    @Override
+    // Override as the original tests depend on Hive metastore and here we use galaxy metastore
+    public void testCreateOrReplaceTableWithSameLocationForManagedTable()
+    {
+        try (TestTable table = new TestTable(
+                getQueryRunner()::execute,
+                "create_or_replace_with_same_location_",
+                " (a BIGINT)")) {
+            String location = galaxyMetastore.getMetastore().getTable("test_schema", table.getName()).orElseThrow().storage().location();
+            assertTableType("test_schema", table.getName(), MANAGED_TABLE.name());
+            assertUpdate("CREATE OR REPLACE TABLE " + table.getName() + " WITH (location = '" + location + "') AS SELECT 'abc' as colA", 1);
+            assertTableType("test_schema", table.getName(), MANAGED_TABLE.name());
+        }
+    }
+
+    @Override
+    protected void assertTableType(String schemaName, String tableName, String tableType)
+    {
+        assertThat(galaxyMetastore.getMetastore().getTable(schemaName, tableName).orElseThrow().tableType()).isEqualTo(tableType);
     }
 
     private void skipDuplicateTestCoverage(String methodName, Class<?>... args)
