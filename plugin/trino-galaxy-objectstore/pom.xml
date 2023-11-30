@@ -100,11 +100,6 @@
 
         <dependency>
             <groupId>io.trino</groupId>
-            <artifactId>trino-hdfs</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.trino</groupId>
             <artifactId>trino-hive</artifactId>
         </dependency>
 
@@ -242,6 +237,12 @@
         <dependency>
             <groupId>io.trino</groupId>
             <artifactId>trino-filesystem-s3</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-hdfs</artifactId>
             <scope>runtime</scope>
         </dependency>
 
