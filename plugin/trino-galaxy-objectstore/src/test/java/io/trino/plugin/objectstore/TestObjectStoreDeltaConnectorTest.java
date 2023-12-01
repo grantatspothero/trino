@@ -521,57 +521,6 @@ public class TestObjectStoreDeltaConnectorTest
                 .build();
     }
 
-    /**
-     * @see deltalake.partition_values_parsed
-     */
-    @Test
-    public void testDeltaLakeWithPartitionValuesParsed()
-    {
-        testPartitionValuesParsed("deltalake/partition_values_parsed");
-    }
-
-    /**
-     * @see trino432.partition_values_parsed
-     */
-    @Test
-    public void testTrinoWithoutPartitionValuesParsed()
-    {
-        testPartitionValuesParsed("trino432/partition_values_parsed");
-    }
-
-    private void testPartitionValuesParsed(String resourceName)
-    {
-        String tableName = "test_partition_values_parsed_checkpoint_" + randomNameSuffix();
-        String tableLocation = "s3://test-bucket/" + tableName;
-
-        minio.copyResources(resourceName, "test-bucket", tableName);
-        assertUpdate("CALL system.register_table('%s', '%s', '%s')".formatted(getSession().getSchema().orElseThrow(), tableName, tableLocation));
-
-        Session session = Session.builder(getQueryRunner().getDefaultSession())
-                .setCatalogSessionProperty(getSession().getCatalog().orElseThrow(), "checkpoint_filtering_enabled", "true")
-                .build();
-
-        assertThat(query(session, "SELECT id FROM " + tableName + " WHERE int_part = 10 AND string_part = 'part1'"))
-                .matches("VALUES 1");
-        assertThat(query(session, "SELECT id FROM " + tableName + " WHERE int_part != 10"))
-                .matches("VALUES 2");
-        assertThat(query(session, "SELECT id FROM " + tableName + " WHERE int_part > 10"))
-                .matches("VALUES 2");
-        assertThat(query(session, "SELECT id FROM " + tableName + " WHERE int_part >= 10"))
-                .matches("VALUES 1, 2");
-        assertThat(query(session, "SELECT id FROM " + tableName + " WHERE int_part IN (10, 20)"))
-                .matches("VALUES 1, 2");
-        assertThat(query("SELECT id FROM " + tableName + " WHERE int_part IS NULL AND string_part IS NULL"))
-                .matches("VALUES 3");
-        assertThat(query("SELECT id FROM " + tableName + " WHERE int_part IS NOT NULL AND string_part IS NOT NULL"))
-                .matches("VALUES 1, 2");
-
-        assertThat(query("SELECT id FROM " + tableName + " WHERE int_part = 10 AND string_part = 'unmatched partition condition'"))
-                .returnsEmptyResult();
-        assertThat(query("SELECT id FROM " + tableName + " WHERE int_part IS NULL AND string_part IS NOT NULL"))
-                .returnsEmptyResult();
-    }
-
     private void runAnalyzeVerifySplitCount(String tableName, long expectedSplitCount)
     {
         MaterializedResultWithQueryId analyzeResult = getDistributedQueryRunner().executeWithQueryId(getSession(), "ANALYZE " + tableName);

@@ -19,20 +19,16 @@ import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.reflect.ClassPath;
 import io.trino.testing.containers.Minio;
 import io.trino.util.AutoCloseableCloser;
 
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
-import static java.util.regex.Matcher.quoteReplacement;
 
 public class MinioStorage
         implements AutoCloseable
@@ -94,22 +90,6 @@ public class MinioStorage
     public void putObject(String key, String content)
     {
         s3.putObject(bucketName, key, content);
-    }
-
-    public void copyResources(String resourcePath, String bucketName, String target)
-    {
-        try {
-            for (ClassPath.ResourceInfo resourceInfo : ClassPath.from(AmazonS3.class.getClassLoader())
-                    .getResources()) {
-                if (resourceInfo.getResourceName().startsWith(resourcePath)) {
-                    String fileName = resourceInfo.getResourceName().replaceFirst("^" + Pattern.quote(resourcePath), quoteReplacement(target));
-                    s3.putObject(bucketName, fileName, resourceInfo.asByteSource().openStream(), new ObjectMetadata());
-                }
-            }
-        }
-        catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 
     @SuppressWarnings("HttpUrlsUsage")

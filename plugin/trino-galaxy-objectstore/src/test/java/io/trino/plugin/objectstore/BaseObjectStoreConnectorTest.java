@@ -88,9 +88,8 @@ public abstract class BaseObjectStoreConnectorTest
         extends BaseConnectorTest
 {
     private final TableType tableType;
+    private MinioStorage minio;
     private TestingGalaxyMetastore metastore;
-
-    protected MinioStorage minio;
 
     protected BaseObjectStoreConnectorTest(TableType tableType)
     {
