@@ -1432,11 +1432,17 @@ public abstract class BaseJdbcConnectorTest
             @Language("SQL") String query,
             boolean condition)
     {
-        QueryAssert queryAssert = assertThat(query(session, query));
-        if (condition) {
-            return queryAssert.isFullyPushedDown();
+        try {
+            QueryAssert queryAssert = assertThat(query(session, query));
+            if (condition) {
+                return queryAssert.isFullyPushedDown();
+            }
+            return queryAssert.joinIsNotFullyPushedDown();
         }
-        return queryAssert.joinIsNotFullyPushedDown();
+        catch (Throwable e) {
+            e.addSuppressed(new Exception("Query: " + query));
+            throw e;
+        }
     }
 
     protected void assertConditionallyOrderedPushedDown(
@@ -1445,12 +1451,18 @@ public abstract class BaseJdbcConnectorTest
             boolean condition,
             PlanMatchPattern otherwiseExpected)
     {
-        QueryAssert queryAssert = assertThat(query(session, query)).ordered();
-        if (condition) {
-            queryAssert.isFullyPushedDown();
+        try {
+            QueryAssert queryAssert = assertThat(query(session, query)).ordered();
+            if (condition) {
+                queryAssert.isFullyPushedDown();
+            }
+            else {
+                queryAssert.isNotFullyPushedDown(otherwiseExpected);
+            }
         }
-        else {
-            queryAssert.isNotFullyPushedDown(otherwiseExpected);
+        catch (Throwable e) {
+            e.addSuppressed(new Exception("Query: " + query));
+            throw e;
         }
     }
 
