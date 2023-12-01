@@ -18,6 +18,8 @@ import com.google.inject.Module;
 import com.google.inject.Scopes;
 import io.trino.server.PluginManager.PluginsProvider;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 
@@ -38,6 +40,9 @@ public final class DevelopmentServer
 
     public static void main(String[] args)
     {
-        new DevelopmentServer().start("dev");
+        String injectedVersion = System.getenv("GALAXY_TRINO_DOCKER_VERSION");
+        checkState(injectedVersion == null || !injectedVersion.isEmpty(), "GALAXY_TRINO_DOCKER_VERSION is set but empty");
+        String version = firstNonNull(injectedVersion, "dev");
+        new DevelopmentServer().start(version);
     }
 }
