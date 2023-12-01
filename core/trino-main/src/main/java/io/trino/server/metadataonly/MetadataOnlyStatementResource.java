@@ -62,6 +62,9 @@ import io.trino.spi.block.BlockEncodingSerde;
 import io.trino.spi.exchange.ExchangeId;
 import io.trino.spi.security.Identity;
 import io.trino.spi.type.Type;
+import io.trino.sql.parser.SqlParser;
+import io.trino.sql.tree.NodeLocation;
+import io.trino.sql.tree.Statement;
 import io.trino.tracing.TrinoAttributes;
 import io.trino.transaction.TransactionId;
 import io.trino.util.Failures;
@@ -104,7 +107,9 @@ import static io.trino.server.security.galaxy.MetadataAccessControllerSupplier.T
 import static io.trino.spi.StandardErrorCode.EXCEEDED_TIME_LIMIT;
 import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.trino.spi.StandardErrorCode.SERIALIZATION_ERROR;
+import static io.trino.sql.SqlFormatter.formatSql;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
+import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN;
 import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN_TYPE;
 import static jakarta.ws.rs.core.Response.Status.BAD_REQUEST;
 import static jakarta.ws.rs.core.Response.Status.FORBIDDEN;
@@ -115,6 +120,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 public class MetadataOnlyStatementResource
 {
     private static final URI INFO_URI = URI.create("info:/");
+    private static final SqlParser SQL_PARSER = new SqlParser();
 
     private final Duration maxWaitTime;
 
@@ -204,6 +210,18 @@ public class MetadataOnlyStatementResource
         finally {
             systemState.decrementAndGetActiveRequests();
         }
+    }
+
+    @ResourceSecurity(AUTHENTICATED_USER)
+    @POST
+    @Consumes(TEXT_PLAIN)
+    @Produces(TEXT_PLAIN)
+    @Path("normalizeStatement")
+    public String normalizeStatement(
+            String requestStatement)
+    {
+        Statement statement = SQL_PARSER.createStatement(requestStatement, new NodeLocation(1, 1));
+        return formatSql(statement).trim();
     }
 
     private QueryResults executeQuery(QueryId queryId, AccountId accountId, TransactionId transactionId, String statement, SessionContext sessionContext, List<QueryCatalog> catalogs, Map<String, String> serviceProperties)
