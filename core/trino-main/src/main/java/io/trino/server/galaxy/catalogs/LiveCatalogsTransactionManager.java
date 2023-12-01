@@ -106,7 +106,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
 
 /**
- * This class is designed for multi-tenet use and separates account resources.
+ * This class is designed for multi-tenant use and separates account resources.
  */
 public class LiveCatalogsTransactionManager
         implements TransactionManager, ConnectorServicesProvider, CatalogManager, CatalogResolver
