@@ -172,6 +172,7 @@ public class TestObjectStoreProperties
                         ('objectstore.standard_split_weight_size', '128MB', 'varchar'),
                         ('objectstore.statistics_enabled', 'true', 'boolean'),
                         ('objectstore.target_max_file_size', '1GB', 'varchar'),
+                        ('objectstore.idle_writer_min_file_size', '16MB', 'varchar'),
                         ('objectstore.timestamp_precision', 'MILLISECONDS', 'varchar'),
                         ('objectstore.use_file_size_from_metadata', 'true', 'boolean'),
                         ('objectstore.use_parquet_column_names', 'true', 'boolean'),
