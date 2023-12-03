@@ -134,6 +134,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.io.MoreFiles.deleteRecursively;
 import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
+import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static com.google.inject.util.Modules.EMPTY_MODULE;
 import static io.airlift.concurrent.MoreFutures.getFutureValue;
 import static java.lang.Integer.parseInt;
@@ -323,6 +324,7 @@ public class TestingTrinoServer
                     binder.bind(GracefulShutdownHandler.class).in(Scopes.SINGLETON);
                     binder.bind(ProcedureTester.class).in(Scopes.SINGLETON);
                     binder.bind(ExchangeManagerRegistry.class).in(Scopes.SINGLETON);
+                    spanProcessor.ifPresent(processor -> newSetBinder(binder, SpanProcessor.class).addBinding().toInstance(processor));
                 });
 
         if (coordinator) {

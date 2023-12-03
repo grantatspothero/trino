@@ -22,7 +22,10 @@ import com.google.inject.Module;
 import io.airlift.discovery.server.testing.TestingDiscoveryServer;
 import io.airlift.log.Logger;
 import io.airlift.log.Logging;
+import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.SpanProcessor;
+import io.opentelemetry.sdk.trace.data.SpanData;
+import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import io.trino.Session;
 import io.trino.Session.SessionBuilder;
 import io.trino.cache.CacheMetadata;
@@ -103,6 +106,7 @@ public class DistributedQueryRunner
     private TestingTrinoServer coordinator;
     private Optional<TestingTrinoServer> backupCoordinator;
     private Runnable registerNewWorker;
+    private final InMemorySpanExporter spanExporter = InMemorySpanExporter.create();
     private final List<TestingTrinoServer> servers = new CopyOnWriteArrayList<>();
     private final List<FunctionBundle> functionBundles = new CopyOnWriteArrayList<>(ImmutableList.of(AbstractTestQueries.CUSTOM_FUNCTIONS));
     private final List<Plugin> plugins = new CopyOnWriteArrayList<>();
@@ -241,7 +245,7 @@ public class DistributedQueryRunner
                 environment,
                 additionalModule,
                 baseDataDir,
-                spanProcessor,
+                spanProcessor.or(() -> Optional.of(SimpleSpanProcessor.create(spanExporter))),
                 systemAccessControlConfiguration,
                 systemAccessControls,
                 eventListeners));
@@ -338,6 +342,11 @@ public class DistributedQueryRunner
     public TestingTrinoClient getClient()
     {
         return trinoClient;
+    }
+
+    public List<SpanData> getSpans()
+    {
+        return spanExporter.getFinishedSpanItems();
     }
 
     @Override
@@ -517,13 +526,7 @@ public class DistributedQueryRunner
     @Override
     public MaterializedResult execute(@Language("SQL") String sql)
     {
-        lock.readLock().lock();
-        try {
-            return trinoClient.execute(sql).getResult();
-        }
-        finally {
-            lock.readLock().unlock();
-        }
+        return execute(getDefaultSession(), sql);
     }
 
     @Override
@@ -536,6 +539,7 @@ public class DistributedQueryRunner
     {
         lock.readLock().lock();
         try {
+            spanExporter.reset();
             ResultWithQueryId<MaterializedResult> result = trinoClient.execute(session, sql);
             return new MaterializedResultWithQueryId(result.getQueryId(), result.getResult());
         }
