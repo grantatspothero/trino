@@ -427,7 +427,7 @@ public class GlueHiveMetastore
     }
 
     @Override
-    public List<String> getAllTables(String databaseName)
+    public List<String> getTables(String databaseName)
     {
         return getTableNames(databaseName, tableFilter);
     }
@@ -464,7 +464,7 @@ public class GlueHiveMetastore
     }
 
     @Override
-    public Optional<Map<SchemaTableName, RelationType>> getRelationTypes()
+    public Optional<Map<SchemaTableName, RelationType>> getAllRelationTypes()
     {
         return Optional.empty();
     }
@@ -476,7 +476,7 @@ public class GlueHiveMetastore
     }
 
     @Override
-    public List<String> getAllViews(String databaseName)
+    public List<String> getViews(String databaseName)
     {
         return getTableNames(databaseName, SOME_KIND_OF_VIEW_FILTER);
     }
@@ -1318,7 +1318,7 @@ public class GlueHiveMetastore
     }
 
     @Override
-    public Collection<LanguageFunction> getFunctions(String databaseName)
+    public Collection<LanguageFunction> getAllFunctions(String databaseName)
     {
         return getFunctionsByPattern(databaseName, "trino__.*");
     }

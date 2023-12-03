@@ -343,7 +343,7 @@ public class TrinoGalaxyCatalog
     {
         return namespace.map(Stream::of)
                 .orElseGet(() -> metastore.getAllDatabases().stream())
-                .flatMap(schema -> metastore.getAllTables(schema).stream()
+                .flatMap(schema -> metastore.getTables(schema).stream()
                         .map(table -> new SchemaTableName(schema, table)))
                 .collect(toImmutableList());
     }

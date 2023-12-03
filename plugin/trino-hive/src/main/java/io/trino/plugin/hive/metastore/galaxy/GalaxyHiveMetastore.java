@@ -248,7 +248,7 @@ public class GalaxyHiveMetastore
     }
 
     @Override
-    public List<String> getAllTables(String databaseName)
+    public List<String> getTables(String databaseName)
     {
         try {
             return ImmutableList.copyOf(metastore.getTableNames(databaseName, Optional.empty()));
@@ -279,13 +279,13 @@ public class GalaxyHiveMetastore
     {
         // TODO: Consider adding a new endpoint to galaxy metastore
         ImmutableMap.Builder<String, RelationType> relationTypes = ImmutableMap.builder();
-        getAllTables(databaseName).forEach(name -> relationTypes.put(name, RelationType.TABLE));
-        getAllViews(databaseName).forEach(name -> relationTypes.put(name, RelationType.VIEW));
+        getTables(databaseName).forEach(name -> relationTypes.put(name, RelationType.TABLE));
+        getViews(databaseName).forEach(name -> relationTypes.put(name, RelationType.VIEW));
         return relationTypes.buildKeepingLast();
     }
 
     @Override
-    public Optional<Map<SchemaTableName, RelationType>> getRelationTypes()
+    public Optional<Map<SchemaTableName, RelationType>> getAllRelationTypes()
     {
         // TODO: Consider adding a new endpoint to galaxy metastore
         return getAllTables().flatMap(relations -> getAllViews().map(views -> {
@@ -308,7 +308,7 @@ public class GalaxyHiveMetastore
     }
 
     @Override
-    public List<String> getAllViews(String databaseName)
+    public List<String> getViews(String databaseName)
     {
         try {
             return ImmutableList.copyOf(metastore.getTableNames(databaseName, Optional.of(TableType.VIRTUAL_VIEW.name())));
@@ -833,7 +833,7 @@ public class GalaxyHiveMetastore
     }
 
     @Override
-    public Collection<LanguageFunction> getFunctions(String databaseName)
+    public Collection<LanguageFunction> getAllFunctions(String databaseName)
     {
         // TODO(https://github.com/starburstdata/galaxy-trino/issues/1306)
         throw new TrinoException(NOT_SUPPORTED, "getFunctions is not supported for Galaxy metastore");

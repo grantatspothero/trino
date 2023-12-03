@@ -241,7 +241,7 @@ public class SemiTransactionalHiveMetastore
         if (!tableActions.isEmpty()) {
             throw new UnsupportedOperationException("Listing all tables after adding/dropping/altering tables/views in a transaction is not supported");
         }
-        return delegate.getAllTables(databaseName);
+        return delegate.getTables(databaseName);
     }
 
     public synchronized Iterator<Table> streamTables(ConnectorSession session, String databaseName)
@@ -277,7 +277,7 @@ public class SemiTransactionalHiveMetastore
         if (!tableActions.isEmpty()) {
             throw new UnsupportedOperationException("Listing all relations after adding/dropping/altering tables/views in a transaction is not supported");
         }
-        return delegate.getRelationTypes();
+        return delegate.getAllRelationTypes();
     }
 
     public synchronized Optional<Table> getTable(String databaseName, String tableName)
@@ -451,7 +451,7 @@ public class SemiTransactionalHiveMetastore
         if (!tableActions.isEmpty()) {
             throw new UnsupportedOperationException("Listing all tables after adding/dropping/altering tables/views in a transaction is not supported");
         }
-        return delegate.getAllViews(databaseName);
+        return delegate.getViews(databaseName);
     }
 
     public synchronized Optional<List<SchemaTableName>> getAllViews()
@@ -1246,7 +1246,7 @@ public class SemiTransactionalHiveMetastore
     public synchronized Collection<LanguageFunction> getFunctions(String schemaName)
     {
         checkReadable();
-        return delegate.getFunctions(schemaName);
+        return delegate.getAllFunctions(schemaName);
     }
 
     public synchronized Collection<LanguageFunction> getFunctions(SchemaFunctionName name)
@@ -3375,7 +3375,7 @@ public class SemiTransactionalHiveMetastore
         public void run(HiveMetastoreClosure metastore, AcidTransaction transaction)
         {
             if (partitionName.isPresent()) {
-                metastore.updatePartitionStatistics(tableName.getSchemaName(), tableName.getTableName(), partitionName.get(), this::updateStatistics);
+                metastore.updatePartitionsStatistics(tableName.getSchemaName(), tableName.getTableName(), partitionName.get(), this::updateStatistics);
             }
             else {
                 metastore.updateTableStatistics(tableName.getSchemaName(), tableName.getTableName(), transaction, this::updateStatistics);
@@ -3389,7 +3389,7 @@ public class SemiTransactionalHiveMetastore
                 return;
             }
             if (partitionName.isPresent()) {
-                metastore.updatePartitionStatistics(tableName.getSchemaName(), tableName.getTableName(), partitionName.get(), this::resetStatistics);
+                metastore.updatePartitionsStatistics(tableName.getSchemaName(), tableName.getTableName(), partitionName.get(), this::resetStatistics);
             }
             else {
                 metastore.updateTableStatistics(tableName.getSchemaName(), tableName.getTableName(), transaction, this::resetStatistics);
