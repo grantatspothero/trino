@@ -13,10 +13,12 @@
  */
 package io.trino.server;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.starburst.stargate.id.CatalogVersion;
+import io.trino.Session;
 import io.trino.client.ProtocolHeaders;
 import io.trino.spi.security.Identity;
 import io.trino.spi.security.SelectedRole;
@@ -267,5 +269,49 @@ public class SessionContext
                 clientTransactionSupport,
                 clientInfo,
                 queryCatalogs);
+    }
+
+    @VisibleForTesting
+    public static SessionContext fromSession(Session session)
+    {
+        requireNonNull(session, "session is null");
+
+        Set<String> enabledRoles = session.getIdentity().getEnabledRoles();
+        SelectedRole selectedRole;
+        if (enabledRoles.isEmpty()) {
+            selectedRole = new SelectedRole(SelectedRole.Type.NONE, Optional.empty());
+        }
+        else if (enabledRoles.size() == 1) {
+            selectedRole = new SelectedRole(SelectedRole.Type.ROLE, Optional.of(enabledRoles.iterator().next()));
+        }
+        else {
+            selectedRole = new SelectedRole(SelectedRole.Type.ALL, Optional.empty());
+        }
+
+        return new SessionContext(
+                session.getProtocolHeaders(),
+                session.getCatalog(),
+                session.getSchema(),
+                Optional.of(session.getPath().getRawPath()),
+                Optional.empty(),
+                session.getIdentity(),
+                session.getOriginalIdentity(),
+                selectedRole,
+                session.getSource(),
+                session.getTraceToken(),
+                session.getUserAgent(),
+                session.getRemoteUserAddress(),
+                Optional.of(session.getTimeZoneKey().getId()),
+                Optional.of(session.getLocale().getLanguage()),
+                session.getClientTags(),
+                session.getClientCapabilities(),
+                session.getResourceEstimates(),
+                session.getSystemProperties(),
+                session.getCatalogProperties(),
+                session.getPreparedStatements(),
+                session.getTransactionId(),
+                session.isClientTransactionSupport(),
+                session.getClientInfo(),
+                session.getQueryCatalogs());
     }
 }
