@@ -647,13 +647,13 @@ type conversions.
 * - `CHAR`
   - narrowing conversions for `CHAR`
 * - `TINYINT`
-  - `VARCHAR`, `SMALLINT`, `INTEGER`, `BIGINT`
+  - `VARCHAR`, `SMALLINT`, `INTEGER`, `BIGINT`, `DECIMAL`
 * - `SMALLINT`
-  - `VARCHAR`, `INTEGER`, `BIGINT`
+  - `VARCHAR`, `INTEGER`, `BIGINT`, `DECIMAL`
 * - `INTEGER`
-  - `VARCHAR`, `BIGINT`
+  - `VARCHAR`, `BIGINT`, `DECIMAL`
 * - `BIGINT`
-  - `VARCHAR`
+  - `VARCHAR`, `DECIMAL`
 * - `REAL`
   - `DOUBLE`, `DECIMAL`
 * - `DOUBLE`
