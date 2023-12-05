@@ -22,17 +22,18 @@ import com.google.common.collect.Multiset;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
+import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import io.trino.Session;
 import io.trino.filesystem.TrackingFileSystemFactory;
 import io.trino.filesystem.hdfs.HdfsFileSystemFactory;
-import io.trino.plugin.hive.metastore.CountingAccessHiveMetastore;
-import io.trino.plugin.hive.metastore.CountingAccessHiveMetastoreUtil;
+import io.trino.plugin.hive.metastore.MetastoreMethod;
 import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastore;
 import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastoreConfig;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
+import io.trino.plugin.hive.metastore.tracing.TracingHiveMetastore;
 import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.plugin.iceberg.IcebergUtil;
 import io.trino.plugin.tpch.TpchPlugin;
@@ -71,7 +72,6 @@ import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.INPUT_
 import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.OUTPUT_FILE_CREATE;
 import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.OUTPUT_FILE_CREATE_OR_OVERWRITE;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
-import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_FACTORY;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_STATS;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.CREATE_TABLE;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.GET_ALL_DATABASES;
@@ -83,6 +83,7 @@ import static io.trino.plugin.hive.metastore.MetastoreMethod.GET_TABLE;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.GET_TABLE_STATISTICS;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.REPLACE_TABLE;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.STREAM_TABLES;
+import static io.trino.plugin.hive.metastore.MetastoreMethod.UPDATE_PARTITIONS_STATISTICS;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.UPDATE_PARTITION_STATISTICS;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.UPDATE_TABLE_STATISTICS;
 import static io.trino.plugin.objectstore.TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations.FileType.CDF_DATA;
@@ -115,12 +116,12 @@ import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         extends AbstractTestQueryFramework
 {
+    private static final String TRACE_PREFIX = "HiveMetastore.";
     private static final int MAX_PREFIXES_COUNT = 5;
     private static final String CATALOG_NAME = "objectstore";
     private static final String SCHEMA_NAME = "test_schema";
 
     private InMemorySpanExporter spanExporter;
-    private CountingAccessHiveMetastore metastore;
     private TrackingFileSystemFactory trackingFileSystemFactory;
 
     @Override
@@ -131,12 +132,16 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         closeAfterClass(() -> spanExporter = null);
         SpanProcessor spanProcessor = SimpleSpanProcessor.create(spanExporter);
 
+        SdkTracerProvider tracerProvider = SdkTracerProvider.builder()
+                .addSpanProcessor(spanProcessor)
+                .build();
+
         Path schemaDirectory = createTempDirectory(null);
         GalaxyCockroachContainer galaxyCockroachContainer = closeAfterClass(new GalaxyCockroachContainer());
 
         TestingGalaxyMetastore galaxyMetastore = closeAfterClass(new TestingGalaxyMetastore(galaxyCockroachContainer));
-        metastore = new CountingAccessHiveMetastore(new GalaxyHiveMetastore(galaxyMetastore.getMetastore(), HDFS_FILE_SYSTEM_FACTORY, schemaDirectory.toUri().toString(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch()));
         trackingFileSystemFactory = new TrackingFileSystemFactory(new HdfsFileSystemFactory(HDFS_ENVIRONMENT, HDFS_FILE_SYSTEM_STATS));
+        TracingHiveMetastore metastore = new TracingHiveMetastore(tracerProvider.get("test"), new GalaxyHiveMetastore(galaxyMetastore.getMetastore(), trackingFileSystemFactory, schemaDirectory.toUri().toString(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch()));
 
         TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> galaxyCockroachContainer));
 
@@ -194,7 +199,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
     public void testCreateTable(TableType type)
     {
         assertInvocations("CREATE TABLE test_create(id VARCHAR, age INT) WITH (type = '" + type + "')",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_DATABASE)
                         .add(CREATE_TABLE)
                         .addCopies(GET_TABLE, occurrences(type, 1, 1, 2))
@@ -223,7 +228,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertUpdate("DROP TABLE test_ctas");
 
         assertInvocations("CREATE TABLE test_ctas WITH (type = '" + type + "') AS SELECT 1 AS age",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(CREATE_TABLE)
                         .addCopies(GET_TABLE, occurrences(type, 1, 4, 1))
                         .add(GET_DATABASE)
@@ -275,7 +280,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertInvocations(
                 getSession(),
                 "CREATE TABLE " + tableName + " WITH (type = '" + type + "') AS " + sourceForm,
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_DATABASE)
                         .addCopies(GET_TABLE, occurrences(type, 1, 4, 1))
                         .add(CREATE_TABLE)
@@ -337,7 +342,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertInvocations(
                 getSession(),
                 "CREATE OR REPLACE VIEW " + viewName + " SECURITY INVOKER AS SELECT * FROM tpch.tiny.nation",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .addCopies(GET_TABLE, 2)
                         .add(CREATE_TABLE)
                         .build(),
@@ -367,7 +372,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertUpdate("CREATE TABLE test_select_from(id VARCHAR, age INT) WITH (type = '" + type + "')");
 
         assertInvocations("SELECT * FROM test_select_from",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_TABLE)
                         .build(),
                 switch (type) {
@@ -394,7 +399,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertUpdate("CREATE TABLE test_select_partition WITH (" + partitionProperty + " = ARRAY['part'], type = '" + type + "') AS SELECT 1 AS data, 10 AS part", 1);
 
         assertInvocations("SELECT * FROM test_select_partition",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_TABLE)
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
@@ -419,7 +424,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         assertUpdate("INSERT INTO test_select_partition SELECT 2 AS data, 20 AS part", 1);
         assertInvocations("SELECT * FROM test_select_partition",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_TABLE)
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
@@ -446,7 +451,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         // Specify a specific partition
         assertInvocations("SELECT * FROM test_select_partition WHERE part = 10",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_TABLE)
                         .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
@@ -479,7 +484,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertUpdate("CREATE TABLE test_select_from_where WITH (type = '" + type + "') AS SELECT 2 AS age", 1);
 
         assertInvocations("SELECT * FROM test_select_from_where WHERE age = 2",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_TABLE)
                         .build(),
                 switch (type) {
@@ -510,7 +515,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertUpdate("CREATE VIEW test_select_view_view AS SELECT id, age FROM test_select_view_table");
 
         assertInvocations("SELECT * FROM test_select_view_view",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .addCopies(GET_TABLE, 2)
                         .build(),
                 switch (type) {
@@ -537,7 +542,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertUpdate("CREATE VIEW test_select_view_where_view AS SELECT age FROM test_select_view_where_table");
 
         assertInvocations("SELECT * FROM test_select_view_where_view WHERE age = 2",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .addCopies(GET_TABLE, 2)
                         .build(),
                 switch (type) {
@@ -568,7 +573,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertUpdate("CREATE TABLE test_join_t2 WITH (type = '" + type + "') AS SELECT 'name1' AS name, 'id1' AS id", 1);
 
         assertInvocations("SELECT name, age FROM test_join_t1 JOIN test_join_t2 ON test_join_t2.id = test_join_t1.id",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .addCopies(GET_TABLE, 2)
                         .addCopies(GET_TABLE_STATISTICS, occurrences(type, 2, 0, 0))
                         .build(),
@@ -600,7 +605,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertUpdate("CREATE TABLE test_self_join_table WITH (type = '" + type + "') AS SELECT 2 AS age, 0 parent, 3 AS id", 1);
 
         assertInvocations("SELECT child.age, parent.age FROM test_self_join_table child JOIN test_self_join_table parent ON child.parent = parent.id",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_TABLE)
                         .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .build(),
@@ -632,7 +637,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertUpdate("CREATE TABLE test_explain WITH (type = '" + type + "') AS SELECT 2 AS age", 1);
 
         assertInvocations("EXPLAIN SELECT * FROM test_explain",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_TABLE)
                         .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .build(),
@@ -661,7 +666,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertUpdate("CREATE TABLE test_show_stats WITH (type = '" + type + "') AS SELECT 2 AS age", 1);
 
         assertInvocations("SHOW STATS FOR test_show_stats",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_TABLE)
                         .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .build(),
@@ -690,7 +695,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertUpdate("CREATE TABLE test_show_stats_with_filter AS SELECT 2 AS age", 1);
 
         assertInvocations("SHOW STATS FOR (SELECT * FROM test_show_stats_with_filter where age >= 2)",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_TABLE)
                         .add(GET_TABLE_STATISTICS)
                         .build(),
@@ -708,7 +713,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertUpdate("CREATE TABLE test_analyze WITH (type = '" + type + "') AS SELECT 2 AS age", 1);
 
         assertInvocations("ANALYZE test_analyze",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .addCopies(GET_TABLE, occurrences(type, 1, 3, 1))
                         .addCopies(UPDATE_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
@@ -745,7 +750,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertUpdate("CREATE TABLE test_analyze_partition WITH (" + partitionProperty + " = ARRAY['part'], type = '" + type + "') AS SELECT 1 AS data, 10 AS part", 1);
 
         assertInvocations("ANALYZE test_analyze_partition",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .addCopies(GET_TABLE, occurrences(type, 1, 3, 1))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
@@ -779,7 +784,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertUpdate("INSERT INTO test_analyze_partition SELECT 2 AS data, 20 AS part", 1);
 
         assertInvocations("ANALYZE test_analyze_partition",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .addCopies(GET_TABLE, occurrences(type, 1, 3, 1))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
@@ -824,7 +829,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
             case DELTA -> "CALL system.drop_extended_stats('test_schema', 'drop_stats')";
         };
         assertInvocations(dropStats,
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .addCopies(GET_TABLE, occurrences(type, 1, 3, 1))
                         .addCopies(UPDATE_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
@@ -858,10 +863,10 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
             case DELTA -> "CALL system.drop_extended_stats('test_schema', 'drop_stats_partition')";
         };
         assertInvocations(dropStats,
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .addCopies(GET_TABLE, occurrences(type, 1, 3, 1))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
-                        .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
+                        .addCopies(UPDATE_PARTITIONS_STATISTICS, occurrences(type, 1, 0, 0))
                         .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
                         .build(),
                 switch (type) {
@@ -882,10 +887,10 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertUpdate("INSERT INTO drop_stats_partition SELECT 2 AS data, 20 AS part", 1);
 
         assertInvocations(dropStats,
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .addCopies(GET_TABLE, occurrences(type, 1, 2, 1))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
-                        .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(type, 2, 0, 0))
+                        .addCopies(UPDATE_PARTITIONS_STATISTICS, occurrences(type, 2, 0, 0))
                         .build(),
                 switch (type) {
                     case HIVE -> ImmutableMultiset.<FileOperation>builder()
@@ -935,7 +940,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         // Bulk retrieval
         assertInvocations(session, "SELECT * FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA AND table_name LIKE 'test_select_i_s_columns%'",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(STREAM_TABLES)
                         .build(),
                 bulkRetrievalFileOperations,
@@ -962,7 +967,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         // Bulk retrieval specific columns
         assertInvocations(session, "SELECT table_name, column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA AND table_name LIKE 'test_select_i_s_columns%'",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(STREAM_TABLES)
                         .build(),
                 bulkRetrievalFileOperations,
@@ -988,7 +993,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         // Bulk retrieval without filters. Including information_schema schema involves InformationSchemaMetadata and may result e.g. in additional access control calls
         assertInvocations(session, "TABLE information_schema.columns",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_ALL_DATABASES)
                         .add(STREAM_TABLES)
                         .build(),
@@ -1026,7 +1031,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         // Pointed lookup
         assertInvocations(session, "SELECT * FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA AND table_name = 'test_select_i_s_columns0'",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_TABLE)
                         .build(),
                 pointedLookupFileOperations,
@@ -1046,7 +1051,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         // Pointed lookup specific columns
         assertInvocations(session, "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema = CURRENT_SCHEMA AND table_name = 'test_select_i_s_columns0'",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_TABLE)
                         .build(),
                 pointedLookupFileOperations,
@@ -1065,7 +1070,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         // Pointed lookup via DESCRIBE (which does some additional things before delegating to information_schema.columns)
         assertInvocations(session, "DESCRIBE test_select_i_s_columns0",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_DATABASE)
                         .add(GET_TABLE)
                         .build(),
@@ -1105,7 +1110,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         // Bulk retrieval
         // TODO add assertions for galaxy-access-control. When doing so, test separately `SELECT *` and `SELECT <explicit-columns` cases
         assertInvocations(session, "SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name LIKE 'test_select_s_m_t_comments%'",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(STREAM_TABLES)
                         .build(),
                 switch (type) {
@@ -1122,7 +1127,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         // Pointed lookup
         // TODO add assertions for galaxy-access-control. When doing so, test separately `SELECT *` and `SELECT <explicit-columns` cases
         assertInvocations(session, "SELECT * FROM system.metadata.table_comments WHERE schema_name = CURRENT_SCHEMA AND table_name = 'test_select_s_m_t_comments" + 0 + "'",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_TABLE)
                         .build(),
                 switch (type) {
@@ -1167,7 +1172,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 "VALUES 'delta_id', 'delta_age', 'iceberg_id', 'iceberg_age', 'hive_id', 'hive_age'");
 
         assertInvocations(session, "SELECT table_name, column_name, data_type, is_nullable FROM information_schema.columns",
-                ImmutableMultiset.<CountingAccessHiveMetastore.Method>builder()
+                ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_ALL_DATABASES)
                         .add(STREAM_TABLES)
                         .build(),
@@ -1194,25 +1199,27 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                         .build());
     }
 
-    private void assertInvocations(@Language("SQL") String query, Multiset<CountingAccessHiveMetastore.Method> expectedMetastoreInvocations, Multiset<FileOperation> expectedFileAccesses)
+    private void assertInvocations(@Language("SQL") String query, Multiset<MetastoreMethod> expectedMetastoreInvocations, Multiset<FileOperation> expectedFileAccesses)
     {
         assertInvocations(getQueryRunner().getDefaultSession(), query, expectedMetastoreInvocations, expectedFileAccesses);
     }
 
-    private void assertInvocations(Session session, @Language("SQL") String query, Multiset<CountingAccessHiveMetastore.Method> expectedMetastoreInvocations, Multiset<FileOperation> expectedFileAccesses)
+    private void assertInvocations(Session session, @Language("SQL") String query, Multiset<MetastoreMethod> expectedMetastoreInvocations, Multiset<FileOperation> expectedFileAccesses)
     {
         // Delta depends on metadata and active files caches being present, so tuning them down could have us testing too pessimistic cases. Flush before counting instead.
         assertUpdate("CALL system.flush_metadata_cache()");
 
+        spanExporter.reset();
         trackingFileSystemFactory.reset();
-        CountingAccessHiveMetastoreUtil.assertMetastoreInvocations(metastore, getQueryRunner(), session, query, expectedMetastoreInvocations);
+
+        assertMetastoreInvocationsForQuery(getDistributedQueryRunner(), session, query, expectedMetastoreInvocations);
         assertMultisetsEqual(getOperations(), expectedFileAccesses);
     }
 
     private void assertInvocations(
             Session session,
             @Language("SQL") String query,
-            Multiset<CountingAccessHiveMetastore.Method> expectedMetastoreInvocations,
+            Multiset<MetastoreMethod> expectedMetastoreInvocations,
             Multiset<FileOperation> expectedFileAccesses,
             List<TracesAssertion> expectedTraces)
     {
@@ -1221,11 +1228,32 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
 
         spanExporter.reset();
         trackingFileSystemFactory.reset();
-        CountingAccessHiveMetastoreUtil.assertMetastoreInvocations(metastore, getQueryRunner(), session, query, expectedMetastoreInvocations);
+        assertMetastoreInvocationsForQuery(getDistributedQueryRunner(), session, query, expectedMetastoreInvocations);
         Multiset<FileOperation> fileOperations = getOperations();
-        List<SpanData> finishedSpans = spanExporter.getFinishedSpanItems();
         assertMultisetsEqual(fileOperations, expectedFileAccesses);
-        expectedTraces.forEach(assertion -> assertion.verify(finishedSpans));
+        expectedTraces.forEach(assertion -> assertion.verify(spanExporter.getFinishedSpanItems()));
+    }
+
+    // TODO Replace this method with MetastoreInvocations.assertMetastoreInvocationsForQuery after fixing an empty list from DistributedQueryRunner.getSpans method
+    // https://github.com/starburstdata/galaxy-trino/issues/1589
+    private void assertMetastoreInvocationsForQuery(
+            DistributedQueryRunner queryRunner,
+            Session session,
+            @Language("SQL") String query,
+            Multiset<MetastoreMethod> expectedInvocations)
+    {
+        queryRunner.execute(session, query);
+
+        Multiset<MetastoreMethod> invocations = spanExporter.getFinishedSpanItems().stream()
+                .map(SpanData::getName)
+                .filter(name -> name.startsWith(TRACE_PREFIX))
+                .map(name -> name.substring(TRACE_PREFIX.length()))
+                .filter(name -> !name.equals("listRoleGrants"))
+                .filter(name -> !name.equals("listTablePrivileges"))
+                .map(MetastoreMethod::fromMethodName)
+                .collect(toImmutableMultiset());
+
+        assertMultisetsEqual(invocations, expectedInvocations);
     }
 
     private Multiset<FileOperation> getOperations()

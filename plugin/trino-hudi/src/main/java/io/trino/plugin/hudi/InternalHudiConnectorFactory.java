@@ -32,6 +32,7 @@ import io.trino.plugin.base.classloader.ClassLoaderSafeNodePartitioningProvider;
 import io.trino.plugin.base.jmx.MBeanServerModule;
 import io.trino.plugin.base.session.SessionPropertiesProvider;
 import io.trino.plugin.hive.NodeVersion;
+import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hive.metastore.HiveMetastoreModule;
 import io.trino.spi.NodeManager;
 import io.trino.spi.classloader.ThreadContextClassLoader;
@@ -57,6 +58,7 @@ public final class InternalHudiConnectorFactory
     public static Connector createConnector(
             String catalogName,
             Map<String, String> config,
+            Optional<HiveMetastore> metastore,
             ConnectorContext context,
             Optional<Module> module)
     {
@@ -67,7 +69,7 @@ public final class InternalHudiConnectorFactory
                     new MBeanModule(),
                     new JsonModule(),
                     new HudiModule(),
-                    new HiveMetastoreModule(Optional.empty()),
+                    new HiveMetastoreModule(metastore),
                     new FileSystemModule(catalogName, context.getNodeManager(), context.getOpenTelemetry()),
                     new MBeanServerModule(),
                     binder -> {
