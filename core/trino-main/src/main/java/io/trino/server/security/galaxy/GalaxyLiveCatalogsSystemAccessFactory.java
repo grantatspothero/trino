@@ -26,14 +26,14 @@ public class GalaxyLiveCatalogsSystemAccessFactory
         implements SystemAccessControlFactory
 {
     public static final String NAME = "galaxy-live";
-    private final LiveCatalogsGalaxyAccessControllerSupplier liveCatalogsGalaxyAccessControllerSupplier;
     private final int backgroundProcessingThreads;
+    private final LiveCatalogsGalaxyAccessControllerSupplier liveCatalogsGalaxyAccessControllerSupplier;
 
     @Inject
     public GalaxyLiveCatalogsSystemAccessFactory(GalaxySystemAccessControlConfig systemAccessControlConfig, LiveCatalogsGalaxyAccessControllerSupplier liveCatalogsGalaxyAccessControllerSupplier)
     {
+        backgroundProcessingThreads = requireNonNull(systemAccessControlConfig, "systemAccessControlConfig is null").getBackgroundProcessingThreads();
         this.liveCatalogsGalaxyAccessControllerSupplier = requireNonNull(liveCatalogsGalaxyAccessControllerSupplier, "liveCatalogsGalaxyAccessControllerSupplier is null");
-        backgroundProcessingThreads = systemAccessControlConfig.getBackgroundProcessingThreads();
     }
 
     @Override
