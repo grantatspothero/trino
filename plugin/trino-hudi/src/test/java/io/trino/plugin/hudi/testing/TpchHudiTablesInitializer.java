@@ -161,7 +161,7 @@ public class TpchHudiTablesInitializer
 
     protected HudiConnector getHudiConnector(DistributedQueryRunner queryRunner)
     {
-        return TransactionBuilder.transaction(queryRunner.getTransactionManager(), queryRunner.getMetadata(), queryRunner.getAccessControl())
+        return TransactionBuilder.transaction(queryRunner.getTransactionManager(), queryRunner.getPlannerContext().getMetadata(), queryRunner.getAccessControl())
                 .readOnly()
                 .execute(queryRunner.getDefaultSession(), transactionSession -> ((HudiConnector) queryRunner.getCoordinator().getConnector(transactionSession, "hudi")));
     }

@@ -182,7 +182,7 @@ public class TestObjectStoreIcebergGlueCatalogAccessOperations
         try {
             queryRunner.execute("CREATE SCHEMA " + testSchema);
 
-            DelegateConnectors connectors = TransactionBuilder.transaction(queryRunner.getTransactionManager(), queryRunner.getMetadata(), queryRunner.getAccessControl())
+            DelegateConnectors connectors = TransactionBuilder.transaction(queryRunner.getTransactionManager(), queryRunner.getPlannerContext().getMetadata(), queryRunner.getAccessControl())
                     .readOnly()
                     .execute(queryRunner.getDefaultSession(), transactionSession -> {
                         return ((ObjectStoreConnector) queryRunner.getCoordinator().getConnector(transactionSession, CATALOG_NAME)).getInjector().getInstance(DelegateConnectors.class);

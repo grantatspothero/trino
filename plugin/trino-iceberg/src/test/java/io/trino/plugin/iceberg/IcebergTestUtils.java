@@ -144,7 +144,7 @@ public final class IcebergTestUtils
 
     public static Injector getIcebergConnectorInjector(DistributedQueryRunner queryRunner)
     {
-        return TransactionBuilder.transaction(queryRunner.getTransactionManager(), queryRunner.getMetadata(), queryRunner.getAccessControl())
+        return TransactionBuilder.transaction(queryRunner.getTransactionManager(), queryRunner.getPlannerContext().getMetadata(), queryRunner.getAccessControl())
                 .readOnly()
                 .execute(queryRunner.getDefaultSession(), transactionSession -> {
                     return ((IcebergConnector) queryRunner.getCoordinator().getConnector(transactionSession, ICEBERG_CATALOG))

@@ -45,7 +45,7 @@ public final class TestingDeltaLakeUtils
 
     public static <T> T getConnectorService(DistributedQueryRunner queryRunner, Class<T> clazz)
     {
-        return TransactionBuilder.transaction(queryRunner.getTransactionManager(), queryRunner.getMetadata(), queryRunner.getAccessControl())
+        return TransactionBuilder.transaction(queryRunner.getTransactionManager(), queryRunner.getPlannerContext().getMetadata(), queryRunner.getAccessControl())
                 .readOnly()
                 .execute(queryRunner.getDefaultSession(), transactionSession -> {
                     return ((DeltaLakeConnector) queryRunner.getCoordinator().getConnector(transactionSession, DELTA_CATALOG)).getInjector().getInstance(clazz);

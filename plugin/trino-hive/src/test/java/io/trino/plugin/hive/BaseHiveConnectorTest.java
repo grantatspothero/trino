@@ -286,7 +286,7 @@ public abstract class BaseHiveConnectorTest
 
     protected HiveConnector getHiveConnector(String catalog)
     {
-        return transaction(getDistributedQueryRunner().getTransactionManager(), getDistributedQueryRunner().getMetadata(), getDistributedQueryRunner().getAccessControl())
+        return transaction(getDistributedQueryRunner().getTransactionManager(), getDistributedQueryRunner().getPlannerContext().getMetadata(), getDistributedQueryRunner().getAccessControl())
                 .execute(getSession(), transactionSession -> {
                     Connector connector = getDistributedQueryRunner().getCoordinator().getConnector(transactionSession, catalog);
                     if (connector instanceof MockPlanAlternativeConnector mockConnector) {
@@ -2674,7 +2674,7 @@ public abstract class BaseHiveConnectorTest
             assertUpdate(session, createSourceTable, "SELECT count(*) FROM orders");
             assertUpdate(session, createTargetTable, "SELECT count(*) FROM orders");
 
-            transaction(getQueryRunner().getTransactionManager(), getQueryRunner().getMetadata(), getQueryRunner().getAccessControl()).execute(
+            transaction(getQueryRunner().getTransactionManager(), getQueryRunner().getPlannerContext().getMetadata(), getQueryRunner().getAccessControl()).execute(
                     session,
                     transactionalSession -> {
                         assertUpdate(
@@ -3825,7 +3825,7 @@ public abstract class BaseHiveConnectorTest
     protected TableMetadata getTableMetadata(String catalog, String schema, String tableName)
     {
         Session session = getSession();
-        Metadata metadata = getDistributedQueryRunner().getCoordinator().getMetadata();
+        Metadata metadata = getDistributedQueryRunner().getPlannerContext().getMetadata();
 
         return transaction(getQueryRunner().getTransactionManager(), metadata, getQueryRunner().getAccessControl())
                 .readOnly()
@@ -3839,7 +3839,7 @@ public abstract class BaseHiveConnectorTest
     private Object getHiveTableProperty(String tableName, Function<HiveTableHandle, Object> propertyGetter)
     {
         Session session = getSession();
-        Metadata metadata = getDistributedQueryRunner().getCoordinator().getMetadata();
+        Metadata metadata = getDistributedQueryRunner().getPlannerContext().getMetadata();
 
         return transaction(getQueryRunner().getTransactionManager(), metadata, getQueryRunner().getAccessControl())
                 .readOnly()
@@ -5038,7 +5038,7 @@ public abstract class BaseHiveConnectorTest
                 .getMaterializedRows();
 
         try {
-            transaction(getQueryRunner().getTransactionManager(), getQueryRunner().getMetadata(), getQueryRunner().getAccessControl())
+            transaction(getQueryRunner().getTransactionManager(), getQueryRunner().getPlannerContext().getMetadata(), getQueryRunner().getAccessControl())
                     .execute(session, transactionSession -> {
                         assertUpdate(transactionSession, "DELETE FROM tmp_delete_insert WHERE z >= 2");
                         assertUpdate(transactionSession, "INSERT INTO tmp_delete_insert VALUES (203, 2), (204, 2), (205, 2), (301, 2), (302, 3)", 5);
@@ -5056,7 +5056,7 @@ public abstract class BaseHiveConnectorTest
         MaterializedResult actualAfterRollback = computeActual(session, "SELECT * FROM tmp_delete_insert");
         assertEqualsIgnoreOrder(actualAfterRollback, expectedBefore);
 
-        transaction(getQueryRunner().getTransactionManager(), getQueryRunner().getMetadata(), getQueryRunner().getAccessControl())
+        transaction(getQueryRunner().getTransactionManager(), getQueryRunner().getPlannerContext().getMetadata(), getQueryRunner().getAccessControl())
                 .execute(session, transactionSession -> {
                     assertUpdate(transactionSession, "DELETE FROM tmp_delete_insert WHERE z >= 2");
                     assertUpdate(transactionSession, "INSERT INTO tmp_delete_insert VALUES (203, 2), (204, 2), (205, 2), (301, 2), (302, 3)", 5);
@@ -5084,7 +5084,7 @@ public abstract class BaseHiveConnectorTest
                 .build()
                 .getMaterializedRows();
 
-        transaction(getQueryRunner().getTransactionManager(), getQueryRunner().getMetadata(), getQueryRunner().getAccessControl())
+        transaction(getQueryRunner().getTransactionManager(), getQueryRunner().getPlannerContext().getMetadata(), getQueryRunner().getAccessControl())
                 .execute(session, transactionSession -> {
                     assertUpdate(
                             transactionSession,
@@ -6314,8 +6314,8 @@ public abstract class BaseHiveConnectorTest
                     .findAll()
                     .size();
             if (actualRemoteExchangesCount != expectedRemoteExchangesCount) {
-                Metadata metadata = getDistributedQueryRunner().getCoordinator().getMetadata();
-                FunctionManager functionManager = getDistributedQueryRunner().getCoordinator().getFunctionManager();
+                Metadata metadata = getDistributedQueryRunner().getPlannerContext().getMetadata();
+                FunctionManager functionManager = getDistributedQueryRunner().getPlannerContext().getFunctionManager();
                 String formattedPlan = textLogicalPlan(plan.getRoot(), plan.getTypes(), metadata, functionManager, StatsAndCosts.empty(), session, 0, false);
                 throw new AssertionError(format(
                         "Expected [\n%s\n] remote exchanges but found [\n%s\n] remote exchanges. Actual plan is [\n\n%s\n]",
@@ -6341,8 +6341,8 @@ public abstract class BaseHiveConnectorTest
                     .size();
             if (actualLocalExchangesCount != expectedLocalExchangesCount) {
                 Session session = getSession();
-                Metadata metadata = getDistributedQueryRunner().getMetadata();
-                FunctionManager functionManager = getDistributedQueryRunner().getFunctionManager();
+                Metadata metadata = getDistributedQueryRunner().getPlannerContext().getMetadata();
+                FunctionManager functionManager = getDistributedQueryRunner().getPlannerContext().getFunctionManager();
                 String formattedPlan = textLogicalPlan(plan.getRoot(), plan.getTypes(), metadata, functionManager, StatsAndCosts.empty(), session, 0, false);
                 throw new AssertionError(format(
                         "Expected [\n%s\n] local repartitioned exchanges but found [\n%s\n] local repartitioned exchanges. Actual plan is [\n\n%s\n]",
@@ -8981,15 +8981,15 @@ public abstract class BaseHiveConnectorTest
         JoinNode join = searchFrom(plan.getRoot()).whereIsInstanceOfAny(JoinNode.class).findOnlyElement();
         QueryRunner queryRunner = getQueryRunner();
         // in the case of ChooseAlternative, there can be multiple TableScanNodes
-        Set<CatalogSchemaTableName> tables = transaction(queryRunner.getTransactionManager(), queryRunner.getMetadata(), queryRunner.getAccessControl())
+        Set<CatalogSchemaTableName> tables = transaction(queryRunner.getTransactionManager(), queryRunner.getPlannerContext().getMetadata(), queryRunner.getAccessControl())
                 .execute(queryRunner.getDefaultSession(), transactionalSession -> {
                     return searchFrom(join.getRight()).whereIsInstanceOfAny(TableScanNode.class)
                             .findAll()
                             .stream()
                             .map(tableScan -> {
                                 TableScanNode tableScanNode = (TableScanNode) tableScan;
-                                queryRunner.getMetadata().getCatalogHandle(transactionalSession, tableScanNode.getTable().getCatalogHandle().getCatalogName());
-                                return queryRunner.getMetadata().getTableName(transactionalSession, tableScanNode.getTable());
+                                queryRunner.getPlannerContext().getMetadata().getCatalogHandle(transactionalSession, tableScanNode.getTable().getCatalogHandle().getCatalogName());
+                                return queryRunner.getPlannerContext().getMetadata().getTableName(transactionalSession, tableScanNode.getTable());
                             })
                             .collect(toImmutableSet());
                 });
@@ -9340,7 +9340,7 @@ public abstract class BaseHiveConnectorTest
     private JsonCodec<IoPlan> getIoPlanCodec()
     {
         ObjectMapperProvider objectMapperProvider = new ObjectMapperProvider();
-        objectMapperProvider.setJsonDeserializers(ImmutableMap.of(Type.class, new TypeDeserializer(getQueryRunner().getTypeManager())));
+        objectMapperProvider.setJsonDeserializers(ImmutableMap.of(Type.class, new TypeDeserializer(getQueryRunner().getPlannerContext().getTypeManager())));
         return new JsonCodecFactory(objectMapperProvider).jsonCodec(IoPlan.class);
     }
 

@@ -204,7 +204,7 @@ public class TestObjectStoreHiveFeaturesConnectorTest
     @Override
     protected HiveConnector getHiveConnector(String catalog)
     {
-        ObjectStoreConnector objectStoreConnector = transaction(getDistributedQueryRunner().getTransactionManager(), getDistributedQueryRunner().getMetadata(), getDistributedQueryRunner().getAccessControl())
+        ObjectStoreConnector objectStoreConnector = transaction(getDistributedQueryRunner().getTransactionManager(), getDistributedQueryRunner().getPlannerContext().getMetadata(), getDistributedQueryRunner().getAccessControl())
                 .execute(getSession(), transactionSession -> (ObjectStoreConnector) getDistributedQueryRunner().getCoordinator().getConnector(transactionSession, catalog));
         return (HiveConnector) objectStoreConnector.getInjector().getInstance(DelegateConnectors.class).hiveConnector();
     }

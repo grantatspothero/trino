@@ -40,7 +40,7 @@ public final class HudiTestUtils
 
     public static <T> T getConnectorService(DistributedQueryRunner queryRunner, Class<T> clazz)
     {
-        return TransactionBuilder.transaction(queryRunner.getTransactionManager(), queryRunner.getMetadata(), queryRunner.getAccessControl())
+        return TransactionBuilder.transaction(queryRunner.getTransactionManager(), queryRunner.getPlannerContext().getMetadata(), queryRunner.getAccessControl())
                 .readOnly()
                 .execute(queryRunner.getDefaultSession(), transactionSession -> {
                     return ((HudiConnector) queryRunner.getCoordinator().getConnector(transactionSession, HUDI_CATALOG)).getInjector().getInstance(clazz);

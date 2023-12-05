@@ -34,7 +34,7 @@ public class TpchObjectStoreHudiTablesInitializer
     @Override
     protected HudiConnector getHudiConnector(DistributedQueryRunner queryRunner)
     {
-        ObjectStoreConnector objectStoreConnector = transaction(queryRunner.getTransactionManager(), queryRunner.getMetadata(), queryRunner.getAccessControl())
+        ObjectStoreConnector objectStoreConnector = transaction(queryRunner.getTransactionManager(), queryRunner.getPlannerContext().getMetadata(), queryRunner.getAccessControl())
                 .execute(queryRunner.getDefaultSession(), transactionSession -> (ObjectStoreConnector) queryRunner.getCoordinator().getConnector(transactionSession, "objectstore"));
         return (HudiConnector) objectStoreConnector.getInjector().getInstance(DelegateConnectors.class).hudiConnector();
     }

@@ -134,7 +134,7 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     @Override
     public void initFileSystem()
     {
-        ObjectStoreConnector objectStoreConnector = TransactionBuilder.transaction(getDistributedQueryRunner().getTransactionManager(), getDistributedQueryRunner().getMetadata(), getDistributedQueryRunner().getAccessControl())
+        ObjectStoreConnector objectStoreConnector = TransactionBuilder.transaction(getDistributedQueryRunner().getTransactionManager(), getDistributedQueryRunner().getPlannerContext().getMetadata(), getDistributedQueryRunner().getAccessControl())
                 .readOnly()
                 .execute(getSession(), transactionSession -> {
                     return (ObjectStoreConnector) getDistributedQueryRunner().getCoordinator().getConnector(transactionSession, getSession().getCatalog().orElseThrow());

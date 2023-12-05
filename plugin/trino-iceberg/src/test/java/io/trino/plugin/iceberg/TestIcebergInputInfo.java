@@ -133,7 +133,7 @@ public class TestIcebergInputInfo
 
     private void assertInputInfo(Session session, String tableName, boolean expectedPartition, String expectedFileFormat, String extendedStatisticsMetric, int numberOfDataFiles)
     {
-        Metadata metadata = getQueryRunner().getMetadata();
+        Metadata metadata = getQueryRunner().getPlannerContext().getMetadata();
         QualifiedObjectName qualifiedObjectName = new QualifiedObjectName(
                 session.getCatalog().orElse(ICEBERG_CATALOG),
                 session.getSchema().orElse("tpch"),
@@ -154,7 +154,7 @@ public class TestIcebergInputInfo
 
     private void simulateStatisticsRequest(Session session, String tableName)
     {
-        Metadata metadata = getQueryRunner().getMetadata();
+        Metadata metadata = getQueryRunner().getPlannerContext().getMetadata();
         QualifiedObjectName qualifiedObjectName = new QualifiedObjectName(
                 session.getCatalog().orElse(ICEBERG_CATALOG),
                 session.getSchema().orElse("tpch"),

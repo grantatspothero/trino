@@ -746,7 +746,7 @@ public class TestDeltaLakeMetadata
 
     private void assertInputInfo(Session session, String tableName, DeltaLakeInputInfo deltaLakeInputInfo)
     {
-        Metadata metadata = getQueryRunner().getMetadata();
+        Metadata metadata = getQueryRunner().getPlannerContext().getMetadata();
         QualifiedObjectName qualifiedObjectName = new QualifiedObjectName(
                 session.getCatalog().orElse(DELTA_CATALOG),
                 session.getSchema().orElse("tpch"),
@@ -761,7 +761,7 @@ public class TestDeltaLakeMetadata
 
     private void simulateStatisticsRequest(Session session, String tableName)
     {
-        Metadata metadata = getQueryRunner().getMetadata();
+        Metadata metadata = getQueryRunner().getPlannerContext().getMetadata();
         QualifiedObjectName qualifiedObjectName = new QualifiedObjectName(
                 session.getCatalog().orElse(DELTA_CATALOG),
                 session.getSchema().orElse("tpch"),

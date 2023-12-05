@@ -185,7 +185,7 @@ public class TestObjectStoreProperties
     @Test
     public void testHiddenSessionProperties()
     {
-        ObjectStoreConnector objectStoreConnector = transaction(getDistributedQueryRunner().getTransactionManager(), getDistributedQueryRunner().getMetadata(), getDistributedQueryRunner().getAccessControl())
+        ObjectStoreConnector objectStoreConnector = transaction(getDistributedQueryRunner().getTransactionManager(), getDistributedQueryRunner().getPlannerContext().getMetadata(), getDistributedQueryRunner().getAccessControl())
                 .execute(getSession(), transactionSession -> (ObjectStoreConnector) getDistributedQueryRunner().getCoordinator().getConnector(transactionSession, CATALOG));
         ObjectStoreSessionProperties objectStoreSessionProperties = objectStoreConnector.getInjector().getInstance(ObjectStoreSessionProperties.class);
 

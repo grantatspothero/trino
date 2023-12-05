@@ -41,7 +41,7 @@ public final class TestingHiveUtils
     private static Injector getConnectorInjector(QueryRunner queryRunner)
     {
         if (queryRunner instanceof DistributedQueryRunner) {
-            Connector connector = TransactionBuilder.transaction(queryRunner.getTransactionManager(), queryRunner.getMetadata(), queryRunner.getAccessControl())
+            Connector connector = TransactionBuilder.transaction(queryRunner.getTransactionManager(), queryRunner.getPlannerContext().getMetadata(), queryRunner.getAccessControl())
                     .readOnly()
                     .execute(queryRunner.getDefaultSession(), transactionSession -> {
                         return ((DistributedQueryRunner) queryRunner).getCoordinator().getConnector(transactionSession, HIVE_CATALOG);
