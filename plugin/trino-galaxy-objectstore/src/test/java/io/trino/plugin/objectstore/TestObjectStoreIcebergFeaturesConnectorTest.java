@@ -882,12 +882,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     }
 
     @Override
-    public void testMergeMultipleOperations()
-    {
-        skipDuplicateTestCoverage("testMergeMultipleOperations");
-    }
-
-    @Override
     public void testMergeMultipleRowsMatchFails()
     {
         skipDuplicateTestCoverage("testMergeMultipleRowsMatchFails");
