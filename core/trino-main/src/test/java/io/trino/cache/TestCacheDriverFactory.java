@@ -104,7 +104,7 @@ public class TestCacheDriverFactory
     @Test
     public void testUpdateCache()
     {
-        PlanSignature signature = new PlanSignature(new SignatureKey("sig"), Optional.empty(), ImmutableList.of(), TupleDomain.all(), TupleDomain.all());
+        PlanSignature signature = new PlanSignature(new SignatureKey("sig"), Optional.empty(), ImmutableList.of(), ImmutableList.of(), TupleDomain.all(), TupleDomain.all());
         AtomicInteger operatorIdAllocator = new AtomicInteger();
 
         DriverFactory driverFactory = new DriverFactory(
@@ -127,7 +127,7 @@ public class TestCacheDriverFactory
                 () -> createStaticDynamicFilter(ImmutableList.of(EMPTY)),
                 ImmutableList.of(driverFactory, driverFactory));
 
-        PlanSignature allPlanSignature = new PlanSignature(new SignatureKey("signature"), Optional.empty(), ImmutableList.of(), TupleDomain.all(), TupleDomain.all());
+        PlanSignature allPlanSignature = new PlanSignature(new SignatureKey("signature"), Optional.empty(), ImmutableList.of(), ImmutableList.of(), TupleDomain.all(), TupleDomain.all());
         PlanSignature nonePlanSignature = allPlanSignature.withDynamicPredicate(TupleDomain.none());
 
         // it is the first time when splitCache is updated in driver factory - expect that it was set in factory
@@ -158,7 +158,7 @@ public class TestCacheDriverFactory
     @Test
     public void testCreateDriverForOriginalPlan()
     {
-        PlanSignature signature = new PlanSignature(new SignatureKey("sig"), Optional.empty(), ImmutableList.of(), TupleDomain.all(), TupleDomain.all());
+        PlanSignature signature = new PlanSignature(new SignatureKey("sig"), Optional.empty(), ImmutableList.of(), ImmutableList.of(), TupleDomain.all(), TupleDomain.all());
         AtomicInteger operatorIdAllocator = new AtomicInteger();
         ConnectorSplit connectorSplit = new TestingSplit(false, ImmutableList.of());
         Split split = new Split(TEST_CATALOG_HANDLE, connectorSplit);
@@ -214,7 +214,7 @@ public class TestCacheDriverFactory
     @Test
     public void testCreateDriverWhenDynamicFilterWasChanged()
     {
-        PlanSignature signature = new PlanSignature(new SignatureKey("sig"), Optional.empty(), ImmutableList.of(), TupleDomain.all(), TupleDomain.all());
+        PlanSignature signature = new PlanSignature(new SignatureKey("sig"), Optional.empty(), ImmutableList.of(), ImmutableList.of(), TupleDomain.all(), TupleDomain.all());
         AtomicInteger operatorIdAllocator = new AtomicInteger();
         ConnectorSplit connectorSplit = new TestingSplit(false, ImmutableList.of());
         Split split = new Split(TEST_CATALOG_HANDLE, connectorSplit);

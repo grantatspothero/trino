@@ -25,6 +25,7 @@ import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.predicate.ValueSet;
+import io.trino.spi.type.RowType;
 import io.trino.spi.type.Type;
 import io.trino.sql.DynamicFilters;
 import io.trino.sql.planner.BuiltinFunctionCallBuilder;
@@ -39,6 +40,7 @@ import io.trino.testing.LocalQueryRunner;
 import org.intellij.lang.annotations.Language;
 import org.testng.annotations.Test;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -49,6 +51,7 @@ import static io.trino.cache.CanonicalSubplanExtractor.canonicalExpressionToColu
 import static io.trino.spi.predicate.Range.greaterThan;
 import static io.trino.spi.predicate.Range.lessThan;
 import static io.trino.spi.type.BigintType.BIGINT;
+import static io.trino.spi.type.DoubleType.DOUBLE;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.aggregation;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.anyTree;
 import static io.trino.sql.planner.assertions.PlanMatchPattern.cacheDataPlanNode;
@@ -110,6 +113,7 @@ public class TestCacheCommonSubqueries
                 new SignatureKey(testCatalogId + ":tiny:nation:0.01"),
                 Optional.empty(),
                 ImmutableList.of(REGIONKEY_COLUMN_ID, NATIONKEY_COLUMN_ID),
+                ImmutableList.of(BIGINT, BIGINT),
                 TupleDomain.withColumnDomains(ImmutableMap.of(
                         NATIONKEY_COLUMN_ID, Domain.create(ValueSet.ofRanges(lessThan(BIGINT, 5L), greaterThan(BIGINT, 10L)), false))),
                 TupleDomain.all());
@@ -157,10 +161,13 @@ public class TestCacheCommonSubqueries
     @Test
     public void testJoinQuery()
     {
+        List<CacheColumnId> cacheColumnIds = ImmutableList.of(NATIONKEY_COLUMN_ID, REGIONKEY_COLUMN_ID);
+        List<Type> cacheColumnTypes = ImmutableList.of(BIGINT, BIGINT);
         PlanSignature signature = new PlanSignature(
                 new SignatureKey(testCatalogId + ":tiny:nation:0.01"),
                 Optional.empty(),
-                ImmutableList.of(NATIONKEY_COLUMN_ID, REGIONKEY_COLUMN_ID),
+                cacheColumnIds,
+                cacheColumnTypes,
                 TupleDomain.all(),
                 TupleDomain.all());
         Predicate<FilterNode> isNationKeyDynamicFilter = node -> DynamicFilters.getDescriptor(node.getPredicate())
@@ -208,10 +215,13 @@ public class TestCacheCommonSubqueries
     @Test
     public void testJoinQueryWithCommonDynamicFilters()
     {
+        List<CacheColumnId> cacheColumnIds = ImmutableList.of(NATIONKEY_COLUMN_ID, REGIONKEY_COLUMN_ID);
+        List<Type> cacheColumnTypes = ImmutableList.of(BIGINT, BIGINT);
         PlanSignature signature = new PlanSignature(
                 new SignatureKey(testCatalogId + ":tiny:nation:0.01:((\"[nationkey:bigint]\" IN (BIGINT '0', BIGINT '1')) OR (\"[regionkey:bigint]\" IN (BIGINT '0', BIGINT '1')))"),
                 Optional.empty(),
-                ImmutableList.of(NATIONKEY_COLUMN_ID, REGIONKEY_COLUMN_ID),
+                cacheColumnIds,
+                cacheColumnTypes,
                 TupleDomain.all(),
                 TupleDomain.all());
         Map<CacheColumnId, ColumnHandle> dynamicFilteringMapping = ImmutableMap.of(
@@ -249,10 +259,13 @@ public class TestCacheCommonSubqueries
         Expression max = getFunctionCallBuilder("max", nationkey).build();
         Expression sum = getFunctionCallBuilder("sum", nationkey).build();
         Expression avg = getFunctionCallBuilder("avg", nationkey).build();
+        List<CacheColumnId> cacheColumnIds = ImmutableList.of(REGIONKEY_COLUMN_ID, canonicalExpressionToColumnId(max), canonicalExpressionToColumnId(sum), canonicalExpressionToColumnId(avg));
+        List<Type> cacheColumnTypes = ImmutableList.of(BIGINT, BIGINT, RowType.anonymousRow(BIGINT, BIGINT), RowType.anonymousRow(DOUBLE, BIGINT));
         PlanSignature signature = new PlanSignature(
                 new SignatureKey(testCatalogId + ":tiny:nation:0.01"),
                 Optional.of(ImmutableList.of(REGIONKEY_COLUMN_ID)),
-                ImmutableList.of(REGIONKEY_COLUMN_ID, canonicalExpressionToColumnId(max), canonicalExpressionToColumnId(sum), canonicalExpressionToColumnId(avg)),
+                cacheColumnIds,
+                cacheColumnTypes,
                 TupleDomain.all(),
                 TupleDomain.all());
         assertPlan("""

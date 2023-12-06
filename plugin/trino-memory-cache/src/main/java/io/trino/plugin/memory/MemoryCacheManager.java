@@ -119,6 +119,7 @@ public class MemoryCacheManager
                 signature.getGroupByColumns(),
                 // columns are stored independently
                 ImmutableList.of(),
+                ImmutableList.of(),
                 signature.getPredicate(),
                 signature.getDynamicPredicate());
     }

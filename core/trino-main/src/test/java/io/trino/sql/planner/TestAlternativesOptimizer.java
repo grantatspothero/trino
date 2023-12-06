@@ -158,7 +158,7 @@ public class TestAlternativesOptimizer
                         scan,
                         new LoadCachedDataPlanNode(
                                 idAllocator.getNextId(),
-                                new PlanSignature(new SignatureKey("sig"), Optional.empty(), ImmutableList.of(), TupleDomain.all(), TupleDomain.all()),
+                                new PlanSignature(new SignatureKey("sig"), Optional.empty(), ImmutableList.of(), ImmutableList.of(), TupleDomain.all(), TupleDomain.all()),
                                 FALSE_LITERAL,
                                 ImmutableMap.of(),
                                 ImmutableList.of())),

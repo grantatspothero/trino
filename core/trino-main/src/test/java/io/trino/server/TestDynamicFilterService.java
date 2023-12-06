@@ -1047,7 +1047,7 @@ public class TestDynamicFilterService
                         new ProjectNode(new PlanNodeId("0"),
                                 new LoadCachedDataPlanNode(
                                         new PlanNodeId("1"),
-                                        new PlanSignature(new SignatureKey("test"), Optional.empty(), ImmutableList.of(), TupleDomain.all(), TupleDomain.all()),
+                                        new PlanSignature(new SignatureKey("test"), Optional.empty(), ImmutableList.of(), ImmutableList.of(), TupleDomain.all(), TupleDomain.all()),
                                         or(and(createDynamicFilterExpression(metadata, new DynamicFilterId("0"), BIGINT, new SymbolReference("symbol0")),
                                                         createDynamicFilterExpression(metadata, new DynamicFilterId("1"), BIGINT, new SymbolReference("symbol1"))),
                                                 createDynamicFilterExpression(metadata, new DynamicFilterId("2"), BIGINT, new SymbolReference("symbol2"))),

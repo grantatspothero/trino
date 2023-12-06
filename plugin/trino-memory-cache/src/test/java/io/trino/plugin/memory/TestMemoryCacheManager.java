@@ -32,6 +32,7 @@ import io.trino.spi.cache.SignatureKey;
 import io.trino.spi.connector.ConnectorPageSink;
 import io.trino.spi.connector.ConnectorPageSource;
 import io.trino.spi.predicate.TupleDomain;
+import io.trino.spi.type.Type;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -41,6 +42,7 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -50,6 +52,7 @@ import static io.trino.plugin.memory.MemoryCacheManager.MAX_CACHED_CHANNELS_PER_
 import static io.trino.plugin.memory.MemoryCacheManager.canonicalizePlanSignature;
 import static io.trino.plugin.memory.TestUtils.assertBlockEquals;
 import static io.trino.spi.type.BigintType.BIGINT;
+import static io.trino.spi.type.IntegerType.INTEGER;
 import static java.util.Collections.nCopies;
 import static java.util.stream.Collectors.joining;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -239,6 +242,7 @@ public class TestMemoryCacheManager
                 new SignatureKey("sig"),
                 Optional.of(ImmutableList.of(COLUMN1)),
                 ImmutableList.of(COLUMN1),
+                ImmutableList.of(INTEGER),
                 TupleDomain.all(),
                 TupleDomain.all()));
         assertThat(groupByCacheCol1.loadPages(SPLIT1)).isEmpty();
@@ -294,10 +298,14 @@ public class TestMemoryCacheManager
             List<CacheColumnId> columns = IntStream.range(0, i + 1)
                     .mapToObj(col -> new CacheColumnId("col" + col))
                     .collect(toImmutableList());
+            List<Type> columnsTypes = columns
+                    .stream().map(col -> INTEGER)
+                    .collect(toImmutableList());
             PlanSignature signature = new PlanSignature(
                     new SignatureKey("sig"),
                     Optional.empty(),
                     columns,
+                    columnsTypes,
                     TupleDomain.all(),
                     TupleDomain.all());
             try (SplitCache cache = cacheManager.getSplitCache(signature)) {
@@ -319,10 +327,14 @@ public class TestMemoryCacheManager
 
         // add another channel for col1
         List<CacheColumnId> columns = ImmutableList.of(new CacheColumnId("col1"), new CacheColumnId("col100"));
+        List<Type> columnsTypes = columns
+                .stream().map(col -> INTEGER)
+                .collect(toImmutableList());
         PlanSignature signature = new PlanSignature(
                 new SignatureKey("sig"),
                 Optional.empty(),
                 columns,
+                columnsTypes,
                 TupleDomain.all(),
                 TupleDomain.all());
         SplitCache cache = cacheManager.getSplitCache(signature);
@@ -499,6 +511,7 @@ public class TestMemoryCacheManager
                 new SignatureKey(signature),
                 Optional.empty(),
                 ImmutableList.copyOf(ids),
+                Stream.of(ids).map(ignore -> (Type) INTEGER).collect(toImmutableList()),
                 TupleDomain.all(),
                 TupleDomain.all());
     }

@@ -343,6 +343,7 @@ public abstract class BaseCacheSubqueriesTest
                 new SignatureKey(catalogId + ":" + getCacheTableId(getSession(), "orders_part")),
                 Optional.empty(),
                 ImmutableList.of(getCacheColumnId(getSession(), "orders_part", "orderkey")),
+                ImmutableList.of(BIGINT),
                 TupleDomain.all(),
                 TupleDomain.all());
 

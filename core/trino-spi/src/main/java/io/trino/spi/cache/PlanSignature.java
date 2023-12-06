@@ -16,6 +16,7 @@ package io.trino.spi.cache;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.trino.spi.predicate.TupleDomain;
+import io.trino.spi.type.Type;
 
 import java.util.List;
 import java.util.Objects;
@@ -51,6 +52,10 @@ public class PlanSignature
      */
     private final List<CacheColumnId> columns;
     /**
+     * List of output columns types parallel to {@link PlanSignature#columns}.
+     */
+    private final List<Type> columnsTypes;
+    /**
      * Predicate that is enforced on result rows represented by {@link PlanSignature}.
      * You can use output of `PlanSignature A` to derive output of matching `PlanSignature B`
      * as long as `B.predicate` is a strict subset of `A.predicate`. To do so, `B.predicate`
@@ -72,12 +77,14 @@ public class PlanSignature
             SignatureKey key,
             Optional<List<CacheColumnId>> groupByColumns,
             List<CacheColumnId> columns,
+            List<Type> columnsTypes,
             TupleDomain<CacheColumnId> predicate,
             TupleDomain<CacheColumnId> dynamicPredicate)
     {
         this.key = requireNonNull(key, "key is null");
         this.groupByColumns = requireNonNull(groupByColumns, "groupByColumns is null").map(List::copyOf);
         this.columns = List.copyOf(requireNonNull(columns, "columns is null"));
+        this.columnsTypes = requireNonNull(columnsTypes, "columns types is null");
         this.predicate = requireNonNull(predicate, "predicate is null");
         this.dynamicPredicate = requireNonNull(dynamicPredicate, "dynamicPredicate is null");
     }
@@ -121,8 +128,15 @@ public class PlanSignature
                 key,
                 groupByColumns,
                 columns,
+                columnsTypes,
                 predicate,
                 dynamicPredicate);
+    }
+
+    @JsonProperty
+    public List<Type> getColumnsTypes()
+    {
+        return columnsTypes;
     }
 
     @Override
@@ -138,6 +152,7 @@ public class PlanSignature
         return key.equals(signature.key)
                 && groupByColumns.equals(signature.groupByColumns)
                 && columns.equals(signature.columns)
+                && columnsTypes.equals(signature.columnsTypes)
                 && predicate.equals(signature.predicate)
                 && dynamicPredicate.equals(signature.dynamicPredicate);
     }
@@ -146,7 +161,7 @@ public class PlanSignature
     public int hashCode()
     {
         if (hashCode == 0) {
-            hashCode = Objects.hash(key, groupByColumns, columns, predicate, dynamicPredicate);
+            hashCode = Objects.hash(key, groupByColumns, columns, predicate, dynamicPredicate, columnsTypes);
         }
         return hashCode;
     }
@@ -158,6 +173,7 @@ public class PlanSignature
                 .add("key=" + key)
                 .add("groupByColumns=" + groupByColumns)
                 .add("columns=" + columns)
+                .add("columnTypes=" + columnsTypes)
                 .add("predicate=" + predicate)
                 .add("dynamicPredicate=" + dynamicPredicate)
                 .toString();

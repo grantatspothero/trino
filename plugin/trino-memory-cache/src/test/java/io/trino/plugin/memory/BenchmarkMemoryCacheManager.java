@@ -24,6 +24,7 @@ import io.trino.spi.cache.SignatureKey;
 import io.trino.spi.connector.ConnectorPageSink;
 import io.trino.spi.connector.ConnectorPageSource;
 import io.trino.spi.predicate.TupleDomain;
+import io.trino.spi.type.Type;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -45,6 +46,7 @@ import java.util.stream.IntStream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.jmh.Benchmarks.benchmark;
+import static io.trino.spi.type.IntegerType.INTEGER;
 import static java.util.Collections.nCopies;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.openjdk.jmh.annotations.Mode.Throughput;
@@ -70,11 +72,16 @@ public class BenchmarkMemoryCacheManager
         private final List<CacheColumnId> columnIds = IntStream.range(0, 64)
                 .mapToObj(i -> new CacheColumnId("column" + i))
                 .collect(toImmutableList());
+
+        private final List<Type> columnTypes = columnIds.stream()
+                .map(column -> INTEGER)
+                .collect(toImmutableList());
         private final PlanSignature[] signatures = IntStream.range(0, 200)
                 .mapToObj(i -> new PlanSignature(
                         new SignatureKey("key" + i),
                         Optional.empty(),
                         columnIds,
+                        columnTypes,
                         TupleDomain.all(),
                         TupleDomain.all()))
                 .toArray(PlanSignature[]::new);

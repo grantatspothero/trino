@@ -66,6 +66,7 @@ import static io.trino.cache.StaticDynamicFilter.createStaticDynamicFilter;
 import static io.trino.operator.PageTestUtils.createPage;
 import static io.trino.spi.connector.DynamicFilter.EMPTY;
 import static io.trino.spi.type.BigintType.BIGINT;
+import static io.trino.spi.type.IntegerType.INTEGER;
 import static io.trino.testing.TestingHandles.TEST_CATALOG_HANDLE;
 import static io.trino.testing.TestingHandles.TEST_TABLE_HANDLE;
 import static io.trino.testing.TestingSession.testSessionBuilder;
@@ -209,6 +210,7 @@ public class TestCacheDataOperator
                 new SignatureKey(signature),
                 Optional.empty(),
                 ImmutableList.of(new CacheColumnId("id")),
+                ImmutableList.of(INTEGER),
                 TupleDomain.all(),
                 TupleDomain.all());
     }

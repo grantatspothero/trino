@@ -31,6 +31,7 @@ import io.trino.spi.cache.PlanSignature;
 import io.trino.spi.cache.SignatureKey;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.predicate.TupleDomain;
+import io.trino.spi.type.Type;
 import io.trino.sql.PlannerContext;
 import io.trino.sql.planner.DomainTranslator;
 import io.trino.sql.planner.DomainTranslator.ExtractionResult;
@@ -295,12 +296,15 @@ public final class CommonSubqueriesExtractor
         Optional<List<CacheColumnId>> orderedGroupByColumns = groupByColumns.map(
                 Ordering.from(Comparator.comparing(Object::toString))::sortedCopy);
         checkState(groupByColumns.isEmpty() || groupByColumns.get().containsAll(orderedGroupByColumns.get()));
-
+        List<Type> projectionColumnsTypes = projections.stream()
+                .map(cacheColumnId -> typeProvider.get(commonColumnIds.get(cacheColumnId)))
+                .collect(toImmutableList());
         if (predicate.equals(TRUE_LITERAL)) {
             return new PlanSignature(
                     signatureKey,
                     orderedGroupByColumns,
                     projections,
+                    projectionColumnsTypes,
                     TupleDomain.all(),
                     TupleDomain.all());
         }
@@ -331,6 +335,7 @@ public final class CommonSubqueriesExtractor
                 signatureKey,
                 orderedGroupByColumns,
                 projections,
+                projectionColumnsTypes,
                 normalizeTupleDomain(signaturePredicate),
                 TupleDomain.all());
     }
