@@ -2642,7 +2642,7 @@ public class IcebergMetadata
                         table.getStorageProperties(),
                         table.isRecordScannedFiles(),
                         table.getMaxScannedFileSize(),
-                        Sets.union(table.getConstraintColumns(), newConstraintColumns),
+                        newConstraintColumns,
                         table.getForAnalyze()),
                 remainingConstraint.transformKeys(ColumnHandle.class::cast),
                 extractionResult.remainingExpression(),
