@@ -88,6 +88,7 @@ import static io.trino.sql.planner.assertions.PlanMatchPattern.tableScan;
 import static io.trino.testing.QueryAssertions.assertEqualsIgnoreOrder;
 import static io.trino.tpch.TpchTable.CUSTOMER;
 import static io.trino.tpch.TpchTable.LINE_ITEM;
+import static io.trino.tpch.TpchTable.NATION;
 import static io.trino.tpch.TpchTable.ORDERS;
 import static io.trino.transaction.TransactionBuilder.transaction;
 import static java.lang.String.format;
@@ -97,7 +98,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public abstract class BaseCacheSubqueriesTest
         extends AbstractTestQueryFramework
 {
-    protected static final Set<TpchTable<?>> REQUIRED_TABLES = ImmutableSet.of(LINE_ITEM, ORDERS, CUSTOMER);
+    protected static final Set<TpchTable<?>> REQUIRED_TABLES = ImmutableSet.of(NATION, LINE_ITEM, ORDERS, CUSTOMER);
     protected static final Map<String, String> EXTRA_PROPERTIES = ImmutableMap.of("cache.enabled", "true");
 
     @BeforeMethod
@@ -110,6 +111,21 @@ public abstract class BaseCacheSubqueriesTest
     public static Object[][] isDynamicRowFilteringEnabled()
     {
         return new Object[][] {{true}, {false}};
+    }
+
+    @Test
+    public void testShowStats()
+    {
+        assertThat(query("SHOW STATS FOR nation"))
+                // Not testing average length and min/max, as this would make the test less reusable and is not that important to test.
+                .exceptColumns("data_size", "low_value", "high_value")
+                .skippingTypesCheck()
+                .matches("VALUES " +
+                        "('nationkey', 25e0, 0e0, null)," +
+                        "('name', 25e0, 0e0, null)," +
+                        "('regionkey', 5e0, 0e0, null)," +
+                        "('comment', 25e0, 0e0, null)," +
+                        "(null, null, null, 25e0)");
     }
 
     @Test

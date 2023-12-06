@@ -259,6 +259,11 @@ public class LogicalPlanner
 
     public Plan plan(Analysis analysis, Stage stage, boolean collectPlanStatistics)
     {
+        return plan(analysis, stage, collectPlanStatistics, false);
+    }
+
+    public Plan plan(Analysis analysis, Stage stage, boolean collectPlanStatistics, boolean showStatsQuery)
+    {
         PlanNode root;
         try (var ignored = scopedSpan(plannerContext.getTracer(), "plan")) {
             root = planStatement(analysis, analysis.getStatement());
@@ -297,7 +302,7 @@ public class LogicalPlanner
             }
         }
 
-        if (cacheEnabled || isUseSubPlanAlternatives(session)) {
+        if (!showStatsQuery && (cacheEnabled || isUseSubPlanAlternatives(session))) {
             try (var ignored = scopedSpan(plannerContext.getTracer(), "cache-subqueries")) {
                 root = cacheCommonSubqueries.cacheSubqueries(root);
             }
