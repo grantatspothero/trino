@@ -58,9 +58,11 @@ import io.trino.testing.QueryRunner;
 import io.trino.testing.TestingGalaxyCatalogInfoSupplier;
 import io.trino.transaction.ForTransactionManager;
 import org.intellij.lang.annotations.Language;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.parallel.Execution;
 
 import java.time.Clock;
 import java.util.Arrays;
@@ -91,6 +93,8 @@ import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
 /**
  * You can debug GalaxyQueryRunner queries in both Trino and Stargate portal-server!
@@ -101,7 +105,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  *     <li>Debug TestGalaxyQueries with VM argument -DdebugPortal=true</li>
  * </ul>
  */
-@Test(singleThreaded = true)
+@TestInstance(PER_CLASS)
+@Execution(SAME_THREAD)
 public class TestGalaxyQueries
         extends AbstractTestQueryFramework
 {
@@ -140,7 +145,7 @@ public class TestGalaxyQueries
         queryRunner.execute(format("CREATE SCHEMA %s.%s", "memory", "tiny"));
     }
 
-    @BeforeMethod(alwaysRun = true)
+    @BeforeEach
     public void setFeatureFlags()
     {
         TestingAccountClient accountClient = getTestingAccountClient();
@@ -148,7 +153,7 @@ public class TestGalaxyQueries
         accountClient.upsertAccountFeatureFlag("ROW_FILTERS", true);
     }
 
-    @AfterMethod(alwaysRun = true)
+    @AfterEach
     public void verifyCleanup()
     {
         assertThat(query("SHOW ROLES"))

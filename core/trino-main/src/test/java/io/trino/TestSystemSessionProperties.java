@@ -15,7 +15,7 @@ package io.trino;
 
 import io.airlift.units.Duration;
 import io.trino.spi.session.PropertyMetadata;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.trino.SystemSessionProperties.QUERY_MAX_RUN_TIME;
 import static org.assertj.core.api.Assertions.assertThatNoException;

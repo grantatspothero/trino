@@ -23,18 +23,21 @@ import io.airlift.json.JsonCodec;
 import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.server.testing.TestingTrinoServer;
 import io.trino.testing.DistributedQueryRunner;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import java.util.List;
 
 import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.trino.SessionTestUtils.TEST_SESSION;
 import static java.lang.String.format;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
+@TestInstance(PER_CLASS)
 public class TestDataframeApiSmokeTest
 {
     private static final JsonCodec<TrinoPlan> TRINO_PLAN = jsonCodec(TrinoPlan.class);
@@ -73,7 +76,7 @@ public class TestDataframeApiSmokeTest
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public void setUp()
             throws Exception
     {
@@ -85,7 +88,7 @@ public class TestDataframeApiSmokeTest
         runner.createCatalog("tpch", "tpch", ImmutableMap.of());
     }
 
-    @AfterClass(alwaysRun = true)
+    @AfterAll
     public void tearDown()
             throws Exception
     {

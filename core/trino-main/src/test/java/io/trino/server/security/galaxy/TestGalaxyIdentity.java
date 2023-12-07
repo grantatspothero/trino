@@ -16,7 +16,7 @@ package io.trino.server.security.galaxy;
 import io.starburst.stargate.id.AccountId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.UserId;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.trino.server.security.galaxy.GalaxyIdentity.createPrincipalString;
 import static org.assertj.core.api.Assertions.assertThat;

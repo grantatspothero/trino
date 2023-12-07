@@ -48,10 +48,12 @@ import io.trino.testing.QueryRunner;
 import jakarta.ws.rs.core.MediaType;
 import org.assertj.core.api.AssertProvider;
 import org.intellij.lang.annotations.Language;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.parallel.Execution;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -72,13 +74,16 @@ import static java.util.Locale.ENGLISH;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
 /**
  * Like {@link TestMetadataOnlyQueries} but uses (testing) Galaxy metastore and ObjectStore connector.
  *
  * @see TestMetadataOnlyQueries
  */
-@Test(singleThreaded = true) // Has verify() @AfterMethod
+@TestInstance(PER_CLASS)
+@Execution(SAME_THREAD) // Has verify() @AfterEach
 public class TestGalaxyMetadataOnlyQueries
         extends AbstractTestQueryFramework
 {
@@ -137,7 +142,7 @@ public class TestGalaxyMetadataOnlyQueries
                 .build();
     }
 
-    @BeforeClass
+    @BeforeAll
     public void setUp()
     {
         httpClient = closeAfterClass(new JettyHttpClient());
@@ -159,13 +164,13 @@ public class TestGalaxyMetadataOnlyQueries
         }
     }
 
-    @AfterClass(alwaysRun = true)
+    @AfterAll
     public void tearDown()
     {
         httpClient = null; // closed by closeAfterClass
     }
 
-    @AfterMethod(alwaysRun = true)
+    @AfterEach
     public void verify()
     {
         MetadataOnlyTransactionManager transactionManager = getDistributedQueryRunner().getCoordinator().getInstance(Key.get(MetadataOnlyTransactionManager.class));

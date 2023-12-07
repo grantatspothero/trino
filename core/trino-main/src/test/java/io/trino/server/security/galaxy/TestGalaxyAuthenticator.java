@@ -19,7 +19,7 @@ import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.UserId;
 import io.trino.server.security.AuthenticationException;
 import io.trino.spi.security.Identity;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;

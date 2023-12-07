@@ -16,7 +16,7 @@ package io.trino.server.security.galaxy;
 import io.airlift.security.pem.PemWriter;
 import io.starburst.stargate.id.TrinoPlaneId;
 import io.trino.server.metadataonly.MetadataOnlyConfig;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.security.KeyPair;
 import java.util.Optional;

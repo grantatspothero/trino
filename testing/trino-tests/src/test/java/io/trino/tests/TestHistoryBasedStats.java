@@ -29,10 +29,12 @@ import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import io.trino.tests.tpch.TpchQueryRunnerBuilder;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.parallel.Execution;
 
 import static io.airlift.log.Level.DEBUG;
 import static io.airlift.log.Level.INFO;
@@ -47,8 +49,11 @@ import static io.trino.sql.planner.plan.JoinNode.DistributionType.REPLICATED;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 import static io.trino.transaction.TransactionBuilder.transaction;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
-@Test(singleThreaded = true)
+@TestInstance(PER_CLASS)
+@Execution(SAME_THREAD)
 public class TestHistoryBasedStats
         extends AbstractTestQueryFramework
 {
@@ -60,13 +65,13 @@ public class TestHistoryBasedStats
             .setSystemProperty(HISTORY_BASED_STATISTICS_ENABLED, "true")
             .build();
 
-    @BeforeClass
+    @BeforeAll
     public void enableLogging()
     {
         Logging.initialize().setLevel(HistoryBasedStatsCalculator.class.getName(), DEBUG);
     }
 
-    @AfterClass(alwaysRun = true)
+    @AfterAll
     public void disableLogging()
     {
         Logging.initialize().setLevel(HistoryBasedStatsCalculator.class.getName(), INFO);
@@ -96,7 +101,7 @@ public class TestHistoryBasedStats
         return queryRunner;
     }
 
-    @BeforeMethod
+    @BeforeEach
     public void flushCache()
     {
         assertQuerySucceeds("call system.system.flush_history_based_stats_cache()");

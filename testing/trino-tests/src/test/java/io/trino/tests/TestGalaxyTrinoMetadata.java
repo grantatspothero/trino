@@ -54,9 +54,10 @@ import io.trino.sql.rewrite.StatementRewrite;
 import io.trino.testing.LocalQueryRunner;
 import io.trino.transaction.TransactionId;
 import io.trino.transaction.TransactionManager;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import java.util.Arrays;
 import java.util.List;
@@ -68,10 +69,12 @@ import static io.trino.plugin.tpch.TpchMetadata.TINY_SCHEMA_NAME;
 import static io.trino.testing.TestingEventListenerManager.emptyEventListenerManager;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
+@TestInstance(PER_CLASS)
 public class TestGalaxyTrinoMetadata
 {
     private static final SqlParser SQL_PARSER = new SqlParser();
@@ -84,7 +87,7 @@ public class TestGalaxyTrinoMetadata
     private AnalyzePropertyManager analyzePropertyManager;
 
     @SuppressWarnings("TrinoExperimentalSpi")
-    @BeforeClass
+    @BeforeAll
     public void setup()
     {
         closer = Closer.create();
@@ -148,7 +151,7 @@ public class TestGalaxyTrinoMetadata
         galaxyTrinoMetadata = new GalaxyTrinoMetadata(session, analyzerFactory, SQL_PARSER, dataTypeMapper);
     }
 
-    @AfterClass(alwaysRun = true)
+    @AfterAll
     public void tearDown()
             throws Exception
     {

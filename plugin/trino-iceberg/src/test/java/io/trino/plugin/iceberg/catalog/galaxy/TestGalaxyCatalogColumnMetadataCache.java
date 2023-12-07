@@ -18,20 +18,21 @@ import io.trino.plugin.hive.metastore.Column;
 import io.trino.spi.connector.ColumnMetadata;
 import io.trino.spi.type.TestingTypeManager;
 import io.trino.spi.type.TypeManager;
-import io.trino.testing.DataProviders;
 import org.apache.iceberg.types.Types;
-import org.testng.annotations.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Optional;
 
 import static io.trino.spi.type.IntegerType.INTEGER;
-import static org.testng.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestGalaxyCatalogColumnMetadataCache
 {
     private final TypeManager typeManager = new TestingTypeManager();
 
-    @Test(dataProviderClass = DataProviders.class, dataProvider = "trueFalse")
+    @ParameterizedTest
+    @MethodSource("trueFalse")
     public void testCacheColumnMetadata(boolean createNullableColumn)
     {
         Types.NestedField icebergColumn;
@@ -55,5 +56,10 @@ public class TestGalaxyCatalogColumnMetadataCache
                         .setHidden(false)
                         .setProperties(ImmutableMap.of())
                         .build());
+    }
+
+    private static Object[][] trueFalse()
+    {
+        return new Object[][] {{true}, {false}};
     }
 }

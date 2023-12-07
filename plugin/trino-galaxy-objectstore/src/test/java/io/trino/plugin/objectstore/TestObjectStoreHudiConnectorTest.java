@@ -32,8 +32,8 @@ import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_UPDATE;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assumptions.abort;
-import static org.testng.Assert.assertFalse;
 
 public class TestObjectStoreHudiConnectorTest
         extends BaseObjectStoreConnectorTest

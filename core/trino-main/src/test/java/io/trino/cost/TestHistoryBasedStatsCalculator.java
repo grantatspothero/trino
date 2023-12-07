@@ -91,9 +91,10 @@ import io.trino.testing.TestingSession;
 import io.trino.testing.TestingTransactionHandle;
 import io.trino.transaction.TransactionId;
 import org.joda.time.DateTime;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import java.net.URI;
 import java.util.List;
@@ -131,7 +132,9 @@ import static io.trino.sql.tree.ComparisonExpression.Operator.EQUAL;
 import static io.trino.testing.TestingHandles.TEST_CATALOG_HANDLE;
 import static io.trino.type.UnknownType.UNKNOWN;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
+@TestInstance(PER_CLASS)
 public class TestHistoryBasedStatsCalculator
 {
     private static final ConnectorCacheMetadata CONNECTOR_CACHE_METADATA = new ConnectorCacheMetadata()
@@ -190,13 +193,13 @@ public class TestHistoryBasedStatsCalculator
         }
     };
 
-    @BeforeClass
+    @BeforeAll
     public void enableLogging()
     {
         Logging.initialize().setLevel(HistoryBasedStatsCalculator.class.getName(), DEBUG);
     }
 
-    @AfterClass(alwaysRun = true)
+    @AfterAll
     public void disableLogging()
     {
         Logging.initialize().setLevel(HistoryBasedStatsCalculator.class.getName(), INFO);

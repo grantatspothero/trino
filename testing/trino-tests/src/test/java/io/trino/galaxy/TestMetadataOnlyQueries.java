@@ -51,8 +51,10 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import org.assertj.core.api.AssertProvider;
 import org.intellij.lang.annotations.Language;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.parallel.Execution;
 
 import java.io.File;
 import java.net.URI;
@@ -77,12 +79,15 @@ import static io.trino.testing.MaterializedResult.resultBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
 /**
  * @see TestGalaxyMetadataOnlyQueries
  */
 // see comment at top of TestGalaxyQueries for debugging GalaxyQueryRunner queries in both Trino and Stargate portal-server!
-@Test(singleThreaded = true)
+@TestInstance(PER_CLASS)
+@Execution(SAME_THREAD)
 public class TestMetadataOnlyQueries
         extends AbstractTestQueryFramework
 {
@@ -151,7 +156,7 @@ public class TestMetadataOnlyQueries
                 .build();
     }
 
-    @AfterMethod(alwaysRun = true)
+    @AfterEach
     public void verify()
     {
         MetadataOnlyTransactionManager transactionManager = getDistributedQueryRunner().getCoordinator().getInstance(Key.get(MetadataOnlyTransactionManager.class));
@@ -205,8 +210,8 @@ public class TestMetadataOnlyQueries
                 .hasMessageMatching("\\QQueryError{message=150000 is too many, sqlState=null, errorCode=0, errorName=GENERIC_USER_ERROR, errorType=USER_ERROR, errorLocation=null, failureInfo=io.trino.client.FailureInfo@\\E\\w+\\Q}");
     }
 
-    // must run last as it will shutdown the server
-    @Test(priority = 99999)
+    // must run last as it will shutdown the server, so named accordingly
+    @Test
     public void testShutdown()
     {
         DistributedQueryRunner distributedQueryRunner = getDistributedQueryRunner();

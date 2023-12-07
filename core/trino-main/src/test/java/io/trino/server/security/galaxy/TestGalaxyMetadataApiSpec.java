@@ -60,10 +60,12 @@ import io.trino.spi.security.PrivilegeInfo;
 import io.trino.spi.security.RoleGrant;
 import io.trino.spi.security.SystemSecurityContext;
 import io.trino.spi.security.TrinoPrincipal;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.parallel.Execution;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -98,8 +100,11 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
-@Test(singleThreaded = true)
+@TestInstance(PER_CLASS)
+@Execution(SAME_THREAD)
 public class TestGalaxyMetadataApiSpec
 {
     private static final Logger log = Logger.get(TestGalaxyMetadataApiSpec.class);
@@ -134,7 +139,7 @@ public class TestGalaxyMetadataApiSpec
     private RoleId adminRoleId;
     private RoleId publicRoleId;
 
-    @BeforeClass(alwaysRun = true)
+    @BeforeAll
     public void initialize()
             throws Exception
     {
@@ -155,7 +160,7 @@ public class TestGalaxyMetadataApiSpec
         catalogNames = helper.getCatalogResolver().getCatalogNames().stream().sorted().collect(toImmutableList());
     }
 
-    @AfterClass(alwaysRun = true)
+    @AfterAll
     public void cleanup()
             throws Exception
     {
@@ -177,7 +182,7 @@ public class TestGalaxyMetadataApiSpec
         catalogNames = null;
     }
 
-    @AfterMethod(alwaysRun = true)
+    @AfterEach
     public void verifyCleanup()
     {
         assertThat(securityApi.listRoles(adminSession()))

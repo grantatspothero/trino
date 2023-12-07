@@ -16,8 +16,10 @@ package io.trino.operator.scalar;
 import io.airlift.slice.Slice;
 import io.airlift.slice.Slices;
 import io.trino.sql.query.QueryAssertions;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.trino.operator.scalar.ColumnMaskingFunctions.maskAllButFirstFour;
 import static io.trino.operator.scalar.ColumnMaskingFunctions.maskAllButLastFour;
@@ -25,11 +27,12 @@ import static io.trino.operator.scalar.ColumnMaskingFunctions.maskIntegerAsVarch
 import static io.trino.operator.scalar.ColumnMaskingFunctions.maskVarchar;
 import static io.trino.spi.type.VarcharType.createUnboundedVarcharType;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
+@TestInstance(PER_CLASS)
 public class TestColumnMaskingFunctions
 {
-    @DataProvider(name = "differentStringsWithFullMask")
-    public Object[][] getDifferentStrings()
+    public Object[][] differentStringsWithFullMask()
     {
         return new Object[][] {
                 {"", ""},
@@ -46,8 +49,7 @@ public class TestColumnMaskingFunctions
         };
     }
 
-    @DataProvider(name = "differentStringsWithAllButFirstFour")
-    public Object[][] getDifferentStringsWithAllButFirstFour()
+    public Object[][] differentStringsWithAllButFirstFour()
     {
         return new Object[][] {
                 {"", ""},
@@ -64,8 +66,7 @@ public class TestColumnMaskingFunctions
         };
     }
 
-    @DataProvider(name = "differentStringsWithAllButLastFour")
-    public Object[][] getDifferentStringsWithAllButLastFour()
+    public Object[][] differentStringsWithAllButLastFour()
     {
         return new Object[][] {
                 {"", ""},
@@ -102,7 +103,8 @@ public class TestColumnMaskingFunctions
         }
     }
 
-    @Test(dataProvider = "differentStringsWithFullMask")
+    @ParameterizedTest
+    @MethodSource("differentStringsWithFullMask")
     public void testMaskVarchar(String data, String masked)
     {
         Slice toBeMasked = Slices.utf8Slice(data);
@@ -113,7 +115,8 @@ public class TestColumnMaskingFunctions
                 .isEqualTo(masked);
     }
 
-    @Test(dataProvider = "differentStringsWithAllButFirstFour")
+    @ParameterizedTest
+    @MethodSource("differentStringsWithAllButFirstFour")
     public void testMaskAllButFirstFour(String data, String masked)
     {
         Slice toBeMasked = Slices.utf8Slice(data);
@@ -123,7 +126,8 @@ public class TestColumnMaskingFunctions
         assertThat(slice.toStringUtf8()).isEqualTo(masked);
     }
 
-    @Test(dataProvider = "differentStringsWithAllButLastFour")
+    @ParameterizedTest
+    @MethodSource("differentStringsWithAllButLastFour")
     public void testMaskAllButLastFour(String data, String masked)
     {
         Slice toBeMasked = Slices.utf8Slice(data);
@@ -133,8 +137,7 @@ public class TestColumnMaskingFunctions
         assertThat(slice.toStringUtf8()).isEqualTo(masked);
     }
 
-    @DataProvider(name = "differentIntegers")
-    public Object[][] getDifferentIntegersAsVarchar()
+    public Object[][] differentIntegers()
     {
         return new Object[][] {
                 {""},
@@ -146,7 +149,8 @@ public class TestColumnMaskingFunctions
         };
     }
 
-    @Test(dataProvider = "differentIntegers")
+    @ParameterizedTest
+    @MethodSource("differentIntegers")
     public void testMaskIntegerAsVarchar(String integer)
     {
         Slice slice = Slices.utf8Slice(integer);

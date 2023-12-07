@@ -13,7 +13,7 @@
  */
 package io.trino.server.security.galaxy;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.security.KeyPair;
 import java.util.Optional;

@@ -29,7 +29,7 @@ import io.trino.testing.TestingConnectorSession;
 import io.trino.testing.TestingMetadata;
 import io.trino.testing.TestingSession;
 import io.trino.testing.TestingSplit;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.HashMap;

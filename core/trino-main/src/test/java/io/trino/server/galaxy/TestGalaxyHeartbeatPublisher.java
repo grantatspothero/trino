@@ -25,7 +25,9 @@ import io.trino.server.galaxy.events.CatalogMetricsSnapshot;
 import io.trino.server.galaxy.events.HeartbeatEvent;
 import io.trino.server.galaxy.events.HeartbeatPublisher;
 import io.trino.spi.galaxy.CatalogNetworkMonitor;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.parallel.Execution;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -35,8 +37,11 @@ import java.util.concurrent.TimeUnit;
 import static io.trino.server.galaxy.events.HeartbeatPublisher.HEARTBEAT_EVENT_JSON_CODEC;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
-@Test(singleThreaded = true)
+@TestInstance(PER_CLASS)
+@Execution(SAME_THREAD)
 public class TestGalaxyHeartbeatPublisher
 {
     private static final int CHUNK_SIZE = 64;

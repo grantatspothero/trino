@@ -22,7 +22,8 @@ import io.trino.testing.BaseCacheSubqueriesTest;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import org.intellij.lang.annotations.Language;
-import org.testng.annotations.AfterClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.parallel.Execution;
 
 import java.util.List;
 import java.util.Map;
@@ -32,14 +33,16 @@ import static io.trino.server.security.galaxy.TestingAccountFactory.createTestin
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
+import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
+@Execution(SAME_THREAD)
 public class TestObjectStoreHiveCacheSubqueriesTest
         extends BaseCacheSubqueriesTest
 {
     private MinioStorage minio;
     private TestingGalaxyMetastore metastore;
 
-    @AfterClass(alwaysRun = true)
+    @AfterAll
     public void tearDown()
     {
         metastore = null; // closed by closeAfterClass

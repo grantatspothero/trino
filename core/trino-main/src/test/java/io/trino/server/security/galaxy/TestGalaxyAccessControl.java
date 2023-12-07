@@ -46,10 +46,13 @@ import io.trino.spi.security.PrincipalType;
 import io.trino.spi.security.Privilege;
 import io.trino.spi.security.SystemSecurityContext;
 import io.trino.spi.security.TrinoPrincipal;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -86,8 +89,11 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
-@Test(singleThreaded = true)
+@TestInstance(PER_CLASS)
+@Execution(SAME_THREAD)
 public class TestGalaxyAccessControl
 {
     public static final Logger log = Logger.get(TestGalaxyAccessControl.class);
@@ -103,7 +109,7 @@ public class TestGalaxyAccessControl
     private RoleId lackeyRoleId;
     private List<Identity> fearlessAndLackeyIdentities;
 
-    @BeforeClass(alwaysRun = true)
+    @BeforeAll
     public void initialize()
             throws Exception
     {
@@ -119,7 +125,7 @@ public class TestGalaxyAccessControl
         fearlessAndLackeyIdentities = ImmutableList.of(helper.roleNameToIdentity(FEARLESS_LEADER), helper.roleNameToIdentity(LACKEY_FOLLOWER));
     }
 
-    @AfterClass(alwaysRun = true)
+    @AfterAll
     public void cleanup()
             throws Exception
     {
@@ -538,7 +544,8 @@ public class TestGalaxyAccessControl
         });
     }
 
-    @Test(dataProvider = "testFilterColumnsBulkDataProvider")
+    @ParameterizedTest
+    @MethodSource("testFilterColumnsBulkDataProvider")
     public void testFilterColumnsBulk(FilterColumnsAcceleration mode)
     {
         SessionPropertyManager sessionPropertyManager = new SessionPropertyManager(
@@ -594,7 +601,6 @@ public class TestGalaxyAccessControl
         securityMetadata.revokeEntityPrivileges(adminSession(), table4ColumnId, Set.of(SELECT), user, false);
     }
 
-    @DataProvider
     public static Object[][] testFilterColumnsBulkDataProvider()
     {
         return Stream.of(FilterColumnsAcceleration.values())

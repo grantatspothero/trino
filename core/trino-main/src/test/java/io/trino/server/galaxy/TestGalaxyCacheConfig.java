@@ -16,7 +16,7 @@ package io.trino.server.galaxy;
 import com.google.common.collect.ImmutableMap;
 import io.airlift.units.Duration;
 import io.trino.connector.informationschema.galaxy.GalaxyCacheConfig;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Map;

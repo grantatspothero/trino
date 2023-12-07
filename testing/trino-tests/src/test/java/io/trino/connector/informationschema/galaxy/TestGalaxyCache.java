@@ -38,8 +38,10 @@ import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.LocalQueryRunner;
 import io.trino.testing.MaterializedResult;
 import io.trino.testing.QueryRunner;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.parallel.Execution;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -57,10 +59,13 @@ import static io.trino.connector.informationschema.galaxy.GalaxyCacheSessionProp
 import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.INDEXER;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
-@Test(singleThreaded = true)
+@TestInstance(PER_CLASS)
+@Execution(SAME_THREAD)
 public class TestGalaxyCache
         extends AbstractTestQueryFramework
 {
@@ -94,7 +99,7 @@ public class TestGalaxyCache
         return queryRunner;
     }
 
-    @BeforeMethod
+    @BeforeEach
     public void prepareTest()
     {
         response.set(null);
