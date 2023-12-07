@@ -286,21 +286,25 @@ public class MetadataOnlyStatementResource
                     new SimpleLocalMemoryContext(newSimpleAggregatedMemoryContext(), "Query"),
                     queryManager::outputTaskFailed,
                     getRetryPolicy(session))) {
-                queryManager.setOutputInfoListener(queryId, outputInfo -> {
-                    columnNames.compareAndSet(null, outputInfo.getColumnNames());
-                    columnTypes.compareAndSet(null, outputInfo.getColumnTypes());
+                Object lock = new Object();
 
-                    outputInfo.getInputs()
-                            .stream()
-                            .map(exchangeInput -> {
-                                if (exchangeInput instanceof DirectExchangeInput directExchangeInput) {
-                                    return directExchangeInput;
-                                }
-                                throw new TrinoException(GENERIC_INTERNAL_ERROR, "SpoolingExchangeInput is not supported");
-                            })
-                            .forEach(directExchangeInput -> exchangeClient.addLocationIfNotExists(directExchangeInput.getTaskId(), URI.create(directExchangeInput.getLocation())));
-                    if (outputInfo.isNoMoreInputs()) {
-                        exchangeClient.noMoreLocations();
+                queryManager.setOutputInfoListener(queryId, outputInfo -> {
+                    synchronized (lock) {
+                        columnNames.compareAndSet(null, outputInfo.getColumnNames());
+                        columnTypes.compareAndSet(null, outputInfo.getColumnTypes());
+
+                        outputInfo.getInputs()
+                                .stream()
+                                .map(exchangeInput -> {
+                                    if (exchangeInput instanceof DirectExchangeInput directExchangeInput) {
+                                        return directExchangeInput;
+                                    }
+                                    throw new TrinoException(GENERIC_INTERNAL_ERROR, "SpoolingExchangeInput is not supported");
+                                })
+                                .forEach(directExchangeInput -> exchangeClient.addLocationIfNotExists(directExchangeInput.getTaskId(), URI.create(directExchangeInput.getLocation())));
+                        if (outputInfo.isNoMoreInputs()) {
+                            exchangeClient.noMoreLocations();
+                        }
                     }
                 });
 
