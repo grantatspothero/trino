@@ -65,6 +65,7 @@ import static io.trino.testing.TestingAccessControlManager.TestingPrivilegeType.
 import static io.trino.testing.TestingAccessControlManager.privilege;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_ADD_COLUMN;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_ADD_FIELD;
+import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_CREATE_OR_REPLACE_TABLE;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_CREATE_TABLE;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_CREATE_TABLE_WITH_DATA;
 import static io.trino.testing.TestingConnectorBehavior.SUPPORTS_CREATE_VIEW;
@@ -81,6 +82,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 public abstract class BaseObjectStoreConnectorTest
         extends BaseConnectorTest
@@ -608,6 +610,33 @@ public abstract class BaseObjectStoreConnectorTest
                 "   location = 's3://test-bucket/tpch/test_delta_specific_property\\E" + locationUuidRegex() + "\\Q',\n" +
                 "   type = 'DELTA'\n" +
                 ")\\E");
+    }
+
+    @Test
+    public void testCreateOrReplaceTableDoesNotChangeTableType()
+    {
+        skipTestUnless(hasBehavior(SUPPORTS_CREATE_OR_REPLACE_TABLE));
+        assertUpdate("CREATE OR REPLACE TABLE test_create_or_replace_table_type AS SELECT 1 AS abc", 1);
+        switch (tableType) {
+            case HIVE, HUDI -> fail(format("CREATE OR REPLACE TABLE queries are not supporred for the table type: %s", tableType));
+            case ICEBERG -> {
+                assertQueryFails(
+                        "CREATE OR REPLACE TABLE test_create_or_replace_table_type (abc integer) WITH (type = 'DELTA')",
+                        "tpch.test_create_or_replace_table_type is not a Delta Lake table");
+                assertQueryFails(
+                        "CREATE OR REPLACE TABLE test_create_or_replace_table_type WITH (type = 'DELTA') AS SELECT 2 AS abc",
+                        "tpch.test_create_or_replace_table_type is not a Delta Lake table");
+            }
+            case DELTA -> {
+                assertQueryFails(
+                        "CREATE OR REPLACE TABLE test_create_or_replace_table_type (abc integer) WITH (type = 'ICEBERG')",
+                        "Not an Iceberg table: tpch.test_create_or_replace_table_type");
+                assertQueryFails(
+                        "CREATE OR REPLACE TABLE test_create_or_replace_table_type WITH (type = 'ICEBERG') AS SELECT 2 AS abc",
+                        "Not an Iceberg table: tpch.test_create_or_replace_table_type");
+            }
+        }
+        assertQuery("SELECT * FROM test_create_or_replace_table_type", "VALUES 1");
     }
 
     @Test
