@@ -19,6 +19,19 @@
     </properties>
 
     <dependencies>
+
+        <dependency>
+            <groupId>com.datastax.astra</groupId>
+            <artifactId>astra-sdk</artifactId>
+            <version>1.0.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>javax.annotation</groupId>
+                    <artifactId>javax.annotation-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
         <dependency>
             <groupId>com.datastax.oss</groupId>
             <artifactId>java-driver-core</artifactId>
@@ -172,6 +185,12 @@
         </dependency>
 
         <dependency>
+            <groupId>org.jetbrains</groupId>
+            <artifactId>annotations</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>junit-extensions</artifactId>
             <scope>test</scope>
@@ -229,12 +248,6 @@
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.jetbrains</groupId>
-            <artifactId>annotations</artifactId>
             <scope>test</scope>
         </dependency>
 

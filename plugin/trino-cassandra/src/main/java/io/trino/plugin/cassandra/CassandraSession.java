@@ -546,7 +546,7 @@ public class CassandraSession
         return estimates.build();
     }
 
-    private void checkSizeEstimatesTableExist()
+    protected void checkSizeEstimatesTableExist()
     {
         Optional<KeyspaceMetadata> keyspaceMetadata = executeWithSession(session -> session.getMetadata().getKeyspace(SYSTEM));
         checkState(keyspaceMetadata.isPresent(), "system keyspace metadata must not be null");

@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.cassandra;
 
+import com.datastax.astra.sdk.AstraClient;
 import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
 import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
 import com.datastax.oss.driver.api.core.config.ProgrammaticDriverConfigLoaderBuilder;
@@ -33,6 +34,9 @@ import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.cassandra.galaxy.GalaxyCassandraTunnelManager;
 import io.trino.plugin.cassandra.galaxy.GalaxyCqlSessionBuilder;
+import io.trino.plugin.cassandra.galaxy.astradb.AstraDbClientConfig;
+import io.trino.plugin.cassandra.galaxy.astradb.AstraDbSession;
+import io.trino.plugin.cassandra.galaxy.astradb.CassandraDeploymentTypeConfig;
 import io.trino.plugin.cassandra.ptf.Query;
 import io.trino.spi.function.table.ConnectorTableFunction;
 import io.trino.spi.type.Type;
@@ -46,16 +50,20 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
+import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
+import static io.airlift.configuration.ConditionalModule.conditionalModule;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.airlift.json.JsonBinder.jsonBinder;
 import static io.airlift.json.JsonCodecBinder.jsonCodecBinder;
 import static io.trino.plugin.base.galaxy.RegionVerifierProperties.addRegionVerifierProperties;
 import static io.trino.plugin.cassandra.galaxy.GalaxySSLContextUtils.getInsecureSslContext;
+import static io.trino.plugin.cassandra.galaxy.astradb.CassandraDeploymentTypeConfig.DeploymentType.ASTRADB;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
 import static java.lang.Math.toIntExact;
 import static java.util.Objects.requireNonNull;
@@ -91,6 +99,13 @@ public class CassandraClientModule
 
         configBinder(binder).bindConfig(CassandraClientConfig.class);
 
+        configBinder(binder).bindConfig(CassandraDeploymentTypeConfig.class);
+        newOptionalBinder(binder, AstraDbClientConfig.class);
+        install(conditionalModule(
+                CassandraDeploymentTypeConfig.class,
+                deploymentTypeConfig -> deploymentTypeConfig.getDeploymentType() == ASTRADB,
+                conditionalBinder -> configBinder(conditionalBinder).bindConfig(AstraDbClientConfig.class)));
+
         jsonCodecBinder(binder).bindListJsonCodec(ExtraColumnMetadata.class);
         jsonBinder(binder).addDeserializerBinding(Type.class).to(TypeDeserializer.class);
     }
@@ -117,6 +132,8 @@ public class CassandraClientModule
     @Singleton
     @Provides
     public static CassandraSession createCassandraSession(
+            Optional<AstraDbClientConfig> astraDbClientConfig,
+            CassandraDeploymentTypeConfig cassandraDeploymentTypeConfig,
             CassandraTypeManager cassandraTypeManager,
             CassandraClientConfig config,
             JsonCodec<List<ExtraColumnMetadata>> extraColumnMetadataCodec,
@@ -192,6 +209,27 @@ public class CassandraClientModule
 
         cqlSessionBuilder.withConfigLoader(driverConfigLoaderBuilder.build());
 
+        // Haven't created a separate AstraDbClientModule to reuse `driverConfigLoaderBuilder`
+        if (cassandraDeploymentTypeConfig.getDeploymentType() == ASTRADB) {
+            AstraDbClientConfig astraConfig = astraDbClientConfig.orElseThrow(IllegalStateException::new);
+            return new AstraDbSession(
+                    cassandraTypeManager,
+                    extraColumnMetadataCodec,
+                    () -> {
+                        AstraClient astraClient = AstraClient.builder()
+                                .withToken(astraConfig.getToken())
+                                .withDatabaseId(astraConfig.getDatabaseId())
+                                .withDatabaseRegion(astraConfig.getRegion())
+                                .withCqlDriverConfig(driverConfigLoaderBuilder)
+                                .enableCql()
+                                .enableDownloadSecureConnectBundle() // Downloads secure bundle under `{user.home}/.astra/scb/` directory with a separate zip file for project/region combination
+                                .build();
+
+                        CassandraTelemetry cassandraTelemetry = CassandraTelemetry.create(openTelemetry);
+                        return cassandraTelemetry.wrap(astraClient.cqlSession());
+                    },
+                    config.getNoHostAvailableRetryTimeout());
+        }
         return new CassandraSession(
                 cassandraTypeManager,
                 extraColumnMetadataCodec,
