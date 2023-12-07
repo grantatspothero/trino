@@ -295,6 +295,7 @@ public class MetadataOnlyStatementResource
             try (DirectExchangeClient exchangeClient = directExchangeClientSupplier.get(
                     session.getQueryId(),
                     new ExchangeId("direct-exchange-query-results"),
+                    span,
                     new SimpleLocalMemoryContext(newSimpleAggregatedMemoryContext(), "Query"),
                     queryManager::outputTaskFailed,
                     getRetryPolicy(session))) {
