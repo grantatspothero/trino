@@ -36,6 +36,7 @@ public class JdbcMetadataSessionProperties
 {
     public static final String COMPLEX_EXPRESSION_PUSHDOWN = "complex_expression_pushdown";
     public static final String JOIN_PUSHDOWN_ENABLED = "join_pushdown_enabled";
+    public static final String COMPLEX_JOIN_PUSHDOWN_ENABLED = "complex_join_pushdown_enabled";
     public static final String AGGREGATION_PUSHDOWN_ENABLED = "aggregation_pushdown_enabled";
     public static final String TOPN_PUSHDOWN_ENABLED = "topn_pushdown_enabled";
     public static final String LIST_COLUMNS_MODE = "experimental_list_columns_mode";
@@ -58,6 +59,11 @@ public class JdbcMetadataSessionProperties
                         JOIN_PUSHDOWN_ENABLED,
                         "Enable join pushdown",
                         jdbcMetadataConfig.isJoinPushdownEnabled(),
+                        false))
+                .add(booleanProperty(
+                        COMPLEX_JOIN_PUSHDOWN_ENABLED,
+                        "Enable join pushdown with non-comparison expressions",
+                        jdbcMetadataConfig.isComplexJoinPushdownEnabled(),
                         false))
                 .add(booleanProperty(
                         AGGREGATION_PUSHDOWN_ENABLED,
@@ -104,6 +110,11 @@ public class JdbcMetadataSessionProperties
     public static boolean isJoinPushdownEnabled(ConnectorSession session)
     {
         return session.getProperty(JOIN_PUSHDOWN_ENABLED, Boolean.class);
+    }
+
+    public static boolean isComplexJoinPushdownEnabled(ConnectorSession session)
+    {
+        return session.getProperty(COMPLEX_JOIN_PUSHDOWN_ENABLED, Boolean.class);
     }
 
     public static boolean isAggregationPushdownEnabled(ConnectorSession session)
