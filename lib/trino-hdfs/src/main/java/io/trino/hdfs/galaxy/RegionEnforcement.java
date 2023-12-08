@@ -13,11 +13,10 @@
  */
 package io.trino.hdfs.galaxy;
 
-import com.google.cloud.hadoop.repackaged.gcs.com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
-import com.google.cloud.hadoop.repackaged.gcs.com.google.api.client.http.HttpRequestInitializer;
-import com.google.cloud.hadoop.repackaged.gcs.com.google.api.services.storage.Storage;
-import com.google.cloud.hadoop.repackaged.gcs.com.google.api.services.storage.model.Bucket;
-import com.google.cloud.hadoop.repackaged.gcs.com.google.cloud.hadoop.util.RetryHttpInitializer;
+import com.google.cloud.hadoop.repackaged.gcs.com.google.auth.oauth2.GoogleCredentials;
+import com.google.cloud.hadoop.repackaged.gcs.com.google.cloud.storage.Bucket;
+import com.google.cloud.hadoop.repackaged.gcs.com.google.cloud.storage.Storage;
+import com.google.cloud.hadoop.repackaged.gcs.com.google.cloud.storage.StorageOptions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
@@ -41,7 +40,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystemConfiguration.GCS_CONFIG_PREFIX;
-import static com.google.cloud.hadoop.repackaged.gcs.com.google.cloud.hadoop.util.HadoopCredentialConfiguration.SERVICE_ACCOUNT_JSON_KEYFILE_SUFFIX;
+import static com.google.cloud.hadoop.repackaged.gcs.com.google.cloud.hadoop.util.HadoopCredentialsConfiguration.SERVICE_ACCOUNT_JSON_KEYFILE_SUFFIX;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.airlift.http.client.Request.Builder.prepareHead;
@@ -182,15 +181,16 @@ public final class RegionEnforcement
     private static Set<String> getGcsRegions(String gcsJsonKey, String bucketName)
             throws IOException
     {
-        GoogleCredential credential = GoogleCredential.fromStream(new ByteArrayInputStream(gcsJsonKey.getBytes(UTF_8)))
+        GoogleCredentials credentials = GoogleCredentials.fromStream(new ByteArrayInputStream(gcsJsonKey.getBytes(UTF_8)))
                 .createScoped(ImmutableList.of("https://www.googleapis.com/auth/devstorage.full_control"));
 
-        HttpRequestInitializer initializer = new RetryHttpInitializer(credential, "Galaxy");
-        Storage storage = new Storage.Builder(credential.getTransport(), credential.getJsonFactory(), initializer)
-                .setApplicationName("Galaxy")
-                .build();
+        Storage storage = StorageOptions.newBuilder()
+                .setCredentials(credentials)
+                .setProjectId("Galaxy")
+                .build()
+                .getService();
 
-        Bucket bucket = storage.buckets().get(bucketName).execute();
+        Bucket bucket = storage.get(bucketName);
 
         switch (bucket.getLocationType()) {
             case "region":
