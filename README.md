@@ -6,9 +6,11 @@
 
 ## How to build this project?
 
-You will need to use settings.xml file with credentials for AWS CodeArtifact.
-
-Use one either from [Galaxy](https://github.com/starburstdata/stargate) or [SEP](https://github.com/starburstdata/starburst-enterprise) repository.
+You will need to use settings.xml file with credentials for AWS CodeArtifact.  Please clone the 
+[Galaxy repo](https://github.com/starburstdata/stargate) and run the commands outlined in its
+[Maven settings](https://github.com/starburstdata/stargate#maven-settings) and
+[Credentials](https://github.com/starburstdata/stargate#credentials) sections.  This will set
+you up to be able to run Maven builds here.
 
 ## How to update this Trino fork to a newer Trino version?
 
