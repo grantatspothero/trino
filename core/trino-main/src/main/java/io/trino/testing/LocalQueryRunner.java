@@ -1267,7 +1267,7 @@ public class LocalQueryRunner
         private boolean alwaysRevokeMemory;
         private Map<String, List<PropertyMetadata<?>>> defaultSessionProperties = ImmutableMap.of();
         private Set<SystemSessionPropertiesProvider> extraSessionProperties = ImmutableSet.of();
-        private int nodeCountForStats;
+        private int nodeCountForStats = 1;
         private BiFunction<Metadata, AccessControl, InformationSchemaPageSourceProvider> informationSchemaPageSourceFactory = InformationSchemaPageSourceProvider::new;
         private BiFunction<Metadata, AccessControl, SystemTable> tableCommentFactory = TableCommentSystemTable::new;
         private BiFunction<Metadata, AccessControl, SystemTable> materializedViewFactory = MaterializedViewSystemTable::new;
