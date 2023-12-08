@@ -297,7 +297,7 @@ public class TestHiveCacheIds
                 readBucketNumber,
                 OptionalInt.empty(),
                 false,
-                new TableToPartitionMapping(Optional.empty(), ImmutableMap.of()),
+                ImmutableMap.of(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),

@@ -135,7 +135,7 @@ class TestNodeLocalDynamicSplitPruning
                 OptionalInt.of(1),
                 OptionalInt.of(1),
                 false,
-                TableToPartitionMapping.empty(),
+                ImmutableMap.of(),
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
