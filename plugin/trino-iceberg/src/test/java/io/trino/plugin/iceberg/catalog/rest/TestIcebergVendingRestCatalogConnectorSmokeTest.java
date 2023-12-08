@@ -14,49 +14,66 @@
 package io.trino.plugin.iceberg.catalog.rest;
 
 import com.google.common.collect.ImmutableMap;
-import io.airlift.http.server.testing.TestingHttpServer;
+import io.opentelemetry.api.OpenTelemetry;
 import io.trino.filesystem.Location;
+import io.trino.filesystem.s3.S3FileSystemConfig;
+import io.trino.filesystem.s3.S3FileSystemFactory;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.iceberg.BaseIcebergConnectorSmokeTest;
 import io.trino.plugin.iceberg.IcebergConfig;
 import io.trino.plugin.iceberg.IcebergQueryRunner;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.testing.QueryRunner;
 import io.trino.testing.TestingConnectorBehavior;
-import io.trino.testng.services.ManageTestResources;
+import io.trino.testing.containers.IcebergRestCatalogBackendContainer;
+import io.trino.testing.containers.Minio;
+import io.trino.testing.minio.MinioClient;
 import org.apache.iceberg.BaseTable;
-import org.apache.iceberg.catalog.Catalog;
+import org.apache.iceberg.CatalogProperties;
+import org.apache.iceberg.catalog.SessionCatalog;
 import org.apache.iceberg.catalog.TableIdentifier;
-import org.apache.iceberg.jdbc.JdbcCatalog;
-import org.apache.iceberg.rest.DelegatingRestSessionCatalog;
-import org.assertj.core.util.Files;
-import org.junit.jupiter.api.AfterAll;
+import org.apache.iceberg.rest.RESTSessionCatalog;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
+import org.testcontainers.containers.Network;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
+import software.amazon.awssdk.services.sts.model.AssumeRoleResponse;
 
-import java.io.File;
+import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.Optional;
 
-import static com.google.common.io.MoreFiles.deleteRecursively;
-import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
 import static io.trino.plugin.iceberg.IcebergTestUtils.checkOrcFileSorting;
 import static io.trino.plugin.iceberg.IcebergTestUtils.checkParquetFileSorting;
-import static io.trino.plugin.iceberg.catalog.rest.RestCatalogTestUtils.backendCatalog;
+import static io.trino.testing.TestingConnectorSession.SESSION;
+import static io.trino.testing.TestingNames.randomNameSuffix;
+import static io.trino.testing.containers.Minio.MINIO_ACCESS_KEY;
+import static io.trino.testing.containers.Minio.MINIO_REGION;
+import static io.trino.testing.containers.Minio.MINIO_SECRET_KEY;
+import static java.lang.String.format;
 import static org.apache.iceberg.FileFormat.PARQUET;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
-@TestInstance(PER_CLASS)
-public class TestIcebergTrinoRestCatalogConnectorSmokeTest
+public class TestIcebergVendingRestCatalogConnectorSmokeTest
         extends BaseIcebergConnectorSmokeTest
 {
-    private File warehouseLocation;
+    private final String bucketName;
+    private String warehouseLocation;
+    private IcebergRestCatalogBackendContainer restCatalogBackendContainer;
+    private Minio minio;
 
-    @ManageTestResources.Suppress(because = "Not a TestNG test class")
-    private Catalog backend;
-
-    public TestIcebergTrinoRestCatalogConnectorSmokeTest()
+    public TestIcebergVendingRestCatalogConnectorSmokeTest()
     {
         super(new IcebergConfig().getFileFormat().toIceberg());
+        this.bucketName = "test-iceberg-vending-rest-connector-smoke-test-" + randomNameSuffix();
     }
 
     @Override
@@ -77,36 +94,61 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        warehouseLocation = Files.newTemporaryFolder();
-        closeAfterClass(() -> deleteRecursively(warehouseLocation.toPath(), ALLOW_INSECURE));
+        Network network = Network.newNetwork();
+        minio = closeAfterClass(Minio.builder().withNetwork(network).build());
+        minio.start();
+        minio.createBucket(bucketName);
 
-        backend = closeAfterClass((JdbcCatalog) backendCatalog(warehouseLocation));
+        this.warehouseLocation = "s3://%s/default/".formatted(bucketName);
 
-        DelegatingRestSessionCatalog delegatingCatalog = DelegatingRestSessionCatalog.builder()
-                .delegate(backend)
+        AwsCredentials credentials = AwsBasicCredentials.create(MINIO_ACCESS_KEY, MINIO_SECRET_KEY);
+        StsClient stsClient = StsClient.builder()
+                .endpointOverride(URI.create(minio.getMinioAddress()))
+                .credentialsProvider(StaticCredentialsProvider.create(credentials))
+                .region(Region.US_EAST_1)
                 .build();
 
-        TestingHttpServer testServer = delegatingCatalog.testServer();
-        testServer.start();
-        closeAfterClass(testServer::stop);
+        AssumeRoleResponse assumeRoleResponse = stsClient.assumeRole(AssumeRoleRequest.builder().build());
+        restCatalogBackendContainer = closeAfterClass(new IcebergRestCatalogBackendContainer(
+                Optional.of(network),
+                warehouseLocation,
+                minio.getMinioAddress(),
+                assumeRoleResponse.credentials().accessKeyId(),
+                assumeRoleResponse.credentials().secretAccessKey(),
+                assumeRoleResponse.credentials().sessionToken()));
+        restCatalogBackendContainer.start();
 
         return IcebergQueryRunner.builder()
-                .setBaseDataDir(Optional.of(warehouseLocation.toPath()))
                 .setIcebergProperties(
                         ImmutableMap.<String, String>builder()
                                 .put("iceberg.file-format", format.name())
                                 .put("iceberg.catalog.type", "rest")
-                                .put("iceberg.rest-catalog.uri", testServer.getBaseUrl().toString())
+                                .put("iceberg.rest-catalog.uri", restCatalogBackendContainer.getRestCatalogEndpoint())
+                                .put("iceberg.rest-catalog.vended-credentials-enabled", "true")
                                 .put("iceberg.writer-sort-buffer-size", "1MB")
+                                .put("fs.hadoop.enabled", "false")
+                                .put("fs.native-s3.enabled", "true")
+                                .put("s3.region", MINIO_REGION)
+                                .put("s3.endpoint", minio.getMinioAddress())
+                                .put("s3.path-style-access", "true")
                                 .buildOrThrow())
                 .setInitialTables(REQUIRED_TPCH_TABLES)
                 .build();
     }
 
-    @AfterAll
-    public void teardown()
+    @Override
+    @BeforeAll
+    public void initFileSystem()
     {
-        backend = null; // closed by closeAfterClass
+        this.fileSystem = new S3FileSystemFactory(OpenTelemetry.noop(), new S3FileSystemConfig()
+                .setRegion(MINIO_REGION)
+                .setEndpoint(minio.getMinioAddress())
+                .setPathStyleAccess(true)
+                .setAwsAccessKey(MINIO_ACCESS_KEY)
+                .setAwsSecretKey(MINIO_SECRET_KEY),
+                CatalogHandle.fromId("catalog:normal:1"),
+                new LocalRegionConfig(),
+                new CrossRegionConfig()).create(SESSION);
     }
 
     @Test
@@ -136,20 +178,31 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
     @Override
     protected void dropTableFromMetastore(String tableName)
     {
-        // used when registering a table, which is not supported by the REST catalog
+        // TODO: Get register table tests working
     }
 
     @Override
     protected String getMetadataLocation(String tableName)
     {
-        BaseTable table = (BaseTable) backend.loadTable(toIdentifier(tableName));
-        return table.operations().current().metadataFileLocation();
+        try (RESTSessionCatalog catalog = new RESTSessionCatalog()) {
+            catalog.initialize("rest-catalog", ImmutableMap.of(CatalogProperties.URI, restCatalogBackendContainer.getRestCatalogEndpoint()));
+            SessionCatalog.SessionContext context = new SessionCatalog.SessionContext(
+                    "user-default",
+                    "user",
+                    ImmutableMap.of(),
+                    ImmutableMap.of(),
+                    SESSION.getIdentity());
+            return ((BaseTable) catalog.loadTable(context, toIdentifier(tableName))).operations().current().metadataFileLocation();
+        }
+        catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     protected String schemaPath()
     {
-        return String.format("%s/%s", warehouseLocation, getSession().getSchema());
+        return format("%s%s", warehouseLocation, getSession().getSchema().orElseThrow());
     }
 
     @Override
@@ -192,6 +245,14 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
 
     @Test
     @Override
+    public void testRegisterTableWithDroppedTable()
+    {
+        assertThatThrownBy(super::testRegisterTableWithDroppedTable)
+                .hasMessageContaining("register_table procedure is disabled");
+    }
+
+    @Test
+    @Override
     public void testRegisterTableWithDifferentTableName()
     {
         assertThatThrownBy(super::testRegisterTableWithDifferentTableName)
@@ -226,7 +287,7 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
     @Override
     public void testUnregisterBrokenTable()
     {
-        assertThatThrownBy(super::testUnregisterBrokenTable)
+        assertThatThrownBy(super::testUnregisterTable)
                 .hasMessageContaining("unregisterTable is not supported for Iceberg REST catalogs");
     }
 
@@ -248,14 +309,6 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
 
     @Test
     @Override
-    public void testRegisterTableWithDroppedTable()
-    {
-        assertThatThrownBy(super::testRegisterTableWithDroppedTable)
-                .hasMessageContaining("register_table procedure is disabled");
-    }
-
-    @Test
-    @Override
     public void testDropTableWithMissingMetadataFile()
     {
         assertThatThrownBy(super::testDropTableWithMissingMetadataFile)
@@ -267,7 +320,7 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
     public void testDropTableWithMissingSnapshotFile()
     {
         assertThatThrownBy(super::testDropTableWithMissingSnapshotFile)
-                .hasMessageMatching("Server error: NotFoundException: Failed to open input stream for file: (.*)");
+                .hasMessageMatching("Server error: NoSuchKeyException:.*");
     }
 
     @Test
@@ -306,7 +359,15 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
     @Override
     protected void deleteDirectory(String location)
     {
-        // used when unregistering a table, which is not supported by the REST catalog
+        try (MinioClient minioClient = minio.createMinioClient()) {
+            String prefix = "s3://" + bucketName + "/";
+            String key = location.substring(prefix.length());
+
+            for (String file : minioClient.listObjects(bucketName, key)) {
+                minioClient.removeObject(bucketName, file);
+            }
+            assertThat(minioClient.listObjects(bucketName, key)).isEmpty();
+        }
     }
 
     private TableIdentifier toIdentifier(String tableName)

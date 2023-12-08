@@ -16,10 +16,10 @@ package io.trino.plugin.iceberg.catalog.rest;
 import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
-import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.hive.NodeVersion;
 import io.trino.plugin.iceberg.IcebergConfig;
+import io.trino.plugin.iceberg.IcebergFileSystemFactory;
 import io.trino.plugin.iceberg.catalog.TrinoCatalog;
 import io.trino.plugin.iceberg.catalog.TrinoCatalogFactory;
 import io.trino.plugin.iceberg.catalog.rest.IcebergRestCatalogConfig.SessionType;
@@ -39,12 +39,13 @@ import static org.apache.iceberg.CatalogProperties.FILE_IO_IMPL;
 public class TrinoIcebergRestCatalogFactory
         implements TrinoCatalogFactory
 {
-    private final TrinoFileSystemFactory fileSystemFactory;
+    private final IcebergFileSystemFactory fileSystemFactory;
     private final CatalogName catalogName;
     private final String trinoVersion;
     private final URI serverUri;
     private final Optional<String> warehouse;
     private final SessionType sessionType;
+    private final boolean vendedCredentialsEnabled;
     private final SecurityProperties securityProperties;
     private final boolean uniqueTableLocation;
 
@@ -53,7 +54,7 @@ public class TrinoIcebergRestCatalogFactory
 
     @Inject
     public TrinoIcebergRestCatalogFactory(
-            TrinoFileSystemFactory fileSystemFactory,
+            IcebergFileSystemFactory fileSystemFactory,
             CatalogName catalogName,
             IcebergRestCatalogConfig restConfig,
             SecurityProperties securityProperties,
@@ -67,6 +68,7 @@ public class TrinoIcebergRestCatalogFactory
         this.serverUri = restConfig.getBaseUri();
         this.warehouse = restConfig.getWarehouse();
         this.sessionType = restConfig.getSessionType();
+        this.vendedCredentialsEnabled = restConfig.isVendedCredentialsEnabled();
         this.securityProperties = requireNonNull(securityProperties, "securityProperties is null");
         requireNonNull(icebergConfig, "icebergConfig is null");
         this.uniqueTableLocation = icebergConfig.isUniqueTableLocation();
@@ -84,13 +86,18 @@ public class TrinoIcebergRestCatalogFactory
             properties.put("trino-version", trinoVersion);
             properties.put(FILE_IO_IMPL, HadoopFileIO.class.getName());
             properties.putAll(securityProperties.get());
+
+            if (vendedCredentialsEnabled) {
+                properties.put("header.x-tabular-s3-access", "vended_credentials");
+            }
+
             RESTSessionCatalog icebergCatalogInstance = new RESTSessionCatalog(
                     config -> HTTPClient.builder(config).uri(config.get(CatalogProperties.URI)).build(),
                     (context, config) -> {
                         ConnectorIdentity currentIdentity = (context.wrappedIdentity() != null)
                                 ? ((ConnectorIdentity) context.wrappedIdentity())
                                 : ConnectorIdentity.ofUser("fake");
-                        return new ForwardingFileIo(fileSystemFactory.create(currentIdentity));
+                        return new ForwardingFileIo(fileSystemFactory.create(currentIdentity, config), config);
                     });
             icebergCatalogInstance.initialize(catalogName.toString(), properties.buildOrThrow());
 

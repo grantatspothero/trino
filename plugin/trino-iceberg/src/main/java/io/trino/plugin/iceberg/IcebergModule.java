@@ -31,6 +31,7 @@ import io.trino.plugin.hive.parquet.ParquetReaderConfig;
 import io.trino.plugin.hive.parquet.ParquetWriterConfig;
 import io.trino.plugin.hive.util.BlockJsonSerde;
 import io.trino.plugin.hive.util.HiveBlockEncodingSerde;
+import io.trino.plugin.iceberg.catalog.rest.DefaultIcebergFileSystemFactory;
 import io.trino.plugin.iceberg.functions.IcebergFunctionProvider;
 import io.trino.plugin.iceberg.functions.tablechanges.TableChangesFunctionProcessorProvider;
 import io.trino.plugin.iceberg.functions.tablechanges.TableChangesFunctionProvider;
@@ -130,5 +131,6 @@ public class IcebergModule
         binder.bind(HiveBlockEncodingSerde.class).in(Scopes.SINGLETON);
         jsonBinder(binder).addSerializerBinding(Block.class).to(BlockJsonSerde.Serializer.class);
         jsonBinder(binder).addDeserializerBinding(Block.class).to(BlockJsonSerde.Deserializer.class);
+        newOptionalBinder(binder, IcebergFileSystemFactory.class).setDefault().to(DefaultIcebergFileSystemFactory.class).in(Scopes.SINGLETON);
     }
 }

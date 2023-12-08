@@ -520,6 +520,10 @@
                                     </dependency>
                                     <dependency>
                                         <groupId>org.apache.iceberg</groupId>
+                                        <artifactId>iceberg-aws</artifactId>
+                                    </dependency>
+                                    <dependency>
+                                        <groupId>org.apache.iceberg</groupId>
                                         <artifactId>iceberg-common</artifactId>
                                     </dependency>
                                     <dependency>
