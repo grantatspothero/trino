@@ -685,5 +685,4 @@
             </build>
         </profile>
     </profiles>
->>>>>>> 4bab25c7e58 (Migrate tests to JUnit (435/1))
 </project>
