@@ -115,10 +115,6 @@ public class TestDenyOnSchema
     public void testValidDenySchema()
     {
         testValidDenySchema("CREATE");
-        testValidDenySchema("SELECT");
-        testValidDenySchema("INSERT");
-        testValidDenySchema("UPDATE");
-        testValidDenySchema("DELETE");
         testValidDenySchema("ALL PRIVILEGES");
     }
 

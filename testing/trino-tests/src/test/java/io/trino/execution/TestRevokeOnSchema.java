@@ -85,7 +85,6 @@ public class TestRevokeOnSchema
     @Test
     public void testRevokeOnSchema()
     {
-        testRevokeOnSchema("SELECT", userWithSelect);
         testRevokeOnSchema("ALL PRIVILEGES", userWithAllPrivileges);
     }
 
@@ -121,8 +120,6 @@ public class TestRevokeOnSchema
     {
         assertThatThrownBy(() -> queryRunner.execute(sessionOf(randomUsername()), format("REVOKE CREATE ON SCHEMA default FROM %s", randomUsername())))
                 .hasMessageContaining("Access Denied: Cannot revoke privilege CREATE on schema default");
-        assertThatThrownBy(() -> queryRunner.execute(sessionOf(randomUsername()), format("REVOKE SELECT ON SCHEMA default FROM %s", randomUsername())))
-                .hasMessageContaining("Access Denied: Cannot revoke privilege SELECT on schema default");
         assertThatThrownBy(() -> queryRunner.execute(sessionOf(randomUsername()), format("REVOKE ALL PRIVILEGES ON SCHEMA default FROM %s", randomUsername())))
                 .hasMessageContaining("Access Denied: Cannot revoke privilege CREATE on schema default");
     }

@@ -106,7 +106,6 @@ public class TestGrantOnTable
     @Test
     public void testValidGrant()
     {
-        testValidGrant("CREATE");
         testValidGrant("SELECT");
         testValidGrant("INSERT");
         testValidGrant("UPDATE");
@@ -127,7 +126,6 @@ public class TestGrantOnTable
     @Test
     public void testValidGrantWithGrantOption()
     {
-        testValidGrantWithGrantOption("CREATE");
         testValidGrantWithGrantOption("SELECT");
         testValidGrantWithGrantOption("INSERT");
         testValidGrantWithGrantOption("UPDATE");

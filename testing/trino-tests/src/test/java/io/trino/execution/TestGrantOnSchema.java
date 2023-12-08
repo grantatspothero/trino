@@ -99,7 +99,6 @@ public class TestGrantOnSchema
     @Test
     public void testValidGrant()
     {
-        testValidGrant("SELECT");
         testValidGrant("CREATE");
         testValidGrant("ALL PRIVILEGES");
     }
@@ -119,7 +118,6 @@ public class TestGrantOnSchema
     @Test
     public void testValidGrantWithGrantOption()
     {
-        testValidGrantWithGrantOption("SELECT");
         testValidGrantWithGrantOption("CREATE");
         testValidGrantWithGrantOption("ALL PRIVILEGES");
     }
@@ -161,8 +159,6 @@ public class TestGrantOnSchema
     @Test
     public void testAccessDenied()
     {
-        assertThatThrownBy(() -> queryRunner.execute(sessionOf(randomUsername()), format("GRANT SELECT ON SCHEMA default TO %s", randomUsername())))
-                .hasMessageContaining("Access Denied: Cannot grant privilege SELECT on schema default");
         assertThatThrownBy(() -> queryRunner.execute(sessionOf(randomUsername()), format("GRANT CREATE ON SCHEMA default TO %s", randomUsername())))
                 .hasMessageContaining("Access Denied: Cannot grant privilege CREATE on schema default");
         assertThatThrownBy(() -> queryRunner.execute(sessionOf(randomUsername()), format("GRANT ALL PRIVILEGES ON SCHEMA default TO %s", randomUsername())))

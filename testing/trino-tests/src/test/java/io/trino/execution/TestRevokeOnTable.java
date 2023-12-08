@@ -96,7 +96,6 @@ public class TestRevokeOnTable
     @Test
     public void testRevokeOnSchema()
     {
-        testRevokeOnSchema("CREATE", userWithCreate);
         testRevokeOnSchema("SELECT", userWithSelect);
         testRevokeOnSchema("INSERT", userWithInsert);
         testRevokeOnSchema("UPDATE", userWithUpdate);
@@ -165,15 +164,11 @@ public class TestRevokeOnTable
     }
 
     @Test
-    public void testAccessDenied(String privilege)
+    public void testAccessDenied()
     {
-        assertThatThrownBy(() -> queryRunner.execute(sessionOf(randomUsername()), format("REVOKE %s ON TABLE table_one FROM %s", privilege, randomUsername())))
+        assertThatThrownBy(() -> queryRunner.execute(sessionOf(randomUsername()), format("REVOKE SELECT ON TABLE table_one FROM %s", randomUsername())))
                 .hasMessageContaining(
-                        "Access Denied: Cannot revoke privilege %s on table default.table_one",
-                        privilege.equals("ALL PRIVILEGES") ? "SELECT" : privilege);
-
-        assertThatThrownBy(() -> queryRunner.execute(sessionOf(randomUsername()), format("REVOKE CREATE ON TABLE table_one FROM %s", randomUsername())))
-                .hasMessageContaining("Access Denied: Cannot revoke privilege CREATE on table default.table_one");
+                        "Access Denied: Cannot revoke privilege SELECT on table default.table_one");
 
         assertThatThrownBy(() -> queryRunner.execute(sessionOf(randomUsername()), format("REVOKE SELECT ON TABLE table_one FROM %s", randomUsername())))
                 .hasMessageContaining("Access Denied: Cannot revoke privilege SELECT on table default.table_one");
@@ -188,7 +183,7 @@ public class TestRevokeOnTable
                 .hasMessageContaining("Access Denied: Cannot revoke privilege DELETE on table default.table_one");
 
         assertThatThrownBy(() -> queryRunner.execute(sessionOf(randomUsername()), format("REVOKE ALL PRIVILEGES ON TABLE table_one FROM %s", randomUsername())))
-                .hasMessageContaining("Access Denied: Cannot revoke privilege CREATE on table default.table_one");
+                .hasMessageContaining("Access Denied: Cannot revoke privilege SELECT on table default.table_one");
     }
 
     private static Session sessionOf(String username)

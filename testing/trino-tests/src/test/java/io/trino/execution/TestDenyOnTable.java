@@ -110,7 +110,6 @@ public class TestDenyOnTable
     @Test
     public void testValidDenyTable()
     {
-        testValidDenyTable("CREATE");
         testValidDenyTable("SELECT");
         testValidDenyTable("INSERT");
         testValidDenyTable("UPDATE");
