@@ -213,6 +213,8 @@
         <dep.warp-speed.version>435.2.0</dep.warp-speed.version>
         <!-- released form https://github.com/starburstdata/schema-discovery -->
         <dep.schema-discovery.version>435.20240112-ef1803a</dep.schema-discovery.version>
+        <!-- released from https://github.com/starburstdata/starburst-dataframe -->
+        <dep.starburst-dataframe.version>0.5.0.20240201-b4f4176</dep.starburst-dataframe.version>
         <!-- released from https://github.com/starburstdata/stargate -->
         <dep.stargate.version>stargate-13411-g34e761eb60</dep.stargate.version>
 
@@ -703,6 +705,12 @@
                 <groupId>com.squareup.wire</groupId>
                 <artifactId>wire-schema-jvm</artifactId>
                 <version>${dep.wire.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.starburstdata.dataframe</groupId>
+                <artifactId>starburst-dataframe-api</artifactId>
+                <version>${dep.starburst-dataframe.version}</version>
             </dependency>
 
             <dependency>
