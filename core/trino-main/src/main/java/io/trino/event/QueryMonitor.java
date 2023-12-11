@@ -176,6 +176,7 @@ public class QueryMonitor
                                 Optional.empty(),
                                 Optional.empty(),
                                 Optional.empty(),
+                                Optional.empty(),
                                 ImmutableList.of())));
     }
 
@@ -192,6 +193,7 @@ public class QueryMonitor
                         ImmutableList.of(),
                         ImmutableList.of(),
                         queryInfo.getSelf(),
+                        Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
@@ -301,6 +303,7 @@ public class QueryMonitor
                 payloadJson,
                 queryInfo.getResultsCacheResultStatus(),
                 queryInfo.getResultsCacheResultSize(),
+                queryInfo.isResultsCacheEligible(),
                 overflowStageDetails);
     }
 

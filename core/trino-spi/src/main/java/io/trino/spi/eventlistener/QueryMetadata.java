@@ -47,6 +47,7 @@ public class QueryMetadata
     private final Optional<String> payload;
     private final Optional<String> resultsCacheResultStatus;
     private final Optional<Long> resultsCacheResultSize;
+    private final Optional<Boolean> resultsCacheEligible;
     private final List<StageDetails> overflowStageDetails;
 
     @JsonCreator
@@ -66,6 +67,7 @@ public class QueryMetadata
             Optional<String> payload,
             Optional<String> resultsCacheResultStatus,
             Optional<Long> resultsCacheResultSize,
+            Optional<Boolean> resultsCacheEligible,
             List<StageDetails> overflowStageDetails)
     {
         this.queryId = requireNonNull(queryId, "queryId is null");
@@ -82,6 +84,7 @@ public class QueryMetadata
         this.payload = requireNonNull(payload, "payload is null");
         this.resultsCacheResultStatus = requireNonNull(resultsCacheResultStatus, "resultsCacheResultStatus is null");
         this.resultsCacheResultSize = requireNonNull(resultsCacheResultSize, "resultsCacheResultSize is null");
+        this.resultsCacheEligible = requireNonNull(resultsCacheEligible, "resultsCacheEligible is null");
         this.overflowStageDetails = requireNonNull(overflowStageDetails, "overflowStageDetails is null");
     }
 
@@ -167,6 +170,12 @@ public class QueryMetadata
     public Optional<Long> getResultsCacheResultSize()
     {
         return resultsCacheResultSize;
+    }
+
+    @JsonProperty
+    public Optional<Boolean> isResultsCacheEligible()
+    {
+        return resultsCacheEligible;
     }
 
     @JsonProperty

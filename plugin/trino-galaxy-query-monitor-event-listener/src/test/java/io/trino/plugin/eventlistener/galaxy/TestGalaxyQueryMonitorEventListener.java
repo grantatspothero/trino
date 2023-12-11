@@ -126,6 +126,7 @@ public class TestGalaxyQueryMonitorEventListener
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
+                        Optional.empty(),
                         ImmutableList.of()),
                 new QueryStatistics(
                         Duration.ofSeconds(1),

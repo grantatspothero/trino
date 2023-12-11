@@ -139,6 +139,7 @@ public class TestHttpEventListener
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
                 ImmutableList.of());
 
         splitStatistics = new SplitStatistics(

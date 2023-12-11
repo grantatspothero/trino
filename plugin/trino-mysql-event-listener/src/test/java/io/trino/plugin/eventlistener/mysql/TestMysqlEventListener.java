@@ -86,6 +86,7 @@ public class TestMysqlEventListener
             Optional.of("stageInfo"),
             Optional.empty(),
             Optional.empty(),
+            Optional.empty(),
             ImmutableList.of());
 
     private static final QueryStatistics FULL_QUERY_STATISTICS = new QueryStatistics(
@@ -241,6 +242,7 @@ public class TestMysqlEventListener
             // not stored
             List.of(),
             URI.create("http://localhost"),
+            Optional.empty(),
             Optional.empty(),
             Optional.empty(),
             Optional.empty(),
