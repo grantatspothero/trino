@@ -16,7 +16,6 @@ package io.trino.server.resultscache;
 
 import io.airlift.log.Logger;
 import io.trino.execution.QueryPreparer.PreparedQuery;
-import io.trino.metadata.QualifiedObjectName;
 import io.trino.metadata.TableHandle;
 import io.trino.security.AccessControl;
 import io.trino.security.SecurityContext;
@@ -28,7 +27,6 @@ import java.util.Optional;
 
 import static io.trino.server.resultscache.ResultsCacheEntry.ResultsCacheResult.Status.EXECUTE_STATEMENT;
 import static io.trino.server.resultscache.ResultsCacheEntry.ResultsCacheResult.Status.NOT_SELECT;
-import static io.trino.server.resultscache.ResultsCacheEntry.ResultsCacheResult.Status.QUERY_HAS_ABAC_RBAC_TABLE;
 import static io.trino.server.resultscache.ResultsCacheEntry.ResultsCacheResult.Status.QUERY_HAS_SYSTEM_TABLE;
 import static java.util.Objects.requireNonNull;
 
@@ -64,13 +62,6 @@ public class ResultsCacheAnalyzer
                     return Optional.of(new FilteredResultsCacheEntry(QUERY_HAS_SYSTEM_TABLE));
                 case NORMAL:
                     continue;
-            }
-        }
-
-        for (QualifiedObjectName qualifiedObjectName : analysis.getTableNames()) {
-            if (!accessControl.getRowFilters(securityContext, qualifiedObjectName).isEmpty()) {
-                log.debug("QueryId: %s, query uses table: %s, which has row filters; not caching", queryId, qualifiedObjectName);
-                return Optional.of(new FilteredResultsCacheEntry(QUERY_HAS_ABAC_RBAC_TABLE));
             }
         }
 

@@ -43,8 +43,7 @@ public interface ResultsCacheEntry
             NO_COLUMNS("no columns in result set", true),
             EXECUTE_STATEMENT("execute statement not supported", true),
             NOT_SELECT("not a select statement", true),
-            QUERY_HAS_SYSTEM_TABLE("query has system table", true),
-            QUERY_HAS_ABAC_RBAC_TABLE("query has table with ABAC/RBAC", true);
+            QUERY_HAS_SYSTEM_TABLE("query has system table", true);
 
             private final String display;
             private final boolean isFiltered;
