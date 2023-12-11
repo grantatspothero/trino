@@ -17,8 +17,6 @@ package io.trino.server.resultscache;
 import io.airlift.log.Logger;
 import io.trino.execution.QueryPreparer.PreparedQuery;
 import io.trino.metadata.TableHandle;
-import io.trino.security.AccessControl;
-import io.trino.security.SecurityContext;
 import io.trino.spi.QueryId;
 import io.trino.sql.analyzer.Analysis;
 import io.trino.sql.tree.Query;
@@ -28,21 +26,15 @@ import java.util.Optional;
 import static io.trino.server.resultscache.ResultsCacheEntry.ResultsCacheResult.Status.EXECUTE_STATEMENT;
 import static io.trino.server.resultscache.ResultsCacheEntry.ResultsCacheResult.Status.NOT_SELECT;
 import static io.trino.server.resultscache.ResultsCacheEntry.ResultsCacheResult.Status.QUERY_HAS_SYSTEM_TABLE;
-import static java.util.Objects.requireNonNull;
 
 public class ResultsCacheAnalyzer
 {
     private static final Logger log = Logger.get(ResultsCacheAnalyzer.class);
-    private final AccessControl accessControl;
-    private final SecurityContext securityContext;
 
-    public ResultsCacheAnalyzer(AccessControl accessControl, SecurityContext securityContext)
-    {
-        this.accessControl = requireNonNull(accessControl, "accessControl is null");
-        this.securityContext = requireNonNull(securityContext, "securityContext is null");
-    }
+    private ResultsCacheAnalyzer()
+    {}
 
-    public Optional<FilteredResultsCacheEntry> isStatementCacheable(QueryId queryId, PreparedQuery preparedQuery, Analysis analysis)
+    public static Optional<FilteredResultsCacheEntry> isStatementCacheable(QueryId queryId, PreparedQuery preparedQuery, Analysis analysis)
     {
         if (preparedQuery.isExecuteStatement()) {
             log.debug("QueryId: %s, statement is EXECUTE statement, not caching", queryId);
