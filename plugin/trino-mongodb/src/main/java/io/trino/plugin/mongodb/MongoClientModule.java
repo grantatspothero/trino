@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.mongodb;
 
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
@@ -86,6 +87,12 @@ public class MongoClientModule
                 MongoClientConfig.class,
                 config -> config.getTlsEnabled() != null && config.getTlsEnabled(),
                 new MongoSslModule()));
+
+        install(conditionalModule(
+                MongoClientConfig.class,
+                MongoClientConfig::isAllowLocalScheduling,
+                internalBinder -> internalBinder.bind(MongoServerDetailsProvider.class).toInstance(ImmutableList::of),
+                internalBinder -> internalBinder.bind(MongoServerDetailsProvider.class).to(SessionBasedMongoServerDetailsProvider.class).in(Scopes.SINGLETON)));
 
         newSetBinder(binder, ConnectorTableFunction.class).addBinding().toProvider(Query.class).in(Scopes.SINGLETON);
     }
