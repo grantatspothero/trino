@@ -195,6 +195,7 @@ public class QueryStateMachine
     private final AtomicBoolean committed = new AtomicBoolean();
     private final AtomicBoolean consumed = new AtomicBoolean();
     private final AtomicReference<ResultsCacheEntry> resultsCacheEntry = new AtomicReference<>(EMPTY_RESULTS_CACHE_ENTRY);
+    private final AtomicBoolean resultsCacheEligible = new AtomicBoolean();
 
     private final NodeVersion version;
 
@@ -555,6 +556,7 @@ public class QueryStateMachine
                 deallocatedPreparedStatements,
                 resultsCacheResult.map(finalResult -> finalResult.status().getDisplay()),
                 resultsCacheResult.map(ResultsCacheResult::resultSetSize),
+                Optional.of(resultsCacheEligible.get()),
                 Optional.ofNullable(startedTransactionId.get()),
                 clearTransactionId.get(),
                 updateType.get(),
@@ -1354,6 +1356,7 @@ public class QueryStateMachine
                 queryInfo.getDeallocatedPreparedStatements(),
                 queryInfo.getResultsCacheResultStatus(),
                 queryInfo.getResultsCacheResultSize(),
+                queryInfo.isResultsCacheEligible(),
                 queryInfo.getStartedTransactionId(),
                 queryInfo.isClearTransactionId(),
                 queryInfo.getUpdateType(),
@@ -1390,6 +1393,11 @@ public class QueryStateMachine
     public void resultsCacheEntryDone()
     {
         transitionToFinishedIfReady();
+    }
+
+    public void setResultsCacheEligible()
+    {
+        resultsCacheEligible.set(true);
     }
 
     private static QueryStats pruneQueryStats(QueryStats queryStats)

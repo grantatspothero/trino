@@ -136,6 +136,7 @@ public class TestQueryInfo
                 ImmutableSet.of("deallocated_prepared_statement", "statement"),
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
                 Optional.of(TransactionId.create()),
                 true,
                 "42",

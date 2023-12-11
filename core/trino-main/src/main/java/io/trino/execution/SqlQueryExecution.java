@@ -249,6 +249,13 @@ public class SqlQueryExecution
             this.taskDescriptorStorage = requireNonNull(taskDescriptorStorage, "taskDescriptorStorage is null");
             this.planOptimizersStatsCollector = requireNonNull(planOptimizersStatsCollector, "planOptimizersStatsCollector is null");
 
+            // Regardless of if results cache is configured, track if the query was eligible for it
+            Optional<FilteredResultsCacheEntry> filteredResultsCacheEntry =
+                    ResultsCacheAnalyzer.isStatementCacheable(stateMachine.getQueryId(), preparedQuery, analysis);
+            if (filteredResultsCacheEntry.isEmpty()) {
+                stateMachine.setResultsCacheEligible();
+            }
+
             // The ResultsCacheState, if present, represents the Dispatcher indicating to the Coordinator to cache
             // the results of the query if it meets the criteria.
             Optional<ResultsCacheState> potentialResultsCacheState = createResultsCacheParameters(stateMachine.getSession());
@@ -262,9 +269,6 @@ public class SqlQueryExecution
                 //     the resultsCacheState member to what was passed by the Dispatcher.
                 //   If a filter criterion is met, a FilteredResultCacheEntry will be returned that can be registered
                 //     with the QueryStateMachine in order to report this in QueryInfo.
-                Optional<FilteredResultsCacheEntry> filteredResultsCacheEntry = potentialResultsCacheState.flatMap(state ->
-                        ResultsCacheAnalyzer.isStatementCacheable(stateMachine.getQueryId(), preparedQuery, analysis));
-
                 if (filteredResultsCacheEntry.isPresent()) {
                     stateMachine.setResultsCacheEntry(filteredResultsCacheEntry.get());
                     this.resultsCacheState = Optional.empty();

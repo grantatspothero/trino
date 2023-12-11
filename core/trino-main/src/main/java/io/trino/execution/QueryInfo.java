@@ -87,6 +87,7 @@ public class QueryInfo
     private final NodeVersion version;
     private final Optional<String> resultsCacheResultStatus;
     private final Optional<Long> resultsCacheResultSize;
+    private final Optional<Boolean> resultsCacheEligible;
 
     @JsonCreator
     public QueryInfo(
@@ -110,6 +111,7 @@ public class QueryInfo
             @JsonProperty("deallocatedPreparedStatements") Set<String> deallocatedPreparedStatements,
             @JsonProperty("resultsCacheResultStatus") Optional<String> resultsCacheResultStatus,
             @JsonProperty("resultsCacheResultSize") Optional<Long> resultsCacheResultSize,
+            @JsonProperty("resultsCacheEligible") Optional<Boolean> resultsCacheEligible,
             @JsonProperty("startedTransactionId") Optional<TransactionId> startedTransactionId,
             @JsonProperty("clearTransactionId") boolean clearTransactionId,
             @JsonProperty("updateType") String updateType,
@@ -144,6 +146,7 @@ public class QueryInfo
         requireNonNull(deallocatedPreparedStatements, "deallocatedPreparedStatements is null");
         requireNonNull(resultsCacheResultStatus, "resultsCacheResultStatus is null");
         requireNonNull(resultsCacheResultSize, "resultsCacheResultSize is null");
+        requireNonNull(resultsCacheEligible, "resultsCacheEligible is null");
         requireNonNull(startedTransactionId, "startedTransactionId is null");
         requireNonNull(query, "query is null");
         requireNonNull(preparedQuery, "preparedQuery is null");
@@ -178,6 +181,7 @@ public class QueryInfo
         this.deallocatedPreparedStatements = ImmutableSet.copyOf(deallocatedPreparedStatements);
         this.resultsCacheResultStatus = resultsCacheResultStatus;
         this.resultsCacheResultSize = resultsCacheResultSize;
+        this.resultsCacheEligible = resultsCacheEligible;
         this.startedTransactionId = startedTransactionId;
         this.clearTransactionId = clearTransactionId;
         this.updateType = updateType;
@@ -335,6 +339,12 @@ public class QueryInfo
     public Optional<Long> getResultsCacheResultSize()
     {
         return resultsCacheResultSize;
+    }
+
+    @JsonProperty
+    public Optional<Boolean> isResultsCacheEligible()
+    {
+        return resultsCacheEligible;
     }
 
     @JsonProperty

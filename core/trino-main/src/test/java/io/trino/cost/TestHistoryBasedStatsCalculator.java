@@ -725,6 +725,7 @@ public class TestHistoryBasedStatsCalculator
                 ImmutableSet.of(),
                 Optional.empty(),
                 Optional.empty(),
+                Optional.empty(),
                 Optional.of(TransactionId.create()),
                 true,
                 "42",
