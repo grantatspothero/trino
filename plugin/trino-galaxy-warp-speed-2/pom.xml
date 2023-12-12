@@ -89,31 +89,8 @@
 
         <dependency>
             <groupId>io.trino</groupId>
-            <artifactId>trino-delta-lake</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.trino</groupId>
             <artifactId>trino-galaxy-objectstore</artifactId>
         </dependency>
-
-        <dependency>
-            <groupId>io.trino</groupId>
-            <artifactId>trino-hive</artifactId>
-            <exclusions>
-                <!-- duplicate resources with org.apache.orc:orc-core -->
-                <exclusion>
-                    <groupId>org.alluxio</groupId>
-                    <artifactId>alluxio-shaded-client</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>io.trino</groupId>
-            <artifactId>trino-hudi</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>io.trino</groupId>
             <artifactId>trino-iceberg</artifactId>
@@ -201,10 +178,20 @@
             <artifactId>trino-base-jdbc</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-delta-lake</artifactId>
+            <scope>runtime</scope>
+        </dependency>
 
         <dependency>
             <groupId>io.trino</groupId>
             <artifactId>trino-hdfs</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-hudi</artifactId>
             <scope>runtime</scope>
         </dependency>
 

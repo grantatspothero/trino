@@ -21,6 +21,7 @@ import io.trino.plugin.warp.proxiedconnector.deltalake.DeltaLakeProxiedConnector
 import io.trino.plugin.warp.proxiedconnector.hive.HiveProxiedConnectorTransformer;
 import io.trino.plugin.warp.proxiedconnector.hudi.HudiProxiedConnectorTransformer;
 import io.trino.plugin.warp.proxiedconnector.iceberg.IcebergProxiedConnectorTransformer;
+import io.trino.plugin.warp.proxiedconnector.objectstore.ObjectStoreProxiedConnectorTransformer;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
 
