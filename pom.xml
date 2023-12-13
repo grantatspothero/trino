@@ -150,7 +150,7 @@
     </modules>
 
     <properties>
-        <revision>432-galaxy-1-SNAPSHOT</revision>
+        <revision>434-galaxy-1-SNAPSHOT</revision>
         <air.main.basedir>${project.basedir}</air.main.basedir>
 
         <air.check.skip-spotbugs>true</air.check.skip-spotbugs>
@@ -198,15 +198,15 @@
         <!-- released from https://github.com/starburstdata/varada -->
         <dep.warp-speed.version>432.2.3</dep.warp-speed.version>
         <!-- released from https://github.com/starburstdata/trino-buffer-service -->
-        <dep.trino-buffer-service.version>432-trino-buffer-service-611-g855fb8c</dep.trino-buffer-service.version>
+        <dep.trino-buffer-service.version>434-trino-buffer-service-643-g39b8335</dep.trino-buffer-service.version>
         <!-- released form https://github.com/starburstdata/schema-discovery -->
-        <dep.schema-discovery.version>433.20231204-0978264</dep.schema-discovery.version>
+        <dep.schema-discovery.version>434.20231229-61758ce</dep.schema-discovery.version>
         <!-- released from https://github.com/starburstdata/starburst-dataframe -->
         <dep.starburst-dataframe.version>0.5.0.20240103-59af7c5</dep.starburst-dataframe.version>
         <!-- released from https://github.com/starburstdata/stargate -->
         <dep.stargate.version>stargate-12880-gc416d1d61d</dep.stargate.version>
         <!-- released from https://github.com/starburstdata/starburst-trino-plugins -->
-        <dep.starburst-trino-plugins.version>432.7</dep.starburst-trino-plugins.version>
+        <dep.starburst-trino-plugins.version>434.4</dep.starburst-trino-plugins.version>
         <dep.cloudevents.version>2.2.0</dep.cloudevents.version>
 
         <!--
