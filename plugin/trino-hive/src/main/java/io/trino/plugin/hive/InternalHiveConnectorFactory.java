@@ -21,15 +21,12 @@ import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import io.airlift.bootstrap.Bootstrap;
 import io.airlift.bootstrap.LifeCycleManager;
-import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.airlift.event.client.EventModule;
 import io.airlift.json.JsonModule;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.filesystem.manager.FileSystemModule;
-import io.trino.hdfs.HdfsModule;
-import io.trino.hdfs.authentication.HdfsAuthenticationModule;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.base.CatalogNameModule;
 import io.trino.plugin.base.TypeDeserializerModule;
@@ -115,18 +112,7 @@ public final class InternalHiveConnectorFactory
                     new HiveMetastoreModule(metastore),
                     new HiveSecurityModule(),
                     fileSystemFactory
-                            .map(factory -> (Module) new AbstractConfigurationAwareModule()
-                            {
-                                @Override
-                                protected void setup(Binder binder)
-                                {
-                                    //TODO(https://github.com/starburstdata/stargate/issues/13734): drop Hdfs* bindings when no longer needed by schema-discovery
-                                    super.install(new HdfsModule());
-                                    super.install(new HdfsAuthenticationModule());
-
-                                    binder.bind(TrinoFileSystemFactory.class).toInstance(factory);
-                                }
-                            })
+                            .map(factory -> (Module) binder -> binder.bind(TrinoFileSystemFactory.class).toInstance(factory))
                             .orElseGet(() -> new FileSystemModule(catalogName, context.getNodeManager(), openTelemetry.orElse(context.getOpenTelemetry()))),
                     new HiveProcedureModule(),
                     new MBeanServerModule(),

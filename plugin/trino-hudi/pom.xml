@@ -189,13 +189,6 @@
         </dependency>
 
         <dependency>
-            <!-- TODO (https://github.com/starburstdata/galaxy-trino/issues/1120) needed by tests but also by io.starburst.schema-discovery:schema-discovery-core -->
-            <groupId>org.apache.parquet</groupId>
-            <artifactId>parquet-avro</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
-        <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>junit-extensions</artifactId>
             <scope>test</scope>
@@ -319,6 +312,12 @@
                     <artifactId>*</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.parquet</groupId>
+            <artifactId>parquet-avro</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <dependency>

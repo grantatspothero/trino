@@ -178,12 +178,6 @@
         </dependency>
 
         <dependency>
-            <!-- TODO (https://github.com/starburstdata/stargate/issues/13734) move back to `runtime` scope when schema-discovery no longer needs it -->
-            <groupId>io.trino</groupId>
-            <artifactId>trino-hdfs</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>io.trino</groupId>
             <artifactId>trino-hive-formats</artifactId>
         </dependency>
@@ -216,12 +210,6 @@
         <dependency>
             <groupId>io.trino.coral</groupId>
             <artifactId>coral</artifactId>
-        </dependency>
-
-        <dependency>
-            <!-- TODO https://github.com/starburstdata/galaxy-trino/issues/1120 needed by schema discovery -->
-            <groupId>io.trino.hadoop</groupId>
-            <artifactId>hadoop-apache</artifactId>
         </dependency>
 
         <dependency>
@@ -358,20 +346,7 @@
 
         <dependency>
             <groupId>io.opentelemetry</groupId>
-            <artifactId>opentelemetry-context</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.opentelemetry</groupId>
             <artifactId>opentelemetry-sdk-trace</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
-        <dependency>
-            <!-- TODO (https://github.com/starburstdata/galaxy-trino/issues/1120) needed by tests but also by io.starburst.schema-discovery:schema-discovery-core -->
-            <groupId>io.trino.hive</groupId>
-            <artifactId>hive-apache</artifactId>
             <scope>runtime</scope>
         </dependency>
 

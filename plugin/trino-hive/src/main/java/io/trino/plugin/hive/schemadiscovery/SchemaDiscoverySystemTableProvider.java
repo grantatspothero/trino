@@ -14,53 +14,47 @@
 package io.trino.plugin.hive.schemadiscovery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import io.starburst.schema.discovery.SchemaDiscoveryController;
-import io.starburst.schema.discovery.formats.orc.CopiedHdfsOrcDataSource;
 import io.starburst.schema.discovery.formats.orc.OrcDataSourceFactory;
-import io.starburst.schema.discovery.formats.parquet.CopiedHdfsParquetDataSource;
 import io.starburst.schema.discovery.formats.parquet.ParquetDataSourceFactory;
 import io.starburst.schema.discovery.generation.Dialect;
-import io.starburst.schema.discovery.io.DiscoveryFileSystem;
+import io.starburst.schema.discovery.io.DiscoveryTrinoFileSystem;
 import io.starburst.schema.discovery.trino.system.table.DiscoveryLocationAccessControlAdapter;
 import io.starburst.schema.discovery.trino.system.table.SchemaDiscoverySystemTable;
 import io.starburst.schema.discovery.trino.system.table.ShallowDiscoverySystemTable;
-import io.trino.hdfs.HdfsContext;
-import io.trino.hdfs.HdfsEnvironment;
+import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.parquet.ParquetReaderOptions;
 import io.trino.plugin.base.classloader.ClassLoaderSafeSystemTable;
 import io.trino.plugin.hive.FileFormatDataSourceStats;
 import io.trino.plugin.hive.HiveMetadata;
 import io.trino.plugin.hive.LocationAccessControl;
 import io.trino.plugin.hive.SystemTableProvider;
-import io.trino.spi.TrinoException;
+import io.trino.plugin.hive.orc.HdfsOrcDataSource;
+import io.trino.plugin.hive.parquet.TrinoParquetDataSource;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SystemTable;
-import org.apache.hadoop.fs.Path;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
-import static io.trino.spi.StandardErrorCode.INVALID_ARGUMENTS;
 import static java.util.Objects.requireNonNull;
 
 public class SchemaDiscoverySystemTableProvider
         implements SystemTableProvider
 {
-    private final HdfsEnvironment hdfsEnvironment;
+    private final TrinoFileSystemFactory trinoFileSystemFactory;
     private final ExecutorService executor;
     private final ObjectMapper objectMapper;
     private final DiscoveryLocationAccessControlAdapter discoveryLocationAccessControlAdapter;
 
     @Inject
-    public SchemaDiscoverySystemTableProvider(HdfsEnvironment hdfsEnvironment, @ForSchemaDiscovery ExecutorService executor, ObjectMapper objectMapper, LocationAccessControl locationAccessControl)
+    public SchemaDiscoverySystemTableProvider(TrinoFileSystemFactory trinoFileSystemFactory, @ForSchemaDiscovery ExecutorService executor, ObjectMapper objectMapper, LocationAccessControl locationAccessControl)
     {
-        this.hdfsEnvironment = requireNonNull(hdfsEnvironment, "hdfsEnvironment is null");
+        this.trinoFileSystemFactory = requireNonNull(trinoFileSystemFactory, "trinoFileSystemFactory is null");
         this.executor = requireNonNull(executor, "executor is null");
         this.objectMapper = requireNonNull(objectMapper, "objectMapper is null");
         requireNonNull(locationAccessControl, "locationAccessControl is null");
@@ -91,19 +85,9 @@ public class SchemaDiscoverySystemTableProvider
 
     private SchemaDiscoveryController createSchemaDiscoveryController(ConnectorSession session)
     {
-        HdfsContext hdfsContext = new HdfsContext(session);
-        Function<URI, DiscoveryFileSystem> fileSystemProvider = uri -> {
-            try {
-                return new DiscoveryFileSystem(hdfsEnvironment.getFileSystem(hdfsContext, new Path(uri)));
-            }
-            catch (IOException e) {
-                String rootErrorMessage = Throwables.getRootCause(e).getMessage();
-                String finalMessage = e.getMessage().equals(rootErrorMessage) ? rootErrorMessage : "%s, reason: %s".formatted(e.getMessage(), rootErrorMessage);
-                throw new TrinoException(INVALID_ARGUMENTS, "Failure for URI: %s, caused by: %s".formatted(uri, finalMessage), e);
-            }
-        };
-        OrcDataSourceFactory orcDataSourceFactory = (id, size, options, inputStream) -> new CopiedHdfsOrcDataSource(id, size, options, inputStream, new FileFormatDataSourceStats());
-        ParquetDataSourceFactory parquetDataSourceFactory = (id, estimatedSize, inputStream) -> new CopiedHdfsParquetDataSource(id, estimatedSize, inputStream, new FileFormatDataSourceStats(), new ParquetReaderOptions());
+        Function<URI, DiscoveryTrinoFileSystem> fileSystemProvider = uri -> new DiscoveryTrinoFileSystem(trinoFileSystemFactory.create(session));
+        OrcDataSourceFactory orcDataSourceFactory = (id, size, options, inputFile) -> new HdfsOrcDataSource(id, size, options, inputFile, new FileFormatDataSourceStats());
+        ParquetDataSourceFactory parquetDataSourceFactory = (inputFile) -> new TrinoParquetDataSource(inputFile, new ParquetReaderOptions(), new FileFormatDataSourceStats());
         return new SchemaDiscoveryController(fileSystemProvider, parquetDataSourceFactory, orcDataSourceFactory, Dialect.GALAXY, executor);
     }
 }
