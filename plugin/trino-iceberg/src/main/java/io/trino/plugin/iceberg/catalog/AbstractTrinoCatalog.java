@@ -20,7 +20,6 @@ import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystem;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.hive.HiveMetadata;
-import io.trino.plugin.hive.LocationAccessControl;
 import io.trino.plugin.iceberg.ColumnIdentity;
 import io.trino.plugin.iceberg.IcebergMaterializedViewDefinition;
 import io.trino.plugin.iceberg.IcebergUtil;
@@ -80,6 +79,7 @@ import static io.trino.plugin.iceberg.IcebergMaterializedViewAdditionalPropertie
 import static io.trino.plugin.iceberg.IcebergMaterializedViewDefinition.decodeMaterializedViewData;
 import static io.trino.plugin.iceberg.IcebergTableProperties.FILE_FORMAT_PROPERTY;
 import static io.trino.plugin.iceberg.IcebergTableProperties.getPartitioning;
+import static io.trino.plugin.iceberg.IcebergTableProperties.getTableLocation;
 import static io.trino.plugin.iceberg.IcebergUtil.commit;
 import static io.trino.plugin.iceberg.IcebergUtil.getIcebergTableProperties;
 import static io.trino.plugin.iceberg.IcebergUtil.schemaFromMetadata;
@@ -317,7 +317,9 @@ public abstract class AbstractTrinoCatalog
                 });
 
         ConnectorTableMetadata tableMetadata = new ConnectorTableMetadata(storageTable, columns, storageTableProperties, Optional.empty());
-        Transaction transaction = IcebergUtil.newCreateTableTransaction(this, tableMetadata, session, false, LocationAccessControl.ALLOW_ALL);
+        String tableLocation = getTableLocation(tableMetadata.getProperties())
+                .orElseGet(() -> defaultTableLocation(session, tableMetadata.getTable()));
+        Transaction transaction = IcebergUtil.newCreateTableTransaction(this, tableMetadata, session, false, tableLocation);
         AppendFiles appendFiles = transaction.newAppend();
         commit(appendFiles, session);
         transaction.commitTransaction();
