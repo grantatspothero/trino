@@ -65,7 +65,6 @@ import static io.trino.plugin.base.galaxy.RegionVerifierProperties.addRegionVeri
 import static io.trino.plugin.cassandra.galaxy.GalaxySSLContextUtils.getInsecureSslContext;
 import static io.trino.plugin.cassandra.galaxy.astradb.CassandraDeploymentTypeConfig.DeploymentType.ASTRADB;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
-import static java.lang.Math.toIntExact;
 import static java.util.Objects.requireNonNull;
 
 public class CassandraClientModule
@@ -182,8 +181,8 @@ public class CassandraClientModule
             }
         }
 
-        driverConfigLoaderBuilder.withDuration(DefaultDriverOption.REQUEST_TIMEOUT, Duration.ofMillis(toIntExact(config.getClientReadTimeout().toMillis())));
-        driverConfigLoaderBuilder.withDuration(DefaultDriverOption.CONNECTION_CONNECT_TIMEOUT, Duration.ofMillis(toIntExact(config.getClientConnectTimeout().toMillis())));
+        driverConfigLoaderBuilder.withDuration(DefaultDriverOption.REQUEST_TIMEOUT, config.getClientReadTimeout().toJavaTime());
+        driverConfigLoaderBuilder.withDuration(DefaultDriverOption.CONNECTION_CONNECT_TIMEOUT, config.getClientConnectTimeout().toJavaTime());
         if (config.getClientSoLinger() != null) {
             driverConfigLoaderBuilder.withInt(DefaultDriverOption.SOCKET_LINGER_INTERVAL, config.getClientSoLinger());
         }
