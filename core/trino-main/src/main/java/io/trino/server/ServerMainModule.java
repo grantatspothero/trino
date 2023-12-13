@@ -443,7 +443,7 @@ public class ServerMainModule
         binder.install(new HandleJsonModule());
 
         // system connector
-        install(new SystemConnectorModule());
+        binder.install(new SystemConnectorModule());
 
         // slice
         jsonBinder(binder).addSerializerBinding(Slice.class).to(SliceSerializer.class);

@@ -156,12 +156,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.starburstdata.dataframe</groupId>
-            <artifactId>starburst-dataframe-api</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>bootstrap</artifactId>
             <scope>test</scope>
@@ -383,13 +377,6 @@
             <groupId>io.trino</groupId>
             <artifactId>trino-spi</artifactId>
             <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.trino</groupId>
-            <artifactId>trino-teradata-functions</artifactId>
-            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
 

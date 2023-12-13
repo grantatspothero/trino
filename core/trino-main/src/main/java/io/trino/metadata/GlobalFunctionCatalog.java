@@ -24,7 +24,6 @@ import io.trino.connector.system.GlobalSystemConnector;
 import io.trino.operator.table.ExcludeColumns.ExcludeColumnsFunctionHandle;
 import io.trino.operator.table.Sequence.SequenceFunctionHandle;
 import io.trino.operator.table.json.JsonTable.JsonTableFunctionHandle;
-import io.trino.server.dataframe.AnalyzeLogicalPlan.AnalyzeLogicalPlanFunctionHandle;
 import io.trino.spi.function.AggregationFunctionMetadata;
 import io.trino.spi.function.AggregationImplementation;
 import io.trino.spi.function.BoundSignature;
@@ -59,7 +58,6 @@ import static io.trino.metadata.OperatorNameUtil.unmangleOperator;
 import static io.trino.operator.table.ExcludeColumns.getExcludeColumnsFunctionProcessorProvider;
 import static io.trino.operator.table.Sequence.getSequenceFunctionProcessorProvider;
 import static io.trino.operator.table.json.JsonTable.getJsonTableFunctionProcessorProvider;
-import static io.trino.server.dataframe.AnalyzeLogicalPlan.getAnalyzeLogicalPlanFunctionProcessorProvider;
 import static io.trino.spi.function.FunctionKind.AGGREGATE;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.BooleanType.BOOLEAN;
@@ -201,9 +199,6 @@ public class GlobalFunctionCatalog
     @Override
     public TableFunctionProcessorProvider getTableFunctionProcessorProvider(ConnectorTableFunctionHandle functionHandle)
     {
-        if (functionHandle instanceof AnalyzeLogicalPlanFunctionHandle) {
-            return getAnalyzeLogicalPlanFunctionProcessorProvider();
-        }
         if (functionHandle instanceof ExcludeColumnsFunctionHandle) {
             return getExcludeColumnsFunctionProcessorProvider();
         }
