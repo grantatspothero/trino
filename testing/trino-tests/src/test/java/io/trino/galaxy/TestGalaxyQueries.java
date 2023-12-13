@@ -932,39 +932,23 @@ public class TestGalaxyQueries
         assertUpdate(innerViewOwnerSessionNoGrantOption, "CREATE VIEW memory.definer_views.inner_view_no_grant_option_definer AS SELECT * FROM memory.definer_views.base_table");
         assertUpdate(innerViewOwnerSessionNoGrantOption, "CREATE VIEW memory.definer_views.inner_view_no_grant_option_invoker SECURITY INVOKER AS SELECT * FROM memory.definer_views.base_table");
 
-        // however, querying with definer will fail. invoker querying will succeed because it is the view owner
-        assertThatThrownBy(() -> query(innerViewOwnerSessionNoGrantOption, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Access Denied: View owner does not have sufficient privileges")
-                .hasMessageContaining("cannot create view that selects from memory.definer_views.base_table: Role inner_view_owner_no_grant_option does not have the privilege SELECT WITH GRANT OPTION on the columns");
-        assertThat(query(innerViewOwnerSessionNoGrantOption, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker")).matches(tableContents);
-
-        // grant with grant option, and the views can be queried again
-        assertUpdate(baseTableOwnerSession, "GRANT SELECT ON TABLE memory.definer_views.base_table TO ROLE inner_view_owner_no_grant_option WITH GRANT OPTION");
-        assertThat(query(innerViewOwnerSessionNoGrantOption, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker")).matches(tableContents);
+        // they are also allowed to be queried when the view owner queries them
         assertThat(query(innerViewOwnerSessionNoGrantOption, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer")).matches(tableContents);
+        assertThat(query(innerViewOwnerSessionNoGrantOption, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker")).matches(tableContents);
 
-        // revoke the grant option
-        // Grant SELECT on the table to another role - allowed, since the role has ownership over the view
-        // however, querying by the outer view owner should fail
-        assertUpdate(baseTableOwnerSession, "REVOKE SELECT ON TABLE memory.definer_views.base_table FROM ROLE inner_view_owner_no_grant_option");
-        assertUpdate(baseTableOwnerSession, "GRANT SELECT ON TABLE memory.definer_views.base_table TO ROLE inner_view_owner_no_grant_option");
-        assertUpdate(innerViewOwnerSessionNoGrantOption, "GRANT SELECT ON TABLE memory.definer_views.inner_view_no_grant_option_invoker TO ROLE outer_view_owner");
+        // however, without the grant option, another role won't be able to query the view
+        assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.inner_view_no_grant_option_definer: Relation not found or not allowed");
+        assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.inner_view_no_grant_option_invoker: Relation not found or not allowed");
+
+        // give other role SELECT on the view, and the views will still fail:
+        //  - definer view requires inner_view_owner_no_grant_option have SELECT WITH GRANT OPTION on the underlying table
+        //  - invoker view requires outer_view_owner have SELECT on the underlying table
         assertUpdate(innerViewOwnerSessionNoGrantOption, "GRANT SELECT ON TABLE memory.definer_views.inner_view_no_grant_option_definer TO ROLE outer_view_owner");
-
-        assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Access Denied: View owner does not have sufficient privileges")
-                .hasMessageContaining("cannot create view that selects from memory.definer_views.base_table: Role outer_view_owner does not have the privilege SELECT WITH GRANT OPTION on the columns");
-        assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Access Denied: View owner does not have sufficient privileges")
-                .hasMessageContaining("cannot create view that selects from memory.definer_views.base_table: Role outer_view_owner does not have the privilege SELECT WITH GRANT OPTION on the columns");
-
-        // even adding the grant option should make the querying fail
-        assertUpdate(innerViewOwnerSessionNoGrantOption, "GRANT SELECT ON TABLE memory.definer_views.inner_view_no_grant_option_invoker TO ROLE outer_view_owner WITH GRANT OPTION");
-        assertUpdate(innerViewOwnerSessionNoGrantOption, "GRANT SELECT ON TABLE memory.definer_views.inner_view_no_grant_option_definer TO ROLE outer_view_owner WITH GRANT OPTION");
-
+        assertUpdate(innerViewOwnerSessionNoGrantOption, "GRANT SELECT ON TABLE memory.definer_views.inner_view_no_grant_option_invoker TO ROLE outer_view_owner");
         assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Access Denied: View owner does not have sufficient privileges")
@@ -973,16 +957,55 @@ public class TestGalaxyQueries
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.base_table: Relation not found or not allowed");
 
-        // set the inner view owner grant option back, then the definer query should work just fine
-        // the invoker query still needs base_table granted to the outer view owner
+        // grant with grant option, and the definer view can now be queried, but invoker still needs the grant
         assertUpdate(baseTableOwnerSession, "GRANT SELECT ON TABLE memory.definer_views.base_table TO ROLE inner_view_owner_no_grant_option WITH GRANT OPTION");
         assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer")).matches(tableContents);
         assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.base_table: Relation not found or not allowed");
 
+        // give base table access to outer_view_owner, and now querying should work for outer_view_owner role
         assertUpdate(baseTableOwnerSession, "GRANT SELECT ON TABLE memory.definer_views.base_table TO ROLE outer_view_owner");
+        assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer")).matches(tableContents);
         assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker")).matches(tableContents);
+
+        // make sure this doesn't work for base_table_owner, as they don't have view privileges
+        assertThatThrownBy(() -> query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.inner_view_no_grant_option_definer: Relation not found or not allowed");
+        assertThatThrownBy(() -> query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.inner_view_no_grant_option_invoker: Relation not found or not allowed");
+
+        // grant inner_view_owner_no_grant_option to base_table_owner role and querying the views should succeed
+        assertUpdate("GRANT inner_view_owner_no_grant_option TO ROLE base_table_owner");
+        assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer")).matches(tableContents);
+        assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker")).matches(tableContents);
+
+        // revoke the grant option -- now querying by outer_view_owner should fail again,
+        // but base_table_owner should still succeed, as it has the view owner in its active role set
+        assertUpdate(baseTableOwnerSession, "REVOKE SELECT ON TABLE memory.definer_views.base_table FROM ROLE inner_view_owner_no_grant_option");
+        assertUpdate(baseTableOwnerSession, "GRANT SELECT ON TABLE memory.definer_views.base_table TO ROLE inner_view_owner_no_grant_option");
+
+        assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer")).matches(tableContents);
+        assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker")).matches(tableContents);
+
+        assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Access Denied: View owner does not have sufficient privileges")
+                .hasMessageContaining("cannot create view that selects from memory.definer_views.base_table: Role outer_view_owner does not have the privilege SELECT WITH GRANT OPTION on the columns");
+        // invoker is still good
+        assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker")).matches(tableContents);
+
+        // revoke the role grant and the definer view isn't accessible to either role anymore
+        assertUpdate("REVOKE inner_view_owner_no_grant_option FROM ROLE base_table_owner");
+        assertThatThrownBy(() -> query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.inner_view_no_grant_option_definer: Relation not found or not allowed");
+        assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Access Denied: View owner does not have sufficient privileges")
+                .hasMessageContaining("cannot create view that selects from memory.definer_views.base_table: Role outer_view_owner does not have the privilege SELECT WITH GRANT OPTION on the columns");
 
         // Clean up
         assertUpdate("DROP VIEW memory.definer_views.inner_view_no_grant_option_invoker");

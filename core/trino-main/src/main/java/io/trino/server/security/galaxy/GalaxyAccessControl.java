@@ -79,6 +79,7 @@ import static io.starburst.stargate.accesscontrol.privilege.Privilege.VIEW_ALL_Q
 import static io.trino.execution.PrivilegeUtilities.getPrivilegesForEntityKind;
 import static io.trino.metadata.GlobalFunctionCatalog.BUILTIN_SCHEMA;
 import static io.trino.plugin.base.util.Parallels.processWithAdditionalThreads;
+import static io.trino.server.security.galaxy.GalaxyIdentity.getContextRoleId;
 import static io.trino.server.security.galaxy.GalaxyIdentity.getRoleId;
 import static io.trino.server.security.galaxy.GalaxySecuritySessionProperties.getFilterColumnsAcceleration;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
@@ -543,7 +544,7 @@ public class GalaxyAccessControl
     @Override
     public void checkCanCreateViewWithSelectFromColumns(SystemSecurityContext context, CatalogSchemaTableName table, Set<String> columns)
     {
-        checkHasPrivilegeOnColumns(context, SELECT, !isTableOwner(context, table), table, columns, explanation ->
+        checkHasPrivilegeOnColumns(context, SELECT, !isViewOwnerQuerying(context), table, columns, explanation ->
                 denyCreateViewWithSelect(table.toString(), context.getIdentity().toConnectorIdentity(), explanation));
     }
 
@@ -1108,6 +1109,15 @@ public class GalaxyAccessControl
     {
         return controller.getCatalogId(table.getCatalogName())
                 .map(catalogId -> new TableId(catalogId, table.getSchemaTableName().getSchemaName(), table.getSchemaTableName().getTableName()));
+    }
+
+    private boolean isViewOwnerQuerying(SystemSecurityContext context)
+    {
+        // When querying a view, the view's run-as role will be different from the actual role executing the query
+        RoleId viewOwner = getContextRoleId(context.getIdentity());
+        return getSystemAccessController(context)
+                .listEnabledRoles(context.getIdentity(), GalaxyIdentity::toDispatchSessionFromPrincipal)
+                .containsValue(viewOwner);
     }
 
     private boolean isReadOnlyCatalog(GalaxySystemAccessController controller, String name)

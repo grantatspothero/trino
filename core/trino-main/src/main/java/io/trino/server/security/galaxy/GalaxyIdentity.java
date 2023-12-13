@@ -184,7 +184,7 @@ public final class GalaxyIdentity
         return toDispatchSessionFromPrincipal(identity);
     }
 
-    private static DispatchSession toDispatchSessionFromPrincipal(Identity identity)
+    public static DispatchSession toDispatchSessionFromPrincipal(Identity identity)
     {
         List<String> parts = splitPrincipal(identity);
         return new DispatchSession(

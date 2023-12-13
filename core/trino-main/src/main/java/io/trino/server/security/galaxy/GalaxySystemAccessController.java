@@ -26,6 +26,7 @@ import io.starburst.stargate.id.FunctionId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.RoleName;
 import io.starburst.stargate.id.TableId;
+import io.starburst.stargate.identity.DispatchSession;
 import io.trino.server.galaxy.GalaxyPermissionsCache;
 import io.trino.server.galaxy.GalaxyPermissionsCache.GalaxyQueryPermissions;
 import io.trino.server.galaxy.catalogs.CatalogResolver;
@@ -39,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -101,7 +103,12 @@ public class GalaxySystemAccessController
 
     public Map<RoleName, RoleId> listEnabledRoles(Identity identity)
     {
-        return accessControlClient.listEnabledRoles(toDispatchSession(identity));
+        return listEnabledRoles(identity, GalaxyIdentity::toDispatchSession);
+    }
+
+    public Map<RoleName, RoleId> listEnabledRoles(Identity identity, Function<Identity, DispatchSession> sessionCreator)
+    {
+        return accessControlClient.listEnabledRoles(sessionCreator.apply(identity));
     }
 
     public Predicate<String> getCatalogVisibility(SystemSecurityContext context, Set<String> requestedCatalogs)
