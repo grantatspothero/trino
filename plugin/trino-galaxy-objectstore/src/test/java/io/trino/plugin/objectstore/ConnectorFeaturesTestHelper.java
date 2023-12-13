@@ -14,8 +14,8 @@
 package io.trino.plugin.objectstore;
 
 import io.trino.testing.BaseConnectorTest;
+import org.junit.jupiter.api.Test;
 import org.testng.SkipException;
-import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.lang.reflect.Method;

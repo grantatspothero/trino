@@ -24,8 +24,6 @@ import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.plugin.objectstore.ConnectorFeaturesTestHelper.TestFramework;
 import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.spi.connector.ConnectorTableMetadata;
-import io.trino.sql.planner.OptimizerConfig;
-import io.trino.testing.BaseConnectorTest;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryFailedException;
 import io.trino.testing.QueryRunner;
@@ -519,9 +517,9 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
-    public void testAddAndDropColumnName(String arg0)
+    public void testAddAndDropColumnName()
     {
-        skipDuplicateTestCoverage("testAddAndDropColumnName", String.class);
+        skipDuplicateTestCoverage("testAddAndDropColumnName");
     }
 
     @Test
@@ -533,13 +531,6 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
-    public void testAddColumnConcurrently()
-    {
-        skipDuplicateTestCoverage("testAddColumnConcurrently");
-    }
-
-    @Test
-    @Override
     public void testAddColumnWithComment()
     {
         skipDuplicateTestCoverage("testAddColumnWithComment");
@@ -547,9 +538,9 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
-    public void testAddColumnWithCommentSpecialCharacter(String arg0)
+    public void testAddColumnWithCommentSpecialCharacter()
     {
-        skipDuplicateTestCoverage("testAddColumnWithCommentSpecialCharacter", String.class);
+        skipDuplicateTestCoverage("testAddColumnWithCommentSpecialCharacter");
     }
 
     @Test
@@ -582,6 +573,13 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
+    public void testAggregationOverUnknown()
+    {
+        skipDuplicateTestCoverage("testAggregationOverUnknown");
+    }
+
+    @Test
+    @Override
     public void testAlterTableAddLongColumnName()
     {
         skipDuplicateTestCoverage("testAlterTableAddLongColumnName");
@@ -596,9 +594,16 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
-    public void testCaseSensitiveDataMapping(BaseConnectorTest.DataMappingTestSetup arg0)
+    public void testArithmeticNegation()
     {
-        skipDuplicateTestCoverage("testCaseSensitiveDataMapping", BaseConnectorTest.DataMappingTestSetup.class);
+        skipDuplicateTestCoverage("testArithmeticNegation");
+    }
+
+    @Test
+    @Override
+    public void testCaseSensitiveDataMapping()
+    {
+        skipDuplicateTestCoverage("testCaseSensitiveDataMapping");
     }
 
     @Test
@@ -617,9 +622,9 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
-    public void testColumnName(String arg0)
+    public void testColumnName()
     {
-        skipDuplicateTestCoverage("testColumnName", String.class);
+        skipDuplicateTestCoverage("testColumnName");
     }
 
     @Test
@@ -638,16 +643,16 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
-    public void testCommentColumnName(String arg0)
+    public void testCommentColumnName()
     {
-        skipDuplicateTestCoverage("testCommentColumnName", String.class);
+        skipDuplicateTestCoverage("testCommentColumnName");
     }
 
     @Test
     @Override
-    public void testCommentColumnSpecialCharacter(String arg0)
+    public void testCommentColumnSpecialCharacter()
     {
-        skipDuplicateTestCoverage("testCommentColumnSpecialCharacter", String.class);
+        skipDuplicateTestCoverage("testCommentColumnSpecialCharacter");
     }
 
     @Test
@@ -659,9 +664,9 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
-    public void testCommentTableSpecialCharacter(String arg0)
+    public void testCommentTableSpecialCharacter()
     {
-        skipDuplicateTestCoverage("testCommentTableSpecialCharacter", String.class);
+        skipDuplicateTestCoverage("testCommentTableSpecialCharacter");
     }
 
     @Test
@@ -694,9 +699,30 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
+    public void testComplexQuery()
+    {
+        skipDuplicateTestCoverage("testComplexQuery");
+    }
+
+    @Test
+    @Override
     public void testConcurrentScans()
     {
         skipDuplicateTestCoverage("testConcurrentScans");
+    }
+
+    @Test
+    @Override
+    public void testCountAll()
+    {
+        skipDuplicateTestCoverage("testCountAll");
+    }
+
+    @Test
+    @Override
+    public void testCountColumn()
+    {
+        skipDuplicateTestCoverage("testCountColumn");
     }
 
     @Test
@@ -711,13 +737,6 @@ public class TestObjectStoreHiveFeaturesConnectorTest
     public void testCreateOrReplaceTableAsSelectWhenTableDoesNotExists()
     {
         skipDuplicateTestCoverage("testCreateOrReplaceTableAsSelectWhenTableDoesNotExists");
-    }
-
-    @Test
-    @Override
-    public void testCreateOrReplaceTableConcurrently()
-    {
-        skipDuplicateTestCoverage("testCreateOrReplaceTableConcurrently");
     }
 
     @Test
@@ -806,9 +825,9 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
-    public void testCreateTableAsSelectWithTableCommentSpecialCharacter(String arg0)
+    public void testCreateTableAsSelectWithTableCommentSpecialCharacter()
     {
-        skipDuplicateTestCoverage("testCreateTableAsSelectWithTableCommentSpecialCharacter", String.class);
+        skipDuplicateTestCoverage("testCreateTableAsSelectWithTableCommentSpecialCharacter");
     }
 
     @Test
@@ -834,9 +853,9 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
-    public void testCreateTableWithColumnCommentSpecialCharacter(String arg0)
+    public void testCreateTableWithColumnCommentSpecialCharacter()
     {
-        skipDuplicateTestCoverage("testCreateTableWithColumnCommentSpecialCharacter", String.class);
+        skipDuplicateTestCoverage("testCreateTableWithColumnCommentSpecialCharacter");
     }
 
     @Test
@@ -862,9 +881,9 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
-    public void testCreateTableWithTableCommentSpecialCharacter(String arg0)
+    public void testCreateTableWithTableCommentSpecialCharacter()
     {
-        skipDuplicateTestCoverage("testCreateTableWithTableCommentSpecialCharacter", String.class);
+        skipDuplicateTestCoverage("testCreateTableWithTableCommentSpecialCharacter");
     }
 
     @Test
@@ -876,9 +895,9 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
-    public void testDataMappingSmokeTest(BaseConnectorTest.DataMappingTestSetup arg0)
+    public void testDataMappingSmokeTest()
     {
-        skipDuplicateTestCoverage("testDataMappingSmokeTest", BaseConnectorTest.DataMappingTestSetup.class);
+        skipDuplicateTestCoverage("testDataMappingSmokeTest");
     }
 
     @Test
@@ -900,6 +919,41 @@ public class TestObjectStoreHiveFeaturesConnectorTest
     public void testDescribeTable()
     {
         skipDuplicateTestCoverage("testDescribeTable");
+    }
+
+    @Test
+    @Override
+    public void testDistinct()
+    {
+        skipDuplicateTestCoverage("testDistinct");
+    }
+
+    @Test
+    @Override
+    public void testDistinctHaving()
+    {
+        skipDuplicateTestCoverage("testDistinctHaving");
+    }
+
+    @Test
+    @Override
+    public void testDistinctLimit()
+    {
+        skipDuplicateTestCoverage("testDistinctLimit");
+    }
+
+    @Test
+    @Override
+    public void testDistinctMultipleFields()
+    {
+        skipDuplicateTestCoverage("testDistinctMultipleFields");
+    }
+
+    @Test
+    @Override
+    public void testDistinctWithOrderBy()
+    {
+        skipDuplicateTestCoverage("testDistinctWithOrderBy");
     }
 
     @Test
@@ -1009,9 +1063,37 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
+    public void testFilterPushdownWithAggregation()
+    {
+        skipDuplicateTestCoverage("testFilterPushdownWithAggregation");
+    }
+
+    @Test
+    @Override
+    public void testIn()
+    {
+        skipDuplicateTestCoverage("testIn");
+    }
+
+    @Test
+    @Override
     public void testInListPredicate()
     {
         skipDuplicateTestCoverage("testInListPredicate");
+    }
+
+    @Test
+    @Override
+    public void testInformationSchemaFiltering()
+    {
+        skipDuplicateTestCoverage("testInformationSchemaFiltering");
+    }
+
+    @Test
+    @Override
+    public void testInformationSchemaUppercaseName()
+    {
+        skipDuplicateTestCoverage("testInformationSchemaUppercaseName");
     }
 
     @Test
@@ -1051,13 +1133,6 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
-    public void testInsertRowConcurrently()
-    {
-        skipDuplicateTestCoverage("testInsertRowConcurrently");
-    }
-
-    @Test
-    @Override
     public void testInsertSameValues()
     {
         skipDuplicateTestCoverage("testInsertSameValues");
@@ -1079,9 +1154,16 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
-    public void testJoinWithEmptySides(OptimizerConfig.JoinDistributionType arg0)
+    public void testJoinWithEmptySides()
     {
-        skipDuplicateTestCoverage("testJoinWithEmptySides", OptimizerConfig.JoinDistributionType.class);
+        skipDuplicateTestCoverage("testJoinWithEmptySides");
+    }
+
+    @Test
+    @Override
+    public void testLargeIn()
+    {
+        skipDuplicateTestCoverage("testLargeIn");
     }
 
     @Test
@@ -1089,6 +1171,34 @@ public class TestObjectStoreHiveFeaturesConnectorTest
     public void testLikePredicate()
     {
         skipDuplicateTestCoverage("testLikePredicate");
+    }
+
+    @Test
+    @Override
+    public void testLimit()
+    {
+        skipDuplicateTestCoverage("testLimit");
+    }
+
+    @Test
+    @Override
+    public void testLimitInInlineView()
+    {
+        skipDuplicateTestCoverage("testLimitInInlineView");
+    }
+
+    @Test
+    @Override
+    public void testLimitMax()
+    {
+        skipDuplicateTestCoverage("testLimitMax");
+    }
+
+    @Test
+    @Override
+    public void testLimitWithAggregation()
+    {
+        skipDuplicateTestCoverage("testLimitWithAggregation");
     }
 
     @Test
@@ -1107,16 +1217,16 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
-    public void testMaterializedViewBaseTableGone(boolean arg0)
+    public void testMaterializedViewBaseTableGone()
     {
-        skipDuplicateTestCoverage("testMaterializedViewBaseTableGone", boolean.class);
+        skipDuplicateTestCoverage("testMaterializedViewBaseTableGone");
     }
 
     @Test
     @Override
-    public void testMaterializedViewColumnName(String arg0)
+    public void testMaterializedViewColumnName()
     {
-        skipDuplicateTestCoverage("testMaterializedViewColumnName", String.class);
+        skipDuplicateTestCoverage("testMaterializedViewColumnName");
     }
 
     @Test
@@ -1282,6 +1392,13 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
+    public void testPredicate()
+    {
+        skipDuplicateTestCoverage("testPredicate");
+    }
+
+    @Test
+    @Override
     public void testPredicateOnRowTypeField()
     {
         skipDuplicateTestCoverage("testPredicateOnRowTypeField");
@@ -1352,16 +1469,9 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
-    public void testReadMetadataWithRelationsConcurrentModifications()
+    public void testRenameColumnName()
     {
-        skipDuplicateTestCoverage("testReadMetadataWithRelationsConcurrentModifications");
-    }
-
-    @Test
-    @Override
-    public void testRenameColumnName(String arg0)
-    {
-        skipDuplicateTestCoverage("testRenameColumnName", String.class);
+        skipDuplicateTestCoverage("testRenameColumnName");
     }
 
     @Test
@@ -1436,6 +1546,13 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
+    public void testRepeatedAggregations()
+    {
+        skipDuplicateTestCoverage("testRepeatedAggregations");
+    }
+
+    @Test
+    @Override
     public void testRollback()
     {
         skipDuplicateTestCoverage("testRollback");
@@ -1485,6 +1602,13 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
+    public void testSelectWithComparison()
+    {
+        skipDuplicateTestCoverage("testSelectWithComparison");
+    }
+
+    @Test
+    @Override
     public void testSetColumnIncompatibleType()
     {
         skipDuplicateTestCoverage("testSetColumnIncompatibleType");
@@ -1527,9 +1651,9 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
-    public void testSetColumnTypes(BaseConnectorTest.SetColumnTypeSetup arg0)
+    public void testSetColumnTypes()
     {
-        skipDuplicateTestCoverage("testSetColumnTypes", BaseConnectorTest.SetColumnTypeSetup.class);
+        skipDuplicateTestCoverage("testSetColumnTypes");
     }
 
     @Test
@@ -1576,9 +1700,16 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
-    public void testSetFieldTypes(BaseConnectorTest.SetColumnTypeSetup arg0)
+    public void testSetFieldTypes()
     {
-        skipDuplicateTestCoverage("testSetFieldTypes", BaseConnectorTest.SetColumnTypeSetup.class);
+        skipDuplicateTestCoverage("testSetFieldTypes");
+    }
+
+    @Test
+    @Override
+    public void testShowColumns()
+    {
+        skipDuplicateTestCoverage("testShowColumns");
     }
 
     @Test
@@ -1611,9 +1742,51 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
+    public void testShowSchemas()
+    {
+        skipDuplicateTestCoverage("testShowSchemas");
+    }
+
+    @Test
+    @Override
+    public void testShowSchemasFrom()
+    {
+        skipDuplicateTestCoverage("testShowSchemasFrom");
+    }
+
+    @Test
+    @Override
     public void testShowSchemasFromOther()
     {
         skipDuplicateTestCoverage("testShowSchemasFromOther");
+    }
+
+    @Test
+    @Override
+    public void testShowSchemasLike()
+    {
+        skipDuplicateTestCoverage("testShowSchemasLike");
+    }
+
+    @Test
+    @Override
+    public void testShowSchemasLikeWithEscape()
+    {
+        skipDuplicateTestCoverage("testShowSchemasLikeWithEscape");
+    }
+
+    @Test
+    @Override
+    public void testShowTables()
+    {
+        skipDuplicateTestCoverage("testShowTables");
+    }
+
+    @Test
+    @Override
+    public void testShowTablesLike()
+    {
+        skipDuplicateTestCoverage("testShowTablesLike");
     }
 
     @Test
@@ -1632,6 +1805,20 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
+    public void testTableSampleBernoulli()
+    {
+        skipDuplicateTestCoverage("testTableSampleBernoulli");
+    }
+
+    @Test
+    @Override
+    public void testTableSampleBernoulliBoundaryValues()
+    {
+        skipDuplicateTestCoverage("testTableSampleBernoulliBoundaryValues");
+    }
+
+    @Test
+    @Override
     public void testTableSampleSystem()
     {
         skipDuplicateTestCoverage("testTableSampleSystem");
@@ -1646,6 +1833,20 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
+    public void testTopN()
+    {
+        skipDuplicateTestCoverage("testTopN");
+    }
+
+    @Test
+    @Override
+    public void testTopNByMultipleFields()
+    {
+        skipDuplicateTestCoverage("testTopNByMultipleFields");
+    }
+
+    @Test
+    @Override
     public void testTruncateTable()
     {
         skipDuplicateTestCoverage("testTruncateTable");
@@ -1656,6 +1857,13 @@ public class TestObjectStoreHiveFeaturesConnectorTest
     public void testTrySelectTableVersion()
     {
         skipDuplicateTestCoverage("testTrySelectTableVersion");
+    }
+
+    @Test
+    @Override
+    public void testUnionAllAboveBroadcastJoin()
+    {
+        skipDuplicateTestCoverage("testUnionAllAboveBroadcastJoin");
     }
 
     @Test
@@ -1702,9 +1910,9 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
-    public void testViewMetadata(String arg0, String arg1)
+    public void testViewMetadata()
     {
-        skipDuplicateTestCoverage("testViewMetadata", String.class, String.class);
+        skipDuplicateTestCoverage("testViewMetadata");
     }
 
     @Test
