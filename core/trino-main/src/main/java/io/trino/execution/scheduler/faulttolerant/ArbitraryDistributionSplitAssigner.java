@@ -243,7 +243,8 @@ class ArbitraryDistributionSplitAssigner
                 openAssignments.put(hostRequirement, partitionAssignment);
                 assignment.addPartition(new Partition(
                         partitionAssignment.getPartitionId(),
-                        new NodeRequirements(catalogRequirement, hostRequirement.map(ImmutableSet::of).orElseGet(ImmutableSet::of))));
+                        new NodeRequirements(catalogRequirement, hostRequirement.map(ImmutableSet::of).orElseGet(ImmutableSet::of),
+                                split.isRemotelyAccessibleIfNodeMissing())));
 
                 for (PlanNodeId replicatedSourceId : replicatedSources) {
                     assignment.updatePartition(new PartitionUpdate(
