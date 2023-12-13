@@ -15,7 +15,6 @@ package io.trino.tests.product.launcher.suite.suites;
 
 import com.google.common.collect.ImmutableList;
 import io.trino.tests.product.launcher.env.EnvironmentConfig;
-import io.trino.tests.product.launcher.env.environment.EnvMultinodeHiveCaching;
 import io.trino.tests.product.launcher.env.environment.EnvSinglenodeHiveImpersonation;
 import io.trino.tests.product.launcher.env.environment.EnvSinglenodeKerberosHiveImpersonation;
 import io.trino.tests.product.launcher.env.environment.EnvSinglenodeKerberosHiveImpersonationWithCredentialCache;
@@ -38,8 +37,6 @@ public class Suite5
                 .filter(run -> run.getEnvironment() != EnvSinglenodeHiveImpersonation.class)
                 // Galaxy does not support Kerberos
                 .filter(run -> !run.getEnvironment().getSimpleName().contains("Kerberos"))
-                // Galaxy doesn't use Rubix-based Hive caching (and it currently does not work)
-                .filter(run -> run.getEnvironment() != EnvMultinodeHiveCaching.class)
                 .collect(toImmutableList());
     }
 
@@ -54,10 +51,6 @@ public class Suite5
                         .build(),
                 testOnEnvironment(EnvSinglenodeKerberosHiveImpersonationWithCredentialCache.class)
                         .withGroups("configured_features", "storage_formats", "hdfs_impersonation", "authorization")
-                        .build(),
-                testOnEnvironment(EnvMultinodeHiveCaching.class)
-                        .withGroups("configured_features", "hive_caching", "storage_formats")
-                        .withExcludedGroups("iceberg")
                         .build());
     }
 }

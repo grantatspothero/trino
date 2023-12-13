@@ -50,7 +50,6 @@ public final class TestGroups
     public static final String HIVE_TRANSACTIONAL = "hive_transactional";
     public static final String HIVE_VIEWS = "hive_views";
     public static final String HIVE_VIEW_COMPATIBILITY = "hive_view_compatibility";
-    public static final String HIVE_CACHING = "hive_caching";
     public static final String HIVE_ICEBERG_REDIRECTIONS = "hive_iceberg_redirections";
     public static final String HIVE_HUDI_REDIRECTIONS = "hive_hudi_redirections";
     public static final String HIVE_KERBEROS = "hive_kerberos";
