@@ -16,9 +16,7 @@ package io.trino.plugin.warp2;
 import io.trino.plugin.varada.configuration.GlobalConfiguration;
 import io.trino.plugin.varada.configuration.ProxiedConnectorConfiguration;
 import io.trino.plugin.varada.di.VaradaStubsStorageEngineModule;
-import io.trino.plugin.varada.dispatcher.ForWarp;
 import io.trino.spi.Plugin;
-import io.varada.cloudvendors.CloudVendorMockModule;
 import io.varada.cloudvendors.configuration.CloudVendorConfiguration;
 import io.varada.tools.configuration.MultiPrefixConfigurationWrapper;
 
@@ -31,7 +29,6 @@ public abstract class WarpSpeedConnectorTestUtils
     public static Plugin getPlugin()
     {
         WarpSpeedPlugin warpSpeedPlugin = new WarpSpeedPlugin();
-        warpSpeedPlugin.withCloudVendorModule(new CloudVendorMockModule(ForWarp.class, Map.of()));
         warpSpeedPlugin.withStorageEngineModule(new VaradaStubsStorageEngineModule());
 
         return warpSpeedPlugin;

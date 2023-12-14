@@ -20,7 +20,7 @@
         <air.test.thread-count>1</air.test.thread-count>
         <air.test.jvm.additional-arguments>${extraJavaVectorArgs}</air.test.jvm.additional-arguments>
         <!-- overide warp version to use new FS-->
-        <dep.warp-speed.version>432.0.4</dep.warp-speed.version>
+        <dep.warp-speed.version>432.0.6</dep.warp-speed.version>
     </properties>
 
     <dependencies>
