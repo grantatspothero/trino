@@ -26,7 +26,6 @@ import java.util.Optional;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.trino.plugin.base.cache.CacheUtils.normalizeTupleDomain;
-import static io.trino.plugin.iceberg.TableStatisticsReader.TRINO_STATS_PREFIX;
 import static java.util.Objects.requireNonNull;
 
 public class IcebergCacheMetadata
@@ -81,8 +80,7 @@ public class IcebergCacheMetadata
                 handle.getTableLocation(),
                 normalizeTupleDomain(handle.getUnenforcedPredicate().transformKeys(column -> getCacheColumnId(tableHandle, column).orElseThrow())),
                 handle.getStorageProperties().entrySet().stream()
-                        // filter out deprecated Trino statistics placed within storage properties
-                        .filter(entry -> !entry.getKey().startsWith(TRINO_STATS_PREFIX))
+                        .filter(IcebergCacheTableId::isCacheableStorageProperty)
                         .sorted(Map.Entry.comparingByKey())
                         .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)));
 
