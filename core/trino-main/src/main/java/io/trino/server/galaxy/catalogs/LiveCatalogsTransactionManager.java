@@ -46,6 +46,7 @@ import io.trino.metadata.Catalog;
 import io.trino.metadata.CatalogInfo;
 import io.trino.metadata.CatalogManager;
 import io.trino.metadata.CatalogMetadata;
+import io.trino.plugin.base.galaxy.GalaxyCatalogVersionUtils;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.ConnectorTransactionHandle;
@@ -93,6 +94,8 @@ import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
 import static com.google.common.util.concurrent.Futures.nonCancellationPropagating;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static io.airlift.concurrent.MoreFutures.addExceptionCallback;
+import static io.trino.plugin.base.galaxy.GalaxyCatalogVersionUtils.fromCatalogIdAndLiveCatalogUniqueId;
+import static io.trino.plugin.base.galaxy.GalaxyCatalogVersionUtils.getRequiredLiveCatalogUniqueId;
 import static io.trino.spi.StandardErrorCode.ADMINISTRATIVELY_KILLED;
 import static io.trino.spi.StandardErrorCode.AUTOCOMMIT_WRITE_CONFLICT;
 import static io.trino.spi.StandardErrorCode.CATALOG_NOT_FOUND;
@@ -280,8 +283,7 @@ public class LiveCatalogsTransactionManager
         return getTransactionMetadata(requiredTransactionId.orElseThrow(() -> new NullPointerException("Required Transaction Id not found")))
                 .getCatalogHandle(catalogName)
                 .map(CatalogHandle::getVersion)
-                .map(CatalogHandle.CatalogVersion::toString)
-                .map(UUID::fromString)
+                .map(GalaxyCatalogVersionUtils::getRequiredLiveCatalogUniqueId)
                 .map(galaxyLiveCatalogs::get)
                 .map(GalaxyLiveCatalog::getReadOnly)
                 .orElseThrow(() -> new TrinoException(CATALOG_NOT_FOUND, "Catalog '%s' does not exist".formatted(catalogName)));
@@ -307,8 +309,7 @@ public class LiveCatalogsTransactionManager
         return getTransactionMetadata(requiredTransactionId.orElseThrow(() -> new VerifyException("Required Transaction Id not found")))
                 .getCatalogHandle(catalogName)
                 .map(CatalogHandle::getVersion)
-                .map(CatalogHandle.CatalogVersion::toString)
-                .map(UUID::fromString)
+                .map(GalaxyCatalogVersionUtils::getRequiredLiveCatalogUniqueId)
                 .map(galaxyLiveCatalogs::get)
                 .flatMap(GalaxyLiveCatalog::getSharedSchema);
     }
@@ -337,7 +338,7 @@ public class LiveCatalogsTransactionManager
         if (catalogHandle.getRootCatalogHandle().equals(GlobalSystemConnector.CATALOG_HANDLE)) {
             return globalSystemCatalogConnector.get().getMaterializedConnector(catalogHandle.getType());
         }
-        UUID liveCatalogId = UUID.fromString(catalogHandle.getVersion().toString());
+        UUID liveCatalogId = getRequiredLiveCatalogUniqueId(catalogHandle.getVersion());
         return Optional.ofNullable(galaxyLiveCatalogs.get(liveCatalogId))
                 .map(GalaxyLiveCatalog::getCatalogConnector)
                 .orElseThrow(() -> new VerifyException("Cannot find Galaxy ConnectorService for handle"))
@@ -378,7 +379,7 @@ public class LiveCatalogsTransactionManager
             // global system catalog not distributed to workers
             return Optional.empty();
         }
-        UUID liveCatalogId = UUID.fromString(catalogHandle.getVersion().toString());
+        UUID liveCatalogId = getRequiredLiveCatalogUniqueId(catalogHandle.getVersion());
         return Optional.ofNullable(galaxyLiveCatalogs.get(liveCatalogId)).map(GalaxyLiveCatalog::getCatalogProperties);
     }
 
@@ -814,7 +815,7 @@ public class LiveCatalogsTransactionManager
                     catalogConnector = globalSystemCatalogConnector;
                 }
                 else {
-                    UUID liveCatalogId = UUID.fromString(catalogHandle.getVersion().toString());
+                    UUID liveCatalogId = getRequiredLiveCatalogUniqueId(catalogHandle.getVersion());
                     verify(idToLiveCatalog.containsKey(liveCatalogId), "catalog not part of transaction");
                     catalogConnector = idToLiveCatalog.get(liveCatalogId).getCatalogConnector();
                 }
@@ -975,7 +976,8 @@ public class LiveCatalogsTransactionManager
             requireNonNull(galaxyCatalogInfo, "galaxyCatalogInfo is null");
             CatalogProperties propertiesWithWrongVersion = galaxyCatalogInfo.catalogProperties();
             catalogProperties = new CatalogProperties(
-                    propertiesWithWrongVersion.getCatalogHandle().withVersion(new CatalogHandle.CatalogVersion(id.toString())),
+                    propertiesWithWrongVersion.getCatalogHandle().withVersion(
+                            fromCatalogIdAndLiveCatalogUniqueId(galaxyCatalogArgs.catalogVersion().catalogId(), id)),
                     propertiesWithWrongVersion.getConnectorName(),
                     propertiesWithWrongVersion.getProperties());
             readOnly = galaxyCatalogInfo.readOnly();

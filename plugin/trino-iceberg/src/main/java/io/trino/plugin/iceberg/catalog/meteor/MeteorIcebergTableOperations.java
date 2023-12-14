@@ -23,6 +23,7 @@ import org.apache.iceberg.io.FileIO;
 
 import java.util.Optional;
 
+import static io.trino.plugin.base.galaxy.GalaxyCatalogVersionUtils.getRequiredCatalogId;
 import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_INVALID_METADATA;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static java.lang.String.format;
@@ -54,7 +55,7 @@ public class MeteorIcebergTableOperations
     protected String getRefreshedLocation(boolean invalidateCaches)
     {
         if (metadataLocation == null || invalidateCaches) {
-            metadataLocation = catalogClient.fetchMetadataLocation(session.getIdentity(), catalogHandle.getVersion().toString(), new SchemaTableName(database, tableName));
+            metadataLocation = catalogClient.fetchMetadataLocation(session.getIdentity(), getRequiredCatalogId(catalogHandle.getVersion()).toString(), new SchemaTableName(database, tableName));
             if (metadataLocation == null) {
                 throw new TrinoException(ICEBERG_INVALID_METADATA, format("Failed to fetch table %s metadata location. Either it is not present or state server is not responding", getSchemaTableName()));
             }

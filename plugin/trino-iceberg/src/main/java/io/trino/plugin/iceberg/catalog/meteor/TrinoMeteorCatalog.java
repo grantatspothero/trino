@@ -52,6 +52,7 @@ import java.util.function.UnaryOperator;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static io.trino.plugin.base.galaxy.GalaxyCatalogVersionUtils.getRequiredCatalogId;
 import static io.trino.plugin.iceberg.IcebergUtil.getIcebergTableWithMetadata;
 import static io.trino.plugin.iceberg.IcebergUtil.quotedTableName;
 import static io.trino.plugin.iceberg.TrinoMetricsReporter.TRINO_METRICS_REPORTER;
@@ -85,7 +86,7 @@ public class TrinoMeteorCatalog
             throw new TrinoException(NOT_SUPPORTED, "Only Trino queries from Starburst Galaxy is supported for this catalog");
         }
 
-        return apiClient.namespaceExists(session.getIdentity(), catalogHandle.getVersion().toString(), namespace);
+        return apiClient.namespaceExists(session.getIdentity(), getRequiredCatalogId(catalogHandle.getVersion()).toString(), namespace);
     }
 
     @Override
@@ -95,7 +96,7 @@ public class TrinoMeteorCatalog
             throw new TrinoException(NOT_SUPPORTED, "Only Trino queries from Starburst Galaxy is supported for this catalog");
         }
 
-        return apiClient.listNamespaces(session.getIdentity(), catalogHandle.getVersion().toString())
+        return apiClient.listNamespaces(session.getIdentity(), getRequiredCatalogId(catalogHandle.getVersion()).toString())
                 .stream()
                 .collect(toImmutableList());
     }
@@ -144,7 +145,7 @@ public class TrinoMeteorCatalog
             throw new TrinoException(NOT_SUPPORTED, "Only Trino queries from Starburst Galaxy is supported for this catalog");
         }
 
-        return apiClient.listTables(session.getIdentity(), catalogHandle.getVersion().toString(), namespace);
+        return apiClient.listTables(session.getIdentity(), getRequiredCatalogId(catalogHandle.getVersion()).toString(), namespace);
     }
 
     @Override

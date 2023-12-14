@@ -57,7 +57,6 @@ import io.trino.server.security.galaxy.StaticCatalogResolver;
 import io.trino.spi.QueryId;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogHandle;
-import io.trino.spi.connector.CatalogHandle.CatalogVersion;
 import io.trino.spi.connector.ConnectorTransactionHandle;
 import io.trino.spi.security.Identity;
 import io.trino.spi.transaction.IsolationLevel;
@@ -72,6 +71,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
@@ -90,6 +90,8 @@ import static com.google.common.util.concurrent.Futures.nonCancellationPropagati
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static io.airlift.concurrent.MoreFutures.addExceptionCallback;
 import static io.airlift.concurrent.MoreFutures.asVoid;
+import static io.trino.plugin.base.galaxy.GalaxyCatalogVersionUtils.fromCatalogIdAndTransactionId;
+import static io.trino.plugin.base.galaxy.GalaxyCatalogVersionUtils.getRequiredTransactionId;
 import static io.trino.server.security.galaxy.GalaxyIdentity.GalaxyIdentityType.INDEXER;
 import static io.trino.server.security.galaxy.GalaxyIdentity.getGalaxyIdentityType;
 import static io.trino.spi.StandardErrorCode.CATALOG_NOT_AVAILABLE;
@@ -256,7 +258,7 @@ public class MetadataOnlyTransactionManager
             return systemConnector.get().getMaterializedConnector(catalogHandle.getType());
         }
 
-        TransactionId transactionId = TransactionId.valueOf(catalogHandle.getVersion().toString());
+        TransactionId transactionId = TransactionId.valueOf(getRequiredTransactionId(catalogHandle.getVersion()).toString());
         TransactionMetadata transactionMetadata = transactions.get(transactionId);
         if (transactionMetadata == null) {
             throw new TrinoException(CATALOG_NOT_AVAILABLE, "No catalog " + catalogHandle);
@@ -629,7 +631,7 @@ public class MetadataOnlyTransactionManager
 
         private CatalogProperties toCatalogProperties(QueryCatalog queryCatalog, TransactionId transactionId)
         {
-            return new CatalogProperties(createRootCatalogHandle(queryCatalog.catalogName(), new CatalogVersion(transactionId.toString())), new ConnectorName(queryCatalog.connectorName()), queryCatalog.properties());
+            return new CatalogProperties(createRootCatalogHandle(queryCatalog.catalogName(), fromCatalogIdAndTransactionId(queryCatalog.catalogId(), UUID.fromString(transactionId.toString()))), new ConnectorName(queryCatalog.connectorName()), queryCatalog.properties());
         }
     }
 }

@@ -20,6 +20,7 @@ import com.google.common.io.Files;
 import com.google.errorprone.annotations.ThreadSafe;
 import com.google.inject.Inject;
 import io.airlift.log.Logger;
+import io.starburst.stargate.id.CatalogId;
 import io.trino.Session;
 import io.trino.connector.system.GlobalSystemConnector;
 import io.trino.metadata.Catalog;
@@ -28,7 +29,6 @@ import io.trino.server.ForStartup;
 import io.trino.server.galaxy.GalaxyEnabledConfig;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogHandle;
-import io.trino.spi.connector.CatalogHandle.CatalogVersion;
 import jakarta.annotation.PreDestroy;
 
 import java.io.File;
@@ -51,6 +51,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.airlift.configuration.ConfigurationLoader.loadPropertiesFrom;
+import static io.trino.plugin.base.galaxy.GalaxyCatalogVersionUtils.fromCatalogId;
 import static io.trino.spi.StandardErrorCode.CATALOG_NOT_AVAILABLE;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.connector.CatalogHandle.createRootCatalogHandle;
@@ -108,14 +109,14 @@ public class StaticCatalogManager
                 log.warn("Catalog '%s' is using the deprecated connector name '%s'. The correct connector name is '%s'", catalogName, deprecatedConnectorName, connectorName);
             }
 
-            String version = "default";
+            CatalogHandle.CatalogVersion version = new CatalogHandle.CatalogVersion("default");
             if (galaxyEnabledConfig.isGalaxyEnabled()) {
-                version = properties.remove("galaxy.catalog-id");
-                checkState(version != null, "Catalog configuration %s does not contain galaxy.catalog-id", file.getAbsoluteFile());
+                checkState(properties.containsKey("galaxy.catalog-id"), "Catalog configuration %s does not contain galaxy.catalog-id", file.getAbsoluteFile());
+                version = fromCatalogId(new CatalogId(properties.remove("galaxy.catalog-id")));
             }
 
             catalogProperties.add(new CatalogProperties(
-                    createRootCatalogHandle(catalogName, new CatalogVersion(version)),
+                    createRootCatalogHandle(catalogName, version),
                     new ConnectorName(connectorName),
                     ImmutableMap.copyOf(properties)));
         }
