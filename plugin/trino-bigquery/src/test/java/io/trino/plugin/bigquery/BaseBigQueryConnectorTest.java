@@ -776,6 +776,13 @@ public abstract class BaseBigQueryConnectorTest
     }
 
     @Override
+    @Test
+    public void testCreateSchemaWithLongName()
+    {
+        throw new SkipException("Dropping schema with long name causes BigQuery to return code 500");
+    }
+
+    @Override
     protected void verifySchemaNameLengthFailurePermissible(Throwable e)
     {
         assertThat(e).hasMessageContaining("Invalid dataset ID");
