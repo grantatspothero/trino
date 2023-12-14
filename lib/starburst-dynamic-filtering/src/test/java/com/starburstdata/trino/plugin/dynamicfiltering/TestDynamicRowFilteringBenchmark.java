@@ -9,7 +9,7 @@
  */
 package com.starburstdata.trino.plugin.dynamicfiltering;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import static com.starburstdata.trino.plugin.dynamicfiltering.BenchmarkDynamicPageFilter.DataSet;
 

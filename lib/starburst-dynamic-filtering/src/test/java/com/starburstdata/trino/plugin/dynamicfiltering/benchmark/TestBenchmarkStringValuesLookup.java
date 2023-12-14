@@ -10,7 +10,7 @@
 package com.starburstdata.trino.plugin.dynamicfiltering.benchmark;
 
 import com.google.common.collect.ImmutableList;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
