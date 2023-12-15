@@ -76,8 +76,8 @@ public class PlanSignature
             TupleDomain<CacheColumnId> dynamicPredicate)
     {
         this.key = requireNonNull(key, "key is null");
-        this.groupByColumns = requireNonNull(groupByColumns, "groupByColumns is null");
-        this.columns = requireNonNull(columns, "columns is null");
+        this.groupByColumns = requireNonNull(groupByColumns, "groupByColumns is null").map(List::copyOf);
+        this.columns = List.copyOf(requireNonNull(columns, "columns is null"));
         this.predicate = requireNonNull(predicate, "predicate is null");
         this.dynamicPredicate = requireNonNull(dynamicPredicate, "dynamicPredicate is null");
     }
