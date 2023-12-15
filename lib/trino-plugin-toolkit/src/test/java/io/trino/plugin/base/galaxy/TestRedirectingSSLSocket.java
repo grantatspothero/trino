@@ -13,7 +13,7 @@
  */
 package io.trino.plugin.base.galaxy;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLSocket;
 
