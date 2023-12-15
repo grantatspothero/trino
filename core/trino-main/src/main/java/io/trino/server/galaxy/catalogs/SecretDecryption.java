@@ -17,13 +17,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.starburst.stargate.catalog.EncryptedSecret;
 import io.starburst.stargate.catalog.QueryCatalog;
-import io.starburst.stargate.crypto.SecretEncryptionContext;
 import io.starburst.stargate.crypto.SecretSealer;
 import io.starburst.stargate.id.AccountId;
-import io.starburst.stargate.id.TrinoPlaneId;
 
 import java.util.Map;
-import java.util.Optional;
 
 import static com.google.common.collect.Maps.transformValues;
 
@@ -31,20 +28,20 @@ public final class SecretDecryption
 {
     private SecretDecryption() {}
 
-    public static QueryCatalog decryptCatalog(SecretSealer secretSealer, AccountId accountId, TrinoPlaneId trinoPlaneId, QueryCatalog queryCatalog)
+    public static QueryCatalog decryptCatalog(SecretSealer secretSealer, AccountId accountId, QueryCatalog queryCatalog, DecryptionContextProvider decryptionContextProvider)
     {
-        Map<String, String> decryptedProperties = decryptSecrets(secretSealer, accountId, trinoPlaneId, queryCatalog);
+        Map<String, String> decryptedProperties = decryptSecrets(secretSealer, accountId, queryCatalog, decryptionContextProvider);
         return new QueryCatalog(queryCatalog.catalogId(), queryCatalog.version(), queryCatalog.catalogName(), queryCatalog.connectorName(), queryCatalog.readOnly(), decryptedProperties, queryCatalog.secretsMap(), queryCatalog.secrets());
     }
 
-    private static Map<String, String> decryptSecrets(SecretSealer secretSealer, AccountId accountId, TrinoPlaneId trinoPlaneId, QueryCatalog queryCatalog)
+    private static Map<String, String> decryptSecrets(SecretSealer secretSealer, AccountId accountId, QueryCatalog queryCatalog, DecryptionContextProvider decryptionContextProvider)
     {
         return ImmutableMap.copyOf(transformValues(queryCatalog.properties(), propertyValue -> {
             String decryptedPropertyValue = propertyValue;
             for (EncryptedSecret secret : queryCatalog.secrets().orElseGet(ImmutableSet::of)) {
                 if (decryptedPropertyValue.contains(secret.placeholderText())) {
-                    Map<String, String> metadataEncryptionContext = SecretEncryptionContext.forVerifier(accountId, trinoPlaneId, Optional.of(queryCatalog.catalogName()), secret.secretName());
-                    String decryptedValue = secretSealer.unsealSecret(SecretSealer.SealedSecret.fromString(secret.encryptedValue()), metadataEncryptionContext);
+                    Map<String, String> decryptionContext = decryptionContextProvider.decryptionContextFor(accountId, queryCatalog, secret);
+                    String decryptedValue = secretSealer.unsealSecret(SecretSealer.SealedSecret.fromString(secret.encryptedValue()), decryptionContext);
                     decryptedPropertyValue = decryptedPropertyValue.replace(secret.placeholderText(), decryptedValue);
                 }
             }

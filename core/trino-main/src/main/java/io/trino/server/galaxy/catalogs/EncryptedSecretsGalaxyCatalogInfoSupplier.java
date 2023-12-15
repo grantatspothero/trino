@@ -25,7 +25,6 @@ import io.starburst.stargate.identity.DispatchSession;
 import io.trino.connector.CatalogProperties;
 import io.trino.connector.ConnectorName;
 import io.trino.server.galaxy.GalaxyConfig;
-import io.trino.server.metadataonly.MetadataOnlyConfig;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -34,11 +33,7 @@ import java.util.Optional;
 import static io.trino.server.galaxy.catalogs.CatalogVersioningUtils.toCatalogHandle;
 import static java.util.Objects.requireNonNull;
 
-/**
- * Caches the latest version of properties for a given catalog ID. Has the potential to multi fetch during initialization of a version
- */
-// TODO delete or clean up old versions
-public class MetadataOnlyEncryptedGalaxyCatalogInfoSupplier
+public class EncryptedSecretsGalaxyCatalogInfoSupplier
         implements GalaxyCatalogInfoSupplier
 {
     // used to configure the catalog
@@ -48,15 +43,22 @@ public class MetadataOnlyEncryptedGalaxyCatalogInfoSupplier
     // used for secret unsealing
     private final SecretSealer secretSealer;
     private final TrinoPlaneId trinoPlaneId;
+    private final DecryptionContextProvider decryptionContextProvider;
 
     @Inject
-    public MetadataOnlyEncryptedGalaxyCatalogInfoSupplier(CatalogVersionConfigurationApi catalogVersionConfigurationApi, SecretSealer secretSealer, GalaxyConfig galaxyConfig, MetadataOnlyConfig config, LiveCatalogsConfig liveCatalogsConfig)
+    public EncryptedSecretsGalaxyCatalogInfoSupplier(
+            CatalogVersionConfigurationApi catalogVersionConfigurationApi,
+            SecretSealer secretSealer,
+            GalaxyConfig galaxyConfig,
+            LiveCatalogsConfig liveCatalogsConfig,
+            DecryptionContextProvider decryptionContextProvider)
     {
         this.catalogVersionConfigurationApi = requireNonNull(catalogVersionConfigurationApi, "catalogVersionConfigurationApi is null");
         this.secretSealer = requireNonNull(secretSealer, "secretSealer is null");
         this.cloudRegionId = new CloudRegionId(galaxyConfig.getCloudRegionId());
-        this.trinoPlaneId = config.getTrinoPlaneId();
+        this.trinoPlaneId = liveCatalogsConfig.getTrinoPlaneId();
         this.deploymentType = liveCatalogsConfig.getDeploymentType();
+        this.decryptionContextProvider = requireNonNull(decryptionContextProvider, "decryptionContextProvider is null");
     }
 
     @Override
@@ -65,14 +67,14 @@ public class MetadataOnlyEncryptedGalaxyCatalogInfoSupplier
         QueryCatalog queryCatalog = SecretDecryption.decryptCatalog(
                 secretSealer,
                 galaxyCatalogArgs.accountId(),
-                trinoPlaneId,
                 catalogVersionConfigurationApi.configureCatalog(
                         dispatchSession,
                         galaxyCatalogArgs.accountId(),
                         galaxyCatalogArgs.catalogVersion(),
                         cloudRegionId,
                         Optional.of(trinoPlaneId),
-                        deploymentType));
+                        deploymentType),
+                decryptionContextProvider);
         Map<String, String> properties = new HashMap<>(queryCatalog.properties());
         properties.remove("galaxy.catalog-id");
         return new GalaxyCatalogInfo(

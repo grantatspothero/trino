@@ -24,8 +24,10 @@ import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.airlift.http.client.HttpClient;
 import io.airlift.units.Duration;
 import io.starburst.stargate.catalog.CatalogVersionConfigurationApi;
-import io.starburst.stargate.catalog.DeploymentType;
 import io.starburst.stargate.catalog.HttpCatalogVersionConfigurationClient;
+import io.starburst.stargate.crypto.KmsCryptoModule;
+import io.starburst.stargate.crypto.MasterKeyCrypto;
+import io.starburst.stargate.crypto.SecretSealer;
 import io.trino.client.NodeVersion;
 import io.trino.connector.CatalogPruneTask;
 import io.trino.connector.CatalogPruneTaskConfig;
@@ -51,6 +53,8 @@ import static com.google.inject.Scopes.SINGLETON;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.airlift.http.client.HttpClientBinder.httpClientBinder;
+import static io.starburst.stargate.crypto.TestingMasterKeyCrypto.createTrinoCrypto;
+import static io.starburst.stargate.crypto.TestingMasterKeyCrypto.createVerifierCrypto;
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -67,15 +71,31 @@ public class LiveCatalogsModule
             LiveCatalogsConfig liveCatalogsConfig = buildConfigObject(LiveCatalogsConfig.class);
             configBinder(binder).bindConfig(LiveCatalogsConfig.class);
             super.install(new CatalogVersionConfigurationApiProviderModule());
-            DeploymentType deploymentType = liveCatalogsConfig.getDeploymentType();
             if (!liveCatalogsConfig.isQueryRunnerTesting()) {
-                super.install(switch (deploymentType) {
-                    case METADATA -> new MetadataOnlyGalaxyCatalogInfoSupplierModule();
-                    case DEFAULT, WARP_SPEED -> {
-                        //TODO replace with galaxy catalog info supplier with proper encryption setup. Not to be used in prod
-                        yield new MetadataOnlyGalaxyCatalogInfoSupplierModule();
+                binder.bind(SecretSealer.class).in(SINGLETON);
+                if (liveCatalogsConfig.getUseKmsCrypto()) {
+                    install(new KmsCryptoModule());
+                }
+                else {
+                    switch (liveCatalogsConfig.getDeploymentType()) {
+                        case DEFAULT, WARP_SPEED -> {
+                            binder.bind(MasterKeyCrypto.class).toInstance(createTrinoCrypto(liveCatalogsConfig.getTrinoPlaneId().toString()));
+                        }
+                        case METADATA -> {
+                            binder.bind(MasterKeyCrypto.class).toInstance(createVerifierCrypto(liveCatalogsConfig.getTrinoPlaneId().toString()));
+                        }
                     }
-                });
+                }
+                binder.bind(GalaxyCatalogInfoSupplier.class).to(EncryptedSecretsGalaxyCatalogInfoSupplier.class);
+                switch (liveCatalogsConfig.getDeploymentType()) {
+                    case DEFAULT, WARP_SPEED -> {
+                        binder.bind(DecryptionContextProvider.class).to(TrinoDecryptionContextProvider.class).in(SINGLETON);
+                    }
+                    case METADATA -> {
+                        //TODO before Live Catalog use in Metadata service, consider transition to service plane and new decryption at the same time
+                        binder.bind(DecryptionContextProvider.class).to(MetadataDecryptionContextProvider.class).in(SINGLETON);
+                    }
+                }
                 binder.bind(Clock.class).annotatedWith(ForTransactionManager.class).toInstance(Clock.systemUTC());
             }
             //Transaction manager

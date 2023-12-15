@@ -29,6 +29,8 @@ import io.trino.execution.QueryManagerConfig;
 import io.trino.metadata.CatalogManager;
 import io.trino.metadata.SystemSecurityMetadata;
 import io.trino.operator.RetryPolicy;
+import io.trino.server.galaxy.catalogs.DecryptionContextProvider;
+import io.trino.server.galaxy.catalogs.MetadataDecryptionContextProvider;
 import io.trino.server.security.galaxy.GalaxySystemAccessModule;
 import io.trino.server.security.galaxy.MetadataSystemSecurityMetadata;
 import io.trino.server.ui.NoWebUiAuthenticationFilter;
@@ -74,6 +76,7 @@ public class MetadataOnlyCatalogManagerModule
         }
         binder.bind(SecretSealer.class).in(SINGLETON);
         configBinder(binder).bindConfig(MetadataOnlyConfig.class);
+        binder.bind(DecryptionContextProvider.class).to(MetadataDecryptionContextProvider.class).in(SINGLETON);
 
         QueryManagerConfig queryManagerConfig = buildConfigObject(QueryManagerConfig.class);
         if (queryManagerConfig.getRetryPolicy() == RetryPolicy.TASK) {

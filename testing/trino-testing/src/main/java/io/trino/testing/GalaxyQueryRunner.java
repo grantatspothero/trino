@@ -213,6 +213,7 @@ public final class GalaxyQueryRunner
                 addExtraProperty("galaxy.deployment-id", accountClient.getSampleDeploymentId().toString());
                 addCoordinatorProperty("galaxy.account-url", accountUri.toString());
                 addCoordinatorProperty("galaxy.cluster-id", accountClient.getSampleClusterId().toString());
+                addCoordinatorProperty("trino.plane-id", "aws-us-east1-1");
                 if (useLiveCatalogs) {
                     setSystemAccessControl(GalaxyLiveCatalogsSystemAccessFactory.NAME, ImmutableMap.of());
                 }

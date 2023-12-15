@@ -17,6 +17,7 @@ import io.airlift.configuration.Config;
 import io.airlift.units.Duration;
 import io.airlift.units.MinDuration;
 import io.starburst.stargate.catalog.DeploymentType;
+import io.starburst.stargate.id.TrinoPlaneId;
 import jakarta.validation.constraints.NotNull;
 
 import java.net.URI;
@@ -29,6 +30,8 @@ public class LiveCatalogsConfig
     private Duration maxStaleness = new Duration(24, TimeUnit.HOURS);
     private Duration oldVersionStaleness = new Duration(5, TimeUnit.MINUTES);
     private boolean queryRunnerTesting;
+    private TrinoPlaneId trinoPlaneId;
+    private boolean useKmsCrypto;
 
     @NotNull
     public DeploymentType getDeploymentType()
@@ -40,6 +43,31 @@ public class LiveCatalogsConfig
     public LiveCatalogsConfig setDeploymentType(DeploymentType deploymentType)
     {
         this.deploymentType = deploymentType;
+        return this;
+    }
+
+    @NotNull
+    public TrinoPlaneId getTrinoPlaneId()
+    {
+        return trinoPlaneId;
+    }
+
+    @Config("trino.plane-id")
+    public LiveCatalogsConfig setTrinoPlaneId(TrinoPlaneId trinoPlaneId)
+    {
+        this.trinoPlaneId = trinoPlaneId;
+        return this;
+    }
+
+    public boolean getUseKmsCrypto()
+    {
+        return useKmsCrypto;
+    }
+
+    @Config("kms-crypto.enabled")
+    public LiveCatalogsConfig setUseKmsCrypto(boolean useKmsCrypto)
+    {
+        this.useKmsCrypto = useKmsCrypto;
         return this;
     }
 

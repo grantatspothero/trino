@@ -27,7 +27,6 @@ import io.opentelemetry.api.trace.Tracer;
 import io.starburst.stargate.catalog.QueryCatalog;
 import io.starburst.stargate.crypto.SecretSealer;
 import io.starburst.stargate.id.AccountId;
-import io.starburst.stargate.id.TrinoPlaneId;
 import io.starburst.stargate.metadata.StatementRequest;
 import io.trino.Session;
 import io.trino.client.Column;
@@ -50,6 +49,7 @@ import io.trino.operator.DirectExchangeClient;
 import io.trino.operator.DirectExchangeClientSupplier;
 import io.trino.server.HttpRequestSessionContextFactory;
 import io.trino.server.SessionContext;
+import io.trino.server.galaxy.catalogs.DecryptionContextProvider;
 import io.trino.server.protocol.QueryResultRows;
 import io.trino.server.protocol.Slug;
 import io.trino.server.security.InternalPrincipal;
@@ -132,8 +132,8 @@ public class MetadataOnlyStatementResource
     private final BlockEncodingSerde blockEncodingSerde;
     private final MetadataOnlyTransactionManager transactionManager;
     private final SecretSealer secretSealer;
-    private final TrinoPlaneId trinoPlaneId;
     private final MetadataOnlySystemState systemState;
+    private final DecryptionContextProvider decryptionContextProvider;
 
     @Inject
     public MetadataOnlyStatementResource(
@@ -145,10 +145,10 @@ public class MetadataOnlyStatementResource
             BlockEncodingSerde blockEncodingSerde,
             MetadataOnlyTransactionManager transactionManager,
             SecretSealer secretSealer,
-            MetadataOnlyConfig config,
             QueryManagerConfig queryManagerConfig,
             MetadataOnlySystemState systemState,
-            JsonCodec<QueryResults> queryResultsJsonCodec)
+            JsonCodec<QueryResults> queryResultsJsonCodec,
+            DecryptionContextProvider decryptionContextProvider)
     {
         this.sessionContextFactory = requireNonNull(sessionContextFactory, "sessionContextFactory is null");
         this.dispatchManager = requireNonNull(dispatchManager, "dispatchManager is null");
@@ -158,9 +158,9 @@ public class MetadataOnlyStatementResource
         this.blockEncodingSerde = requireNonNull(blockEncodingSerde, "blockEncodingSerde is null");
         this.transactionManager = requireNonNull(transactionManager, "transactionManager is null");
         this.secretSealer = requireNonNull(secretSealer, "secretSealer is null");
-        trinoPlaneId = config.getTrinoPlaneId();
         this.maxWaitTime = queryManagerConfig.getClientTimeout();
         this.systemState = requireNonNull(systemState, "systemState is null");
+        this.decryptionContextProvider = requireNonNull(decryptionContextProvider, "decryptionContextProvider is null");
     }
 
     /**
@@ -200,7 +200,7 @@ public class MetadataOnlyStatementResource
         MultivaluedMap<String, String> headers = httpHeaders.getRequestHeaders();
 
         SessionContext sessionContext = sessionContextFactory.createSessionContext(headers, Optional.empty(), remoteAddress, identity);
-        List<QueryCatalog> decryptedCatalogs = request.catalogs().stream().map(queryCatalog -> decryptCatalog(secretSealer, request.accountId(), trinoPlaneId, queryCatalog)).collect(toImmutableList());
+        List<QueryCatalog> decryptedCatalogs = request.catalogs().stream().map(queryCatalog -> decryptCatalog(secretSealer, request.accountId(), queryCatalog, decryptionContextProvider)).collect(toImmutableList());
 
         systemState.incrementActiveRequests();
         try {
