@@ -41,8 +41,6 @@ import java.util.function.Supplier;
 
 import static com.google.common.math.DoubleMath.roundToLong;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
-import static java.math.RoundingMode.CEILING;
-import static java.math.RoundingMode.FLOOR;
 import static java.math.RoundingMode.HALF_UP;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
@@ -54,37 +52,29 @@ public class WorkerRecommendationProvider
     private final InternalNodeManager nodeManager;
     private final DispatchManager dispatchManager;
     private final boolean includeCoordinator;
-
-    private final long nodeStartupTimeSeconds;
-    private final long remainingTimeScaleUpThresholdSeconds;
-    private final long remainingTimeScaleDownThresholdSeconds;
-    private final double scaleDownRatio;
-    private final double scaleUpRatio;
     private final Duration refreshInterval;
 
     private final AtomicBoolean started = new AtomicBoolean();
     private final ScheduledExecutorService queryMetricsExecutor = newSingleThreadScheduledExecutor(daemonThreadsNamed("autoscaling-query-metrics-%s"));
 
     private final QueryStatsCalculator statsCalculator;
+    private final WorkerCountEstimator workerCountEstimator;
 
     @Inject
     public WorkerRecommendationProvider(
             NodeSchedulerConfig nodeSchedulerConfig,
             GalaxyTrinoAutoscalingConfig config,
             InternalNodeManager nodeManager,
-            DispatchManager dispatchManager)
+            DispatchManager dispatchManager,
+            WorkerCountEstimator workerCountEstimator)
     {
         this.includeCoordinator = nodeSchedulerConfig.isIncludeCoordinator();
         this.nodeManager = requireNonNull(nodeManager, "nodeManager is null");
         this.dispatchManager = requireNonNull(dispatchManager, "dispatchManager is null");
         requireNonNull(config, "config is null");
-        this.nodeStartupTimeSeconds = config.getNodeStartupTime().roundTo(TimeUnit.SECONDS);
-        this.remainingTimeScaleUpThresholdSeconds = config.getRemainingTimeScaleUpThreshold().roundTo(TimeUnit.SECONDS);
-        this.remainingTimeScaleDownThresholdSeconds = config.getRemainingTimeScaleDownThreshold().roundTo(TimeUnit.SECONDS);
-        this.scaleDownRatio = config.getScaleDownRatio();
-        this.scaleUpRatio = config.getScaleUpRatio();
-        refreshInterval = Duration.succinctDuration(10, TimeUnit.SECONDS);
-        statsCalculator = new QueryStatsCalculator(Ticker.systemTicker(), dispatchManager::getQueries, this::getActiveNodes);
+        this.refreshInterval = Duration.succinctDuration(10, TimeUnit.SECONDS);
+        this.statsCalculator = new QueryStatsCalculator(Ticker.systemTicker(), dispatchManager::getQueries, this::getActiveNodes);
+        this.workerCountEstimator = requireNonNull(workerCountEstimator, "workerCountEstimator is null");
     }
 
     @PostConstruct
@@ -112,34 +102,6 @@ public class WorkerRecommendationProvider
         queryMetricsExecutor.shutdownNow();
     }
 
-    /*
-     * ScaleupTime is a time required to bring new worker online
-     */
-    private long getNodeStartupTimeSeconds()
-    {
-        return nodeStartupTimeSeconds;
-    }
-
-    /*
-     * MinimalClusterRuntime is a minimal time we want to run a cluster after a resize.
-     * If there is not enough work to run cluster for at least the specified interval,
-     * then it is not cost-efficient to spin up additional workers.
-     */
-    private long getRemainingTimeScaleUpThresholdSeconds()
-    {
-        return remainingTimeScaleUpThresholdSeconds;
-    }
-
-    /*
-     * ScaleDownThresholdSecs is the lower bound for a running time before scaledown.
-     * If there is not enough work to run for scaleDownThreshold Seconds, it means we can
-     * resize the cluster.
-     */
-    public long getRemainingTimeScaleDownThresholdSeconds()
-    {
-        return remainingTimeScaleDownThresholdSeconds;
-    }
-
     public WorkerRecommendation get()
     {
         return calculateBasedOnQueryRunningTime();
@@ -153,40 +115,25 @@ public class WorkerRecommendationProvider
                 (long) stats.getCompletedQueries().getFiveMinute().getCount(),
                 stats.getConsumedCpuTimeSecs().getFiveMinute().getCount() * TimeUnit.SECONDS.toMillis(1));
 
-        // Calculate cost (running time)
-        double expectedRunningTimeMillis = estimateExpectedWallTimeToProcessQueriesMillis(
-                pastQueryStats,
-                statsCalculator.getRunningQueryStats(),
-                dispatchManager.getQueuedQueries(),
-                getActiveNodes(),
-                statsCalculator.avgWorkerParallelism());
+        // Calculate inputs
+        long cpuTimeToProcessQueriesMillis = estimateCpuTimeToProcessQueriesMillis(pastQueryStats, statsCalculator.getRunningQueryStats(), dispatchManager.getQueuedQueries());
+        double avgWorkerParallelism = statsCalculator.avgWorkerParallelism();
+        int activeNodes = getActiveNodes();
 
         // Estimate sizing
-        int recommendedNodes = (int) estimateClusterSize(
-                TimeUnit.MILLISECONDS.toSeconds((long) expectedRunningTimeMillis),
-                getActiveNodes(),
-                getNodeStartupTimeSeconds(),
-                getRemainingTimeScaleUpThresholdSeconds(),
-                getRemainingTimeScaleDownThresholdSeconds(),
-                scaleDownRatio,
-                scaleUpRatio);
+        int recommendedNodes = workerCountEstimator.estimate(
+                cpuTimeToProcessQueriesMillis,
+                avgWorkerParallelism,
+                activeNodes);
 
         return new WorkerRecommendation(recommendedNodes, Collections.emptyMap());
     }
 
     /*
-     * Calculate the expected wall time needed to finish current work
-     *
-     * Below assumes that parallelism does not change much, which might be true, since it only looks at 1 minute history,
-     * get CPU time, estimate current or future parallelism and then calculate wall time at the end
+     * Estimate the expected cpu time needed to finish current work
      */
     @VisibleForTesting
-    static double estimateExpectedWallTimeToProcessQueriesMillis(
-            QueryStats pastQueryStats,
-            QueryStats runningQueryStats,
-            long queuedQueriesCount,
-            long workers,
-            double avgWorkerParallelism)
+    static long estimateCpuTimeToProcessQueriesMillis(QueryStats pastQueryStats, QueryStats runningQueryStats, long queuedQueriesCount)
     {
         double pastQueryAverageCpuTime = pastQueryStats.queryCount() > 0 ?
                 pastQueryStats.getAverageCpuTimePerQueryMillis() :
@@ -196,9 +143,7 @@ public class WorkerRecommendationProvider
         double expectedCpuTimeToProcessRunning = runningQueryStats.queryCount() *
                 approximateRemainingCpuTimeToProcessRunningQueries(runningQueryStats, pastQueryAverageCpuTime);
 
-        double cpuTimeLeftMillis = expectedCpuTimeToProcessQueue + expectedCpuTimeToProcessRunning;
-
-        return cpuTimeLeftMillis / avgWorkerParallelism / workers;
+        return (long) (expectedCpuTimeToProcessQueue + expectedCpuTimeToProcessRunning);
     }
 
     private static double approximateRemainingCpuTimeToProcessRunningQueries(QueryStats runningQueryStats, double pastQueryAverageCpuTime)
@@ -206,35 +151,9 @@ public class WorkerRecommendationProvider
         return Math.max(runningQueryStats.getAverageCpuTimePerQueryMillis(), pastQueryAverageCpuTime - runningQueryStats.getAverageCpuTimePerQueryMillis());
     }
 
-    @VisibleForTesting
-    static long estimateClusterSize(
-            double expectedRunningTimeSecs,
-            long activeNodes,
-            long scaleUpTimeSecs,
-            long minimalClusterRuntimeSecs,
-            long scaleDownThresholdSecs,
-            double scaleDownRatio,
-            double scaleUpRatio)
+    private int getActiveNodes()
     {
-        if (expectedRunningTimeSecs < scaleDownThresholdSecs) {
-            return roundToLong(activeNodes * scaleDownRatio, FLOOR);
-        }
-        // COMPUTE the time it will take to finish work
-        // then remainingWork `R` after waiting for rescale,
-        // finally calculate if R on a scaled cluster is higher than threshold, so it can benefit from scaleup
-        double timeToFinishWorkAfterRescaleSecs = expectedRunningTimeSecs - scaleUpTimeSecs;
-
-        // here we can even try different cluster size in a loop, or we can create a formula for calculating optimal size
-        if ((timeToFinishWorkAfterRescaleSecs / scaleUpRatio) > minimalClusterRuntimeSecs) {
-            return roundToLong(activeNodes * scaleUpRatio, CEILING);
-        }
-
-        return activeNodes;
-    }
-
-    private long getActiveNodes()
-    {
-        return nodeManager.getNodes(NodeState.ACTIVE).stream()
+        return (int) nodeManager.getNodes(NodeState.ACTIVE).stream()
                 .filter(node -> includeCoordinator || !node.isCoordinator())
                 .count();
     }
@@ -284,7 +203,7 @@ public class WorkerRecommendationProvider
     {
         final Ticker ticker;
         final Supplier<List<BasicQueryInfo>> queriesSupplier;
-        final Supplier<Long> nodeCountSupplier;
+        final Supplier<Integer> nodeCountSupplier;
 
         // running queries
         private volatile QueryStats runningQueryStats = new QueryStats(0, 0);
@@ -293,7 +212,7 @@ public class WorkerRecommendationProvider
         private final DecayCounter totalWallMillis;
         private final Stopwatch lastUpdateTimeStopwatch;
 
-        public QueryStatsCalculator(Ticker ticker, Supplier<List<BasicQueryInfo>> queriesSupplier, Supplier<Long> nodeCountSupplier)
+        public QueryStatsCalculator(Ticker ticker, Supplier<List<BasicQueryInfo>> queriesSupplier, Supplier<Integer> nodeCountSupplier)
         {
             this.ticker = requireNonNull(ticker, "ticker is null");
             this.queriesSupplier = requireNonNull(queriesSupplier, "queriesSupplier is null");
@@ -339,5 +258,13 @@ public class WorkerRecommendationProvider
         {
             return totalPerWorkerCpuMillis.getCount() / totalWallMillis.getCount();
         }
+    }
+
+    public interface WorkerCountEstimator
+    {
+        int estimate(
+                long cpuTimeToProcessQueriesMillis,
+                double avgWorkerParallelism,
+                int activeNodes);
     }
 }

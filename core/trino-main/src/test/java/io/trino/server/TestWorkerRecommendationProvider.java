@@ -13,23 +13,23 @@
  */
 package io.trino.server;
 
+import io.airlift.units.Duration;
 import org.assertj.core.api.DoubleAssert;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import static io.trino.server.WorkerRecommendationProvider.QueryStats;
-import static io.trino.server.WorkerRecommendationProvider.estimateClusterSize;
-import static io.trino.server.WorkerRecommendationProvider.estimateExpectedWallTimeToProcessQueriesMillis;
+import static io.trino.server.WorkerRecommendationProvider.estimateCpuTimeToProcessQueriesMillis;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class TestWorkerRecommendationProvider
 {
-    // TODO: test parallelism
     private static Stream<Arguments> provideForNoQueue()
     {
         return Stream.of(
@@ -59,7 +59,7 @@ class TestWorkerRecommendationProvider
     @MethodSource("provideForNoQueue")
     void noQueue(String name, QueryStats pastQueries, QueryStats currentQueries, Consumer<DoubleAssert> assertFunction)
     {
-        double expectedRunningTimeSecs = estimateExpectedWallTimeToProcessQueriesMillis(pastQueries, currentQueries, 0, 1, 1);
+        double expectedRunningTimeSecs = estimateCpuTimeToProcessQueriesMillis(pastQueries, currentQueries, 0);
         assertFunction.accept((DoubleAssert) assertThat(expectedRunningTimeSecs).describedAs(name));
     }
 
@@ -83,12 +83,8 @@ class TestWorkerRecommendationProvider
     @MethodSource("provideForQueueNoHistory")
     void queueNoHistory(String name, QueryStats currentQueries, long queryQueueCount, double expectedRunningTime)
     {
-        double time = estimateExpectedWallTimeToProcessQueriesMillis(
-                new QueryStats(0, 0),
-                currentQueries,
-                queryQueueCount,
-                1,
-                1);
+        final QueryStats pastQueryStats = new QueryStats(0, 0);
+        double time = estimateCpuTimeToProcessQueriesMillis(pastQueryStats, currentQueries, queryQueueCount);
         assertThat(time).describedAs(name).isEqualTo(expectedRunningTime);
     }
 
@@ -129,49 +125,57 @@ class TestWorkerRecommendationProvider
     @MethodSource("provideForQueueWithHistory")
     void queueWithHistory(String name, QueryStats pastQueryStats, QueryStats runningQueryStats, int queryQueueSize, Consumer<DoubleAssert> assertFunction)
     {
-        double time = estimateExpectedWallTimeToProcessQueriesMillis(
-                pastQueryStats,
-                runningQueryStats,
-                queryQueueSize,
-                1,
-                1);
+        double time = estimateCpuTimeToProcessQueriesMillis(pastQueryStats, runningQueryStats, queryQueueSize);
         assertFunction.accept((DoubleAssert) assertThat(time).describedAs(name));
     }
 
     private static Stream<Arguments> provideForVerifyScaleup()
     {
-        double expectedRunningTimeSecs = 120;
+        // 120 seconds on 10 nodes cluster
+        long cpuTimeToProcessQueriesMillis = 120 * 1000 * 10;
 
         return Stream.of(
-                Arguments.of("scaleUpTime lower than running time, can resize", expectedRunningTimeSecs, 0, 0, 15),
-                Arguments.of("scaleUpTime lower than running time, can resize", expectedRunningTimeSecs, 60, 0, 15),
-                Arguments.of("scaleUpTime the same as running time, should not resize", expectedRunningTimeSecs, 120, 0, 10),
-                Arguments.of("scaleUpTime higher than running time, should not resize", expectedRunningTimeSecs, 200, 0, 10),
+                Arguments.of("scaleUpTime lower than running time, can resize", cpuTimeToProcessQueriesMillis, 0, 0, 15),
+                Arguments.of("scaleUpTime lower than running time, can resize", cpuTimeToProcessQueriesMillis, 60, 0, 15),
+                Arguments.of("scaleUpTime the same as running time, should not resize", cpuTimeToProcessQueriesMillis, 120, 0, 10),
+                Arguments.of("scaleUpTime higher than running time, should not resize", cpuTimeToProcessQueriesMillis, 200, 0, 10),
                 // verify minimalClusterTime behavior
-                Arguments.of("scaleUpTime low, minimalClusterRuntime lower than running time, can resize", expectedRunningTimeSecs, 60, 30, 15),
-                Arguments.of("scaleUpTime low, minimalClusterRuntime higher than running time, should not resize", expectedRunningTimeSecs, 60, 60, 10),
-                Arguments.of("scaleUpTime low, minimalClusterRuntime higher than running time, should not resize", expectedRunningTimeSecs, 60, 120, 10),
-                Arguments.of("expectedRunningTime higher than  scaleUpTime + minimalClusterRuntime, can resize", 1200, 60, 30, 15));
+                Arguments.of("scaleUpTime low, minimalClusterRuntime lower than running time, can resize", cpuTimeToProcessQueriesMillis, 60, 30, 15),
+                Arguments.of("scaleUpTime low, minimalClusterRuntime higher than running time, should not resize", cpuTimeToProcessQueriesMillis, 60, 60, 10),
+                Arguments.of("scaleUpTime low, minimalClusterRuntime higher than running time, should not resize", cpuTimeToProcessQueriesMillis, 60, 120, 10),
+                Arguments.of("expectedRunningTime higher than  scaleUpTime + minimalClusterRuntime, can resize", 1200 * 1000 * 10, 60, 30, 15));
     }
 
     @ParameterizedTest
     @MethodSource("provideForVerifyScaleup")
-    void verifyScaleup(String name, double expectedRunningTimeSecs, long scaleUpTimeSecs, long minimalClusterRuntimeSecs, long expectedSize)
+    void verifyScaleup(String name, long cpuTimeToProcessQueriesMillis, long scaleUpTimeSecs, long minimalClusterRuntimeSecs, long expectedSize)
     {
-        long actualSize = estimateClusterSize(expectedRunningTimeSecs, 10, scaleUpTimeSecs, minimalClusterRuntimeSecs, 0, 0.8, 1.5);
+        GalaxyTrinoAutoscalingConfig cfg = new GalaxyTrinoAutoscalingConfig();
+        cfg.setNodeStartupTime(Duration.succinctDuration(scaleUpTimeSecs, TimeUnit.SECONDS));
+        cfg.setRemainingTimeScaleUpThreshold(Duration.succinctDuration(minimalClusterRuntimeSecs, TimeUnit.SECONDS));
+        cfg.setRemainingTimeScaleDownThreshold(Duration.ZERO);
+
+        QueryTimeRatioBasedEstimator querytimeRatioBasedEstimator = new QueryTimeRatioBasedEstimator(cfg);
+        int actualSize = querytimeRatioBasedEstimator.estimate(cpuTimeToProcessQueriesMillis, 1, 10);
         assertThat(actualSize).describedAs(name).isEqualTo(expectedSize);
     }
 
     @Test
     void shouldRescaleA()
     {
-        long actualSize = 0;
+        int actualSize = 0;
+        GalaxyTrinoAutoscalingConfig cfg = new GalaxyTrinoAutoscalingConfig();
+        cfg.setNodeStartupTime(Duration.succinctDuration(60, TimeUnit.SECONDS));
+        cfg.setRemainingTimeScaleUpThreshold(Duration.succinctDuration(60, TimeUnit.SECONDS));
+        cfg.setRemainingTimeScaleDownThreshold(Duration.succinctDuration(30, TimeUnit.SECONDS));
+
+        QueryTimeRatioBasedEstimator querytimeRatioBasedEstimator = new QueryTimeRatioBasedEstimator(cfg);
 
         // -- scaleDown
-        actualSize = estimateClusterSize(30, 10, 60, 60, 30, 0.8, 1.5);
+        actualSize = querytimeRatioBasedEstimator.estimate(30_000 * 10, 1, 10);
         assertThat(actualSize).isEqualTo(10);
 
-        actualSize = estimateClusterSize(10, 10, 60, 60, 30, 0.8, 1.5);
+        actualSize = querytimeRatioBasedEstimator.estimate(10_000 * 10, 1, 10);
         assertThat(actualSize).isEqualTo(8);
     }
 
