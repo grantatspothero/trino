@@ -67,7 +67,6 @@ import java.util.Set;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.trino.cache.CanonicalSubplanExtractor.canonicalExpressionToColumnId;
 import static io.trino.cache.CanonicalSubplanExtractor.canonicalSymbolToColumnId;
@@ -146,8 +145,7 @@ public final class CommonSubqueriesExtractor
 
             Expression commonPredicate = extractCommonPredicate(subplans, plannerContext.getMetadata());
             Set<Expression> intersectingConjuncts = extractIntersectingConjuncts(subplans);
-            Optional<CacheColumnId> groupByHash = extractGroupByHash(subplans);
-            Map<CacheColumnId, Expression> commonProjections = extractCommonProjections(subplans, commonPredicate, intersectingConjuncts, groupByHash, cacheCandidate.groupByColumns());
+            Map<CacheColumnId, Expression> commonProjections = extractCommonProjections(subplans, commonPredicate, intersectingConjuncts, cacheCandidate.groupByColumns());
             Map<CacheColumnId, ColumnHandle> commonColumnHandles = extractCommonColumnHandles(subplans);
             Map<CacheColumnId, Symbol> commonColumnIds = extractCommonColumnIds(subplans);
             Expression commonDynamicFilterDisjuncts = extractCommonDynamicFilterDisjuncts(plannerContext, subplans);
@@ -176,7 +174,6 @@ public final class CommonSubqueriesExtractor
                             commonPredicate,
                             commonColumnHandles,
                             commonColumnIds,
-                            groupByHash,
                             commonDynamicFilterDisjuncts,
                             typeAnalyzer,
                             session,
@@ -208,36 +205,16 @@ public final class CommonSubqueriesExtractor
                 .orElse(ImmutableSet.of());
     }
 
-    private static Optional<CacheColumnId> extractGroupByHash(List<CanonicalSubplan> subplans)
-    {
-        // Only single hash expression from first subplan is cached as
-        // hash combination order (for group by columns) is variable and
-        // depends on order of group by columns.
-        return subplans.stream()
-                .filter(subplan -> subplan.getGroupByHash().isPresent())
-                .map(subplan -> subplan.getGroupByHash().get())
-                .findFirst();
-    }
-
     private static Map<CacheColumnId, Expression> extractCommonProjections(
             List<CanonicalSubplan> subplans,
             Expression commonPredicate,
             Set<Expression> intersectingConjuncts,
-            Optional<CacheColumnId> groupByHash,
             Optional<Set<CacheColumnId>> groupByColumns)
     {
-        Set<CacheColumnId> excludedGroupByHashes = subplans.stream()
-                .map(CanonicalSubplan::getGroupByHash)
-                .filter(Optional::isPresent)
-                // Only group by hash expression from first subplan is cached.
-                .filter(id -> !groupByHash.equals(id))
-                .map(Optional::get)
-                .collect(toImmutableSet());
         // Extract common projections. Common (cached) subquery must contain projections from all subqueries.
         // Pruning adaptation projection is then created for each subquery on top of common subplan.
         Map<CacheColumnId, Expression> commonProjections = subplans.stream()
                 .flatMap(subplan -> subplan.getAssignments().entrySet().stream())
-                .filter(entry -> !excludedGroupByHashes.contains(entry.getKey()))
                 .distinct()
                 .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
         // Common subquery must propagate all symbols used in adaptation predicates.
@@ -350,7 +327,6 @@ public final class CommonSubqueriesExtractor
             Expression commonPredicate,
             Map<CacheColumnId, ColumnHandle> commonColumnHandles,
             Map<CacheColumnId, Symbol> commonColumnIds,
-            Optional<CacheColumnId> groupByHash,
             Expression commonDynamicFilterDisjuncts,
             TypeAnalyzer typeAnalyzer,
             Session session,
@@ -377,7 +353,6 @@ public final class CommonSubqueriesExtractor
                     commonSubplan,
                     commonProjections,
                     subplan.getGroupByColumns().get(),
-                    groupByHash,
                     subqueryColumnIdMapping,
                     idAllocator,
                     plannerContext.getMetadata());
@@ -403,7 +378,6 @@ public final class CommonSubqueriesExtractor
             PlanNode subplan,
             Map<CacheColumnId, Expression> projections,
             Set<CacheColumnId> groupByColumns,
-            Optional<CacheColumnId> groupByHash,
             Map<CacheColumnId, Symbol> columnIdMapping,
             PlanNodeIdAllocator idAllocator,
             Metadata metadata)
@@ -419,8 +393,7 @@ public final class CommonSubqueriesExtractor
                 preAggregateProjections.put(id, entry.getValue());
                 groupByColumnSymbols.add(columnIdMapping.get(id));
             }
-            // A separate projection will be created for evaluating group by hash expression
-            else if (!groupByHash.equals(Optional.of(id))) {
+            else {
                 FunctionCall aggregationCall = (FunctionCall) entry.getValue();
 
                 // Evaluate filter expression
@@ -451,23 +424,6 @@ public final class CommonSubqueriesExtractor
             subplan = getOnlyElement(subplan.getSources());
         }
 
-        Optional<Symbol> groupByHashSymbol = Optional.empty();
-        if (groupByHash.isPresent()) {
-            // Append a hash generating projection
-            CacheColumnId hashId = groupByHash.get();
-            groupByHashSymbol = Optional.of(columnIdMapping.get(hashId));
-            subplan = createSubplanProjection(
-                    subplan,
-                    ImmutableMap.<CacheColumnId, Expression>builder()
-                            // Identity passthrough for all columns apart hash column
-                            .putAll(preAggregateProjections.keySet().stream()
-                                    .collect(toImmutableMap(identity(), id -> columnIdToSymbol(id).toSymbolReference())))
-                            .put(hashId, projections.get(hashId))
-                            .buildOrThrow(),
-                    columnIdMapping,
-                    idAllocator);
-        }
-
         AggregationNode aggregation = new AggregationNode(
                 idAllocator.getNextId(),
                 subplan,
@@ -475,7 +431,7 @@ public final class CommonSubqueriesExtractor
                 singleGroupingSet(groupByColumnSymbols.build()),
                 ImmutableList.of(),
                 PARTIAL,
-                groupByHashSymbol,
+                Optional.empty(),
                 Optional.empty());
         List<Symbol> expectedSymbols = projections.keySet().stream()
                 .map(columnIdMapping::get)
@@ -622,14 +578,8 @@ public final class CommonSubqueriesExtractor
         ImmutableMap.Builder<CacheColumnId, Expression> projections = ImmutableMap.builder();
         for (Map.Entry<CacheColumnId, Expression> assignment : canonicalSubplan.getAssignments().entrySet()) {
             CacheColumnId id = assignment.getKey();
-            if (!subplan.getOutputSymbols().contains(requireNonNull(subqueryColumnIdMapping.get(id)))) {
-                // Add hash computation back if needed.
-                checkState(canonicalSubplan.getGroupByHash().equals(Optional.of(id)), "No symbol for column id: %s", id);
-                projections.put(id, assignment.getValue());
-            }
-            else {
-                projections.put(id, columnIdToSymbol(id).toSymbolReference());
-            }
+            checkState(subplan.getOutputSymbols().contains(requireNonNull(subqueryColumnIdMapping.get(id))), "No symbol for column id: %s", id);
+            projections.put(id, columnIdToSymbol(id).toSymbolReference());
         }
         return createSubplanAssignments(
                 subplan,

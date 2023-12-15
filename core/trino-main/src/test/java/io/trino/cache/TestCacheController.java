@@ -110,7 +110,6 @@ public class TestCacheController
                 new ValuesNode(new PlanNodeId(planId), 0),
                 ImmutableBiMap.of(),
                 groupByColumns,
-                Optional.empty(),
                 ImmutableMap.of(),
                 ImmutableList.of(),
                 ImmutableList.of(),

@@ -29,9 +29,7 @@ import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TestingColumnHandle;
-import io.trino.spi.function.OperatorType;
 import io.trino.spi.predicate.TupleDomain;
-import io.trino.spi.type.StandardTypes;
 import io.trino.spi.type.Type;
 import io.trino.sql.DynamicFilters;
 import io.trino.sql.planner.BuiltinFunctionCallBuilder;
@@ -48,11 +46,7 @@ import io.trino.sql.planner.plan.PlanNode;
 import io.trino.sql.planner.plan.PlanNodeId;
 import io.trino.sql.planner.plan.ProjectNode;
 import io.trino.sql.planner.plan.TableScanNode;
-import io.trino.sql.tree.CoalesceExpression;
 import io.trino.sql.tree.Expression;
-import io.trino.sql.tree.FunctionCall;
-import io.trino.sql.tree.GenericLiteral;
-import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.SymbolReference;
 import io.trino.testing.LocalQueryRunner;
 import io.trino.testing.TestingHandles;
@@ -68,11 +62,9 @@ import java.util.function.Function;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Iterables.getOnlyElement;
-import static io.trino.SystemSessionProperties.OPTIMIZE_HASH_GENERATION;
 import static io.trino.SystemSessionProperties.TASK_CONCURRENCY;
 import static io.trino.cache.CanonicalSubplanExtractor.extractCanonicalSubplans;
 import static io.trino.metadata.MetadataManager.createTestMetadataManager;
-import static io.trino.metadata.OperatorNameUtil.mangleOperatorName;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.VarcharType.createVarcharType;
 import static io.trino.sql.DynamicFilters.createDynamicFilterExpression;
@@ -82,7 +74,6 @@ import static io.trino.sql.planner.TestingPlannerContext.PLANNER_CONTEXT;
 import static io.trino.sql.planner.iterative.rule.test.PlanBuilder.expression;
 import static io.trino.testing.TestingHandles.TEST_TABLE_HANDLE;
 import static io.trino.testing.TestingSession.testSessionBuilder;
-import static io.trino.type.TypeUtils.NULL_HASH_CODE;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -104,9 +95,7 @@ public class TestCanonicalSubplanExtractor
     {
         super(ImmutableMap.of(
                 // increase task concurrency to get parallel plans
-                TASK_CONCURRENCY, "4",
-                // test hash generation
-                OPTIMIZE_HASH_GENERATION, "true"));
+                TASK_CONCURRENCY, "4"));
     }
 
     @BeforeClass
@@ -117,7 +106,7 @@ public class TestCanonicalSubplanExtractor
     }
 
     @Test
-    public void testAggregationWithHashColumn()
+    public void testAggregationWithMultipleGroupByColumnsAndPredicate()
     {
         List<CanonicalSubplan> subplans = extractCanonicalSubplansForQuery("""
                 SELECT sum(nationkey), sum(nationkey) filter(where nationkey > 10)
@@ -134,9 +123,6 @@ public class TestCanonicalSubplanExtractor
                 new SimpleEntry<>(new CacheColumnId("((\"[nationkey:bigint]\" > BIGINT '10'))"), expression("(\"[nationkey:bigint]\" > BIGINT '10')")),
                 new SimpleEntry<>(new CacheColumnId("((\"[regionkey:bigint]\" * BIGINT '2'))"), expression("(\"[regionkey:bigint]\" * BIGINT '2')")));
 
-        Expression hashExpression = getHashExpression(
-                new ExpressionWithType("\"[name:varchar(25)]\"", createVarcharType(25)),
-                new ExpressionWithType(new SymbolReference("((\"[regionkey:bigint]\" * BIGINT '2'))"), BIGINT));
         Expression sum = getSumFunction();
         Expression filteredSum = getSumFunctionBuilder()
                 .setFilter(expression("(\"[nationkey:bigint]\" > BIGINT '10')"))
@@ -146,12 +132,10 @@ public class TestCanonicalSubplanExtractor
         assertThat(getGroupByExpressions(aggregatedSubplan)).contains(ImmutableList.of(
                 expression("\"[name:varchar(25)]\""),
                 expression("(\"[regionkey:bigint]\" * BIGINT '2')")));
-        assertThat(getHashExpression(aggregatedSubplan)).contains(hashExpression);
         assertThat(aggregatedSubplan.getOriginalSymbolMapping()).containsOnlyKeys(
                 new CacheColumnId("[nationkey:bigint]"),
                 new CacheColumnId("[name:varchar(25)]"),
                 new CacheColumnId("[regionkey:bigint]"),
-                new CacheColumnId("(" + formatExpression(hashExpression) + ")"),
                 new CacheColumnId("((\"[nationkey:bigint]\" > BIGINT '10'))"),
                 new CacheColumnId("((\"[regionkey:bigint]\" * BIGINT '2'))"),
                 new CacheColumnId("(" + formatExpression(filteredSum) + ")"),
@@ -159,7 +143,6 @@ public class TestCanonicalSubplanExtractor
         assertThat(aggregatedSubplan.getAssignments()).containsExactly(
                 new SimpleEntry<>(new CacheColumnId("[name:varchar(25)]"), expression("\"[name:varchar(25)]\"")),
                 new SimpleEntry<>(new CacheColumnId("((\"[regionkey:bigint]\" * BIGINT '2'))"), expression("(\"[regionkey:bigint]\" * BIGINT '2')")),
-                new SimpleEntry<>(new CacheColumnId("(" + formatExpression(hashExpression) + ")"), hashExpression),
                 new SimpleEntry<>(new CacheColumnId("(" + formatExpression(filteredSum) + ")"), filteredSum),
                 new SimpleEntry<>(new CacheColumnId("(" + formatExpression(sum) + ")"), sum));
         assertThat(aggregatedSubplan.getConjuncts()).containsExactly(expression("(\"[name:varchar(25)]\" = '0123456789012345689012345')"));
@@ -172,7 +155,7 @@ public class TestCanonicalSubplanExtractor
     }
 
     @Test
-    public void testAggregationWithInlinedHashProjection()
+    public void testAggregationWithMultipleGroupByColumns()
     {
         List<CanonicalSubplan> subplans = extractCanonicalSubplansForQuery("""
                 SELECT sum(nationkey + 1)
@@ -183,22 +166,16 @@ public class TestCanonicalSubplanExtractor
         CanonicalSubplan nonAggregatedSubplan = subplans.get(0);
         assertThat(nonAggregatedSubplan.getGroupByColumns()).isEmpty();
 
-        Expression hashExpression = getHashExpression(
-                new ExpressionWithType("\"[name:varchar(25)]\"", createVarcharType(25)),
-                new ExpressionWithType("\"[regionkey:bigint]\"", BIGINT));
-        CacheColumnId hashId = new CacheColumnId("(" + formatExpression(hashExpression) + ")");
         assertThat(nonAggregatedSubplan.getAssignments()).containsExactly(
                 new SimpleEntry<>(new CacheColumnId("[name:varchar(25)]"), new SymbolReference("[name:varchar(25)]")),
                 new SimpleEntry<>(new CacheColumnId("[regionkey:bigint]"), new SymbolReference("[regionkey:bigint]")),
-                new SimpleEntry<>(new CacheColumnId("((\"[nationkey:bigint]\" + BIGINT '1'))"), expression("(\"[nationkey:bigint]\" + BIGINT '1')")),
-                new SimpleEntry<>(hashId, hashExpression));
+                new SimpleEntry<>(new CacheColumnId("((\"[nationkey:bigint]\" + BIGINT '1'))"), expression("(\"[nationkey:bigint]\" + BIGINT '1')")));
 
         CanonicalSubplan aggregatedSubplan = subplans.get(1);
         assertThat(aggregatedSubplan.getOriginalPlanNode()).isInstanceOf(AggregationNode.class);
         assertThat(getGroupByExpressions(aggregatedSubplan)).contains(ImmutableList.of(
                 expression("\"[name:varchar(25)]\""),
                 expression("\"[regionkey:bigint]\"")));
-        assertThat(getHashExpression(aggregatedSubplan)).contains(hashExpression);
 
         Expression sum = getFunctionCallBuilder("sum", new ExpressionWithType("(\"[nationkey:bigint]\" + BIGINT '1')", BIGINT)).build();
         assertThat(aggregatedSubplan.getOriginalSymbolMapping()).containsOnlyKeys(
@@ -206,12 +183,10 @@ public class TestCanonicalSubplanExtractor
                 new CacheColumnId("[name:varchar(25)]"),
                 new CacheColumnId("[regionkey:bigint]"),
                 new CacheColumnId("((\"[nationkey:bigint]\" + BIGINT '1'))"),
-                new CacheColumnId("(" + formatExpression(hashExpression) + ")"),
                 new CacheColumnId("(" + formatExpression(sum) + ")"));
         assertThat(aggregatedSubplan.getAssignments()).containsExactly(
                 new SimpleEntry<>(new CacheColumnId("[name:varchar(25)]"), expression("\"[name:varchar(25)]\"")),
                 new SimpleEntry<>(new CacheColumnId("[regionkey:bigint]"), expression("\"[regionkey:bigint]\"")),
-                new SimpleEntry<>(new CacheColumnId("(" + formatExpression(hashExpression) + ")"), hashExpression),
                 new SimpleEntry<>(new CacheColumnId("(" + formatExpression(sum) + ")"), sum));
         assertThat(aggregatedSubplan.getConjuncts()).isEmpty();
         assertThat(aggregatedSubplan.getDynamicConjuncts()).isEmpty();
@@ -223,7 +198,7 @@ public class TestCanonicalSubplanExtractor
     }
 
     @Test
-    public void testAggregationWithoutHashColumn()
+    public void testBigintAggregation()
     {
         List<CanonicalSubplan> subplans = extractCanonicalSubplansForQuery("""
                 SELECT sum(nationkey)
@@ -241,7 +216,6 @@ public class TestCanonicalSubplanExtractor
         CanonicalSubplan aggregatedSubplan = subplans.get(1);
         assertThat(aggregatedSubplan.getOriginalPlanNode()).isInstanceOf(AggregationNode.class);
         assertThat(getGroupByExpressions(aggregatedSubplan)).contains(ImmutableList.of(expression("\"[regionkey:bigint]\"")));
-        assertThat(aggregatedSubplan.getGroupByHash()).isEmpty();
         assertThat(aggregatedSubplan.getOriginalSymbolMapping()).containsOnlyKeys(
                 new CacheColumnId("[nationkey:bigint]"),
                 new CacheColumnId("[regionkey:bigint]"),
@@ -268,7 +242,6 @@ public class TestCanonicalSubplanExtractor
         CanonicalSubplan aggregatedSubplan = subplans.get(1);
         assertThat(aggregatedSubplan.getOriginalPlanNode()).isInstanceOf(AggregationNode.class);
         assertThat(aggregatedSubplan.getGroupByColumns()).contains(ImmutableSet.of());
-        assertThat(aggregatedSubplan.getGroupByHash()).isEmpty();
         assertThat(aggregatedSubplan.getOriginalSymbolMapping()).containsOnlyKeys(
                 new CacheColumnId("[nationkey:bigint]"),
                 new CacheColumnId("(" + formatExpression(sum) + ")"));
@@ -320,12 +293,6 @@ public class TestCanonicalSubplanExtractor
                 .map(columns -> columns.stream()
                         .map(column -> requireNonNull(subplan.getAssignments().get(column), "No assignment for column: " + column))
                         .collect(toImmutableList()));
-    }
-
-    private Optional<Expression> getHashExpression(CanonicalSubplan subplan)
-    {
-        return subplan.getGroupByHash()
-                .map(column -> requireNonNull(subplan.getAssignments().get(column), "No assignment for column: " + column));
     }
 
     @Test
@@ -623,30 +590,6 @@ public class TestCanonicalSubplanExtractor
         return builder;
     }
 
-    private Expression getHashExpression(ExpressionWithType... expressions)
-    {
-        Expression hashExpression = new GenericLiteral(StandardTypes.BIGINT, Integer.toString(0));
-        for (ExpressionWithType expression : expressions) {
-            hashExpression = getHashFunctionCall(hashExpression, expression);
-        }
-        return hashExpression;
-    }
-
-    private Expression getHashFunctionCall(Expression previousHashValue, ExpressionWithType argument)
-    {
-        LocalQueryRunner queryRunner = getQueryRunner();
-        FunctionCall functionCall = BuiltinFunctionCallBuilder.resolve(queryRunner.getMetadata())
-                .setName(mangleOperatorName(OperatorType.HASH_CODE))
-                .addArgument(argument.type, argument.expression)
-                .build();
-
-        return BuiltinFunctionCallBuilder.resolve(queryRunner.getMetadata())
-                .setName("combine_hash")
-                .addArgument(BIGINT, previousHashValue)
-                .addArgument(BIGINT, orNullHashCode(functionCall))
-                .build();
-    }
-
     // workaround for https://github.com/google/error-prone/issues/2713
     @SuppressWarnings("unused")
     private record ExpressionWithType(Expression expression, Type type)
@@ -655,11 +598,6 @@ public class TestCanonicalSubplanExtractor
         {
             this(PlanBuilder.expression(expression), type);
         }
-    }
-
-    private static Expression orNullHashCode(Expression expression)
-    {
-        return new CoalesceExpression(expression, new LongLiteral(String.valueOf(NULL_HASH_CODE)));
     }
 
     private ProjectNode createScanAndProjectNode()

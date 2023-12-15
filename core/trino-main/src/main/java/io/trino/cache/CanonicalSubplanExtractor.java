@@ -24,7 +24,6 @@ import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.sql.planner.Symbol;
-import io.trino.sql.planner.SymbolsExtractor;
 import io.trino.sql.planner.optimizations.SymbolMapper;
 import io.trino.sql.planner.plan.AggregationNode;
 import io.trino.sql.planner.plan.AggregationNode.Aggregation;
@@ -43,7 +42,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -137,7 +135,8 @@ public final class CanonicalSubplanExtractor
             if (!(node.getGroupingSetCount() == 1
                     && node.getPreGroupedSymbols().isEmpty()
                     && node.getStep() == PARTIAL
-                    && node.getGroupIdSymbol().isEmpty())) {
+                    && node.getGroupIdSymbol().isEmpty()
+                    && node.getHashSymbol().isEmpty())) {
                 canonicalizeRecursively(source);
                 return Optional.empty();
             }
@@ -156,40 +155,9 @@ public final class CanonicalSubplanExtractor
                 return Optional.empty();
             }
 
-            Optional<CanonicalSubplan> subplanOptional;
-            Optional<Expression> originalHashExpression;
-            if (node.getHashSymbol().isPresent()) {
-                // projection that computes hash symbol is expected
-                Symbol hashSymbol = node.getHashSymbol().get();
-                if (!(source instanceof ProjectNode projectNode)) {
-                    canonicalizeRecursively(source);
-                    return Optional.empty();
-                }
-
-                originalHashExpression = Optional.of(projectNode.getAssignments().get(hashSymbol));
-                // hash expression is supported if it only contains group by symbols
-                if (!ImmutableSet.copyOf(node.getGroupingKeys()).containsAll(SymbolsExtractor.extractUnique(originalHashExpression.get()))) {
-                    canonicalizeRecursively(source);
-                    return Optional.empty();
-                }
-
-                // skip source projection if it's only computing hash symbol
-                if (isIdentityHashProjection(projectNode, hashSymbol)) {
-                    // always add non-aggregated canonical subplan so that it can be matched against other
-                    // non-aggregated subqueries
-                    subplanOptional = canonicalizeRecursively(projectNode.getSource());
-                }
-                else {
-                    subplanOptional = canonicalizeRecursively(projectNode);
-                }
-            }
-            else {
-                // always add non-aggregated canonical subplan so that it can be matched against other
-                // non-aggregated subqueries
-                subplanOptional = canonicalizeRecursively(source);
-                originalHashExpression = Optional.empty();
-            }
-
+            // always add non-aggregated canonical subplan so that it can be matched against other
+            // non-aggregated subqueries
+            Optional<CanonicalSubplan> subplanOptional = canonicalizeRecursively(source);
             if (subplanOptional.isEmpty()) {
                 return Optional.empty();
             }
@@ -215,27 +183,6 @@ public final class CanonicalSubplanExtractor
                     // duplicated column ids are not supported
                     return Optional.empty();
                 }
-            }
-
-            // canonicalize hash column (in terms of column ids from groupByColumns)
-            Optional<CacheColumnId> groupByHash;
-            if (originalHashExpression.isPresent()) {
-                Expression canonicalHashExpression = subplan.canonicalSymbolMapper().map(originalHashExpression.get());
-                CacheColumnId columnId = canonicalExpressionToColumnId(canonicalHashExpression);
-                groupByHash = Optional.of(columnId);
-                checkState(assignments.put(columnId, canonicalHashExpression) == null, "Hash column already present");
-                Symbol originalSymbol = subplan.getOriginalSymbolMapping().get(columnId);
-                Symbol hashSymbol = node.getHashSymbol().orElseThrow();
-                if (originalSymbol == null) {
-                    symbolMappingBuilder.put(columnId, hashSymbol);
-                }
-                else if (!originalSymbol.equals(hashSymbol)) {
-                    // might happen if hash expression is projected by user explicitly
-                    return Optional.empty();
-                }
-            }
-            else {
-                groupByHash = Optional.empty();
             }
 
             // canonicalize aggregation functions
@@ -279,7 +226,6 @@ public final class CanonicalSubplanExtractor
                     node,
                     symbolMapping,
                     Optional.of(groupByColumns.build()),
-                    groupByHash,
                     assignments,
                     subplan.getConjuncts(),
                     subplan.getDynamicConjuncts(),
@@ -339,7 +285,6 @@ public final class CanonicalSubplanExtractor
                     node,
                     symbolMappingBuilder.buildOrThrow(),
                     Optional.empty(),
-                    Optional.empty(),
                     assignments,
                     subplan.getConjuncts(),
                     subplan.getDynamicConjuncts(),
@@ -388,7 +333,6 @@ public final class CanonicalSubplanExtractor
             return Optional.of(new CanonicalSubplan(
                     node,
                     subplan.getOriginalSymbolMapping(),
-                    Optional.empty(),
                     Optional.empty(),
                     subplan.getAssignments(),
                     conjuncts.build(),
@@ -449,7 +393,6 @@ public final class CanonicalSubplanExtractor
                     node,
                     symbolMapping,
                     Optional.empty(),
-                    Optional.empty(),
                     assignments,
                     // No filters in table scan. Relevant pushed predicates are
                     // part of CacheTableId, so such subplans won't be considered
@@ -462,14 +405,6 @@ public final class CanonicalSubplanExtractor
                     tableId.get(),
                     node.isUseConnectorNodePartitioning(),
                     node.getId()));
-        }
-
-        private boolean isIdentityHashProjection(ProjectNode projection, Symbol hashSymbol)
-        {
-            // all projections except hash calculation should be identities
-            return projection.getAssignments().getSymbols().stream()
-                    .filter(symbol -> !symbol.equals(hashSymbol))
-                    .allMatch(symbol -> projection.getAssignments().isIdentity(symbol));
         }
 
         private Optional<CanonicalSubplan> canonicalizeRecursively(PlanNode node)

@@ -46,7 +46,6 @@ import java.util.Optional;
 import java.util.function.Predicate;
 
 import static io.trino.SystemSessionProperties.JOIN_REORDERING_STRATEGY;
-import static io.trino.SystemSessionProperties.OPTIMIZE_HASH_GENERATION;
 import static io.trino.cache.CanonicalSubplanExtractor.canonicalExpressionToColumnId;
 import static io.trino.spi.predicate.Range.greaterThan;
 import static io.trino.spi.predicate.Range.lessThan;
@@ -81,8 +80,6 @@ public class TestCacheCommonSubqueries
             .setSchema("tiny")
             // disable so join order is not changed in tests
             .setSystemProperty(JOIN_REORDERING_STRATEGY, "none")
-            // prevent hash columns from being added
-            .setSystemProperty(OPTIMIZE_HASH_GENERATION, "false")
             .build();
     private static final CacheColumnId NATIONKEY_COLUMN_ID = new CacheColumnId("[nationkey:bigint]");
     private static final CacheColumnId REGIONKEY_COLUMN_ID = new CacheColumnId("[regionkey:bigint]");

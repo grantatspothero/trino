@@ -58,12 +58,6 @@ public class CanonicalSubplan
      */
     private final Optional<Set<CacheColumnId>> groupByColumns;
     /**
-     * {@link CacheColumnId} of group by hash that is part of {@link CanonicalSubplan#assignments}.
-     * Hash expression symbols are canonicalized as {@link CacheColumnId} from
-     * {@link CanonicalSubplan#groupByColumns}.
-     */
-    private final Optional<CacheColumnId> groupByHash;
-    /**
      * Output projections with iteration order matching list of output columns.
      * Symbol names are canonicalized as {@link CacheColumnId}.
      */
@@ -101,7 +95,6 @@ public class CanonicalSubplan
             PlanNode originalPlanNode,
             BiMap<CacheColumnId, Symbol> originalSymbolMapping,
             Optional<Set<CacheColumnId>> groupByColumns,
-            Optional<CacheColumnId> groupByHash,
             Map<CacheColumnId, Expression> assignments,
             List<Expression> conjuncts,
             List<Expression> dynamicConjuncts,
@@ -114,7 +107,6 @@ public class CanonicalSubplan
         this.originalPlanNode = requireNonNull(originalPlanNode, "originalPlanNode is null");
         this.originalSymbolMapping = ImmutableBiMap.copyOf(requireNonNull(originalSymbolMapping, "originalSymbolMapping is null"));
         this.groupByColumns = requireNonNull(groupByColumns, "groupByColumns is null").map(ImmutableSet::copyOf);
-        this.groupByHash = requireNonNull(groupByHash, "groupByHash is null");
         this.assignments = ImmutableMap.copyOf(requireNonNull(assignments, "assignments is null"));
         this.conjuncts = ImmutableList.copyOf(requireNonNull(conjuncts, "conjuncts is null"));
         this.dynamicConjuncts = ImmutableList.copyOf(requireNonNull(dynamicConjuncts, "dynamicConjuncts is null"));
@@ -147,11 +139,6 @@ public class CanonicalSubplan
     public Optional<Set<CacheColumnId>> getGroupByColumns()
     {
         return groupByColumns;
-    }
-
-    public Optional<CacheColumnId> getGroupByHash()
-    {
-        return groupByHash;
     }
 
     public Map<CacheColumnId, Expression> getAssignments()
