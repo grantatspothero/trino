@@ -65,6 +65,9 @@ import static org.testng.Assert.assertFalse;
 @TestInstance(PER_METHOD)
 public class TestUniformNodeSelector
 {
+    private final InternalNode node1 = new InternalNode("node1", URI.create("http://10.0.0.1:13"), NodeVersion.UNKNOWN, false);
+    private final InternalNode node2 = new InternalNode("node2", URI.create("http://10.0.0.1:12"), NodeVersion.UNKNOWN, false);
+    private final Set<Split> splits = new LinkedHashSet<>();
     private FinalizerService finalizerService;
     private NodeTaskMap nodeTaskMap;
     private InMemoryNodeManager nodeManager;
@@ -83,6 +86,8 @@ public class TestUniformNodeSelector
         finalizerService = new FinalizerService();
         nodeTaskMap = new NodeTaskMap(finalizerService);
         nodeManager = new InMemoryNodeManager();
+        nodeManager.addNodes(node1);
+        nodeManager.addNodes(node2);
 
         nodeSchedulerConfig = new NodeSchedulerConfig()
                 .setMaxSplitsPerNode(20)
@@ -117,11 +122,6 @@ public class TestUniformNodeSelector
     @Test
     public void testQueueSizeAdjustmentScaleDown()
     {
-        InternalNode node1 = new InternalNode("node1", URI.create("http://10.0.0.1:13"), NodeVersion.UNKNOWN, false);
-        nodeManager.addNodes(node1);
-        InternalNode node2 = new InternalNode("node2", URI.create("http://10.0.0.1:12"), NodeVersion.UNKNOWN, false);
-        nodeManager.addNodes(node2);
-
         TestingTicker ticker = new TestingTicker();
         UniformNodeSelector.QueueSizeAdjuster queueSizeAdjuster = new UniformNodeSelector.QueueSizeAdjuster(10, 100, ticker);
 
@@ -137,8 +137,6 @@ public class TestUniformNodeSelector
                 NodeSchedulerConfig.SplitsBalancingPolicy.STAGE,
                 false,
                 queueSizeAdjuster);
-
-        Set<Split> splits = new LinkedHashSet<>();
 
         for (int i = 0; i < 20; i++) {
             splits.add(new Split(TEST_CATALOG_HANDLE, TestingSplit.createRemoteSplit()));
@@ -188,13 +186,6 @@ public class TestUniformNodeSelector
     @Test
     public void testQueueSizeAdjustmentAllNodes()
     {
-        InternalNode node1 = new InternalNode("node1", URI.create("http://10.0.0.1:13"), NodeVersion.UNKNOWN, false);
-        nodeManager.addNodes(node1);
-        InternalNode node2 = new InternalNode("node2", URI.create("http://10.0.0.1:12"), NodeVersion.UNKNOWN, false);
-        nodeManager.addNodes(node2);
-
-        Set<Split> splits = new LinkedHashSet<>();
-
         for (int i = 0; i < 20 * 9; i++) {
             splits.add(new Split(TEST_CATALOG_HANDLE, TestingSplit.createRemoteSplit()));
         }
@@ -247,13 +238,6 @@ public class TestUniformNodeSelector
     @Test
     public void testQueueSizeAdjustmentOneOfAll()
     {
-        InternalNode node1 = new InternalNode("node1", URI.create("http://10.0.0.1:13"), NodeVersion.UNKNOWN, false);
-        nodeManager.addNodes(node1);
-        InternalNode node2 = new InternalNode("node2", URI.create("http://10.0.0.1:12"), NodeVersion.UNKNOWN, false);
-        nodeManager.addNodes(node2);
-
-        Set<Split> splits = new LinkedHashSet<>();
-
         for (int i = 0; i < 20 * 9; i++) {
             splits.add(new Split(TEST_CATALOG_HANDLE, TestingSplit.createRemoteSplit()));
         }
