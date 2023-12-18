@@ -596,6 +596,7 @@ jobs:
         run: |
           $MAVEN test ${MAVEN_TEST} -pl '
             !:galaxy-buffer-exchange-tests,
+            !:starburst-base-jdbc,
             !:starburst-ci-cd,
             !:starburst-license,
             !:starburst-plugin-toolkit,
@@ -721,6 +722,7 @@ jobs:
           include:
             - modules:
                 - client/trino-jdbc
+                - plugin/starburst-base-jdbc
                 - plugin/trino-base-jdbc
                 - plugin/trino-memory
                 - plugin/trino-thrift
