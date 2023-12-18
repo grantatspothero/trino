@@ -597,6 +597,7 @@ jobs:
           $MAVEN test ${MAVEN_TEST} -pl '
             !:galaxy-buffer-exchange-tests,
             !:starburst-ci-cd,
+            !:starburst-license,
             !:trino-accumulo,
             !:trino-base-jdbc,
             !:trino-bigquery,
