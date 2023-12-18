@@ -598,6 +598,7 @@ jobs:
             !:galaxy-buffer-exchange-tests,
             !:starburst-ci-cd,
             !:starburst-license,
+            !:starburst-plugin-toolkit,
             !:trino-accumulo,
             !:trino-base-jdbc,
             !:trino-bigquery,
@@ -725,6 +726,7 @@ jobs:
                 - plugin/trino-thrift
             - modules:
                 - lib/starburst-ci-cd
+                - lib/starburst-plugin-toolkit
             - modules:
                 - lib/trino-orc
                 - lib/trino-parquet
