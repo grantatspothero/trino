@@ -18,7 +18,6 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.plugin.base.CatalogName;
-import io.trino.plugin.hive.LocationAccessControl;
 import io.trino.plugin.hive.NodeVersion;
 import io.trino.plugin.iceberg.IcebergConfig;
 import io.trino.plugin.iceberg.catalog.TrinoCatalog;
@@ -40,7 +39,6 @@ import static org.apache.iceberg.CatalogProperties.FILE_IO_IMPL;
 public class TrinoIcebergRestCatalogFactory
         implements TrinoCatalogFactory
 {
-    private final LocationAccessControl locationAccessControl;
     private final TrinoFileSystemFactory fileSystemFactory;
     private final CatalogName catalogName;
     private final String trinoVersion;
@@ -55,7 +53,6 @@ public class TrinoIcebergRestCatalogFactory
 
     @Inject
     public TrinoIcebergRestCatalogFactory(
-            LocationAccessControl locationAccessControl,
             TrinoFileSystemFactory fileSystemFactory,
             CatalogName catalogName,
             IcebergRestCatalogConfig restConfig,
@@ -63,7 +60,6 @@ public class TrinoIcebergRestCatalogFactory
             IcebergConfig icebergConfig,
             NodeVersion nodeVersion)
     {
-        this.locationAccessControl = requireNonNull(locationAccessControl, "locationAccessControl is null");
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.catalogName = requireNonNull(catalogName, "catalogName is null");
         this.trinoVersion = requireNonNull(nodeVersion, "nodeVersion is null").toString();
@@ -101,6 +97,6 @@ public class TrinoIcebergRestCatalogFactory
             icebergCatalog = icebergCatalogInstance;
         }
 
-        return new TrinoRestCatalog(locationAccessControl, icebergCatalog, catalogName, sessionType, trinoVersion, uniqueTableLocation);
+        return new TrinoRestCatalog(icebergCatalog, catalogName, sessionType, trinoVersion, uniqueTableLocation);
     }
 }
