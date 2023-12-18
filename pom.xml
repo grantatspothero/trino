@@ -186,6 +186,7 @@
             -XX:GCLockerRetryAllocationCount=10
         </air.test.jvm.additional-arguments.default>
         <air.test.jvm.additional-arguments>${air.test.jvm.additional-arguments.default}</air.test.jvm.additional-arguments>
+        <starburst-license.header-file>${air.main.basedir}/.mvn/license/starburst-header.txt</starburst-license.header-file>
 
         <!-- Publish artifacts to our internal Maven repository -->
         <air.repository.snapshot.id>starburstdata-sep.snapshots</air.repository.snapshot.id>
