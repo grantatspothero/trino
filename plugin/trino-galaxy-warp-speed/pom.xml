@@ -42,6 +42,10 @@
                     <artifactId>calcite-core</artifactId>
                 </exclusion>
                 <exclusion>
+                    <groupId>io.airlift</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
                     <groupId>io.trino</groupId>
                     <artifactId>*</artifactId>
                 </exclusion>
