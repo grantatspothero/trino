@@ -126,6 +126,9 @@ public class WorkerRecommendationProvider
                 avgWorkerParallelism,
                 activeNodes);
 
+        log.info("TrinoWorkers recommendation: %s; Inputs: (timeToProcess: %s, avgWorkerParallelism: %s, activeNodes: %s); Stats age: %s",
+                recommendedNodes, cpuTimeToProcessQueriesMillis, avgWorkerParallelism, activeNodes, statsCalculator.getAge());
+
         return new WorkerRecommendation(recommendedNodes, Collections.emptyMap());
     }
 
@@ -257,6 +260,11 @@ public class WorkerRecommendationProvider
         public double avgWorkerParallelism()
         {
             return totalPerWorkerCpuMillis.getCount() / totalWallMillis.getCount();
+        }
+
+        public Duration getAge()
+        {
+            return Duration.succinctDuration(lastUpdateTimeStopwatch.elapsed(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
         }
     }
 

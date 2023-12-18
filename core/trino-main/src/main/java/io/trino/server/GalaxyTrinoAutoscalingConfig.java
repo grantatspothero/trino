@@ -22,8 +22,9 @@ import java.util.concurrent.TimeUnit;
 public class GalaxyTrinoAutoscalingConfig
 {
     private Duration nodeStartupTime = Duration.succinctDuration(60, TimeUnit.SECONDS);
-    private Duration remainingTimeScaleUpThreshold = Duration.succinctDuration(120, TimeUnit.SECONDS);
-    private Duration remainingTimeScaleDownThreshold = Duration.succinctDuration(30, TimeUnit.SECONDS);
+    private Duration remainingTimeScaleUpThreshold = Duration.succinctDuration(20, TimeUnit.SECONDS);
+    private Duration remainingTimeScaleDownThreshold = Duration.succinctDuration(10, TimeUnit.SECONDS);
+
     private double scaleDownRatio = 0.8;
     private double scaleUpRatio = 1.5;
 
