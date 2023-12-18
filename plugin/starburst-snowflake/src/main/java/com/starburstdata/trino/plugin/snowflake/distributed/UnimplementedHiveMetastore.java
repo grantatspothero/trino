@@ -22,6 +22,7 @@ import io.trino.plugin.hive.metastore.Partition;
 import io.trino.plugin.hive.metastore.PartitionWithStatistics;
 import io.trino.plugin.hive.metastore.PrincipalPrivileges;
 import io.trino.plugin.hive.metastore.Table;
+import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.RelationType;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.function.LanguageFunction;
@@ -30,6 +31,7 @@ import io.trino.spi.security.RoleGrant;
 import io.trino.spi.type.Type;
 
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -125,6 +127,12 @@ class UnimplementedHiveMetastore
 
     @Override
     public Optional<List<SchemaTableName>> getAllViews()
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Optional<Iterator<Table>> streamTables(ConnectorSession session, String databaseName)
     {
         throw new UnsupportedOperationException();
     }
