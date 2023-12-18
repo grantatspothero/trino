@@ -168,6 +168,7 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
                 .hasMessageContaining("registerTable is not supported for Iceberg REST catalog");
     }
 
+    @Test
     @Override
     public void testRegisterTableWithComments()
     {
@@ -175,6 +176,7 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
                 .hasMessageContaining("registerTable is not supported for Iceberg REST catalog");
     }
 
+    @Test
     @Override
     public void testRegisterTableWithShowCreateTable()
     {
@@ -182,6 +184,7 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
                 .hasMessageContaining("registerTable is not supported for Iceberg REST catalog");
     }
 
+    @Test
     @Override
     public void testRegisterTableWithReInsert()
     {
@@ -189,6 +192,7 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
                 .hasMessageContaining("registerTable is not supported for Iceberg REST catalog");
     }
 
+    @Test
     @Override
     public void testRegisterTableWithDifferentTableName()
     {
@@ -196,6 +200,7 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
                 .hasMessageContaining("registerTable is not supported for Iceberg REST catalog");
     }
 
+    @Test
     @Override
     public void testRegisterTableWithMetadataFile()
     {
@@ -203,6 +208,7 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
                 .hasMessageContaining("registerTable is not supported for Iceberg REST catalog");
     }
 
+    @Test
     @Override
     public void testRegisterTableWithTrailingSpaceInLocation()
     {
@@ -210,6 +216,7 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
                 .hasMessageContaining("registerTable is not supported for Iceberg REST catalog");
     }
 
+    @Test
     @Override
     public void testUnregisterTable()
     {
@@ -217,6 +224,7 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
                 .hasMessageContaining("unregisterTable is not supported for Iceberg REST catalogs");
     }
 
+    @Test
     @Override
     public void testUnregisterBrokenTable()
     {
@@ -224,6 +232,7 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
                 .hasMessageContaining("unregisterTable is not supported for Iceberg REST catalogs");
     }
 
+    @Test
     @Override
     public void testUnregisterTableNotExistingTable()
     {
@@ -231,6 +240,7 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
                 .hasMessageContaining("unregisterTable is not supported for Iceberg REST catalogs");
     }
 
+    @Test
     @Override
     public void testRepeatUnregisterTable()
     {
@@ -238,6 +248,7 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
                 .hasMessageContaining("unregisterTable is not supported for Iceberg REST catalogs");
     }
 
+    @Test
     @Override
     public void testDropTableWithMissingMetadataFile()
     {
