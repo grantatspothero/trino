@@ -28,6 +28,8 @@
     </licenses>
 
     <modules>
+
+        <module>buffer-service</module>
         <module>client/trino-cli</module>
         <module>client/trino-client</module>
         <module>client/trino-jdbc</module>
@@ -147,8 +149,6 @@
         <module>testing/trino-tests</module>
         <module>testing/trino-tests-galaxy-buffer-exchange</module>
         <module>testing/trino-tests-schema-discovery</module>
-
-        <module>buffer-service</module>
     </modules>
 
     <properties>
@@ -1392,6 +1392,13 @@
                 <groupId>io.trino</groupId>
                 <artifactId>trino-faulttolerant-tests</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>trino-faulttolerant-tests</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
             </dependency>
 
             <dependency>
