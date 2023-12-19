@@ -61,14 +61,14 @@
 
         <dependency>
             <groupId>io.starburst.stargate.buffer</groupId>
-            <artifactId>buffer-exchange</artifactId>
+            <artifactId>galaxy-buffer-discovery-client</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>io.starburst.stargate.buffer</groupId>
-            <artifactId>discovery-client</artifactId>
+            <artifactId>galaxy-buffer-exchange</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>

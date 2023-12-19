@@ -4,12 +4,12 @@
 
     <parent>
         <groupId>io.starburst.stargate.buffer</groupId>
-        <artifactId>stargate-buffer-root</artifactId>
+        <artifactId>galaxy-buffer-root</artifactId>
         <version>${revision}</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>data-server</artifactId>
+    <artifactId>galaxy-buffer-data-server</artifactId>
     <description>Stargate Buffer Service Data Server</description>
 
     <properties>
@@ -22,7 +22,7 @@
 
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>data-common</artifactId>
+            <artifactId>galaxy-buffer-data-common</artifactId>
             <version>${project.version}</version>
         </dependency>
 
@@ -244,24 +244,24 @@
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-core</artifactId>
         </dependency>
+
         <dependency>
             <groupId>io.starburst.stargate.buffer</groupId>
-            <artifactId>buffer-status</artifactId>
+            <artifactId>galaxy-buffer-client-common</artifactId>
         </dependency>
 
         <dependency>
             <groupId>io.starburst.stargate.buffer</groupId>
-            <artifactId>client-common</artifactId>
+            <artifactId>galaxy-buffer-data-client</artifactId>
         </dependency>
 
         <dependency>
             <groupId>io.starburst.stargate.buffer</groupId>
-            <artifactId>data-client</artifactId>
+            <artifactId>galaxy-buffer-discovery-client</artifactId>
         </dependency>
-
         <dependency>
             <groupId>io.starburst.stargate.buffer</groupId>
-            <artifactId>discovery-client</artifactId>
+            <artifactId>galaxy-buffer-status</artifactId>
         </dependency>
 
         <dependency>

@@ -149,7 +149,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
       - name: Build and push the Buffer Service Data Server Docker image
         run: |
-          ./buffer-service/bin/build-docker-image.sh -p data-server \
+          ./galaxy-buffer-service/bin/build-docker-image.sh -p data-server \
             -r 179619298502.dkr.ecr.us-east-1.amazonaws.com/galaxy \
             -r us-east1-docker.pkg.dev/starburstdata-saas-prod/starburst-docker-repository/galaxy \
             -r starburstgalaxy.azurecr.io/galaxy \
@@ -158,7 +158,7 @@ jobs:
             -P
       - name: Build and push the Buffer Service Discovery Server Docker image
         run: |
-          ./buffer-service/bin/build-docker-image.sh -p discovery-server \
+          ./galaxy-buffer-service/bin/build-docker-image.sh -p discovery-server \
             -r 179619298502.dkr.ecr.us-east-1.amazonaws.com/galaxy \
             -r us-east1-docker.pkg.dev/starburstdata-saas-prod/starburst-docker-repository/galaxy \
             -r starburstgalaxy.azurecr.io/galaxy \
@@ -204,8 +204,8 @@ jobs:
       - name: Maven Deploy
         run: |
           export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
-          $RETRY $MAVEN install deploy -B --strict-checksums -V -T 1C -DskipTests -Dair.check.skip-all -am \
-            -pl :discovery-client,:data-client,:discovery-server,:data-server \
+          $RETRY $MAVEN deploy -B --strict-checksums -V -T 1C -DskipTests -Dair.check.skip-all -Dgib.disable -am \
+            -pl :galaxy-buffer-discovery-client,:galaxy-buffer-data-client,:galaxy-buffer-discovery-server,:galaxy-buffer-data-server \
             -Drevision=${{ needs.determine-version.outputs.version }}
 
   maven-checks:
@@ -589,7 +589,7 @@ jobs:
       - name: Maven Tests
         run: |
           $MAVEN test ${MAVEN_TEST} -pl '
-            !:buffer-exchange-tests,
+            !:galaxy-buffer-exchange-tests,
             !:trino-accumulo,
             !:trino-base-jdbc,
             !:trino-bigquery,
@@ -782,8 +782,8 @@ jobs:
             - { modules: testing/trino-faulttolerant-tests, profile: test-fault-tolerant-iceberg }
             - { modules: testing/trino-tests, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
             - { modules: testing/trino-tests-galaxy-buffer-exchange }
-            - { modules: buffer-service/buffer-exchange-tests, profile: test-buffer-exchange-failure-recovery }
-            - { modules: buffer-service/buffer-exchange-tests }
+            - { modules: galaxy-buffer-service/galaxy-buffer-exchange-tests, profile: test-buffer-exchange-failure-recovery }
+            - { modules: galaxy-buffer-service/galaxy-buffer-exchange-tests }
           EOF
           if [[ ( ${{ github.event_name }} == "schedule" || ( ${{ github.event_name }} == "pull_request" && ${{ contains(github.event.pull_request.labels.*.name, 'salesforce') }} == "true" ) || ( ${{ github.event_name }} == "workflow_dispatch" ) ) ]]; then
             echo "  - { modules: plugin/trino-galaxy-salesforce }" >> .github/test-matrix.yaml

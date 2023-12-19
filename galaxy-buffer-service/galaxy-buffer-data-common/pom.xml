@@ -4,12 +4,12 @@
 
     <parent>
         <groupId>io.starburst.stargate.buffer</groupId>
-        <artifactId>stargate-buffer-root</artifactId>
+        <artifactId>galaxy-buffer-root</artifactId>
         <version>${revision}</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>data-common</artifactId>
+    <artifactId>galaxy-buffer-data-common</artifactId>
     <description>Buffer Service Data Common</description>
 
     <properties>

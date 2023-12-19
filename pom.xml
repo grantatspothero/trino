@@ -28,8 +28,6 @@
     </licenses>
 
     <modules>
-
-        <module>buffer-service</module>
         <module>client/trino-cli</module>
         <module>client/trino-client</module>
         <module>client/trino-jdbc</module>
@@ -41,6 +39,7 @@
         <module>core/trino-server-rpm</module>
         <module>core/trino-spi</module>
         <module>docs</module>
+        <module>galaxy-buffer-service</module>
         <module>lib/trino-array</module>
         <module>lib/trino-cache</module>
         <module>lib/trino-filesystem</module>

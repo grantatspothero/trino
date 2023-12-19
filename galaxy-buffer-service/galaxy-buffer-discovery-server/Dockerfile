@@ -1,5 +1,6 @@
 FROM eclipse-temurin:17-jdk
 
+ARG MODULE_NAME=galaxy-buffer-discovery-server
 ARG PROJECT_NAME=discovery-server
 ARG PROJECT_VERSION
 ARG PROJECT_DIR="/opt/${PROJECT_NAME}"
@@ -16,11 +17,11 @@ RUN \
     useradd ${PROJECT_NAME} --uid 1000 --gid 1000
 
 # Add project files
-ADD target/${PROJECT_NAME}-${PROJECT_VERSION}.tar.gz /tmp/${PROJECT_NAME}
+ADD target/${MODULE_NAME}-${PROJECT_VERSION}.tar.gz /tmp/${PROJECT_NAME}
 RUN \
     mkdir -p ${PROJECT_DIR} && \
     chown -R "${CHOWN}" ${PROJECT_DIR} && \
-    mv /tmp/${PROJECT_NAME}/${PROJECT_NAME}-${PROJECT_VERSION}/* ${PROJECT_DIR} && \
+    mv /tmp/${PROJECT_NAME}/${MODULE_NAME}-${PROJECT_VERSION}/* ${PROJECT_DIR} && \
     chown ${CHOWN} -R ${PROJECT_DIR} && \
     rm -rf /tmp/${PROJECT_NAME} && \
     DD_AGENT_JAR="${PROJECT_DIR}/lib/$(ls ${PROJECT_DIR}/lib | grep dd-java-agent | head -n 1)" && \
