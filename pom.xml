@@ -66,6 +66,7 @@
         <module>lib/trino-record-decoder</module>
         <module>lib/trino-ssh-tunnel</module>
         <module>plugin/starburst-base-jdbc</module>
+        <module>plugin/starburst-dynamodb</module>
         <module>plugin/starburst-snowflake</module>
         <module>plugin/trino-accumulo</module>
         <module>plugin/trino-accumulo-iterators</module>
@@ -1287,6 +1288,19 @@
             <dependency>
                 <groupId>io.trino</groupId>
                 <artifactId>starburst-base-jdbc</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>starburst-base-jdbc</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>starburst-license</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

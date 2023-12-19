@@ -635,6 +635,7 @@ jobs:
             !:galaxy-buffer-exchange-tests,
             !:starburst-base-jdbc,
             !:starburst-ci-cd,
+            !:starburst-dynamodb,
             !:starburst-license,
             !:starburst-plugin-toolkit,
             !:starburst-snowflake,
@@ -787,6 +788,7 @@ jobs:
             - { modules: lib/trino-filesystem-azure, profile: cloud-tests }
             - { modules: lib/trino-hdfs, profile: cloud-tests }
             - { modules: lib/trino-filesystem-gcs, profile: cloud-tests }
+            - { modules: plugin/starburst-dynamodb }
             - { modules: plugin/starburst-snowflake, profile: default, cloud: aws }
             - { modules: plugin/trino-accumulo }
             - { modules: plugin/trino-bigquery }
