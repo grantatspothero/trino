@@ -206,7 +206,7 @@
     </artifactSet>
 
     <artifactSet to="plugin/exchange-buffer">
-        <artifact id="io.starburst.stargate.buffer:buffer-exchange:zip:${dep.trino-buffer-service.version}">
+        <artifact id="io.starburst.stargate.buffer:buffer-exchange:zip:${project.version}">
             <unpack />
         </artifact>
     </artifactSet>
