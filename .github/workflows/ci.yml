@@ -64,10 +64,39 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  determine-version:
+    runs-on: [self-hosted, sep-cicd, gha-fleet-nano]
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.project.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup
+        with:
+          cache: false
+          download_dependencies: false
+
+      - name: Determine the project version
+        id: project
+        run: |
+          version="$(./core/docker/determine-image-tag)"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            version="pr${{ github.event.number }}-${version}"
+          fi
+          echo "Determined project version: ${version}"
+          echo "version=${version}" >> $GITHUB_OUTPUT
+          echo "version: \`${version}\`" >> $GITHUB_STEP_SUMMARY
+
   docker-images:
     # Only build images for merges to galaxy*, or for PRs with the 'with-images' label
     if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'with-images')
     runs-on: [self-hosted, sep-cicd, gha-fleet-small]
+    needs: determine-version
+    env:
+      IMAGE_TAG: ${{ needs.determine-version.outputs.version }}
     steps:
       - name: Free Disk Space
         run: |
@@ -114,14 +143,6 @@ jobs:
           $RETRY $MAVEN install ${MAVEN_FAST_INSTALL} -Dgib.disable -pl '!:trino-docs,!:trino-server-rpm'
       - name: Maven Clean
         run: $MAVEN clean -pl '!:trino-server,!:trino-cli'
-      - name: Determine the image tag
-        run: |
-          IMAGE_TAG="$(./core/docker/determine-image-tag)"
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            IMAGE_TAG="pr${{ github.event.number }}-${IMAGE_TAG}"
-          fi
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
-          echo "Image tag: \`$IMAGE_TAG\`" >> $GITHUB_STEP_SUMMARY
       - uses: docker/setup-qemu-action@v1
         with:
           platforms: arm64
