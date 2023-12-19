@@ -70,6 +70,7 @@
         <module>plugin/starburst-oracle</module>
         <module>plugin/starburst-salesforce</module>
         <module>plugin/starburst-snowflake</module>
+        <module>plugin/starburst-stargate</module>
         <module>plugin/trino-accumulo</module>
         <module>plugin/trino-accumulo-iterators</module>
         <module>plugin/trino-atop</module>
@@ -1303,6 +1304,12 @@
             <dependency>
                 <groupId>io.trino</groupId>
                 <artifactId>starburst-license</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>starburst-plugin-toolkit</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

@@ -18,7 +18,7 @@ import io.trino.testing.sql.SqlExecutor;
 import io.trino.testing.sql.TestTable;
 import org.junit.jupiter.api.Test;
 
-import static io.trino.SystemSessionProperties.MARK_DISTINCT_STRATEGY;
+import static io.trino.SystemSessionProperties.DISTINCT_AGGREGATIONS_STRATEGY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assumptions.abort;
@@ -105,7 +105,7 @@ public abstract class BaseStargateConnectorTest
         }
 
         Session withMarkDistinct = Session.builder(getSession())
-                .setSystemProperty(MARK_DISTINCT_STRATEGY, "always")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "mark_distinct")
                 .build();
         // distinct aggregation
         assertThat(query(withMarkDistinct, "SELECT count(DISTINCT regionkey) FROM nation")).isFullyPushedDown();
@@ -119,7 +119,7 @@ public abstract class BaseStargateConnectorTest
         assertThat(query(withMarkDistinct, "SELECT count(DISTINCT regionkey), sum(nationkey) FROM nation")).isFullyPushedDown();
 
         Session withoutMarkDistinct = Session.builder(getSession())
-                .setSystemProperty(MARK_DISTINCT_STRATEGY, "none")
+                .setSystemProperty(DISTINCT_AGGREGATIONS_STRATEGY, "single_step")
                 .build();
         // distinct aggregation
         assertThat(query(withoutMarkDistinct, "SELECT count(DISTINCT regionkey) FROM nation")).isFullyPushedDown();
@@ -148,6 +148,20 @@ public abstract class BaseStargateConnectorTest
     public void testDropNonEmptySchemaWithTable()
     {
         abort("Stargate connector not support creating tables");
+    }
+
+    @Test
+    @Override
+    public void testColumnsListingModes()
+    {
+        abort("not supported.");
+    }
+
+    @Test
+    @Override
+    public void testCommentsListingModes()
+    {
+        abort("not supported.");
     }
 
     @Override

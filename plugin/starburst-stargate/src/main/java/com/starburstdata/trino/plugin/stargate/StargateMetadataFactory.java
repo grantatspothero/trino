@@ -14,6 +14,7 @@ import com.google.inject.Inject;
 import io.trino.plugin.jdbc.DefaultJdbcMetadataFactory;
 import io.trino.plugin.jdbc.JdbcClient;
 import io.trino.plugin.jdbc.JdbcMetadata;
+import io.trino.plugin.jdbc.JdbcMetadataConfig;
 import io.trino.plugin.jdbc.JdbcQueryEventListener;
 
 import java.util.Set;
@@ -26,9 +27,9 @@ public class StargateMetadataFactory
     private final Set<JdbcQueryEventListener> jdbcQueryEventListeners;
 
     @Inject
-    public StargateMetadataFactory(JdbcClient jdbcClient, Set<JdbcQueryEventListener> jdbcQueryEventListeners)
+    public StargateMetadataFactory(JdbcMetadataConfig jdbcMetadataConfig, JdbcClient jdbcClient, Set<JdbcQueryEventListener> jdbcQueryEventListeners)
     {
-        super(jdbcClient, jdbcQueryEventListeners);
+        super(jdbcMetadataConfig, jdbcClient, jdbcQueryEventListeners);
         this.jdbcQueryEventListeners = ImmutableSet.copyOf(requireNonNull(jdbcQueryEventListeners, "jdbcQueryEventListeners is null"));
     }
 
