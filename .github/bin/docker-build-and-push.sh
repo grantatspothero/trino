@@ -96,7 +96,6 @@ cassandra
 druid
 elasticsearch
 exchange-buffer
-exchange-fallbacking-buffer
 exchange-filesystem
 galaxy-dynamodb
 galaxy-catalog

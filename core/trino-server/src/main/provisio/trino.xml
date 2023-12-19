@@ -211,12 +211,6 @@
         </artifact>
     </artifactSet>
 
-    <artifactSet to="plugin/exchange-fallbacking-buffer">
-        <artifact id="io.starburst.stargate.buffer:fallbacking-buffer-exchange:zip:${dep.trino-buffer-service.version}">
-            <unpack />
-        </artifact>
-    </artifactSet>
-
     <artifactSet to="plugin/exchange-filesystem">
         <artifact id="${project.groupId}:trino-exchange-filesystem:zip:${project.version}">
             <unpack />
