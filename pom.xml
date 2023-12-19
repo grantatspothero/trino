@@ -147,6 +147,8 @@
         <module>testing/trino-tests</module>
         <module>testing/trino-tests-galaxy-buffer-exchange</module>
         <module>testing/trino-tests-schema-discovery</module>
+
+        <module>buffer-service</module>
     </modules>
 
     <properties>
