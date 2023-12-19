@@ -160,25 +160,4 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-    <build>
-        <testResources>
-            <testResource>
-                <filtering>true</filtering>
-                <directory>src/test/resources</directory>
-                <includes>
-                    <include>io/trino/tests/exchange/buffer/test-buffer-exchange-plugin-versions.properties</include>
-                    <include>io/trino/tests/exchange/buffer/test-buffer-exchange-tested-versions.properties</include>
-                </includes>
-            </testResource>
-            <testResource>
-                <filtering>false</filtering>
-                <directory>src/test/resources</directory>
-                <excludes>
-                    <exclude>io/trino/tests/exchange/buffer/test-buffer-exchange-plugin-versions.properties</exclude>
-                    <exclude>io/trino/tests/exchange/buffer/test-buffer-exchange-tested-versions.properties</exclude>
-                </excludes>
-            </testResource>
-        </testResources>
-    </build>
 </project>
