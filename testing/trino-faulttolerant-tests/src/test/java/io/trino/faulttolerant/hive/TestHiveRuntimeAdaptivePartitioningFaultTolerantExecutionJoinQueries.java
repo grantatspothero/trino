@@ -21,12 +21,14 @@ import io.trino.testing.AbstractTestFaultTolerantExecutionJoinQueries;
 import io.trino.testing.FaultTolerantExecutionConnectorTestHelper;
 import io.trino.testing.QueryRunner;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.util.Map;
 
 import static com.google.common.base.Verify.verify;
 import static io.trino.tpch.TpchTable.getTables;
 
+@Isolated
 public class TestHiveRuntimeAdaptivePartitioningFaultTolerantExecutionJoinQueries
         extends AbstractTestFaultTolerantExecutionJoinQueries
 {
