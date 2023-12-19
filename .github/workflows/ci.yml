@@ -560,6 +560,7 @@ jobs:
       - name: Maven Tests
         run: |
           $MAVEN test ${MAVEN_TEST} -pl '
+            !:buffer-exchange-tests,
             !:trino-accumulo,
             !:trino-base-jdbc,
             !:trino-bigquery,
@@ -752,6 +753,8 @@ jobs:
             - { modules: testing/trino-faulttolerant-tests, profile: test-fault-tolerant-iceberg }
             - { modules: testing/trino-tests, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
             - { modules: testing/trino-tests-galaxy-buffer-exchange }
+            - { modules: buffer-service/buffer-exchange-tests, profile: test-buffer-exchange-failure-recovery }
+            - { modules: buffer-service/buffer-exchange-tests }
           EOF
           if [[ ( ${{ github.event_name }} == "schedule" || ( ${{ github.event_name }} == "pull_request" && ${{ contains(github.event.pull_request.labels.*.name, 'salesforce') }} == "true" ) || ( ${{ github.event_name }} == "workflow_dispatch" ) ) ]]; then
             echo "  - { modules: plugin/trino-galaxy-salesforce }" >> .github/test-matrix.yaml
