@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.trino</groupId>
         <artifactId>trino-root</artifactId>
-        <version>432-galaxy-1-SNAPSHOT</version>
+        <version>${revision}</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -57,6 +57,18 @@
                 <configuration>
                     <proc>none</proc>
                 </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <!-- Flatten can be disabled as nothing depends on this module (trino-server-rpm being disabled in Galaxy) -->
+                        <phase>disable-flatten-as-it-breaks-with-provisio</phase>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

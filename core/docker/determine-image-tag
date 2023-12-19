@@ -8,7 +8,7 @@ maven_version=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdo
 
 # If the line is not found, the `grep` will exit with non-zero and script will terminate (-o pipefail)
 # If there are multiple matches found, the `git rev-list` below will fail to parse arguments and scipt will terminate as well.
-version_changing_commit=$(git blame pom.xml | grep "<version>${maven_version}</version>" | awk '{print $1}')
+version_changing_commit=$(git blame pom.xml | grep "<revision>${maven_version}</revision>" | awk '{print $1}')
 
 commits_since_version_change=$(git rev-list "${version_changing_commit}..HEAD" | wc -l)
 
