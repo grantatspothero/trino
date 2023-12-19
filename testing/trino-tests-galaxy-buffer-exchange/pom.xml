@@ -62,14 +62,14 @@
         <dependency>
             <groupId>io.starburst.stargate.buffer</groupId>
             <artifactId>buffer-exchange</artifactId>
-            <version>${dep.trino-buffer-service.version}</version>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>io.starburst.stargate.buffer</groupId>
             <artifactId>discovery-client</artifactId>
-            <version>${dep.trino-buffer-service.version}</version>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
 
