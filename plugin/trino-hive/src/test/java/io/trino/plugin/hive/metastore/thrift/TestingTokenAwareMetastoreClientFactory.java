@@ -33,21 +33,29 @@ public class TestingTokenAwareMetastoreClientFactory
     private final DefaultThriftMetastoreClientFactory factory;
     private final URI address;
 
+    private final MetastoreClientAdapterProvider metastoreClientAdapterProvider;
+
     public TestingTokenAwareMetastoreClientFactory(Optional<HostAndPort> socksProxy, URI address)
     {
-        this(socksProxy, address, TIMEOUT);
+        this(socksProxy, address, TIMEOUT, delegate -> delegate);
     }
 
     public TestingTokenAwareMetastoreClientFactory(Optional<HostAndPort> socksProxy, URI address, Duration timeout)
     {
+        this(socksProxy, address, timeout, delegate -> delegate);
+    }
+
+    public TestingTokenAwareMetastoreClientFactory(Optional<HostAndPort> socksProxy, URI address, Duration timeout, MetastoreClientAdapterProvider metastoreClientAdapterProvider)
+    {
         this.factory = new DefaultThriftMetastoreClientFactory(new SshTunnelConfig(), Optional.empty(), socksProxy, timeout, timeout, AUTHENTICATION, "localhost");
         this.address = requireNonNull(address, "address is null");
+        this.metastoreClientAdapterProvider = requireNonNull(metastoreClientAdapterProvider, "metastoreClientAdapterProvider is null");
     }
 
     @Override
     public ThriftMetastoreClient createMetastoreClient(Optional<String> delegationToken)
             throws TException
     {
-        return factory.create(address, delegationToken);
+        return metastoreClientAdapterProvider.createThriftMetastoreClientAdapter(factory.create(address, delegationToken));
     }
 }
