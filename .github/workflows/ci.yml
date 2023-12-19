@@ -179,6 +179,35 @@ jobs:
           git tag -m '' "${TRINO_VERSION}" HEAD
           git push origin "${TRINO_VERSION}"
 
+  deploy-maven:
+    # Only deploy buffer service artifacts for merges to galaxy*, or for PRs with the 'with-images' label
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'with-images')
+    runs-on: [ self-hosted, sep-cicd, gha-fleet-small ]
+    timeout-minutes: 30
+    needs: determine-version
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup
+        with:
+          cache: restore
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_CICD_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_CICD_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Maven Deploy
+        run: |
+          export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
+          $RETRY $MAVEN install deploy -B --strict-checksums -V -T 1C -DskipTests -Dair.check.skip-all -am \
+            -pl :discovery-client,:data-client,:discovery-server,:data-server \
+            -Drevision=${{ needs.determine-version.outputs.version }}
+
   maven-checks:
     runs-on: [self-hosted, sep-cicd, gha-fleet-small]
     strategy:
