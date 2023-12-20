@@ -17,7 +17,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import com.starburstdata.trino.plugins.snowflake.jdbc.SnowflakeClient;
+import com.starburstdata.trino.plugin.snowflake.jdbc.SnowflakeClient;
 import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.TableId;
 import io.trino.plugin.base.mapping.IdentifierMapping;

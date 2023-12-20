@@ -16,7 +16,7 @@ package io.trino.plugin.snowflake.procedure;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import com.starburstdata.trino.plugins.snowflake.jdbc.SnowflakeClient;
+import com.starburstdata.trino.plugin.snowflake.jdbc.SnowflakeClient;
 import io.trino.plugin.base.mapping.IdentifierMapping;
 import io.trino.plugin.base.mapping.RemoteIdentifiers;
 import io.trino.plugin.jdbc.ConnectionFactory;

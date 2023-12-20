@@ -24,13 +24,13 @@
         </dependency>
 
         <dependency>
-            <groupId>com.starburstdata.trino.plugins</groupId>
-            <artifactId>starburst-synapse</artifactId>
+            <groupId>io.airlift</groupId>
+            <artifactId>configuration</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>io.airlift</groupId>
-            <artifactId>configuration</artifactId>
+            <groupId>io.trino</groupId>
+            <artifactId>starburst-synapse</artifactId>
         </dependency>
 
         <dependency>
@@ -96,15 +96,15 @@
         </dependency>
 
         <dependency>
-            <groupId>com.starburstdata.trino.plugins</groupId>
-            <artifactId>starburst-synapse</artifactId>
-            <type>test-jar</type>
+            <groupId>io.airlift</groupId>
+            <artifactId>junit-extensions</artifactId>
             <scope>test</scope>
         </dependency>
 
         <dependency>
-            <groupId>io.airlift</groupId>
-            <artifactId>junit-extensions</artifactId>
+            <groupId>io.trino</groupId>
+            <artifactId>starburst-synapse</artifactId>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
 
@@ -213,7 +213,7 @@
                                 <include>**/TestSynapseConnectorTest.java</include>
                             </includes>
                             <dependenciesToScan>
-                                <dependency>com.starburstdata.trino.plugins:starburst-synapse:test-jar</dependency>
+                                <dependency>io.trino:starburst-synapse:test-jar</dependency>
                             </dependenciesToScan>
                         </configuration>
                     </plugin>

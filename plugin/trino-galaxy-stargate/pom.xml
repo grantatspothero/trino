@@ -29,13 +29,13 @@
         </dependency>
 
         <dependency>
-            <groupId>com.starburstdata.trino.plugins</groupId>
-            <artifactId>starburst-stargate</artifactId>
+            <groupId>io.airlift</groupId>
+            <artifactId>configuration</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>io.airlift</groupId>
-            <artifactId>configuration</artifactId>
+            <groupId>io.trino</groupId>
+            <artifactId>starburst-stargate</artifactId>
         </dependency>
 
         <dependency>
@@ -95,13 +95,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- used by tests but also needed transitively -->
-        <dependency>
-            <groupId>com.starburstdata.trino.plugins</groupId>
-            <artifactId>starburst-plugin-toolkit</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>bootstrap</artifactId>
@@ -120,12 +113,11 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- for testing -->
+        <!-- used by tests but also needed transitively -->
         <dependency>
-            <groupId>com.starburstdata.trino.plugins</groupId>
-            <artifactId>starburst-stargate</artifactId>
-            <type>test-jar</type>
-            <scope>test</scope>
+            <groupId>io.trino</groupId>
+            <artifactId>starburst-plugin-toolkit</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <dependency>
@@ -137,6 +129,14 @@
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>testing</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- for testing -->
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>starburst-stargate</artifactId>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
 

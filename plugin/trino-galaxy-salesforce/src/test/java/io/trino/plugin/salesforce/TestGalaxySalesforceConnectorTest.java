@@ -13,7 +13,7 @@
  */
 package io.trino.plugin.salesforce;
 
-import com.starburstdata.trino.plugins.salesforce.TestSalesforceConnectorTest;
+import com.starburstdata.trino.plugin.salesforce.TestSalesforceConnectorTest;
 import io.trino.testing.MaterializedResult;
 import org.junit.jupiter.api.Test;
 

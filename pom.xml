@@ -213,8 +213,6 @@
         <dep.starburst-dataframe.version>0.5.0.20240103-59af7c5</dep.starburst-dataframe.version>
         <!-- released from https://github.com/starburstdata/stargate -->
         <dep.stargate.version>stargate-12952-gf35b98ef29</dep.stargate.version>
-        <!-- released from https://github.com/starburstdata/starburst-trino-plugins -->
-        <dep.starburst-trino-plugins.version>434.4</dep.starburst-trino-plugins.version>
 
         <!-- keep dependency properties sorted -->
         <dep.accumulo-hadoop.version>2.7.7-1</dep.accumulo-hadoop.version>
@@ -712,103 +710,6 @@
             </dependency>
 
             <dependency>
-                <groupId>com.starburstdata.trino.plugins</groupId>
-                <artifactId>starburst-dynamodb</artifactId>
-                <version>${dep.starburst-trino-plugins.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.starburstdata.trino.plugins</groupId>
-                <artifactId>starburst-dynamodb</artifactId>
-                <version>${dep.starburst-trino-plugins.version}</version>
-                <type>test-jar</type>
-            </dependency>
-
-            <dependency>
-                <groupId>com.starburstdata.trino.plugins</groupId>
-                <artifactId>starburst-license</artifactId>
-                <version>${dep.starburst-trino-plugins.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.starburstdata.trino.plugins</groupId>
-                <artifactId>starburst-oracle</artifactId>
-                <version>${dep.starburst-trino-plugins.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.starburstdata.trino.plugins</groupId>
-                <artifactId>starburst-oracle</artifactId>
-                <version>${dep.starburst-trino-plugins.version}</version>
-                <type>test-jar</type>
-            </dependency>
-
-            <dependency>
-                <groupId>com.starburstdata.trino.plugins</groupId>
-                <artifactId>starburst-plugin-toolkit</artifactId>
-                <version>${dep.starburst-trino-plugins.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.starburstdata.trino.plugins</groupId>
-                <artifactId>starburst-plugin-toolkit</artifactId>
-                <version>${dep.starburst-trino-plugins.version}</version>
-                <type>test-jar</type>
-            </dependency>
-
-            <dependency>
-                <groupId>com.starburstdata.trino.plugins</groupId>
-                <artifactId>starburst-salesforce</artifactId>
-                <version>${dep.starburst-trino-plugins.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.starburstdata.trino.plugins</groupId>
-                <artifactId>starburst-salesforce</artifactId>
-                <version>${dep.starburst-trino-plugins.version}</version>
-                <type>test-jar</type>
-            </dependency>
-
-            <dependency>
-                <groupId>com.starburstdata.trino.plugins</groupId>
-                <artifactId>starburst-snowflake</artifactId>
-                <version>${dep.starburst-trino-plugins.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.starburstdata.trino.plugins</groupId>
-                <artifactId>starburst-snowflake</artifactId>
-                <version>${dep.starburst-trino-plugins.version}</version>
-                <type>test-jar</type>
-            </dependency>
-
-            <dependency>
-                <groupId>com.starburstdata.trino.plugins</groupId>
-                <artifactId>starburst-stargate</artifactId>
-                <version>${dep.starburst-trino-plugins.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.starburstdata.trino.plugins</groupId>
-                <artifactId>starburst-stargate</artifactId>
-                <version>${dep.starburst-trino-plugins.version}</version>
-                <type>test-jar</type>
-            </dependency>
-
-            <dependency>
-                <groupId>com.starburstdata.trino.plugins</groupId>
-                <artifactId>starburst-synapse</artifactId>
-                <version>${dep.starburst-trino-plugins.version}</version>
-                <type>test-jar</type>
-            </dependency>
-
-            <dependency>
-                <groupId>com.starburstdata.trino.plugins</groupId>
-                <artifactId>starburst-synapse</artifactId>
-                <version>${dep.starburst-trino-plugins.version}</version>
-            </dependency>
-
-            <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
                 <version>1.16.0</version>
@@ -1302,13 +1203,98 @@
 
             <dependency>
                 <groupId>io.trino</groupId>
+                <artifactId>starburst-dynamodb</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>starburst-dynamodb</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
                 <artifactId>starburst-license</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>io.trino</groupId>
+                <artifactId>starburst-oracle</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>starburst-oracle</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
                 <artifactId>starburst-plugin-toolkit</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>starburst-plugin-toolkit</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>starburst-salesforce</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>starburst-salesforce</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>starburst-snowflake</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>starburst-snowflake</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>starburst-stargate</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>starburst-stargate</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>starburst-synapse</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>starburst-synapse</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

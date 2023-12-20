@@ -14,7 +14,7 @@
 package io.trino.plugin.stargate;
 
 import com.google.common.collect.ImmutableMap;
-import com.starburstdata.trino.plugins.stargate.StargateQueryRunner;
+import com.starburstdata.trino.plugin.stargate.StargateQueryRunner;
 import io.trino.plugin.jdbc.BaseJdbcConnectorSmokeTest;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;

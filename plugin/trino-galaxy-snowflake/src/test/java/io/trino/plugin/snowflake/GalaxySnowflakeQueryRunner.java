@@ -15,7 +15,7 @@ package io.trino.plugin.snowflake;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.starburstdata.trino.plugins.snowflake.SnowflakeServer;
+import com.starburstdata.trino.plugin.snowflake.SnowflakeServer;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
 import io.trino.plugin.objectstore.TestingLocationSecurityServer;
 import io.trino.testing.DistributedQueryRunner;
@@ -24,10 +24,10 @@ import io.trino.testing.GalaxyQueryRunner;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.starburstdata.trino.plugins.snowflake.SnowflakeServer.JDBC_URL;
-import static com.starburstdata.trino.plugins.snowflake.SnowflakeServer.PASSWORD;
-import static com.starburstdata.trino.plugins.snowflake.SnowflakeServer.ROLE;
-import static com.starburstdata.trino.plugins.snowflake.SnowflakeServer.USER;
+import static com.starburstdata.trino.plugin.snowflake.SnowflakeServer.JDBC_URL;
+import static com.starburstdata.trino.plugin.snowflake.SnowflakeServer.PASSWORD;
+import static com.starburstdata.trino.plugin.snowflake.SnowflakeServer.ROLE;
+import static com.starburstdata.trino.plugin.snowflake.SnowflakeServer.USER;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;

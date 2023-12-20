@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-import static com.starburstdata.trino.plugins.dynamodb.DynamoDbConnectionFactory.AWS_REGION_TO_CDATA_REGION;
+import static com.starburstdata.trino.plugin.dynamodb.DynamoDbConnectionFactory.AWS_REGION_TO_CDATA_REGION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 

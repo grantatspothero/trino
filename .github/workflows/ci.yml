@@ -840,7 +840,6 @@ jobs:
             - { modules: plugin/trino-galaxy-snowflake, profile: jdbc-integration-tests }
             - { modules: plugin/trino-galaxy-snowflake, profile: parallel-integration-tests }
             - { modules: plugin/trino-galaxy-stargate }
-            - { modules: plugin/trino-galaxy-synapse }
             - { modules: plugin/trino-galaxy-synapse, profile: jdbc-integration-tests }
             - { modules: plugin/trino-clickhouse }
             - { modules: plugin/trino-delta-lake }

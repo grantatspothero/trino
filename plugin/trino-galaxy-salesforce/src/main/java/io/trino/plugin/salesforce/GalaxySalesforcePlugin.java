@@ -13,9 +13,9 @@
  */
 package io.trino.plugin.salesforce;
 
-import com.starburstdata.trino.plugins.license.LicenseManager;
-import com.starburstdata.trino.plugins.salesforce.EnableWrites;
-import com.starburstdata.trino.plugins.salesforce.SalesforceModule;
+import com.starburstdata.trino.plugin.license.LicenseManager;
+import com.starburstdata.trino.plugin.salesforce.EnableWrites;
+import com.starburstdata.trino.plugin.salesforce.SalesforceModule;
 import io.trino.plugin.jdbc.JdbcConnectorFactory;
 import io.trino.spi.Plugin;
 import io.trino.spi.connector.ConnectorFactory;

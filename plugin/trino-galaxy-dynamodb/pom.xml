@@ -25,19 +25,19 @@
         </dependency>
 
         <dependency>
-            <groupId>com.starburstdata.trino.plugins</groupId>
+            <groupId>io.airlift</groupId>
+            <artifactId>configuration</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
             <artifactId>starburst-dynamodb</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>com.starburstdata.trino.plugins</groupId>
+            <groupId>io.trino</groupId>
             <artifactId>starburst-license</artifactId>
             <scope>compile</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.airlift</groupId>
-            <artifactId>configuration</artifactId>
         </dependency>
 
         <dependency>
@@ -88,13 +88,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.starburstdata.trino.plugins</groupId>
-            <artifactId>starburst-dynamodb</artifactId>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <scope>test</scope>
@@ -103,6 +96,13 @@
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>junit-extensions</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>starburst-dynamodb</artifactId>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
 
@@ -187,7 +187,7 @@
                                 <include>**/TestDynamoDbConnectorTest.java</include>
                             </includes>
                             <dependenciesToScan>
-                                <dependency>com.starburstdata.trino.plugins:starburst-dynamodb:test-jar</dependency>
+                                <dependency>io.trino:starburst-dynamodb:test-jar</dependency>
                             </dependenciesToScan>
                         </configuration>
                     </plugin>

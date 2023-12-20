@@ -14,8 +14,8 @@
 package io.trino.plugin.stargate;
 
 import com.google.inject.Inject;
-import com.starburstdata.trino.plugins.stargate.EnableWrites;
-import com.starburstdata.trino.plugins.stargate.StargateClient;
+import com.starburstdata.trino.plugin.stargate.EnableWrites;
+import com.starburstdata.trino.plugin.stargate.StargateClient;
 import io.trino.plugin.base.mapping.IdentifierMapping;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;

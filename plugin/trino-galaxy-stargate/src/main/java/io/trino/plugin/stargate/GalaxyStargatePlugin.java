@@ -15,7 +15,7 @@ package io.trino.plugin.stargate;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.starburstdata.trino.plugins.stargate.EnableWrites;
+import com.starburstdata.trino.plugin.stargate.EnableWrites;
 import io.trino.plugin.jdbc.ExtraCredentialsBasedIdentityCacheMappingModule;
 import io.trino.plugin.jdbc.JdbcConnectorFactory;
 import io.trino.spi.Plugin;

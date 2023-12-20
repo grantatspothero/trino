@@ -14,7 +14,7 @@
 package io.trino.plugin.snowflake;
 
 import com.google.common.collect.ImmutableMap;
-import com.starburstdata.trino.plugins.snowflake.SnowflakeServer;
+import com.starburstdata.trino.plugin.snowflake.SnowflakeServer;
 import io.trino.plugin.objectstore.TestingLocationSecurityServer;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
@@ -24,8 +24,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
-import static com.starburstdata.trino.plugins.snowflake.SnowflakeQueryRunner.TEST_SCHEMA;
-import static com.starburstdata.trino.plugins.snowflake.SnowflakeServer.TEST_WAREHOUSE;
+import static com.starburstdata.trino.plugin.snowflake.SnowflakeQueryRunner.TEST_SCHEMA;
+import static com.starburstdata.trino.plugin.snowflake.SnowflakeServer.TEST_WAREHOUSE;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.lang.String.format;

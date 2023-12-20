@@ -14,9 +14,9 @@
 package io.trino.plugin.snowflake;
 
 import com.google.inject.Injector;
-import com.starburstdata.trino.plugins.snowflake.parallel.SnowflakeJdbcOverrideModule;
-import com.starburstdata.trino.plugins.snowflake.parallel.SnowflakeParallelConnector;
-import com.starburstdata.trino.plugins.snowflake.parallel.SnowflakeParallelModule;
+import com.starburstdata.trino.plugin.snowflake.parallel.SnowflakeJdbcOverrideModule;
+import com.starburstdata.trino.plugin.snowflake.parallel.SnowflakeParallelConnector;
+import com.starburstdata.trino.plugin.snowflake.parallel.SnowflakeParallelModule;
 import io.airlift.bootstrap.Bootstrap;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
@@ -32,7 +32,7 @@ import io.trino.spi.type.TypeManager;
 
 import java.util.Map;
 
-import static com.starburstdata.trino.plugins.snowflake.SnowflakeConnectorFlavour.PARALLEL;
+import static com.starburstdata.trino.plugin.snowflake.SnowflakeConnectorFlavour.PARALLEL;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.trino.plugin.base.Versions.checkStrictSpiVersionMatch;
 import static java.util.Objects.requireNonNull;

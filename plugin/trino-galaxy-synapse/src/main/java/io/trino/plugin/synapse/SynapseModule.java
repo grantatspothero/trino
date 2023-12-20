@@ -20,7 +20,7 @@ import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
-import com.starburstdata.trino.plugins.synapse.StarburstSynapseModule;
+import com.starburstdata.trino.plugin.synapse.StarburstSynapseModule;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.opentelemetry.api.OpenTelemetry;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;

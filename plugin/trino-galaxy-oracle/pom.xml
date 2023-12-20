@@ -39,19 +39,19 @@
         </dependency>
 
         <dependency>
-            <groupId>com.starburstdata.trino.plugins</groupId>
+            <groupId>io.airlift</groupId>
+            <artifactId>configuration</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
             <artifactId>starburst-license</artifactId>
             <scope>compile</scope>
         </dependency>
 
         <dependency>
-            <groupId>com.starburstdata.trino.plugins</groupId>
+            <groupId>io.trino</groupId>
             <artifactId>starburst-oracle</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.airlift</groupId>
-            <artifactId>configuration</artifactId>
         </dependency>
 
         <dependency>
@@ -111,15 +111,15 @@
         </dependency>
 
         <dependency>
-            <groupId>com.starburstdata.trino.plugins</groupId>
-            <artifactId>starburst-oracle</artifactId>
-            <type>test-jar</type>
+            <groupId>io.airlift</groupId>
+            <artifactId>junit-extensions</artifactId>
             <scope>test</scope>
         </dependency>
 
         <dependency>
-            <groupId>io.airlift</groupId>
-            <artifactId>junit-extensions</artifactId>
+            <groupId>io.trino</groupId>
+            <artifactId>starburst-oracle</artifactId>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
 

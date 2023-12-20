@@ -14,8 +14,8 @@
 package io.trino.plugin.oracle;
 
 import com.google.common.net.HostAndPort;
-import com.starburstdata.trino.plugins.oracle.OracleConnectionProvider;
-import com.starburstdata.trino.plugins.oracle.OraclePoolingConnectionFactory;
+import com.starburstdata.trino.plugin.oracle.OracleConnectionProvider;
+import com.starburstdata.trino.plugin.oracle.OraclePoolingConnectionFactory;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.base.galaxy.RegionVerifier;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;

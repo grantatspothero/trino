@@ -13,8 +13,8 @@
  */
 package io.trino.plugin.dynamodb;
 
-import com.starburstdata.trino.plugins.dynamodb.EnableWrites;
-import com.starburstdata.trino.plugins.license.LicenseManager;
+import com.starburstdata.trino.plugin.dynamodb.EnableWrites;
+import com.starburstdata.trino.plugin.license.LicenseManager;
 import io.trino.plugin.jdbc.JdbcConnectorFactory;
 import io.trino.spi.Plugin;
 import io.trino.spi.connector.ConnectorFactory;

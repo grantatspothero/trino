@@ -13,13 +13,13 @@
  */
 package io.trino.plugin.stargate;
 
-import com.starburstdata.trino.plugins.stargate.StargateQueryRunner;
+import com.starburstdata.trino.plugin.stargate.StargateQueryRunner;
 import io.trino.testing.DistributedQueryRunner;
 
 import java.util.Map;
 import java.util.Optional;
 
-import static com.starburstdata.trino.plugins.stargate.StargateQueryRunner.createRemoteStarburstQueryRunner;
+import static com.starburstdata.trino.plugin.stargate.StargateQueryRunner.createRemoteStarburstQueryRunner;
 import static io.airlift.testing.Closeables.closeAllSuppress;
 
 public final class GalaxyStargateQueryRunner

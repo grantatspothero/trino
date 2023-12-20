@@ -13,14 +13,14 @@
  */
 package io.trino.plugin.snowflake;
 
-import com.starburstdata.trino.plugins.snowflake.jdbc.SnowflakeJdbcClientModule;
+import com.starburstdata.trino.plugin.snowflake.jdbc.SnowflakeJdbcClientModule;
 import io.trino.plugin.jdbc.JdbcConnectorFactory;
 import io.trino.spi.Plugin;
 import io.trino.spi.connector.ConnectorFactory;
 
 import java.util.List;
 
-import static com.starburstdata.trino.plugins.snowflake.SnowflakeConnectorFlavour.JDBC;
+import static com.starburstdata.trino.plugin.snowflake.SnowflakeConnectorFlavour.JDBC;
 import static io.airlift.configuration.ConfigurationAwareModule.combine;
 
 public class GalaxySnowflakePlugin
