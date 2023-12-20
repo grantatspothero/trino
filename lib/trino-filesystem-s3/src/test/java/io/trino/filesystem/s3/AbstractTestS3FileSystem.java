@@ -84,7 +84,7 @@ public abstract class AbstractTestS3FileSystem
     }
 
     @Override
-    protected final boolean supportsCreateExclusive()
+    protected boolean isCreateExclusive()
     {
         return false;
     }
