@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.server;
+package io.trino.server.galaxy.autoscaling;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -20,7 +20,7 @@ import java.util.Map;
 import static java.util.Objects.requireNonNull;
 
 /**
- * TODO: we need a definition what a default compute unit is
+ * Recommended optimal cluster size.
  *
  * @param recommendedComputeUnits a target value for recommended compute units
  * @param debugMetrics raw debugMetrics that were used to compute the recommendation

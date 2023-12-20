@@ -11,10 +11,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.server;
+package io.trino.server.galaxy.autoscaling;
 
 import com.google.inject.Inject;
-import io.trino.server.WorkerRecommendationProvider.WorkerCountEstimator;
+import io.trino.server.galaxy.autoscaling.WorkerRecommendationProvider.WorkerCountEstimator;
 
 import java.util.concurrent.TimeUnit;
 

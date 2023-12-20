@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.server;
+package io.trino.server.galaxy.autoscaling;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
@@ -26,6 +26,7 @@ import io.trino.execution.QueryManagerStats;
 import io.trino.execution.scheduler.NodeSchedulerConfig;
 import io.trino.metadata.InternalNodeManager;
 import io.trino.metadata.NodeState;
+import io.trino.server.BasicQueryInfo;
 import io.trino.spi.QueryId;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -254,8 +255,7 @@ public class WorkerRecommendationProvider
             }
 
             runningQueryStats = new QueryStats(runningQueries, totalCpuTimeMillis);
-            lastUpdateTimeStopwatch.reset();
-            lastUpdateTimeStopwatch.start();
+            lastUpdateTimeStopwatch.reset().start();
         }
 
         public double avgWorkerParallelism()

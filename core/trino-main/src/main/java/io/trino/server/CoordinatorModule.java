@@ -102,6 +102,7 @@ import io.trino.operator.ForScheduler;
 import io.trino.operator.OperatorStats;
 import io.trino.server.galaxy.GalaxyCustomerMetricsModule;
 import io.trino.server.galaxy.GalaxyEnabledConfig;
+import io.trino.server.galaxy.autoscaling.GalaxyTrinoAutoscalingModule;
 import io.trino.server.protocol.ExecutingStatementResource;
 import io.trino.server.protocol.QueryInfoUrlFactory;
 import io.trino.server.protocol.StatementResponseFilter;
@@ -378,12 +379,7 @@ public class CoordinatorModule
 
         install(new ResultsCacheModule());
         install(new QueryExecutionFactoryModule());
-
-        configBinder(binder).bindConfig(GalaxyTrinoAutoscalingConfig.class);
-        binder.bind(WorkerRecommendationProvider.WorkerCountEstimator.class).to(QueryTimeRatioBasedEstimator.class).in(Scopes.SINGLETON);
-        binder.bind(WorkerRecommendationProvider.class).in(Scopes.SINGLETON);
-        jaxrsBinder(binder).bind(GalaxyTrinoAutoscalingResource.class);
-
+        install(new GalaxyTrinoAutoscalingModule());
         install(new GalaxyCustomerMetricsModule());
 
         // cleanup

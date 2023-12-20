@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.server;
+package io.trino.server.galaxy.autoscaling;
 
 import io.airlift.units.Duration;
 import org.assertj.core.api.DoubleAssert;
@@ -24,8 +24,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import static io.trino.server.WorkerRecommendationProvider.QueryStats;
-import static io.trino.server.WorkerRecommendationProvider.estimateCpuTimeToProcessQueriesMillis;
+import static io.trino.server.galaxy.autoscaling.WorkerRecommendationProvider.QueryStats;
+import static io.trino.server.galaxy.autoscaling.WorkerRecommendationProvider.estimateCpuTimeToProcessQueriesMillis;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class TestWorkerRecommendationProvider
