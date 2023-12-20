@@ -31,7 +31,7 @@ import io.trino.connector.system.jdbc.TableTypeJdbcTable;
 import io.trino.connector.system.jdbc.TypesJdbcTable;
 import io.trino.connector.system.jdbc.UdtJdbcTable;
 import io.trino.operator.table.ExcludeColumnsFunction;
-import io.trino.operator.table.Sequence;
+import io.trino.operator.table.SequenceFunction;
 import io.trino.server.ServerConfig;
 import io.trino.server.dataframe.AnalyzeLogicalPlan;
 import io.trino.spi.connector.SystemTable;
@@ -89,6 +89,6 @@ public class SystemConnectorModule
         }
 
         tableFunctions.addBinding().to(ExcludeColumnsFunction.class).in(Scopes.SINGLETON);
-        tableFunctions.addBinding().toProvider(Sequence.class).in(Scopes.SINGLETON);
+        tableFunctions.addBinding().to(SequenceFunction.class).in(Scopes.SINGLETON);
     }
 }
