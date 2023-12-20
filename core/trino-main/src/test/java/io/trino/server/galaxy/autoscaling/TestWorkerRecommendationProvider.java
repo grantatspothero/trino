@@ -150,7 +150,7 @@ class TestWorkerRecommendationProvider
     @MethodSource("provideForVerifyScaleup")
     void verifyScaleup(String name, long cpuTimeToProcessQueriesMillis, long scaleUpTimeSecs, long minimalClusterRuntimeSecs, long expectedSize)
     {
-        GalaxyTrinoAutoscalingConfig cfg = new GalaxyTrinoAutoscalingConfig();
+        QueryTimeRatioBasedEstimatorConfig cfg = new QueryTimeRatioBasedEstimatorConfig();
         cfg.setNodeStartupTime(Duration.succinctDuration(scaleUpTimeSecs, TimeUnit.SECONDS));
         cfg.setRemainingTimeScaleUpThreshold(Duration.succinctDuration(minimalClusterRuntimeSecs, TimeUnit.SECONDS));
         cfg.setRemainingTimeScaleDownThreshold(Duration.ZERO);
@@ -164,7 +164,7 @@ class TestWorkerRecommendationProvider
     void shouldRescaleA()
     {
         int actualSize = 0;
-        GalaxyTrinoAutoscalingConfig cfg = new GalaxyTrinoAutoscalingConfig();
+        QueryTimeRatioBasedEstimatorConfig cfg = new QueryTimeRatioBasedEstimatorConfig();
         cfg.setNodeStartupTime(Duration.succinctDuration(60, TimeUnit.SECONDS));
         cfg.setRemainingTimeScaleUpThreshold(Duration.succinctDuration(60, TimeUnit.SECONDS));
         cfg.setRemainingTimeScaleDownThreshold(Duration.succinctDuration(30, TimeUnit.SECONDS));

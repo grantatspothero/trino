@@ -32,11 +32,12 @@ public class QueryTimeRatioBasedEstimator
     private final long scaleUpTimeSeconds;
 
     /*
-     * MinimalClusterRuntime is a minimal time we want to run a cluster after a resize.
+     * ScaleUpThresholdSeconds is a minimal time we want to run a cluster after a resize,
+     * before considering it is worth to scale up.
      * If there is not enough work to run cluster for at least the specified interval,
      * then it is not cost-efficient to spin up additional workers.
      */
-    private final long minimalClusterRuntimeSecs;
+    private final long scaleUpThresholdSeconds;
     /*
      * ScaleDownThresholdSecs is the lower bound for a running time before scaledown.
      * If there is not enough work to run for scaleDownThreshold Seconds, it means we can
@@ -47,11 +48,11 @@ public class QueryTimeRatioBasedEstimator
     private final double scaleUpRatio;
 
     @Inject
-    public QueryTimeRatioBasedEstimator(GalaxyTrinoAutoscalingConfig config)
+    public QueryTimeRatioBasedEstimator(QueryTimeRatioBasedEstimatorConfig config)
     {
         requireNonNull(config, "config is null");
         this.scaleUpTimeSeconds = config.getNodeStartupTime().roundTo(TimeUnit.SECONDS);
-        this.minimalClusterRuntimeSecs = config.getRemainingTimeScaleUpThreshold().roundTo(TimeUnit.SECONDS);
+        this.scaleUpThresholdSeconds = config.getRemainingTimeScaleUpThreshold().roundTo(TimeUnit.SECONDS);
         this.scaleDownThresholdSecs = config.getRemainingTimeScaleDownThreshold().roundTo(TimeUnit.SECONDS);
         this.scaleDownRatio = config.getScaleDownRatio();
         this.scaleUpRatio = config.getScaleUpRatio();
@@ -60,11 +61,11 @@ public class QueryTimeRatioBasedEstimator
     @Override
     public int estimate(
             long cpuTimeToProcessQueriesMillis,
-            double avgWorkerParallelism,
+            double averageWorkerParallelism,
             int activeNodes)
     {
         double cpuTimeToProcessQueriesSeconds = TimeUnit.MILLISECONDS.toSeconds(cpuTimeToProcessQueriesMillis);
-        double expectedRunningTimeSeconds = cpuTimeToProcessQueriesSeconds / avgWorkerParallelism / activeNodes;
+        double expectedRunningTimeSeconds = cpuTimeToProcessQueriesSeconds / averageWorkerParallelism / activeNodes;
 
         if (expectedRunningTimeSeconds < scaleDownThresholdSecs) {
             return roundToInt(activeNodes * scaleDownRatio, FLOOR);
@@ -73,7 +74,7 @@ public class QueryTimeRatioBasedEstimator
         double timeToFinishWorkAfterRescaleSecs = expectedRunningTimeSeconds - scaleUpTimeSeconds;
 
         // finally calculate if R on a scaled cluster is higher than threshold, so it can benefit from scaleup
-        if ((timeToFinishWorkAfterRescaleSecs / scaleUpRatio) > minimalClusterRuntimeSecs) {
+        if ((timeToFinishWorkAfterRescaleSecs / scaleUpRatio) > scaleUpThresholdSeconds) {
             return roundToInt(activeNodes * scaleUpRatio, CEILING);
         }
 

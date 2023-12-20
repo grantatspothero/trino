@@ -14,12 +14,12 @@
 package io.trino.server.galaxy.autoscaling;
 
 import com.google.inject.Binder;
-import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
-import io.trino.server.galaxy.autoscaling.WorkerRecommendationProvider.WorkerCountEstimator;
 
+import static io.airlift.configuration.ConditionalModule.conditionalModule;
 import static io.airlift.configuration.ConfigBinder.configBinder;
-import static io.airlift.jaxrs.JaxrsBinder.jaxrsBinder;
+import static io.trino.server.galaxy.autoscaling.GalaxyTrinoAutoscalingConfig.AutoscalingMethod.TIME_OPTIMAL;
+import static io.trino.server.galaxy.autoscaling.GalaxyTrinoAutoscalingConfig.AutoscalingMethod.TIME_RATIO;
 
 public class GalaxyTrinoAutoscalingModule
         extends AbstractConfigurationAwareModule
@@ -28,8 +28,12 @@ public class GalaxyTrinoAutoscalingModule
     protected void setup(Binder binder)
     {
         configBinder(binder).bindConfig(GalaxyTrinoAutoscalingConfig.class);
-        binder.bind(WorkerCountEstimator.class).to(QueryTimeRatioBasedEstimator.class).in(Scopes.SINGLETON);
-        binder.bind(WorkerRecommendationProvider.class).in(Scopes.SINGLETON);
-        jaxrsBinder(binder).bind(GalaxyTrinoAutoscalingResource.class);
+
+        install(conditionalModule(
+                GalaxyTrinoAutoscalingConfig.class,
+                config -> config.getAutoscalingMethod() == TIME_RATIO, new QueryTimeRatioBasedEstimatorModule()));
+        install(conditionalModule(
+                GalaxyTrinoAutoscalingConfig.class,
+                config -> config.getAutoscalingMethod() == TIME_OPTIMAL, new QueryTimeBasedOptimalEstimatorModule()));
     }
 }
