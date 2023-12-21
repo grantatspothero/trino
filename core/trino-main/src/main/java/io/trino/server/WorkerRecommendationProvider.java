@@ -255,6 +255,7 @@ public class WorkerRecommendationProvider
 
             runningQueryStats = new QueryStats(runningQueries, totalCpuTimeMillis);
             lastUpdateTimeStopwatch.reset();
+            lastUpdateTimeStopwatch.start();
         }
 
         public double avgWorkerParallelism()
