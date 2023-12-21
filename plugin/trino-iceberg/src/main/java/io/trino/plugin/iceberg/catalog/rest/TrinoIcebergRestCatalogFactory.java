@@ -26,7 +26,6 @@ import io.trino.plugin.iceberg.catalog.rest.IcebergRestCatalogConfig.SessionType
 import io.trino.plugin.iceberg.fileio.ForwardingFileIo;
 import io.trino.spi.security.ConnectorIdentity;
 import org.apache.iceberg.CatalogProperties;
-import org.apache.iceberg.hadoop.HadoopFileIO;
 import org.apache.iceberg.rest.HTTPClient;
 import org.apache.iceberg.rest.RESTSessionCatalog;
 
@@ -34,7 +33,6 @@ import java.net.URI;
 import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.iceberg.CatalogProperties.FILE_IO_IMPL;
 
 public class TrinoIcebergRestCatalogFactory
         implements TrinoCatalogFactory
@@ -84,7 +82,6 @@ public class TrinoIcebergRestCatalogFactory
             properties.put(CatalogProperties.URI, serverUri.toString());
             warehouse.ifPresent(location -> properties.put(CatalogProperties.WAREHOUSE_LOCATION, location));
             properties.put("trino-version", trinoVersion);
-            properties.put(FILE_IO_IMPL, HadoopFileIO.class.getName());
             properties.putAll(securityProperties.get());
 
             if (vendedCredentialsEnabled) {
