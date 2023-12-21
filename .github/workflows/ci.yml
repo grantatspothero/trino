@@ -84,7 +84,8 @@ jobs:
         run: |
           version="$(./core/docker/determine-image-tag)"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            version="pr${{ github.event.number }}-${version}"
+            # Ensure version for PR build starts with a number. Otherwise provisio plugin complains.
+            version="${{ github.event.number }}pr-${version}"
           fi
           echo "Determined project version: ${version}"
           echo "version=${version}" >> $GITHUB_OUTPUT
