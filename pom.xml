@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>147</version>
+        <version>148</version>
     </parent>
 
     <groupId>io.trino</groupId>
@@ -498,6 +498,30 @@
                 <groupId>com.facebook.thirdparty</groupId>
                 <artifactId>libsvm</artifactId>
                 <version>3.18.1</version>
+            </dependency>
+
+            <!-- Temporary - remove after bump to airbase 148 -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.dataformat</groupId>
+                <artifactId>jackson-dataformat-xml</artifactId>
+                <version>2.15.3</version>
+            </dependency>
+
+            <!-- Temporary - remove after bump to airbase 148 -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.module</groupId>
+                <artifactId>jackson-module-jaxb-annotations</artifactId>
+                <version>2.15.3</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>jakarta.activation</groupId>
+                        <artifactId>jakarta.activation-api</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>jakarta.xml.bind</groupId>
+                        <artifactId>jakarta.xml.bind-api</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <dependency>
