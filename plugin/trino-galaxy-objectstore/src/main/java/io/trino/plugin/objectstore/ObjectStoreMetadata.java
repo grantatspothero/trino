@@ -406,9 +406,23 @@ public class ObjectStoreMetadata
     }
 
     @Override
-    public Optional<ConnectorOutputMetadata> finishRefreshMaterializedView(ConnectorSession session, ConnectorTableHandle tableHandle, ConnectorInsertTableHandle insertHandle, Collection<Slice> fragments, Collection<ComputedStatistics> computedStatistics, List<ConnectorTableHandle> sourceTableHandles)
+    public Optional<ConnectorOutputMetadata> finishRefreshMaterializedView(
+            ConnectorSession session,
+            ConnectorTableHandle tableHandle,
+            ConnectorInsertTableHandle insertHandle,
+            Collection<Slice> fragments,
+            Collection<ComputedStatistics> computedStatistics,
+            List<ConnectorTableHandle> sourceTableHandles,
+            List<String> sourceTableFunctions)
     {
-        return icebergMetadata.finishRefreshMaterializedView(unwrap(ICEBERG, session), tableHandle, insertHandle, fragments, computedStatistics, sourceTableHandles);
+        return icebergMetadata.finishRefreshMaterializedView(
+                unwrap(ICEBERG, session),
+                tableHandle,
+                insertHandle,
+                fragments,
+                computedStatistics,
+                sourceTableHandles,
+                sourceTableFunctions);
     }
 
     @Override
