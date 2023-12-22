@@ -84,7 +84,6 @@ import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_SCH
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.CREATE_TABLE;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.DELETE;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.INSERT;
-import static io.starburst.stargate.accesscontrol.privilege.Privilege.MANAGE_DATA_OBSERVABILITY;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.MANAGE_SECURITY;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.SELECT;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.UPDATE;
@@ -1461,11 +1460,7 @@ public class TestGalaxyMetadataApiSpec
 
                         for (EntityId entityId : entityIds) {
                             EntityKind privilegeEntityKind = entityId.getEntityKind() == TABLE ? COLUMN : entityId.getEntityKind();
-                            Set<Privilege> privileges = getEntityKindPrivileges(privilegeEntityKind)
-                                    .stream()
-                                    // its under feature flag in portal currently
-                                    .filter(p -> p != MANAGE_DATA_OBSERVABILITY)
-                                    .collect(toImmutableSet());
+                            Set<Privilege> privileges = getEntityKindPrivileges(privilegeEntityKind);
                             Privilege privilege = privileges.iterator().next();
 
                             // Grant the privilege to the originalRoleName and show that it took
