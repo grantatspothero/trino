@@ -132,6 +132,7 @@ public final class FeatureExposures
                 .put(ICEBERG, "orc_writer_min_stripe_size", EXPOSED)
                 .put(ICEBERG, "orc_writer_validate_mode", EXPOSED)
                 .put(ICEBERG, "orc_writer_validate_percentage", EXPOSED)
+                .put(ICEBERG, "parquet_ignore_statistics", EXPOSED)
                 .put(ICEBERG, "parquet_max_read_block_row_count", EXPOSED)
                 .put(ICEBERG, "parquet_max_read_block_size", EXPOSED)
                 .put(ICEBERG, "parquet_native_snappy_decompressor_enabled", EXPOSED)
