@@ -164,6 +164,7 @@ public final class FeatureExposures
                 .put(DELTA, "max_initial_split_size", EXPOSED)
                 .put(DELTA, "max_split_size", EXPOSED)
                 .put(DELTA, "metastore_stream_tables_fetch_size", EXPOSED) // Galaxy specific
+                .put(DELTA, "parquet_ignore_statistics", EXPOSED)
                 .put(DELTA, "parquet_max_read_block_row_count", EXPOSED)
                 .put(DELTA, "parquet_max_read_block_size", EXPOSED)
                 .put(DELTA, "parquet_native_snappy_decompressor_enabled", EXPOSED)
