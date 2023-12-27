@@ -22,6 +22,7 @@ import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
 import io.trino.Session;
+import io.trino.event.QueryMonitor;
 import io.trino.execution.QueryIdGenerator;
 import io.trino.execution.QueryInfo;
 import io.trino.execution.QueryManagerConfig;
@@ -57,6 +58,7 @@ import static io.trino.execution.QueryState.RUNNING;
 import static io.trino.server.security.galaxy.GalaxyIdentity.getContextRoleId;
 import static io.trino.spi.StandardErrorCode.QUERY_TEXT_TOO_LARGE;
 import static io.trino.tracing.ScopedSpan.scopedSpan;
+import static io.trino.util.Failures.toFailure;
 import static io.trino.util.StatementUtils.getQueryType;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -81,6 +83,7 @@ public class DispatchManager
     private final QueryTracker<DispatchQuery> queryTracker;
 
     private final QueryManagerStats stats = new QueryManagerStats();
+    private final QueryMonitor queryMonitor;
 
     @Inject
     public DispatchManager(
@@ -95,7 +98,8 @@ public class DispatchManager
             SessionPropertyManager sessionPropertyManager,
             Tracer tracer,
             QueryManagerConfig queryManagerConfig,
-            DispatchExecutor dispatchExecutor)
+            DispatchExecutor dispatchExecutor,
+            QueryMonitor queryMonitor)
     {
         this.queryIdGenerator = requireNonNull(queryIdGenerator, "queryIdGenerator is null");
         this.queryPreparer = requireNonNull(queryPreparer, "queryPreparer is null");
@@ -113,6 +117,7 @@ public class DispatchManager
         this.dispatchExecutor = dispatchExecutor.getExecutor();
 
         this.queryTracker = new QueryTracker<>(queryManagerConfig, dispatchExecutor.getScheduledExecutor());
+        this.queryMonitor = requireNonNull(queryMonitor, "queryMonitor is null");
     }
 
     @PostConstruct
@@ -245,6 +250,11 @@ public class DispatchManager
             Optional<String> preparedSql = Optional.ofNullable(preparedQuery).flatMap(PreparedQuery::getPrepareSql);
             DispatchQuery failedDispatchQuery = failedDispatchQueryFactory.createFailedDispatchQuery(session, query, preparedSql, Optional.empty(), throwable);
             queryCreated(failedDispatchQuery);
+            // maintain proper order of calls such that EventListener has access to QueryInfo
+            // - add query to tracker
+            // - fire query created event
+            // - fire query completed event
+            queryMonitor.queryImmediateFailureEvent(failedDispatchQuery.getBasicQueryInfo(), toFailure(throwable));
             querySpan.setStatus(StatusCode.ERROR, throwable.getMessage())
                     .recordException(throwable)
                     .end();
