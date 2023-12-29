@@ -190,7 +190,7 @@
         <dep.wire.version>4.5.0</dep.wire.version>
         <dep.jna.version>5.13.0</dep.jna.version>
         <dep.okio.version>3.6.0</dep.okio.version>
-        <dep.flyway.version>10.0.0</dep.flyway.version>
+        <dep.flyway.version>10.0.1</dep.flyway.version>
         <dep.parquet.version>1.13.1</dep.parquet.version>
         <dep.antlr.version>4.13.1</dep.antlr.version>
 
