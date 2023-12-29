@@ -10,6 +10,15 @@ maven_version=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdo
 # If there are multiple matches found, the `git rev-list` below will fail to parse arguments and scipt will terminate as well.
 version_changing_commit=$(git blame pom.xml | grep "<revision>${maven_version}</revision>" | awk '{print $1}')
 
+# If the version was not changed since we introduced ${revision} maven property,
+# we should use the previous method of identifying the version-changing commit.
+# Otherwise we'd effectively reset commits_since_version_change counter without
+# changing the major version.
+commit_introducing_revision_property=e6a5abb440a06c2fa3b147c2018a078a7e27b306
+if test "$(git rev-parse "${version_changing_commit}")" = "${commit_introducing_revision_property}"; then
+    version_changing_commit=$(git blame "${commit_introducing_revision_property}^" pom.xml | grep "<version>${maven_version}</version>" | awk '{print $1}')
+fi
+
 commits_since_version_change=$(git rev-list "${version_changing_commit}..HEAD" | wc -l)
 
 current_commit_short=$(git rev-parse --short HEAD)
