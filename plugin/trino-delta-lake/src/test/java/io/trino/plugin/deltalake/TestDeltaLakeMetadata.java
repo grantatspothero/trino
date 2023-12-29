@@ -708,10 +708,10 @@ public class TestDeltaLakeMetadata
         assertUpdate("INSERT INTO " + tableName + " VALUES('txt1'), ('txt2')", 2);
 
         // Number of data files metric is not present until cache is loaded
-        assertInputInfoNumberOfDataFiles(tableName, Optional.empty());
+        assertInputInfoNumberOfDataFiles(tableName, Optional.empty(), 1);
 
         query("SELECT * FROM " + tableName); // Fill cache
-        assertInputInfoNumberOfDataFiles(tableName, Optional.of(1));
+        assertInputInfoNumberOfDataFiles(tableName, Optional.of(1), 1);
 
         assertUpdate("INSERT INTO " + tableName + " VALUES('txt3')", 1);
         assertUpdate("INSERT INTO " + tableName + " VALUES('txt3')", 1);
@@ -719,18 +719,18 @@ public class TestDeltaLakeMetadata
         assertUpdate("INSERT INTO " + tableName + " VALUES('txt3')", 1);
         assertUpdate("INSERT INTO " + tableName + " VALUES('txt3')", 1);
         query("SELECT * FROM " + tableName); // Fill cache
-        assertInputInfoNumberOfDataFiles(tableName, Optional.of(6));
+        assertInputInfoNumberOfDataFiles(tableName, Optional.of(6), 6);
 
         assertUpdate("UPDATE " + tableName + " SET a = 'txt10' WHERE a = 'txt2'", 1);
         query("SELECT * FROM " + tableName); // Fill cache
-        assertInputInfoNumberOfDataFiles(tableName, Optional.of(7));
+        assertInputInfoNumberOfDataFiles(tableName, Optional.of(7), 7);
 
         assertUpdate("DELETE FROM " + tableName, 7);
         query("SELECT * FROM " + tableName); // Fill cache
-        assertInputInfoNumberOfDataFiles(tableName, Optional.of(0));
+        assertInputInfoNumberOfDataFiles(tableName, Optional.of(0), 8);
     }
 
-    private void assertInputInfoNumberOfDataFiles(String tableName, Optional<Integer> numberOfDataFiles)
+    private void assertInputInfoNumberOfDataFiles(String tableName, Optional<Integer> numberOfDataFiles, long version)
     {
         newTransaction().execute(
                 // Make sure that each call to getInfo is with different query_id to not read cached transactionLog
@@ -738,6 +738,7 @@ public class TestDeltaLakeMetadata
                 (session) -> {
                      assertInputInfo(session, tableName, new DeltaLakeInputInfoBuilder()
                             .setNumberOfDataFiles(numberOfDataFiles)
+                            .setVersion(version)
                             .build());
                 }
         );
@@ -852,6 +853,7 @@ public class TestDeltaLakeMetadata
     private static class DeltaLakeInputInfoBuilder
     {
         private boolean partitioned = false;
+        private long version = 0;
         private boolean cdfEnabled = false;
         private String checkConstraints = "";
         private String columnMappingMode = "NONE";
@@ -863,6 +865,12 @@ public class TestDeltaLakeMetadata
         public DeltaLakeInputInfoBuilder setPartitioned(boolean partitioned)
         {
             this.partitioned = partitioned;
+            return this;
+        }
+
+        public DeltaLakeInputInfoBuilder setVersion(long version)
+        {
+            this.version = version;
             return this;
         }
 
@@ -920,7 +928,7 @@ public class TestDeltaLakeMetadata
 
             numberOfDataFiles.ifPresent(numberOfDataFiles -> galaxyTraitsBuilder.put("numberOfDataFilesInTable", Integer.toString(numberOfDataFiles)));
 
-            return new DeltaLakeInputInfo(partitioned, galaxyTraitsBuilder.buildOrThrow());
+            return new DeltaLakeInputInfo(partitioned, galaxyTraitsBuilder.buildOrThrow(), version);
         }
     }
 }

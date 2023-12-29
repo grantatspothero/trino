@@ -27,14 +27,17 @@ public class DeltaLakeInputInfo
 {
     private final boolean partitioned;
     private final Map<String, String> galaxyTraits;
+    private final long version;
 
     @JsonCreator
     public DeltaLakeInputInfo(
             @JsonProperty("partitioned") boolean partitioned,
-            @JsonProperty("galaxyTraits") Map<String, String> galaxyTraits)
+            @JsonProperty("galaxyTraits") Map<String, String> galaxyTraits,
+            @JsonProperty("version") long version)
     {
         this.partitioned = partitioned;
         this.galaxyTraits = requireNonNull(ImmutableMap.copyOf(galaxyTraits), "galaxyTraits are null");
+        this.version = version;
     }
 
     @JsonProperty
@@ -55,6 +58,11 @@ public class DeltaLakeInputInfo
         return "DELTA";
     }
 
+    public long getVersion()
+    {
+        return version;
+    }
+
     @Override
     public boolean equals(Object o)
     {
@@ -65,13 +73,14 @@ public class DeltaLakeInputInfo
             return false;
         }
         return partitioned == that.partitioned
-                && galaxyTraits.equals(that.galaxyTraits);
+                && galaxyTraits.equals(that.galaxyTraits)
+                && version == that.version;
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(partitioned, galaxyTraits);
+        return Objects.hash(partitioned, galaxyTraits, version);
     }
 
     @Override
@@ -80,6 +89,7 @@ public class DeltaLakeInputInfo
         return toStringHelper(this)
                 .add("partitioned", this.partitioned)
                 .add("galaxyTraits", this.galaxyTraits)
+                .add("version", this.version)
                 .toString();
     }
 }

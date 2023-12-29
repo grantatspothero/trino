@@ -2595,7 +2595,7 @@ public class DeltaLakeMetadata
         transactionLogAccess.getActiveFilesOnlyFromCache(tableHandle)
                 .ifPresent(addFileEntries -> galaxyTraitsBuilder.put("numberOfDataFilesInTable", Integer.toString(addFileEntries.size())));
 
-        return Optional.of(new DeltaLakeInputInfo(isPartitioned, galaxyTraitsBuilder.buildOrThrow()));
+        return Optional.of(new DeltaLakeInputInfo(isPartitioned, galaxyTraitsBuilder.buildOrThrow(), tableHandle.getReadVersion()));
     }
 
     @Override
