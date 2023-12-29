@@ -342,6 +342,10 @@
                     <groupId>com.github.stephenc.jcip</groupId>
                     <artifactId>jcip-annotations</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>io.trino</groupId>
+                    <artifactId>re2j</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
 
@@ -350,6 +354,12 @@
             <artifactId>trino-main</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.trino</groupId>
+                    <artifactId>re2j</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
