@@ -23,14 +23,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestSchemaDiscoveryVersion
 {
-    private static final int ALLOWED_VERSION_DRIFT = 1;
-
     /**
-     * Ensure Schema Discovery we are using is based on top of OSS version of SPI which
-     * matches one which is currently used in stargate-trino.
-     * We allow SPI to be one version newer assuming at least one release backward compatibility of SPI interfaces.
-     * Allowing skew makes it easier to perform galaxy-trino updates after OSS release as we do not to need to bump
-     * schema discovery dependency as part of the update.
+     * Schema Discovery comes from a separate repo, and it's combined with
+     * trino-hive that comes from this repo. The depended-on module makes no
+     * backward nor forward compatibility guarantees, so we need to ensure
+     * at least that Schema Discovery repo was built and tested against the
+     * Trino OSS version that the Galaxy Trino fork is based on.
+     * <p>
+     * Note the check isn't sufficient to ensure runtime compatibility, should
+     * Galaxy Trino fork have modifications to trino-hive (or other reused modules),
+     * so care needs to be taken that any such changes are done with due care.
      */
     @Test
     public void testVersionCompatibility()
@@ -53,14 +55,14 @@ public class TestSchemaDiscoveryVersion
         String schemaDiscoveryVersion = properties.getProperty("dep.schema-discovery.version");
         int schemaDiscoveryTrinoVersion = Integer.parseInt(schemaDiscoveryVersion.split("\\.")[0]);
 
-        assertThat(baseTrinoVersion - schemaDiscoveryTrinoVersion)
+        assertThat(schemaDiscoveryTrinoVersion)
                 .withFailMessage(
-                        "Schema Discovery version [%s] does not match the base Trino version [%s] the Galaxy Trino [%s] is based on (allowed SPI version drift is %s)",
-                        schemaDiscoveryVersion,
+                        "Schema Discovery version [%s] does not match the base Trino version [%s] the Galaxy Trino [%s] is based on." +
+                                " See this test's documentation for more information. " +
+                                "TL;DR is: trino-hive have no backward/forward compatibility guarantees with respect to plugins extending it.",
+                        schemaDiscoveryTrinoVersion,
                         baseTrinoVersion,
-                        galaxyTrinoVersion,
-                        ALLOWED_VERSION_DRIFT)
-                .isLessThanOrEqualTo(ALLOWED_VERSION_DRIFT)
-                .isGreaterThanOrEqualTo(0);
+                        galaxyTrinoVersion)
+                .isEqualTo(baseTrinoVersion);
     }
 }
