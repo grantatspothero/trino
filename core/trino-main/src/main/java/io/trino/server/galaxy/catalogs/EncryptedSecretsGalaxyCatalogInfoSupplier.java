@@ -82,6 +82,7 @@ public class EncryptedSecretsGalaxyCatalogInfoSupplier
                         toCatalogHandle(queryCatalog.catalogName(), galaxyCatalogArgs.catalogVersion()),
                         new ConnectorName(queryCatalog.connectorName()),
                         ImmutableMap.copyOf(properties)),
-                queryCatalog.readOnly());
+                queryCatalog.readOnly(),
+                queryCatalog.sharedSchema());
     }
 }

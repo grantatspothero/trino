@@ -28,6 +28,7 @@ import io.starburst.stargate.id.EntityKind;
 import io.starburst.stargate.id.FunctionId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.SchemaId;
+import io.starburst.stargate.id.SharedSchemaNameAndAccepted;
 import io.starburst.stargate.id.TableId;
 import io.trino.security.FullSystemSecurityContext;
 import io.trino.server.security.galaxy.GalaxySystemAccessControlConfig.FilterColumnsAcceleration;
@@ -284,6 +285,7 @@ public class GalaxyAccessControl
             return schemaNames;
         }
 
+        schemaNames = filterSchemasIfSharedSchema(context, catalogName, schemaNames);
         Set<String> requestedSchemaNames = schemaNames.stream()
                 .filter(schemaName -> !isInformationSchema(schemaName))
                 .collect(toImmutableSet());
@@ -303,7 +305,8 @@ public class GalaxyAccessControl
     public void checkCanShowCreateSchema(SystemSecurityContext context, CatalogSchemaName schemaName)
     {
         if (!isSystemOrInformationSchema(schemaName) &&
-                !getVisibilityForSchemas(context, schemaName.getCatalogName(), ImmutableSet.of(schemaName.getSchemaName())).test(schemaName.getSchemaName())) {
+                (isIllegalSharedSchemaName(context, schemaName.getCatalogName(), schemaName.getSchemaName()) ||
+                        !getVisibilityForSchemas(context, schemaName.getCatalogName(), ImmutableSet.of(schemaName.getSchemaName())).test(schemaName.getSchemaName()))) {
             denyShowCreateSchema(schemaName.toString(), entityIsNotVisible(context, "Schema", schemaName.toString()));
         }
     }
@@ -997,16 +1000,19 @@ public class GalaxyAccessControl
         return visibility.defaultVisibility() == GrantKind.ALLOW;
     }
 
-    private boolean isSchemaVisible(SystemSecurityContext context, CatalogSchemaName schema)
-    {
-        return getVisibilityForSchemas(context, schema.getCatalogName(), ImmutableSet.of(schema.getSchemaName())).test(schema.getSchemaName());
-    }
-
     private Predicate<String> getVisibilityForSchemas(SystemSecurityContext context, String catalogName, Set<String> schemaNames)
     {
         Optional<CatalogId> catalogId = getSystemAccessController(context).getCatalogId(catalogName);
         if (catalogId.isEmpty()) {
             return ignored -> false;
+        }
+        Optional<SharedSchemaNameAndAccepted> sharedSchema = getSystemAccessController(context).getSharedCatalogSchemaName(catalogName);
+        if (sharedSchema.isPresent()) {
+            SharedSchemaNameAndAccepted schema = sharedSchema.get();
+            if (!schema.accepted()) {
+                return schemaName -> false;
+            }
+            schemaNames = schemaNames.stream().filter(name -> name.equals(schema.schemaName())).collect(toImmutableSet());
         }
         return getSystemAccessController(context).getVisibilityForSchemas(context, catalogId.get(), schemaNames);
     }
@@ -1042,8 +1048,37 @@ public class GalaxyAccessControl
 
     private boolean isTableVisible(SystemSecurityContext context, CatalogSchemaTableName tableName)
     {
-        return getTableVisibility(context, tableName.getCatalogName(), ImmutableSet.of(tableName.getSchemaTableName()))
-                .test(tableName.getSchemaTableName());
+        return !isIllegalSharedSchemaName(context, tableName.getCatalogName(), tableName.getSchemaTableName().getSchemaName()) &&
+                getTableVisibility(context, tableName.getCatalogName(), ImmutableSet.of(tableName.getSchemaTableName()))
+                        .test(tableName.getSchemaTableName());
+    }
+
+    private Set<SchemaTableName> filterTablesIfSharedSchema(SystemSecurityContext context, String catalogName, Set<SchemaTableName> tableNames)
+    {
+        Optional<SharedSchemaNameAndAccepted> sharedSchemaName = getSystemAccessController(context).getSharedCatalogSchemaName(catalogName);
+        if (sharedSchemaName.isEmpty()) {
+            return tableNames;
+        }
+        SharedSchemaNameAndAccepted schema = sharedSchemaName.get();
+        if (!schema.accepted()) {
+            return ImmutableSet.of();
+        }
+        return tableNames.stream().filter(tableName -> isInformationSchemaOrSharedSchema(schema, tableName.getSchemaName())).collect(toImmutableSet());
+    }
+
+    private Set<String> filterSchemasIfSharedSchema(SystemSecurityContext context, String catalogName, Set<String> schemaNames)
+    {
+        Optional<SharedSchemaNameAndAccepted> sharedSchemaName = getSystemAccessController(context).getSharedCatalogSchemaName(catalogName);
+        if (sharedSchemaName.isEmpty()) {
+            return schemaNames;
+        }
+        SharedSchemaNameAndAccepted schema = sharedSchemaName.get();
+        return schemaNames.stream().filter(name -> isInformationSchemaOrSharedSchema(schema, name)).collect(toImmutableSet());
+    }
+
+    private boolean isInformationSchemaOrSharedSchema(SharedSchemaNameAndAccepted schema, String schemaName)
+    {
+        return "information_schema".equals(schemaName) || (schema.accepted() && schemaName.equals(schema.schemaName()));
     }
 
     private Predicate<SchemaTableName> getTableVisibility(SystemSecurityContext context, String catalogName, Set<SchemaTableName> tableNames)
@@ -1057,7 +1092,7 @@ public class GalaxyAccessControl
         }
         CatalogId catalogId = optionalCatalogId.get();
 
-        Set<String> schemaNames = tableNames.stream()
+        Set<String> schemaNames = filterTablesIfSharedSchema(context, catalogName, tableNames).stream()
                 .map(SchemaTableName::getSchemaName)
                 .filter(schema -> !isInformationSchema(schema))
                 .collect(toImmutableSet());
@@ -1184,5 +1219,11 @@ public class GalaxyAccessControl
     public static boolean isInGalaxyFunctionsSchema(CatalogSchemaRoutineName routineName)
     {
         return routineName.getCatalogName().equals("galaxy") && routineName.getSchemaName().equals("functions");
+    }
+
+    public boolean isIllegalSharedSchemaName(SystemSecurityContext context, String catalogName, String schemaName)
+    {
+        Optional<SharedSchemaNameAndAccepted> sharedSchema = getSystemAccessController(context.getIdentity()).getSharedCatalogSchemaName(catalogName);
+        return sharedSchema.isPresent() && sharedSchema.get().accepted() && !sharedSchema.get().schemaName().equals(schemaName);
     }
 }

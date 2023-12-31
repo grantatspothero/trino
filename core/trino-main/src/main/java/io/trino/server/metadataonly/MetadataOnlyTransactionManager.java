@@ -78,7 +78,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableBiMap.toImmutableBiMap;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
@@ -442,11 +444,16 @@ public class MetadataOnlyTransactionManager
             Optional<URI> accessControlUri = Optional.ofNullable(serviceProperties.get("galaxy.access-control-url")).map(URI::create);
             URI uri = accessControlUri.orElse(URI.create(requiredServiceProperty(serviceProperties, "galaxy.account-url")));
 
-            TrinoSecurityApi securityClient = (getGalaxyIdentityType(identity) == INDEXER) ? GalaxyIndexerTrinoSecurityApi.INSTANCE : new HttpTrinoSecurityClient(uri, accessControlClient);
+            TrinoSecurityApi securityClient = (getGalaxyIdentityType(identity) == INDEXER) ?
+                    new GalaxyIndexerTrinoSecurityApi(
+                            catalogs.stream().collect(toImmutableBiMap(QueryCatalog::catalogId, QueryCatalog::catalogName)),
+                            catalogs.stream().filter(catalog -> catalog.sharedSchema().isPresent()).collect(toImmutableMap(QueryCatalog::catalogId, catalog -> catalog.sharedSchema().get())))
+                    : new HttpTrinoSecurityClient(uri, accessControlClient);
 
             GalaxyAccessControlConfig galaxyAccessControlConfig = new GalaxyAccessControlConfig()
                     .setCatalogNames(requiredServiceProperty(serviceProperties, "galaxy.catalog-names"))
-                    .setReadOnlyCatalogs(requiredServiceProperty(serviceProperties, "galaxy.read-only-catalogs"));
+                    .setReadOnlyCatalogs(requiredServiceProperty(serviceProperties, "galaxy.read-only-catalogs"))
+                    .setSharedCatalogSchemaNames(requiredServiceProperty(serviceProperties, "galaxy.shared-catalog-schemas"));
             StaticCatalogResolver catalogResolver = new StaticCatalogResolver(galaxyAccessControlConfig);
 
             galaxyMetadataAccessControl.addController(transactionId, new GalaxySystemAccessController(securityClient, catalogResolver, permissionsCache, Optional.of(transactionId)));

@@ -66,6 +66,7 @@ import org.junit.jupiter.api.parallel.Execution;
 
 import java.time.Clock;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -1393,7 +1394,8 @@ public class TestGalaxyQueries
                 new CatalogVersion(catalogId, new Version(new Random().nextLong(0, Long.MAX_VALUE))));
         GalaxyCatalogInfo catalogInfoV1 = new GalaxyCatalogInfo(
                 new CatalogProperties(toCatalogHandle(catalogName, catalogV1.catalogVersion()), new ConnectorName("memory"), ImmutableMap.of()),
-                false);
+                false,
+                Optional.empty());
         testingGalaxyCatalogInfoSupplier.addCatalog(catalogV1, catalogInfoV1);
         assertThat(query(sessionFor(tpchCatalogVersion, catalogV1.catalogVersion()),
                 """
@@ -1417,7 +1419,8 @@ public class TestGalaxyQueries
                 new CatalogVersion(catalogId, new Version(new Random().nextLong(0, Long.MAX_VALUE))));
         GalaxyCatalogInfo catalogInfoV2 = new GalaxyCatalogInfo(
                 new CatalogProperties(toCatalogHandle(catalogName, catalogV1.catalogVersion()), new ConnectorName("memory"), ImmutableMap.of()),
-                true);
+                true,
+                Optional.empty());
         testingGalaxyCatalogInfoSupplier.addCatalog(catalogV2, catalogInfoV2);
         assertQueryFails(sessionFor(tpchCatalogVersion, catalogV2.catalogVersion()),
                 "CREATE SCHEMA %s.test_schema".formatted(catalogName), ".* Catalog " + catalogName + " only allows read-only access");
@@ -1441,7 +1444,8 @@ public class TestGalaxyQueries
                             toCatalogHandle(catalogName, catalogV1.catalogVersion()),
                             new ConnectorName("memory"),
                             ImmutableMap.of()),
-                    false);
+                    false,
+                    Optional.empty());
             testingGalaxyCatalogInfoSupplier.addCatalog(catalogV1, catalogInfoV1);
             testingGalaxyCatalogInfoSupplier.addCatalog(catalogV2, catalogInfoV1);
             // Load in both catalogs

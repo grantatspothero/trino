@@ -271,7 +271,8 @@ public class TestGalaxyMetadataOnlyQueries
                 "access-control.name", "galaxy",
                 "galaxy.account-url", testingAccountClient.getBaseUri().toString(),
                 "galaxy.catalog-names", "tpch->" + tpchCatalogId.toString() + ",objectstore->" + objectStoreCatalogId,
-                "galaxy.read-only-catalogs", ""));
+                "galaxy.read-only-catalogs", "",
+                "galaxy.shared-catalog-schemas", ""));
 
         return preparePost().setUri(baseUrl.resolve("/galaxy/metadata/v1/statement"))
                 .setHeader("X-Trino-User", "dummy")

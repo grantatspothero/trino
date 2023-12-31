@@ -16,6 +16,7 @@ package io.trino.server.security.galaxy;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.starburst.stargate.id.CatalogId;
+import io.starburst.stargate.id.SharedSchemaNameAndAccepted;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -36,7 +37,8 @@ public class TestGalaxyAccessControlConfig
                 .setAccountUri(null)
                 .setAccessControlOverrideUri(null)
                 .setCatalogNames("")
-                .setReadOnlyCatalogs(""));
+                .setReadOnlyCatalogs("")
+                .setSharedCatalogSchemaNames(""));
     }
 
     @Test
@@ -48,6 +50,7 @@ public class TestGalaxyAccessControlConfig
                 .put("galaxy.access-control-url", "https://whackadoodle.aws-us-east1.accesscontrol.galaxy.com")
                 .put("galaxy.catalog-names", "my_catalog->c-1234567890,other_catalog->c-1112223334")
                 .put("galaxy.read-only-catalogs", "sillycatalog,funnycatalog")
+                .put("galaxy.shared-catalog-schemas", "my_catalog->foo,his_catalog->*broken,her_catalog->*")
                 .buildOrThrow();
 
         GalaxyAccessControlConfig expected = new GalaxyAccessControlConfig()
@@ -57,7 +60,11 @@ public class TestGalaxyAccessControlConfig
                         .put("my_catalog", new CatalogId("c-1234567890"))
                         .put("other_catalog", new CatalogId("c-1112223334"))
                         .buildOrThrow())
-                .setReadOnlyCatalogs(ImmutableSet.of("sillycatalog", "funnycatalog"));
+                .setReadOnlyCatalogs(ImmutableSet.of("sillycatalog", "funnycatalog"))
+                .setSharedCatalogSchemaNames(ImmutableMap.of(
+                        "my_catalog", new SharedSchemaNameAndAccepted("foo", true),
+                        "his_catalog", new SharedSchemaNameAndAccepted("broken", false),
+                        "her_catalog", new SharedSchemaNameAndAccepted(null, false)));
 
         assertFullMapping(properties, expected);
     }

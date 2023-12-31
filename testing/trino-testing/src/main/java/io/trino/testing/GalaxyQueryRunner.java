@@ -29,6 +29,7 @@ import io.starburst.stargate.id.AccountId;
 import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.CatalogVersion;
 import io.starburst.stargate.id.RoleId;
+import io.starburst.stargate.id.SharedSchemaNameAndAccepted;
 import io.starburst.stargate.id.UserId;
 import io.starburst.stargate.id.Version;
 import io.starburst.stargate.identity.DispatchSession;
@@ -101,12 +102,14 @@ public final class GalaxyQueryRunner
                 String catalogName,
                 String connectorName,
                 boolean readOnly,
+                Optional<SharedSchemaNameAndAccepted> sharedSchema,
                 Map<String, String> properties)
         {
             CatalogInit
             {
                 requireNonNull(catalogName, "catalogName is null");
                 requireNonNull(connectorName, "connectorName is null");
+                requireNonNull(sharedSchema, "sharedSchema is null");
                 properties = ImmutableMap.copyOf(requireNonNull(properties, "properties is null"));
             }
         }
@@ -149,7 +152,7 @@ public final class GalaxyQueryRunner
 
         public Builder addCatalog(String catalogName, String connectorName, boolean readOnly, Map<String, String> properties)
         {
-            this.catalogs.add(new CatalogInit(catalogName, connectorName, readOnly, properties));
+            this.catalogs.add(new CatalogInit(catalogName, connectorName, readOnly, Optional.empty(), properties));
             return self();
         }
 
@@ -254,7 +257,8 @@ public final class GalaxyQueryRunner
                                                         toCatalogHandle(catalogInit.catalogName(), new CatalogVersion(catalogIdMap.get(catalogInit.catalogName()), new Version(1))),
                                                         new ConnectorName(catalogInit.connectorName()),
                                                         catalogInit.properties()),
-                                                catalogInit.readOnly())));
+                                                catalogInit.readOnly(),
+                                                catalogInit.sharedSchema())));
                         binder.bind(GalaxyCatalogInfoSupplier.class)
                                 .toInstance(galaxyCatalogInfoSupplier);
                         binder.bind(TestingClock.class).in(Scopes.SINGLETON);

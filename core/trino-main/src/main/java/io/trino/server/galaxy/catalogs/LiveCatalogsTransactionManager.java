@@ -31,6 +31,7 @@ import io.airlift.units.Duration;
 import io.starburst.stargate.id.AccountId;
 import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.CatalogVersion;
+import io.starburst.stargate.id.SharedSchemaNameAndAccepted;
 import io.starburst.stargate.identity.DispatchSession;
 import io.trino.NotInTransactionException;
 import io.trino.Session;
@@ -298,6 +299,18 @@ public class LiveCatalogsTransactionManager
     {
         return Optional.ofNullable(getTransactionMetadata(requiredTransactionId.orElseThrow(() -> new VerifyException("Required Transaction Id not found")))
                 .getCatalogNamesToCatalogIds().inverse().get(catalogId));
+    }
+
+    @Override
+    public Optional<SharedSchemaNameAndAccepted> getSharedSchemaForCatalog(Optional<TransactionId> requiredTransactionId, String catalogName)
+    {
+        return getTransactionMetadata(requiredTransactionId.orElseThrow(() -> new VerifyException("Required Transaction Id not found")))
+                .getCatalogHandle(catalogName)
+                .map(CatalogHandle::getVersion)
+                .map(CatalogHandle.CatalogVersion::toString)
+                .map(UUID::fromString)
+                .map(galaxyLiveCatalogs::get)
+                .flatMap(GalaxyLiveCatalog::getSharedSchema);
     }
 
     @Override
@@ -946,6 +959,7 @@ public class LiveCatalogsTransactionManager
         private final boolean readOnly;
         private final CatalogProperties catalogProperties;
         private final AtomicReference<Instant> lastTransactionEnd = new AtomicReference<>();
+        private final Optional<SharedSchemaNameAndAccepted> sharedSchema;
 
         private CatalogConnector catalogConnector;
 
@@ -966,6 +980,7 @@ public class LiveCatalogsTransactionManager
                     propertiesWithWrongVersion.getProperties());
             readOnly = galaxyCatalogInfo.readOnly();
             this.catalogFactory = requireNonNull(catalogFactory, "catalogFactory is null");
+            this.sharedSchema = galaxyCatalogInfo.sharedSchema();
             lastTransactionEnd.set(clock.instant());
         }
 
@@ -987,6 +1002,11 @@ public class LiveCatalogsTransactionManager
         public boolean getReadOnly()
         {
             return readOnly;
+        }
+
+        public Optional<SharedSchemaNameAndAccepted> getSharedSchema()
+        {
+            return sharedSchema;
         }
 
         public CatalogConnector getCatalogConnector()

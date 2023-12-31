@@ -13,6 +13,8 @@
  */
 package io.trino.server.security.galaxy;
 
+import com.google.common.collect.BiMap;
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -34,70 +36,115 @@ import io.starburst.stargate.accesscontrol.privilege.GrantKind;
 import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.ColumnId;
 import io.starburst.stargate.id.EntityId;
+import io.starburst.stargate.id.EntityKind;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.RoleName;
+import io.starburst.stargate.id.SharedSchemaNameAndAccepted;
 import io.starburst.stargate.id.TableId;
 import io.starburst.stargate.identity.DispatchSession;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static io.starburst.stargate.accesscontrol.client.ContentsVisibility.ALLOW_ALL;
+import static io.starburst.stargate.accesscontrol.client.ContentsVisibility.DENY_ALL;
 import static io.starburst.stargate.accesscontrol.privilege.Privilege.SELECT;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Specialized TrinoSecurityApi for use by the Galaxy indexer. Grants visibility to all
  * catalogs, schemas and tables solely so that they can be indexed. Actual permission
  * filtering is done when the index is queried by a user.
  */
-public enum GalaxyIndexerTrinoSecurityApi
+public class GalaxyIndexerTrinoSecurityApi
         implements TrinoSecurityApi
 {
-    INSTANCE;
+    private final BiMap<CatalogId, String> allCatalogs;
+    private final Map<CatalogId, SharedSchemaNameAndAccepted> sharedCatalogs;
 
-    private static final ContentsVisibility ALLOW_ALL = new ContentsVisibility(GrantKind.ALLOW, ImmutableSet.of());
+    public GalaxyIndexerTrinoSecurityApi(BiMap<CatalogId, String> allCatalogs, Map<CatalogId, SharedSchemaNameAndAccepted> sharedCatalogs)
+    {
+        this.allCatalogs = ImmutableBiMap.copyOf(requireNonNull(allCatalogs, "allCatalogs is null"));
+        this.sharedCatalogs = ImmutableMap.copyOf(requireNonNull(sharedCatalogs, "sharedCatalogs is null"));
+    }
 
     @Override
     public ContentsVisibility getCatalogVisibility(DispatchSession session)
     {
-        return ALLOW_ALL;
+        if (sharedCatalogs.isEmpty()) {
+            return ALLOW_ALL;
+        }
+        return new ContentsVisibility(GrantKind.DENY, getCatalogVisibility(allCatalogs.keySet()));
     }
 
     @Override
     public ContentsVisibility getCatalogVisibility(DispatchSession session, Set<CatalogId> catalogIds)
     {
-        return ALLOW_ALL;
+        if (sharedCatalogs.isEmpty()) {
+            return ALLOW_ALL;
+        }
+        return new ContentsVisibility(GrantKind.DENY, getCatalogVisibility(catalogIds));
     }
 
     @Override
     public ContentsVisibility getSchemaVisibility(DispatchSession session, CatalogId catalogId)
     {
-        return ALLOW_ALL;
+        if (sharedCatalogs.isEmpty()) {
+            return ALLOW_ALL;
+        }
+        SharedSchemaNameAndAccepted sharedSchema = sharedCatalogs.get(catalogId);
+        if (sharedSchema == null) {
+            return ALLOW_ALL;
+        }
+        return new ContentsVisibility(GrantKind.DENY, getSchemaVisibility(catalogId, ImmutableSet.of(sharedSchema.schemaName(), "information_schema")));
     }
 
     @Override
     public ContentsVisibility getVisibilityForSchemas(DispatchSession session, CatalogId catalogId, Set<String> schemaNames)
     {
-        return ALLOW_ALL;
+        if (!sharedCatalogs.containsKey(catalogId)) {
+            return ALLOW_ALL;
+        }
+        return new ContentsVisibility(GrantKind.DENY, getSchemaVisibility(catalogId, schemaNames));
     }
 
     @Override
     public Map<String, ContentsVisibility> getTableVisibility(DispatchSession session, CatalogId catalogId, Set<String> schemaNames)
     {
-        return schemaNames.stream().collect(toImmutableMap(Function.identity(), ignore -> ALLOW_ALL));
+        SharedSchemaNameAndAccepted state = sharedCatalogs.get(catalogId);
+        if (state == null) {
+            return schemaNames.stream().collect(toImmutableMap(Function.identity(), ignore -> ALLOW_ALL));
+        }
+        return schemaNames.stream().collect(toImmutableMap(Function.identity(), schema -> state.accepted() && state.schemaName().equals(schema) ? ALLOW_ALL : DENY_ALL));
     }
 
     @Override
     public ContentsVisibility getVisibilityForTables(DispatchSession session, CatalogId catalogId, String schemaName, Set<String> tableNames)
     {
-        return ALLOW_ALL;
+        SharedSchemaNameAndAccepted state = sharedCatalogs.get(catalogId);
+        if (state == null || (state.accepted() && schemaName.equals(state.schemaName()))) {
+            return ALLOW_ALL;
+        }
+        return DENY_ALL;
     }
 
     @Override
     public EntityPrivileges getEntityPrivileges(DispatchSession session, RoleId roleId, EntityId entityId)
     {
+        EntityKind kind = entityId.getEntityKind();
+        if (kind.isContainerKind() || kind.isContainedKind()) {
+            CatalogId catalogId = entityId.getCatalogId();
+            SharedSchemaNameAndAccepted state = sharedCatalogs.get(catalogId);
+            if (state != null && kind.isContainedKind() && (!state.accepted() || !state.schemaName().equals(entityId.getSchemaName()))) {
+                // Return no privileges
+                return new EntityPrivileges(new RoleName("indexer"), roleId, true, false, ImmutableSet.of(), ImmutableMap.of(), ImmutableList.of(), ImmutableMap.of());
+            }
+        }
         // return EntityPrivileges with explicitOwner set to true. This is needed so that any checks for querying/inspecting will pass
         // Indexer does not do any RBAC checks and, instead, those are done at query time by Portal
         return new EntityPrivileges(new RoleName("indexer"), roleId, true, false, ImmutableSet.of(), ImmutableMap.of(SELECT.name(), ALLOW_ALL), ImmutableList.of(), ImmutableMap.of());
@@ -239,5 +286,35 @@ public enum GalaxyIndexerTrinoSecurityApi
     public List<CacheKeyAndResult> validateCachedResults(DispatchSession session, List<CacheKeyAndResult> cacheReferences)
     {
         return ImmutableList.of();
+    }
+
+    private Set<String> getCatalogVisibility(Set<CatalogId> catalogIds)
+    {
+        return catalogIds.stream()
+                .filter(this::isVisibleCatalogId)
+                .map(allCatalogs::get)
+                .filter(Objects::nonNull)
+                .collect(toImmutableSet());
+    }
+
+    private boolean isVisibleCatalogId(CatalogId catalogId)
+    {
+        SharedSchemaNameAndAccepted state = sharedCatalogs.get(catalogId);
+        return state == null || state.accepted();
+    }
+
+    private Set<String> getSchemaVisibility(CatalogId catalogId, Set<String> schemaNames)
+    {
+        SharedSchemaNameAndAccepted state = sharedCatalogs.get(catalogId);
+        if (state == null) {
+            return schemaNames;
+        }
+        if (!state.accepted() || !schemaNames.contains(state.schemaName())) {
+            return ImmutableSet.of();
+        }
+        if (schemaNames.contains("information_schema")) {
+            return ImmutableSet.of(state.schemaName(), "information_schema");
+        }
+        return ImmutableSet.of(state.schemaName());
     }
 }

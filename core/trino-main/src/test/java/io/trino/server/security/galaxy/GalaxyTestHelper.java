@@ -19,6 +19,7 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
@@ -100,7 +101,7 @@ public class GalaxyTestHelper
                 .mapToObj(index -> "catalog" + index)
                 .collect(toImmutableMap(Function.identity(), accountClient::getOrCreateCatalog));
 
-        catalogResolver = new StaticCatalogResolver(ImmutableBiMap.copyOf(catalogs), ImmutableSet.of());
+        catalogResolver = new StaticCatalogResolver(ImmutableBiMap.copyOf(catalogs), ImmutableSet.of(), ImmutableMap.of());
         client = accountClient.getTrinoSecurityApi();
         GalaxyPermissionsCache permissionsCache = new GalaxyPermissionsCache(new GalaxySystemAccessControlConfig());
         accessController = new GalaxySystemAccessController(client, catalogResolver, permissionsCache);

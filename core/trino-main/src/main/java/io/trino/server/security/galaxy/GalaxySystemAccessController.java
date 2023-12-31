@@ -25,6 +25,7 @@ import io.starburst.stargate.id.EntityId;
 import io.starburst.stargate.id.FunctionId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.RoleName;
+import io.starburst.stargate.id.SharedSchemaNameAndAccepted;
 import io.starburst.stargate.id.TableId;
 import io.starburst.stargate.identity.DispatchSession;
 import io.trino.server.galaxy.GalaxyPermissionsCache;
@@ -80,6 +81,11 @@ public class GalaxySystemAccessController
     public boolean isReadOnlyCatalog(String catalogName)
     {
         return catalogResolver.isReadOnlyCatalog(transactionId, catalogName);
+    }
+
+    public Optional<SharedSchemaNameAndAccepted> getSharedCatalogSchemaName(String catalogName)
+    {
+        return catalogResolver.getSharedSchemaForCatalog(transactionId, catalogName);
     }
 
     /**

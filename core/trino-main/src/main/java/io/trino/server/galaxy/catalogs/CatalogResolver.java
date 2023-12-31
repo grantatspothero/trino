@@ -14,6 +14,7 @@
 package io.trino.server.galaxy.catalogs;
 
 import io.starburst.stargate.id.CatalogId;
+import io.starburst.stargate.id.SharedSchemaNameAndAccepted;
 import io.trino.transaction.TransactionId;
 
 import java.util.Optional;
@@ -25,4 +26,6 @@ public interface CatalogResolver
     Optional<CatalogId> getCatalogId(Optional<TransactionId> transactionId, String catalogName);
 
     Optional<String> getCatalogName(Optional<TransactionId> transactionId, CatalogId catalogId);
+
+    Optional<SharedSchemaNameAndAccepted> getSharedSchemaForCatalog(Optional<TransactionId> transactionId, String catalogName);
 }

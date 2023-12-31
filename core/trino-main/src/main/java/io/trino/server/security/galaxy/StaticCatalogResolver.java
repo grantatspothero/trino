@@ -15,9 +15,11 @@ package io.trino.server.security.galaxy;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import io.starburst.stargate.id.CatalogId;
+import io.starburst.stargate.id.SharedSchemaNameAndAccepted;
 import io.trino.server.galaxy.catalogs.CatalogResolver;
 import io.trino.transaction.TransactionId;
 
@@ -30,17 +32,19 @@ public class StaticCatalogResolver
 {
     private final BiMap<String, CatalogId> catalogNamesToIds;
     private final Set<String> readOnlyCatalogs;
+    private final Map<String, SharedSchemaNameAndAccepted> sharedSchemas;
 
     @Inject
     public StaticCatalogResolver(GalaxyAccessControlConfig config)
     {
-        this(config.getCatalogNames(), config.getReadOnlyCatalogs());
+        this(config.getCatalogNames(), config.getReadOnlyCatalogs(), config.getSharedCatalogSchemaNames());
     }
 
-    public StaticCatalogResolver(Map<String, CatalogId> catalogNamesToIds, Set<String> readOnlyCatalogs)
+    public StaticCatalogResolver(Map<String, CatalogId> catalogNamesToIds, Set<String> readOnlyCatalogs, Map<String, SharedSchemaNameAndAccepted> sharedSchemas)
     {
         this.catalogNamesToIds = ImmutableBiMap.copyOf(catalogNamesToIds);
         this.readOnlyCatalogs = ImmutableSet.copyOf(readOnlyCatalogs);
+        this.sharedSchemas = ImmutableMap.copyOf(sharedSchemas);
     }
 
     public Set<String> getCatalogNames()
@@ -64,5 +68,11 @@ public class StaticCatalogResolver
     public Optional<String> getCatalogName(Optional<TransactionId> transactionId, CatalogId catalogId)
     {
         return Optional.ofNullable(catalogNamesToIds.inverse().get(catalogId));
+    }
+
+    @Override
+    public Optional<SharedSchemaNameAndAccepted> getSharedSchemaForCatalog(Optional<TransactionId> transactionId, String catalogName)
+    {
+        return Optional.ofNullable(sharedSchemas.get(catalogName));
     }
 }

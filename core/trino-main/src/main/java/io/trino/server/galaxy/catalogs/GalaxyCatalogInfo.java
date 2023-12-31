@@ -13,14 +13,18 @@
  */
 package io.trino.server.galaxy.catalogs;
 
+import io.starburst.stargate.id.SharedSchemaNameAndAccepted;
 import io.trino.connector.CatalogProperties;
+
+import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
-public record GalaxyCatalogInfo(CatalogProperties catalogProperties, boolean readOnly)
+public record GalaxyCatalogInfo(CatalogProperties catalogProperties, boolean readOnly, Optional<SharedSchemaNameAndAccepted> sharedSchema)
 {
     public GalaxyCatalogInfo
     {
         requireNonNull(catalogProperties, "catalogProperties is null");
+        requireNonNull(sharedSchema, "sharedSchema is null");
     }
 }
