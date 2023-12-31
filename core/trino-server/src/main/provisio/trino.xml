@@ -129,10 +129,16 @@
         <artifact id="${project.groupId}:trino-galaxy-warp-speed:zip:${project.version}">
             <unpack />
         </artifact>
+        <artifact id="${project.groupId}:trino-hdfs:zip:${project.version}">
+            <unpack useRoot="true" />
+        </artifact>
     </artifactSet>
     <artifactSet to="plugin/galaxy-warp-speed-2">
         <artifact id="${project.groupId}:trino-galaxy-warp-speed-2:zip:${project.version}">
             <unpack />
+        </artifact>
+        <artifact id="${project.groupId}:trino-hdfs:zip:${project.version}">
+            <unpack useRoot="true" />
         </artifact>
     </artifactSet>
 

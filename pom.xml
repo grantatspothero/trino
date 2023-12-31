@@ -196,7 +196,7 @@
         <extraJavaVectorArgs>--add-modules=jdk.incubator.vector</extraJavaVectorArgs>
 
         <!-- released from https://github.com/starburstdata/varada -->
-        <dep.warp-speed.version>432.2.3</dep.warp-speed.version>
+        <dep.warp-speed.version>434.2.0-cand</dep.warp-speed.version>
         <!-- released from https://github.com/starburstdata/trino-buffer-service -->
         <dep.trino-buffer-service.version>434-trino-buffer-service-643-g39b8335</dep.trino-buffer-service.version>
         <!-- released form https://github.com/starburstdata/schema-discovery -->
