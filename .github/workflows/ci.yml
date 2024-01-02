@@ -714,6 +714,7 @@ jobs:
             !:trino-memory,
             !:trino-mongodb,
             !:trino-mysql,
+            !:trino-opensearch,
             !:trino-oracle,
             !:trino-orc,
             !:trino-parquet,
@@ -875,6 +876,7 @@ jobs:
             - { modules: plugin/trino-mariadb }
             - { modules: plugin/trino-mongodb }
             - { modules: plugin/trino-mysql }
+            - { modules: plugin/trino-opensearch }
             - { modules: plugin/trino-pinot }
             - { modules: plugin/trino-postgresql }
             - { modules: plugin/trino-redshift, profile: default}

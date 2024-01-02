@@ -72,6 +72,7 @@ public final class EnvMultinodeAllConnectors
                         "synapse",
                         "mongodb",
                         "mysql",
+                        "opensearch",
                         "oracle",
                         "phoenix5",
                         "pinot",
