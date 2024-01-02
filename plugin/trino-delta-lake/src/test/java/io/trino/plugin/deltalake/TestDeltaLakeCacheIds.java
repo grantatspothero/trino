@@ -79,10 +79,10 @@ import static io.trino.spi.type.IntegerType.INTEGER;
 import static java.util.concurrent.Executors.newScheduledThreadPool;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
-import static org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT;
+import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
 @TestInstance(PER_CLASS)
-@Execution(CONCURRENT)
+@Execution(SAME_THREAD)
 public class TestDeltaLakeCacheIds
 {
     private static ScheduledExecutorService executorService = newScheduledThreadPool(1);
