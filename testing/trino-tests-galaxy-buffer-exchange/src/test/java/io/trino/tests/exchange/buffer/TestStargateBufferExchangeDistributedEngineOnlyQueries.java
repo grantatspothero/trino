@@ -13,16 +13,88 @@
  */
 package io.trino.tests.exchange.buffer;
 
+import com.google.common.collect.ImmutableMap;
+import io.starburst.stargate.buffer.trino.exchange.BufferExchangePlugin;
+import io.trino.connector.MockConnectorFactory;
+import io.trino.connector.MockConnectorPlugin;
+import io.trino.plugin.memory.MemoryQueryRunner;
+import io.trino.testing.AbstractDistributedEngineOnlyQueries;
+import io.trino.testing.DistributedQueryRunner;
+import io.trino.testing.FaultTolerantExecutionConnectorTestHelper;
+import io.trino.testing.QueryRunner;
+import io.trino.tpch.TpchTable;
+import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+
 import static com.google.common.base.Verify.verify;
+import static io.airlift.testing.Closeables.closeAllSuppress;
 
 public class TestStargateBufferExchangeDistributedEngineOnlyQueries
-        extends AbstractBufferExchangeDistributedEngineOnlyQueries
+        extends AbstractDistributedEngineOnlyQueries
 {
     @Override
-    protected String getBufferServiceVersion()
+    protected QueryRunner createQueryRunner()
+            throws Exception
+    {
+        TestingBufferServiceCluster bufferServiceCluster = TestingBufferServiceCluster.builder()
+                .withImages("179619298502.dkr.ecr.us-east-1.amazonaws.com/galaxy/trino-buffer-service", getBufferServiceVersion())
+                .build();
+        closeAfterClass(bufferServiceCluster);
+
+        ImmutableMap<String, String> exchangeManagerProperties = ImmutableMap.<String, String>builder()
+                .put("exchange.buffer-discovery.uri", bufferServiceCluster.getDiscoveryUri())
+                .put("exchange.sink-target-written-pages-count", "3") // small requests for better test coverage
+                .put("exchange.source-handle-target-chunks-count", "4") // smaller handles make more sense for test env when we do not have too much data
+                .put("exchange.min-buffer-nodes-per-partition", "2")
+                .put("exchange.max-buffer-nodes-per-partition", "2")
+                .buildOrThrow();
+
+        DistributedQueryRunner queryRunner = MemoryQueryRunner.builder()
+                .setExtraProperties(FaultTolerantExecutionConnectorTestHelper.getExtraProperties())
+                .setAdditionalSetup(runner -> {
+                    runner.installPlugin(new BufferExchangePlugin());
+                    runner.loadExchangeManager("buffer", exchangeManagerProperties);
+                })
+                .setInitialTables(TpchTable.getTables())
+                .build();
+
+        queryRunner.getCoordinator().getSessionPropertyManager().addSystemSessionProperties(TEST_SYSTEM_PROPERTIES);
+        try {
+            queryRunner.installPlugin(new MockConnectorPlugin(
+                    MockConnectorFactory.builder()
+                            .withSessionProperties(TEST_CATALOG_PROPERTIES)
+                            .build()));
+            queryRunner.createCatalog(TESTING_CATALOG, "mock");
+        }
+        catch (RuntimeException e) {
+            throw closeAllSuppress(e, queryRunner);
+        }
+        return queryRunner;
+    }
+
+    private String getBufferServiceVersion()
     {
         String stargateBufferExchangeVersion = System.getenv("STARGATE_BUFFER_EXCHANGE_VERSION");
         verify(stargateBufferExchangeVersion != null && !stargateBufferExchangeVersion.isBlank(), "STARGATE_BUFFER_EXCHANGE_VERSION not set");
         return stargateBufferExchangeVersion;
+    }
+
+    @Override
+    @Test
+    public void testExplainAnalyzeVerbose()
+    {
+        // Spooling exchange does not provide output buffer utilization histogram
+        Assertions.assertThatThrownBy(super::testExplainAnalyzeVerbose)
+                .isInstanceOf(AssertionError.class)
+                .hasMessageMatching("(?s).*Expecting actual:.*to contain pattern:.*");
+    }
+
+    @Override
+    @Test
+    @Disabled
+    public void testSelectiveLimit()
+    {
+        // FTE mode does not terminate query when limit is reached
     }
 }
