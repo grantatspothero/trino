@@ -362,10 +362,10 @@ public class TestObjectStoreIcebergConnectorTest
     public void testEndVersionInTableNameAndForClauseShouldFail()
     {
         assertQueryFails("SELECT * FROM \"test_iceberg_read_versioned_table@" + v1SnapshotId + "\" FOR VERSION AS OF " + v1SnapshotId,
-                "Invalid Iceberg table name: test_iceberg_read_versioned_table@%d".formatted(v1SnapshotId));
+                ".*Table 'objectstore.tpch.\"test_iceberg_read_versioned_table@%d\"' does not exist".formatted(v1SnapshotId));
 
         assertQueryFails("SELECT * FROM \"test_iceberg_read_versioned_table@" + v1SnapshotId + "\" FOR TIMESTAMP AS OF " + timestampLiteral(v1EpochMillis, 9),
-                "Invalid Iceberg table name: test_iceberg_read_versioned_table@%d".formatted(v1SnapshotId));
+                ".*Table 'objectstore.tpch.\"test_iceberg_read_versioned_table@%d\"' does not exist".formatted(v1SnapshotId));
     }
 
     @Test
