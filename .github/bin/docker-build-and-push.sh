@@ -23,16 +23,20 @@ cd ${SCRIPT_DIR}/../../core/docker
 
 PERFORM_PUSH="--load"
 IMAGE_TAG="latest"
+TRINO_VERSION=""
 ARCHITECTURES=(amd64 arm64)
 JDK_VERSION=$(cat "${SOURCE_DIR}/.java-version")
 
-while getopts ":a:t:j:ph" o; do
+while getopts ":a:t:v:j:ph" o; do
     case "${o}" in
         a)
             IFS=, read -ra ARCHITECTURES <<< "$OPTARG"
             ;;
         t)
             IMAGE_TAG=${OPTARG}
+            ;;
+        v)
+            TRINO_VERSION=${OPTARG}
             ;;
         p)
             PERFORM_PUSH="--push"
@@ -68,10 +72,12 @@ function temurin_jdk_link() {
   echo "https://api.adoptium.net/v3/binary/version/${RELEASE_NAME}/linux/__ARCH__/jdk/hotspot/normal/eclipse?project=jdk"
 }
 
-# Move to the root directory to run maven for current version.
-pushd ${SOURCE_DIR}
-TRINO_VERSION=$(./mvnw --quiet help:evaluate -Dexpression=project.version -DforceStdout)
-popd
+if [[ "${TRINO_VERSION}" == "" ]]; then
+  # Move to the root directory to run maven for current version.
+  pushd ${SOURCE_DIR}
+  TRINO_VERSION=$(./mvnw --quiet help:evaluate -Dexpression=project.version -DforceStdout)
+  popd
+fi
 
 IMAGE_NAME="trino:${IMAGE_TAG}"
 echo "Building ${IMAGE_NAME} for Trino ${TRINO_VERSION}"
