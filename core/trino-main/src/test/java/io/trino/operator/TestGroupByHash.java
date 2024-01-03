@@ -124,7 +124,7 @@ public class TestGroupByHash
                             assertThat(groupByHash.getGroupCount()).isEqualTo(tries == 0 ? value + 1 : maxGroupId);
 
                             // verify the first position
-                            assertThat(groupIds.length).isEqualTo(1);
+                            assertThat(groupIds).hasSize(1);
                             int groupId = groupIds[0];
                             assertThat(groupId).isEqualTo(value);
                         }
@@ -161,7 +161,7 @@ public class TestGroupByHash
                 int[] groupIds = work.getResult();
 
                 assertThat(groupByHash.getGroupCount()).isEqualTo(1);
-                assertThat(groupIds.length).isEqualTo(2);
+                assertThat(groupIds).hasSize(2);
                 assertThat(groupIds[0]).isEqualTo(0);
                 assertThat(groupIds[1]).isEqualTo(0);
             }
@@ -187,7 +187,7 @@ public class TestGroupByHash
 
                 int[] groupIds = getGroupIds(groupByHash, page);
                 assertThat(groupByHash.getGroupCount()).isEqualTo(2);
-                assertThat(groupIds.length).isEqualTo(4);
+                assertThat(groupIds).hasSize(4);
                 assertThat(groupIds[0]).isEqualTo(0);
                 assertThat(groupIds[1]).isEqualTo(0);
                 assertThat(groupIds[2]).isEqualTo(1);
@@ -247,7 +247,7 @@ public class TestGroupByHash
                         for (int addValuesTries = 0; addValuesTries < 10; addValuesTries++) {
                             int[] groupIds = getGroupIds(groupByHash, page);
                             assertThat(groupByHash.getGroupCount()).isEqualTo(tries == 0 ? value + 1 : groupByHashType.getMaxGroupId(hashType));
-                            assertThat(groupIds.length).isEqualTo(1);
+                            assertThat(groupIds).hasSize(1);
                             long groupId = groupIds[0];
                             assertThat(groupId).isEqualTo(value);
                         }
@@ -416,7 +416,7 @@ public class TestGroupByHash
             }
 
             // assert there is not anything missing
-            assertThat(length).isEqualTo(groupByHash.getGroupCount());
+            assertThat(groupByHash.getGroupCount()).isEqualTo(length);
             // assert we yield for every 3 rehashes
             // currentQuota is essentially the count we have successfully rehashed multiplied by 2 (as updateMemory is called twice per rehash)
             assertThat(currentQuota.get()).isEqualTo(2 * (type == VARCHAR ? VARCHAR_EXPECTED_REHASH : BIGINT_EXPECTED_REHASH));
@@ -442,8 +442,8 @@ public class TestGroupByHash
                 }
             }
             // assert there is not anything missing
-            assertThat(length).isEqualTo(groupByHash.getGroupCount());
-            assertThat(length).isEqualTo(getGroupIdsWork.getResult().length);
+            assertThat(groupByHash.getGroupCount()).isEqualTo(length);
+            assertThat(getGroupIdsWork.getResult()).hasSize(length);
             // rehash count is the same as above
             assertThat(currentQuota.get()).isEqualTo(2 * (type == VARCHAR ? VARCHAR_EXPECTED_REHASH : BIGINT_EXPECTED_REHASH));
             assertThat(currentQuota.get() / 3 / 2).isEqualTo(yields);
@@ -505,7 +505,7 @@ public class TestGroupByHash
                 }
 
                 // assert there is not anything missing
-                assertThat(dictionaryLength).isEqualTo(groupByHash.getGroupCount());
+                assertThat(groupByHash.getGroupCount()).isEqualTo(dictionaryLength);
                 // assert we yield for every 3 rehashes
                 // currentQuota is essentially the count we have successfully rehashed multiplied by 2 (as updateMemory is called twice per rehash)
                 // the rehash count is 10 = log(1_000 / 0.75)
@@ -535,8 +535,8 @@ public class TestGroupByHash
                 }
 
                 // assert there is not anything missing
-                assertThat(dictionaryLength).isEqualTo(groupByHash.getGroupCount());
-                assertThat(dictionaryLength).isEqualTo(getGroupIdsWork.getResult().length);
+                assertThat(groupByHash.getGroupCount()).isEqualTo(dictionaryLength);
+                assertThat(getGroupIdsWork.getResult()).hasSize(dictionaryLength);
                 // assert we yield for every 3 rehashes
                 // currentQuota is essentially the count we have successfully rehashed multiplied by 2 (as updateMemory is called twice per rehash)
                 // the rehash count is 10 = log2(1_000 / 0.75)
