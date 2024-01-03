@@ -140,24 +140,44 @@ jobs:
         run: |
           export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
           # GIB needs to be explicitly disabled, because the gib profile enables it, but the trino-server module requires all of its dependencies to be built
-          $RETRY $MAVEN install ${MAVEN_FAST_INSTALL} -Dgib.disable -pl '!:trino-docs,!:trino-server-rpm'
-      - name: Maven Clean
-        run: $MAVEN clean -pl '!:trino-server,!:trino-cli'
-      - uses: docker/setup-qemu-action@v1
+          $RETRY $MAVEN install ${MAVEN_FAST_INSTALL} -Dgib.disable -Drevision=${TRINO_VERSION} -pl '!:trino-docs,!:trino-server-rpm'
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
         with:
           platforms: arm64
-      - uses: docker/setup-buildx-action@v1
-      - name: Build and Push Docker Images [JDK 19]
-        run: .github/bin/docker-build-and-push.sh -t "${IMAGE_TAG}" -j 19 -p
-      - name: Build and Push Docker Images [JDK 21]
-        run: .github/bin/docker-build-and-push.sh -t "${IMAGE_TAG}-jdk21" -j 21 -p
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Build and push the Buffer Service Data Server Docker image
+        run: |
+          ./buffer-service/bin/build-docker-image.sh -p data-server \
+            -r 179619298502.dkr.ecr.us-east-1.amazonaws.com/galaxy \
+            -r us-east1-docker.pkg.dev/starburstdata-saas-prod/starburst-docker-repository/galaxy \
+            -r starburstgalaxy.azurecr.io/galaxy \
+            -v "${TRINO_VERSION}" \
+            -a linux/amd64,linux/arm64 \
+            -P
+      - name: Build and push the Buffer Service Discovery Server Docker image
+        run: |
+          ./buffer-service/bin/build-docker-image.sh -p discovery-server \
+            -r 179619298502.dkr.ecr.us-east-1.amazonaws.com/galaxy \
+            -r us-east1-docker.pkg.dev/starburstdata-saas-prod/starburst-docker-repository/galaxy \
+            -r starburstgalaxy.azurecr.io/galaxy \
+            -v "${TRINO_VERSION}" \
+            -a linux/amd64,linux/arm64 \
+            -P
+      - name: Maven Clean
+        run: $MAVEN clean -pl '!:trino-server,!:trino-cli'
+      - name: Build and Push Trino Docker Images [JDK 19]
+        run: .github/bin/docker-build-and-push.sh -v "${TRINO_VERSION}" -t "${TRINO_VERSION}"  -j 19 -p
+      - name: Build and Push Trino Docker Images [JDK 21]
+        run: .github/bin/docker-build-and-push.sh -v "${TRINO_VERSION}" -t "${TRINO_VERSION}-jdk21" -j 21 -p
       - name: Tag release commit
         if: github.event_name == 'push'
         run: |
           git config user.name 'Galaxy Trino Automation'
           git config user.email ''
-          git tag -m '' "${IMAGE_TAG}" HEAD
-          git push origin "${IMAGE_TAG}"
+          git tag -m '' "${TRINO_VERSION}" HEAD
+          git push origin "${TRINO_VERSION}"
 
   maven-checks:
     runs-on: [self-hosted, sep-cicd, gha-fleet-small]
