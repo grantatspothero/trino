@@ -1483,6 +1483,9 @@ public class TestGalaxyMetadataApiSpec
 
                             // Show that the newRoleName has all privileges
                             assertThat(extractPrivileges(client.getEntityPrivileges(dispatchSession(newRoleId), entityId))).isEqualTo(privileges);
+                            assertThat(extractPrivileges(client.getEntityPrivileges(dispatchSession(originalRoleId), entityId))).isEqualTo(entityId.getEntityKind() == TABLE ? ImmutableSet.of(privilege) : ImmutableSet.of());
+
+                            client.revokeEntityPrivileges(dispatchSession(adminRoleId), entityId, ImmutableSet.of(new RevokeEntityPrivilege(privilege, new RoleName(originalRoleName), false)));
                             assertThat(extractPrivileges(client.getEntityPrivileges(dispatchSession(originalRoleId), entityId))).isEmpty();
 
                             // Set ownership of the entity back to admin
