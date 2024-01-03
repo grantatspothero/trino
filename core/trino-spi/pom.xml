@@ -196,82 +196,8 @@
                                     <new>method long io.trino.spi.connector.DynamicFilter::getPreferredDynamicFilterTimeout()</new>
                                     <justification>Internal change</justification>
                                 </item>
-                                <item>
-                                    <!-- TODO this can be removed after update to 426 -->
-                                    <ignore>true</ignore>
-                                    <code>java.method.removed</code>
-                                    <old>method io.trino.spi.connector.RelationCommentMetadata io.trino.spi.connector.RelationCommentMetadata::forTable(io.trino.spi.connector.SchemaTableName, java.util.Optional&lt;java.lang.String&gt;)</old>
-                                    <justification>cherry picked from future OSS release</justification>
-                                </item>
-                                <item>
-                                    <!-- TODO this can be removed after upgrading to release containing https://github.com/trinodb/trino/pull/19141 -->
-                                    <ignore>true</ignore>
-                                    <code>java.method.numberOfParametersChanged</code>
-                                    <old>method void io.trino.spi.security.SystemSecurityContext::&lt;init&gt;(io.trino.spi.security.Identity, java.util.Optional&lt;io.trino.spi.QueryId&gt;)</old>
-                                    <new>method void io.trino.spi.security.SystemSecurityContext::&lt;init&gt;(io.trino.spi.security.Identity, io.trino.spi.QueryId, java.time.Instant)</new>
-                                </item>
                                 <!-- / Galaxy internal changes -->
                                 <!-- Galaxy backports, i.e. temporary exclusions -->
-                                <item>
-                                    <ignore>true</ignore>
-                                    <code>java.method.parameterTypeChanged</code>
-                                    <old>parameter void io.trino.spi.security.SystemAccessControl::checkCanExecuteQuery(===io.trino.spi.security.SystemSecurityContext===)</old>
-                                    <new>parameter void io.trino.spi.security.SystemAccessControl::checkCanExecuteQuery(===io.trino.spi.security.Identity===)</new>
-                                </item>
-                                <item>
-                                    <ignore>true</ignore>
-                                    <code>java.method.parameterTypeChanged</code>
-                                    <old>parameter void io.trino.spi.security.SystemAccessControl::checkCanImpersonateUser(===io.trino.spi.security.SystemSecurityContext===, java.lang.String)</old>
-                                    <new>parameter void io.trino.spi.security.SystemAccessControl::checkCanImpersonateUser(===io.trino.spi.security.Identity===, java.lang.String)</new>
-                                </item>
-                                <item>
-                                    <ignore>true</ignore>
-                                    <code>java.method.parameterTypeChanged</code>
-                                    <old>parameter void io.trino.spi.security.SystemAccessControl::checkCanKillQueryOwnedBy(===io.trino.spi.security.SystemSecurityContext===, io.trino.spi.security.Identity)</old>
-                                    <new>parameter void io.trino.spi.security.SystemAccessControl::checkCanKillQueryOwnedBy(===io.trino.spi.security.Identity===, io.trino.spi.security.Identity)</new>
-                                </item>
-                                <item>
-                                    <ignore>true</ignore>
-                                    <code>java.method.parameterTypeChanged</code>
-                                    <old>parameter void io.trino.spi.security.SystemAccessControl::checkCanReadSystemInformation(===io.trino.spi.security.SystemSecurityContext===)</old>
-                                    <new>parameter void io.trino.spi.security.SystemAccessControl::checkCanReadSystemInformation(===io.trino.spi.security.Identity===)</new>
-                                </item>
-                                <item>
-                                    <ignore>true</ignore>
-                                    <code>java.method.parameterTypeChanged</code>
-                                    <old>parameter void io.trino.spi.security.SystemAccessControl::checkCanSetSystemSessionProperty(===io.trino.spi.security.SystemSecurityContext===, java.lang.String)</old>
-                                    <new>parameter void io.trino.spi.security.SystemAccessControl::checkCanSetSystemSessionProperty(===io.trino.spi.security.Identity===, java.lang.String)</new>
-                                </item>
-                                <item>
-                                    <ignore>true</ignore>
-                                    <code>java.method.parameterTypeChanged</code>
-                                    <old>parameter void io.trino.spi.security.SystemAccessControl::checkCanViewQueryOwnedBy(===io.trino.spi.security.SystemSecurityContext===, io.trino.spi.security.Identity)</old>
-                                    <new>parameter void io.trino.spi.security.SystemAccessControl::checkCanViewQueryOwnedBy(===io.trino.spi.security.Identity===, io.trino.spi.security.Identity)</new>
-                                </item>
-                                <item>
-                                    <ignore>true</ignore>
-                                    <code>java.method.parameterTypeChanged</code>
-                                    <old>parameter void io.trino.spi.security.SystemAccessControl::checkCanWriteSystemInformation(===io.trino.spi.security.SystemSecurityContext===)</old>
-                                    <new>parameter void io.trino.spi.security.SystemAccessControl::checkCanWriteSystemInformation(===io.trino.spi.security.Identity===)</new>
-                                </item>
-                                <item>
-                                    <ignore>true</ignore>
-                                    <code>java.method.parameterTypeChanged</code>
-                                    <old>parameter java.util.Collection&lt;io.trino.spi.security.Identity&gt; io.trino.spi.security.SystemAccessControl::filterViewQueryOwnedBy(===io.trino.spi.security.SystemSecurityContext===, java.util.Collection&lt;io.trino.spi.security.Identity&gt;)</old>
-                                    <new>parameter java.util.Collection&lt;io.trino.spi.security.Identity&gt; io.trino.spi.security.SystemAccessControl::filterViewQueryOwnedBy(===io.trino.spi.security.Identity===, java.util.Collection&lt;io.trino.spi.security.Identity&gt;)</new>
-                                </item>
-                                <item>
-                                    <ignore>true</ignore>
-                                    <code>java.method.parameterTypeChanged</code>
-                                    <old>parameter void io.trino.spi.security.SystemSecurityContext::&lt;init&gt;(io.trino.spi.security.Identity, ===java.util.Optional&lt;io.trino.spi.QueryId&gt;===)</old>
-                                    <new>parameter void io.trino.spi.security.SystemSecurityContext::&lt;init&gt;(io.trino.spi.security.Identity, ===io.trino.spi.QueryId===)</new>
-                                </item>
-                                <item>
-                                    <ignore>true</ignore>
-                                    <code>java.method.returnTypeChanged</code>
-                                    <old>method java.util.Optional&lt;io.trino.spi.QueryId&gt; io.trino.spi.security.SystemSecurityContext::getQueryId()</old>
-                                    <new>method io.trino.spi.QueryId io.trino.spi.security.SystemSecurityContext::getQueryId()</new>
-                                </item>
                                 <item>
                                     <ignore>true</ignore>
                                     <code>java.method.numberOfParametersChanged</code>
