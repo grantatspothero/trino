@@ -33,15 +33,15 @@ public final class IcebergTableName
             "(?<table>[^$@]+)" +
             "(?:\\$(?<type>[^@]+))?");
 
+    public static boolean isIcebergTableName(String tableName)
+    {
+        return TABLE_PATTERN.matcher(tableName).matches();
+    }
+
     public static String tableNameWithType(String tableName, TableType tableType)
     {
         requireNonNull(tableName, "tableName is null");
         return tableName + "$" + tableType.name().toLowerCase(ENGLISH);
-    }
-
-    public static boolean isIcebergTableName(String tableName)
-    {
-        return TABLE_PATTERN.matcher(tableName).matches();
     }
 
     public static String tableNameFrom(String name)
