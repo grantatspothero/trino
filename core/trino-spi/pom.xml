@@ -189,6 +189,10 @@
                         <revapi.differences>
                             <ignore>true</ignore>
                             <differences>
+                                <!-- Cork internal changes -->
+                                <!-- / Cork internal changes -->
+                                <!-- Cork backports, i.e. temporary exclusions -->
+                                <!-- / Cork backports, i.e. temporary exclusions -->
                                 <!-- Galaxy internal changes -->
                                 <item>
                                     <ignore>true</ignore>
