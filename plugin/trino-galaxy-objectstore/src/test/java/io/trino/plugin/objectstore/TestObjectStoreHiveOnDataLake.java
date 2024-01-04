@@ -44,8 +44,6 @@ import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 public class TestObjectStoreHiveOnDataLake
         extends TestHive3OnDataLake
 {
-    public TestObjectStoreHiveOnDataLake() {}
-
     @Override
     protected QueryRunner createQueryRunner()
             throws Exception
