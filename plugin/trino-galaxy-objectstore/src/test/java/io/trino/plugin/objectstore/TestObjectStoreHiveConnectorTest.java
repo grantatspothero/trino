@@ -442,7 +442,7 @@ public class TestObjectStoreHiveConnectorTest
     @Test
     public void testShowCreateTable()
     {
-        assertQueryReturns("SHOW CREATE TABLE orders", "" +
+        assertThat(computeScalar("SHOW CREATE TABLE orders")).isEqualTo("" +
                 "CREATE TABLE objectstore.tpch.orders (\n" +
                 "   orderkey bigint,\n" +
                 "   custkey bigint,\n" +

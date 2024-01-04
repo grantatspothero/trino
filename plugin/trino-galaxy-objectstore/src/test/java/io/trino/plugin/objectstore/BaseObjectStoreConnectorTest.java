@@ -400,7 +400,7 @@ public abstract class BaseObjectStoreConnectorTest
     @Override
     public void testShowCreateSchema()
     {
-        assertQueryReturns("SHOW CREATE SCHEMA tpch", "" +
+        assertThat(computeScalar("SHOW CREATE SCHEMA tpch")).isEqualTo("" +
                 "CREATE SCHEMA objectstore.tpch\n" +
                 format("AUTHORIZATION ROLE %s\n", ACCOUNT_ADMIN) +
                 "WITH (\n" +
@@ -450,7 +450,7 @@ public abstract class BaseObjectStoreConnectorTest
 
         assertUpdate(createTable);
 
-        assertQueryReturns("SHOW CREATE TABLE test_type_format", createTable);
+        assertThat(computeScalar("SHOW CREATE TABLE test_type_format")).isEqualTo(createTable);
 
         assertUpdate("DROP TABLE test_type_format");
     }
@@ -522,7 +522,7 @@ public abstract class BaseObjectStoreConnectorTest
                 "   auto_purge = true\n" +
                 ")");
 
-        assertQueryReturns("SHOW CREATE TABLE test_hive_specific_property", "" +
+        assertThat(computeScalar("SHOW CREATE TABLE test_hive_specific_property")).isEqualTo("" +
                 "CREATE TABLE objectstore.tpch.test_hive_specific_property (\n" +
                 "   abc bigint\n" +
                 ")\n" +
@@ -547,7 +547,7 @@ public abstract class BaseObjectStoreConnectorTest
                 "    partition_projection_location_template = 's3://example/${abc}'\n" +
                 ")");
 
-        assertQueryReturns("SHOW CREATE TABLE test_hive_specific_column_property", "" +
+        assertThat(computeScalar("SHOW CREATE TABLE test_hive_specific_column_property")).isEqualTo("" +
                 "CREATE TABLE objectstore.tpch.test_hive_specific_column_property (\n" +
                 "   xyz bigint,\n" +
                 "   abc bigint WITH ( partition_projection_range = ARRAY['0','10'], partition_projection_type = 'INTEGER' )\n" +
@@ -1071,11 +1071,6 @@ public abstract class BaseObjectStoreConnectorTest
     protected void verifyRefreshMaterializedViewFailureWithoutMultiWriteInTransactionSupport(AbstractThrowableAssert abstractThrowableAssert)
     {
         abstractThrowableAssert.hasMessageContaining("Catalogs already associated with transaction");
-    }
-
-    protected void assertQueryReturns(@Language("SQL") String sql, String result)
-    {
-        assertThat(computeActual(sql).getOnlyValue()).isEqualTo(result);
     }
 
     protected TrinoFileSystem getTrinoFileSystem()
