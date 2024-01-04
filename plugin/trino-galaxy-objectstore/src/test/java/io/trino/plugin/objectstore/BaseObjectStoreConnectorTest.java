@@ -467,16 +467,16 @@ public abstract class BaseObjectStoreConnectorTest
                 "   type = 'ICEBERG'\n" +
                 ")", format));
 
-        assertThat((String) computeActual("SHOW CREATE TABLE test_type_format").getOnlyValue()).matches(format("" +
+        assertThat((String) computeActual("SHOW CREATE TABLE test_type_format").getOnlyValue()).matches("" +
                 "\\QCREATE TABLE objectstore.tpch.test_type_format (\n" +
                 "   abc bigint\n" +
                 ")\n" +
                 "WITH (\n" +
-                "   format = '%s',\n" +
+                "   format = '" + format + "',\n" +
                 "   format_version = 2,\n" +
                 "   location = 's3://test-bucket-\\E\\w+\\Q/tpch/test_type_format\\E" + locationUuidRegex() + "\\Q',\n" +
                 "   type = 'ICEBERG'\n" +
-                ")\\E", format));
+                ")\\E");
 
         assertUpdate("DROP TABLE test_type_format");
     }
