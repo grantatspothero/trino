@@ -187,7 +187,7 @@ public class TestObjectStoreIcebergConnectorTest
                 "WITH (\n" +
                 "   format = 'PARQUET',\n" +
                 "   format_version = 2,\n" +
-                "   location = 's3://test-bucket/tpch/orders-\\E.*\\Q',\n" +
+                "   location = 's3://test-bucket-\\E\\w+\\Q/tpch/orders-\\E.*\\Q',\n" +
                 "   type = 'ICEBERG'\n" +
                 ")\\E");
     }

@@ -14,7 +14,6 @@
 package io.trino.plugin.objectstore;
 
 import io.trino.Session;
-import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
@@ -30,6 +29,7 @@ import java.util.Map;
 
 import static io.trino.plugin.objectstore.TableType.HIVE;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
+import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 
@@ -60,10 +60,8 @@ public class TestObjectStoreHiveCacheSubqueriesTest
             Map<String, String> extraObjectStoreProperties)
             throws Exception
     {
-        closeAfterClass(TrinoFileSystemCache.INSTANCE::closeAll);
-
         GalaxyCockroachContainer galaxyCockroachContainer = closeAfterClass(new GalaxyCockroachContainer());
-        minio = closeAfterClass(new MinioStorage("test-bucket"));
+        minio = closeAfterClass(new MinioStorage("test-bucket-" + randomNameSuffix()));
         minio.start();
 
         metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyCockroachContainer));

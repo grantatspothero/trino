@@ -24,7 +24,6 @@ import io.trino.hdfs.HdfsConfig;
 import io.trino.hdfs.HdfsConfiguration;
 import io.trino.hdfs.HdfsConfigurationInitializer;
 import io.trino.hdfs.HdfsEnvironment;
-import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.hdfs.TrinoHdfsFileSystemStats;
 import io.trino.hdfs.authentication.NoHdfsAuthentication;
 import io.trino.hdfs.s3.HiveS3Config;
@@ -87,6 +86,7 @@ import static org.testng.Assert.fail;
 public abstract class BaseObjectStoreConnectorTest
         extends BaseConnectorTest
 {
+    protected final String bucketName = "test-bucket-" + randomNameSuffix();
     private final TableType tableType;
     private MinioStorage minio;
     private TestingGalaxyMetastore metastore;
@@ -112,10 +112,8 @@ public abstract class BaseObjectStoreConnectorTest
             Map<String, String> extraObjectStoreProperties)
             throws Exception
     {
-        closeAfterClass(TrinoFileSystemCache.INSTANCE::closeAll);
-
         GalaxyCockroachContainer galaxyCockroachContainer = closeAfterClass(new GalaxyCockroachContainer());
-        minio = closeAfterClass(new MinioStorage("test-bucket"));
+        minio = closeAfterClass(new MinioStorage(bucketName));
         minio.start();
 
         metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyCockroachContainer));
@@ -406,7 +404,7 @@ public abstract class BaseObjectStoreConnectorTest
                 "CREATE SCHEMA objectstore.tpch\n" +
                 format("AUTHORIZATION ROLE %s\n", ACCOUNT_ADMIN) +
                 "WITH (\n" +
-                "   location = 's3://test-bucket/tpch'\n" +
+                "   location = 's3://" + bucketName + "/tpch'\n" +
                 ")");
     }
 
@@ -476,7 +474,7 @@ public abstract class BaseObjectStoreConnectorTest
                 "WITH (\n" +
                 "   format = '%s',\n" +
                 "   format_version = 2,\n" +
-                "   location = 's3://test-bucket/tpch/test_type_format\\E" + locationUuidRegex() + "\\Q',\n" +
+                "   location = 's3://test-bucket-\\E\\w+\\Q/tpch/test_type_format\\E" + locationUuidRegex() + "\\Q',\n" +
                 "   type = 'ICEBERG'\n" +
                 ")\\E", format));
 
@@ -499,7 +497,7 @@ public abstract class BaseObjectStoreConnectorTest
                 "   abc bigint\n" +
                 ")\n" +
                 "WITH (\n" +
-                "   location = 's3://test-bucket/tpch/test_type_format\\E" + locationUuidRegex() + "\\Q',\n" +
+                "   location = 's3://test-bucket-\\E\\w+\\Q/tpch/test_type_format\\E" + locationUuidRegex() + "\\Q',\n" +
                 "   type = 'DELTA'\n" +
                 ")\\E");
 
@@ -583,7 +581,7 @@ public abstract class BaseObjectStoreConnectorTest
                 "WITH (\n" +
                 "   format = 'PARQUET',\n" +
                 "   format_version = 2,\n" +
-                "   location = 's3://test-bucket/tpch/test_iceberg_specific_property\\E" + locationUuidRegex() + "\\Q',\n" +
+                "   location = 's3://test-bucket-\\E\\w+\\Q/tpch/test_iceberg_specific_property\\E" + locationUuidRegex() + "\\Q',\n" +
                 "   partitioning = ARRAY['bucket(abc, 13)'],\n" +
                 "   type = 'ICEBERG'\n" +
                 ")\\E");
@@ -606,7 +604,7 @@ public abstract class BaseObjectStoreConnectorTest
                 ")\n" +
                 "WITH (\n" +
                 "   checkpoint_interval = 42,\n" +
-                "   location = 's3://test-bucket/tpch/test_delta_specific_property\\E" + locationUuidRegex() + "\\Q',\n" +
+                "   location = 's3://test-bucket-\\E\\w+\\Q/tpch/test_delta_specific_property\\E" + locationUuidRegex() + "\\Q',\n" +
                 "   type = 'DELTA'\n" +
                 ")\\E");
     }
@@ -685,32 +683,35 @@ public abstract class BaseObjectStoreConnectorTest
     @Test
     public void testCreateSchemaWithLocation()
     {
-        assertQueryFails("CREATE SCHEMA test_location_create WITH (location = 's3://test-bucket/denied')",
-                "Access Denied: Role accountadmin is not allowed to use location: s3://test-bucket/denied");
+        String location = "s3://%s/denied".formatted(bucketName);
+        assertQueryFails("CREATE SCHEMA test_location_create WITH (location = '" + location + "')",
+                "Access Denied: Role accountadmin is not allowed to use location: " + location);
     }
 
     @Test
     public void testCreateTableWithLocation()
     {
         skipTestUnless(hasBehavior(SUPPORTS_CREATE_TABLE));
+        String location = "s3://%s/denied".formatted(bucketName);
 
-        assertQueryFails("CREATE TABLE test_location_create (x int) WITH (location = 's3://test-bucket/denied')",
-                "Access Denied: Role accountadmin is not allowed to use location: s3://test-bucket/denied");
+        assertQueryFails("CREATE TABLE test_location_create (x int) WITH (location = '" + location + "')",
+                "Access Denied: Role accountadmin is not allowed to use location: " + location);
 
-        assertQueryFails("CREATE TABLE test_location_create (x int) WITH (location = 's3://test-bucket/denied/test_location_create')",
-                "Access Denied: Role accountadmin is not allowed to use location: s3://test-bucket/denied/test_location_create");
+        assertQueryFails("CREATE TABLE test_location_create (x int) WITH (location = '" + location + "/test_location_create')",
+                "Access Denied: Role accountadmin is not allowed to use location: " + location + "/test_location_create");
     }
 
     @Test
     public void testCreateTableAsWithLocation()
     {
         skipTestUnless(hasBehavior(SUPPORTS_CREATE_TABLE));
+        String location = "s3://%s/denied".formatted(bucketName);
 
-        assertQueryFails("CREATE TABLE test_location_ctas WITH (location = 's3://test-bucket/denied') AS SELECT 123 x",
-                "Access Denied: Role accountadmin is not allowed to use location: s3://test-bucket/denied");
+        assertQueryFails("CREATE TABLE test_location_ctas WITH (location = '" + location + "') AS SELECT 123 x",
+                "Access Denied: Role accountadmin is not allowed to use location: " + location);
 
-        assertQueryFails("CREATE TABLE test_location_ctas WITH (location = 's3://test-bucket/denied/test_location_ctas') AS SELECT 123 x",
-                "Access Denied: Role accountadmin is not allowed to use location: s3://test-bucket/denied/test_location_ctas");
+        assertQueryFails("CREATE TABLE test_location_ctas WITH (location = '" + location + "/test_location_ctas') AS SELECT 123 x",
+                "Access Denied: Role accountadmin is not allowed to use location: " + location + "/test_location_ctas");
     }
 
     @Test
@@ -835,7 +836,7 @@ public abstract class BaseObjectStoreConnectorTest
     {
         String tableName = "test_register_table_types_" + randomNameSuffix();
 
-        String tableLocation = "s3://test-bucket/" + tableName;
+        String tableLocation = "s3://%s/%s".formatted(bucketName, tableName);
 
         minio.putObject(tableName + "/metadata/dummy_metadata.json", "dummy");
         minio.putObject(tableName + "/_delta_log/dummy_transaction.json", "dummy");
@@ -851,8 +852,9 @@ public abstract class BaseObjectStoreConnectorTest
     public void testRegisterTableAccessControl()
     {
         String tableName = "test_register_table_" + randomNameSuffix();
-        assertQueryFails("CALL system.register_table (CURRENT_SCHEMA, '" + tableName + "', 's3://test-bucket/denied')",
-                "Access Denied: Role accountadmin is not allowed to use location: s3://test-bucket/denied");
+        String location = "s3://%s/denied".formatted(bucketName);
+        assertQueryFails("CALL system.register_table (CURRENT_SCHEMA, '" + tableName + "', '" + location + "')",
+                "Access Denied: Role accountadmin is not allowed to use location: " + location);
     }
 
     @Test

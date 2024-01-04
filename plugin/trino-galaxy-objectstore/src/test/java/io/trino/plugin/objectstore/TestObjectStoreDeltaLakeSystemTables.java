@@ -13,7 +13,6 @@
  */
 package io.trino.plugin.objectstore;
 
-import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.deltalake.TestDeltaLakeSystemTables;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
@@ -24,6 +23,7 @@ import static io.trino.plugin.objectstore.ObjectStoreQueryRunner.CATALOG;
 import static io.trino.plugin.objectstore.ObjectStoreQueryRunner.TPCH_SCHEMA;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
+import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.lang.String.format;
 
 public class TestObjectStoreDeltaLakeSystemTables
@@ -33,10 +33,8 @@ public class TestObjectStoreDeltaLakeSystemTables
     protected DistributedQueryRunner createQueryRunner()
             throws Exception
     {
-        closeAfterClass(TrinoFileSystemCache.INSTANCE::closeAll);
-
         GalaxyCockroachContainer galaxyCockroachContainer = closeAfterClass(new GalaxyCockroachContainer());
-        MinioStorage minio = closeAfterClass(new MinioStorage("test-bucket"));
+        MinioStorage minio = closeAfterClass(new MinioStorage("test-bucket-" + randomNameSuffix()));
         minio.start();
 
         TestingGalaxyMetastore metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyCockroachContainer));

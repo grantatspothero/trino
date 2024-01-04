@@ -22,7 +22,6 @@ import com.amazonaws.services.glue.model.GetTablesResult;
 import com.amazonaws.services.glue.model.Table;
 import com.google.common.collect.ImmutableMap;
 import io.trino.filesystem.Location;
-import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.aws.AwsApiCallStats;
 import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.server.security.galaxy.GalaxyTestHelper;
@@ -74,7 +73,6 @@ public abstract class BaseObjectStoreS3GlueTest
         GalaxyTestHelper galaxyTestHelper = closeAfterClass(new GalaxyTestHelper());
         galaxyTestHelper.initialize();
 
-        closeAfterClass(TrinoFileSystemCache.INSTANCE::closeAll);
         TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> true));
 
         Map<String, String> properties = createObjectStoreProperties(

@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
 import io.starburst.stargate.accesscontrol.privilege.Privilege;
 import io.starburst.stargate.id.SchemaId;
-import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.aws.AwsApiCallStats;
 import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.plugin.tpch.TpchPlugin;
@@ -64,7 +63,6 @@ public class TestObjectStoreGlueMaterializedView
         GalaxyTestHelper galaxyTestHelper = closeAfterClass(new GalaxyTestHelper());
         galaxyTestHelper.initialize();
 
-        closeAfterClass(TrinoFileSystemCache.INSTANCE::closeAll);
         TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> true));
 
         schemaName = "test_objectstore_iceberg_glue_" + randomNameSuffix();

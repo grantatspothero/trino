@@ -14,7 +14,6 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableList;
-import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
@@ -24,6 +23,7 @@ import org.testng.annotations.Test;
 
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
+import static io.trino.testing.TestingNames.randomNameSuffix;
 import static io.trino.tpch.TpchTable.NATION;
 
 public class TestObjectStoreHudiSystemTables
@@ -33,10 +33,8 @@ public class TestObjectStoreHudiSystemTables
     protected DistributedQueryRunner createQueryRunner()
             throws Exception
     {
-        closeAfterClass(TrinoFileSystemCache.INSTANCE::closeAll);
-
         GalaxyCockroachContainer galaxyCockroachContainer = closeAfterClass(new GalaxyCockroachContainer());
-        MinioStorage minio = closeAfterClass(new MinioStorage("test-bucket"));
+        MinioStorage minio = closeAfterClass(new MinioStorage("test-bucket-" + randomNameSuffix()));
         minio.start();
 
         TestingGalaxyMetastore metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyCockroachContainer));

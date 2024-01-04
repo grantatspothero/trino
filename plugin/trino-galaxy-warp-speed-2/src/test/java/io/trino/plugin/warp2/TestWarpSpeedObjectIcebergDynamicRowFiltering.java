@@ -13,7 +13,6 @@
  */
 package io.trino.plugin.warp2;
 
-import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.objectstore.MinioStorage;
 import io.trino.plugin.objectstore.ObjectStoreQueryRunner;
@@ -30,6 +29,7 @@ import org.testng.annotations.AfterClass;
 
 import static io.trino.plugin.objectstore.TableType.ICEBERG;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
+import static io.trino.testing.TestingNames.randomNameSuffix;
 
 public class TestWarpSpeedObjectIcebergDynamicRowFiltering
         extends AbstractTestDynamicRowFiltering
@@ -48,10 +48,8 @@ public class TestWarpSpeedObjectIcebergDynamicRowFiltering
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        closeAfterClass(TrinoFileSystemCache.INSTANCE::closeAll);
-
         GalaxyCockroachContainer galaxyCockroachContainer = closeAfterClass(new GalaxyCockroachContainer());
-        minio = closeAfterClass(new MinioStorage("test-bucket"));
+        minio = closeAfterClass(new MinioStorage("test-bucket-" + randomNameSuffix()));
         minio.start();
 
         metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyCockroachContainer));

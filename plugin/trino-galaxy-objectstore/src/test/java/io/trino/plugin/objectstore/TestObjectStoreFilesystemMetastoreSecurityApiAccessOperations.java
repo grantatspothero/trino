@@ -28,7 +28,6 @@ import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import io.trino.Session;
 import io.trino.filesystem.TrackingFileSystemFactory;
 import io.trino.filesystem.hdfs.HdfsFileSystemFactory;
-import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.CountingAccessHiveMetastore;
 import io.trino.plugin.hive.metastore.CountingAccessHiveMetastoreUtil;
 import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastore;
@@ -128,8 +127,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        closeAfterClass(TrinoFileSystemCache.INSTANCE::closeAll);
-
         spanExporter = closeAfterClass(InMemorySpanExporter.create());
         closeAfterClass(() -> spanExporter = null);
         SpanProcessor spanProcessor = SimpleSpanProcessor.create(spanExporter);

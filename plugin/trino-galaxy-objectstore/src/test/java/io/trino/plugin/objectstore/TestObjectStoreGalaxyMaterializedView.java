@@ -20,7 +20,6 @@ import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
 import io.starburst.stargate.accesscontrol.privilege.Privilege;
 import io.starburst.stargate.id.SchemaId;
 import io.trino.Session;
-import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.plugin.tpch.TpchPlugin;
@@ -49,8 +48,8 @@ public class TestObjectStoreGalaxyMaterializedView
         extends BaseObjectStoreMaterializedViewTest
 {
     private static final String TEST_CATALOG = "iceberg";
-    private static final String TEST_BUCKET = "test-bucket";
 
+    private final String bucketName = "test-bucket-" + randomNameSuffix();
     private GalaxyTestHelper galaxyTestHelper;
     private String schemaDirectory;
     private MinioStorage minio;
@@ -68,10 +67,9 @@ public class TestObjectStoreGalaxyMaterializedView
         galaxyTestHelper = closeAfterClass(new GalaxyTestHelper());
         galaxyTestHelper.initialize();
 
-        closeAfterClass(TrinoFileSystemCache.INSTANCE::closeAll);
         TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> false));
 
-        minio = closeAfterClass(new MinioStorage(TEST_BUCKET));
+        minio = closeAfterClass(new MinioStorage(bucketName));
         minio.start();
         schemaDirectory = minio.getS3Url() + "/" + storageSchemaName;
         TestingGalaxyMetastore metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyTestHelper.getCockroach()));
@@ -139,13 +137,13 @@ public class TestObjectStoreGalaxyMaterializedView
                 .build();
         assertThat(client.listObjects(ListObjectsArgs.builder()
                 .recursive(true)
-                .bucket(TEST_BUCKET)
+                .bucket(bucketName)
                 .prefix(schemaForDroppedMaterializedView)
                 .build())).isNotEmpty();
         getQueryRunner().execute("DROP MATERIALIZED VIEW test_drop_mv_data_materialized_view");
         assertThat(client.listObjects(ListObjectsArgs.builder()
                 .recursive(true)
-                .bucket(TEST_BUCKET)
+                .bucket(bucketName)
                 .prefix(schemaForDroppedMaterializedView)
                 .build())).isEmpty();
 

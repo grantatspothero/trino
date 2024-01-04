@@ -13,7 +13,6 @@
  */
 package io.trino.plugin.objectstore;
 
-import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.TestHiveDynamicRowFiltering;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
@@ -24,6 +23,7 @@ import org.testng.annotations.AfterClass;
 
 import static io.trino.plugin.objectstore.TableType.HIVE;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
+import static io.trino.testing.TestingNames.randomNameSuffix;
 
 public class TestObjectStoreHiveDynamicRowFiltering
         extends TestHiveDynamicRowFiltering
@@ -42,10 +42,8 @@ public class TestObjectStoreHiveDynamicRowFiltering
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        closeAfterClass(TrinoFileSystemCache.INSTANCE::closeAll);
-
         GalaxyCockroachContainer galaxyCockroachContainer = closeAfterClass(new GalaxyCockroachContainer());
-        minio = closeAfterClass(new MinioStorage("test-bucket"));
+        minio = closeAfterClass(new MinioStorage("test-bucket-" + randomNameSuffix()));
         minio.start();
 
         metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyCockroachContainer));

@@ -28,7 +28,6 @@ import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.Version;
 import io.starburst.stargate.metadata.StatementRequest;
 import io.trino.client.QueryResults;
-import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.plugin.objectstore.MinioStorage;
@@ -68,6 +67,7 @@ import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectSt
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static io.trino.sql.query.QueryAssertions.QueryAssert.newQueryAssert;
 import static io.trino.testing.MaterializedResult.resultBuilder;
+import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.util.Locale.ENGLISH;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -95,10 +95,8 @@ public class TestGalaxyMetadataOnlyQueries
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        closeAfterClass(TrinoFileSystemCache.INSTANCE::closeAll);
-
         GalaxyCockroachContainer galaxyCockroachContainer = closeAfterClass(new GalaxyCockroachContainer());
-        MinioStorage minio = closeAfterClass(new MinioStorage("test-bucket"));
+        MinioStorage minio = closeAfterClass(new MinioStorage("test-bucket-" + randomNameSuffix()));
         minio.start();
 
         TestingGalaxyMetastore metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyCockroachContainer));

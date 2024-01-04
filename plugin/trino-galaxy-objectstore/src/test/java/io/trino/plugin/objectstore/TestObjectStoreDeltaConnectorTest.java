@@ -200,7 +200,7 @@ public class TestObjectStoreDeltaConnectorTest
                         "   comment varchar\n" +
                         ")\n" +
                         "WITH (\n" +
-                        "   location = 's3://test-bucket/tpch/orders-\\E.*\\Q',\n" +
+                        "   location = 's3://test-bucket-\\E\\w+\\Q/tpch/orders-\\E.*\\Q',\n" +
                         "   type = 'DELTA'\n" +
                         ")\\E");
     }

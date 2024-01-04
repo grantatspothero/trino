@@ -19,7 +19,6 @@ import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import io.trino.Session;
 import io.trino.filesystem.Location;
-import io.trino.hdfs.TrinoFileSystemCache;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
@@ -76,8 +75,6 @@ public abstract class BaseObjectStoreS3Test
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        closeAfterClass(TrinoFileSystemCache.INSTANCE::closeAll);
-
         GalaxyCockroachContainer galaxyCockroachContainer = closeAfterClass(new GalaxyCockroachContainer());
 
         metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyCockroachContainer));
