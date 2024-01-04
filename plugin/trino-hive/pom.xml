@@ -633,7 +633,6 @@
                         <configuration>
                             <excludes>
                                 <exclude>**/TestGalaxy*.java</exclude>
-                                <exclude>**/TestHiveGlueMetastore.java</exclude>
                                 <exclude>**/TestHiveS3AndGlueMetastoreTest.java</exclude>
                                 <exclude>**/TestHiveConcurrentModificationGlueMetastore.java</exclude>
                                 <exclude>**/TestTrinoS3FileSystemAwsS3.java</exclude>
@@ -708,7 +707,6 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <includes>
-                                <include>**/TestHiveGlueMetastore.java</include>
                                 <include>**/TestHiveS3AndGlueMetastoreTest.java</include>
                                 <include>**/TestHiveConcurrentModificationGlueMetastore.java</include>
                                 <include>**/TestTrinoS3FileSystemAwsS3.java</include>
