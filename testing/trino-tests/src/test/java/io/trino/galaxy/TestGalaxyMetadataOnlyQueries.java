@@ -74,9 +74,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 
 /**
- * Like {@link BaseMetadataOnlyQueriesTest} but uses (testing) Galaxy metastore and ObjectStore connector.
+ * Like {@link TestMetadataOnlyQueries} but uses (testing) Galaxy metastore and ObjectStore connector.
  *
- * @see BaseMetadataOnlyQueriesTest
+ * @see TestMetadataOnlyQueries
  */
 @Test(singleThreaded = true) // Has verify() @AfterMethod
 public class TestGalaxyMetadataOnlyQueries
