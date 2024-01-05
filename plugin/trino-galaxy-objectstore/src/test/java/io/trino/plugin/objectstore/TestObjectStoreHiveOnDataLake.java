@@ -24,6 +24,7 @@ import io.trino.testing.QueryRunner;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.parallel.Execution;
 
 import static io.trino.plugin.hive.TestingThriftHiveMetastoreBuilder.testingThriftHiveMetastoreBuilder;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
@@ -36,11 +37,13 @@ import static java.util.regex.Pattern.quote;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
 /**
  * Test certain Hive features like flush_metadata_cache procedure via Object Store connector.
  */
 @TestInstance(PER_CLASS)
+@Execution(SAME_THREAD) // some tests depend on metadata cache
 public class TestObjectStoreHiveOnDataLake
         extends TestHive3OnDataLake
 {
