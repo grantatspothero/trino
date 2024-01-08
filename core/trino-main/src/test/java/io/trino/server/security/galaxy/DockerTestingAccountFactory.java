@@ -102,7 +102,7 @@ public class DockerTestingAccountFactory
         }
         catch (Throwable t) {
             if (portalServer != null) {
-                log.error(t, "Revieved error during test, container log follows:\n%s", portalServer.getLogs());
+                log.error(t, "Received error during test, container log follows:\n%s", portalServer.getLogs());
             }
             Throwables.throwIfUnchecked(t);
             throw new RuntimeException(t);
