@@ -484,6 +484,12 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
+                            <systemPropertyVariables>
+                                <!-- Fix concurrency - otherwise it would be based on available CPUs, not available memory -->
+                                <junit.jupiter.execution.parallel.enabled>true</junit.jupiter.execution.parallel.enabled>
+                                <junit.jupiter.execution.parallel.config.strategy>fixed</junit.jupiter.execution.parallel.config.strategy>
+                                <junit.jupiter.execution.parallel.config.fixed.parallelism>2</junit.jupiter.execution.parallel.config.fixed.parallelism>
+                            </systemPropertyVariables>
                             <excludes>
                                 <exclude>**/io/trino/faulttolerant/delta/Test*.java</exclude>
                                 <exclude>**/io/trino/faulttolerant/hive/Test*.java</exclude>
@@ -503,8 +509,10 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
+                            <!-- Failure recovery tests spend most of the time waiting for a retry -->
+                            <threadCount>4</threadCount>
                             <systemPropertyVariables>
-                                <!-- setup parallelism to 4 to avoid OOM errors -->
+                                <!-- Fix concurrency - otherwise it would be based on available CPUs, not available memory -->
                                 <junit.jupiter.execution.parallel.enabled>true</junit.jupiter.execution.parallel.enabled>
                                 <junit.jupiter.execution.parallel.config.strategy>fixed</junit.jupiter.execution.parallel.config.strategy>
                                 <junit.jupiter.execution.parallel.config.fixed.parallelism>4</junit.jupiter.execution.parallel.config.fixed.parallelism>
@@ -528,6 +536,12 @@
                         <configuration>
                             <!-- Failure recovery tests spend most of the time waiting for a retry -->
                             <threadCount>4</threadCount>
+                            <systemPropertyVariables>
+                                <!-- Fix concurrency - otherwise it would be based on available CPUs, not available memory -->
+                                <junit.jupiter.execution.parallel.enabled>true</junit.jupiter.execution.parallel.enabled>
+                                <junit.jupiter.execution.parallel.config.strategy>fixed</junit.jupiter.execution.parallel.config.strategy>
+                                <junit.jupiter.execution.parallel.config.fixed.parallelism>2</junit.jupiter.execution.parallel.config.fixed.parallelism>
+                            </systemPropertyVariables>
                             <includes>
                                 <include>**/io/trino/faulttolerant/delta/Test*.java</include>
                             </includes>
@@ -547,6 +561,12 @@
                         <configuration>
                             <!-- Failure recovery tests spend most of the time waiting for a retry -->
                             <threadCount>4</threadCount>
+                            <systemPropertyVariables>
+                                <!-- Fix concurrency - otherwise it would be based on available CPUs, not available memory -->
+                                <junit.jupiter.execution.parallel.enabled>true</junit.jupiter.execution.parallel.enabled>
+                                <junit.jupiter.execution.parallel.config.strategy>fixed</junit.jupiter.execution.parallel.config.strategy>
+                                <junit.jupiter.execution.parallel.config.fixed.parallelism>2</junit.jupiter.execution.parallel.config.fixed.parallelism>
+                            </systemPropertyVariables>
                             <includes>
                                 <include>**/io/trino/faulttolerant/iceberg/Test*.java</include>
                             </includes>
