@@ -33,6 +33,7 @@ import java.nio.file.Files;
 import java.util.Map;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.trino.plugin.base.util.Closables.closeAllSuppress;
 import static io.trino.server.galaxy.GalaxyImageConstants.STARGATE_DOCKER_REPO;
 import static io.trino.server.galaxy.GalaxyImageConstants.STARGATE_IMAGE_TAG;
 import static io.trino.testing.containers.galaxy.PemUtils.getCertFile;
@@ -101,6 +102,7 @@ public class DockerTestingAccountFactory
             testingPortalClient = new TestingPortalClient(portalServerUri, httpClient);
         }
         catch (Throwable t) {
+            closeAllSuppress(t, closer);
             if (portalServer != null) {
                 log.error(t, "Received error during test, container log follows:\n%s", portalServer.getLogs());
             }
