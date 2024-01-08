@@ -15,7 +15,6 @@ package io.trino.server.security.galaxy;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Closer;
 import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.jetty.JettyHttpClient;
 import io.airlift.log.Logger;
@@ -23,6 +22,7 @@ import io.airlift.testing.TempFile;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
 import io.starburst.stargate.accesscontrol.client.testing.TestingPortalClient;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
+import io.trino.util.AutoCloseableCloser;
 import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.GenericContainer;
 
@@ -53,7 +53,7 @@ public class DockerTestingAccountFactory
     private static final String TEST_CERT_PORTAL = "TEST_CERT_PORTAL";
     private static final int PORTAL_PORT = 8888;
 
-    private final Closer closer = Closer.create();
+    private final AutoCloseableCloser closer = AutoCloseableCloser.create();
     private final TestingPortalClient testingPortalClient;
 
     public DockerTestingAccountFactory(GalaxyCockroachContainer cockroach)
@@ -64,7 +64,7 @@ public class DockerTestingAccountFactory
             File pemFile = getCertFile("portal");
 
             log.info("Running Trino Testing Portal Server");
-            portalServer = new GenericContainer<>(PORTAL_SERVER_IMAGE);
+            portalServer = closer.register(new GenericContainer<>(PORTAL_SERVER_IMAGE));
             portalServer.setNetwork(cockroach.getNetwork());
             portalServer.addEnv(TEST_CERT_PORTAL, Files.readString(pemFile.toPath(), UTF_8));
             portalServer.addExposedPort(PORTAL_PORT);
@@ -128,7 +128,7 @@ public class DockerTestingAccountFactory
 
     @Override
     public void close()
-            throws IOException
+            throws Exception
     {
         closer.close();
     }

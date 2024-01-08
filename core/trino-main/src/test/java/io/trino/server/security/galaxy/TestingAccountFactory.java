@@ -16,11 +16,10 @@ package io.trino.server.security.galaxy;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 
-import java.io.Closeable;
 import java.util.function.Supplier;
 
 public interface TestingAccountFactory
-        extends Closeable
+        extends AutoCloseable
 {
     static TestingAccountFactory createTestingAccountFactory(Supplier<GalaxyCockroachContainer> cockroach)
     {
