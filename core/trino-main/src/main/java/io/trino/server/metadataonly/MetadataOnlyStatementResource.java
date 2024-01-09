@@ -41,6 +41,7 @@ import io.trino.execution.QueryInfo;
 import io.trino.execution.QueryManager;
 import io.trino.execution.QueryManagerConfig;
 import io.trino.execution.QueryState;
+import io.trino.execution.buffer.CompressionCodec;
 import io.trino.execution.buffer.PageDeserializer;
 import io.trino.execution.buffer.PagesSerdeFactory;
 import io.trino.memory.context.SimpleLocalMemoryContext;
@@ -291,7 +292,7 @@ public class MetadataOnlyStatementResource
 
         boolean isDdl = (dispatchQuery.getFullQueryInfo().getUpdateType() != null);
         if (!isDdl) {
-            PageDeserializer pageDeserializer = new PagesSerdeFactory(blockEncodingSerde, false).createDeserializer(Optional.empty());
+            PageDeserializer pageDeserializer = new PagesSerdeFactory(blockEncodingSerde, CompressionCodec.NONE).createDeserializer(Optional.empty());
             try (DirectExchangeClient exchangeClient = directExchangeClientSupplier.get(
                     session.getQueryId(),
                     new ExchangeId("direct-exchange-query-results"),
