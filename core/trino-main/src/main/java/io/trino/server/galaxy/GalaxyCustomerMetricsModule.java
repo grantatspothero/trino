@@ -19,7 +19,6 @@ import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import io.airlift.node.NodeConfig;
@@ -58,7 +57,7 @@ public class GalaxyCustomerMetricsModule
                 .setBinding().toInstance(new PrefixObjectNameGenerator(TRINO_PACKAGE, CUSTOMER_METRICS_PACKAGE));
         jaxrsBinder(binder).bind(GalaxyCustomerMetricsResource.class);
         Multibinder<Object> setBinder = newSetBinder(binder, Object.class, ForCustomerMetrics.class);
-        CLASSES.forEach(clazz -> setBinder.addBinding().to(clazz).in(Scopes.SINGLETON));
+        CLASSES.forEach(clazz -> setBinder.addBinding().to(clazz));
     }
 
     @ForCustomerMetrics
