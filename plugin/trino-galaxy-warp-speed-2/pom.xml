@@ -20,7 +20,7 @@
         <air.test.thread-count>1</air.test.thread-count>
         <air.test.jvm.additional-arguments>${extraJavaVectorArgs}</air.test.jvm.additional-arguments>
         <!-- overide warp version to use new FS-->
-        <dep.warp-speed.version>432.0.19</dep.warp-speed.version>
+        <dep.warp-speed.version>432.0.21</dep.warp-speed.version>
     </properties>
 
     <dependencies>
@@ -198,7 +198,11 @@
             <artifactId>trino-hudi</artifactId>
             <scope>runtime</scope>
         </dependency>
-
+        <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-main</artifactId>
+            <scope>runtime</scope>
+        </dependency>
         <dependency>
             <groupId>org.apache.hudi</groupId>
             <artifactId>hudi-common</artifactId>
@@ -304,12 +308,6 @@
         <dependency>
             <groupId>io.trino</groupId>
             <artifactId>trino-jmx</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.trino</groupId>
-            <artifactId>trino-main</artifactId>
             <scope>test</scope>
         </dependency>
 
