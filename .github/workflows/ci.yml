@@ -835,7 +835,7 @@ jobs:
             - { modules: plugin/starburst-sqlserver }
             - { modules: plugin/starburst-stargate, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
             - { modules: plugin/starburst-synapse }
-            - { modules: plugin/starburst-synapse, profile: fault-tolerant-tests }
+            - { modules: plugin/starburst-synapse, profile: fte-tests }
             - { modules: plugin/starburst-synapse, profile: long-running-tests }
             - { modules: plugin/starburst-synapse, profile: type-mapping-tests }
             - { modules: plugin/trino-accumulo }
