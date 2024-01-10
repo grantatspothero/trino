@@ -14,6 +14,7 @@
 package io.trino.plugin.hive.metastore.galaxy;
 
 import io.trino.plugin.hive.metastore.AbstractTestHiveMetastore;
+import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -32,6 +33,7 @@ public class TestGalaxyHiveMetastore
     private GalaxyCockroachContainer cockroach;
     private TestingGalaxyMetastore testingGalaxyMetastore;
     private Path tempDir;
+    private HiveMetastore metastore;
 
     @BeforeAll
     public void initialize()
@@ -41,7 +43,13 @@ public class TestGalaxyHiveMetastore
         tempDir.toFile().mkdirs();
         cockroach = new GalaxyCockroachContainer();
         testingGalaxyMetastore = new TestingGalaxyMetastore(cockroach);
-        setMetastore(new GalaxyHiveMetastore(testingGalaxyMetastore.getMetastore(), HDFS_FILE_SYSTEM_FACTORY, tempDir.toUri().toString(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch()));
+        metastore = new GalaxyHiveMetastore(testingGalaxyMetastore.getMetastore(), HDFS_FILE_SYSTEM_FACTORY, tempDir.toUri().toString(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
+    }
+
+    @Override
+    protected HiveMetastore getMetastore()
+    {
+        return metastore;
     }
 
     @AfterAll
