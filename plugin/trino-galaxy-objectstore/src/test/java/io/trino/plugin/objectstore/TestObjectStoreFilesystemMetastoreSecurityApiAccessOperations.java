@@ -63,7 +63,6 @@ import static io.trino.plugin.hive.metastore.MetastoreMethod.GET_TABLE;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.GET_TABLE_STATISTICS;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.REPLACE_TABLE;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.STREAM_TABLES;
-import static io.trino.plugin.hive.metastore.MetastoreMethod.UPDATE_PARTITIONS_STATISTICS;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.UPDATE_PARTITION_STATISTICS;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.UPDATE_TABLE_STATISTICS;
 import static io.trino.plugin.objectstore.TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations.FileType.CDF_DATA;
@@ -820,7 +819,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 ImmutableMultiset.<MetastoreMethod>builder()
                         .addCopies(GET_TABLE, occurrences(type, 1, 3, 1))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
-                        .addCopies(UPDATE_PARTITIONS_STATISTICS, occurrences(type, 1, 0, 0))
+                        .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
                         .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
                         .build(),
                 switch (type) {
@@ -844,7 +843,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                 ImmutableMultiset.<MetastoreMethod>builder()
                         .addCopies(GET_TABLE, occurrences(type, 1, 2, 1))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
-                        .addCopies(UPDATE_PARTITIONS_STATISTICS, occurrences(type, 2, 0, 0))
+                        .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(type, 2, 0, 0))
                         .build(),
                 switch (type) {
                     case HIVE -> ImmutableMultiset.<FileOperation>builder()
