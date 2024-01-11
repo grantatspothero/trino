@@ -21,6 +21,8 @@ import io.trino.tests.product.launcher.suite.SuiteTestRun;
 
 import java.util.List;
 
+import static io.trino.tests.product.TestGroups.CONFIGURED_FEATURES;
+import static io.trino.tests.product.TestGroups.OBJECTSTORE;
 import static io.trino.tests.product.launcher.suite.SuiteTestRun.testOnEnvironment;
 
 public class SuiteObjectstore
@@ -31,7 +33,7 @@ public class SuiteObjectstore
     {
         return ImmutableList.of(
                 testOnEnvironment(EnvMultinodeObjectstore.class)
-                        .withGroups("configured_features", "objectstore")
+                        .withGroups(CONFIGURED_FEATURES, OBJECTSTORE)
                         .build());
     }
 }

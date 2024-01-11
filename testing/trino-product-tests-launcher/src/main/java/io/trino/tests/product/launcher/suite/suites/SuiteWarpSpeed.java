@@ -22,6 +22,7 @@ import io.trino.tests.product.launcher.suite.SuiteTestRun;
 
 import java.util.List;
 
+import static io.trino.tests.product.TestGroups.WARP_SPEED;
 import static io.trino.tests.product.launcher.suite.SuiteTestRun.testOnEnvironment;
 
 public class SuiteWarpSpeed
@@ -32,10 +33,10 @@ public class SuiteWarpSpeed
     {
         return ImmutableList.of(
                 testOnEnvironment(EnvMultinodeWarpSpeed.class)
-                        .withGroups("warp_speed")
+                        .withGroups(WARP_SPEED)
                         .build(),
                 testOnEnvironment(EnvMultinodeWarpSpeed2.class)
-                        .withGroups("warp_speed")
+                        .withGroups(WARP_SPEED)
                         .build());
     }
 }

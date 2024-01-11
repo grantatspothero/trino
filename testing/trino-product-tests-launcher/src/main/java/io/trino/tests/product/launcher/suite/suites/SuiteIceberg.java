@@ -28,6 +28,14 @@ import io.trino.tests.product.launcher.suite.SuiteTestRun;
 import java.util.List;
 
 import static com.google.common.base.Verify.verify;
+import static io.trino.tests.product.TestGroups.CONFIGURED_FEATURES;
+import static io.trino.tests.product.TestGroups.HIVE_ICEBERG_REDIRECTIONS;
+import static io.trino.tests.product.TestGroups.ICEBERG;
+import static io.trino.tests.product.TestGroups.ICEBERG_JDBC;
+import static io.trino.tests.product.TestGroups.ICEBERG_NESSIE;
+import static io.trino.tests.product.TestGroups.ICEBERG_REST;
+import static io.trino.tests.product.TestGroups.ICEBERG_TABULAR;
+import static io.trino.tests.product.TestGroups.STORAGE_FORMATS;
 import static io.trino.tests.product.launcher.suite.SuiteTestRun.testOnEnvironment;
 
 public class SuiteIceberg
@@ -40,23 +48,23 @@ public class SuiteIceberg
 
         return ImmutableList.of(
                 testOnEnvironment(EnvSinglenodeSparkIceberg.class)
-                        .withGroups("configured_features", "iceberg")
-                        .withExcludedGroups("storage_formats")
+                        .withGroups(CONFIGURED_FEATURES, ICEBERG)
+                        .withExcludedGroups(STORAGE_FORMATS)
                         .build(),
                 testOnEnvironment(EnvSinglenodeHiveIcebergRedirections.class)
-                        .withGroups("configured_features", "hive_iceberg_redirections")
+                        .withGroups(CONFIGURED_FEATURES, HIVE_ICEBERG_REDIRECTIONS)
                         .build(),
                 testOnEnvironment(EnvSinglenodeSparkIcebergRest.class)
-                        .withGroups("configured_features", "iceberg_rest")
+                        .withGroups(CONFIGURED_FEATURES, ICEBERG_REST)
                         .build(),
                 testOnEnvironment(EnvMultinodeIcebergTabular.class)
-                        .withGroups("configured_features", "iceberg_tabular")
+                        .withGroups(CONFIGURED_FEATURES, ICEBERG_TABULAR)
                         .build(),
                 testOnEnvironment(EnvSinglenodeSparkIcebergJdbcCatalog.class)
-                        .withGroups("configured_features", "iceberg_jdbc")
+                        .withGroups(CONFIGURED_FEATURES, ICEBERG_JDBC)
                         .build(),
                 testOnEnvironment(EnvSinglenodeSparkIcebergNessie.class)
-                        .withGroups("configured_features", "iceberg_nessie")
+                        .withGroups(CONFIGURED_FEATURES, ICEBERG_NESSIE)
                         .build());
     }
 }

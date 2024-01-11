@@ -21,6 +21,8 @@ import io.trino.tests.product.launcher.suite.SuiteTestRun;
 
 import java.util.List;
 
+import static io.trino.tests.product.TestGroups.CONFIGURED_FEATURES;
+import static io.trino.tests.product.TestGroups.DATABRICKS_UNITY_HTTP_HMS;
 import static io.trino.tests.product.launcher.suite.SuiteTestRun.testOnEnvironment;
 
 public class SuiteDatabricksUnityHttpHms
@@ -31,7 +33,7 @@ public class SuiteDatabricksUnityHttpHms
     {
         return ImmutableList.of(
                 testOnEnvironment(EnvMultinodeDatabricksHttpHms.class)
-                        .withGroups("configured_features", "databricks-unity-http-hms")
+                        .withGroups(CONFIGURED_FEATURES, DATABRICKS_UNITY_HTTP_HMS)
                         .build());
     }
 }

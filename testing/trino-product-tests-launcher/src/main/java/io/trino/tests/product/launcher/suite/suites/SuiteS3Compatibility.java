@@ -22,6 +22,7 @@ import io.trino.tests.product.launcher.suite.SuiteTestRun;
 
 import java.util.List;
 
+import static io.trino.tests.product.TestGroups.S3_BACKWARDS_COMPATIBILITY;
 import static io.trino.tests.product.launcher.suite.SuiteTestRun.testOnEnvironment;
 
 public class SuiteS3Compatibility
@@ -31,7 +32,7 @@ public class SuiteS3Compatibility
     public List<SuiteTestRun> getTestRuns(EnvironmentConfig config)
     {
         return ImmutableList.of(
-                testOnEnvironment(EnvMultinodeTrino415.class).withGroups("s3_backwards_compatibility").build(),
-                testOnEnvironment(EnvMultinodeWithLegacyPathsTrino415.class).withGroups("s3_backwards_compatibility").build());
+                testOnEnvironment(EnvMultinodeTrino415.class).withGroups(S3_BACKWARDS_COMPATIBILITY).build(),
+                testOnEnvironment(EnvMultinodeWithLegacyPathsTrino415.class).withGroups(S3_BACKWARDS_COMPATIBILITY).build());
     }
 }
