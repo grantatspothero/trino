@@ -1028,7 +1028,7 @@ jobs:
           cache: restore
           cleanup-node: ${{ format('{0}', matrix.modules == 'plugin/trino-singlestore') }}
           # TODO(https://github.com/starburstdata/galaxy-trino/issues/1309) switch to 21 as soon as we decide to use 21 in production in Galaxy; so far it is better to use 19 for tests (also snowflake tests do not work on 21 now)
-          java-version: ${{ matrix.jdk != '' && matrix.jdk || '19' }}
+          java-version: ${{ matrix.jdk != '' && matrix.jdk || '21' }}
       - name: Maven Install
         run: |
           export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
@@ -1772,7 +1772,7 @@ jobs:
               --output PRINT_WRITE \
               --timeout 105m \
               --bind=off \
-              --trino-jdk-version temurin19
+              --trino-jdk-version temurin21
       - name: Upload test results
         uses: actions/upload-artifact@v2
         if: failure() # TODO: Condition on job running.
