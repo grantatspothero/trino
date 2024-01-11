@@ -91,7 +91,7 @@ jobs:
           echo "version=${version}" >> $GITHUB_OUTPUT
           echo "version: \`${version}\`" >> $GITHUB_STEP_SUMMARY
 
-  docker-images:
+  docker-images-19:
     # Only build images for merges to galaxy*, or for PRs with the 'with-images' label
     if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'with-images')
     runs-on: [self-hosted, sep-cicd, gha-fleet-small]
@@ -170,6 +170,95 @@ jobs:
         run: $MAVEN clean -pl '!:trino-server,!:trino-cli'
       - name: Build and Push Trino Docker Images [JDK 19]
         run: .github/bin/docker-build-and-push.sh -v "${TRINO_VERSION}" -t "${TRINO_VERSION}"  -j 19 -p
+      - name: Tag release commit
+        if: github.event_name == 'push'
+        run: |
+          git config user.name 'Galaxy Trino Automation'
+          git config user.email ''
+          git tag -m '' "${TRINO_VERSION}" HEAD
+          git push origin "${TRINO_VERSION}"
+
+  docker-images-21:
+    # Only build images for merges to galaxy*, or for PRs with the 'with-images' label
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'with-images')
+    runs-on: [self-hosted, sep-cicd, gha-fleet-small]
+    needs: determine-version
+    env:
+      TRINO_VERSION: ${{ needs.determine-version.outputs.version }}
+    steps:
+      - name: Free Disk Space
+        run: |
+          df -h
+          sudo apt-get clean
+          df -h
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # checkout tags so 'git describe' works
+      - uses: actions/setup-java@v2
+        with:
+          distribution: 'temurin'
+          java-version: 21
+      - name: Login to the Docker Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ secrets.LABS_DOCKER_REGISTRY }}
+          username: ${{ secrets.LABS_DOCKER_REGISTRY_USERNAME }}
+          password: ${{ secrets.LABS_DOCKER_REGISTRY_PASSWORD }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.PROD_AWS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Login to the ECR Docker Registry
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Login to the GCP Artifact Registry
+        uses: docker/login-action@v1
+        with:
+          registry: "us-east1-docker.pkg.dev/starburstdata-saas-prod/starburst-docker-repository"
+          username: "_json_key_base64"
+          password: ${{ secrets.GCR_DOCKER_SECRET }}
+      - name: Login to the Azure Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: "starburstgalaxy.azurecr.io"
+          username: "StarburstGalaxy"
+          password: ${{ secrets.ACR_DOCKER_SECRET }}
+      - name: Maven Build
+        run: |
+          export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
+          # GIB needs to be explicitly disabled, because the gib profile enables it, but the trino-server module requires all of its dependencies to be built
+          $RETRY $MAVEN install ${MAVEN_FAST_INSTALL} -Dgib.disable -Drevision=${TRINO_VERSION} -pl '!:trino-docs,!:trino-server-rpm'
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+        with:
+          platforms: arm64
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Build and push the Buffer Service Data Server Docker image
+        run: |
+          ./galaxy-buffer-service/bin/build-docker-image.sh -p data-server \
+            -r 179619298502.dkr.ecr.us-east-1.amazonaws.com/galaxy \
+            -r us-east1-docker.pkg.dev/starburstdata-saas-prod/starburst-docker-repository/galaxy \
+            -r starburstgalaxy.azurecr.io/galaxy \
+            -v "${TRINO_VERSION}" \
+            -t "${TRINO_VERSION}-jdk21" \
+            -j "21" \
+            -a linux/amd64,linux/arm64 \
+            -P
+      - name: Build and push the Buffer Service Discovery Server Docker image
+        run: |
+          ./galaxy-buffer-service/bin/build-docker-image.sh -p discovery-server \
+            -r 179619298502.dkr.ecr.us-east-1.amazonaws.com/galaxy \
+            -r us-east1-docker.pkg.dev/starburstdata-saas-prod/starburst-docker-repository/galaxy \
+            -r starburstgalaxy.azurecr.io/galaxy \
+            -v "${TRINO_VERSION}" \
+            -t "${TRINO_VERSION}-jdk21" \
+            -j "21" \
+            -a linux/amd64,linux/arm64 \
+            -P
+      - name: Maven Clean
+        run: $MAVEN clean -pl '!:trino-server,!:trino-cli'
       - name: Build and Push Trino Docker Images [JDK 21]
         run: .github/bin/docker-build-and-push.sh -v "${TRINO_VERSION}" -t "${TRINO_VERSION}-jdk21" -j 21 -p
       - name: Tag release commit
