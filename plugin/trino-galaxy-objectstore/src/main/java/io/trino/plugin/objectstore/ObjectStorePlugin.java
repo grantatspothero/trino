@@ -23,6 +23,6 @@ public class ObjectStorePlugin
     @Override
     public Iterable<ConnectorFactory> getConnectorFactories()
     {
-        return ImmutableList.of(new ObjectStoreConnectorFactory("galaxy_objectstore"));
+        return ImmutableList.of(new ObjectStoreConnectorFactory());
     }
 }

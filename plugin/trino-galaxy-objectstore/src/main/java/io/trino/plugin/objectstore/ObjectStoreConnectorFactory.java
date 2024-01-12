@@ -13,65 +13,30 @@
  */
 package io.trino.plugin.objectstore;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
 import io.trino.spi.connector.ConnectorFactory;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Strings.isNullOrEmpty;
-import static com.google.common.base.Throwables.throwIfUnchecked;
+import static com.google.inject.util.Modules.EMPTY_MODULE;
+import static io.trino.plugin.objectstore.InternalObjectStoreConnectorFactory.createConnector;
 
 public class ObjectStoreConnectorFactory
         implements ConnectorFactory
 {
-    private final String name;
-
-    public ObjectStoreConnectorFactory(String name)
-    {
-        checkArgument(!isNullOrEmpty(name), "name is null or empty");
-        this.name = name;
-    }
+    private static final String GALAXY_OBJECTSTORE = "galaxy_objectstore";
 
     @Override
     public Connector create(String catalogName, Map<String, String> config, ConnectorContext context)
     {
-        @SuppressWarnings("removal")
-        ClassLoader classLoader = context.duplicatePluginClassLoader();
-        try {
-            // the module must be from the same classloader as InternalObjectStoreConnectorFactory
-            Object moduleInstance = classLoader.loadClass(EmptyModule.class.getName()).getConstructor().newInstance();
-            // use the class instance from InternalObjectStoreConnectorFactory's classloader
-            Class<?> moduleClass = classLoader.loadClass(Module.class.getName());
-            return (Connector) classLoader.loadClass(InternalObjectStoreConnectorFactory.class.getName())
-                    .getMethod("createConnector", String.class, Map.class, Optional.class, Optional.class, Optional.class, Optional.class, moduleClass, ConnectorContext.class)
-                    .invoke(null, catalogName, config, Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), moduleInstance, context);
-        }
-        catch (InvocationTargetException e) {
-            Throwable targetException = e.getTargetException();
-            throwIfUnchecked(targetException);
-            throw new RuntimeException(targetException);
-        }
-        catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
-        }
+        return createConnector(catalogName, config, Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), EMPTY_MODULE, context);
     }
 
     @Override
     public String getName()
     {
-        return name;
-    }
-
-    public static class EmptyModule
-            implements Module
-    {
-        @Override
-        public void configure(Binder binder) {}
+        return GALAXY_OBJECTSTORE;
     }
 }
