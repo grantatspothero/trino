@@ -17,12 +17,11 @@ import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
 import io.trino.spi.connector.ConnectorFactory;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.google.common.base.Throwables.throwIfUnchecked;
 import static io.trino.plugin.base.Versions.checkStrictSpiVersionMatch;
+import static io.trino.plugin.hudi.InternalHudiConnectorFactory.createConnector;
 
 public class HudiConnectorFactory
         implements ConnectorFactory
@@ -38,20 +37,6 @@ public class HudiConnectorFactory
     {
         checkStrictSpiVersionMatch(context, this);
 
-        @SuppressWarnings("removal")
-        ClassLoader classLoader = context.duplicatePluginClassLoader();
-        try {
-            return (Connector) classLoader.loadClass(InternalHudiConnectorFactory.class.getName())
-                    .getMethod("createConnector", String.class, Map.class, ConnectorContext.class, Optional.class, Optional.class, Optional.class)
-                    .invoke(null, catalogName, config, context, Optional.empty(), Optional.empty(), Optional.empty());
-        }
-        catch (InvocationTargetException e) {
-            Throwable targetException = e.getTargetException();
-            throwIfUnchecked(targetException);
-            throw new RuntimeException(targetException);
-        }
-        catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
-        }
+        return createConnector(catalogName, config, context, Optional.empty(), Optional.empty(), Optional.empty());
     }
 }
