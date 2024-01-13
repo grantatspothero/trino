@@ -74,8 +74,7 @@ public class WarpSpeedConnectorFactory
                     context,
                     optionalModules,
                     Map.of(ProxiedConnectorConfiguration.ICEBERG_CONNECTOR_NAME,
-                            IcebergProxiedConnectorInitializer.class.getName()),
-                    false);
+                            IcebergProxiedConnectorInitializer.class.getName()));
         }
         else {
             Map<String, String> strippedConfig =
