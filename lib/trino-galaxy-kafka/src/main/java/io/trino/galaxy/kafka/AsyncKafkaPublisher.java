@@ -31,6 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
@@ -54,6 +55,7 @@ public class AsyncKafkaPublisher
     private final AtomicBoolean initialized = new AtomicBoolean();
     private final AtomicBoolean destroyed = new AtomicBoolean();
     private final AtomicBoolean errorDelay = new AtomicBoolean();
+    private final AtomicInteger recordsDropped = new AtomicInteger(0);
     private final RateLimiter errorRetryRateLimiter = RateLimiter.create(0.5);
     private final RateLimiter loggingRateLimiter = RateLimiter.create(0.5);
     private final ExecutorService executorService = newSingleThreadExecutor(new ThreadFactoryBuilder()
@@ -147,9 +149,18 @@ public class AsyncKafkaPublisher
             // Drop older records in favor of newer records if backed up to capacity limits
             if (buffer.pollFirst() != null) {
                 queueOverflowDroppedRecords.update(1);
+                recordsDropped.incrementAndGet();
             }
+        }
+
+        int dropped = recordsDropped.getAndSet(0);
+        if (dropped > 0) {
             if (loggingRateLimiter.tryAcquire()) {
-                log.error("%s - record dropped! Async queue has reached max buffering capacity of %s", loggingName, maxBufferingCapacity);
+                log.error("%s - %s records dropped! Async queue has reached max buffering capacity of %s", loggingName, dropped, maxBufferingCapacity);
+            }
+            else {
+                // Rate limited, add back so we don't lose count
+                recordsDropped.addAndGet(dropped);
             }
         }
     }
