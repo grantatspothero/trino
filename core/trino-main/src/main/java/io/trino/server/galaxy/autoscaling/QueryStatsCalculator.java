@@ -74,7 +74,7 @@ public class QueryStatsCalculator
 
         Map<QueryId, Long> queryIdToCpuTime = new HashMap<>();
         for (BasicQueryInfo query : queriesSupplier.get()) {
-            if (!query.getState().isDone()) {
+            if (isRunning(query)) {
                 runningQueries++;
 
                 long totalQueryCpuTimeMillis = roundToLong(query.getQueryStats().getTotalCpuTime().getValue(TimeUnit.MILLISECONDS), HALF_UP);
@@ -96,8 +96,16 @@ public class QueryStatsCalculator
                 (long) stats.getCompletedQueries().getFiveMinute().getCount(),
                 stats.getConsumedCpuTimeSecs().getFiveMinute().getCount() * TimeUnit.SECONDS.toMillis(1));
         queuedQueries = queriesSupplier.get().stream()
-                .filter(query -> query.getState() == QUEUED)
+                .filter(query -> query.getState() == QUEUED || query.getState() == WAITING_FOR_RESOURCES)
                 .count();
+    }
+
+    private static boolean isRunning(BasicQueryInfo query)
+    {
+        QueryState state = query.getState();
+        return !state.isDone() &&
+                state != QUEUED &&
+                state != WAITING_FOR_RESOURCES;
     }
 
     public QueryStats getPastQueryStats()
