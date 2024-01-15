@@ -15,6 +15,11 @@ package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
+import io.starburst.stargate.accesscontrol.privilege.GrantKind;
+import io.starburst.stargate.accesscontrol.privilege.Privilege;
+import io.starburst.stargate.id.CatalogId;
+import io.starburst.stargate.id.FunctionId;
 import io.trino.Session;
 import io.trino.filesystem.TrinoFileSystem;
 import io.trino.filesystem.hdfs.HdfsFileSystemFactory;
@@ -34,6 +39,7 @@ import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.spi.Plugin;
 import io.trino.testing.BaseConnectorTest;
 import io.trino.testing.DistributedQueryRunner;
+import io.trino.testing.MaterializedResult;
 import io.trino.testing.QueryRunner;
 import io.trino.testing.TestingConnectorBehavior;
 import io.trino.testing.sql.TestTable;
@@ -51,6 +57,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Verify.verify;
+import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.trino.plugin.objectstore.MinioStorage.ACCESS_KEY;
 import static io.trino.plugin.objectstore.MinioStorage.SECRET_KEY;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
@@ -117,6 +124,7 @@ public abstract class BaseObjectStoreConnectorTest
 
         TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> !location.contains("denied")));
         TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> galaxyCockroachContainer));
+        TestingAccountClient accountClient = testingAccountFactory.createAccountClient();
 
         Map<String, String> objectStoreProperties = ImmutableMap.<String, String>builder()
                 .putAll(extraObjectStoreProperties)
@@ -125,7 +133,7 @@ public abstract class BaseObjectStoreConnectorTest
 
         DistributedQueryRunner queryRunner = ObjectStoreQueryRunner.builder()
                 .withTableType(tableType)
-                .withAccountClient(testingAccountFactory.createAccountClient())
+                .withAccountClient(accountClient)
                 .withS3Url(minio.getS3Url())
                 .withHiveS3Config(minio.getHiveS3Config())
                 .withMetastore(metastore)
@@ -140,6 +148,12 @@ public abstract class BaseObjectStoreConnectorTest
 
         // Grant select on mock catalog
         queryRunner.execute(format("GRANT SELECT ON \"mock_dynamic_listing\".\"*\".\"*\" TO ROLE %s WITH GRANT OPTION", ACCOUNT_ADMIN));
+
+        // Grant execute on unload function
+        CatalogId catalogId = accountClient.getOrCreateCatalog(queryRunner.getDefaultSession().getCatalog().orElseThrow());
+        FunctionId functionId = new FunctionId(catalogId, "system", "unload");
+        accountClient.grantFunctionPrivilege(new TestingAccountClient.GrantDetails(Privilege.EXECUTE, accountClient.getAdminRoleId(), GrantKind.ALLOW, false, functionId));
+
         return queryRunner;
     }
 
@@ -1058,6 +1072,43 @@ public abstract class BaseObjectStoreConnectorTest
     public void testSelectInTransaction()
     {
         // Select in transaction not supported in galaxy
+    }
+
+    @Test
+    public void testUnloadTableFunction()
+    {
+        String tableName = "test_unload" + randomNameSuffix();
+        String location = "s3://%s/%s".formatted(bucketName, tableName);
+
+        MaterializedResult result = computeActual("SELECT * FROM TABLE(system.unload(" +
+                "input => TABLE(VALUES 'test unload') t(col)," +
+                "location => '" + location + "'," +
+                "format => 'TEXTFILE'," +
+                "compression => 'GZIP'," +
+                "separator => '#'))");
+        assertThat(result.getColumnNames()).containsExactly("path", "count");
+        assertThat(result.getRowCount()).isEqualTo(1);
+        assertThat((String) getOnlyElement(result.getMaterializedRows()).getField(0)).startsWith(location);
+
+        assertUpdate("CREATE TABLE " + tableName + "(col varchar)" +
+                "WITH (type = 'HIVE', format = 'TEXTFILE', textfile_field_separator = '#', external_location = '" + location + "')");
+        assertQuery("SELECT * FROM " + tableName, "VALUES 'test unload'");
+
+        assertUpdate("DROP TABLE " + tableName);
+    }
+
+    @Test
+    public void testUnloadTableFunctionLocationDenied()
+    {
+        String tableName = "test_unload_denied" + randomNameSuffix();
+        String location = "s3://%s/%s".formatted(bucketName, tableName);
+
+        assertQueryFails(
+                "SELECT * FROM TABLE(system.unload(" +
+                "input => TABLE(VALUES 'test unload denied') t(col)," +
+                "location => '" + location + "'," +
+                "format => 'TEXTFILE'))",
+                "Access Denied: Role accountadmin is not allowed to use location: " + location);
     }
 
     @Override

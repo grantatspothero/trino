@@ -15,26 +15,31 @@ package io.trino.plugin.objectstore;
 
 import com.google.inject.Inject;
 import io.trino.plugin.deltalake.functions.tablechanges.TableChangesTableFunctionHandle;
+import io.trino.plugin.hive.functions.Unload.UnloadFunctionHandle;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.ConnectorSplit;
 import io.trino.spi.function.FunctionProvider;
 import io.trino.spi.function.table.ConnectorTableFunctionHandle;
+import io.trino.spi.function.table.TableFunctionDataProcessor;
 import io.trino.spi.function.table.TableFunctionProcessorProvider;
 import io.trino.spi.function.table.TableFunctionSplitProcessor;
 
 import static io.trino.plugin.objectstore.TableType.DELTA;
+import static io.trino.plugin.objectstore.TableType.HIVE;
 import static java.util.Objects.requireNonNull;
 
 public class ObjectStoreFunctionProvider
         implements FunctionProvider
 {
+    private final Connector hiveConnector;
     private final Connector deltaConnector;
     private final ObjectStoreSessionProperties objectStoreSessionProperties;
 
     @Inject
-    public ObjectStoreFunctionProvider(@ForDelta Connector deltaConnector, ObjectStoreSessionProperties objectStoreSessionProperties)
+    public ObjectStoreFunctionProvider(@ForHive Connector hiveConnector, @ForDelta Connector deltaConnector, ObjectStoreSessionProperties objectStoreSessionProperties)
     {
+        this.hiveConnector = requireNonNull(hiveConnector, "hiveConnector is null");
         this.deltaConnector = requireNonNull(deltaConnector, "deltaConnector is null");
         this.objectStoreSessionProperties = requireNonNull(objectStoreSessionProperties, "objectStoreSessionProperties is null");
     }
@@ -42,10 +47,36 @@ public class ObjectStoreFunctionProvider
     @Override
     public TableFunctionProcessorProvider getTableFunctionProcessorProvider(ConnectorTableFunctionHandle functionHandle)
     {
+        if (functionHandle instanceof UnloadFunctionHandle) {
+            return new UnloadProcessorProvider(hiveConnector, objectStoreSessionProperties, functionHandle);
+        }
         if (functionHandle instanceof TableChangesTableFunctionHandle) {
             return new DeltaLakeTableChangesProcessorProvider(deltaConnector, objectStoreSessionProperties, functionHandle);
         }
         throw new UnsupportedOperationException("Unsupported function: " + functionHandle);
+    }
+
+    private static class UnloadProcessorProvider
+            implements TableFunctionProcessorProvider
+    {
+        private final TableFunctionProcessorProvider tableFunctionProcessorProvider;
+        private final ObjectStoreSessionProperties objectStoreSessionProperties;
+
+        public UnloadProcessorProvider(
+                Connector hiveConnector,
+                ObjectStoreSessionProperties objectStoreSessionProperties,
+                ConnectorTableFunctionHandle functionHandle)
+        {
+            this.objectStoreSessionProperties = requireNonNull(objectStoreSessionProperties, "objectStoreSessionProperties is null");
+            FunctionProvider functionProvider = hiveConnector.getFunctionProvider().orElseThrow();
+            this.tableFunctionProcessorProvider = requireNonNull(functionProvider.getTableFunctionProcessorProvider(functionHandle), "tableFunctionProcessorProvider is null");
+        }
+
+        @Override
+        public TableFunctionDataProcessor getDataProcessor(ConnectorSession session, ConnectorTableFunctionHandle handle)
+        {
+            return tableFunctionProcessorProvider.getDataProcessor(objectStoreSessionProperties.unwrap(HIVE, session), handle);
+        }
     }
 
     private static class DeltaLakeTableChangesProcessorProvider
