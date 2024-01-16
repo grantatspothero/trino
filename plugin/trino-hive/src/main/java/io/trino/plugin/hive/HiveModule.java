@@ -30,6 +30,7 @@ import io.trino.plugin.hive.avro.AvroFileWriterFactory;
 import io.trino.plugin.hive.avro.AvroPageSourceFactory;
 import io.trino.plugin.hive.fs.CachingDirectoryLister;
 import io.trino.plugin.hive.fs.TransactionScopeCachingDirectoryListerFactory;
+import io.trino.plugin.hive.functions.Unload;
 import io.trino.plugin.hive.line.CsvFileWriterFactory;
 import io.trino.plugin.hive.line.CsvPageSourceFactory;
 import io.trino.plugin.hive.line.JsonFileWriterFactory;
@@ -178,8 +179,8 @@ public class HiveModule
         jsonBinder(binder).addSerializerBinding(Block.class).to(BlockJsonSerde.Serializer.class);
         jsonBinder(binder).addDeserializerBinding(Block.class).to(BlockJsonSerde.Deserializer.class);
 
-        newOptionalBinder(binder, FunctionProvider.class).setDefault().toInstance(new NoopFunctionProvider());
-        newSetBinder(binder, ConnectorTableFunction.class);
+        newOptionalBinder(binder, FunctionProvider.class).setDefault().to(HiveFunctionProvider.class).in(Scopes.SINGLETON);
+        newSetBinder(binder, ConnectorTableFunction.class).addBinding().toProvider(Unload.class).in(Scopes.SINGLETON);
     }
 
     @Singleton

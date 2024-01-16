@@ -66,7 +66,7 @@ public class HivePageSink
 {
     private static final int MAX_PAGE_POSITIONS = 4096;
 
-    private final HiveWriterFactory writerFactory;
+    private final WriterFactory writerFactory;
 
     private final boolean isTransactional;
     private final int[] dataColumnInputIndex; // ordinal of columns (not counting sample weight column)
@@ -96,7 +96,7 @@ public class HivePageSink
 
     public HivePageSink(
             boolean isMergeSink,
-            HiveWriterFactory writerFactory,
+            WriterFactory writerFactory,
             List<HiveColumnHandle> inputColumns,
             boolean isTransactional,
             Optional<HiveBucketProperty> bucketProperty,

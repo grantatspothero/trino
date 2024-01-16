@@ -466,16 +466,21 @@ jobs:
               plugin/trino-hive-hadoop2/bin/run_hive_s3_select_json_tests.sh
             fi
           fi
-      - name: Run Hive AWS Tests
+      - name: Run Hive Cloud Tests
         env:
+          ABFS_CONTAINER: ${{ secrets.AZURE_ABFS_CONTAINER }}
+          ABFS_ACCOUNT: ${{ secrets.AZURE_ABFS_ACCOUNT }}
+          ABFS_ACCESSKEY: ${{ secrets.AZURE_ABFS_ACCESSKEY }}
           AWS_ACCESS_KEY_ID: ${{ secrets.TRINO_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TRINO_AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ vars.TRINO_AWS_REGION }}
           S3_BUCKET: ${{ vars.TRINO_S3_BUCKET }}
           S3_BUCKET_ENDPOINT: "s3.${{ vars.TRINO_AWS_REGION }}.amazonaws.com"
+          GCP_CREDENTIALS_KEY: ${{ secrets.GCP_CREDENTIALS_KEY }}
+          GCP_STORAGE_BUCKET: ${{ vars.GCP_STORAGE_BUCKET }}
         run: |
           if [ "${AWS_ACCESS_KEY_ID}" != "" ]; then
-            $MAVEN test ${MAVEN_TEST} -pl :trino-hive -P aws-tests
+            $MAVEN test ${MAVEN_TEST} -pl :trino-hive -P cloud-tests
           fi
       - name: Run Hive Azure ABFS Access Key Tests
         if: matrix.config != 'config-empty' # Hive 1.x does not support Azure storage
