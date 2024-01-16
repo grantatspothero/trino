@@ -95,7 +95,7 @@ public class HivePageSink
     private long validationCpuNanos;
 
     public HivePageSink(
-            HiveWritableTableHandle tableHandle,
+            boolean isMergeSink,
             HiveWriterFactory writerFactory,
             List<HiveColumnHandle> inputColumns,
             boolean isTransactional,
@@ -117,7 +117,7 @@ public class HivePageSink
         this.writeVerificationExecutor = requireNonNull(writeVerificationExecutor, "writeVerificationExecutor is null");
         this.partitionUpdateCodec = requireNonNull(partitionUpdateCodec, "partitionUpdateCodec is null");
 
-        this.isMergeSink = tableHandle.getTransaction().isMerge();
+        this.isMergeSink = isMergeSink;
         requireNonNull(bucketProperty, "bucketProperty is null");
         this.pagePartitioner = new HiveWriterPagePartitioner(
                 inputColumns,
