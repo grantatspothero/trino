@@ -23,8 +23,6 @@ import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import io.airlift.node.NodeConfig;
 import io.airlift.node.NodeInfo;
-import io.trino.dispatcher.DispatchManager;
-import io.trino.execution.QueryExecutionMBean;
 import io.trino.server.PrefixObjectNameGeneratorModule.PrefixObjectNameGenerator;
 import org.weakref.jmx.MBeanExporter;
 import org.weakref.jmx.ObjectNameGenerator;
@@ -42,13 +40,12 @@ import static io.airlift.jaxrs.JaxrsBinder.jaxrsBinder;
 public class GalaxyCustomerMetricsModule
         implements Module
 {
-    private static final String TRINO_PACKAGE = "io.trino";
+    private static final String TRINO_PACKAGE = "io.trino.server.galaxy";
     private static final String CUSTOMER_METRICS_PACKAGE = "io.starburst.galaxy";
 
     // Classes exported to customer metrics
     private static final Set<Class<?>> CLASSES = ImmutableSet.of(
-            QueryExecutionMBean.class,
-            DispatchManager.class);
+            GalaxyMetrics.class);
 
     @Override
     public void configure(Binder binder)
