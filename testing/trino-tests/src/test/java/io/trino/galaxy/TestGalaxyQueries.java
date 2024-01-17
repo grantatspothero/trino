@@ -32,6 +32,7 @@ import io.starburst.stargate.id.PolicyId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.RoleName;
 import io.starburst.stargate.id.RowFilterId;
+import io.starburst.stargate.id.SharedSchemaNameAndAccepted;
 import io.starburst.stargate.id.TagId;
 import io.starburst.stargate.id.Version;
 import io.trino.Session;
@@ -118,6 +119,7 @@ public class TestGalaxyQueries
             .map(privilege -> new PrivilegeInfo(privilege, true))
             .collect(toImmutableSet());
 
+    private TestingAccountFactory testingAccountFactory;
     private TestingAccountClient testingAccountClient;
     private final TestingGalaxyCatalogInfoSupplier testingGalaxyCatalogInfoSupplier = new TestingGalaxyCatalogInfoSupplier();
 
@@ -125,7 +127,7 @@ public class TestGalaxyQueries
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> closeAfterClass(new GalaxyCockroachContainer())));
+        testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> closeAfterClass(new GalaxyCockroachContainer())));
         testingAccountClient = testingAccountFactory.createAccountClient();
         QueryRunner queryRunner = GalaxyQueryRunner.builder("memory", "tiny")
                 .setAccountClient(testingAccountClient)
@@ -1469,6 +1471,56 @@ public class TestGalaxyQueries
         }
     }
 
+    @Test
+    public void testSharedCatalogFilterOutSchemas() {
+
+        // Show if there is no shared schema, SHOW SCHEMAS shows all schemas in tpch as well as information_schema
+        String unsharedCatalogName = "catalog_" + randomNameSuffix();
+        CatalogId unsharedCatalogId = testingAccountClient.getOrCreateCatalog(unsharedCatalogName);
+        GalaxyCatalogArgs unsharedCatalogArgs = new GalaxyCatalogArgs(
+                testingAccountClient.getAccountId(),
+                new CatalogVersion(unsharedCatalogId, new Version(new Random().nextLong(0, Long.MAX_VALUE))));
+        GalaxyCatalogInfo unsharedCatalogCatalogInfo = new GalaxyCatalogInfo(
+                new CatalogProperties(toCatalogHandle(unsharedCatalogName, unsharedCatalogArgs.catalogVersion()), new ConnectorName("tpch"), ImmutableMap.of()),
+                true,
+                Optional.empty());
+        testingGalaxyCatalogInfoSupplier.addCatalog(unsharedCatalogArgs, unsharedCatalogCatalogInfo);
+
+        assertThat(query(sessionFor(unsharedCatalogArgs.catalogVersion()), "SHOW SCHEMAS IN " + unsharedCatalogName))
+                .matches("""
+                    VALUES
+                    CAST('tiny' AS varchar),
+                    CAST('sf1' AS varchar),
+                    CAST('sf100' AS varchar),
+                    CAST('sf300' AS varchar),
+                    CAST('sf1000' AS varchar),
+                    CAST('sf3000' AS varchar),
+                    CAST('sf10000' AS varchar),
+                    CAST('sf30000' AS varchar),
+                    CAST('sf100000' AS varchar),
+                    CAST('information_schema' AS varchar)
+                    """);
+
+        // Show that for a shared catalog restricted to schema tiny, SHOW SCHEMA only shows tiny and information_schema
+        String sharedCatalogName = "catalog_" + randomNameSuffix();
+        CatalogId sharedCatalogId = testingAccountClient.getOrCreateCatalog(sharedCatalogName);
+        GalaxyCatalogArgs sharedCatalogArgs = new GalaxyCatalogArgs(
+                testingAccountClient.getAccountId(),
+                new CatalogVersion(sharedCatalogId, new Version(new Random().nextLong(0, Long.MAX_VALUE))));
+
+        // mimic the galaxy catalog info that would be returned for a shared catalog
+        // -- always read only
+        // -- shared schema populated
+        GalaxyCatalogInfo sharedCatalogCatalogInfo = new GalaxyCatalogInfo(
+                new CatalogProperties(toCatalogHandle(sharedCatalogName, sharedCatalogArgs.catalogVersion()), new ConnectorName("tpch"), ImmutableMap.of()),
+                true,
+                Optional.of(new SharedSchemaNameAndAccepted("tiny", true)));
+        testingGalaxyCatalogInfoSupplier.addCatalog(sharedCatalogArgs, sharedCatalogCatalogInfo);
+
+        assertThat(query(sessionFor(sharedCatalogArgs.catalogVersion()), "SHOW SCHEMAS IN " + sharedCatalogName))
+                .matches("VALUES CAST('tiny' AS varchar), CAST('information_schema' AS varchar)");
+    }
+
     private Session sessionFor(CatalogVersion... versions)
     {
         return sessionFor(getSession(), versions);
@@ -1495,14 +1547,16 @@ public class TestGalaxyQueries
 
     private Session publicSession()
     {
-        TestingAccountClient accountClient = getTestingAccountClient();
-        RoleId publicRoleId = accountClient.getPublicRoleId();
+        return sessionFor(testingAccountClient, testingAccountClient.getPublicRoleId());
+    }
 
+    private Session sessionFor(TestingAccountClient accountClient, RoleId roleId)
+    {
         Identity identity = createIdentity(
                 accountClient.getAdminEmail(),
                 accountClient.getAccountId(),
                 accountClient.getAdminUserId(),
-                publicRoleId,
+                roleId,
                 accountClient.getAdminTrinoAccessToken(),
                 PORTAL);
 
