@@ -197,7 +197,7 @@
         <extraJavaVectorArgs>--add-modules=jdk.incubator.vector</extraJavaVectorArgs>
 
         <!-- released from https://github.com/starburstdata/varada -->
-        <dep.warp-speed.version>434.2.0</dep.warp-speed.version>
+        <dep.warp-speed.version>434.2.1</dep.warp-speed.version>
         <!-- released form https://github.com/starburstdata/schema-discovery -->
         <dep.schema-discovery.version>434.20231229-61758ce</dep.schema-discovery.version>
         <!-- released from https://github.com/starburstdata/starburst-dataframe -->
