@@ -210,9 +210,9 @@ public class TestIcebergSplitSource
                     }
 
                     @Override
-                    public long getPreferredDynamicFilterTimeout()
+                    public OptionalLong getPreferredDynamicFilterTimeout()
                     {
-                        return 0;
+                        return OptionalLong.of(0L);
                     }
                 },
                 new Duration(2, SECONDS),

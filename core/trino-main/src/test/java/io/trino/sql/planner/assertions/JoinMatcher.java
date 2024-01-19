@@ -36,6 +36,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.Set;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
@@ -167,7 +168,7 @@ public final class JoinMatcher
                 .collect(toImmutableList());
 
         Set<Expression> actualExpressions = new HashSet<>();
-        Map<Expression, Optional<Long>> actualTimeouts = new HashMap<>();
+        Map<Expression, OptionalLong> actualTimeouts = new HashMap<>();
 
         for (DynamicFilters.Descriptor descriptor : descriptors) {
             Expression probe = descriptor.getInput();
@@ -188,7 +189,7 @@ public final class JoinMatcher
             }
         }
 
-        Map<Expression, Optional<Long>> expectedTimeouts = new HashMap<>();
+        Map<Expression, OptionalLong> expectedTimeouts = new HashMap<>();
         Set<Expression> expectedExpressions = expectedDynamicFilter.get().stream()
                 .map(pattern -> {
                     Expression expression = pattern.getExpression(symbolAliases);
@@ -280,7 +281,7 @@ public final class JoinMatcher
         @CanIgnoreReturnValue
         public Builder dynamicFilter(String key, String value, long timeout)
         {
-            this.dynamicFilter = Optional.of(ImmutableList.of(new PlanMatchPattern.DynamicFilterPattern(PlanBuilder.expression(key), EQUAL, value, false, Optional.of(timeout))));
+            this.dynamicFilter = Optional.of(ImmutableList.of(new PlanMatchPattern.DynamicFilterPattern(PlanBuilder.expression(key), EQUAL, value, false, OptionalLong.of(timeout))));
 
             return this;
         }
