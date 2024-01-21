@@ -23,7 +23,7 @@ import java.util.Optional;
 
 import static io.trino.spi.session.PropertyMetadata.stringProperty;
 
-public class IcebergMaterializedViewAdditionalProperties
+public class IcebergMaterializedViewProperties
 {
     public static final String REFRESH_SCHEDULE = "refresh_schedule";
     public static final String STORAGE_SCHEMA = "storage_schema";
@@ -31,10 +31,10 @@ public class IcebergMaterializedViewAdditionalProperties
     private final List<PropertyMetadata<?>> materializedViewProperties;
 
     @Inject
-    public IcebergMaterializedViewAdditionalProperties(IcebergConfig icebergConfig)
+    public IcebergMaterializedViewProperties(IcebergConfig icebergConfig, IcebergTableProperties tableProperties)
     {
         ImmutableList.Builder<PropertyMetadata<?>> materializedViewProperties = ImmutableList.builder();
-        materializedViewProperties.addAll(ossProperties(icebergConfig));
+        materializedViewProperties.addAll(ossProperties(icebergConfig, tableProperties));
         if (icebergConfig.isScheduledMaterializedViewRefreshEnabled()) {
             materializedViewProperties.add(stringProperty(
                     REFRESH_SCHEDULE,
@@ -45,13 +45,17 @@ public class IcebergMaterializedViewAdditionalProperties
         this.materializedViewProperties = materializedViewProperties.build();
     }
 
-    private List<PropertyMetadata<?>> ossProperties(IcebergConfig icebergConfig)
+    private List<PropertyMetadata<?>> ossProperties(IcebergConfig icebergConfig, IcebergTableProperties tableProperties)
     {
-        return ImmutableList.of(stringProperty(
-                STORAGE_SCHEMA,
-                "Schema for creating materialized view storage table",
-                icebergConfig.getMaterializedViewsStorageSchema().orElse(null),
-                false));
+        return ImmutableList.<PropertyMetadata<?>>builder()
+                .add(stringProperty(
+                        STORAGE_SCHEMA,
+                        "Schema for creating materialized view storage table",
+                        icebergConfig.getMaterializedViewsStorageSchema().orElse(null),
+                        false))
+                // Materialized view should allow configuring all the supported iceberg table properties for the storage table
+                .addAll(tableProperties.getTableProperties())
+                .build();
     }
 
     public List<PropertyMetadata<?>> getMaterializedViewProperties()

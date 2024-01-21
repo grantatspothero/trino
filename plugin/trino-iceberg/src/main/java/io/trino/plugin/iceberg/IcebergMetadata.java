@@ -218,7 +218,7 @@ import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_COMMIT_ERROR;
 import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_FILESYSTEM_ERROR;
 import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_INVALID_METADATA;
 import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_MISSING_METADATA;
-import static io.trino.plugin.iceberg.IcebergMaterializedViewAdditionalProperties.REFRESH_SCHEDULE;
+import static io.trino.plugin.iceberg.IcebergMaterializedViewProperties.REFRESH_SCHEDULE;
 import static io.trino.plugin.iceberg.IcebergMetadataColumn.FILE_MODIFIED_TIME;
 import static io.trino.plugin.iceberg.IcebergMetadataColumn.FILE_PATH;
 import static io.trino.plugin.iceberg.IcebergMetadataColumn.isMetadataColumnId;
