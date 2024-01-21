@@ -14,7 +14,6 @@
 FROM ghcr.io/airlift/jvmkill:latest AS jvmkill
 
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest AS jdk-download
-ARG JDK_DOWNLOAD_LINK
 ARG JDK_VERSION
 ENV JAVA_HOME="/usr/lib/jvm/jdk-${JDK_VERSION}"
 
@@ -22,9 +21,9 @@ RUN \
     set -xeuo pipefail && \
     microdnf install -y tar gzip && \
     # Install JDK from the provided archive link \
-    echo "Downloading JDK from ${JDK_DOWNLOAD_LINK}" && \
+    echo "Downloading JDK" && \
     mkdir -p "${JAVA_HOME}" && \
-    curl -#LfS "${JDK_DOWNLOAD_LINK/__ARCH__/$(arch)}" | tar -zx --strip 1 -C "${JAVA_HOME}"
+    curl -#LfS -w %{filename_effective} "$(curl -s -w %{redirect_url} "https://api.adoptium.net/v3/binary/latest/${JDK_VERSION}/ga/linux/$(arch)/jdk/hotspot/normal/eclipse")" | tar -zx --strip 1 -C "${JAVA_HOME}"
 
 # Use ubi9 minimal as it's more secure
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest

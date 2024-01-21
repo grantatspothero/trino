@@ -56,22 +56,6 @@ while getopts ":a:t:v:j:ph" o; do
 done
 shift $((OPTIND - 1))
 
-function temurin_jdk_link() {
-  JDK_VERSION="${1}"
-  versionsUrl="https://api.adoptium.net/v3/info/release_names?heap_size=normal&image_type=jdk&os=linux&page=0&page_size=20&project=jdk&release_type=ga&semver=false&sort_method=DATE&sort_order=DESC&vendor=eclipse&version=%5B${JDK_VERSION}%2C%29"
-  if ! result=$(curl -fLs "$versionsUrl" -H 'accept: application/json'); then
-    echo >&2 "Failed to fetch release names for JDK version [${JDK_VERSION}, ) from Temurin API : $result"
-    exit 1
-  fi
-
-  if ! RELEASE_NAME=$(echo "$result" | jq -er '.releases[]' | grep "${JDK_VERSION}" | head -n 1); then
-    echo >&2 "Failed to determine release name: ${RELEASE_NAME}"
-    exit 1
-  fi
-  # __ARCH__ will be resolved in Dockerfile
-  echo "https://api.adoptium.net/v3/binary/version/${RELEASE_NAME}/linux/__ARCH__/jdk/hotspot/normal/eclipse?project=jdk"
-}
-
 if [[ "${TRINO_VERSION}" == "" ]]; then
   # Move to the root directory to run maven for current version.
   pushd ${SOURCE_DIR}
@@ -160,7 +144,6 @@ docker buildx build --pull ${PERFORM_PUSH} \
   --build-arg "TRINO_VERSION=${TRINO_VERSION}" \
   --build-arg "GALAXY_TRINO_DOCKER_VERSION=${IMAGE_TAG}" \
   --build-arg JDK_VERSION="${JDK_VERSION}" \
-  --build-arg JDK_DOWNLOAD_LINK="$(temurin_jdk_link "${JDK_VERSION}")" \
   --file Dockerfile ${WORK_DIR}
 
 rm -r ${WORK_DIR}
