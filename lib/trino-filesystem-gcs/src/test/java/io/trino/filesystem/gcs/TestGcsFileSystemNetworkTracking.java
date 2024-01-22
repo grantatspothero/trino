@@ -232,7 +232,7 @@ public class TestGcsFileSystemNetworkTracking
     private static Storage createStorageClient()
             throws IOException
     {
-        return new GcsStorageFactory(ImmutableSet.of(), createGcsFileSystemConfig()).create(TESTING_CONNECTOR_IDENTITY);
+        return new GcsStorageFactory(createGcsFileSystemConfig()).create(TESTING_CONNECTOR_IDENTITY);
     }
 
     private static GcsFileSystemConfig createGcsFileSystemConfig()

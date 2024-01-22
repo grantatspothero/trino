@@ -19,6 +19,7 @@ import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import io.trino.filesystem.gcs.galaxy.StorageOptionsConfigurer;
 import io.trino.spi.security.ConnectorIdentity;
@@ -51,6 +52,12 @@ public class GcsStorageFactory
     private final Duration maxRetryTime;
     private final Duration minBackoffDelay;
     private final Duration maxBackoffDelay;
+
+    public GcsStorageFactory(GcsFileSystemConfig config)
+            throws IOException
+    {
+        this(ImmutableSet.of(), config);
+    }
 
     @Inject
     public GcsStorageFactory(Set<StorageOptionsConfigurer> optionsConfigurers, GcsFileSystemConfig config)
