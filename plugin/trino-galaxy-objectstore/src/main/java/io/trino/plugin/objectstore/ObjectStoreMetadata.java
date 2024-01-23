@@ -1214,10 +1214,10 @@ public class ObjectStoreMetadata
     }
 
     @Override
-    public Optional<ConnectorOutputMetadata> finishInsert(ConnectorSession session, ConnectorInsertTableHandle insertHandle, Collection<Slice> fragments, Collection<ComputedStatistics> computedStatistics)
+    public Optional<ConnectorOutputMetadata> finishInsert(ConnectorSession session, ConnectorInsertTableHandle insertHandle, List<ConnectorTableHandle> sourceTableHandles, Collection<Slice> fragments, Collection<ComputedStatistics> computedStatistics)
     {
         TableType tableType = tableType(insertHandle);
-        return delegate(tableType).finishInsert(unwrap(tableType, session), insertHandle, fragments, computedStatistics);
+        return delegate(tableType).finishInsert(unwrap(tableType, session), insertHandle, sourceTableHandles, fragments, computedStatistics);
     }
 
     @Override
