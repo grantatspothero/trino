@@ -18,7 +18,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import io.airlift.concurrent.SetThreadName;
-import io.airlift.json.JsonCodec;
 import io.airlift.slice.Slice;
 import io.airlift.units.Duration;
 import io.opentelemetry.api.trace.Span;
@@ -78,7 +77,6 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.UriInfo;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -147,7 +145,6 @@ public class MetadataOnlyStatementResource
             SecretSealer secretSealer,
             QueryManagerConfig queryManagerConfig,
             MetadataOnlySystemState systemState,
-            JsonCodec<QueryResults> queryResultsJsonCodec,
             DecryptionContextProvider decryptionContextProvider)
     {
         this.sessionContextFactory = requireNonNull(sessionContextFactory, "sessionContextFactory is null");
@@ -175,8 +172,7 @@ public class MetadataOnlyStatementResource
     public QueryResults postStatement(
             StatementRequest request,
             @Context HttpServletRequest servletRequest,
-            @Context HttpHeaders httpHeaders,
-            @Context UriInfo uriInfo)
+            @Context HttpHeaders httpHeaders)
     {
         if (systemState.isShuttingDown()) {
             throw new WebApplicationException(Response.Status.SERVICE_UNAVAILABLE);
