@@ -1327,6 +1327,11 @@ public class EventDrivenFaultTolerantQueryScheduler
                 return IsReadyForExecutionResult.notReady();
             }
 
+            StageExecution stageExecution = stageExecutions.get(getStageId(subPlan.getFragment().getId()));
+            if (stageExecution != null) {
+                stageExecution.setSpeculative(speculative);
+            }
+
             if (speculative) {
                 log.debug("scheduling speculative %s/%s; sources: finished=%s; kinds=%s",
                         queryStateMachine.getQueryId(),
@@ -1895,6 +1900,8 @@ public class EventDrivenFaultTolerantQueryScheduler
         private final int maxTaskExecutionAttempts;
         private final int schedulingPriority;
         private final boolean eager;
+        private boolean speculative;
+
         private final DynamicFilterService dynamicFilterService;
         private final long[] outputDataSize;
 
@@ -2029,6 +2036,11 @@ public class EventDrivenFaultTolerantQueryScheduler
             return exchangeClosed;
         }
 
+        public void setSpeculative(boolean speculative)
+        {
+            this.speculative = speculative;
+        }
+
         public void addPartition(int partitionId, NodeRequirements nodeRequirements)
         {
             if (getState().isDone()) {
@@ -2065,7 +2077,10 @@ public class EventDrivenFaultTolerantQueryScheduler
             partition.addSplits(planNodeId, splits, noMoreSplits);
             if (readyForScheduling && !partition.isTaskScheduled()) {
                 partition.setTaskScheduled(true);
-                return Optional.of(PrioritizedScheduledTask.createSpeculative(stage.getStageId(), taskPartitionId, schedulingPriority, eager));
+                PrioritizedScheduledTask task = speculative ?
+                        PrioritizedScheduledTask.createSpeculative(stage.getStageId(), taskPartitionId, schedulingPriority, eager) :
+                        PrioritizedScheduledTask.create(stage.getStageId(), taskPartitionId, schedulingPriority);
+                return Optional.of(task);
             }
             return Optional.empty();
         }
