@@ -26,8 +26,6 @@ import io.trino.testing.QueryRunner;
 
 import java.io.IOException;
 
-import static io.trino.plugin.hive.metastore.file.TestingFileHiveMetastore.createTestingFileHiveMetastore;
-
 public class TestUnloadNativeS3
         extends BaseUnloadFileSystemTest
 {
@@ -44,8 +42,10 @@ public class TestUnloadNativeS3
                         .put("s3.region", requireEnv("AWS_REGION"))
                         .put("s3.aws-access-key", requireEnv("AWS_ACCESS_KEY_ID"))
                         .put("s3.aws-secret-key", requireEnv("AWS_SECRET_ACCESS_KEY"))
+                        .put("hive.metastore", "file")
+                        .put("hive.metastore.catalog.dir", "s3://%s/file-metastore".formatted(bucketName))
                         .buildOrThrow())
-                .setMetastore(runner -> createTestingFileHiveMetastore(runner.getCoordinator().getBaseDataDir().resolve("file-metastore").toFile()))
+                .setInitialSchemasLocationBase("s3://" + bucketName)
                 .build();
     }
 

@@ -20,13 +20,11 @@ import io.trino.filesystem.gcs.GcsFileSystemFactory;
 import io.trino.filesystem.gcs.GcsStorageFactory;
 import io.trino.plugin.hive.HiveQueryRunner;
 import io.trino.testing.QueryRunner;
-import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Base64;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestUnloadGcs
         extends BaseUnloadFileSystemTest
@@ -65,13 +63,5 @@ public class TestUnloadGcs
     protected String getLocation(String path)
     {
         return "gs://%s/%s".formatted(gcpStorageBucket, path);
-    }
-
-    @Test
-    @Override // TODO Fix ClassCastException of OpenTelemetryTraceComponentImpl failure. This issue doesn't happen if we use product tests
-    public void testUnload()
-    {
-        assertThatThrownBy(super::testUnload)
-                .hasMessageContaining("OpenTelemetryTraceComponentImpl could not be instantiated");
     }
 }
