@@ -106,6 +106,7 @@ import static io.trino.spi.StandardErrorCode.EXCEEDED_TIME_LIMIT;
 import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.trino.spi.StandardErrorCode.SERIALIZATION_ERROR;
 import static io.trino.sql.SqlFormatter.formatSql;
+import static io.trino.tracing.ScopedSpan.scopedSpan;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN;
 import static jakarta.ws.rs.core.MediaType.TEXT_PLAIN_TYPE;
@@ -195,12 +196,19 @@ public class MetadataOnlyStatementResource
 
         MultivaluedMap<String, String> headers = httpHeaders.getRequestHeaders();
 
+        QueryId queryId = dispatchManager.createQueryId();
+
         SessionContext sessionContext = sessionContextFactory.createSessionContext(headers, Optional.empty(), remoteAddress, identity);
-        List<QueryCatalog> decryptedCatalogs = request.catalogs().stream().map(queryCatalog -> decryptCatalog(secretSealer, request.accountId(), queryCatalog, decryptionContextProvider)).collect(toImmutableList());
+        List<QueryCatalog> decryptedCatalogs;
+        Span decryptedCatalogsSpan = tracer.spanBuilder("metadata-decrypt-catalogs")
+                .setAttribute(TrinoAttributes.QUERY_ID, queryId.toString())
+                .startSpan();
+        try (var ignore = scopedSpan(decryptedCatalogsSpan)) {
+            decryptedCatalogs = request.catalogs().stream().map(queryCatalog -> decryptCatalog(secretSealer, request.accountId(), queryCatalog, decryptionContextProvider)).collect(toImmutableList());
+        }
 
         systemState.incrementActiveRequests();
         try {
-            QueryId queryId = dispatchManager.createQueryId();
             return executeQuery(queryId, request.accountId(), transactionId, statement, sessionContext, decryptedCatalogs, request.serviceProperties());
         }
         finally {
@@ -226,7 +234,12 @@ public class MetadataOnlyStatementResource
                 .setAttribute(TrinoAttributes.QUERY_ID, queryId.toString())
                 .startSpan();
         try (SetThreadName ignored = new SetThreadName("Resource " + queryId)) {
-            transactionManager.registerQueryCatalogs(accountId, sessionContext.getIdentity(), transactionId, queryId, catalogs, serviceProperties);
+            Span registerQueryCatalogsSpan = tracer.spanBuilder("metadata-register-query-catalogs")
+                    .setAttribute(TrinoAttributes.QUERY_ID, queryId.toString())
+                    .startSpan();
+            try (var ignore = scopedSpan(registerQueryCatalogsSpan)) {
+                transactionManager.registerQueryCatalogs(accountId, sessionContext.getIdentity(), transactionId, queryId, catalogs, serviceProperties);
+            }
             return executeQuery(statement, span, sessionContext.withTransactionId(transactionId), queryId);
         }
         catch (Throwable e) {
