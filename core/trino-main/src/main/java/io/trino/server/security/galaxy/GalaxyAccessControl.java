@@ -548,7 +548,7 @@ public class GalaxyAccessControl
     public void checkCanCreateViewWithSelectFromColumns(SystemSecurityContext context, CatalogSchemaTableName table, Set<String> columns)
     {
         checkHasPrivilegeOnColumns(context, SELECT, !isViewOwnerQuerying(context), table, columns, explanation ->
-                denyCreateViewWithSelect(table.toString(), context.getIdentity().toConnectorIdentity(), explanation));
+                denyCreateViewWithSelect(table.toString(), contextRoleName(context), explanation));
     }
 
     @Override
@@ -968,7 +968,7 @@ public class GalaxyAccessControl
 
     private String roleLacksPrivilege(SystemSecurityContext context, Privilege privilege, boolean requiresGrantOption, String kind, String entity)
     {
-        return format("Role %s does not have the privilege %s%s on the %s %s", currentRoleName(context), privilege, requiresGrantOption ? " WITH GRANT OPTION" : "", kind, entity);
+        return format("Role %s does not have the privilege %s%s on the %s %s", contextRoleName(context), privilege, requiresGrantOption ? " WITH GRANT OPTION" : "", kind, entity);
     }
 
     // Helper methods that call Galaxy to determine access
@@ -1163,6 +1163,11 @@ public class GalaxyAccessControl
     private String currentRoleName(SystemSecurityContext context)
     {
         return getSystemAccessController(context).getRoleDisplayName(context.getIdentity(), getRoleId(context.getIdentity()));
+    }
+
+    private String contextRoleName(SystemSecurityContext context)
+    {
+        return getSystemAccessController(context).getRoleDisplayName(context.getIdentity(), getContextRoleId(context.getIdentity()));
     }
 
     private GalaxySystemAccessController getSystemAccessController(SystemSecurityContext context)

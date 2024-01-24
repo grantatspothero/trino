@@ -422,7 +422,12 @@ public class AccessDeniedException
 
     public static void denyCreateViewWithSelect(String sourceName, ConnectorIdentity identity, String extraInfo)
     {
-        throw new AccessDeniedException(format("View owner '%s' cannot create view that selects from %s%s", identity.getUser(), sourceName, formatExtraInfo(extraInfo)));
+        denyCreateViewWithSelect(sourceName, identity.getUser(), extraInfo);
+    }
+
+    public static void denyCreateViewWithSelect(String sourceName, String ownerName, String extraInfo)
+    {
+        throw new AccessDeniedException(format("View owner '%s' cannot create view that selects from %s%s", ownerName, sourceName, formatExtraInfo(extraInfo)));
     }
 
     public static void denyGrantExecuteFunctionPrivilege(String functionName, Identity identity, TrinoPrincipal grantee)

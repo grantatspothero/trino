@@ -20,12 +20,14 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Key;
 import io.airlift.testing.TestingClock;
 import io.starburst.stargate.accesscontrol.client.ColumnMaskType;
+import io.starburst.stargate.accesscontrol.client.CreateEntityPrivilege;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.client.testing.TestUser;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient.GrantDetails;
 import io.starburst.stargate.id.CatalogId;
 import io.starburst.stargate.id.CatalogVersion;
+import io.starburst.stargate.id.ColumnId;
 import io.starburst.stargate.id.ColumnMaskId;
 import io.starburst.stargate.id.EntityKind;
 import io.starburst.stargate.id.PolicyId;
@@ -36,6 +38,7 @@ import io.starburst.stargate.id.SharedSchemaNameAndAccepted;
 import io.starburst.stargate.id.TagId;
 import io.starburst.stargate.id.Version;
 import io.trino.Session;
+import io.trino.Session.SessionBuilder;
 import io.trino.connector.CatalogProperties;
 import io.trino.connector.ConnectorName;
 import io.trino.plugin.memory.MemoryPlugin;
@@ -61,6 +64,7 @@ import io.trino.transaction.ForTransactionManager;
 import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.parallel.Execution;
@@ -212,8 +216,8 @@ public class TestGalaxyQueries
     @Test
     public void testRoleManagement()
     {
-        Session userA = newUserSession(getTestingAccountClient().getPublicRoleId());
-        Session userB = newUserSession(getTestingAccountClient().getPublicRoleId());
+        Session userA = newUserSession(getTestingAccountClient().getPublicRoleId(), false);
+        Session userB = newUserSession(getTestingAccountClient().getPublicRoleId(), false);
 
         verifyCurrentRoles(ImmutableSet.of(), ImmutableSet.of());
 
@@ -791,7 +795,7 @@ public class TestGalaxyQueries
         assertUpdate("CREATE ROLE my_role");
         RoleId myRoleId = getTrinoSecurityApi().listRoles(toDispatchSession(getSession()))
                 .get(new RoleName("my_role"));
-        Session newUserSession = newUserSession(myRoleId);
+        Session newUserSession = newUserSession(myRoleId, false);
 
         String randomValue = UUID.randomUUID().toString();
         getQueryRunner().execute(newUserSession, "SELECT '" + randomValue + "'");
@@ -811,7 +815,7 @@ public class TestGalaxyQueries
         assertThat(query(publicSession(), findQuerySql)).returnsEmptyResult();
 
         // create another user/role, they cannot see the query
-        Session anotherUserSession = newUserSession("public");
+        Session anotherUserSession = newUserSession("public", false);
         assertThat(query(anotherUserSession, findQuerySql)).returnsEmptyResult();
 
         // grant public special VIEW_ALL_QUERY_HISTORY account privilege, and both public role sessions can see the query
@@ -928,10 +932,10 @@ public class TestGalaxyQueries
         // originally, the views cannot be created
         assertThatThrownBy(() -> query(innerViewOwnerSessionNoGrantOption, "CREATE VIEW memory.definer_views.inner_view_no_grant_option_definer AS SELECT * FROM memory.definer_views.base_table"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.base_table: Relation not found or not allowed");
+                .hasMessage("Access Denied: Cannot select from columns [col2, col1] in table or view memory.definer_views.base_table: Relation not found or not allowed");
         assertThatThrownBy(() -> query(innerViewOwnerSessionNoGrantOption, "CREATE VIEW memory.definer_views.inner_view_no_grant_option_invoker SECURITY INVOKER AS SELECT * FROM memory.definer_views.base_table"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.base_table: Relation not found or not allowed");
+                .hasMessage("Access Denied: Cannot select from columns [col2, col1] in table or view memory.definer_views.base_table: Relation not found or not allowed");
 
         // grant select without the grant option
         assertUpdate(baseTableOwnerSession, "GRANT SELECT ON TABLE memory.definer_views.base_table TO ROLE inner_view_owner_no_grant_option");
@@ -947,10 +951,10 @@ public class TestGalaxyQueries
         // however, without the grant option, another role won't be able to query the view
         assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.inner_view_no_grant_option_definer: Relation not found or not allowed");
+                .hasMessage("Access Denied: Cannot select from columns [col2, col1] in table or view memory.definer_views.inner_view_no_grant_option_definer: Relation not found or not allowed");
         assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.inner_view_no_grant_option_invoker: Relation not found or not allowed");
+                .hasMessage("line 1:15: Failed analyzing stored view 'memory.definer_views.inner_view_no_grant_option_invoker': line 1:8: Relation not found or not allowed");
 
         // give other role SELECT on the view, and the views will still fail:
         //  - definer view requires inner_view_owner_no_grant_option have SELECT WITH GRANT OPTION on the underlying table
@@ -959,18 +963,17 @@ public class TestGalaxyQueries
         assertUpdate(innerViewOwnerSessionNoGrantOption, "GRANT SELECT ON TABLE memory.definer_views.inner_view_no_grant_option_invoker TO ROLE outer_view_owner");
         assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Access Denied: View owner does not have sufficient privileges")
-                .hasMessageContaining("cannot create view that selects from memory.definer_views.base_table: Role outer_view_owner does not have the privilege SELECT WITH GRANT OPTION on the columns");
+                .hasMessage("Access Denied: View owner does not have sufficient privileges: View owner 'inner_view_owner_no_grant_option' cannot create view that selects from memory.definer_views.base_table: Role inner_view_owner_no_grant_option does not have the privilege SELECT WITH GRANT OPTION on the columns [col2, col1]");
         assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.base_table: Relation not found or not allowed");
+                .hasMessage("line 1:15: Failed analyzing stored view 'memory.definer_views.inner_view_no_grant_option_invoker': line 1:8: Relation not found or not allowed");
 
         // grant with grant option, and the definer view can now be queried, but invoker still needs the grant
         assertUpdate(baseTableOwnerSession, "GRANT SELECT ON TABLE memory.definer_views.base_table TO ROLE inner_view_owner_no_grant_option WITH GRANT OPTION");
         assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer")).matches(tableContents);
         assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.base_table: Relation not found or not allowed");
+                .hasMessage("line 1:15: Failed analyzing stored view 'memory.definer_views.inner_view_no_grant_option_invoker': line 1:8: Relation not found or not allowed");
 
         // give base table access to outer_view_owner, and now querying should work for outer_view_owner role
         assertUpdate(baseTableOwnerSession, "GRANT SELECT ON TABLE memory.definer_views.base_table TO ROLE outer_view_owner");
@@ -980,10 +983,10 @@ public class TestGalaxyQueries
         // make sure this doesn't work for base_table_owner, as they don't have view privileges
         assertThatThrownBy(() -> query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.inner_view_no_grant_option_definer: Relation not found or not allowed");
+                .hasMessage("Access Denied: Cannot select from columns [col2, col1] in table or view memory.definer_views.inner_view_no_grant_option_definer: Relation not found or not allowed");
         assertThatThrownBy(() -> query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.inner_view_no_grant_option_invoker: Relation not found or not allowed");
+                .hasMessage("Access Denied: Cannot select from columns [col2, col1] in table or view memory.definer_views.inner_view_no_grant_option_invoker: Relation not found or not allowed");
 
         // grant inner_view_owner_no_grant_option to base_table_owner role and querying the views should succeed
         assertUpdate("GRANT inner_view_owner_no_grant_option TO ROLE base_table_owner");
@@ -1000,8 +1003,7 @@ public class TestGalaxyQueries
 
         assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Access Denied: View owner does not have sufficient privileges")
-                .hasMessageContaining("cannot create view that selects from memory.definer_views.base_table: Role outer_view_owner does not have the privilege SELECT WITH GRANT OPTION on the columns");
+                .hasMessage("Access Denied: View owner does not have sufficient privileges: View owner 'inner_view_owner_no_grant_option' cannot create view that selects from memory.definer_views.base_table: Role inner_view_owner_no_grant_option does not have the privilege SELECT WITH GRANT OPTION on the columns [col2, col1]");
         // invoker is still good
         assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker")).matches(tableContents);
 
@@ -1009,11 +1011,10 @@ public class TestGalaxyQueries
         assertUpdate("REVOKE inner_view_owner_no_grant_option FROM ROLE base_table_owner");
         assertThatThrownBy(() -> query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Cannot select from columns [col2, col1] in table or view memory.definer_views.inner_view_no_grant_option_definer: Relation not found or not allowed");
+                .hasMessage("Access Denied: Cannot select from columns [col2, col1] in table or view memory.definer_views.inner_view_no_grant_option_definer: Relation not found or not allowed");
         assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Access Denied: View owner does not have sufficient privileges")
-                .hasMessageContaining("cannot create view that selects from memory.definer_views.base_table: Role outer_view_owner does not have the privilege SELECT WITH GRANT OPTION on the columns");
+                .hasMessage("Access Denied: View owner does not have sufficient privileges: View owner 'inner_view_owner_no_grant_option' cannot create view that selects from memory.definer_views.base_table: Role inner_view_owner_no_grant_option does not have the privilege SELECT WITH GRANT OPTION on the columns [col2, col1]");
 
         // Clean up
         assertUpdate("DROP VIEW memory.definer_views.inner_view_no_grant_option_invoker");
@@ -1022,6 +1023,114 @@ public class TestGalaxyQueries
         assertUpdate("DROP SCHEMA memory.definer_views");
         assertUpdate("DROP ROLE outer_view_owner");
         assertUpdate("DROP ROLE inner_view_owner_no_grant_option");
+        assertUpdate("DROP ROLE base_table_owner");
+    }
+
+    /*
+     * This entire test does not work because of https://github.com/starburstdata/stargate/issues/15073 and https://github.com/starburstdata/stargate/issues/15239
+     */
+    @Test
+    @Disabled
+    public void testViewColumnAccess()
+    {
+        MaterializedResult tableContents = MaterializedResult.resultBuilder(getSession(), VARCHAR, VARCHAR, BOOLEAN)
+                .row("abc", "def", true)
+                .build();
+        MaterializedResult col1Col2Contents = MaterializedResult.resultBuilder(getSession(), VARCHAR, VARCHAR)
+                .row("abc", "def")
+                .build();
+        MaterializedResult col1Contents = MaterializedResult.resultBuilder(getSession(), VARCHAR)
+                .row("abc")
+                .build();
+
+        assertUpdate("CREATE SCHEMA memory.views_test");
+        Session baseTableOwnerSession = createUserAndGrantedRole("base_table_owner", true);
+        Session viewOwnerSession = createUserAndGrantedRole("view_owner", true);
+        Session viewViewerSession = createUserAndGrantedRole("view_viewer", true);
+        assertUpdate("GRANT CREATE ON schema views_test TO ROLE base_table_owner");
+        assertUpdate("GRANT CREATE ON schema views_test TO ROLE view_owner");
+
+        // Create the base table, insert a row and verify the contents
+        assertUpdate(baseTableOwnerSession, "CREATE TABLE memory.views_test.base_table(col1 VARCHAR, col2 VARCHAR, col3 BOOLEAN)");
+        assertUpdate(baseTableOwnerSession, "INSERT INTO memory.views_test.base_table VALUES('abc', 'def', true)", 1);
+        assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.views_test.base_table")).matches(tableContents);
+
+        // Grant SELECT col1 and col2 on base_table to view_owner with grant option
+        CatalogId memoryCatalogId = testingAccountClient.getOrCreateCatalog("memory");
+        getTrinoSecurityApi().addEntityPrivileges(
+                toDispatchSession(baseTableOwnerSession),
+                new ColumnId(memoryCatalogId, "views_test", "base_table", "col1"),
+                ImmutableSet.of(new CreateEntityPrivilege(io.starburst.stargate.accesscontrol.privilege.Privilege.SELECT, ALLOW, new RoleName("view_owner"), true)));
+        getTrinoSecurityApi().addEntityPrivileges(
+                toDispatchSession(baseTableOwnerSession),
+                new ColumnId(memoryCatalogId, "views_test", "base_table", "col2"),
+                ImmutableSet.of(new CreateEntityPrivilege(io.starburst.stargate.accesscontrol.privilege.Privilege.SELECT, ALLOW, new RoleName("view_owner"), true)));
+        assertThat(query(viewOwnerSession, "SELECT * FROM memory.views_test.base_table")).matches(col1Col2Contents);
+
+        // Create new definer and invoker views
+        assertUpdate(viewOwnerSession, "CREATE VIEW memory.views_test.definer_view AS SELECT * FROM memory.views_test.base_table");
+        assertUpdate(viewOwnerSession, "CREATE VIEW memory.views_test.invoker_view SECURITY INVOKER AS SELECT * FROM memory.views_test.base_table");
+
+        // view_owner sees only col1 when querying the views
+        assertThat(query(viewOwnerSession, "SELECT * FROM memory.views_test.definer_view")).matches(col1Col2Contents);
+        assertThat(query(viewOwnerSession, "SELECT * FROM memory.views_test.invoker_view")).matches(col1Col2Contents);
+
+        // view_viewer cannot query the views
+        assertThatThrownBy(() -> query(viewViewerSession, "SELECT * FROM memory.views_test.definer_view"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("line 1:8: Relation not found or not allowed");
+        assertThatThrownBy(() -> query(viewViewerSession, "SELECT * FROM memory.views_test.invoker_view"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("line 1:15: Failed analyzing stored view 'memory.views_test.invoker_view': line 1:8: Relation not found or not allowed");
+
+        // Grant view_viewer SELECT on the views. The definer view can be queried, but not the invoker
+        assertUpdate("GRANT SELECT ON TABLE memory.views_test.definer_view TO ROLE view_viewer");
+        assertUpdate("GRANT SELECT ON TABLE memory.views_test.invoker_view TO ROLE view_viewer");
+        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.definer_view")).matches(col1Col2Contents);
+        assertThatThrownBy(() -> query(viewViewerSession, "SELECT * FROM memory.views_test.invoker_view"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("line 1:15: Failed analyzing stored view 'memory.views_test.invoker_view': line 1:8: Relation not found or not allowed");
+
+        // Grant view_viewer SELECT on the base table.
+        assertUpdate("GRANT SELECT ON TABLE memory.views_test.base_table TO ROLE view_viewer");
+        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.definer_view")).matches(col1Col2Contents);
+        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.invoker_view")).matches(col1Col2Contents);
+
+        // Revoke view_viewer SELECT on the base table and then grant it SELECT on col1
+        assertUpdate("REVOKE SELECT ON TABLE memory.views_test.base_table FROM ROLE view_viewer");
+        getTrinoSecurityApi().addEntityPrivileges(
+                toDispatchSession(baseTableOwnerSession),
+                new ColumnId(memoryCatalogId, "views_test", "base_table", "col1"),
+                ImmutableSet.of(new CreateEntityPrivilege(io.starburst.stargate.accesscontrol.privilege.Privilege.SELECT, ALLOW, new RoleName("view_viewer"), true)));
+        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.definer_view")).matches(col1Contents);
+        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.invoker_view")).matches(col1Contents);
+
+        // Revoke view_viewer SELECT on both views. Grant SELECT on col1 to both views.
+        assertUpdate("REVOKE SELECT ON TABLE memory.views_test.definer_view FROM ROLE view_viewer");
+        assertUpdate("REVOKE SELECT ON TABLE memory.views_test.invoker_view FROM ROLE view_viewer");
+        getTrinoSecurityApi().addEntityPrivileges(
+                toDispatchSession(baseTableOwnerSession),
+                new ColumnId(memoryCatalogId, "views_test", "definer_view", "col1"),
+                ImmutableSet.of(new CreateEntityPrivilege(io.starburst.stargate.accesscontrol.privilege.Privilege.SELECT, ALLOW, new RoleName("view_viewer"), true)));
+        getTrinoSecurityApi().addEntityPrivileges(
+                toDispatchSession(baseTableOwnerSession),
+                new ColumnId(memoryCatalogId, "views_test", "invoker_view", "col1"),
+                ImmutableSet.of(new CreateEntityPrivilege(io.starburst.stargate.accesscontrol.privilege.Privilege.SELECT, ALLOW, new RoleName("view_viewer"), true)));
+        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.definer_view")).matches(col1Contents);
+        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.invoker_view")).matches(col1Contents);
+
+        // Grant view_viewer SELECT on the base table again
+        assertUpdate("GRANT SELECT ON TABLE memory.views_test.base_table TO ROLE view_viewer");
+        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.definer_view")).matches(col1Contents);
+        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.invoker_view")).matches(col1Contents);
+
+        // Clean up
+        assertUpdate("DROP VIEW memory.views_test.invoker_view");
+        assertUpdate("DROP VIEW memory.views_test.definer_view");
+        assertUpdate("DROP TABLE memory.views_test.base_table");
+        assertUpdate("DROP SCHEMA memory.views_test");
+        assertUpdate("DROP ROLE view_viewer");
+        assertUpdate("DROP ROLE view_owner");
         assertUpdate("DROP ROLE base_table_owner");
     }
 
@@ -1080,13 +1189,13 @@ public class TestGalaxyQueries
         assertUpdate(innerViewOwnerSession, "REVOKE SELECT ON TABLE memory.definer_views.base_table FROM ROLE inner_view_owner");
         assertThatThrownBy(() -> query(innerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageMatching("Access Denied.*");
+                .hasMessage("line 1:15: Failed analyzing stored view 'memory.definer_views.inner_view': line 1:8: Relation not found or not allowed");
         assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.outer_view"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageMatching("Access Denied.*");
+                .hasMessage("line 1:15: Failed analyzing stored view 'memory.definer_views.outer_view': line 3:3: Failed analyzing stored view 'memory.definer_views.inner_view': line 1:8: Relation not found or not allowed");
         assertThatThrownBy(() -> query(testRoleSession, "SELECT * FROM memory.definer_views.outer_view"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageMatching("Access Denied.*");
+                .hasMessage("line 1:15: Failed analyzing stored view 'memory.definer_views.outer_view': line 3:3: Failed analyzing stored view 'memory.definer_views.inner_view': line 1:8: Relation not found or not allowed");
 
         // Grant it again and they all work again
         assertUpdate(getSession(), "GRANT SELECT ON TABLE memory.definer_views.base_table TO ROLE inner_view_owner WITH GRANT OPTION");
@@ -1100,10 +1209,10 @@ public class TestGalaxyQueries
         assertThat(query(innerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view")).matches(tableContents);
         assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.outer_view"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageMatching("Access Denied.*");
+                .hasMessage("line 1:15: Failed analyzing stored view 'memory.definer_views.outer_view': line 1:8: Relation not found or not allowed");
         assertThatThrownBy(() -> query(testRoleSession, "SELECT * FROM memory.definer_views.outer_view"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageMatching("Access Denied.*");
+                .hasMessage("line 1:15: Failed analyzing stored view 'memory.definer_views.outer_view': line 1:8: Relation not found or not allowed");
 
         // Grant it again and they all work again
         assertUpdate(getSession(), "GRANT SELECT ON TABLE memory.definer_views.inner_view TO ROLE outer_view_owner WITH GRANT OPTION");
@@ -1567,20 +1676,25 @@ public class TestGalaxyQueries
 
     private Session createUserAndGrantedRole(String roleName)
     {
+        return createUserAndGrantedRole(roleName, false);
+    }
+
+    private Session createUserAndGrantedRole(String roleName, boolean hideInaccessibleColumns)
+    {
         assertUpdate("CREATE ROLE " + roleName);
-        Session session = newUserSession(roleName);
+        Session session = newUserSession(roleName, hideInaccessibleColumns);
         assertUpdate("GRANT %s TO USER \"%s\"".formatted(roleName, session.getUser()));
         return session;
     }
 
-    private Session newUserSession(String roleName)
+    private Session newUserSession(String roleName, boolean hideInaccessibleColumns)
     {
         RoleId roleId = getTrinoSecurityApi().listRoles(toDispatchSession(getSession())).get(new RoleName(roleName));
         verifyNotNull(roleId, "roleId for roleName %s is null", roleName);
-        return newUserSession(roleId);
+        return newUserSession(roleId, hideInaccessibleColumns);
     }
 
-    private Session newUserSession(RoleId roleId)
+    private Session newUserSession(RoleId roleId, boolean hideInaccessibleColumns)
     {
         TestingAccountClient accountClient = getTestingAccountClient();
         TestUser user = accountClient.createUser();
@@ -1593,9 +1707,13 @@ public class TestGalaxyQueries
                 accountClient.getAdminTrinoAccessToken(),
                 PORTAL);
 
-        return Session.builder(getSession())
-                .setIdentity(identity)
-                .build();
+        SessionBuilder builder = Session.builder(getSession()).setIdentity(identity);
+
+        if (hideInaccessibleColumns) {
+            builder.setSystemProperty("hide_inaccessible_columns", "true");
+        }
+
+        return builder.build();
     }
 
     private TestingAccountClient getTestingAccountClient()

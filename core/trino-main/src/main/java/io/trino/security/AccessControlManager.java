@@ -81,6 +81,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.airlift.configuration.ConfigurationLoader.loadPropertiesFrom;
+import static io.trino.server.security.galaxy.GalaxyIdentity.isViewOwnerIdentity;
 import static io.trino.spi.StandardErrorCode.INVALID_COLUMN_MASK;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.StandardErrorCode.SERVER_STARTING_UP;
@@ -613,6 +614,11 @@ public class AccessControlManager
             if (filterCatalogs(securityContext, ImmutableSet.of(catalogName)).isEmpty()) {
                 return ImmutableSet.of();
             }
+        }
+
+        // Don't do visibility checks for views. See discussion here: https://github.com/starburstdata/stargate/pull/15113
+        if (isViewOwnerIdentity(securityContext.getIdentity())) {
+            return tableNames;
         }
 
         for (SystemAccessControl systemAccessControl : getSystemAccessControls()) {

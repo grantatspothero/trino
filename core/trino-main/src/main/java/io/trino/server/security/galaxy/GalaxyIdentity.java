@@ -247,6 +247,11 @@ public final class GalaxyIdentity
         return GALAXY_USER_STRING_IDENTITY_MATCHER.matcher(identity.getUser()).matches();
     }
 
+    public static boolean isViewOwnerIdentity(Identity identity)
+    {
+        return identity.getUser().startsWith("<galaxy role ");
+    }
+
     private static List<String> splitPrincipal(Identity identity)
     {
         String principal = identity.getPrincipal().orElseThrow(() -> new IllegalArgumentException("Identity does not contain a principal: " + identity)).toString();
