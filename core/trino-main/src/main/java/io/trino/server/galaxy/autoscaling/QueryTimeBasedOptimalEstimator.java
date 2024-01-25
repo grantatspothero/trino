@@ -75,7 +75,7 @@ public class QueryTimeBasedOptimalEstimator
 
         // compute the time it will take to finish the remainingWork after waiting for rescale,
         // it is also possible to set nodeStartupTime to `0` and tune the behavior with only scaleUpThresholdSeconds
-        double timeToFinishWorkAfterRescaleSecs = expectedRunningTimeSeconds - nodeStartupTime;
+        double timeToFinishWorkAfterRescaleSecs = Math.max(0, expectedRunningTimeSeconds - nodeStartupTime);
 
         // we want to have NewTimeToFinishWork to less or equal targetLatency
         // we want to compute the optimal scale up to achieve targetLatency (or maybe lets call it targetMaximumRunningTime)
@@ -86,7 +86,7 @@ public class QueryTimeBasedOptimalEstimator
         // we can approximate scale:
         // X >= timeToFinishWork / targetLatency;
         double scale = timeToFinishWorkAfterRescaleSecs / targetLatency;
-        if ((timeToFinishWorkAfterRescaleSecs / scale) > scaleUpThresholdSeconds) {
+        if (scale > 1.0 && (timeToFinishWorkAfterRescaleSecs / scale) > scaleUpThresholdSeconds) {
             return roundToInt(activeNodes * scale, CEILING);
         }
 
