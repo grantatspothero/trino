@@ -17,7 +17,6 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import io.trino.connector.alternatives.MockPlanAlternativeConnector;
 import io.trino.spi.connector.Connector;
-import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.PlanTester;
 import io.trino.testing.QueryRunner;
 import io.trino.testing.TransactionBuilder;
@@ -48,7 +47,7 @@ public final class TestingHiveUtils
         Connector connector = TransactionBuilder.transaction(queryRunner.getTransactionManager(), queryRunner.getPlannerContext().getMetadata(), queryRunner.getAccessControl())
                 .readOnly()
                 .execute(queryRunner.getDefaultSession(), transactionSession -> {
-                    return ((DistributedQueryRunner) queryRunner).getCoordinator().getConnector(transactionSession, HIVE_CATALOG);
+                    return queryRunner.getCoordinator().getConnector(transactionSession, HIVE_CATALOG);
                 });
         if (connector instanceof MockPlanAlternativeConnector mockConnector) {
             connector = mockConnector.getDelegate();

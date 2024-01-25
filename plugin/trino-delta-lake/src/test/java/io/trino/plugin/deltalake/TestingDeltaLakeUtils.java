@@ -19,8 +19,8 @@ import io.trino.plugin.deltalake.transactionlog.ProtocolEntry;
 import io.trino.plugin.deltalake.transactionlog.TableSnapshot;
 import io.trino.plugin.deltalake.transactionlog.TransactionLogAccess;
 import io.trino.spi.connector.SchemaTableName;
-import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.PlanTester;
+import io.trino.testing.QueryRunner;
 import io.trino.testing.TransactionBuilder;
 
 import java.io.IOException;
@@ -43,7 +43,7 @@ public final class TestingDeltaLakeUtils
         return ((DeltaLakeConnector) planTester.getConnector(DELTA_CATALOG)).getInjector().getInstance(clazz);
     }
 
-    public static <T> T getConnectorService(DistributedQueryRunner queryRunner, Class<T> clazz)
+    public static <T> T getConnectorService(QueryRunner queryRunner, Class<T> clazz)
     {
         return TransactionBuilder.transaction(queryRunner.getTransactionManager(), queryRunner.getPlannerContext().getMetadata(), queryRunner.getAccessControl())
                 .readOnly()
