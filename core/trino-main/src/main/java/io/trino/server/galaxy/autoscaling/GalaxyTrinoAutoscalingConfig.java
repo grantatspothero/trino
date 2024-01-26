@@ -24,7 +24,7 @@ public class GalaxyTrinoAutoscalingConfig
         TIME_OPTIMAL
     }
 
-    private AutoscalingMethod autoscalingMethod = AutoscalingMethod.TIME_OPTIMAL;
+    private AutoscalingMethod autoscalingMethod = AutoscalingMethod.TIME_RATIO;
 
     public AutoscalingMethod getAutoscalingMethod()
     {
