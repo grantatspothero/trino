@@ -80,6 +80,7 @@ public class ObjectStorePageSourceProvider
         throw new VerifyException("Unhandled class: " + table.getClass().getName());
     }
 
+    @SuppressWarnings("deprecation") // interface method is deprecated
     @Override
     public TupleDomain<ColumnHandle> simplifyPredicate(
             ConnectorSession session,
@@ -87,17 +88,27 @@ public class ObjectStorePageSourceProvider
             ConnectorTableHandle table,
             TupleDomain<ColumnHandle> predicate)
     {
+        return getUnenforcedPredicate(session, split, table, predicate);
+    }
+
+    @Override
+    public TupleDomain<ColumnHandle> getUnenforcedPredicate(
+            ConnectorSession session,
+            ConnectorSplit split,
+            ConnectorTableHandle table,
+            TupleDomain<ColumnHandle> dynamicFilter)
+    {
         if (table instanceof HiveTableHandle) {
-            return hivePageSourceProvider.simplifyPredicate(unwrap(HIVE, session), split, table, predicate);
+            return hivePageSourceProvider.getUnenforcedPredicate(unwrap(HIVE, session), split, table, dynamicFilter);
         }
         if (table instanceof IcebergTableHandle) {
-            return icebergPageSourceProvider.simplifyPredicate(unwrap(ICEBERG, session), split, table, predicate);
+            return icebergPageSourceProvider.getUnenforcedPredicate(unwrap(ICEBERG, session), split, table, dynamicFilter);
         }
         if (table instanceof DeltaLakeTableHandle) {
-            return deltaPageSourceProvider.simplifyPredicate(unwrap(DELTA, session), split, table, predicate);
+            return deltaPageSourceProvider.getUnenforcedPredicate(unwrap(DELTA, session), split, table, dynamicFilter);
         }
         if (table instanceof HudiTableHandle) {
-            return hudiPageSourceProvider.simplifyPredicate(unwrap(HUDI, session), split, table, predicate);
+            return hudiPageSourceProvider.getUnenforcedPredicate(unwrap(HUDI, session), split, table, dynamicFilter);
         }
         throw new VerifyException("Unhandled class: " + table.getClass().getName());
     }
