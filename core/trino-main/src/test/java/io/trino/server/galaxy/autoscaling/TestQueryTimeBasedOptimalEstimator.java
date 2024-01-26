@@ -32,7 +32,6 @@ class TestQueryTimeBasedOptimalEstimator
         QueryTimeBasedOptimalEstimatorConfig config = new QueryTimeBasedOptimalEstimatorConfig();
         config.setNodeStartupTime(new Duration(NODE_STARTUP_TIME, TimeUnit.MILLISECONDS));
         config.setTargetLatency(new Duration(TARGET_LATENCY, TimeUnit.MILLISECONDS));
-        config.setRemainingTimeScaleUpThreshold(new Duration(1, TimeUnit.SECONDS));
         config.setRemainingTimeScaleDownThreshold(new Duration(10, TimeUnit.SECONDS));
 
         QueryTimeBasedOptimalEstimator queryTimeBasedOptimalEstimator = new QueryTimeBasedOptimalEstimator(config);

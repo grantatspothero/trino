@@ -23,7 +23,6 @@ public class QueryTimeBasedOptimalEstimatorConfig
 {
     private Duration nodeStartupTime = new Duration(60, TimeUnit.SECONDS);
     private Duration targetLatency = new Duration(10, TimeUnit.SECONDS);
-    private Duration remainingTimeScaleUpThreshold = new Duration(1, TimeUnit.SECONDS);
     private Duration remainingTimeScaleDownThreshold = new Duration(10, TimeUnit.SECONDS);
     private double scaleDownRatio = 0.8;
 
@@ -49,19 +48,6 @@ public class QueryTimeBasedOptimalEstimatorConfig
     public QueryTimeBasedOptimalEstimatorConfig setTargetLatency(Duration targetLatency)
     {
         this.targetLatency = targetLatency;
-        return this;
-    }
-
-    public Duration getRemainingTimeScaleUpThreshold()
-    {
-        return remainingTimeScaleUpThreshold;
-    }
-
-    @Config("galaxy.autoscaling.remaining-time-scale-up-threshold")
-    @ConfigDescription("Minimal remaining time to keep resized cluster busy - before considering scaleup")
-    public QueryTimeBasedOptimalEstimatorConfig setRemainingTimeScaleUpThreshold(Duration remainingTimeScaleUpThreshold)
-    {
-        this.remainingTimeScaleUpThreshold = remainingTimeScaleUpThreshold;
         return this;
     }
 

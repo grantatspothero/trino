@@ -26,14 +26,6 @@ public class QueryTimeBasedOptimalEstimator
         implements WorkerRecommendationProvider.WorkerCountEstimator
 {
     private final long nodeStartupTime;
-
-    /*
-     * ScaleUpThresholdSeconds is a minimal time we want to run a cluster after scaling up.
-     * If runtime is shorter than threshold it is not worth to scale up.
-     * If there is not enough work to run cluster for at least the specified interval,
-     * then it is not cost-efficient to spin up additional workers.
-     */
-    private final long scaleUpThresholdSeconds;
     /*
      * ScaleDownThresholdSecs is the lower bound for a running time before scaledown.
      * If there is not enough work to run for scaleDownThreshold Seconds, it means we can
@@ -55,7 +47,6 @@ public class QueryTimeBasedOptimalEstimator
         requireNonNull(config, "config is null");
         this.nodeStartupTime = config.getNodeStartupTime().roundTo(SECONDS);
         this.targetLatency = config.getTargetLatency().roundTo(SECONDS);
-        this.scaleUpThresholdSeconds = config.getRemainingTimeScaleUpThreshold().roundTo(SECONDS);
         this.scaleDownThresholdSecs = config.getRemainingTimeScaleDownThreshold().roundTo(SECONDS);
         this.scaleDownRatio = config.getScaleDownRatio();
     }
@@ -86,7 +77,7 @@ public class QueryTimeBasedOptimalEstimator
         // we can approximate scale:
         // X >= timeToFinishWork / targetLatency;
         double scale = timeToFinishWorkAfterRescaleSecs / targetLatency;
-        if (scale > 1.0 && (timeToFinishWorkAfterRescaleSecs / scale) > scaleUpThresholdSeconds) {
+        if (scale > 1.0) {
             return roundToInt(activeNodes * scale, CEILING);
         }
 
