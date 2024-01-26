@@ -1481,7 +1481,7 @@ public class TestGalaxyQueries
                 .matches("VALUES 'system'");
 
         assertThat(query(sessionFor(tpchCatalogVersion), "SELECT * FROM tpch.tiny.nation")).succeeds();
-        assertQueryFails(sessionFor(memeoryCatalogVersion), "SELECT * FROM tpch.tiny.nation", ".* Catalog 'tpch' does not exist");
+        assertQueryFails(sessionFor(memeoryCatalogVersion), "SELECT * FROM tpch.tiny.nation", ".* Catalog 'tpch' not found");
     }
 
     @Test
