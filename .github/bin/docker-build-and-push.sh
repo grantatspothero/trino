@@ -91,6 +91,7 @@ galaxy-objectstore
 galaxy-oracle
 galaxy-salesforce
 galaxy-snowflake
+galaxy-sqlserver
 galaxy-stargate
 galaxy-synapse
 galaxy-warp-speed
@@ -110,7 +111,6 @@ postgresql
 redshift
 resource-group-managers
 session-property-managers
-sqlserver
 teradata-functions
 tpcds
 tpch
