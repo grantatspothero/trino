@@ -21,10 +21,6 @@ import com.google.inject.Singleton;
 import com.microsoft.sqlserver.jdbc.SQLServerDriver;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.opentelemetry.api.OpenTelemetry;
-import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
-import io.trino.plugin.base.galaxy.CrossRegionConfig;
-import io.trino.plugin.base.galaxy.LocalRegionConfig;
-import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
 import io.trino.plugin.jdbc.DriverConnectionFactory;
@@ -36,15 +32,8 @@ import io.trino.plugin.jdbc.MaxDomainCompactionThreshold;
 import io.trino.plugin.jdbc.credential.CredentialProvider;
 import io.trino.plugin.jdbc.ptf.Procedure;
 import io.trino.plugin.jdbc.ptf.Query;
-import io.trino.plugin.sqlserver.galaxy.GalaxySqlServerSocketFactory;
-import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.function.table.ConnectorTableFunction;
-import io.trino.sshtunnel.SshTunnelConfig;
-import io.trino.sshtunnel.SshTunnelProperties;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.Properties;
 
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
@@ -54,8 +43,6 @@ import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.trino.plugin.jdbc.JdbcModule.bindSessionPropertiesProvider;
 import static io.trino.plugin.jdbc.JdbcModule.bindTablePropertiesProvider;
 import static io.trino.plugin.sqlserver.SqlServerClient.SQL_SERVER_MAX_LIST_EXPRESSIONS;
-import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class SqlServerClientModule
         extends AbstractConfigurationAwareModule
@@ -82,35 +69,18 @@ public class SqlServerClientModule
     @Singleton
     @ForBaseJdbc
     public static ConnectionFactory getConnectionFactory(
-            CatalogHandle catalogHandle,
             BaseJdbcConfig config,
             SqlServerConfig sqlServerConfig,
-            LocalRegionConfig localRegionConfig,
-            CrossRegionConfig crossRegionConfig,
-            SshTunnelConfig sshTunnelConfig,
             CredentialProvider credentialProvider,
             OpenTelemetry openTelemetry)
     {
-        Properties socketArgs = new Properties();
-        RegionVerifierProperties.addRegionVerifierProperties(socketArgs::setProperty, RegionVerifierProperties.generateFrom(localRegionConfig, crossRegionConfig));
-        SshTunnelProperties.generateFrom(sshTunnelConfig)
-                .ifPresent(sshTunnelProperties -> addSshTunnelProperties(socketArgs::setProperty, sshTunnelProperties));
-
-        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(socketArgs::setProperty, CatalogNetworkMonitorProperties.generateFrom(crossRegionConfig, catalogHandle));
-
-        Properties connectionProperties = new Properties();
-        connectionProperties.put("socketFactoryClass", GalaxySqlServerSocketFactory.class.getName());
-
-        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            socketArgs.store(outputStream, null);
-            // serialize ssh tunnel and region enforcement properties
-            connectionProperties.put("socketFactoryConstructorArg", outputStream.toString(UTF_8));
-        }
-        catch (IOException e) {
-            throw new UncheckedIOException("Could not construct SocketFactory argument", e);
-        }
-
-        DriverConnectionFactory delegate = new DriverConnectionFactory(new SQLServerDriver(), config.getConnectionUrl(), connectionProperties, credentialProvider, openTelemetry);
-        return new SqlServerConnectionFactory(delegate, sqlServerConfig.isSnapshotIsolationDisabled());
+        return new SqlServerConnectionFactory(
+                new DriverConnectionFactory(
+                        new SQLServerDriver(),
+                        config.getConnectionUrl(),
+                        new Properties(),
+                        credentialProvider,
+                        openTelemetry),
+                sqlServerConfig.isSnapshotIsolationDisabled());
     }
 }

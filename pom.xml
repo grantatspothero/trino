@@ -1517,6 +1517,12 @@
 
             <dependency>
                 <groupId>io.trino</groupId>
+                <artifactId>trino-galaxy-sqlserver</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
                 <artifactId>trino-galaxy-stargate</artifactId>
                 <version>${project.version}</version>
             </dependency>

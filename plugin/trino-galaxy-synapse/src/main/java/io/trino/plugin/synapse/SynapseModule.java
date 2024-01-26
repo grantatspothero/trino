@@ -29,7 +29,6 @@ import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
 import io.trino.plugin.jdbc.ForBaseJdbc;
 import io.trino.plugin.jdbc.credential.CredentialProvider;
-import io.trino.plugin.sqlserver.SqlServerClientModule;
 import io.trino.plugin.sqlserver.SqlServerConfig;
 import io.trino.spi.connector.CatalogHandle;
 import io.trino.sshtunnel.SshTunnelConfig;
@@ -40,6 +39,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
+import static io.trino.plugin.sqlserver.GalaxySqlServerClientModule.getConnectionFactory;
 
 public class SynapseModule
         extends AbstractConfigurationAwareModule
@@ -68,7 +68,7 @@ public class SynapseModule
             CredentialProvider credentials,
             OpenTelemetry openTelemetry)
     {
-        return SqlServerClientModule.getConnectionFactory(catalogHandle, config, sqlServerConfig, localRegionConfig, crossRegionConfig, sshConfig, credentials, openTelemetry);
+        return getConnectionFactory(catalogHandle, config, sqlServerConfig, localRegionConfig, crossRegionConfig, sshConfig, credentials, openTelemetry);
     }
 
     @Retention(RetentionPolicy.RUNTIME)

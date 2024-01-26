@@ -32,7 +32,6 @@ import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
 import io.trino.plugin.jdbc.DriverConnectionFactory;
 import io.trino.plugin.jdbc.credential.CredentialProvider;
-import io.trino.plugin.sqlserver.galaxy.GalaxySqlServerSocketFactory;
 import io.trino.spi.connector.CatalogHandle;
 import io.trino.sshtunnel.SshTunnelConfig;
 import io.trino.sshtunnel.SshTunnelProperties;
