@@ -154,6 +154,12 @@
         </artifact>
     </artifactSet>
 
+    <artifactSet to="plugin/galaxy-sqlserver">
+        <artifact id="${project.groupId}:trino-galaxy-sqlserver:zip:${project.version}">
+            <unpack />
+        </artifact>
+    </artifactSet>
+
     <artifactSet to="plugin/galaxy-stargate">
         <artifact id="${project.groupId}:trino-galaxy-stargate:zip:${project.version}">
             <unpack />
@@ -402,12 +408,6 @@
 
     <artifactSet to="plugin/singlestore">
         <artifact id="${project.groupId}:trino-singlestore:zip:${project.version}">
-            <unpack />
-        </artifact>
-    </artifactSet>
-
-    <artifactSet to="plugin/sqlserver">
-        <artifact id="${project.groupId}:trino-sqlserver:zip:${project.version}">
             <unpack />
         </artifact>
     </artifactSet>
