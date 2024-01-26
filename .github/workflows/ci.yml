@@ -774,6 +774,7 @@ jobs:
             !:trino-galaxy-warp-speed-2,
             !:trino-galaxy-salesforce,
             !:trino-galaxy-snowflake,
+            !:trino-galaxy-sqlserver,
             !:trino-galaxy-stargate,
             !:trino-galaxy-synapse,
             !:trino-google-sheets,
@@ -920,6 +921,7 @@ jobs:
             - { modules: plugin/trino-galaxy-snowflake }
             - { modules: plugin/trino-galaxy-snowflake, profile: jdbc-integration-tests }
             - { modules: plugin/trino-galaxy-snowflake, profile: parallel-integration-tests }
+            - { modules: plugin/trino-galaxy-sqlserver, profile: jdbc-integration-tests }
             - { modules: plugin/trino-galaxy-stargate }
             - { modules: plugin/trino-galaxy-synapse, profile: jdbc-integration-tests }
             - { modules: plugin/trino-clickhouse }
@@ -956,7 +958,6 @@ jobs:
             - { modules: plugin/trino-redshift, profile: cloud-tests}
             - { modules: plugin/trino-redshift, profile: fte-tests}
             - { modules: plugin/trino-resource-group-managers }
-            - { modules: plugin/trino-sqlserver }
             - { modules: testing/trino-faulttolerant-tests, profile: default }
             - { modules: testing/trino-faulttolerant-tests, profile: test-fault-tolerant-delta }
             - { modules: testing/trino-faulttolerant-tests, profile: test-fault-tolerant-hive, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
