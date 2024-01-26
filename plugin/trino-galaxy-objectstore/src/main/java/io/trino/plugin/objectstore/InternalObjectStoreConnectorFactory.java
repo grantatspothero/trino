@@ -20,12 +20,15 @@ import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.filesystem.manager.FileSystemModule;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.deltalake.InternalDeltaLakeConnectorFactory;
 import io.trino.plugin.hive.InternalHiveConnectorFactory;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hudi.InternalHudiConnectorFactory;
 import io.trino.plugin.iceberg.InternalIcebergConnectorFactory;
 import io.trino.spi.classloader.ThreadContextClassLoader;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
 import io.trino.spi.connector.ConnectorNodePartitioningProvider;
@@ -40,6 +43,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.airlift.configuration.ConfigurationAwareModule.combine;
 
 public final class InternalObjectStoreConnectorFactory
@@ -121,6 +125,9 @@ public final class InternalObjectStoreConnectorFactory
                         binder.bind(TypeManager.class).toInstance(context.getTypeManager());
                         binder.bind(OpenTelemetry.class).toInstance(context.getOpenTelemetry());
                         binder.bind(Tracer.class).toInstance(context.getTracer());
+                        binder.bind(CatalogHandle.class).toInstance(context.getCatalogHandle());
+                        configBinder(binder).bindConfig(LocalRegionConfig.class);
+                        configBinder(binder).bindConfig(CrossRegionConfig.class);
                     });
 
             Injector injector = app

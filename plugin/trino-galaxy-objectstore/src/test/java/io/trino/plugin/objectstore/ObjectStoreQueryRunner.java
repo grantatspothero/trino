@@ -338,7 +338,7 @@ public final class ObjectStoreQueryRunner
                 .withCoordinatorProperties(ImmutableMap.of("http-server.http.port", "8080"))
                 .withTableType(tableType)
                 .withS3Url(minio.getS3Url())
-                .withHiveS3Config(minio.getHiveS3Config())
+                .withHiveS3Config(minio.getNativeS3Config())
                 .withMetastore(metastore)
                 .withLocationSecurityServer(locationSecurityServer)
                 .withMockConnectorPlugin(new MockConnectorPlugin(MockConnectorFactory.create()))

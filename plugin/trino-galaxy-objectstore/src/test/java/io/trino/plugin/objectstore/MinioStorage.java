@@ -35,6 +35,7 @@ public class MinioStorage
 {
     public static final String ACCESS_KEY = "accesskey";
     public static final String SECRET_KEY = "secretkey";
+    public static final String REGION = "us-east-1";
 
     private final AutoCloseableCloser closer = AutoCloseableCloser.create();
     private final String bucketName;
@@ -110,6 +111,19 @@ public class MinioStorage
                 .put("hive.s3.aws-secret-key", SECRET_KEY)
                 .put("hive.s3.endpoint", getEndpoint())
                 .put("hive.s3.path-style-access", "true")
+                .buildOrThrow();
+    }
+
+    public Map<String, String> getNativeS3Config()
+    {
+        return ImmutableMap.<String, String>builder()
+                .put("fs.hadoop.enabled", "false")
+                .put("fs.native-s3.enabled", "true")
+                .put("s3.aws-access-key", ACCESS_KEY)
+                .put("s3.aws-secret-key", SECRET_KEY)
+                .put("s3.region", REGION)
+                .put("s3.endpoint", getEndpoint())
+                .put("s3.path-style-access", "true")
                 .buildOrThrow();
     }
 }

@@ -61,7 +61,7 @@ public class TestWarpSpeedObjectIcebergDynamicRowFiltering
                 .withTableType(ICEBERG)
                 .withAccountClient(testingAccountFactory.createAccountClient())
                 .withS3Url(minio.getS3Url())
-                .withHiveS3Config(minio.getHiveS3Config())
+                .withHiveS3Config(minio.getNativeS3Config())
                 .withMetastore(metastore)
                 .withLocationSecurityServer(locationSecurityServer)
                 .withPlugin(WarpSpeedConnectorTestUtils.getPlugin())

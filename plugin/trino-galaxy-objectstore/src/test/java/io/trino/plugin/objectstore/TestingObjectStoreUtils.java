@@ -38,6 +38,7 @@ public final class TestingObjectStoreUtils
         addCommonObjectStoreProperties(properties, locationSecurityClientConfig);
         addCommonObjectStoreProperties(properties, metastoreConfig);
         addCommonObjectStoreProperties(properties, hiveS3Config);
+        addObjectStoreProperties(properties, hiveS3Config);
 
         verify(extraObjectStoreProperties.containsKey("HIVE__hive.metastore-cache-ttl") == extraObjectStoreProperties.containsKey("DELTA__hive.metastore-cache-ttl"), "Configure caching metastore for all or for none of underlying connectors");
         verify(extraObjectStoreProperties.containsKey("HIVE__hive.metastore-cache-ttl") == extraObjectStoreProperties.containsKey("HUDI__hive.metastore-cache-ttl"), "Configure caching metastore for all or for none of underlying connectors");

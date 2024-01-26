@@ -135,7 +135,7 @@ public abstract class BaseObjectStoreConnectorTest
                 .withTableType(tableType)
                 .withAccountClient(accountClient)
                 .withS3Url(minio.getS3Url())
-                .withHiveS3Config(minio.getHiveS3Config())
+                .withHiveS3Config(minio.getNativeS3Config())
                 .withMetastore(metastore)
                 .withLocationSecurityServer(locationSecurityServer)
                 .withMockConnectorPlugin(buildMockConnectorPlugin())
@@ -1122,7 +1122,9 @@ public abstract class BaseObjectStoreConnectorTest
     {
         ConfigurationInitializer s3Initializer = new TrinoS3ConfigurationInitializer(new HiveS3Config()
                 .setS3AwsAccessKey(ACCESS_KEY)
-                .setS3AwsSecretKey(SECRET_KEY));
+                .setS3AwsSecretKey(SECRET_KEY)
+                .setS3Endpoint(minio.getEndpoint())
+                .setS3PathStyleAccess(true));
         HdfsConfigurationInitializer initializer = new HdfsConfigurationInitializer(new HdfsConfig(), ImmutableSet.of(s3Initializer));
         HdfsConfiguration hdfsConfiguration = new DynamicHdfsConfiguration(initializer, ImmutableSet.of());
         return new HdfsFileSystemFactory(new HdfsEnvironment(hdfsConfiguration, new HdfsConfig(), new NoHdfsAuthentication()), new TrinoHdfsFileSystemStats())

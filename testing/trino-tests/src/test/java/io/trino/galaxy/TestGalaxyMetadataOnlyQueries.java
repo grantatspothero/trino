@@ -151,7 +151,7 @@ public class TestGalaxyMetadataOnlyQueries
                         .buildOrThrow(),
                 "galaxy",
                 metastore.getMetastoreConfig(minio.getS3Url()),
-                minio.getHiveS3Config(),
+                minio.getNativeS3Config(),
                 Map.of());
 
         tpchCatalogId = testingAccountClient.getOrCreateCatalog("tpch");

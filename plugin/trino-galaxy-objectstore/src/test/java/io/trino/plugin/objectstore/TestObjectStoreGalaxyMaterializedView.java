@@ -68,6 +68,7 @@ public class TestObjectStoreGalaxyMaterializedView
     private static final String TEST_CATALOG = "iceberg";
 
     private final String bucketName = "test-bucket-" + randomNameSuffix();
+    private MinioStorage minio;
     private GalaxyTestHelper galaxyTestHelper;
     private TestingGalaxyMetastore metastore;
     private String schemaDirectory;
@@ -87,7 +88,7 @@ public class TestObjectStoreGalaxyMaterializedView
 
         TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> false));
 
-        MinioStorage minio = closeAfterClass(new MinioStorage(bucketName));
+        minio = closeAfterClass(new MinioStorage(bucketName));
         minio.start();
         schemaDirectory = minio.getS3Url() + "/" + "default";
         metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyTestHelper.getCockroach()));
@@ -225,7 +226,9 @@ public class TestObjectStoreGalaxyMaterializedView
     {
         ConfigurationInitializer s3Initializer = new TrinoS3ConfigurationInitializer(new HiveS3Config()
                 .setS3AwsAccessKey(ACCESS_KEY)
-                .setS3AwsSecretKey(SECRET_KEY));
+                .setS3AwsSecretKey(SECRET_KEY)
+                .setS3Endpoint(minio.getEndpoint())
+                .setS3PathStyleAccess(true));
         HdfsConfigurationInitializer initializer = new HdfsConfigurationInitializer(new HdfsConfig(), ImmutableSet.of(s3Initializer));
         HdfsConfiguration hdfsConfiguration = new DynamicHdfsConfiguration(initializer, ImmutableSet.of());
         return new HdfsFileSystemFactory(new HdfsEnvironment(hdfsConfiguration, new HdfsConfig(), new NoHdfsAuthentication()), new TrinoHdfsFileSystemStats())

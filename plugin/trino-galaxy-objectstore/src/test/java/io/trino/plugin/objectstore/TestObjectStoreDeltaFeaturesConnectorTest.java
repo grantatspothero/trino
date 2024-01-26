@@ -88,7 +88,7 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
                 .withLocationSecurityServer(locationSecurityServer)
                 .withMetastore(galaxyMetastore)
                 .withS3Url(minio.getS3Url())
-                .withHiveS3Config(minio.getHiveS3Config())
+                .withHiveS3Config(minio.getNativeS3Config())
                 .build();
         try {
             // Necessary to access system tables such as $history
