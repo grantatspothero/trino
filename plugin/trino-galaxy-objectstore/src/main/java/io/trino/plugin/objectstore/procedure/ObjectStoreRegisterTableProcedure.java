@@ -167,7 +167,7 @@ public final class ObjectStoreRegisterTableProcedure
     private static boolean exists(TrinoFileSystem fileSystem, Location location)
     {
         try {
-            return fileSystem.newInputFile(location).exists();
+            return fileSystem.directoryExists(location).orElse(false);
         }
         catch (IOException e) {
             throw new TrinoException(GENERIC_INTERNAL_ERROR, "Failed to check location: " + location, e);
