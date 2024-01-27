@@ -688,7 +688,7 @@ public class TestingTrinoServer
         checkState(coordinator, "not a coordinator");
         return transactionManager
                 .getCatalogHandle(transactionSession.getRequiredTransactionId(), catalogName)
-                .orElseThrow(() -> new IllegalArgumentException("Catalog '%s' does not exist".formatted(catalogName)));
+                .orElseThrow(() -> new IllegalArgumentException("Catalog '%s' not found".formatted(catalogName)));
     }
 
     public Connector getConnector(CatalogHandle catalogHandle)
