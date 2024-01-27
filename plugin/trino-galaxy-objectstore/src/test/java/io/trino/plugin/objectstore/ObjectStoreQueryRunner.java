@@ -246,25 +246,23 @@ public final class ObjectStoreQueryRunner
                 tables);
     }
 
-    public static void initializeTpchTablesHudi(DistributedQueryRunner queryRunner, List<TpchTable<?>> tables)
+    public static void initializeTpchTablesHudi(DistributedQueryRunner queryRunner, List<TpchTable<?>> tables, Location externalLocation)
             throws Exception
     {
-        String dataDir = queryRunner.getCoordinator().getBaseDataDir().resolve("data").toString();
         TpchObjectStoreHudiTablesInitializer loader = new TpchObjectStoreHudiTablesInitializer(COPY_ON_WRITE, tables);
-        loader.initializeTables(queryRunner, Location.of(dataDir), TPCH_SCHEMA);
+        loader.initializeTables(queryRunner, externalLocation, TPCH_SCHEMA);
         grantPrivileges(queryRunner, tables);
     }
 
-    public static void initializeWarpSpeedTpchTablesHudi(DistributedQueryRunner queryRunner, TrinoFileSystem trinoFileSystem, TestingGalaxyMetastore metastore, List<TpchTable<?>> tables)
+    public static void initializeWarpSpeedTpchTablesHudi(DistributedQueryRunner queryRunner, TrinoFileSystem trinoFileSystem, TestingGalaxyMetastore metastore, List<TpchTable<?>> tables, Location externalLocation)
             throws Exception
     {
         Path basePath = queryRunner.getCoordinator().getBaseDataDir().resolve("data");
-        String dataDir = basePath.toString();
         GalaxyHiveMetastore hiveMetastore = new GalaxyHiveMetastore(metastore.getMetastore(), HDFS_FILE_SYSTEM_FACTORY, basePath.toFile().getAbsolutePath(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
         // TpchObjectStoreHudiTablesInitializer wont work here because it cannot cast CoordinatorDispatcherConnector to ObjectStoreConnector.
         // It is not-trivial to expose the injector or any other internal component of the connector (even just for testing). So TpchWarpSpeedObjectStoreHudiTablesInitializer stays with using the old approach of getting a metastore
         TpchWarpSpeedObjectStoreHudiTablesInitializer loader = new TpchWarpSpeedObjectStoreHudiTablesInitializer(hiveMetastore, trinoFileSystem, COPY_ON_WRITE, tables);
-        loader.initializeTables(queryRunner, Location.of(dataDir), TPCH_SCHEMA);
+        loader.initializeTables(queryRunner, externalLocation, TPCH_SCHEMA);
         grantPrivileges(queryRunner, tables);
     }
 
@@ -327,7 +325,8 @@ public final class ObjectStoreQueryRunner
     {
         Logging.initialize();
 
-        MinioStorage minio = new MinioStorage("test-bucket");
+        String bucketName = "test-bucket";
+        MinioStorage minio = new MinioStorage(bucketName);
         GalaxyCockroachContainer cockroach = new GalaxyCockroachContainer();
         TestingGalaxyMetastore metastore = new TestingGalaxyMetastore(cockroach);
         TestingLocationSecurityServer locationSecurityServer = new TestingLocationSecurityServer((session, location) -> false);
@@ -349,7 +348,7 @@ public final class ObjectStoreQueryRunner
 
         switch (tableType) {
             case HIVE, ICEBERG, DELTA -> initializeTpchTables(queryRunner, TpchTable.getTables());
-            case HUDI -> initializeTpchTablesHudi(queryRunner, TpchTable.getTables());
+            case HUDI -> initializeTpchTablesHudi(queryRunner, TpchTable.getTables(), Location.of("s3://%s/hudi/data".formatted(bucketName)));
         }
 
         Logger log = Logger.get(ObjectStoreQueryRunner.class);

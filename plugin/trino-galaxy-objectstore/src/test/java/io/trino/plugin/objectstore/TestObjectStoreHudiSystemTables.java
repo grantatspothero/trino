@@ -14,6 +14,7 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableList;
+import io.trino.filesystem.Location;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
@@ -34,7 +35,8 @@ public class TestObjectStoreHudiSystemTables
             throws Exception
     {
         GalaxyCockroachContainer galaxyCockroachContainer = closeAfterClass(new GalaxyCockroachContainer());
-        MinioStorage minio = closeAfterClass(new MinioStorage("test-bucket-" + randomNameSuffix()));
+        String bucketName = "test-bucket-" + randomNameSuffix();
+        MinioStorage minio = closeAfterClass(new MinioStorage(bucketName));
         minio.start();
 
         TestingGalaxyMetastore metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyCockroachContainer));
@@ -52,7 +54,7 @@ public class TestObjectStoreHudiSystemTables
                 .withPlugin(new ObjectStorePlugin())
                 .build();
 
-        ObjectStoreQueryRunner.initializeTpchTablesHudi(queryRunner, ImmutableList.of(NATION));
+        ObjectStoreQueryRunner.initializeTpchTablesHudi(queryRunner, ImmutableList.of(NATION), Location.of("s3://%s/hudi/tpch".formatted(bucketName)));
         queryRunner.execute("GRANT SELECT ON objectstore.tpch.\"*\" TO ROLE " + ACCOUNT_ADMIN);
         return queryRunner;
     }

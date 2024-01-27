@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.objectstore;
 
+import io.trino.filesystem.Location;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.MaterializedResult;
@@ -49,10 +50,10 @@ public class TestObjectStoreHudiConnectorTest
     {
         // this cannot live in warp-speed modules because it creates a dependency hell on trino-hive and trino-filesystem
         if (getObjectStorePlugin().getClass().getName().equals("io.trino.plugin.warp2.WarpSpeedPlugin") || getObjectStorePlugin().getClass().getName().equals("io.trino.plugin.warp.WarpSpeedPlugin")) {
-            ObjectStoreQueryRunner.initializeWarpSpeedTpchTablesHudi(queryRunner, getTrinoFileSystem(), metastore, REQUIRED_TPCH_TABLES);
+            ObjectStoreQueryRunner.initializeWarpSpeedTpchTablesHudi(queryRunner, getTrinoFileSystem(), metastore, REQUIRED_TPCH_TABLES, Location.of("s3://%s/hudi/data".formatted(bucketName)));
         }
         else {
-            ObjectStoreQueryRunner.initializeTpchTablesHudi(queryRunner, REQUIRED_TPCH_TABLES);
+            ObjectStoreQueryRunner.initializeTpchTablesHudi(queryRunner, REQUIRED_TPCH_TABLES, Location.of("s3://%s/hudi/data".formatted(bucketName)));
         }
     }
 
