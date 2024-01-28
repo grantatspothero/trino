@@ -268,9 +268,9 @@ public class DataDefinitionExecution<T extends Statement>
     }
 
     @Override
-    public Plan getQueryPlan()
+    public Optional<Plan> getQueryPlan()
     {
-        throw new UnsupportedOperationException();
+        return Optional.empty();
     }
 
     @Override

@@ -18,7 +18,7 @@ import io.trino.operator.OperatorStats;
 import io.trino.plugin.deltalake.TestDeltaLakeConnectorTest;
 import io.trino.spi.QueryId;
 import io.trino.testing.MaterializedResult;
-import io.trino.testing.MaterializedResultWithQueryId;
+import io.trino.testing.QueryRunner.MaterializedResultWithPlan;
 import io.trino.testing.TestingConnectorBehavior;
 import io.trino.testing.sql.TestTable;
 import org.intellij.lang.annotations.Language;
@@ -536,8 +536,8 @@ public class TestObjectStoreDeltaConnectorTest
 
     private void runAnalyzeVerifySplitCount(String tableName, long expectedSplitCount)
     {
-        MaterializedResultWithQueryId analyzeResult = getDistributedQueryRunner().executeWithQueryId(getSession(), "ANALYZE " + tableName);
-        verifySplitCount(analyzeResult.getQueryId(), expectedSplitCount);
+        MaterializedResultWithPlan analyzeResult = getDistributedQueryRunner().executeWithPlan(getSession(), "ANALYZE " + tableName);
+        verifySplitCount(analyzeResult.queryId(), expectedSplitCount);
     }
 
     private void verifySplitCount(QueryId queryId, long expectedCount)

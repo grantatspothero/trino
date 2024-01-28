@@ -223,7 +223,7 @@ public class SqlQueryManager
         return queryTracker.getQuery(queryId).getSlug();
     }
 
-    public Plan getQueryPlan(QueryId queryId)
+    public Optional<Plan> getQueryPlan(QueryId queryId)
     {
         return queryTracker.getQuery(queryId).getQueryPlan();
     }
