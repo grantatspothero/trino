@@ -15,7 +15,6 @@ package io.trino.plugin.iceberg.catalog.galaxy;
 
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystemFactory;
-import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.hive.HiveSchemaProperties;
 import io.trino.plugin.hive.metastore.Database;
 import io.trino.plugin.hive.metastore.cache.CachingHiveMetastore;
@@ -29,6 +28,7 @@ import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
 import io.trino.plugin.iceberg.catalog.TrinoCatalog;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.spi.TrinoException;
+import io.trino.spi.catalog.CatalogName;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.SchemaNotFoundException;
 import io.trino.spi.security.TrinoPrincipal;

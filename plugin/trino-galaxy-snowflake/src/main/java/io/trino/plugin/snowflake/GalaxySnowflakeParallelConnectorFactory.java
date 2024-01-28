@@ -18,12 +18,12 @@ import com.starburstdata.trino.plugin.snowflake.parallel.SnowflakeJdbcOverrideMo
 import com.starburstdata.trino.plugin.snowflake.parallel.SnowflakeParallelConnector;
 import com.starburstdata.trino.plugin.snowflake.parallel.SnowflakeParallelModule;
 import io.airlift.bootstrap.Bootstrap;
-import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.jdbc.JdbcModule;
 import io.trino.spi.NodeManager;
 import io.trino.spi.VersionEmbedder;
+import io.trino.spi.catalog.CatalogName;
 import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
