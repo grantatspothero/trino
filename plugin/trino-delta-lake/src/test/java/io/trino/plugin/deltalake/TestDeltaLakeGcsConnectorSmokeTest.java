@@ -27,7 +27,6 @@ import io.trino.hdfs.gcs.GoogleGcsConfigurationInitializer;
 import io.trino.hdfs.gcs.HiveGcsConfig;
 import io.trino.plugin.hive.containers.HiveHadoop;
 import io.trino.spi.security.ConnectorIdentity;
-import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.jupiter.api.AfterAll;
@@ -162,7 +161,7 @@ public class TestDeltaLakeGcsConnectorSmokeTest
     @Override
     protected void registerTableFromResources(String table, String resourcePath, QueryRunner queryRunner)
     {
-        this.fileSystem = getConnectorService((DistributedQueryRunner) queryRunner, TrinoFileSystemFactory.class)
+        this.fileSystem = getConnectorService(queryRunner, TrinoFileSystemFactory.class)
                 .create(ConnectorIdentity.ofUser("test"));
 
         String targetDirectory = bucketUrl() + table;

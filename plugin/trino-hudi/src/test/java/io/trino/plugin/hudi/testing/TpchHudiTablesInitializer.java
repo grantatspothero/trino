@@ -31,9 +31,9 @@ import io.trino.plugin.hive.metastore.Table;
 import io.trino.plugin.hudi.HudiConnector;
 import io.trino.spi.connector.CatalogSchemaName;
 import io.trino.spi.security.ConnectorIdentity;
-import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.MaterializedResult;
 import io.trino.testing.MaterializedRow;
+import io.trino.testing.QueryRunner;
 import io.trino.testing.TransactionBuilder;
 import io.trino.tpch.TpchColumn;
 import io.trino.tpch.TpchColumnType;
@@ -118,7 +118,7 @@ public class TpchHudiTablesInitializer
     }
 
     @Override
-    public void initializeTables(DistributedQueryRunner queryRunner, Location externalLocation, String schemaName)
+    public void initializeTables(QueryRunner queryRunner, Location externalLocation, String schemaName)
             throws Exception
     {
         TrinoFileSystem fileSystem = getTrinoFileSystem(queryRunner);
@@ -144,26 +144,26 @@ public class TpchHudiTablesInitializer
         }
     }
 
-    protected HiveMetastore getMetastore(DistributedQueryRunner queryRunner)
+    protected HiveMetastore getMetastore(QueryRunner queryRunner)
     {
         return getHudiConnector(queryRunner).getInjector().getInstance(HiveMetastoreFactory.class)
                 .createMetastore(Optional.empty());
     }
 
-    protected TrinoFileSystem getTrinoFileSystem(DistributedQueryRunner queryRunner)
+    protected TrinoFileSystem getTrinoFileSystem(QueryRunner queryRunner)
     {
         return getHudiConnector(queryRunner).getInjector().getInstance(TrinoFileSystemFactory.class)
                 .create(ConnectorIdentity.ofUser("test"));
     }
 
-    protected HudiConnector getHudiConnector(DistributedQueryRunner queryRunner)
+    protected HudiConnector getHudiConnector(QueryRunner queryRunner)
     {
         return TransactionBuilder.transaction(queryRunner.getTransactionManager(), queryRunner.getPlannerContext().getMetadata(), queryRunner.getAccessControl())
                 .readOnly()
                 .execute(queryRunner.getDefaultSession(), transactionSession -> ((HudiConnector) queryRunner.getCoordinator().getConnector(transactionSession, "hudi")));
     }
 
-    public void load(TpchTable<?> tpchTables, DistributedQueryRunner queryRunner, java.nio.file.Path tableDirectory)
+    public void load(TpchTable<?> tpchTables, QueryRunner queryRunner, java.nio.file.Path tableDirectory)
     {
         try (HoodieJavaWriteClient<HoodieAvroPayload> writeClient = createWriteClient(tpchTables, HDFS_ENVIRONMENT, new Path(tableDirectory.toUri()))) {
             RecordConverter recordConverter = createRecordConverter(tpchTables);

@@ -48,7 +48,7 @@ public class TestGalaxyHiveConnectorTest
         GalaxyCockroachContainer cockroach = closeAfterClass(new GalaxyCockroachContainer());
         testingGalaxyMetastore = closeAfterClass(new TestingGalaxyMetastore(cockroach));
 
-        Function<DistributedQueryRunner, HiveMetastore> metastore = queryRunner -> {
+        Function<QueryRunner, HiveMetastore> metastore = queryRunner -> {
             File baseDir = queryRunner.getCoordinator().getBaseDataDir().resolve("hive_data").toFile();
             return new GalaxyHiveMetastore(testingGalaxyMetastore.getMetastore(), HDFS_FILE_SYSTEM_FACTORY, baseDir.getAbsolutePath(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
         };

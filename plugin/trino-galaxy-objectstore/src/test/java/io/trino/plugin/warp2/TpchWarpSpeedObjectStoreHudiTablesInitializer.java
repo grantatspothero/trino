@@ -17,7 +17,7 @@ import io.trino.filesystem.TrinoFileSystem;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastore;
 import io.trino.plugin.hudi.testing.TpchHudiTablesInitializer;
-import io.trino.testing.DistributedQueryRunner;
+import io.trino.testing.QueryRunner;
 import io.trino.tpch.TpchTable;
 
 import java.util.List;
@@ -38,13 +38,13 @@ public class TpchWarpSpeedObjectStoreHudiTablesInitializer
     }
 
     @Override
-    protected HiveMetastore getMetastore(DistributedQueryRunner queryRunner)
+    protected HiveMetastore getMetastore(QueryRunner queryRunner)
     {
         return hiveMetastore;
     }
 
     @Override
-    protected TrinoFileSystem getTrinoFileSystem(DistributedQueryRunner queryRunner)
+    protected TrinoFileSystem getTrinoFileSystem(QueryRunner queryRunner)
     {
         return trinoFileSystem;
     }

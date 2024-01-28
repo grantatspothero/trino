@@ -23,8 +23,8 @@ import io.trino.spi.QueryId;
 import io.trino.spi.security.ConnectorIdentity;
 import io.trino.sql.tree.ExplainType;
 import io.trino.testing.AbstractTestQueryFramework;
-import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.MaterializedRow;
+import io.trino.testing.QueryRunner;
 import org.apache.iceberg.PartitionField;
 import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.TableMetadataParser;
@@ -750,7 +750,7 @@ public abstract class BaseIcebergMaterializedViewTest
 
     protected TableMetadata getStorageTableMetadata(String materializedViewName)
     {
-        DistributedQueryRunner queryRunner = (DistributedQueryRunner) getQueryRunner();
+        QueryRunner queryRunner = getQueryRunner();
         TrinoFileSystem fileSystemFactory = getIcebergConnectorInjector(queryRunner).getInstance(TrinoFileSystemFactory.class)
                 .create(ConnectorIdentity.ofUser("test"));
         Location metadataLocation = Location.of(getStorageMetadataLocation(materializedViewName));

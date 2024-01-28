@@ -15,7 +15,7 @@ package io.trino.plugin.objectstore;
 
 import io.trino.plugin.hudi.HudiConnector;
 import io.trino.plugin.hudi.testing.TpchHudiTablesInitializer;
-import io.trino.testing.DistributedQueryRunner;
+import io.trino.testing.QueryRunner;
 import io.trino.tpch.TpchTable;
 
 import java.util.List;
@@ -31,7 +31,7 @@ public class TpchObjectStoreHudiTablesInitializer
     }
 
     @Override
-    protected HudiConnector getHudiConnector(DistributedQueryRunner queryRunner)
+    protected HudiConnector getHudiConnector(QueryRunner queryRunner)
     {
         ObjectStoreConnector objectStoreConnector = transaction(queryRunner.getTransactionManager(), queryRunner.getPlannerContext().getMetadata(), queryRunner.getAccessControl())
                 .execute(queryRunner.getDefaultSession(), transactionSession -> (ObjectStoreConnector) queryRunner.getCoordinator().getConnector(transactionSession, "objectstore"));

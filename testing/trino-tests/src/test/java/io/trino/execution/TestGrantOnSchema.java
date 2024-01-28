@@ -25,6 +25,7 @@ import io.trino.spi.security.Privilege;
 import io.trino.spi.security.TrinoPrincipal;
 import io.trino.sql.query.QueryAssertions;
 import io.trino.testing.DistributedQueryRunner;
+import io.trino.testing.QueryRunner;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -49,7 +50,7 @@ public class TestGrantOnSchema
     private static final Set<Privilege> SCHEMA_PRIVILEGES = ImmutableSet.of(Privilege.CREATE);
     private final Session admin = sessionOf("admin");
     private final Grants<String> schemaGrants = new MutableGrants<>();
-    private DistributedQueryRunner queryRunner;
+    private QueryRunner queryRunner;
     private QueryAssertions assertions;
 
     @BeforeAll
