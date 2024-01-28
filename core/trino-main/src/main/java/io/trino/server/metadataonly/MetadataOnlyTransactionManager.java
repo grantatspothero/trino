@@ -426,7 +426,7 @@ public class MetadataOnlyTransactionManager
             catalogsBuilder.put(systemConnector.getConnectorName().toString(), new CatalogProperties(systemConnector.getCatalogHandle(), systemConnector.getConnectorName(), ImmutableMap.of()));
             catalogs.stream()
                     .map(catalog -> toCatalogProperties(catalog, transactionId))
-                    .forEach(catalog -> catalogsBuilder.put(catalog.getCatalogHandle().getCatalogName(), catalog));
+                    .forEach(catalog -> catalogsBuilder.put(catalog.catalogHandle().getCatalogName(), catalog));
             this.catalogs = catalogsBuilder.buildOrThrow();
 
             // pre activate the system catalog since it can't be constructed from properties
@@ -489,7 +489,7 @@ public class MetadataOnlyTransactionManager
         public List<CatalogInfo> listCatalogs()
         {
             return catalogs.entrySet().stream()
-                    .map(entry -> new CatalogInfo(entry.getKey(), entry.getValue().getCatalogHandle(), entry.getValue().getConnectorName()))
+                    .map(entry -> new CatalogInfo(entry.getKey(), entry.getValue().catalogHandle(), entry.getValue().connectorName()))
                     .collect(toImmutableList());
         }
 

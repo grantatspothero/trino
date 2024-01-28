@@ -414,7 +414,7 @@ public class LiveCatalogsTransactionManager
     {
         return galaxyLiveCatalogs.values().stream()
                 .map(GalaxyLiveCatalog::getCatalogProperties)
-                .map(CatalogProperties::getCatalogHandle)
+                .map(CatalogProperties::catalogHandle)
                 .collect(toImmutableSet());
     }
 
@@ -719,7 +719,7 @@ public class LiveCatalogsTransactionManager
 
             catalogNamesToCatalogId = galaxyLiveCatalogs.stream()
                     .collect(toImmutableBiMap(
-                            galaxyLiveCatalog -> galaxyLiveCatalog.getCatalogProperties().getCatalogHandle().getCatalogName(),
+                            galaxyLiveCatalog -> galaxyLiveCatalog.getCatalogProperties().catalogHandle().getCatalogName(),
                             galaxyLiveCatalog -> galaxyLiveCatalog.getCatalogConstructionArgs().catalogVersion().catalogId()));
 
             catalogNamesToHandles = ImmutableMap.<String, CatalogHandle>builder()
@@ -727,8 +727,8 @@ public class LiveCatalogsTransactionManager
                     .putAll(galaxyLiveCatalogs.stream()
                             .map(GalaxyLiveCatalog::getCatalogProperties)
                             .collect(toImmutableMap(
-                                    properties -> properties.getCatalogHandle().getCatalogName(),
-                                    CatalogProperties::getCatalogHandle)))
+                                    properties -> properties.catalogHandle().getCatalogName(),
+                                    CatalogProperties::catalogHandle)))
                     .buildOrThrow();
 
             catalogHandlesToCatalogInfo = ImmutableMap.<CatalogHandle, CatalogInfo>builder()
@@ -736,8 +736,8 @@ public class LiveCatalogsTransactionManager
                     .putAll(galaxyLiveCatalogs.stream()
                             .map(GalaxyLiveCatalog::getCatalogProperties)
                             .collect(toImmutableMap(
-                                    CatalogProperties::getCatalogHandle,
-                                    properties -> new CatalogInfo(properties.getCatalogHandle().getCatalogName(), properties.getCatalogHandle(), properties.getConnectorName()))))
+                                    CatalogProperties::catalogHandle,
+                                    properties -> new CatalogInfo(properties.catalogHandle().getCatalogName(), properties.catalogHandle(), properties.connectorName()))))
                     .buildOrThrow();
 
             idToLiveCatalog = galaxyLiveCatalogs.stream()
@@ -1009,10 +1009,10 @@ public class LiveCatalogsTransactionManager
             requireNonNull(galaxyCatalogInfo, "galaxyCatalogInfo is null");
             CatalogProperties propertiesWithWrongVersion = galaxyCatalogInfo.catalogProperties();
             catalogProperties = new CatalogProperties(
-                    propertiesWithWrongVersion.getCatalogHandle().withVersion(
+                    propertiesWithWrongVersion.catalogHandle().withVersion(
                             fromCatalogIdAndLiveCatalogUniqueId(galaxyCatalogArgs.catalogVersion().catalogId(), id)),
-                    propertiesWithWrongVersion.getConnectorName(),
-                    propertiesWithWrongVersion.getProperties());
+                    propertiesWithWrongVersion.connectorName(),
+                    propertiesWithWrongVersion.properties());
             readOnly = galaxyCatalogInfo.readOnly();
             this.catalogFactory = requireNonNull(catalogFactory, "catalogFactory is null");
             this.sharedSchema = galaxyCatalogInfo.sharedSchema();

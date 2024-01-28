@@ -154,9 +154,9 @@ public class CachingCatalogFactory
     @Override
     public CatalogConnector createCatalog(CatalogProperties catalogProperties)
     {
-        Map<String, String> decryptedCatalogProperties = accountContext().decryptCatalogProperties(catalogProperties.getCatalogHandle().getCatalogName());
-        return getOrBuildCatalogConnector(catalogProperties.getCatalogHandle(), Optional.of(catalogProperties), keyFor(catalogProperties, decryptedCatalogProperties), () ->
-                catalogFactory.createCatalog(new CatalogProperties(catalogProperties.getCatalogHandle(), catalogProperties.getConnectorName(), decryptedCatalogProperties)));
+        Map<String, String> decryptedCatalogProperties = accountContext().decryptCatalogProperties(catalogProperties.catalogHandle().getCatalogName());
+        return getOrBuildCatalogConnector(catalogProperties.catalogHandle(), Optional.of(catalogProperties), keyFor(catalogProperties, decryptedCatalogProperties), () ->
+                catalogFactory.createCatalog(new CatalogProperties(catalogProperties.catalogHandle(), catalogProperties.connectorName(), decryptedCatalogProperties)));
     }
 
     @Override
@@ -235,7 +235,7 @@ public class CachingCatalogFactory
 
     private Key keyFor(CatalogProperties catalogProperties, Map<String, String> decryptedProperties)
     {
-        return new Key(accountContext().accountId(), "CATALOG_" + catalogProperties.getCatalogHandle().getCatalogName(), catalogProperties.getCatalogHandle().getType(), ImmutableMap.copyOf(decryptedProperties));
+        return new Key(accountContext().accountId(), "CATALOG_" + catalogProperties.catalogHandle().getCatalogName(), catalogProperties.catalogHandle().getType(), ImmutableMap.copyOf(decryptedProperties));
     }
 
     private Key keyFor(CatalogHandle catalogHandle, ConnectorName connectorName)
