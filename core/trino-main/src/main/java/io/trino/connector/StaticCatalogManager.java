@@ -119,7 +119,7 @@ public class StaticCatalogManager
             }
 
             catalogProperties.add(new CatalogProperties(
-                    createRootCatalogHandle(catalogName, version),
+                    createRootCatalogHandle(new CatalogName(catalogName), version),
                     new ConnectorName(connectorName),
                     ImmutableMap.copyOf(properties)));
         }
@@ -167,7 +167,7 @@ public class StaticCatalogManager
                 executor,
                 catalogProperties.stream()
                         .map(catalog -> (Callable<?>) () -> {
-                            CatalogName catalogName = new CatalogName(catalog.catalogHandle().getCatalogName());
+                            CatalogName catalogName = catalog.catalogHandle().getCatalogName();
                             log.info("-- Loading catalog %s --", catalogName);
                             CatalogConnector newCatalog = catalogFactory.createCatalog(catalog);
                             catalogs.put(catalogName, newCatalog);
@@ -194,7 +194,7 @@ public class StaticCatalogManager
     public void ensureCatalogsLoaded(Session session, List<CatalogProperties> catalogs)
     {
         List<CatalogProperties> missingCatalogs = catalogs.stream()
-                .filter(catalog -> !this.catalogs.containsKey(new CatalogName(catalog.catalogHandle().getCatalogName())))
+                .filter(catalog -> !this.catalogs.containsKey(catalog.catalogHandle().getCatalogName()))
                 .collect(toImmutableList());
 
         if (!missingCatalogs.isEmpty()) {
@@ -225,7 +225,7 @@ public class StaticCatalogManager
     @Override
     public ConnectorServices getConnectorServices(CatalogHandle catalogHandle)
     {
-        CatalogConnector catalogConnector = catalogs.get(new CatalogName(catalogHandle.getCatalogName()));
+        CatalogConnector catalogConnector = catalogs.get(catalogHandle.getCatalogName());
         checkArgument(catalogConnector != null, "No catalog '%s'", catalogHandle.getCatalogName());
         return catalogConnector.getMaterializedConnector(catalogHandle.getType());
     }

@@ -274,7 +274,7 @@ class TestEventDrivenFaultTolerantQueryScheduler
         public CatalogSchemaTableName getTableName(Session session, TableHandle tableHandle)
         {
             String[] schemaAndTable = tableHandle.getConnectorHandle().toString().split(":");
-            return new CatalogSchemaTableName(tableHandle.getCatalogHandle().getCatalogName(), new SchemaTableName(schemaAndTable[0], schemaAndTable[1]));
+            return new CatalogSchemaTableName(tableHandle.getCatalogHandle().getCatalogName().toString(), new SchemaTableName(schemaAndTable[0], schemaAndTable[1]));
         }
 
         @Override

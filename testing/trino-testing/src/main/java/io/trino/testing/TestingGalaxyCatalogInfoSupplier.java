@@ -50,7 +50,7 @@ public class TestingGalaxyCatalogInfoSupplier
     {
         return catalogInfoMap.entrySet()
                 .stream()
-                .filter(entry -> entry.getValue().catalogProperties().catalogHandle().getCatalogName().equals(catalogName))
+                .filter(entry -> entry.getValue().catalogProperties().catalogHandle().getCatalogName().toString().equals(catalogName))
                 .map(entry -> entry.getKey().catalogVersion())
                 .collect(toImmutableSet());
     }

@@ -118,7 +118,7 @@ public class DefaultCatalogFactory
         checkArgument(connectorFactory != null, "No factory for connector '%s'. Available factories: %s", catalogProperties.connectorName(), connectorFactories.keySet());
 
         Connector connector = createConnector(
-                catalogProperties.catalogHandle().getCatalogName(),
+                catalogProperties.catalogHandle().getCatalogName().toString(),
                 catalogProperties.catalogHandle(),
                 connectorFactory,
                 catalogProperties.properties());
@@ -147,7 +147,7 @@ public class DefaultCatalogFactory
                 tracer,
                 createInformationSchemaCatalogHandle(catalogHandle),
                 new InformationSchemaConnector(
-                        catalogHandle.getCatalogName(),
+                        catalogHandle.getCatalogName().toString(),
                         nodeManager,
                         metadata,
                         accessControl,
@@ -158,7 +158,7 @@ public class DefaultCatalogFactory
             systemTablesProvider = new CoordinatorSystemTablesProvider(
                     transactionManager,
                     metadata,
-                    catalogHandle.getCatalogName(),
+                    catalogHandle.getCatalogName().toString(),
                     new StaticSystemTablesProvider(catalogConnector.getSystemTables()));
         }
         else {

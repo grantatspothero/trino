@@ -66,7 +66,7 @@ public record CatalogNetworkMonitorProperties(
                 ? Optional.of(crossRegionConfig.getCrossRegionWriteLimit())
                 : Optional.empty();
         return new CatalogNetworkMonitorProperties(
-                catalogHandle.getCatalogName(),
+                catalogHandle.getCatalogName().toString(),
                 catalogHandle.getId(),
                 false,
                 crossRegionConfig.getAllowCrossRegionAccess(),

@@ -9098,7 +9098,7 @@ public abstract class BaseHiveConnectorTest
                             .stream()
                             .map(tableScan -> {
                                 TableScanNode tableScanNode = (TableScanNode) tableScan;
-                                queryRunner.getPlannerContext().getMetadata().getCatalogHandle(transactionalSession, tableScanNode.getTable().getCatalogHandle().getCatalogName());
+                                queryRunner.getPlannerContext().getMetadata().getCatalogHandle(transactionalSession, tableScanNode.getTable().getCatalogHandle().getCatalogName().toString());
                                 return queryRunner.getPlannerContext().getMetadata().getTableName(transactionalSession, tableScanNode.getTable());
                             })
                             .collect(toImmutableSet());
