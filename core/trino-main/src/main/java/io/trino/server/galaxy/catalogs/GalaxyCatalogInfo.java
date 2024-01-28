@@ -14,7 +14,7 @@
 package io.trino.server.galaxy.catalogs;
 
 import io.starburst.stargate.id.SharedSchemaNameAndAccepted;
-import io.trino.connector.CatalogProperties;
+import io.trino.spi.catalog.CatalogProperties;
 
 import java.util.Optional;
 

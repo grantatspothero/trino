@@ -25,9 +25,9 @@ import io.starburst.stargate.id.CatalogVersion;
 import io.starburst.stargate.id.CloudRegionId;
 import io.starburst.stargate.id.TrinoPlaneId;
 import io.starburst.stargate.identity.DispatchSession;
-import io.trino.connector.CatalogProperties;
-import io.trino.connector.ConnectorName;
 import io.trino.server.galaxy.GalaxyConfig;
+import io.trino.spi.catalog.CatalogProperties;
+import io.trino.spi.connector.ConnectorName;
 import org.weakref.jmx.Managed;
 import org.weakref.jmx.Nested;
 
