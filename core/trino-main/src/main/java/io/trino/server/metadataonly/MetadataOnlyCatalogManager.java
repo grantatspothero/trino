@@ -15,6 +15,7 @@ package io.trino.server.metadataonly;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.errorprone.annotations.ThreadSafe;
+import io.trino.connector.CatalogName;
 import io.trino.connector.CatalogProperties;
 import io.trino.connector.ConnectorName;
 import io.trino.metadata.Catalog;
@@ -33,13 +34,13 @@ public class MetadataOnlyCatalogManager
         implements CatalogManager
 {
     @Override
-    public Set<String> getCatalogNames()
+    public Set<CatalogName> getCatalogNames()
     {
         return ImmutableSet.of();
     }
 
     @Override
-    public Optional<Catalog> getCatalog(String catalogName)
+    public Optional<Catalog> getCatalog(CatalogName catalogName)
     {
         return Optional.empty();
     }
@@ -57,13 +58,13 @@ public class MetadataOnlyCatalogManager
     }
 
     @Override
-    public void createCatalog(String catalogName, ConnectorName connectorName, Map<String, String> properties, boolean notExists)
+    public void createCatalog(CatalogName catalogName, ConnectorName connectorName, Map<String, String> properties, boolean notExists)
     {
         throw new TrinoException(NOT_SUPPORTED, "CREATE CATALOG is not supported by the metadata only catalog manager");
     }
 
     @Override
-    public void dropCatalog(String catalogName, boolean exists)
+    public void dropCatalog(CatalogName catalogName, boolean exists)
     {
         throw new TrinoException(NOT_SUPPORTED, "DROP CATALOG is not supported by the metadata only catalog manager");
     }

@@ -162,7 +162,7 @@ public class CachingCatalogFactory
     @Override
     public CatalogConnector createCatalog(CatalogHandle catalogHandle, ConnectorName connectorName, Connector connector)
     {
-        if (catalogHandle.getCatalogName().equals(GlobalSystemConnector.NAME)) {
+        if (catalogHandle.getCatalogName().toString().equals(GlobalSystemConnector.NAME)) {
             return catalogFactory.createCatalog(catalogHandle, connectorName, connector);
         }
 
@@ -181,7 +181,7 @@ public class CachingCatalogFactory
             return;
         }
 
-        if (catalogConnector.getCatalog().getCatalogName().equals(GlobalSystemConnector.NAME)) {
+        if (catalogConnector.getCatalog().getCatalogName().toString().equals(GlobalSystemConnector.NAME)) {
             shutdownConnector(catalogConnector);
             return;
         }

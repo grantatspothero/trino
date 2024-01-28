@@ -37,6 +37,7 @@ import io.trino.NotInTransactionException;
 import io.trino.Session;
 import io.trino.connector.CatalogConnector;
 import io.trino.connector.CatalogFactory;
+import io.trino.connector.CatalogName;
 import io.trino.connector.CatalogProperties;
 import io.trino.connector.ConnectorName;
 import io.trino.connector.ConnectorServices;
@@ -378,7 +379,7 @@ public class LiveCatalogsTransactionManager
     }
 
     @Override
-    public Set<String> getCatalogNames()
+    public Set<CatalogName> getCatalogNames()
     {
         // usage in addConnectorEventListeners which is a system that is not supported for Galaxy/Galaxy Plugins
         // Tagged with "TODO: remove connector event listeners or add support for dynamic loading from connector"
@@ -388,7 +389,7 @@ public class LiveCatalogsTransactionManager
     }
 
     @Override
-    public Optional<Catalog> getCatalog(String catalogName)
+    public Optional<Catalog> getCatalog(CatalogName catalogName)
     {
         // usage in addConnectorEventListeners which is a system that is not supported for Galaxy/Galaxy Plugins
         // Tagged with "TODO: remove connector event listeners or add support for dynamic loading from connector"
@@ -418,13 +419,13 @@ public class LiveCatalogsTransactionManager
     }
 
     @Override
-    public void createCatalog(String catalogName, ConnectorName connectorName, Map<String, String> properties, boolean notExists)
+    public void createCatalog(CatalogName catalogName, ConnectorName connectorName, Map<String, String> properties, boolean notExists)
     {
         throw new TrinoException(NOT_SUPPORTED, "CREATE CATALOG is not supported by Galaxy");
     }
 
     @Override
-    public void dropCatalog(String catalogName, boolean exists)
+    public void dropCatalog(CatalogName catalogName, boolean exists)
     {
         throw new TrinoException(NOT_SUPPORTED, "DROP CATALOG is not supported by Galaxy");
     }
@@ -867,7 +868,7 @@ public class LiveCatalogsTransactionManager
                 throw new TrinoException(READ_ONLY_VIOLATION, "Cannot execute write in a read-only transaction");
             }
             if (!writtenCatalog.compareAndSet(null, catalogHandle) && !writtenCatalog.get().equals(catalogHandle)) {
-                String writtenCatalogName = activeCatalogs.get(writtenCatalog.get()).getCatalogName();
+                CatalogName writtenCatalogName = activeCatalogs.get(writtenCatalog.get()).getCatalogName();
                 throw new TrinoException(MULTI_CATALOG_WRITE_CONFLICT, "Multi-catalog writes not supported in a single transaction. Already wrote to catalog " + writtenCatalogName);
             }
             if (catalogMetadata.isSingleStatementWritesOnly() && !autoCommitContext) {

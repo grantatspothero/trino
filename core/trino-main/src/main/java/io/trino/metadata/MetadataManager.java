@@ -445,7 +445,7 @@ public final class MetadataManager
         ConnectorMetadata metadata = catalogMetadata.getMetadataFor(session, catalogHandle);
         SchemaTableName tableName = metadata.getTableName(session.toConnectorSession(catalogHandle), tableHandle.getConnectorHandle());
 
-        return new CatalogSchemaTableName(catalogMetadata.getCatalogName(), tableName);
+        return new CatalogSchemaTableName(catalogMetadata.getCatalogName().toString(), tableName);
     }
 
     @Override
@@ -1066,7 +1066,7 @@ public final class MetadataManager
         metadata.finishStatisticsCollection(session.toConnectorSession(catalogHandle), tableHandle.getConnectorHandle(), computedStatistics);
         if (catalogMetadata.getSecurityManagement() == SYSTEM) {
             SchemaTableName tableSchema = metadata.getTableName(session.toConnectorSession(), tableHandle.getConnectorHandle());
-            CatalogSchemaTableName analyzedCatalogSchemaTableName = new CatalogSchemaTableName(catalogMetadata.getCatalogName(), tableSchema);
+            CatalogSchemaTableName analyzedCatalogSchemaTableName = new CatalogSchemaTableName(catalogMetadata.getCatalogName().toString(), tableSchema);
             systemSecurityMetadata.finishStatisticsCollection(session, analyzedCatalogSchemaTableName);
         }
     }

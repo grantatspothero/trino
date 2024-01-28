@@ -35,6 +35,7 @@ import io.starburst.stargate.id.AccountId;
 import io.trino.NotInTransactionException;
 import io.trino.Session;
 import io.trino.connector.CatalogConnector;
+import io.trino.connector.CatalogName;
 import io.trino.connector.CatalogProperties;
 import io.trino.connector.ConnectorName;
 import io.trino.connector.ConnectorServices;
@@ -254,7 +255,7 @@ public class MetadataOnlyTransactionManager
     @Override
     public ConnectorServices getConnectorServices(CatalogHandle catalogHandle)
     {
-        if (catalogHandle.getCatalogName().equals(GlobalSystemConnector.NAME)) {
+        if (catalogHandle.getCatalogName().toString().equals(GlobalSystemConnector.NAME)) {
             return systemConnector.get().getMaterializedConnector(catalogHandle.getType());
         }
 
@@ -522,7 +523,7 @@ public class MetadataOnlyTransactionManager
         {
             return activeCatalogs.keySet()
                     .stream()
-                    .filter(catalogHandle -> catalogHandle.getCatalogName().equals(catalogName))
+                    .filter(catalogHandle -> catalogHandle.getCatalogName().toString().equals(catalogName))
                     .findFirst();
         }
 
@@ -535,7 +536,7 @@ public class MetadataOnlyTransactionManager
                 // catalog name will not be an internal catalog (e.g., information schema) because internal
                 // catalog references can only be generated from the main catalog
                 checkArgument(!catalogHandle.getType().isInternal(), "Internal catalog handle not allowed: %s", catalogHandle);
-                Catalog catalog = Optional.ofNullable(connectors.get(catalogHandle.getCatalogName()))
+                Catalog catalog = Optional.ofNullable(connectors.get(catalogHandle.getCatalogName().toString()))
                         .orElseThrow(() -> new IllegalArgumentException("No catalog registered for handle: " + catalogHandle))
                         .getCatalog();
 
@@ -548,7 +549,7 @@ public class MetadataOnlyTransactionManager
 
         public synchronized ConnectorServices getConnectorService(CatalogHandle catalogHandle)
         {
-            CatalogConnector catalogConnector = connectors.get(catalogHandle.getCatalogName());
+            CatalogConnector catalogConnector = connectors.get(catalogHandle.getCatalogName().toString());
             if (catalogConnector == null) {
                 throw new TrinoException(CATALOG_NOT_AVAILABLE, "No catalog " + catalogHandle);
             }
@@ -561,7 +562,7 @@ public class MetadataOnlyTransactionManager
             CatalogMetadata catalogMetadata = activeCatalogs.get(catalogHandle);
             checkArgument(catalogMetadata != null, "Cannot record write for catalog not part of transaction");
             if (!writtenCatalog.compareAndSet(null, catalogHandle) && !writtenCatalog.get().equals(catalogHandle)) {
-                String writtenCatalogName = activeCatalogs.get(writtenCatalog.get()).getCatalogName();
+                CatalogName writtenCatalogName = activeCatalogs.get(writtenCatalog.get()).getCatalogName();
                 throw new TrinoException(MULTI_CATALOG_WRITE_CONFLICT, "Multi-catalog writes not supported in a single transaction. Already wrote to catalog " + writtenCatalogName);
             }
         }
