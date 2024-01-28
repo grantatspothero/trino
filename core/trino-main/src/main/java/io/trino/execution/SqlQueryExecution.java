@@ -139,7 +139,6 @@ public class SqlQueryExecution
     private final Analysis analysis;
     private final StatsCalculator statsCalculator;
     private final CostCalculator costCalculator;
-    private final HistoryBasedStatsCalculator historyBasedStatsCalculator;
     private final DynamicFilterService dynamicFilterService;
     private final TableExecuteContextManager tableExecuteContextManager;
     private final TypeAnalyzer typeAnalyzer;
@@ -210,7 +209,7 @@ public class SqlQueryExecution
             this.schedulerStats = requireNonNull(schedulerStats, "schedulerStats is null");
             this.statsCalculator = requireNonNull(statsCalculator, "statsCalculator is null");
             this.costCalculator = requireNonNull(costCalculator, "costCalculator is null");
-            this.historyBasedStatsCalculator = requireNonNull(historyBasedStatsCalculator, "historyBasedStatsCalculator is null");
+            requireNonNull(historyBasedStatsCalculator, "historyBasedStatsCalculator is null"); // TODO (perf team) currently unused
             this.dynamicFilterService = requireNonNull(dynamicFilterService, "dynamicFilterService is null");
             this.tableExecuteContextManager = requireNonNull(tableExecuteContextManager, "tableExecuteContextManager is null");
 

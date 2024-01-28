@@ -358,7 +358,6 @@ public class ObjectStoreConnector
                         ((ClassLoaderSafeConnectorMetadata) deltaMetadata).unwrap(),
                         ((ClassLoaderSafeConnectorMetadata) hudiMetadata).unwrap(),
                         tableProperties,
-                        materializedViewProperties,
                         sessionProperties,
                         flushMetadataCache,
                         migrateHiveToIcebergProcedure,

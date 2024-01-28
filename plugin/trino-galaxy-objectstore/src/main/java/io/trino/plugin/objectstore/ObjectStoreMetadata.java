@@ -165,7 +165,6 @@ public class ObjectStoreMetadata
     private final DeltaLakeMetadata deltaMetadata;
     private final ConnectorMetadata hudiMetadata;
     private final ObjectStoreTableProperties tableProperties;
-    private final ObjectStoreMaterializedViewProperties materializedViewProperties;
     private final ObjectStoreSessionProperties sessionProperties;
     private final PropertyMetadata<?> hiveFormatProperty;
     private final PropertyMetadata<?> hiveSortedByProperty;
@@ -184,7 +183,6 @@ public class ObjectStoreMetadata
             ConnectorMetadata deltaMetadata,
             ConnectorMetadata hudiMetadata,
             ObjectStoreTableProperties tableProperties,
-            ObjectStoreMaterializedViewProperties materializedViewProperties,
             ObjectStoreSessionProperties sessionProperties,
             Procedure flushMetadataCache,
             Procedure migrateHiveToIcebergProcedure,
@@ -199,7 +197,6 @@ public class ObjectStoreMetadata
         this.deltaMetadata = (DeltaLakeMetadata) requireNonNull(deltaMetadata, "deltaMetadata is null");
         this.hudiMetadata = requireNonNull(hudiMetadata, "hudiMetadata is null");
         this.tableProperties = requireNonNull(tableProperties, "tableProperties is null");
-        this.materializedViewProperties = requireNonNull(materializedViewProperties, "materializedViewProperties is null");
         this.sessionProperties = requireNonNull(sessionProperties, "sessionProperties is null");
         this.hiveFormatProperty = tableProperties.getHiveFormatProperty();
         this.hiveSortedByProperty = tableProperties.getHiveSortedByProperty();

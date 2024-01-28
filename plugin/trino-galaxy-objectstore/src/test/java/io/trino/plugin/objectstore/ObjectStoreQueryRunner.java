@@ -52,7 +52,6 @@ import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static io.trino.testing.QueryAssertions.copyTpchTables;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.apache.hudi.common.model.HoodieTableType.COPY_ON_WRITE;
 
 public final class ObjectStoreQueryRunner
 {
@@ -250,7 +249,7 @@ public final class ObjectStoreQueryRunner
     public static void initializeTpchTablesHudi(DistributedQueryRunner queryRunner, List<TpchTable<?>> tables, Location externalLocation)
             throws Exception
     {
-        TpchObjectStoreHudiTablesInitializer loader = new TpchObjectStoreHudiTablesInitializer(COPY_ON_WRITE, tables);
+        TpchObjectStoreHudiTablesInitializer loader = new TpchObjectStoreHudiTablesInitializer(tables);
         loader.initializeTables(queryRunner, externalLocation, TPCH_SCHEMA);
         grantPrivileges(queryRunner, tables);
     }
@@ -262,7 +261,7 @@ public final class ObjectStoreQueryRunner
         GalaxyHiveMetastore hiveMetastore = new GalaxyHiveMetastore(metastore.getMetastore(), HDFS_FILE_SYSTEM_FACTORY, basePath.toFile().getAbsolutePath(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
         // TpchObjectStoreHudiTablesInitializer wont work here because it cannot cast CoordinatorDispatcherConnector to ObjectStoreConnector.
         // It is not-trivial to expose the injector or any other internal component of the connector (even just for testing). So TpchWarpSpeedObjectStoreHudiTablesInitializer stays with using the old approach of getting a metastore
-        TpchWarpSpeedObjectStoreHudiTablesInitializer loader = new TpchWarpSpeedObjectStoreHudiTablesInitializer(hiveMetastore, trinoFileSystem, COPY_ON_WRITE, tables);
+        TpchWarpSpeedObjectStoreHudiTablesInitializer loader = new TpchWarpSpeedObjectStoreHudiTablesInitializer(hiveMetastore, trinoFileSystem, tables);
         loader.initializeTables(queryRunner, externalLocation, TPCH_SCHEMA);
         grantPrivileges(queryRunner, tables);
     }

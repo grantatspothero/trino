@@ -102,7 +102,6 @@ public class SplitSourceFactory
     private final PlannerContext plannerContext;
     private final DynamicFilterService dynamicFilterService;
     private final ConnectorAwareAddressProvider connectorAwareAddressProvider;
-    private final CacheManagerRegistry cacheManagerRegistry;
     private final NodeInfo nodeInfo;
     private final boolean schedulerIncludeCoordinator;
     private final TypeAnalyzer typeAnalyzer;
@@ -122,7 +121,7 @@ public class SplitSourceFactory
         this.plannerContext = requireNonNull(plannerContext, "metadata is null");
         this.dynamicFilterService = requireNonNull(dynamicFilterService, "dynamicFilterService is null");
         this.connectorAwareAddressProvider = requireNonNull(connectorAwareAddressProvider, "connectorAwareAddressProvider is null");
-        this.cacheManagerRegistry = requireNonNull(cacheManagerRegistry, "cacheManagerRegistry is null");
+        requireNonNull(cacheManagerRegistry, "cacheManagerRegistry is null"); // TODO (Raunaq) sync code with Cork
         this.nodeInfo = requireNonNull(nodeInfo, "nodeInfo is null");
         this.schedulerIncludeCoordinator = requireNonNull(nodeSchedulerConfig, "nodeSchedulerConfig is null").isIncludeCoordinator();
         this.typeAnalyzer = requireNonNull(typeAnalyzer, "typeAnalyzer is null");

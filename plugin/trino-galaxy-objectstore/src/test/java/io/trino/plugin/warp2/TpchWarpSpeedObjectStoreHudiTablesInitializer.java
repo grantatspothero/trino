@@ -19,7 +19,6 @@ import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastore;
 import io.trino.plugin.hudi.testing.TpchHudiTablesInitializer;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.tpch.TpchTable;
-import org.apache.hudi.common.model.HoodieTableType;
 
 import java.util.List;
 
@@ -31,9 +30,9 @@ public class TpchWarpSpeedObjectStoreHudiTablesInitializer
     private final GalaxyHiveMetastore hiveMetastore;
     private final TrinoFileSystem trinoFileSystem;
 
-    public TpchWarpSpeedObjectStoreHudiTablesInitializer(GalaxyHiveMetastore hiveMetastore, TrinoFileSystem trinoFileSystem, HoodieTableType hoodieTableType, List<TpchTable<?>> requiredTpchTables)
+    public TpchWarpSpeedObjectStoreHudiTablesInitializer(GalaxyHiveMetastore hiveMetastore, TrinoFileSystem trinoFileSystem, List<TpchTable<?>> requiredTpchTables)
     {
-        super(hoodieTableType, requiredTpchTables);
+        super(requiredTpchTables);
         this.hiveMetastore = requireNonNull(hiveMetastore, "hiveMetastore is null");
         this.trinoFileSystem = requireNonNull(trinoFileSystem, "trinoFileSystem is null");
     }

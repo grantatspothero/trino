@@ -101,6 +101,7 @@ public final class DiscoveryNodeManager
             NodeVersion expectedNodeVersion,
             @ForNodeManager HttpClient httpClient,
             InternalCommunicationConfig internalCommunicationConfig,
+            @SuppressWarnings("unused")
             CatalogManagerConfig catalogManagerConfig)
     {
         this.serviceSelector = requireNonNull(serviceSelector, "serviceSelector is null");

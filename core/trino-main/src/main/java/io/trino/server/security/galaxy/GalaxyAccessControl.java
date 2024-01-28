@@ -1107,7 +1107,6 @@ public class GalaxyAccessControl
         // that if there are more tables, it might be faster to call
         // getTableVisiblity.
         if (tableNames.size() <= 10 && schemaNames.size() == 1) {
-            GalaxySystemAccessController controller = controllerSupplier.apply(context.getIdentity());
             Set<String> tableNameStrings = tableNames.stream().map(SchemaTableName::getTableName).collect(toImmutableSet());
             ContentsVisibility visibility = controllerSupplier.apply(context.getIdentity())
                     .getVisibilityForTables(context, catalogId, Iterables.getOnlyElement(schemaNames), tableNameStrings);

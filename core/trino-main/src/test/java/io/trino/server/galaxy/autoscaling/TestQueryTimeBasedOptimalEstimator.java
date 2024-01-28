@@ -28,7 +28,7 @@ class TestQueryTimeBasedOptimalEstimator
     @Test
     void shouldRescale()
     {
-        int actualSize = 0;
+        int actualSize;
         QueryTimeBasedOptimalEstimatorConfig config = new QueryTimeBasedOptimalEstimatorConfig();
         config.setNodeStartupTime(new Duration(NODE_STARTUP_TIME, TimeUnit.MILLISECONDS));
         config.setTargetLatency(new Duration(TARGET_LATENCY, TimeUnit.MILLISECONDS));

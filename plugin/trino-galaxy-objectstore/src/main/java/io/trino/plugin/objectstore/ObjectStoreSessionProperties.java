@@ -53,7 +53,7 @@ public class ObjectStoreSessionProperties
     private final Table<String, TableType, Optional<Object>> defaultPropertyValue;
 
     @Inject
-    public ObjectStoreSessionProperties(DelegateConnectors delegates, ObjectStoreConfig objectStoreConfig)
+    public ObjectStoreSessionProperties(DelegateConnectors delegates)
     {
         Set<String> ignoredDescriptions = ImmutableSet.<String>builder()
                 .add("compression_codec")

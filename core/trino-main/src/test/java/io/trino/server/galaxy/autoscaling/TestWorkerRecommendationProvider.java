@@ -163,7 +163,7 @@ class TestWorkerRecommendationProvider
     @Test
     void shouldRescaleA()
     {
-        int actualSize = 0;
+        int actualSize;
         QueryTimeRatioBasedEstimatorConfig cfg = new QueryTimeRatioBasedEstimatorConfig();
         cfg.setNodeStartupTime(Duration.succinctDuration(60, TimeUnit.SECONDS));
         cfg.setRemainingTimeScaleUpThreshold(Duration.succinctDuration(60, TimeUnit.SECONDS));

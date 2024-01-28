@@ -17,7 +17,6 @@ import io.trino.plugin.hudi.HudiConnector;
 import io.trino.plugin.hudi.testing.TpchHudiTablesInitializer;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.tpch.TpchTable;
-import org.apache.hudi.common.model.HoodieTableType;
 
 import java.util.List;
 
@@ -26,9 +25,9 @@ import static io.trino.testing.TransactionBuilder.transaction;
 public class TpchObjectStoreHudiTablesInitializer
         extends TpchHudiTablesInitializer
 {
-    public TpchObjectStoreHudiTablesInitializer(HoodieTableType tableType, List<TpchTable<?>> tpchTables)
+    public TpchObjectStoreHudiTablesInitializer(List<TpchTable<?>> tpchTables)
     {
-        super(tableType, tpchTables);
+        super(tpchTables);
     }
 
     @Override
