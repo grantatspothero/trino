@@ -235,10 +235,11 @@ public class MetadataOnlyStatementResource
                 .startSpan();
         try (SetThreadName ignored = new SetThreadName("Resource " + queryId)) {
             Span registerQueryCatalogsSpan = tracer.spanBuilder("metadata-register-query-catalogs")
+                    .setParent(io.opentelemetry.context.Context.current().with(span))
                     .setAttribute(TrinoAttributes.QUERY_ID, queryId.toString())
                     .startSpan();
             try (var ignore = scopedSpan(registerQueryCatalogsSpan)) {
-                transactionManager.registerQueryCatalogs(accountId, sessionContext.getIdentity(), transactionId, queryId, catalogs, serviceProperties);
+                transactionManager.registerQueryCatalogs(accountId, sessionContext.getIdentity(), transactionId, queryId, catalogs, serviceProperties, span);
             }
             return executeQuery(statement, span, sessionContext.withTransactionId(transactionId), queryId);
         }

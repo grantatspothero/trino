@@ -25,6 +25,9 @@ import com.google.inject.Inject;
 import io.airlift.http.client.HttpClient;
 import io.airlift.log.Logger;
 import io.airlift.units.Duration;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Context;
 import io.starburst.stargate.accesscontrol.client.HttpTrinoSecurityClient;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.catalog.QueryCatalog;
@@ -92,6 +95,7 @@ import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.StandardErrorCode.TRANSACTION_ALREADY_ABORTED;
 import static io.trino.spi.connector.CatalogHandle.createRootCatalogHandle;
 import static io.trino.spi.transaction.IsolationLevel.READ_UNCOMMITTED;
+import static io.trino.tracing.ScopedSpan.scopedSpan;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
@@ -107,6 +111,7 @@ public class MetadataOnlyTransactionManager
     private final MetadataAccessControllerSupplier accessController;
     private final MetadataSystemSecurityMetadata securityMetadata;
     private final GalaxyPermissionsCache permissionsCache;
+    private final Tracer tracer;
     private final AtomicReference<CatalogConnector> systemConnector = new AtomicReference<>();
 
     @Inject
@@ -115,13 +120,15 @@ public class MetadataOnlyTransactionManager
             @ForGalaxySystemAccessControl HttpClient accessControlClient,
             MetadataAccessControllerSupplier accessController,
             MetadataSystemSecurityMetadata securityMetadata,
-            GalaxyPermissionsCache permissionsCache)
+            GalaxyPermissionsCache permissionsCache,
+            Tracer tracer)
     {
         this.catalogFactory = requireNonNull(catalogFactory, "catalogFactory is null");
         this.accessControlClient = requireNonNull(accessControlClient, "accessControlClient is null");
         this.accessController = requireNonNull(accessController, "accessController is null");
         this.securityMetadata = requireNonNull(securityMetadata, "securityMetadata is null");
         this.permissionsCache = requireNonNull(permissionsCache, "permissionsCache is null");
+        this.tracer = requireNonNull(tracer, "tracer is null");
     }
 
     public void registerQueryCatalogs(
@@ -130,7 +137,8 @@ public class MetadataOnlyTransactionManager
             TransactionId transactionId,
             QueryId queryId,
             List<QueryCatalog> catalogs,
-            Map<String, String> serviceProperties)
+            Map<String, String> serviceProperties,
+            Span parentSpan)
     {
         CachingCatalogFactory contextCatalogFactory = catalogFactory.withContextAccountId(accountId);
         TransactionMetadata transactionMetadata = new TransactionMetadata(
@@ -144,7 +152,9 @@ public class MetadataOnlyTransactionManager
                 accessControlClient,
                 accessController,
                 securityMetadata,
-                permissionsCache);
+                permissionsCache,
+                tracer,
+                parentSpan);
         transactions.putIfAbsent(transactionId, transactionMetadata);
     }
 
@@ -372,6 +382,8 @@ public class MetadataOnlyTransactionManager
         private final TransactionInfo transactionInfo;
         private final MetadataAccessControllerSupplier galaxyMetadataAccessControl;
         private final MetadataSystemSecurityMetadata securityMetadata;
+        private final Tracer tracer;
+        private final Span parentSpan;
         @GuardedBy("this")
         private final AtomicReference<CatalogHandle> writtenCatalog = new AtomicReference<>();
 
@@ -386,13 +398,17 @@ public class MetadataOnlyTransactionManager
                 HttpClient accessControlClient,
                 MetadataAccessControllerSupplier galaxyMetadataAccessControl,
                 MetadataSystemSecurityMetadata securityMetadata,
-                GalaxyPermissionsCache permissionsCache)
+                GalaxyPermissionsCache permissionsCache,
+                Tracer tracer,
+                Span parentSpan)
         {
             this.queryId = requireNonNull(queryId, "queryId is null");
             this.transactionId = requireNonNull(transactionId, "transactionId is null");
             this.catalogFactory = requireNonNull(catalogFactory, "catalogFactory is null");
             this.galaxyMetadataAccessControl = requireNonNull(galaxyMetadataAccessControl, "galaxyMetadataAccessControl is null");
             this.securityMetadata = requireNonNull(securityMetadata, "securityMetadata is null");
+            this.tracer = requireNonNull(tracer, "tracer is null");
+            this.parentSpan = requireNonNull(parentSpan, "parentSpan is null");
 
             requireNonNull(catalogs, "catalogs is null");
             requireNonNull(systemConnector, "systemConnector is null");
@@ -473,7 +489,14 @@ public class MetadataOnlyTransactionManager
             if (catalogProperties == null) {
                 return Optional.empty();
             }
-            CatalogConnector catalogConnector = connectors.computeIfAbsent(catalogName, name -> catalogFactory.createCatalog(catalogProperties));
+            CatalogConnector catalogConnector = connectors.computeIfAbsent(catalogName, name -> {
+                Span span = tracer.spanBuilder("metadata-create-catalogs")
+                        .setParent(Context.current().with(parentSpan))
+                        .startSpan();
+                try (var ignore = scopedSpan(span)) {
+                    return catalogFactory.createCatalog(catalogProperties);
+                }
+            });
             return Optional.of(catalogConnector.getCatalogHandle());
         }
 
