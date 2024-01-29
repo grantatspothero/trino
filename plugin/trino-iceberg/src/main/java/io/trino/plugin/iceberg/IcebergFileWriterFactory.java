@@ -30,6 +30,7 @@ import io.trino.orc.OrcWriterStats;
 import io.trino.orc.OutputStreamOrcDataSink;
 import io.trino.parquet.writer.ParquetWriterOptions;
 import io.trino.plugin.hive.FileFormatDataSourceStats;
+import io.trino.plugin.hive.HiveCompressionCodec;
 import io.trino.plugin.hive.HiveStorageFormat;
 import io.trino.plugin.hive.NodeVersion;
 import io.trino.plugin.hive.orc.OrcWriterConfig;
@@ -183,6 +184,7 @@ public class IcebergFileWriterFactory
                     .setBatchSize(getParquetWriterBatchSize(session))
                     .build();
 
+            HiveCompressionCodec hiveCompressionCodec = getCompressionCodec(session, HiveStorageFormat.PARQUET);
             return new IcebergParquetFileWriter(
                     metricsConfig,
                     outputFile,
@@ -193,7 +195,8 @@ public class IcebergFileWriterFactory
                     makeTypeMap(fileColumnTypes, fileColumnNames),
                     parquetWriterOptions,
                     IntStream.range(0, fileColumnNames.size()).toArray(),
-                    getCompressionCodec(session, HiveStorageFormat.PARQUET).getParquetCompressionCodec(),
+                    hiveCompressionCodec.getParquetCompressionCodec()
+                            .orElseThrow(() -> new TrinoException(NOT_SUPPORTED, "Compression codec %s not supported for Parquet".formatted(hiveCompressionCodec))),
                     nodeVersion.toString());
         }
         catch (IOException e) {
