@@ -24,7 +24,6 @@ import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
 import io.trino.Session;
 import io.trino.SystemSessionProperties;
-import io.trino.cache.CacheConfig;
 import io.trino.cost.CostCalculator;
 import io.trino.cost.HistoryBasedStatsCalculator;
 import io.trino.cost.StatsCalculator;
@@ -838,7 +837,6 @@ public class SqlQueryExecution
         private final SqlTaskManager coordinatorTaskManager;
         private final ExchangeManagerRegistry exchangeManagerRegistry;
         private final EventDrivenTaskSourceFactory eventDrivenTaskSourceFactory;
-        private final CacheConfig cacheConfig;
         private final TaskDescriptorStorage taskDescriptorStorage;
 
         @Inject
@@ -873,7 +871,6 @@ public class SqlQueryExecution
                 SqlTaskManager coordinatorTaskManager,
                 ExchangeManagerRegistry exchangeManagerRegistry,
                 EventDrivenTaskSourceFactory eventDrivenTaskSourceFactory,
-                CacheConfig cacheConfig,
                 TaskDescriptorStorage taskDescriptorStorage)
         {
             this.tracer = requireNonNull(tracer, "tracer is null");
@@ -906,7 +903,6 @@ public class SqlQueryExecution
             this.coordinatorTaskManager = requireNonNull(coordinatorTaskManager, "coordinatorTaskManager is null");
             this.exchangeManagerRegistry = requireNonNull(exchangeManagerRegistry, "exchangeManagerRegistry is null");
             this.eventDrivenTaskSourceFactory = requireNonNull(eventDrivenTaskSourceFactory, "eventDrivenTaskSourceFactory is null");
-            this.cacheConfig = requireNonNull(cacheConfig, "cacheConfig is null");
             this.taskDescriptorStorage = requireNonNull(taskDescriptorStorage, "taskDescriptorStorage is null");
         }
 
