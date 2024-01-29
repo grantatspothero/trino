@@ -13,6 +13,8 @@
  */
 package io.trino.spi.galaxy;
 
+import com.google.errorprone.annotations.FormatMethod;
+
 import static java.util.Objects.requireNonNull;
 
 public class QuotaEnforcingNetworkMonitor
@@ -47,6 +49,7 @@ public class QuotaEnforcingNetworkMonitor
         networkUsageQuotaEnforcer.recordWriteBytesAndThrowIfLimitExceeded(bytes, maxWriteBytes);
     }
 
+    @FormatMethod
     private static void checkArgument(boolean argument, String format, Object... args)
     {
         if (!argument) {

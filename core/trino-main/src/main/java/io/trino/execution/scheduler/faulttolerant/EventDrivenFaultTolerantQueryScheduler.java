@@ -3287,7 +3287,7 @@ public class EventDrivenFaultTolerantQueryScheduler
             return onEvent(event);
         }
 
-        default T onEvent(Event event)
+        default T onEvent(Event unused)
         {
             throw new RuntimeException("EventListener no implemented");
         }
