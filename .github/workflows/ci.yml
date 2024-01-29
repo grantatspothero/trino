@@ -957,7 +957,7 @@ jobs:
         if: matrix.modules == 'testing/trino-tests-galaxy-buffer-exchange'
         run: |
           cd stargate
-          STARGATE_BUFFER_EXCHANGE_VERSION=$(./mvnw -B help:evaluate -Dexpression=dep.buffer-service-version -q -DforceStdout)
+          STARGATE_BUFFER_EXCHANGE_VERSION=$(./mvnw -B help:evaluate -Dexpression=dep.buffer-service.version -q -DforceStdout)
           echo "Determined Stargate Buffer Service version: ${STARGATE_BUFFER_EXCHANGE_VERSION}"
           echo "STARGATE_BUFFER_EXCHANGE_VERSION=${STARGATE_BUFFER_EXCHANGE_VERSION}" >> "$GITHUB_ENV"
       - name: Maven Tests
