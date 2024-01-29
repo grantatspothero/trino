@@ -154,7 +154,7 @@ public class CachingCatalogFactory
     @Override
     public CatalogConnector createCatalog(CatalogProperties catalogProperties)
     {
-        Map<String, String> decryptedCatalogProperties = accountContext().decryptCatalogProperties(catalogProperties.catalogHandle().getCatalogName());
+        Map<String, String> decryptedCatalogProperties = accountContext().decryptCatalogProperties(catalogProperties.catalogHandle().getCatalogName().toString());
         return getOrBuildCatalogConnector(catalogProperties.catalogHandle(), Optional.of(catalogProperties), keyFor(catalogProperties, decryptedCatalogProperties), () ->
                 catalogFactory.createCatalog(new CatalogProperties(catalogProperties.catalogHandle(), catalogProperties.connectorName(), decryptedCatalogProperties)));
     }

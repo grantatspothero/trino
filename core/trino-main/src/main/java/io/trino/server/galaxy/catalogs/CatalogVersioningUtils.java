@@ -14,6 +14,7 @@
 package io.trino.server.galaxy.catalogs;
 
 import io.starburst.stargate.id.CatalogVersion;
+import io.trino.spi.catalog.CatalogName;
 import io.trino.spi.connector.CatalogHandle;
 
 import static io.trino.spi.connector.CatalogHandle.createRootCatalogHandle;
@@ -22,7 +23,7 @@ public final class CatalogVersioningUtils
 {
     public static CatalogHandle toCatalogHandle(String catalogName, CatalogVersion catalogVersion)
     {
-        return createRootCatalogHandle(catalogName, new CatalogHandle.CatalogVersion(catalogVersion.toString()));
+        return createRootCatalogHandle(new CatalogName(catalogName), new CatalogHandle.CatalogVersion(catalogVersion.toString()));
     }
 
     public static CatalogVersion toCatalogVersion(CatalogHandle handle)

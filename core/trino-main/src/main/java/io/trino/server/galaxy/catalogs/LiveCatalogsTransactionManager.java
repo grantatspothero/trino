@@ -719,7 +719,7 @@ public class LiveCatalogsTransactionManager
 
             catalogNamesToCatalogId = galaxyLiveCatalogs.stream()
                     .collect(toImmutableBiMap(
-                            galaxyLiveCatalog -> galaxyLiveCatalog.getCatalogProperties().catalogHandle().getCatalogName(),
+                            galaxyLiveCatalog -> galaxyLiveCatalog.getCatalogProperties().catalogHandle().getCatalogName().toString(),
                             galaxyLiveCatalog -> galaxyLiveCatalog.getCatalogConstructionArgs().catalogVersion().catalogId()));
 
             catalogNamesToHandles = ImmutableMap.<String, CatalogHandle>builder()
@@ -727,7 +727,7 @@ public class LiveCatalogsTransactionManager
                     .putAll(galaxyLiveCatalogs.stream()
                             .map(GalaxyLiveCatalog::getCatalogProperties)
                             .collect(toImmutableMap(
-                                    properties -> properties.catalogHandle().getCatalogName(),
+                                    properties -> properties.catalogHandle().getCatalogName().toString(),
                                     CatalogProperties::catalogHandle)))
                     .buildOrThrow();
 
@@ -737,7 +737,7 @@ public class LiveCatalogsTransactionManager
                             .map(GalaxyLiveCatalog::getCatalogProperties)
                             .collect(toImmutableMap(
                                     CatalogProperties::catalogHandle,
-                                    properties -> new CatalogInfo(properties.catalogHandle().getCatalogName(), properties.catalogHandle(), properties.connectorName()))))
+                                    properties -> new CatalogInfo(properties.catalogHandle().getCatalogName().toString(), properties.catalogHandle(), properties.connectorName()))))
                     .buildOrThrow();
 
             idToLiveCatalog = galaxyLiveCatalogs.stream()
@@ -785,7 +785,7 @@ public class LiveCatalogsTransactionManager
                     .orElse(new Duration(0, MILLISECONDS));
 
             // catalog handle catalog names are assumed correct for our use case
-            Optional<String> writtenCatalogName = Optional.ofNullable(this.writtenCatalog.get()).map(CatalogHandle::getCatalogName);
+            Optional<String> writtenCatalogName = Optional.ofNullable(this.writtenCatalog.get()).map(catalogHandle -> catalogHandle.getCatalogName().toString());
 
             List<String> catalogNames = catalogNamesToHandles
                     .keySet().stream()

@@ -19,6 +19,8 @@ import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.server.galaxy.catalogs.LiveCatalogsModule;
 import io.trino.server.metadataonly.MetadataOnlyCatalogManagerModule;
 
+import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
+
 public class CatalogManagerModule
         extends AbstractConfigurationAwareModule
 {
@@ -28,6 +30,7 @@ public class CatalogManagerModule
         binder.bind(DefaultCatalogFactory.class).in(Scopes.SINGLETON);
         binder.bind(LazyCatalogFactory.class).in(Scopes.SINGLETON);
         binder.bind(CatalogFactory.class).to(LazyCatalogFactory.class).in(Scopes.SINGLETON);
+        newOptionalBinder(binder, CatalogStoreManager.class);
 
         CatalogManagerConfig config = buildConfigObject(CatalogManagerConfig.class);
         switch (config.getCatalogMangerKind()) {
