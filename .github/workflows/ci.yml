@@ -907,6 +907,7 @@ jobs:
             - { modules: plugin/starburst-dynamodb }
             - { modules: plugin/starburst-oracle }
             - { modules: plugin/starburst-snowflake, profile: default, cloud: amazon-web-service }
+            - { modules: plugin/starburst-sqlserver }
             - { modules: plugin/starburst-stargate }
             - { modules: plugin/starburst-synapse }
             - { modules: plugin/starburst-synapse, profile: fault-tolerant-tests }
