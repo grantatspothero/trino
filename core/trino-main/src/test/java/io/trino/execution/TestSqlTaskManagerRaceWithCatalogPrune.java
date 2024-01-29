@@ -74,7 +74,6 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Predicate;
 
 import static io.airlift.tracing.Tracing.noopTracer;
-import static io.trino.connector.CatalogManagerConfig.CatalogMangerKind.DYNAMIC;
 import static io.trino.execution.BaseTestSqlTaskManager.OUT;
 import static io.trino.execution.TaskTestUtils.PLAN_FRAGMENT;
 import static io.trino.execution.TaskTestUtils.TABLE_SCAN_NODE_ID;
@@ -121,8 +120,7 @@ public class TestSqlTaskManagerRaceWithCatalogPrune
             ConnectorServices noOpConnectorService = new ConnectorServices(
                     Tracing.noopTracer(),
                     catalogProperties.getCatalogHandle(),
-                    connector,
-                    DYNAMIC);
+                    connector);
             return new CatalogConnector(
                     catalogProperties.getCatalogHandle(),
                     new ConnectorName("mock"),

@@ -146,14 +146,12 @@ public class DefaultCatalogFactory
         ConnectorServices catalogConnector = new ConnectorServices(
                 tracer,
                 catalogHandle,
-                connector,
-                catalogManagerKind);
+                connector);
 
         ConnectorServices informationSchemaConnector = new ConnectorServices(
                 tracer,
                 createInformationSchemaCatalogHandle(catalogHandle),
-                new InformationSchemaConnector(catalogHandle.getCatalogName(), nodeManager, metadata, maxPrefetchedInformationSchemaPrefixes, informationSchemaPageSourceProvider),
-                catalogManagerKind);
+                new InformationSchemaConnector(catalogHandle.getCatalogName(), nodeManager, metadata, maxPrefetchedInformationSchemaPrefixes, informationSchemaPageSourceProvider));
 
         SystemTablesProvider systemTablesProvider;
         if (nodeManager.getCurrentNode().isCoordinator()) {
@@ -173,8 +171,7 @@ public class DefaultCatalogFactory
                 new SystemConnector(
                         nodeManager,
                         systemTablesProvider,
-                        transactionId -> transactionManager.getConnectorTransaction(transactionId, catalogHandle)),
-                catalogManagerKind);
+                        transactionId -> transactionManager.getConnectorTransaction(transactionId, catalogHandle)));
 
         return new CatalogConnector(
                 catalogHandle,
