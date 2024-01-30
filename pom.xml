@@ -2543,6 +2543,13 @@
                 <version>1.6.8</version>
             </dependency>
 
+            <!-- TODO(https://github.com/starburstdata/galaxy-trino/issues/1617) - temp forced version until Airlift is updated -->
+            <dependency>
+                <groupId>org.weakref</groupId>
+                <artifactId>jmxutils</artifactId>
+                <version>1.26</version>
+            </dependency>
+
             <dependency>
                 <groupId>org.xerial.snappy</groupId>
                 <artifactId>snappy-java</artifactId>
