@@ -104,7 +104,7 @@ public class TestObjectStoreIcebergS3
                 (null, null, null, 4e0, null, null)""";
 
         // Check extended statistics collection on write
-        assertThat(query("SHOW STATS FOR " + tableName)).exceptColumns("data_size")
+        assertThat(query("SHOW STATS FOR " + tableName)).result().exceptColumns("data_size")
                 .skippingTypesCheck()
                 .matches(expectedStatistics);
 
@@ -112,7 +112,7 @@ public class TestObjectStoreIcebergS3
         assertUpdate("ALTER TABLE " + tableName + " EXECUTE DROP_EXTENDED_STATS");
         // Check extended statistics collection explicitly
         assertUpdate("ANALYZE " + tableName);
-        assertThat(query("SHOW STATS FOR " + tableName)).exceptColumns("data_size")
+        assertThat(query("SHOW STATS FOR " + tableName)).result().exceptColumns("data_size")
                 .skippingTypesCheck()
                 .matches(expectedStatistics);
 

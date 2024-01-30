@@ -29,7 +29,6 @@ import org.junit.jupiter.api.parallel.Execution;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
 // The testing materialized view scheduling service is not thread safe.
@@ -86,8 +85,8 @@ public abstract class BaseObjectStoreMaterializedViewSchedulingTest
                 .build();
         assertUpdate(createSchemaSql(TEST_CATALOG_WITHOUT_SCHEDULING, schema));
         try {
-            assertThatThrownBy(() -> query(withSchedulingDisabled, "CREATE MATERIALIZED VIEW " + materializedViewName + " WITH (refresh_schedule = '0 0 * * *') AS SELECT 1 AS c"))
-                    .hasMessageContaining("materialized view property 'refresh_schedule' does not exist");
+            assertThat(query(withSchedulingDisabled, "CREATE MATERIALIZED VIEW " + materializedViewName + " WITH (refresh_schedule = '0 0 * * *') AS SELECT 1 AS c"))
+                    .failure().hasMessageContaining("materialized view property 'refresh_schedule' does not exist");
             assertQuery("SELECT catalog_name FROM system.metadata.materialized_view_properties WHERE property_name = 'refresh_schedule'", "VALUES '" + TEST_CATALOG + "'");
         }
         finally {

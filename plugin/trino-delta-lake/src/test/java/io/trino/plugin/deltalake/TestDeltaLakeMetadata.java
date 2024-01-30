@@ -710,7 +710,7 @@ public class TestDeltaLakeMetadata
         // Number of data files metric is not present until cache is loaded
         assertInputInfoNumberOfDataFiles(tableName, Optional.empty(), 1);
 
-        query("SELECT * FROM " + tableName); // Fill cache
+        assertQuerySucceeds("SELECT * FROM " + tableName); // Fill cache
         assertInputInfoNumberOfDataFiles(tableName, Optional.of(1), 1);
 
         assertUpdate("INSERT INTO " + tableName + " VALUES('txt3')", 1);
@@ -718,15 +718,15 @@ public class TestDeltaLakeMetadata
         assertUpdate("INSERT INTO " + tableName + " VALUES('txt3')", 1);
         assertUpdate("INSERT INTO " + tableName + " VALUES('txt3')", 1);
         assertUpdate("INSERT INTO " + tableName + " VALUES('txt3')", 1);
-        query("SELECT * FROM " + tableName); // Fill cache
+        assertQuerySucceeds("SELECT * FROM " + tableName); // Fill cache
         assertInputInfoNumberOfDataFiles(tableName, Optional.of(6), 6);
 
         assertUpdate("UPDATE " + tableName + " SET a = 'txt10' WHERE a = 'txt2'", 1);
-        query("SELECT * FROM " + tableName); // Fill cache
+        assertQuerySucceeds("SELECT * FROM " + tableName); // Fill cache
         assertInputInfoNumberOfDataFiles(tableName, Optional.of(7), 7);
 
         assertUpdate("DELETE FROM " + tableName, 7);
-        query("SELECT * FROM " + tableName); // Fill cache
+        assertQuerySucceeds("SELECT * FROM " + tableName); // Fill cache
         assertInputInfoNumberOfDataFiles(tableName, Optional.of(0), 8);
     }
 

@@ -125,8 +125,8 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
     @AfterEach
     public void cleanUp()
     {
-        listTables("BASE TABLE").forEach(tableName -> query("DROP TABLE " + tableName));
-        listTables("VIEW").forEach(tableName -> query("DROP VIEW " + tableName));
+        listTables("BASE TABLE").forEach(tableName -> assertUpdate("DROP TABLE " + tableName));
+        listTables("VIEW").forEach(tableName -> assertUpdate("DROP VIEW " + tableName));
     }
 
     private Stream<Object> listTables(String tableType)

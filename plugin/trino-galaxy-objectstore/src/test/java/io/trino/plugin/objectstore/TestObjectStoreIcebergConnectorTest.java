@@ -263,12 +263,12 @@ public class TestObjectStoreIcebergConnectorTest
     @Override
     public void testHiveSpecificColumnProperty()
     {
-        assertThatThrownBy(() -> query("""
+        assertThat(query("""
                 CREATE TABLE test_hive_specific_column_property(
                    xyz bigint,
                    abc bigint WITH (partition_projection_type = 'INTEGER', partition_projection_range = ARRAY['0', '10'])
                 )"""))
-                .hasMessage("Iceberg tables do not support column properties [partition_projection_type, partition_projection_range]");
+                .failure().hasMessage("Iceberg tables do not support column properties [partition_projection_type, partition_projection_range]");
     }
 
     @Test

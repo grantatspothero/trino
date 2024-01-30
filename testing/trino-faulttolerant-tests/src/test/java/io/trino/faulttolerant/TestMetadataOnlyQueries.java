@@ -91,7 +91,7 @@ public class TestMetadataOnlyQueries
         ExecutorService backgroundExecutor = newCachedThreadPool();
         try {
             backgroundExecutor.submit(() -> {
-                query(highTaskMemorySession, slowQuery);
+                assertQuerySucceeds(highTaskMemorySession, slowQuery);
             });
             assertEventually(() -> assertThat(queryState(slowQuery).orElseThrow()).isEqualTo(QueryState.RUNNING));
 
@@ -111,7 +111,7 @@ public class TestMetadataOnlyQueries
 
             // check non-metadata queries still wait for resources
             backgroundExecutor.submit(() -> {
-                query(nonMetadataQuery);
+                assertQuerySucceeds(nonMetadataQuery);
             });
             assertEventually(() -> assertThat(queryState(nonMetadataQuery).orElseThrow()).isEqualTo(QueryState.STARTING));
             Thread.sleep(1000); // wait a bit longer and query should be still STARTING

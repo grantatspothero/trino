@@ -57,7 +57,7 @@ import static io.trino.testing.TestingConnectorSession.SESSION;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.lang.String.format;
 import static org.apache.iceberg.BaseMetastoreTableOperations.METADATA_LOCATION_PROP;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test ObjectStore connector materialized views with Galaxy metastore.
@@ -198,13 +198,13 @@ public class TestObjectStoreGalaxyMaterializedView
         String schemaName = getSession().getSchema().orElseThrow();
         String viewName = "galaxy_storage_schema_test_view";
 
-        assertThatThrownBy(() -> query(
+        assertThat(query(
                 "CREATE MATERIALIZED VIEW " + viewName + " " +
                         "WITH (storage_schema = 'different_storage_schema') AS " +
                         "SELECT * FROM base_table1"))
-                .hasMessageContaining("Access Denied: Cannot create materialized view iceberg.different_storage_schema.%s: Role accountadmin does not have the privilege CREATE_TABLE on the schema iceberg.different_storage_schema".formatted(viewName));
-        assertThatThrownBy(() -> query("DESCRIBE " + viewName))
-                .hasMessageContaining(format("'iceberg.%s.%s' does not exist", schemaName, viewName));
+                .failure().hasMessageContaining("Access Denied: Cannot create materialized view iceberg.different_storage_schema.%s: Role accountadmin does not have the privilege CREATE_TABLE on the schema iceberg.different_storage_schema".formatted(viewName));
+        assertThat(query("DESCRIBE " + viewName))
+                .failure().hasMessageContaining(format("'iceberg.%s.%s' does not exist", schemaName, viewName));
     }
 
     private Session getPublicRoleSessionWithQueryCatalogs()

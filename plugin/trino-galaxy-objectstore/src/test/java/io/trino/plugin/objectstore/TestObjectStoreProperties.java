@@ -93,6 +93,7 @@ public class TestObjectStoreProperties
     public void testSessionProperties()
     {
         assertThat(query("SHOW SESSION LIKE '" + CATALOG + ".%'"))
+                .result()
                 .skippingTypesCheck()
                 .exceptColumns("Value", "Description")
                 // Name, Default, Type
