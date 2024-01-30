@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - galaxy*
   schedule:
     # Used to schedule Salesforce tests
     - cron: "2 0 * * *"
