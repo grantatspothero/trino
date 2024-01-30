@@ -1484,7 +1484,7 @@ public class TestIcebergSparkCompatibility
         }
         if (storageFormat == StorageFormat.AVRO && compressionCodec.equals("LZ4")) {
             assertQueryFailure(() -> onTrino().executeQuery(createTable))
-                    .hasMessageMatching("\\QQuery failed (#\\E\\S+\\Q): Compression codec LZ4 not supported for AVRO");
+                    .hasMessageMatching("\\QQuery failed (#\\E\\S+\\Q): Compression codec LZ4 not supported for Avro");
             return;
         }
         onTrino().executeQuery(createTable);
