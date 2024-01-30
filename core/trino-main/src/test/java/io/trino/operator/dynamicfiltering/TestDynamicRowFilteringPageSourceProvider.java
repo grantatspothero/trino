@@ -13,6 +13,9 @@
  */
 package io.trino.operator.dynamicfiltering;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import io.trino.Session;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.ConnectorPageSource;
 import io.trino.spi.connector.ConnectorPageSourceProvider;
@@ -21,80 +24,100 @@ import io.trino.spi.connector.ConnectorSplit;
 import io.trino.spi.connector.ConnectorTableHandle;
 import io.trino.spi.connector.ConnectorTransactionHandle;
 import io.trino.spi.connector.DynamicFilter;
-import io.trino.spi.predicate.NullableValue;
+import io.trino.spi.connector.TestingColumnHandle;
 import io.trino.spi.predicate.TupleDomain;
-import io.trino.spi.session.PropertyMetadata;
 import io.trino.spi.type.TypeOperators;
-import io.trino.testing.TestingConnectorSession;
-import io.trino.testing.TestingMetadata;
+import io.trino.testing.TestingMetadata.TestingTableHandle;
 import io.trino.testing.TestingSession;
-import io.trino.testing.TestingSplit;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
+import static io.trino.spi.predicate.Domain.multipleValues;
+import static io.trino.spi.predicate.Domain.singleValue;
 import static io.trino.spi.type.BigintType.BIGINT;
-import static io.trino.spi.type.VarbinaryType.VARBINARY;
-import static java.lang.Boolean.TRUE;
+import static io.trino.testing.TestingSplit.createRemoteSplit;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestDynamicRowFilteringPageSourceProvider
 {
+    private static final TypeOperators TYPE_OPERATORS = new TypeOperators();
+    private static final Session SESSION = TestingSession.testSession();
+    private static final ColumnHandle COLUMN1 = new TestingColumnHandle("COLUMN1");
+    private static final ColumnHandle COLUMN2 = new TestingColumnHandle("COLUMN2");
+    private static final ColumnHandle COLUMN3 = new TestingColumnHandle("COLUMN3");
+
     @Test
-    public void testFill()
+    public void testGetUnenforcedPredicate()
     {
-        DynamicRowFilteringPageSourceProvider pageSourceProvider = new DynamicRowFilteringPageSourceProvider(
-                new DynamicPageFilterCache(new TypeOperators()));
-        PropertyMetadata<Boolean> property = new PropertyMetadata<>(
-                "dynamic_row_filtering_enabled",
-                "description",
-                VARBINARY,
-                Boolean.class,
-                true,
-                false,
-                param -> TRUE,
-                param -> param);
+        DynamicRowFilteringPageSourceProvider provider = new DynamicRowFilteringPageSourceProvider(new DynamicPageFilterCache(TYPE_OPERATORS));
+        assertThat(provider.getUnenforcedPredicate(
+                new TestingConnectorPageSourceProvider(
+                        TupleDomain.withColumnDomains(ImmutableMap.of(
+                                COLUMN1, singleValue(BIGINT, 10L),
+                                COLUMN2, multipleValues(BIGINT, ImmutableList.of(20L, 22L, 23L)))),
+                        TupleDomain.withColumnDomains(ImmutableMap.of(
+                                COLUMN2, multipleValues(BIGINT, ImmutableList.of(20L, 21L))))),
+                SESSION,
+                SESSION.toConnectorSession(),
+                createRemoteSplit(),
+                new TestingTableHandle(),
+                TupleDomain.withColumnDomains(ImmutableMap.of(
+                        COLUMN2, multipleValues(BIGINT, ImmutableList.of(20L, 21L, 23L)),
+                        COLUMN3, singleValue(BIGINT, 30L)))))
+                .isEqualTo(TupleDomain.withColumnDomains(ImmutableMap.of(
+                        COLUMN1, singleValue(BIGINT, 10L),
+                        COLUMN2, singleValue(BIGINT, 20L))));
 
-        List<PropertyMetadata<?>> properties = new ArrayList<>();
-        properties.add(property);
-        Map<ColumnHandle, NullableValue> values = new HashMap<>();
-        values.put(new TestingMetadata.TestingColumnHandle("column"), new NullableValue(BIGINT, 1L));
+        // delegate provider returns TupleDomain.none()
+        assertThat(provider.getUnenforcedPredicate(
+                new TestingConnectorPageSourceProvider(TupleDomain.none(), TupleDomain.none()),
+                SESSION,
+                SESSION.toConnectorSession(),
+                createRemoteSplit(),
+                new TestingTableHandle(),
+                TupleDomain.withColumnDomains(ImmutableMap.of(COLUMN3, singleValue(BIGINT, 1L)))))
+                .isEqualTo(TupleDomain.none());
 
-        ConnectorSession session = TestingConnectorSession.builder()
-                .setPropertyMetadata(properties)
-                .build();
-        assertThat(pageSourceProvider.simplifyPredicate(
-                new TestPageSourceProvider(),
-                TestingSession.testSessionBuilder().build(),
-                session,
-                new TestingSplit(true, new ArrayList<>()),
-                new ConnectorTableHandle() {},
-                TupleDomain.fromFixedValues(values))
-        ).isEqualTo(TupleDomain.none());
+        // delegate provider returns TupleDomain.all()
+        assertThat(provider.getUnenforcedPredicate(
+                new TestingConnectorPageSourceProvider(TupleDomain.all(), TupleDomain.all()),
+                SESSION,
+                SESSION.toConnectorSession(),
+                createRemoteSplit(),
+                new TestingTableHandle(),
+                TupleDomain.withColumnDomains(ImmutableMap.of(COLUMN3, singleValue(BIGINT, 1L)))))
+                .isEqualTo(TupleDomain.all());
     }
 
-    private static class TestPageSourceProvider
+    private static class TestingConnectorPageSourceProvider
             implements ConnectorPageSourceProvider
     {
-        @Override
-        public ConnectorPageSource createPageSource(ConnectorTransactionHandle transaction, ConnectorSession session, ConnectorSplit split, ConnectorTableHandle table, List<ColumnHandle> columns, DynamicFilter dynamicFilter)
+        private final TupleDomain<ColumnHandle> unenforcedPredicate;
+        private final TupleDomain<ColumnHandle> prunedPredicate;
+
+        public TestingConnectorPageSourceProvider(TupleDomain<ColumnHandle> unenforcedPredicate, TupleDomain<ColumnHandle> prunedPredicate)
         {
-            return null;
+            this.unenforcedPredicate = unenforcedPredicate;
+            this.prunedPredicate = prunedPredicate;
         }
 
         @Override
-        public TupleDomain<ColumnHandle> simplifyPredicate(ConnectorSession session, ConnectorSplit split, ConnectorTableHandle table, TupleDomain<ColumnHandle> predicate)
+        public ConnectorPageSource createPageSource(ConnectorTransactionHandle transaction, ConnectorSession session, ConnectorSplit split, ConnectorTableHandle table, List<ColumnHandle> columns, DynamicFilter dynamicFilter)
         {
-            return ConnectorPageSourceProvider.super.simplifyPredicate(session, split, table, predicate);
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public TupleDomain<ColumnHandle> getUnenforcedPredicate(ConnectorSession session, ConnectorSplit split, ConnectorTableHandle table, TupleDomain<ColumnHandle> dynamicFilter)
+        {
+            return unenforcedPredicate;
         }
 
         @Override
         public TupleDomain<ColumnHandle> prunePredicate(ConnectorSession session, ConnectorSplit split, ConnectorTableHandle table, TupleDomain<ColumnHandle> predicate)
         {
-            return TupleDomain.none();
+            return prunedPredicate;
         }
     }
 }
