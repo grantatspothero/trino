@@ -150,7 +150,7 @@ public class PagePartitioner
         flushPositionsAppenders(false);
         updateMemoryUsage();
 
-        operatorContext.recordOutput(positionsAppendersSizeAfter - positionsAppendersSizeBefore, outputPositionCount);
+        operatorContext.recordOutput(max(positionsAppendersSizeAfter - positionsAppendersSizeBefore, 0), outputPositionCount);
     }
 
     public void partitionPageByRow(Page page)
