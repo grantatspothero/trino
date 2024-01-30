@@ -14,9 +14,11 @@ import io.trino.testing.BaseConnectorSmokeTest;
 import io.trino.testing.QueryRunner;
 import io.trino.testing.TestingConnectorBehavior;
 import io.trino.tpch.TpchTable;
+import org.junit.jupiter.api.Disabled;
 
 import static com.starburstdata.trino.plugin.saphana.SapHanaQueryRunner.createSapHanaQueryRunner;
 
+@Disabled("https://github.com/starburstdata/galaxy-trino/issues/1672 Enable this test when connection pool is enabled in Galaxy SAP HANA connector")
 public class TestSapHanaPooledConnectorSmokeTest
         extends BaseConnectorSmokeTest
 {
