@@ -9,7 +9,7 @@ Builds the Galaxy-Trino Docker image
 
 -h       Display help
 -a       Build the specified comma-separated architectures, defaults to amd64,arm64
--t       Tag for docker images, defaults to latest
+-v       Trino version also serving as image tag; defaults to value in pom.xml
 -j       JDK version to install in the Docker image
 -p       If specified, perform push after docker build
 EOF
@@ -22,7 +22,6 @@ SCRIPT_DIR="${BASH_SOURCE%/*}"
 cd ${SCRIPT_DIR}/../../core/docker
 
 PERFORM_PUSH="--load"
-IMAGE_TAG="latest"
 TRINO_VERSION=""
 ARCHITECTURES=(amd64 arm64)
 JDK_VERSION=$(cat "${SOURCE_DIR}/.java-version")
@@ -31,9 +30,6 @@ while getopts ":a:t:v:j:ph" o; do
     case "${o}" in
         a)
             IFS=, read -ra ARCHITECTURES <<< "$OPTARG"
-            ;;
-        t)
-            IMAGE_TAG=${OPTARG}
             ;;
         v)
             TRINO_VERSION=${OPTARG}
@@ -63,8 +59,8 @@ if [[ "${TRINO_VERSION}" == "" ]]; then
   popd
 fi
 
-IMAGE_NAME="trino:${IMAGE_TAG}"
-echo "Building ${IMAGE_NAME} for Trino ${TRINO_VERSION}"
+IMAGE_NAME="trino:${TRINO_VERSION}"
+echo "Building ${TRINO_VERSION}"
 
 PREFIX=trino-server-${TRINO_VERSION}
 TARBALL=${SOURCE_DIR}/core/trino-server/target/${PREFIX}.tar.gz
@@ -142,7 +138,7 @@ docker buildx build --pull ${PERFORM_PUSH} \
   --tag "us-east1-docker.pkg.dev/starburstdata-saas-prod/starburst-docker-repository/${IMAGE_NAME}" \
   --tag "starburstgalaxy.azurecr.io/${IMAGE_NAME}" \
   --build-arg "TRINO_VERSION=${TRINO_VERSION}" \
-  --build-arg "GALAXY_TRINO_DOCKER_VERSION=${IMAGE_TAG}" \
+  --build-arg "GALAXY_TRINO_DOCKER_VERSION=${TRINO_VERSION}" \
   --build-arg JDK_VERSION="${JDK_VERSION}" \
   --file Dockerfile ${WORK_DIR}
 
@@ -151,6 +147,6 @@ rm -r ${WORK_DIR}
 echo "🏃 Testing built images"
 source container-test.sh
 for platform in "${platforms[@]}"; do
-    DOCKER_TEST_EXPECTED_TRINO_VERSION="${IMAGE_TAG}" \
+    DOCKER_TEST_EXPECTED_TRINO_VERSION="${TRINO_VERSION}" \
         test_container "179619298502.dkr.ecr.us-east-1.amazonaws.com/${IMAGE_NAME}" "${platform}"
 done
