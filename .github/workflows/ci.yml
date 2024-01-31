@@ -176,7 +176,7 @@ jobs:
     runs-on: [self-hosted, sep-cicd, gha-fleet-small]
     needs: determine-version
     env:
-      TRINO_VERSION: ${{ needs.determine-version.outputs.version }}
+      TRINO_VERSION: ${{ needs.determine-version.outputs.version }}-jdk21
     steps:
       - name: Free Disk Space
         run: |
@@ -234,7 +234,7 @@ jobs:
             -r us-east1-docker.pkg.dev/starburstdata-saas-prod/starburst-docker-repository/galaxy \
             -r starburstgalaxy.azurecr.io/galaxy \
             -v "${TRINO_VERSION}" \
-            -t "${TRINO_VERSION}-jdk21" \
+            -t "${TRINO_VERSION}" \
             -j "21" \
             -a linux/amd64,linux/arm64 \
             -P
@@ -245,14 +245,14 @@ jobs:
             -r us-east1-docker.pkg.dev/starburstdata-saas-prod/starburst-docker-repository/galaxy \
             -r starburstgalaxy.azurecr.io/galaxy \
             -v "${TRINO_VERSION}" \
-            -t "${TRINO_VERSION}-jdk21" \
+            -t "${TRINO_VERSION}" \
             -j "21" \
             -a linux/amd64,linux/arm64 \
             -P
       - name: Maven Clean
         run: $MAVEN clean -pl '!:trino-server,!:trino-cli'
       - name: Build and Push Trino Docker Images [JDK 21]
-        run: .github/bin/docker-build-and-push.sh -v "${TRINO_VERSION}" -t "${TRINO_VERSION}-jdk21" -j 21 -p
+        run: .github/bin/docker-build-and-push.sh -v "${TRINO_VERSION}" -t "${TRINO_VERSION}" -j 21 -p
       - name: Tag release commit
         if: github.event_name == 'push'
         run: |
