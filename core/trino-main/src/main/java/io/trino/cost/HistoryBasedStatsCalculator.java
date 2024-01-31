@@ -45,6 +45,7 @@ import io.trino.sql.planner.plan.ExchangeNode;
 import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.JoinNode;
 import io.trino.sql.planner.plan.JoinNode.EquiJoinClause;
+import io.trino.sql.planner.plan.JoinType;
 import io.trino.sql.planner.plan.MarkDistinctNode;
 import io.trino.sql.planner.plan.PlanNode;
 import io.trino.sql.planner.plan.PlanNodeId;
@@ -361,7 +362,7 @@ public class HistoryBasedStatsCalculator
     {
     }
 
-    record Join(JoinNode.Type type, Set<EquiJoinClause> criteria, Optional<Expression> filter, Set<StatsCachePlanSignature> sources)
+    record Join(JoinType type, Set<EquiJoinClause> criteria, Optional<Expression> filter, Set<StatsCachePlanSignature> sources)
             implements StatsCachePlanSignature
     {
         public static Optional<StatsCachePlanSignature> from(

@@ -76,6 +76,7 @@ import io.trino.sql.planner.plan.DynamicFilterId;
 import io.trino.sql.planner.plan.ExchangeNode;
 import io.trino.sql.planner.plan.FilterNode;
 import io.trino.sql.planner.plan.JoinNode;
+import io.trino.sql.planner.plan.JoinType;
 import io.trino.sql.planner.plan.MarkDistinctNode;
 import io.trino.sql.planner.plan.PlanFragmentId;
 import io.trino.sql.planner.plan.PlanNode;
@@ -674,7 +675,7 @@ public class TestHistoryBasedStatsCalculator
     {
         return new JoinNode(
                 new PlanNodeId(id),
-                JoinNode.Type.INNER,
+                JoinType.INNER,
                 left,
                 right,
                 ImmutableList.of(new JoinNode.EquiJoinClause(left.getOutputSymbols().get(0), right.getOutputSymbols().get(0))),
