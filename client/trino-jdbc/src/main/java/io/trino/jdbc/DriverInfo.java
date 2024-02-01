@@ -53,7 +53,7 @@ final class DriverInfo
             verify(!isNullOrEmpty(DRIVER_NAME), "driverName is null or empty");
             verify(!isNullOrEmpty(DRIVER_VERSION), "driverVersion is null or empty");
 
-            Matcher matcher = Pattern.compile("^(\\d+)(\\.(\\d+))?($|[.-])").matcher(DRIVER_VERSION);
+            Matcher matcher = Pattern.compile("^(?:\\d+pr-)?(\\d+)(\\.(\\d+))?($|[.-])").matcher(DRIVER_VERSION);
             verify(matcher.find(), "driverVersion is invalid: %s", DRIVER_VERSION);
 
             DRIVER_VERSION_MAJOR = parseInt(matcher.group(1));
