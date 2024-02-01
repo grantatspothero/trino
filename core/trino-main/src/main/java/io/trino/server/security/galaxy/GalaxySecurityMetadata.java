@@ -467,6 +467,7 @@ public class GalaxySecurityMetadata
     {
         // this will never happen but be safe
         throwIfSystemCatalog(table);
+        accessControlClient.columnTypeChanged(toDispatchSession(session), toColumnEntity(session.getTransactionId(), table, column), oldType, newType);
     }
 
     @Override
