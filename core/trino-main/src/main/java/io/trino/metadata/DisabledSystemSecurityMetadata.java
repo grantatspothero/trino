@@ -201,6 +201,9 @@ public class DisabledSystemSecurityMetadata
     public void columnDropped(Session session, CatalogSchemaTableName table, String column) {}
 
     @Override
+    public void columnTypeChanged(Session session, CatalogSchemaTableName table, String column, String oldType, String newType) {}
+
+    @Override
     public void finishStatisticsCollection(Session session, CatalogSchemaTableName table) {}
 
     private static TrinoException notSupportedException(String catalogName)

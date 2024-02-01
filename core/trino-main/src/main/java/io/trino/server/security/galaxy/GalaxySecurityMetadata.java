@@ -463,6 +463,13 @@ public class GalaxySecurityMetadata
     }
 
     @Override
+    public void columnTypeChanged(Session session, CatalogSchemaTableName table, String column, String oldType, String newType)
+    {
+        // this will never happen but be safe
+        throwIfSystemCatalog(table);
+    }
+
+    @Override
     public void finishStatisticsCollection(Session session, CatalogSchemaTableName table)
     {
         // this will never happen but be safe

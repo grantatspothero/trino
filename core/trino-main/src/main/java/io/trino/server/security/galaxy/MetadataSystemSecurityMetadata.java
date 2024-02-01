@@ -241,6 +241,12 @@ public class MetadataSystemSecurityMetadata
     }
 
     @Override
+    public void columnTypeChanged(Session session, CatalogSchemaTableName table, String column, String oldType, String newType)
+    {
+        get(session).columnTypeChanged(session, table, column, oldType, newType);
+    }
+
+    @Override
     public void finishStatisticsCollection(Session session, CatalogSchemaTableName table)
     {
         throw notSupportedException(table.getCatalogName());

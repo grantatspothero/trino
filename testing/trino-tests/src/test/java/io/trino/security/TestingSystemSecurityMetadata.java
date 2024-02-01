@@ -286,5 +286,8 @@ class TestingSystemSecurityMetadata
     }
 
     @Override
+    public void columnTypeChanged(Session session, CatalogSchemaTableName table, String column, String oldType, String newType) {}
+
+    @Override
     public void finishStatisticsCollection(Session session, CatalogSchemaTableName table) {}
 }

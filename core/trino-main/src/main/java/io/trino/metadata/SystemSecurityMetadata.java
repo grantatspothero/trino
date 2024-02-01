@@ -190,6 +190,11 @@ public interface SystemSecurityMetadata
     void columnDropped(Session session, CatalogSchemaTableName table, String column);
 
     /**
+     * Column type was changed
+     */
+    void columnTypeChanged(Session session, CatalogSchemaTableName table, String column, String oldType, String newType);
+
+    /**
      * A table has been analyzed
      */
     void finishStatisticsCollection(Session session, CatalogSchemaTableName table);
