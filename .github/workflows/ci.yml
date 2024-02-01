@@ -930,10 +930,10 @@ jobs:
             - { modules: plugin/trino-delta-lake, profile: fte-tests }
             - { modules: plugin/trino-druid }
             - { modules: plugin/trino-elasticsearch }
-            - { modules: plugin/trino-galaxy-objectstore }
-            - { modules: plugin/trino-galaxy-objectstore, profile: hive-tests }
+            - { modules: plugin/trino-galaxy-objectstore, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
+            - { modules: plugin/trino-galaxy-objectstore, profile: hive-tests, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
             - { modules: plugin/trino-galaxy-objectstore, profile: iceberg-delta, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
-            - { modules: plugin/trino-galaxy-objectstore, profile: cloud-tests }
+            - { modules: plugin/trino-galaxy-objectstore, profile: cloud-tests, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
             - { modules: plugin/trino-galaxy-oracle }
             - { modules: plugin/trino-galaxy-warp-speed }
             - { modules: plugin/trino-galaxy-warp-speed, profile: iceberg-delta, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
