@@ -21,6 +21,7 @@ import io.starburst.stargate.crypto.SecretSealer;
 import io.starburst.stargate.id.AccountId;
 
 import java.util.Map;
+import java.util.Optional;
 
 import static com.google.common.collect.Maps.transformValues;
 
@@ -31,7 +32,7 @@ public final class SecretDecryption
     public static QueryCatalog decryptCatalog(SecretSealer secretSealer, AccountId accountId, QueryCatalog queryCatalog, DecryptionContextProvider decryptionContextProvider)
     {
         Map<String, String> decryptedProperties = decryptSecrets(secretSealer, accountId, queryCatalog, decryptionContextProvider);
-        return new QueryCatalog(queryCatalog.catalogId(), queryCatalog.version(), queryCatalog.catalogName(), queryCatalog.connectorName(), queryCatalog.readOnly(), decryptedProperties, queryCatalog.secretsMap(), queryCatalog.secrets());
+        return new QueryCatalog(queryCatalog.catalogId(), queryCatalog.version(), queryCatalog.catalogName(), queryCatalog.connectorName(), queryCatalog.readOnly(), decryptedProperties, queryCatalog.secretsMap(), queryCatalog.secrets(), Optional.empty());
     }
 
     private static Map<String, String> decryptSecrets(SecretSealer secretSealer, AccountId accountId, QueryCatalog queryCatalog, DecryptionContextProvider decryptionContextProvider)

@@ -263,8 +263,8 @@ public class TestGalaxyMetadataOnlyQueries
         URI baseUrl = distributedQueryRunner.getCoordinator().getBaseUrl();
 
         List<QueryCatalog> catalogs = List.of(
-                new QueryCatalog(tpchCatalogId, new Version(1), "tpch", "tpch", true, Map.of(), Map.of(), Optional.empty()),
-                new QueryCatalog(objectStoreCatalogId, new Version(1), "objectstore", "galaxy_objectstore", false, objectStoreProperties, Map.of(), Optional.empty()));
+                new QueryCatalog(tpchCatalogId, new Version(1), "tpch", "tpch", true, Map.of(), Map.of(), Optional.empty(), Optional.empty()),
+                new QueryCatalog(objectStoreCatalogId, new Version(1), "objectstore", "galaxy_objectstore", false, objectStoreProperties, Map.of(), Optional.empty(), Optional.empty()));
 
         TestingAccountClient testingAccountClient = getTestingAccountClient();
         StatementRequest statementRequest = new StatementRequest(testingAccountClient.getAccountId(), statement, catalogs, Map.of(

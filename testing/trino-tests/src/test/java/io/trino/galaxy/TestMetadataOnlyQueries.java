@@ -251,8 +251,8 @@ public class TestMetadataOnlyQueries
         URI baseUrl = distributedQueryRunner.getCoordinator().getBaseUrl();
 
         List<QueryCatalog> catalogs = ImmutableList.of(
-                new QueryCatalog(tpchCatalogId, new Version(1), "tpch", "tpch", true, ImmutableMap.of(), ImmutableMap.of(), Optional.empty()),
-                new QueryCatalog(hiveCatalogId, new Version(1), "hive", "hive", false, ImmutableMap.of(), ImmutableMap.of(), Optional.empty()));
+                new QueryCatalog(tpchCatalogId, new Version(1), "tpch", "tpch", true, ImmutableMap.of(), ImmutableMap.of(), Optional.empty(), Optional.empty()),
+                new QueryCatalog(hiveCatalogId, new Version(1), "hive", "hive", false, ImmutableMap.of(), ImmutableMap.of(), Optional.empty(), Optional.empty()));
 
         StatementRequest statementRequest = new StatementRequest(testingAccountClient.getAccountId(), statement, catalogs, ImmutableMap.of(
                 "access-control.name", "galaxy",

@@ -32,6 +32,7 @@ import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.accesscontrol.privilege.EntityPrivileges;
 import io.starburst.stargate.accesscontrol.privilege.GrantKind;
 import io.starburst.stargate.id.CatalogId;
+import io.starburst.stargate.id.ColumnId;
 import io.starburst.stargate.id.EntityId;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.RoleName;
@@ -205,6 +206,12 @@ public enum GalaxyIndexerTrinoSecurityApi
 
     @Override
     public void entityDropped(DispatchSession session, EntityId entityId)
+    {
+        // Ignore
+    }
+
+    @Override
+    public void columnTypeChanged(DispatchSession session, ColumnId columnId, String oldType, String newType)
     {
         // Ignore
     }
