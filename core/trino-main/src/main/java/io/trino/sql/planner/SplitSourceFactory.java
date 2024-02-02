@@ -104,7 +104,7 @@ public class SplitSourceFactory
     private final ConnectorAwareAddressProvider connectorAwareAddressProvider;
     private final NodeInfo nodeInfo;
     private final boolean schedulerIncludeCoordinator;
-    private final TypeAnalyzer typeAnalyzer;
+    private final IrTypeAnalyzer typeAnalyzer;
 
     @Inject
     public SplitSourceFactory(
@@ -115,7 +115,7 @@ public class SplitSourceFactory
             CacheManagerRegistry cacheManagerRegistry,
             NodeInfo nodeInfo,
             NodeSchedulerConfig nodeSchedulerConfig,
-            TypeAnalyzer typeAnalyzer)
+            IrTypeAnalyzer typeAnalyzer)
     {
         this.splitManager = requireNonNull(splitManager, "splitManager is null");
         this.plannerContext = requireNonNull(plannerContext, "metadata is null");
