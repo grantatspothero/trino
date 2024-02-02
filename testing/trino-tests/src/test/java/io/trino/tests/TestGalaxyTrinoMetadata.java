@@ -177,10 +177,10 @@ public class TestGalaxyTrinoMetadata
         Optional<List<Attribute>> attributesQuery = galaxyTrinoMetadata.resolveOutput("SELECT * FROM tpch.tiny.nation");
 
         Optional<List<Attribute>> attributeList = Optional.of(ImmutableList.of(
-                new Attribute(attributesQuery.get().get(0).getId(), "\"nationkey\"", Optional.of(new LongType()), true),
-                new Attribute(attributesQuery.get().get(1).getId(), "\"name\"", Optional.of(new StringType(Optional.of(25))), true),
-                new Attribute(attributesQuery.get().get(2).getId(), "\"regionkey\"", Optional.of(new LongType()), true),
-                new Attribute(attributesQuery.get().get(3).getId(), "\"comment\"", Optional.of(new StringType(Optional.of(152))), true)));
+                new Attribute(attributesQuery.get().get(0).getId(), "\"nationkey\"", new LongType(), true),
+                new Attribute(attributesQuery.get().get(1).getId(), "\"name\"", new StringType(Optional.of(25)), true),
+                new Attribute(attributesQuery.get().get(2).getId(), "\"regionkey\"", new LongType(), true),
+                new Attribute(attributesQuery.get().get(3).getId(), "\"comment\"", new StringType(Optional.of(152)), true)));
         assertEquals(attributeList, attributesQuery);
 
         assertThatThrownBy(() -> galaxyTrinoMetadata.resolveOutput("SELECT * FROM (SELECT avg(1))"))

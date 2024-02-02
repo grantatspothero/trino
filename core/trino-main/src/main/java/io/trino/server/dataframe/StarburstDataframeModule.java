@@ -17,6 +17,7 @@ import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import com.starburstdata.dataframe.analyzer.AnalyzerFactory;
 import com.starburstdata.dataframe.analyzer.LiteralMapper;
+import com.starburstdata.dataframe.analyzer.TypeCoercion;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.FeaturesConfig;
 import io.trino.server.ServerConfig;
@@ -36,6 +37,7 @@ public class StarburstDataframeModule
             binder.bind(AnalyzerFactory.class).in(Scopes.SINGLETON);
             binder.bind(DataTypeMapper.class).in(Scopes.SINGLETON);
             binder.bind(LiteralMapper.class).in(Scopes.SINGLETON);
+            binder.bind(TypeCoercion.class).in(Scopes.SINGLETON);
         }
     }
 }

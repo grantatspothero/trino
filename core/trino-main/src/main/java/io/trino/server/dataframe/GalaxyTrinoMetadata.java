@@ -108,7 +108,7 @@ public class GalaxyTrinoMetadata
                         quoteName(DOUBLE_QUOTE + field.getName().orElseThrow(() -> new IllegalStateException("Dataframe columns should always be named"))
                                 .toLowerCase(ENGLISH)
                                 .replace(DOUBLE_QUOTE, DOUBLE_QUOTE + DOUBLE_QUOTE) + DOUBLE_QUOTE),
-                        Optional.of(dataTypeMapper.fromTrinoType(field.getType())),
+                        dataTypeMapper.fromTrinoType(field.getType()),
                         true))
                 .toList());
     }

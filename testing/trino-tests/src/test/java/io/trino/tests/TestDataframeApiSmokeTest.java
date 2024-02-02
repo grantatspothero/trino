@@ -16,6 +16,7 @@ package io.trino.tests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.starburstdata.dataframe.DataframeException;
+import com.starburstdata.dataframe.analyzer.TypeCoercionMode;
 import com.starburstdata.dataframe.plan.LogicalPlan;
 import com.starburstdata.dataframe.plan.TrinoPlan;
 import com.starburstdata.dataframe.plan.leaf.UnresolvedRelation;
@@ -48,7 +49,7 @@ public class TestDataframeApiSmokeTest
     public void testTablePlan()
     {
         assertQuery(
-                new UnresolvedRelation("tpch.tiny.customer"),
+                new UnresolvedRelation(TypeCoercionMode.DEFAULT, "tpch.tiny.customer"),
                 ImmutableList.of(
                         """
                                 SELECT *
