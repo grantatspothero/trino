@@ -37,7 +37,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
@@ -56,9 +55,9 @@ public interface HiveMetastore
 
     Map<String, PartitionStatistics> getPartitionStatistics(Table table, List<Partition> partitions);
 
-    void updateTableStatistics(String databaseName, String tableName, AcidTransaction transaction, Function<PartitionStatistics, PartitionStatistics> update);
+    void updateTableStatistics(String databaseName, String tableName, AcidTransaction transaction, StatisticsUpdateMode mode, PartitionStatistics statisticsUpdate);
 
-    void updatePartitionStatistics(Table table, Map<String, Function<PartitionStatistics, PartitionStatistics>> updates);
+    void updatePartitionStatistics(Table table, StatisticsUpdateMode mode, Map<String, PartitionStatistics> partitionUpdates);
 
     List<String> getTables(String databaseName);
 

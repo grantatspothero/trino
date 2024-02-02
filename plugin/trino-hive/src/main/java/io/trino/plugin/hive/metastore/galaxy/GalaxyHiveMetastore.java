@@ -47,6 +47,7 @@ import io.trino.plugin.hive.metastore.HivePrivilegeInfo;
 import io.trino.plugin.hive.metastore.Partition;
 import io.trino.plugin.hive.metastore.PartitionWithStatistics;
 import io.trino.plugin.hive.metastore.PrincipalPrivileges;
+import io.trino.plugin.hive.metastore.StatisticsUpdateMode;
 import io.trino.plugin.hive.metastore.Table;
 import io.trino.plugin.hive.metastore.thrift.ThriftMetastoreUtil;
 import io.trino.spi.TrinoException;
@@ -70,7 +71,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Strings.emptyToNull;
@@ -220,7 +220,7 @@ public class GalaxyHiveMetastore
     }
 
     @Override
-    public void updateTableStatistics(String databaseName, String tableName, AcidTransaction transaction, Function<PartitionStatistics, PartitionStatistics> update)
+    public void updateTableStatistics(String databaseName, String tableName, AcidTransaction transaction, StatisticsUpdateMode mode, PartitionStatistics statisticsUpdate)
     {
         if (transaction.isTransactional()) {
             throw new TrinoException(NOT_SUPPORTED, "Hive ACID is not supported");
@@ -228,7 +228,7 @@ public class GalaxyHiveMetastore
 
         try {
             PartitionStatistics originalStatistics = fromGalaxyStatistics(metastore.getTableStatistics(databaseName, tableName));
-            PartitionStatistics updatedStatistics = update.apply(originalStatistics);
+            PartitionStatistics updatedStatistics = mode.updatePartitionStatistics(originalStatistics, statisticsUpdate);
             metastore.updateTableStatistics(databaseName, tableName, toGalaxyStatistics(updatedStatistics));
         }
         catch (EntityNotFoundException e) {
@@ -243,19 +243,19 @@ public class GalaxyHiveMetastore
     }
 
     @Override
-    public void updatePartitionStatistics(Table table, Map<String, Function<PartitionStatistics, PartitionStatistics>> updates)
+    public void updatePartitionStatistics(Table table, StatisticsUpdateMode mode, Map<String, PartitionStatistics> updates)
     {
-        updates.forEach((partitionName, update) -> doUpdatePartitionStatistics(table, partitionName, update));
+        updates.forEach((partitionName, update) -> doUpdatePartitionStatistics(table, partitionName, mode, update));
     }
 
-    public void doUpdatePartitionStatistics(Table table, String encodedPartitionName, Function<PartitionStatistics, PartitionStatistics> update)
+    public void doUpdatePartitionStatistics(Table table, String encodedPartitionName, StatisticsUpdateMode mode, PartitionStatistics statisticsUpdate)
     {
         PartitionName partitionName = new PartitionName(extractPartitionValues(encodedPartitionName));
         try {
             PartitionStatistics originalStatistics = Optional.ofNullable(metastore.getPartitionStatistics(table.getDatabaseName(), table.getTableName(), ImmutableList.of(partitionName)).get(partitionName))
                     .map(GalaxyMetastoreUtils::fromGalaxyStatistics)
                     .orElseThrow(() -> new PartitionNotFoundException(new SchemaTableName(table.getDatabaseName(), table.getTableName()), partitionName.partitionValues()));
-            PartitionStatistics updatedStatistics = update.apply(originalStatistics);
+            PartitionStatistics updatedStatistics = mode.updatePartitionStatistics(originalStatistics, statisticsUpdate);
 
             metastore.updatePartitionStatistics(table.getDatabaseName(), table.getTableName(), partitionName, toGalaxyStatistics(updatedStatistics));
         }
