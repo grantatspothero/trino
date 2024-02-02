@@ -18,7 +18,6 @@ import com.google.inject.Inject;
 import io.airlift.node.NodeInfo;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;
-import io.trino.connector.CatalogManagerConfig.CatalogMangerKind;
 import io.trino.connector.informationschema.InformationSchemaConnector;
 import io.trino.connector.informationschema.InformationSchemaPageSourceProvider;
 import io.trino.connector.system.CoordinatorSystemTablesProvider;
@@ -63,7 +62,6 @@ public class DefaultCatalogFactory
     private final VersionEmbedder versionEmbedder;
     private final OpenTelemetry openTelemetry;
     private final TransactionManager transactionManager;
-    private final CatalogMangerKind catalogManagerKind;
     private final TypeManager typeManager;
     private final InformationSchemaPageSourceProvider informationSchemaPageSourceProvider;
 
@@ -82,7 +80,6 @@ public class DefaultCatalogFactory
             VersionEmbedder versionEmbedder,
             OpenTelemetry openTelemetry,
             TransactionManager transactionManager,
-            CatalogManagerConfig catalogManagerConfig,
             InformationSchemaPageSourceProvider informationSchemaPageSourceProvider,
             TypeManager typeManager,
             NodeSchedulerConfig nodeSchedulerConfig,
@@ -96,7 +93,6 @@ public class DefaultCatalogFactory
         this.versionEmbedder = requireNonNull(versionEmbedder, "versionEmbedder is null");
         this.openTelemetry = requireNonNull(openTelemetry, "openTelemetry is null");
         this.transactionManager = requireNonNull(transactionManager, "transactionManager is null");
-        this.catalogManagerKind = catalogManagerConfig.getCatalogMangerKind();
         this.informationSchemaPageSourceProvider = requireNonNull(informationSchemaPageSourceProvider, "informationSchemaPageSourceProvider is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.schedulerIncludeCoordinator = nodeSchedulerConfig.isIncludeCoordinator();

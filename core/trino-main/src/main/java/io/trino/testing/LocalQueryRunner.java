@@ -33,7 +33,6 @@ import io.trino.cache.CacheMetadata;
 import io.trino.cache.CacheStats;
 import io.trino.client.NodeVersion;
 import io.trino.connector.CatalogFactory;
-import io.trino.connector.CatalogManagerConfig;
 import io.trino.connector.CatalogServiceProviderModule;
 import io.trino.connector.ConnectorName;
 import io.trino.connector.ConnectorServicesProvider;
@@ -434,7 +433,6 @@ public class LocalQueryRunner
                 testingVersionEmbedder(),
                 OpenTelemetry.noop(),
                 transactionManager,
-                new CatalogManagerConfig(),
                 informationSchemaPageSourceFactory.apply(metadata, accessControl),
                 typeManager,
                 nodeSchedulerConfig,
