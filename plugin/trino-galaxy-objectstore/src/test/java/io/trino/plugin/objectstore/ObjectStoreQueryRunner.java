@@ -35,6 +35,7 @@ import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.spi.Plugin;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.GalaxyQueryRunner;
+import io.trino.testing.QueryRunner;
 import io.trino.tpch.TpchTable;
 
 import java.nio.file.Path;
@@ -80,6 +81,7 @@ public final class ObjectStoreQueryRunner
         private Map<String, String> extraProperties = ImmutableMap.of();
         private MockConnectorPlugin mockConnectorPlugin;
         private TestingAccountClient accountClient;
+        private boolean useLiveCatalogs = true;
 
         private Builder() {}
 
@@ -182,6 +184,13 @@ public final class ObjectStoreQueryRunner
             return this;
         }
 
+        @CanIgnoreReturnValue
+        public Builder withUseLiveCatalogs(boolean useLiveCatalogs)
+        {
+            this.useLiveCatalogs = useLiveCatalogs;
+            return this;
+        }
+
         public DistributedQueryRunner build()
                 throws Exception
         {
@@ -202,6 +211,7 @@ public final class ObjectStoreQueryRunner
 
                 GalaxyQueryRunner.Builder builder = GalaxyQueryRunner.builder(catalogName, schemaName);
                 builder.setNodeCount(3);
+                builder.setUseLiveCatalogs(useLiveCatalogs);
                 builder.setCoordinatorProperties(coordinatorProperties);
                 builder.setExtraProperties(extraProperties);
                 builder.addPlugin(new TpchPlugin());
@@ -312,7 +322,7 @@ public final class ObjectStoreQueryRunner
         }
     }
 
-    private static void run(TableType tableType)
+    static QueryRunner run(TableType tableType)
             throws Exception
     {
         Logging.initialize();
@@ -334,6 +344,7 @@ public final class ObjectStoreQueryRunner
                 .withLocationSecurityServer(locationSecurityServer)
                 .withMockConnectorPlugin(new MockConnectorPlugin(MockConnectorFactory.create()))
                 .withAccountClient(account)
+                .withUseLiveCatalogs(false)
                 .build();
 
         switch (tableType) {
@@ -351,6 +362,7 @@ public final class ObjectStoreQueryRunner
                         "====",
                 createCliCommand(queryRunner, account, account.getAdminRoleId()),
                 createCliCommand(queryRunner, account, account.getPublicRoleId()));
+        return queryRunner;
     }
 
     private static String createCliCommand(DistributedQueryRunner queryRunner, TestingAccountClient account, RoleId roleId)

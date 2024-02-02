@@ -213,12 +213,12 @@ public final class GalaxyQueryRunner
                 addExtraProperty("galaxy.deployment-id", accountClient.getSampleDeploymentId().toString());
                 addCoordinatorProperty("galaxy.account-url", accountUri.toString());
                 addCoordinatorProperty("galaxy.cluster-id", accountClient.getSampleClusterId().toString());
-                addCoordinatorProperty("trino.plane-id", "aws-us-east1-1");
                 if (useLiveCatalogs) {
                     setSystemAccessControl(GalaxyLiveCatalogsSystemAccessFactory.NAME, ImmutableMap.of());
+                    addCoordinatorProperty("trino.plane-id", "aws-us-east1-1");
                 }
                 else {
-                    addExtraProperty("galaxy.catalog-names", catalogIdStrings);
+                    addCoordinatorProperty("galaxy.catalog-names", catalogIdStrings);
                     setSystemAccessControl(GalaxyTrinoSystemAccessFactory.NAME, ImmutableMap.<String, String>builder()
                             .put("galaxy.account-url", accountUri.toString())
                             .put("galaxy.catalog-names", catalogIdStrings)
