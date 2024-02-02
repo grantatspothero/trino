@@ -61,7 +61,8 @@ public class ResultsCacheClient
             Optional<String> updateType,
             List<Column> columns,
             List<List<Object>> data,
-            Instant creation)
+            Instant creation,
+            Optional<String> principal)
     {
         if (!galaxyEnabled) {
             log.debug("Galaxy not enabled. Skip sending cache entry %s for query %s to results cache", key, queryId);
@@ -73,7 +74,7 @@ public class ResultsCacheClient
             cacheClient.insertCacheEntry(
                     cacheBaseUri,
                     getTokenSupplier(identity),
-                    createCacheEntry(key, queryId, query, sessionCatalog, sessionSchema, queryType, updateType, clusterId.get(), deploymentId.get(), columns, data, creation));
+                    createCacheEntry(key, queryId, query, sessionCatalog, sessionSchema, queryType, updateType, clusterId.get(), deploymentId.get(), columns, data, creation, principal));
         }
         catch (JsonProcessingException ex) {
             throw new RuntimeException("Error serializing results to JSON", ex);
@@ -97,7 +98,8 @@ public class ResultsCacheClient
             String deploymentId,
             List<Column> columns,
             List<List<Object>> data,
-            Instant creation)
+            Instant creation,
+            Optional<String> princpal)
             throws JsonProcessingException
     {
         return new CacheEntry(
@@ -113,6 +115,7 @@ public class ResultsCacheClient
                 deploymentId,
                 columns,
                 data,
-                creation);
+                creation,
+                princpal);
     }
 }

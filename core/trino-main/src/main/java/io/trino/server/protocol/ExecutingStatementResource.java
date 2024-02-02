@@ -209,7 +209,8 @@ public class ExecutingStatementResource
                         session.getCatalog(),
                         session.getSchema(),
                         queryInfo.getQueryType().map(QueryType::name),
-                        queryInfo.getUpdateType()));
+                        queryInfo.getUpdateType(),
+                        session.toSessionRepresentation().getPrincipal()));
 
         resultsCacheEntry.ifPresent(entry -> queryManager.registerResultsCacheEntry(queryInfo.getQueryId(), entry));
 

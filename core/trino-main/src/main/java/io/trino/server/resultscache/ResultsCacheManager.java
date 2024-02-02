@@ -58,7 +58,8 @@ public class ResultsCacheManager
             Optional<String> sessionCatalog,
             Optional<String> sessionSchema,
             Optional<String> queryType,
-            Optional<String> updateType)
+            Optional<String> updateType,
+            Optional<String> principal)
     {
         Optional<Long> requestMaxSizeOptional = resultsCacheParameters.maximumSizeBytes();
         long maximumSizeBytes = requestMaxSizeOptional.map(requestMaxSize -> {
@@ -81,7 +82,8 @@ public class ResultsCacheManager
                 updateType,
                 maximumSizeBytes,
                 resultsCacheClient,
-                executorService);
+                executorService,
+                principal);
     }
 
     public static Optional<ResultsCacheState> createResultsCacheParameters(Session session)

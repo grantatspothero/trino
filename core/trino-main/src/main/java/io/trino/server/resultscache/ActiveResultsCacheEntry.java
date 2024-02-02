@@ -55,6 +55,7 @@ public class ActiveResultsCacheEntry
     private final long maximumSize;
     private final ResultsCacheClient client;
     private final ListeningExecutorService executorService;
+    private final Optional<String> principal;
     @GuardedBy("this")
     private long currentSize;
     @GuardedBy("this")
@@ -79,7 +80,8 @@ public class ActiveResultsCacheEntry
             Optional<String> updateType,
             long maximumSize,
             ResultsCacheClient client,
-            ListeningExecutorService executorService)
+            ListeningExecutorService executorService,
+            Optional<String> principal)
     {
         this.identity = requireNonNull(identity, "identity is null");
         this.cacheKey = requireNonNull(cacheKey, "key is null");
@@ -94,6 +96,7 @@ public class ActiveResultsCacheEntry
         this.maximumSize = maximumSize;
         this.client = requireNonNull(client, "client is null");
         this.executorService = requireNonNull(executorService, "executorService is null");
+        this.principal = requireNonNull(principal, "principal is null");
     }
 
     @Override
@@ -219,7 +222,8 @@ public class ActiveResultsCacheEntry
                         updateType,
                         resultsData.columns,
                         resultsData.data,
-                        createdTime));
+                        createdTime,
+                        principal));
         MoreFutures.addExceptionCallback(submitFuture, throwable ->
                 log.error(throwable, "Upload to cache failed"));
     }
