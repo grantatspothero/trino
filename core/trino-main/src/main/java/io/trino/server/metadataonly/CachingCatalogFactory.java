@@ -29,6 +29,7 @@ import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.CatalogHandle.CatalogHandleType;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorFactory;
+import jakarta.annotation.Nullable;
 
 import java.util.Map;
 import java.util.Optional;
@@ -65,14 +66,15 @@ public class CachingCatalogFactory
     private static class Entry
     {
         private final Key key;
-        @GuardedBy("synchronized(entry)") private CatalogConnector catalogConnector;
+        @GuardedBy("synchronized(entry)") @Nullable private CatalogConnector catalogConnector;
         @GuardedBy("synchronized(entry)") private int useCount;
         @GuardedBy("synchronized(entry)") private long lastUse;
+        @GuardedBy("synchronized(entry)") private boolean deleted;
 
-        private Entry(Key key, CatalogConnector catalogConnector)
+        private Entry(Key key)
         {
             this.key = requireNonNull(key, "key is null");
-            this.catalogConnector = requireNonNull(catalogConnector, "catalogConnector is null");
+            this.lastUse = Ticker.systemTicker().read();
         }
     }
 
@@ -154,20 +156,27 @@ public class CachingCatalogFactory
         CatalogConnector catalogConnector = null;
         Entry entry = null;
         while (catalogConnector == null) {
-            entry = cache.computeIfAbsent(key, ignore -> new Entry(key, catalogConnectorSupplier.get()));
+            entry = cache.computeIfAbsent(key, ignore -> new Entry(key));
             synchronized (entry) {
+                if (entry.deleted) {
+                    continue;
+                }
+
+                if (entry.catalogConnector == null) {
+                    entry.catalogConnector = catalogConnectorSupplier.get();
+                }
+
                 ++entry.useCount;
                 entry.lastUse = Ticker.systemTicker().read();
                 catalogConnector = entry.catalogConnector;
             }
         }
 
-        // clean after computeIfAbsent in case a key wakes up an entry
         cleanCache();
 
         Connector connectorToCache = catalogConnector.getMaterializedConnector(CatalogHandleType.NORMAL).getConnector();
         CatalogConnector wrappedConnector = catalogFactory.createCatalog(catalogHandle, catalogConnector.getConnectorName(), connectorToCache, catalogProperties);
-        if (wrappedConnectorIndex.put(wrappedConnector, requireNonNull(entry, "entry is null")) != null) {
+        if (wrappedConnectorIndex.put(wrappedConnector, entry) != null) {
             throw new IllegalStateException("Wrapped connector already in index map for key: " + key);
         }
 
@@ -192,18 +201,24 @@ public class CachingCatalogFactory
     private void cleanCache()
     {
         cache.forEach((key, entry) -> {
+            CatalogConnector catalogConnectorToShutdown = null;
+
             synchronized (entry) {
                 if (entry.useCount == 0) {
                     long elapsedNanos = Ticker.systemTicker().read() - entry.lastUse;
                     if (elapsedNanos > cacheDurationNanos) {
-                        CatalogConnector catalogConnector = entry.catalogConnector;
+                        catalogConnectorToShutdown = entry.catalogConnector;
+                        entry.deleted = true;
                         entry.catalogConnector = null;
-                        cache.remove(key);
 
-                        log.debug("Cleaning cached connection. Key: %s", key);
-                        shutdownConnector(catalogConnector);
+                        cache.remove(key);
                     }
                 }
+            }
+
+            if (catalogConnectorToShutdown != null) {
+                log.debug("Cleaning cached connection. Key: %s", key);
+                shutdownConnector(catalogConnectorToShutdown);
             }
         });
     }
