@@ -14,6 +14,8 @@
 package io.trino.server.security.galaxy;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import io.starburst.stargate.id.SharedSchemaNameAndAccepted;
 import io.trino.server.security.galaxy.GalaxySystemAccessControlConfig.FilterColumnsAcceleration;
 import org.junit.jupiter.api.Test;
 
@@ -32,7 +34,9 @@ public class TestGalaxySystemAccessControlConfig
         assertRecordedDefaults(recordDefaults(GalaxySystemAccessControlConfig.class)
                 .setFilterColumnsAcceleration(FilterColumnsAcceleration.NONE)
                 .setBackgroundProcessingThreads(8)
-                .setExpectedQueryParallelism(100));
+                .setExpectedQueryParallelism(100)
+                .setReadOnlyCatalogs("")
+                .setSharedCatalogSchemaNames(""));
     }
 
     @Test
@@ -43,12 +47,19 @@ public class TestGalaxySystemAccessControlConfig
                 .put("galaxy.filter-columns-acceleration", "FCX2")
                 .put("galaxy.access-control-background-threads", "3")
                 .put("galaxy.expected-query-parallelism", "200")
+                .put("galaxy.read-only-catalogs", "sillycatalog,funnycatalog")
+                .put("galaxy.shared-catalog-schemas", "my_catalog->foo,his_catalog->*broken,her_catalog->*")
                 .buildOrThrow();
 
         GalaxySystemAccessControlConfig expected = new GalaxySystemAccessControlConfig()
                 .setFilterColumnsAcceleration(FilterColumnsAcceleration.FCX2)
                 .setBackgroundProcessingThreads(3)
-                .setExpectedQueryParallelism(200);
+                .setExpectedQueryParallelism(200)
+                .setReadOnlyCatalogs(ImmutableSet.of("sillycatalog", "funnycatalog"))
+                .setSharedCatalogSchemaNames(ImmutableMap.of(
+                        "my_catalog", new SharedSchemaNameAndAccepted("foo", true),
+                        "his_catalog", new SharedSchemaNameAndAccepted("broken", false),
+                        "her_catalog", new SharedSchemaNameAndAccepted(null, false)));
 
         assertFullMapping(properties, expected);
     }

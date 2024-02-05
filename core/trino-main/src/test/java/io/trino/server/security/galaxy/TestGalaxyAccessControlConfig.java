@@ -14,9 +14,7 @@
 package io.trino.server.security.galaxy;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import io.starburst.stargate.id.CatalogId;
-import io.starburst.stargate.id.SharedSchemaNameAndAccepted;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -36,9 +34,7 @@ public class TestGalaxyAccessControlConfig
                 // No defaults for the accountUri
                 .setAccountUri(null)
                 .setAccessControlOverrideUri(null)
-                .setCatalogNames("")
-                .setReadOnlyCatalogs("")
-                .setSharedCatalogSchemaNames(""));
+                .setCatalogNames(""));
     }
 
     @Test
@@ -49,8 +45,6 @@ public class TestGalaxyAccessControlConfig
                 .put("galaxy.account-url", "https://whackadoodle.galaxy.com")
                 .put("galaxy.access-control-url", "https://whackadoodle.aws-us-east1.accesscontrol.galaxy.com")
                 .put("galaxy.catalog-names", "my_catalog->c-1234567890,other_catalog->c-1112223334")
-                .put("galaxy.read-only-catalogs", "sillycatalog,funnycatalog")
-                .put("galaxy.shared-catalog-schemas", "my_catalog->foo,his_catalog->*broken,her_catalog->*")
                 .buildOrThrow();
 
         GalaxyAccessControlConfig expected = new GalaxyAccessControlConfig()
@@ -59,12 +53,7 @@ public class TestGalaxyAccessControlConfig
                 .setCatalogNames(ImmutableMap.<String, CatalogId>builder()
                         .put("my_catalog", new CatalogId("c-1234567890"))
                         .put("other_catalog", new CatalogId("c-1112223334"))
-                        .buildOrThrow())
-                .setReadOnlyCatalogs(ImmutableSet.of("sillycatalog", "funnycatalog"))
-                .setSharedCatalogSchemaNames(ImmutableMap.of(
-                        "my_catalog", new SharedSchemaNameAndAccepted("foo", true),
-                        "his_catalog", new SharedSchemaNameAndAccepted("broken", false),
-                        "her_catalog", new SharedSchemaNameAndAccepted(null, false)));
+                        .buildOrThrow());
 
         assertFullMapping(properties, expected);
     }

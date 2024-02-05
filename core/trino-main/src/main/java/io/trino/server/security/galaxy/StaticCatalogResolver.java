@@ -35,9 +35,9 @@ public class StaticCatalogResolver
     private final Map<String, SharedSchemaNameAndAccepted> sharedSchemas;
 
     @Inject
-    public StaticCatalogResolver(GalaxyAccessControlConfig config)
+    public StaticCatalogResolver(GalaxyAccessControlConfig config, GalaxySystemAccessControlConfig systemConfig)
     {
-        this(config.getCatalogNames(), config.getReadOnlyCatalogs(), config.getSharedCatalogSchemaNames());
+        this(config.getCatalogNames(), systemConfig.getReadOnlyCatalogs(), systemConfig.getSharedCatalogSchemaNames());
     }
 
     public StaticCatalogResolver(Map<String, CatalogId> catalogNamesToIds, Set<String> readOnlyCatalogs, Map<String, SharedSchemaNameAndAccepted> sharedSchemas)

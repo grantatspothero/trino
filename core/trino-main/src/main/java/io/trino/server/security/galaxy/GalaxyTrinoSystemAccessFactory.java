@@ -77,6 +77,7 @@ public class GalaxyTrinoSystemAccessFactory
                     binder.bind(CatalogResolver.class).to(StaticCatalogResolver.class);
                     configBinder(binder).bindConfig(GalaxyAccessControlConfig.class);
 
+                    configBinder(binder).bindConfig(GalaxySystemAccessControlConfig.class);
                     binder.bind(TrinoSecurityApi.class).toInstance(trinoSecurityApi);
                     binder.bind(GalaxySystemAccessController.class).in(SINGLETON);
                 });

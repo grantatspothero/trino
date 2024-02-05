@@ -49,6 +49,7 @@ import io.trino.server.security.galaxy.GalaxyAccessControl;
 import io.trino.server.security.galaxy.GalaxyAccessControlConfig;
 import io.trino.server.security.galaxy.GalaxyIndexerTrinoSecurityApi;
 import io.trino.server.security.galaxy.GalaxySecurityMetadata;
+import io.trino.server.security.galaxy.GalaxySystemAccessControlConfig;
 import io.trino.server.security.galaxy.GalaxySystemAccessController;
 import io.trino.server.security.galaxy.MetadataAccessControllerSupplier;
 import io.trino.server.security.galaxy.MetadataSystemSecurityMetadata;
@@ -453,10 +454,11 @@ public class MetadataOnlyTransactionManager
                     : new HttpTrinoSecurityClient(uri, accessControlClient);
 
             GalaxyAccessControlConfig galaxyAccessControlConfig = new GalaxyAccessControlConfig()
-                    .setCatalogNames(requiredServiceProperty(serviceProperties, "galaxy.catalog-names"))
+                    .setCatalogNames(requiredServiceProperty(serviceProperties, "galaxy.catalog-names"));
+            GalaxySystemAccessControlConfig systemConfig = new GalaxySystemAccessControlConfig()
                     .setReadOnlyCatalogs(requiredServiceProperty(serviceProperties, "galaxy.read-only-catalogs"))
                     .setSharedCatalogSchemaNames(requiredServiceProperty(serviceProperties, "galaxy.shared-catalog-schemas"));
-            StaticCatalogResolver catalogResolver = new StaticCatalogResolver(galaxyAccessControlConfig);
+            StaticCatalogResolver catalogResolver = new StaticCatalogResolver(galaxyAccessControlConfig, systemConfig);
 
             galaxyMetadataAccessControl.addController(transactionId, new GalaxySystemAccessController(securityClient, catalogResolver, permissionsCache, Optional.of(transactionId)));
             securityMetadata.add(transactionId, new GalaxySecurityMetadata(securityClient, catalogResolver));
