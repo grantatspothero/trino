@@ -186,7 +186,7 @@ public class CachingCatalogFactory
 
     private AccountId accountId()
     {
-        return contextAccountId.orElseThrow(() -> new IllegalStateException("Context accontId is not set"));
+        return contextAccountId.orElseThrow(() -> new IllegalStateException("Context accountId is not set"));
     }
 
     private void cleanCache()
