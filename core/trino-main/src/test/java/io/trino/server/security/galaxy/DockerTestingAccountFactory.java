@@ -89,7 +89,7 @@ public class DockerTestingAccountFactory
                     .put("process-name", "portal-server")
                     .buildOrThrow());
 
-            portalServer.waitingFor(forLogMessage(".*SERVER STARTED.*", 1).withStartupTimeout(ofMinutes(2)));
+            portalServer.waitingFor(forLogMessage(".*SERVER STARTED.*", 1).withStartupTimeout(ofMinutes(3)));
             portalServer.start();
 
             String hostName = getHostNameFromPem(pemFile);
