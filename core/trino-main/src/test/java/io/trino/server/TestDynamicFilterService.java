@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.airlift.units.DataSize;
 import io.trino.Session;
+import io.trino.cache.CommonPlanAdaptation.PlanSignatureWithPredicate;
 import io.trino.cost.StatsAndCosts;
 import io.trino.execution.DynamicFilterConfig;
 import io.trino.execution.StageId;
@@ -1028,18 +1029,19 @@ public class TestDynamicFilterService
     public void testCacheDynamicFilters()
     {
         Metadata metadata = createTestMetadataManager();
-        assertThat(
-                getCacheDynamicFilters(
-                        new ProjectNode(new PlanNodeId("0"),
-                                new LoadCachedDataPlanNode(
-                                        new PlanNodeId("1"),
-                                        new PlanSignature(new SignatureKey("test"), Optional.empty(), ImmutableList.of(), ImmutableList.of(), TupleDomain.all(), TupleDomain.all()),
-                                        or(and(createDynamicFilterExpression(metadata, new DynamicFilterId("0"), BIGINT, new SymbolReference("symbol0")),
-                                                        createDynamicFilterExpression(metadata, new DynamicFilterId("1"), BIGINT, new SymbolReference("symbol1"))),
-                                                createDynamicFilterExpression(metadata, new DynamicFilterId("2"), BIGINT, new SymbolReference("symbol2"))),
-                                        ImmutableMap.of(),
-                                        ImmutableList.of()),
-                                Assignments.of())))
+        assertThat(getCacheDynamicFilters(
+                new ProjectNode(new PlanNodeId("0"),
+                        new LoadCachedDataPlanNode(
+                                new PlanNodeId("1"),
+                                new PlanSignatureWithPredicate(
+                                        new PlanSignature(new SignatureKey("test"), Optional.empty(), ImmutableList.of(), ImmutableList.of()),
+                                        TupleDomain.all()),
+                                or(and(createDynamicFilterExpression(metadata, new DynamicFilterId("0"), BIGINT, new SymbolReference("symbol0")),
+                                                createDynamicFilterExpression(metadata, new DynamicFilterId("1"), BIGINT, new SymbolReference("symbol1"))),
+                                        createDynamicFilterExpression(metadata, new DynamicFilterId("2"), BIGINT, new SymbolReference("symbol2"))),
+                                ImmutableMap.of(),
+                                ImmutableList.of()),
+                        Assignments.of())))
                 .isEqualTo(ImmutableSet.of(new DynamicFilterId("0"), new DynamicFilterId("1"), new DynamicFilterId("2")));
     }
 
