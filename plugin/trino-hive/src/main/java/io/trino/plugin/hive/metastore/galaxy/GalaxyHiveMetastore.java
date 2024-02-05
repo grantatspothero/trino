@@ -28,6 +28,7 @@ import io.starburst.stargate.metastore.client.Metastore;
 import io.starburst.stargate.metastore.client.MetastoreException;
 import io.starburst.stargate.metastore.client.PartitionName;
 import io.starburst.stargate.metastore.client.RestMetastore;
+import io.starburst.stargate.metastore.client.Statistics;
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystem;
 import io.trino.filesystem.TrinoFileSystemFactory;
@@ -41,6 +42,7 @@ import io.trino.plugin.hive.TableAlreadyExistsException;
 import io.trino.plugin.hive.TableType;
 import io.trino.plugin.hive.acid.AcidTransaction;
 import io.trino.plugin.hive.metastore.Database;
+import io.trino.plugin.hive.metastore.HiveColumnStatistics;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hive.metastore.HivePrincipal;
 import io.trino.plugin.hive.metastore.HivePrivilegeInfo;
@@ -70,12 +72,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.Set;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Strings.emptyToNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.Maps.filterKeys;
+import static com.google.common.collect.Maps.transformValues;
 import static com.google.common.collect.Streams.stream;
 import static io.trino.filesystem.Locations.appendPath;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_FILESYSTEM_ERROR;
@@ -93,7 +98,6 @@ import static io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreUtils.toGalax
 import static io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreUtils.toGalaxyPartitionWithStatistics;
 import static io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreUtils.toGalaxyStatistics;
 import static io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreUtils.toGalaxyTable;
-import static io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreUtils.toPartitionNames;
 import static io.trino.plugin.hive.util.HiveUtil.escapeSchemaName;
 import static io.trino.spi.StandardErrorCode.ALREADY_EXISTS;
 import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
@@ -182,13 +186,16 @@ public class GalaxyHiveMetastore
     }
 
     @Override
-    public PartitionStatistics getTableStatistics(Table table)
+    public Map<String, HiveColumnStatistics> getTableColumnStatistics(String databaseName, String tableName, Set<String> columnNames, OptionalLong rowCount)
     {
         try {
-            return fromGalaxyStatistics(metastore.getTableStatistics(table.getDatabaseName(), table.getTableName()));
+            // TODO[https://github.com/starburstdata/galaxy-trino/issues/1856] filter columns on server side
+            return transformValues(
+                    filterKeys(metastore.getTableStatistics(databaseName, tableName).columnStatistics(), columnNames::contains),
+                    GalaxyMetastoreUtils::fromGalaxyColumnStatistics);
         }
         catch (EntityNotFoundException e) {
-            throw new TableNotFoundException(table.getSchemaTableName());
+            throw new TableNotFoundException(SchemaTableName.schemaTableName(databaseName, tableName));
         }
         catch (MetastoreException e) {
             throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
@@ -199,14 +206,32 @@ public class GalaxyHiveMetastore
     }
 
     @Override
-    public Map<String, PartitionStatistics> getPartitionStatistics(Table table, List<Partition> partitions)
+    public Map<String, Map<String, HiveColumnStatistics>> getPartitionColumnStatistics(String databaseName, String tableName, Map<String, OptionalLong> partitionNamesWithRowCount, Set<String> columnNames)
     {
         try {
-            return metastore.getPartitionStatistics(table.getDatabaseName(), table.getTableName(), toPartitionNames(table, partitions)).entrySet().stream()
-                    .map(entry -> Maps.immutableEntry(
-                            makePartitionName(table.getPartitionColumns(), entry.getKey().partitionValues()),
-                            fromGalaxyStatistics(entry.getValue())))
-                    .collect(toImmutableMap(Entry::getKey, Entry::getValue));
+            ImmutableList.Builder<PartitionName> galaxyPartitionNamesBuilder = ImmutableList.builder();
+            ImmutableMap.Builder<PartitionName, String> galaxyPartitionNameToSourcePartitionNameBuilder = ImmutableMap.builder();
+
+            partitionNamesWithRowCount.keySet().forEach(partitionName -> {
+                List<String> partitionValues = extractPartitionValues(partitionName);
+                PartitionName galaxyPartitionName = new PartitionName(partitionValues);
+                galaxyPartitionNamesBuilder.add(galaxyPartitionName);
+                galaxyPartitionNameToSourcePartitionNameBuilder.put(galaxyPartitionName, partitionName);
+            });
+
+            List<PartitionName> galaxyPartitionNames = galaxyPartitionNamesBuilder.build();
+            Map<PartitionName, String> galaxyPartitionNameToSourcePartitionName = galaxyPartitionNameToSourcePartitionNameBuilder.buildOrThrow();
+
+            // TODO[https://github.com/starburstdata/galaxy-trino/issues/1856] filter columns on server side
+            Map<PartitionName, Statistics> galaxyPartitionStatistics = metastore.getPartitionStatistics(databaseName, tableName, galaxyPartitionNames);
+
+            ImmutableMap.Builder<String, Map<String, HiveColumnStatistics>> result = ImmutableMap.builder();
+            galaxyPartitionStatistics.forEach((name, stats) -> {
+                result.put(
+                        galaxyPartitionNameToSourcePartitionName.get(name),
+                        transformValues(filterKeys(stats.columnStatistics(), columnNames::contains), GalaxyMetastoreUtils::fromGalaxyColumnStatistics));
+            });
+            return result.buildOrThrow();
         }
         catch (EntityNotFoundException e) {
             throw new TrinoException(NOT_FOUND, "A partition was not found");

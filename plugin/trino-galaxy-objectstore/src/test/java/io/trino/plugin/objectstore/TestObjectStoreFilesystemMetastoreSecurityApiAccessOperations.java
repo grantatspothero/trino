@@ -57,10 +57,10 @@ import static io.trino.plugin.hive.metastore.MetastoreMethod.CREATE_TABLE;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.GET_ALL_DATABASES;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.GET_DATABASE;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.GET_PARTITIONS_BY_NAMES;
+import static io.trino.plugin.hive.metastore.MetastoreMethod.GET_PARTITION_COLUMN_STATISTICS;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.GET_PARTITION_NAMES_BY_FILTER;
-import static io.trino.plugin.hive.metastore.MetastoreMethod.GET_PARTITION_STATISTICS;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.GET_TABLE;
-import static io.trino.plugin.hive.metastore.MetastoreMethod.GET_TABLE_STATISTICS;
+import static io.trino.plugin.hive.metastore.MetastoreMethod.GET_TABLE_COLUMN_STATISTICS;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.REPLACE_TABLE;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.STREAM_TABLES;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.UPDATE_PARTITION_STATISTICS;
@@ -515,7 +515,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertInvocations("SELECT name, age FROM test_join_t1 JOIN test_join_t2 ON test_join_t2.id = test_join_t1.id",
                 ImmutableMultiset.<MetastoreMethod>builder()
                         .addCopies(GET_TABLE, 2)
-                        .addCopies(GET_TABLE_STATISTICS, occurrences(type, 2, 0, 0))
+                        .addCopies(GET_TABLE_COLUMN_STATISTICS, occurrences(type, 2, 0, 0))
                         .build(),
                 switch (type) {
                     case HIVE -> ImmutableMultiset.<FileOperation>builder()
@@ -547,7 +547,9 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertInvocations("SELECT child.age, parent.age FROM test_self_join_table child JOIN test_self_join_table parent ON child.parent = parent.id",
                 ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_TABLE)
-                        .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
+                        // TODO[https://github.com/trinodb/trino/issues/21081] We would expect 1 here, but no longer true when set of columns queried for stats is
+                        // part of the caching key in CachingHiveMetastore
+                        .addCopies(GET_TABLE_COLUMN_STATISTICS, occurrences(type, 2, 0, 0))
                         .build(),
                 switch (type) {
                     case HIVE -> ImmutableMultiset.<FileOperation>builder()
@@ -579,7 +581,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertInvocations("EXPLAIN SELECT * FROM test_explain",
                 ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_TABLE)
-                        .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
+                        .addCopies(GET_TABLE_COLUMN_STATISTICS, occurrences(type, 1, 0, 0))
                         .build(),
                 switch (type) {
                     case HIVE -> ImmutableMultiset.<FileOperation>builder()
@@ -608,7 +610,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertInvocations("SHOW STATS FOR test_show_stats",
                 ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_TABLE)
-                        .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
+                        .addCopies(GET_TABLE_COLUMN_STATISTICS, occurrences(type, 1, 0, 0))
                         .build(),
                 switch (type) {
                     case HIVE -> ImmutableMultiset.<FileOperation>builder()
@@ -637,7 +639,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
         assertInvocations("SHOW STATS FOR (SELECT * FROM test_show_stats_with_filter where age >= 2)",
                 ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_TABLE)
-                        .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
+                        .addCopies(GET_TABLE_COLUMN_STATISTICS, occurrences(type, 1, 0, 0))
                         .build(),
                 switch (type) {
                     case HIVE -> ImmutableMultiset.<FileOperation>builder()
@@ -705,7 +707,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                         .addCopies(GET_TABLE, occurrences(type, 1, 3, 1))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
-                        .addCopies(GET_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
+                        .addCopies(GET_PARTITION_COLUMN_STATISTICS, occurrences(type, 1, 0, 0))
                         .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
                         .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
                         .build(),
@@ -739,7 +741,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                         .addCopies(GET_TABLE, occurrences(type, 1, 3, 1))
                         .addCopies(GET_PARTITION_NAMES_BY_FILTER, occurrences(type, 1, 0, 0))
                         .addCopies(GET_PARTITIONS_BY_NAMES, occurrences(type, 1, 0, 0))
-                        .addCopies(GET_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
+                        .addCopies(GET_PARTITION_COLUMN_STATISTICS, occurrences(type, 1, 0, 0))
                         .addCopies(UPDATE_PARTITION_STATISTICS, occurrences(type, 1, 0, 0))
                         .addCopies(REPLACE_TABLE, occurrences(type, 0, 1, 0))
                         .build(),
