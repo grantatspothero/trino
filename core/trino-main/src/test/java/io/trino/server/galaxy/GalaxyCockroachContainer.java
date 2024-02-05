@@ -62,7 +62,7 @@ public class GalaxyCockroachContainer
                         "--verbose",
                         "--url", "jdbc:postgresql://cockroach:26257/postgres",
                         "--user", cockroach.getUsername());
-                migration.withStartupCheckStrategy(new OneShotStartupCheckStrategy().withTimeout(ofMinutes(2)));
+                migration.withStartupCheckStrategy(new OneShotStartupCheckStrategy().withTimeout(ofMinutes(4)));
                 migration.start();
                 migration.stop();
             }
