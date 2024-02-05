@@ -13,7 +13,6 @@
  */
 package io.trino.server.security.galaxy;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.jetty.JettyHttpClient;
@@ -32,6 +31,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.util.Map;
 
+import static com.google.common.base.Throwables.throwIfUnchecked;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.plugin.base.util.Closables.closeAllSuppress;
 import static io.trino.server.galaxy.GalaxyImageConstants.STARGATE_DOCKER_REPO;
@@ -59,13 +59,12 @@ public class DockerTestingAccountFactory
 
     public DockerTestingAccountFactory(GalaxyCockroachContainer cockroach)
     {
-        GenericContainer<?> portalServer = null;
         try {
             // The pem is always available on the local file system
             File pemFile = getCertFile("portal");
 
             log.info("Running Trino Testing Portal Server");
-            portalServer = closer.register(new GenericContainer<>(PORTAL_SERVER_IMAGE));
+            GenericContainer<?> portalServer = closer.register(new GenericContainer<>(PORTAL_SERVER_IMAGE));
             portalServer.setNetwork(cockroach.getNetwork());
             portalServer.addEnv(TEST_CERT_PORTAL, Files.readString(pemFile.toPath(), UTF_8));
             portalServer.addExposedPort(PORTAL_PORT);
@@ -103,10 +102,7 @@ public class DockerTestingAccountFactory
         }
         catch (Throwable t) {
             closeAllSuppress(t, closer);
-            if (portalServer != null) {
-                log.error(t, "Received error during test, container log follows:\n%s", portalServer.getLogs());
-            }
-            Throwables.throwIfUnchecked(t);
+            throwIfUnchecked(t);
             throw new RuntimeException(t);
         }
     }
