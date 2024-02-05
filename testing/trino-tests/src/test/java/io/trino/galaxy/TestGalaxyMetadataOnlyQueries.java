@@ -14,6 +14,7 @@
 package io.trino.galaxy;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Key;
 import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.Request;
@@ -23,8 +24,14 @@ import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient;
 import io.starburst.stargate.accesscontrol.client.testing.TestingAccountClient.GrantDetails;
 import io.starburst.stargate.accesscontrol.privilege.GrantKind;
 import io.starburst.stargate.accesscontrol.privilege.Privilege;
+import io.starburst.stargate.catalog.EncryptedSecret;
 import io.starburst.stargate.catalog.QueryCatalog;
+import io.starburst.stargate.crypto.SecretEncryptionContext;
+import io.starburst.stargate.crypto.SecretSealer;
+import io.starburst.stargate.crypto.SecretSealer.SealedSecret;
+import io.starburst.stargate.crypto.TestingMasterKeyCrypto;
 import io.starburst.stargate.id.CatalogId;
+import io.starburst.stargate.id.TrinoPlaneId;
 import io.starburst.stargate.id.Version;
 import io.starburst.stargate.metadata.StatementRequest;
 import io.trino.client.QueryResults;
@@ -37,6 +44,7 @@ import io.trino.plugin.objectstore.TestingLocationSecurityServer;
 import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.metadataonly.CachingCatalogFactory;
+import io.trino.server.metadataonly.MetadataOnlyConfig;
 import io.trino.server.metadataonly.MetadataOnlyTransactionManager;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.server.testing.TestingTrinoServer;
@@ -61,6 +69,7 @@ import org.junit.jupiter.api.parallel.Execution;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -69,12 +78,16 @@ import static io.airlift.http.client.JsonBodyGenerator.jsonBodyGenerator;
 import static io.airlift.http.client.JsonResponseHandler.createJsonResponseHandler;
 import static io.airlift.http.client.Request.Builder.preparePost;
 import static io.airlift.json.JsonCodec.jsonCodec;
+import static io.starburst.stargate.crypto.TestingMasterKeyCrypto.PORTAL_KEY;
+import static io.starburst.stargate.crypto.TestingMasterKeyCrypto.TRINO_KEY;
+import static io.starburst.stargate.crypto.TestingMasterKeyCrypto.createPortalCrypto;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
 import static io.trino.sql.query.QueryAssertions.QueryAssert.newQueryAssert;
 import static io.trino.testing.MaterializedResult.resultBuilder;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.util.Locale.ENGLISH;
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
@@ -101,6 +114,7 @@ public class TestGalaxyMetadataOnlyQueries
     private CatalogId tpchCatalogId;
     private CatalogId objectStoreCatalogId;
     private CachingCatalogFactory cachingCatalogFactory;
+    private TrinoPlaneId trinoPlaneId;
 
     public static class ConnectorShutdownServiceCheck
             implements TestInstancePreDestroyCallback
@@ -161,6 +175,7 @@ public class TestGalaxyMetadataOnlyQueries
                 .build();
 
         cachingCatalogFactory = queryRunner.getCoordinator().getInstance(Key.get(CachingCatalogFactory.class));
+        trinoPlaneId = queryRunner.getCoordinator().getInstance(Key.get(MetadataOnlyConfig.class)).getTrinoPlaneId();
 
         return queryRunner;
     }
@@ -285,9 +300,25 @@ public class TestGalaxyMetadataOnlyQueries
         DistributedQueryRunner distributedQueryRunner = getDistributedQueryRunner();
         URI baseUrl = distributedQueryRunner.getCoordinator().getBaseUrl();
 
-        List<QueryCatalog> catalogs = List.of(
-                new QueryCatalog(tpchCatalogId, new Version(1), "tpch", "tpch", true, Map.of(), Map.of(), Optional.empty(), Optional.empty()),
-                new QueryCatalog(objectStoreCatalogId, new Version(1), "objectstore", "galaxy_objectstore", false, objectStoreProperties, Map.of(), Optional.empty(), Optional.empty()));
+        // add a secret to test secrypt decryption
+
+        // permissions won't allow us to use injected crypto instances. So create test versions from scratch.
+        TestingMasterKeyCrypto portalCrypto = createPortalCrypto();
+        SecretSealer secretSealer = new SecretSealer(portalCrypto);
+        Map<String, String> portalEncryptionContext = SecretEncryptionContext.forPortal(testingAccountClient.getAccountId(), objectStoreCatalogId, "HIVE__galaxy.metastore.shared-secret");
+        Map<String, String> verifierEncryptionContext = SecretEncryptionContext.forVerifier(testingAccountClient.getAccountId(), trinoPlaneId, Optional.of("objectstore"), "HIVE__galaxy.metastore.shared-secret");
+
+        String hiveSecret = requireNonNull(objectStoreProperties.get("HIVE__galaxy.metastore.shared-secret"), "hiveSecret is null");
+        SealedSecret portalSealedSecret = secretSealer.sealSecret(hiveSecret, PORTAL_KEY, portalEncryptionContext);
+        SealedSecret reSealedSecret = secretSealer.resealSecret(portalSealedSecret, TRINO_KEY, portalEncryptionContext, verifierEncryptionContext);
+
+        EncryptedSecret encryptedSecret = new EncryptedSecret("HIVE__galaxy.metastore.shared-secret", reSealedSecret.toString(), "XXXX_SECRET_XXXX");
+        Map<String, String> encryptedObjectStoreProperties = new HashMap<>(objectStoreProperties);
+        encryptedObjectStoreProperties.put("HIVE__galaxy.metastore.shared-secret", "XXXX_SECRET_XXXX");
+
+        QueryCatalog tpch = new QueryCatalog(tpchCatalogId, new Version(1), "tpch", "tpch", true, Map.of(), Map.of(), Optional.empty(), Optional.empty());
+        QueryCatalog objectStore = new QueryCatalog(objectStoreCatalogId, new Version(1), "objectstore", "galaxy_objectstore", false, encryptedObjectStoreProperties, Map.of(), Optional.of(ImmutableSet.of(encryptedSecret)), Optional.empty());
+        List<QueryCatalog> catalogs = List.of(tpch, objectStore);
 
         TestingAccountClient testingAccountClient = getTestingAccountClient();
         StatementRequest statementRequest = new StatementRequest(testingAccountClient.getAccountId(), statement, catalogs, Map.of(

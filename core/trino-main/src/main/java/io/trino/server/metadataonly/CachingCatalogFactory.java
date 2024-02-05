@@ -59,7 +59,7 @@ public class CachingCatalogFactory
     private final Map<Key, Entry> cache;
     private final Map<CatalogConnector, Entry> wrappedConnectorIndex;
     private final boolean enabled;
-    private final Optional<AccountId> contextAccountId;
+    private final Optional<AccountContext> accountContext;
     private final ScheduledExecutorService executorService;
 
     private record Key(AccountId accountId, String catalogName, CatalogHandleType type, Map<String, String> properties)
@@ -104,13 +104,13 @@ public class CachingCatalogFactory
             long cacheDurationNanos,
             Map<Key, Entry> cache,
             Map<CatalogConnector, Entry> wrappedConnectorIndex,
-            Optional<AccountId> contextAccountId,
+            Optional<AccountContext> accountContext,
             ScheduledExecutorService executorService)
     {
         this.catalogFactory = requireNonNull(catalogFactory, "catalogFactory is null");
         this.cache = requireNonNull(cache, "cache is null");
         this.wrappedConnectorIndex = requireNonNull(wrappedConnectorIndex, "wrappedConnectorIndex is null");
-        this.contextAccountId = requireNonNull(contextAccountId, "contextAccountId is null");
+        this.accountContext = requireNonNull(accountContext, "accountContext is null");
         this.executorService = requireNonNull(executorService, "executorService is null");
         this.cacheDurationNanos = cacheDurationNanos;
 
@@ -154,7 +154,10 @@ public class CachingCatalogFactory
     @Override
     public CatalogConnector createCatalog(CatalogProperties catalogProperties)
     {
-        return getOrBuildCatalogConnector(catalogProperties.getCatalogHandle(), Optional.of(catalogProperties), keyFor(catalogProperties), () -> catalogFactory.createCatalog(catalogProperties));
+        return getOrBuildCatalogConnector(catalogProperties.getCatalogHandle(), Optional.of(catalogProperties), keyFor(catalogProperties), () -> {
+            Map<String, String> decryptedCatalogProperties = accountContext().decryptCatalogProperties(catalogProperties.getCatalogHandle().getCatalogName());
+            return catalogFactory.createCatalog(new CatalogProperties(catalogProperties.getCatalogHandle(), catalogProperties.getConnectorName(), decryptedCatalogProperties));
+        });
     }
 
     @Override
@@ -167,9 +170,9 @@ public class CachingCatalogFactory
         return getOrBuildCatalogConnector(catalogHandle, Optional.empty(), keyFor(catalogHandle, connectorName), () -> catalogFactory.createCatalog(catalogHandle, connectorName, connector));
     }
 
-    CachingCatalogFactory withContextAccountId(AccountId accountId)
+    CachingCatalogFactory withAccountContext(AccountContext accountContext)
     {
-        return new CachingCatalogFactory(catalogFactory, cacheDurationNanos, cache, wrappedConnectorIndex, Optional.of(accountId), executorService);
+        return new CachingCatalogFactory(catalogFactory, cacheDurationNanos, cache, wrappedConnectorIndex, Optional.of(accountContext), executorService);
     }
 
     void releaseCatalogConnector(CatalogConnector catalogConnector)
@@ -233,17 +236,17 @@ public class CachingCatalogFactory
 
     private Key keyFor(CatalogProperties catalogProperties)
     {
-        return new Key(accountId(), "CATALOG_" + catalogProperties.getCatalogHandle().getCatalogName(), catalogProperties.getCatalogHandle().getType(), ImmutableMap.copyOf(catalogProperties.getProperties()));
+        return new Key(accountContext().accountId(), "CATALOG_" + catalogProperties.getCatalogHandle().getCatalogName(), catalogProperties.getCatalogHandle().getType(), ImmutableMap.copyOf(catalogProperties.getProperties()));
     }
 
     private Key keyFor(CatalogHandle catalogHandle, ConnectorName connectorName)
     {
-        return new Key(accountId(), "SYSTEM_" + connectorName, catalogHandle.getType(), ImmutableMap.of());
+        return new Key(accountContext().accountId(), "SYSTEM_" + connectorName, catalogHandle.getType(), ImmutableMap.of());
     }
 
-    private AccountId accountId()
+    private AccountContext accountContext()
     {
-        return contextAccountId.orElseThrow(() -> new IllegalStateException("Context accountId is not set"));
+        return accountContext.orElseThrow(() -> new IllegalStateException("accountContext is not set"));
     }
 
     private void cleanCache(long maxElapsedNanos)

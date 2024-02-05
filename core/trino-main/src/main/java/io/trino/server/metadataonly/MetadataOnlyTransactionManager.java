@@ -76,6 +76,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableBiMap.toImmutableBiMap;
@@ -140,9 +141,10 @@ public class MetadataOnlyTransactionManager
             QueryId queryId,
             List<QueryCatalog> catalogs,
             Map<String, String> serviceProperties,
-            Span parentSpan)
+            Span parentSpan,
+            UnaryOperator<QueryCatalog> decryptProc)
     {
-        CachingCatalogFactory contextCatalogFactory = catalogFactory.withContextAccountId(accountId);
+        CachingCatalogFactory contextCatalogFactory = catalogFactory.withAccountContext(new AccountContext(accountId, catalogs, decryptProc));
         TransactionMetadata transactionMetadata = new TransactionMetadata(
                 identity,
                 queryId,

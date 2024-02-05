@@ -87,10 +87,10 @@ import java.util.OptionalDouble;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.UnaryOperator;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Strings.isNullOrEmpty;
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.airlift.concurrent.MoreFutures.whenAnyComplete;
 import static io.trino.SystemSessionProperties.getRetryPolicy;
 import static io.trino.execution.QueryState.FAILED;
@@ -199,17 +199,10 @@ public class MetadataOnlyStatementResource
         QueryId queryId = dispatchManager.createQueryId();
 
         SessionContext sessionContext = sessionContextFactory.createSessionContext(headers, remoteAddress, identity);
-        List<QueryCatalog> decryptedCatalogs;
-        Span decryptedCatalogsSpan = tracer.spanBuilder("metadata-decrypt-catalogs")
-                .setAttribute(TrinoAttributes.QUERY_ID, queryId.toString())
-                .startSpan();
-        try (var ignore = scopedSpan(decryptedCatalogsSpan)) {
-            decryptedCatalogs = request.catalogs().stream().map(queryCatalog -> decryptCatalog(secretSealer, request.accountId(), queryCatalog, decryptionContextProvider)).collect(toImmutableList());
-        }
 
         systemState.incrementActiveRequests();
         try {
-            return executeQuery(queryId, request.accountId(), transactionId, statement, sessionContext, decryptedCatalogs, request.serviceProperties());
+            return executeQuery(queryId, request.accountId(), transactionId, statement, sessionContext, request.catalogs(), request.serviceProperties());
         }
         finally {
             systemState.decrementAndGetActiveRequests();
@@ -234,12 +227,21 @@ public class MetadataOnlyStatementResource
                 .setAttribute(TrinoAttributes.QUERY_ID, queryId.toString())
                 .startSpan();
         try (SetThreadName ignored = new SetThreadName("Resource " + queryId)) {
+            UnaryOperator<QueryCatalog> decryptProc = queryCatalog -> {
+                Span decryptedCatalogsSpan = tracer.spanBuilder("metadata-decrypt-catalogs")
+                        .setAttribute(TrinoAttributes.QUERY_ID, queryId.toString())
+                        .startSpan();
+                try (var ignore = scopedSpan(decryptedCatalogsSpan)) {
+                    return decryptCatalog(secretSealer, accountId, queryCatalog, decryptionContextProvider);
+                }
+            };
+
             Span registerQueryCatalogsSpan = tracer.spanBuilder("metadata-register-query-catalogs")
                     .setParent(io.opentelemetry.context.Context.current().with(span))
                     .setAttribute(TrinoAttributes.QUERY_ID, queryId.toString())
                     .startSpan();
             try (var ignore = scopedSpan(registerQueryCatalogsSpan)) {
-                transactionManager.registerQueryCatalogs(accountId, sessionContext.getIdentity(), transactionId, queryId, catalogs, serviceProperties, span);
+                transactionManager.registerQueryCatalogs(accountId, sessionContext.getIdentity(), transactionId, queryId, catalogs, serviceProperties, span, decryptProc);
             }
             return executeQuery(statement, span, sessionContext.withTransactionId(transactionId), queryId);
         }
