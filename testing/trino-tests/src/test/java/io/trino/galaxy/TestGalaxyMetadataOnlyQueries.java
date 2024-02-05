@@ -36,6 +36,7 @@ import io.trino.plugin.objectstore.TableType;
 import io.trino.plugin.objectstore.TestingLocationSecurityServer;
 import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
+import io.trino.server.metadataonly.CachingCatalogFactory;
 import io.trino.server.metadataonly.MetadataOnlyTransactionManager;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.server.testing.TestingTrinoServer;
@@ -53,6 +54,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.TestInstancePreDestroyCallback;
 import org.junit.jupiter.api.parallel.Execution;
 
 import java.net.URI;
@@ -84,6 +88,7 @@ import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
  */
 @TestInstance(PER_CLASS)
 @Execution(SAME_THREAD) // Has verify() @AfterEach
+@ExtendWith(TestGalaxyMetadataOnlyQueries.ConnectorShutdownServiceCheck.class)
 public class TestGalaxyMetadataOnlyQueries
         extends AbstractTestQueryFramework
 {
@@ -95,6 +100,20 @@ public class TestGalaxyMetadataOnlyQueries
     private HttpClient httpClient;
     private CatalogId tpchCatalogId;
     private CatalogId objectStoreCatalogId;
+    private CachingCatalogFactory cachingCatalogFactory;
+
+    public static class ConnectorShutdownServiceCheck
+            implements TestInstancePreDestroyCallback
+    {
+        @Override
+        public void preDestroyTestInstance(ExtensionContext extensionContext)
+        {
+            extensionContext.getTestInstance().ifPresent(testInstance -> {
+                TestGalaxyMetadataOnlyQueries testGalaxyMetadataOnlyQueries = (TestGalaxyMetadataOnlyQueries) testInstance;
+                assertThat(testGalaxyMetadataOnlyQueries.cachingCatalogFactory.cacheSize()).isZero();
+            });
+        }
+    }
 
     @Override
     protected QueryRunner createQueryRunner()
@@ -124,7 +143,7 @@ public class TestGalaxyMetadataOnlyQueries
         tpchCatalogId = testingAccountClient.getOrCreateCatalog("tpch");
         objectStoreCatalogId = testingAccountClient.getOrCreateCatalog("objectstore");
 
-        return GalaxyQueryRunner.builder()
+        DistributedQueryRunner queryRunner = GalaxyQueryRunner.builder()
                 .setNodeCount(1)
                 .setAccountClient(testingAccountClient)
                 .setInstallSecurityModule(false) // MetadataOnlyCatalogManagerModule will install it
@@ -140,6 +159,10 @@ public class TestGalaxyMetadataOnlyQueries
                 .addPlugin(new IcebergPlugin())
                 .addPlugin(new ObjectStorePlugin())
                 .build();
+
+        cachingCatalogFactory = queryRunner.getCoordinator().getInstance(Key.get(CachingCatalogFactory.class));
+
+        return queryRunner;
     }
 
     @BeforeAll
