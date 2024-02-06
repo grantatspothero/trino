@@ -909,7 +909,7 @@ jobs:
             - { modules: plugin/starburst-sap-hana }
             - { modules: plugin/starburst-snowflake, profile: default, cloud: amazon-web-service }
             - { modules: plugin/starburst-sqlserver }
-            - { modules: plugin/starburst-stargate }
+            - { modules: plugin/starburst-stargate, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
             - { modules: plugin/starburst-synapse }
             - { modules: plugin/starburst-synapse, profile: fault-tolerant-tests }
             - { modules: plugin/starburst-synapse, profile: long-running-tests }
@@ -924,7 +924,7 @@ jobs:
             - { modules: plugin/trino-galaxy-snowflake, profile: jdbc-integration-tests }
             - { modules: plugin/trino-galaxy-snowflake, profile: parallel-integration-tests }
             - { modules: plugin/trino-galaxy-sqlserver, profile: jdbc-integration-tests }
-            - { modules: plugin/trino-galaxy-stargate }
+            - { modules: plugin/trino-galaxy-stargate, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
             - { modules: plugin/trino-galaxy-synapse, profile: jdbc-integration-tests }
             - { modules: plugin/trino-clickhouse }
             - { modules: plugin/trino-delta-lake }
