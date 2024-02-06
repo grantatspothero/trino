@@ -90,6 +90,7 @@ galaxy-query-monitor-event-listener
 galaxy-objectstore
 galaxy-oracle
 galaxy-salesforce
+galaxy-sap-hana
 galaxy-snowflake
 galaxy-sqlserver
 galaxy-stargate

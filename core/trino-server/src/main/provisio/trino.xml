@@ -148,6 +148,12 @@
         </artifact>
     </artifactSet>
 
+    <artifactSet to="plugin/galaxy-sap-hana">
+        <artifact id="${project.groupId}:starburst-sap-hana:zip:${project.version}">
+            <unpack />
+        </artifact>
+    </artifactSet>
+
     <artifactSet to="plugin/galaxy-snowflake">
         <artifact id="${project.groupId}:trino-galaxy-snowflake:zip:${project.version}">
             <unpack />
