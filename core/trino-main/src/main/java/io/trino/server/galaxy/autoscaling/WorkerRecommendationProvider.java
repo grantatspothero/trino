@@ -39,7 +39,6 @@ public class WorkerRecommendationProvider
     private static final Logger log = Logger.get(WorkerRecommendationProvider.class);
 
     private final InternalNodeManager nodeManager;
-    private final DispatchManager dispatchManager;
     private final boolean includeCoordinator;
     private final Duration refreshInterval;
 
@@ -59,7 +58,7 @@ public class WorkerRecommendationProvider
     {
         this.includeCoordinator = nodeSchedulerConfig.isIncludeCoordinator();
         this.nodeManager = requireNonNull(nodeManager, "nodeManager is null");
-        this.dispatchManager = requireNonNull(dispatchManager, "dispatchManager is null");
+        requireNonNull(dispatchManager, "dispatchManager is null");
         requireNonNull(config, "config is null");
         this.refreshInterval = Duration.succinctDuration(10, TimeUnit.SECONDS);
         this.statsCalculator = new QueryStatsCalculator(
