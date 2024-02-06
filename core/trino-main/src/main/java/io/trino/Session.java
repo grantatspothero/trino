@@ -640,7 +640,6 @@ public final class Session
                 .setUserAgent(getUserAgent().orElse(null))
                 .setClientInfo(getClientInfo().orElse(null))
                 .setStart(getStart())
-                .setSystemProperty("hide_inaccessible_columns", "true")
                 .build();
     }
 

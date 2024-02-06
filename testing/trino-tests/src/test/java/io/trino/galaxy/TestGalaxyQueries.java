@@ -216,8 +216,8 @@ public class TestGalaxyQueries
     @Test
     public void testRoleManagement()
     {
-        Session userA = newUserSession(getTestingAccountClient().getPublicRoleId(), false);
-        Session userB = newUserSession(getTestingAccountClient().getPublicRoleId(), false);
+        Session userA = newUserSession(getTestingAccountClient().getPublicRoleId());
+        Session userB = newUserSession(getTestingAccountClient().getPublicRoleId());
 
         verifyCurrentRoles(ImmutableSet.of(), ImmutableSet.of());
 
@@ -538,7 +538,7 @@ public class TestGalaxyQueries
 
         assertThat(query("select * from memory.my_schema.my_table"))
                 .matches(varcharColumnResult("a", "c", "d"));
-        assertQueryFails(publicSession(), "select * from memory.my_schema.my_table", "Access Denied.*");
+        assertQueryFails(publicSession(), "select * from memory.my_schema.my_table", "line 1:8: Relation not found or not allowed");
 
         // memory does not support delete, but we can check if the security checks passed using the exception message
         assertQueryFails("DELETE FROM memory.my_schema.my_table where my_column = 'a'", "This connector does not support modifying table rows");
@@ -571,7 +571,7 @@ public class TestGalaxyQueries
                 .matches(varcharColumnResult("a", "c", "d"));
 
         // GRANT SELECT
-        assertQueryFails(publicSession(), "select * from memory.my_schema.my_table", "Access Denied.*");
+        assertQueryFails(publicSession(), "select * from memory.my_schema.my_table", "line 1:8: Relation not found or not allowed");
         assertUpdate("GRANT SELECT ON TABLE memory.my_schema.my_table TO ROLE public");
         assertThat(query(publicSession(), "select * from memory.my_schema.my_table"))
                 .matches(varcharColumnResult("a", "c", "d"));
@@ -582,7 +582,7 @@ public class TestGalaxyQueries
 
         // REVOKE SELECT
         assertUpdate("REVOKE SELECT ON TABLE memory.my_schema.my_table FROM ROLE public");
-        assertQueryFails(publicSession(), "select * from memory.my_schema.my_table", "Access Denied.*");
+        assertQueryFails(publicSession(), "select * from memory.my_schema.my_table", "line 1:8: Relation not found or not allowed");
         verifyTableVisibility("accountadmin", getSession(), ImmutableSet.of(MY_SCHEMA_TABLE), ALL_TABLE_PRIVILEGES);
         verifyTableVisibility("public", publicSession(), ImmutableSet.of(MY_SCHEMA_TABLE),
                 ImmutableSet.of(new PrivilegeInfo(INSERT, false), new PrivilegeInfo(DELETE, false), new PrivilegeInfo(UPDATE, false)));
@@ -795,7 +795,7 @@ public class TestGalaxyQueries
         assertUpdate("CREATE ROLE my_role");
         RoleId myRoleId = getTrinoSecurityApi().listRoles(toDispatchSession(getSession()))
                 .get(new RoleName("my_role"));
-        Session newUserSession = newUserSession(myRoleId, false);
+        Session newUserSession = newUserSession(myRoleId);
 
         String randomValue = UUID.randomUUID().toString();
         getQueryRunner().execute(newUserSession, "SELECT '" + randomValue + "'");
@@ -815,7 +815,7 @@ public class TestGalaxyQueries
         assertThat(query(publicSession(), findQuerySql)).returnsEmptyResult();
 
         // create another user/role, they cannot see the query
-        Session anotherUserSession = newUserSession("public", false);
+        Session anotherUserSession = newUserSession("public");
         assertThat(query(anotherUserSession, findQuerySql)).returnsEmptyResult();
 
         // grant public special VIEW_ALL_QUERY_HISTORY account privilege, and both public role sessions can see the query
@@ -868,7 +868,7 @@ public class TestGalaxyQueries
         // Show that before a SELECT grant on the view, view_user can't select from the view
         assertThatThrownBy(() -> query(viewUserSession, "SELECT * FROM memory.definer_views.test_view"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageMatching("Access Denied: Cannot select from columns \\[col2, col1\\] in table or view memory.definer_views.test_view.*");
+                .hasMessageMatching("line 1:8: Relation not found or not allowed");
 
         // Grant SELECT on the view to the view_user
         assertUpdate("GRANT SELECT ON TABLE memory.definer_views.test_view TO ROLE view_user with GRANT OPTION");
@@ -932,10 +932,10 @@ public class TestGalaxyQueries
         // originally, the views cannot be created
         assertThatThrownBy(() -> query(innerViewOwnerSessionNoGrantOption, "CREATE VIEW memory.definer_views.inner_view_no_grant_option_definer AS SELECT * FROM memory.definer_views.base_table"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessage("Access Denied: Cannot select from columns [col2, col1] in table or view memory.definer_views.base_table: Relation not found or not allowed");
+                .hasMessage("line 1:79: Relation not found or not allowed");
         assertThatThrownBy(() -> query(innerViewOwnerSessionNoGrantOption, "CREATE VIEW memory.definer_views.inner_view_no_grant_option_invoker SECURITY INVOKER AS SELECT * FROM memory.definer_views.base_table"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessage("Access Denied: Cannot select from columns [col2, col1] in table or view memory.definer_views.base_table: Relation not found or not allowed");
+                .hasMessage("line 1:96: Relation not found or not allowed");
 
         // grant select without the grant option
         assertUpdate(baseTableOwnerSession, "GRANT SELECT ON TABLE memory.definer_views.base_table TO ROLE inner_view_owner_no_grant_option");
@@ -951,7 +951,7 @@ public class TestGalaxyQueries
         // however, without the grant option, another role won't be able to query the view
         assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessage("Access Denied: Cannot select from columns [col2, col1] in table or view memory.definer_views.inner_view_no_grant_option_definer: Relation not found or not allowed");
+                .hasMessage("line 1:8: Relation not found or not allowed");
         assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("line 1:15: Failed analyzing stored view 'memory.definer_views.inner_view_no_grant_option_invoker': line 1:8: Relation not found or not allowed");
@@ -983,10 +983,10 @@ public class TestGalaxyQueries
         // make sure this doesn't work for base_table_owner, as they don't have view privileges
         assertThatThrownBy(() -> query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessage("Access Denied: Cannot select from columns [col2, col1] in table or view memory.definer_views.inner_view_no_grant_option_definer: Relation not found or not allowed");
+                .hasMessage("line 1:8: Relation not found or not allowed");
         assertThatThrownBy(() -> query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessage("Access Denied: Cannot select from columns [col2, col1] in table or view memory.definer_views.inner_view_no_grant_option_invoker: Relation not found or not allowed");
+                .hasMessage("line 1:8: Relation not found or not allowed");
 
         // grant inner_view_owner_no_grant_option to base_table_owner role and querying the views should succeed
         assertUpdate("GRANT inner_view_owner_no_grant_option TO ROLE base_table_owner");
@@ -1011,7 +1011,7 @@ public class TestGalaxyQueries
         assertUpdate("REVOKE inner_view_owner_no_grant_option FROM ROLE base_table_owner");
         assertThatThrownBy(() -> query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessage("Access Denied: Cannot select from columns [col2, col1] in table or view memory.definer_views.inner_view_no_grant_option_definer: Relation not found or not allowed");
+                .hasMessage("line 1:8: Relation not found or not allowed");
         assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Access Denied: View owner does not have sufficient privileges: View owner 'inner_view_owner_no_grant_option' cannot create view that selects from memory.definer_views.base_table: Role inner_view_owner_no_grant_option does not have the privilege SELECT WITH GRANT OPTION on the columns [col2, col1]");
@@ -1044,9 +1044,9 @@ public class TestGalaxyQueries
                 .build();
 
         assertUpdate("CREATE SCHEMA memory.views_test");
-        Session baseTableOwnerSession = createUserAndGrantedRole("base_table_owner", true);
-        Session viewOwnerSession = createUserAndGrantedRole("view_owner", true);
-        Session viewViewerSession = createUserAndGrantedRole("view_viewer", true);
+        Session baseTableOwnerSession = createUserAndGrantedRole("base_table_owner");
+        Session viewOwnerSession = createUserAndGrantedRole("view_owner");
+        Session viewViewerSession = createUserAndGrantedRole("view_viewer");
         assertUpdate("GRANT CREATE ON schema views_test TO ROLE base_table_owner");
         assertUpdate("GRANT CREATE ON schema views_test TO ROLE view_owner");
 
@@ -1171,7 +1171,7 @@ public class TestGalaxyQueries
         // Verify that outer_view_owner cannot access base_table
         assertThatThrownBy(() -> query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.base_table"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageMatching("Access Denied.*");
+                .hasMessageMatching("line 1:8: Relation not found or not allowed");
 
         // Grant SELECT on outer_view to test_role and verify contents
         assertUpdate(outerViewOwnerSession, "GRANT SELECT ON TABLE memory.definer_views.outer_view TO ROLE test_role");
@@ -1181,7 +1181,7 @@ public class TestGalaxyQueries
         for (String tableName : ImmutableList.of("inner_view", "base_table")) {
             assertThatThrownBy(() -> query(testRoleSession, "SELECT * FROM memory.definer_views." + tableName))
                     .isInstanceOf(RuntimeException.class)
-                    .hasMessageMatching("Access Denied.*");
+                    .hasMessageMatching("line 1:8: Relation not found or not allowed");
         }
 
         // Revoke the SELECT grant to inner_view_owner on the base_table and verify that
@@ -1293,7 +1293,7 @@ public class TestGalaxyQueries
         // Show that directly accessing the subquery_table fails
         assertThatThrownBy(() -> query(tableReaderSession, "SELECT * FROM memory.row_filters.subquery_table"))
                 .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Access Denied: Cannot select from columns [match_column] in table or view memory.row_filters.subquery_table: Relation not found or not allowed");
+                .hasMessage("line 1:8: Relation not found or not allowed");
 
         // Show that we only get the filtered row when querying the base_table
         assertThat(query(tableReaderSession, "SELECT * FROM memory.row_filters.base_table")).matches(filteredTableContents);
@@ -1414,7 +1414,7 @@ public class TestGalaxyQueries
         // table_reader cannot query subquery_table
         assertThatThrownBy(() -> query(tableReader, "SELECT * FROM memory.column_masks.subquery_table"))
                 .isInstanceOf(QueryFailedException.class)
-                .hasMessage("Access Denied: Cannot select from columns [match_column] in table or view memory.column_masks.subquery_table: Relation not found or not allowed");
+                .hasMessage("line 1:8: Relation not found or not allowed");
 
         // The column mask depends on subquery_table
         columnMaskId = client.createColumnMask(
@@ -1676,25 +1676,20 @@ public class TestGalaxyQueries
 
     private Session createUserAndGrantedRole(String roleName)
     {
-        return createUserAndGrantedRole(roleName, false);
-    }
-
-    private Session createUserAndGrantedRole(String roleName, boolean hideInaccessibleColumns)
-    {
         assertUpdate("CREATE ROLE " + roleName);
-        Session session = newUserSession(roleName, hideInaccessibleColumns);
+        Session session = newUserSession(roleName);
         assertUpdate("GRANT %s TO USER \"%s\"".formatted(roleName, session.getUser()));
         return session;
     }
 
-    private Session newUserSession(String roleName, boolean hideInaccessibleColumns)
+    private Session newUserSession(String roleName)
     {
         RoleId roleId = getTrinoSecurityApi().listRoles(toDispatchSession(getSession())).get(new RoleName(roleName));
         verifyNotNull(roleId, "roleId for roleName %s is null", roleName);
-        return newUserSession(roleId, hideInaccessibleColumns);
+        return newUserSession(roleId);
     }
 
-    private Session newUserSession(RoleId roleId, boolean hideInaccessibleColumns)
+    private Session newUserSession(RoleId roleId)
     {
         TestingAccountClient accountClient = getTestingAccountClient();
         TestUser user = accountClient.createUser();
@@ -1708,10 +1703,6 @@ public class TestGalaxyQueries
                 PORTAL);
 
         SessionBuilder builder = Session.builder(getSession()).setIdentity(identity);
-
-        if (hideInaccessibleColumns) {
-            builder.setSystemProperty("hide_inaccessible_columns", "true");
-        }
 
         return builder.build();
     }

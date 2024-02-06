@@ -197,7 +197,7 @@ public final class GalaxyQueryRunner
                     .map(entry -> entry.getKey() + "->" + entry.getValue())
                     .collect(joining(","));
 
-            // TODO addExtraProperty("hide-inaccessible-columns", "true"); // Galaxy always sets this
+            addExtraProperty("hide-inaccessible-columns", "true");
             addExtraProperty("http-server.authentication.type", httpAuthenticationType);
             addExtraProperty("galaxy.authentication.token-issuer", deploymentUri.toString());
             addExtraProperty("galaxy.authentication.public-key", accountClient.getSampleDeploymentPublicKey());

@@ -616,7 +616,9 @@ public class AccessControlManager
             }
         }
 
-        // Don't do visibility checks for views. See discussion here: https://github.com/starburstdata/stargate/pull/15113
+        // Don't do visibility checks for views, because we can't edit dispatch tokens to have the view owner's
+        // information, which means that any query to the table visibility API will be using the querying session's context.
+        // See https://github.com/starburstdata/stargate/issues/15283
         if (isViewOwnerIdentity(securityContext.getIdentity())) {
             return tableNames;
         }
