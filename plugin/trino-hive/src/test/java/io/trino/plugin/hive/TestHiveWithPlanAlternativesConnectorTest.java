@@ -153,13 +153,6 @@ public class TestHiveWithPlanAlternativesConnectorTest
 
     @Test
     @Override
-    public void testWritersAcrossMultipleWorkersWhenScaleWritersIsEnabled()
-    {
-        // Not applicable with plan alternatives
-    }
-
-    @Test
-    @Override
     public void testWriterTaskCountLimitUnpartitioned()
     {
         // Not applicable with plan alternatives
