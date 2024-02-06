@@ -21,12 +21,12 @@ import io.opentelemetry.api.trace.Tracer;
 import io.trino.filesystem.manager.FileSystemModule;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.LocalRegionConfig;
-import io.trino.plugin.deltalake.InternalDeltaLakeConnectorFactory;
-import io.trino.plugin.hive.InternalHiveConnectorFactory;
+import io.trino.plugin.deltalake.DeltaLakeConnectorFactory;
+import io.trino.plugin.hive.HiveConnectorFactory;
 import io.trino.plugin.hive.metastore.HiveMetastore;
-import io.trino.plugin.hudi.InternalHudiConnectorFactory;
+import io.trino.plugin.hudi.HudiConnectorFactory;
 import io.trino.plugin.iceberg.GalaxyIcebergConfig;
-import io.trino.plugin.iceberg.InternalIcebergConnectorFactory;
+import io.trino.plugin.iceberg.IcebergConnectorFactory;
 import io.trino.plugin.objectstore.hive.schemadiscovery.HiveSchemaDiscoveryModule;
 import io.trino.plugin.objectstore.scheduler.GalaxyWorkSchedulerModule;
 import io.trino.spi.classloader.ThreadContextClassLoader;
@@ -67,7 +67,7 @@ public final class InternalObjectStoreConnectorFactory
         try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
             verifyConfigPrefix(config);
 
-            Connector hiveConnector = InternalHiveConnectorFactory.createConnector(
+            Connector hiveConnector = HiveConnectorFactory.createConnector(
                     catalogName,
                     filteredConfig(config, "HIVE"),
                     context,
@@ -88,7 +88,7 @@ public final class InternalObjectStoreConnectorFactory
             // The procedure is disabled in OSS because of security issues.
             // In Galaxy, they are addressed by location-based security and the procedure can be enabled by default.
             icebergConfig.putIfAbsent("iceberg.register-table-procedure.enabled", "true");
-            Connector icebergConnector = InternalIcebergConnectorFactory.createConnector(
+            Connector icebergConnector = IcebergConnectorFactory.createConnector(
                     catalogName,
                     icebergConfig,
                     context,
@@ -103,7 +103,7 @@ public final class InternalObjectStoreConnectorFactory
             // The procedure is disabled in OSS because of security issues.
             // In Galaxy, they are addressed by location-based security and the procedure can be enabled by default.
             deltaConfig.putIfAbsent("delta.register-table-procedure.enabled", "true");
-            Connector deltaConnector = InternalDeltaLakeConnectorFactory.createConnector(
+            Connector deltaConnector = DeltaLakeConnectorFactory.createConnector(
                     catalogName,
                     deltaConfig,
                     context,
@@ -114,7 +114,7 @@ public final class InternalObjectStoreConnectorFactory
                             new GalaxyLocationSecurityModule(),
                             deltaModule));
 
-            Connector hudiConnector = InternalHudiConnectorFactory.createConnector(
+            Connector hudiConnector = HudiConnectorFactory.createConnector(
                     catalogName,
                     filteredConfig(config, "HUDI"),
                     hiveMetastore,

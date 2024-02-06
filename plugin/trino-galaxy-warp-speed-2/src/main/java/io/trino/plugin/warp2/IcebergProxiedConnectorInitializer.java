@@ -15,7 +15,7 @@ package io.trino.plugin.warp2;
 
 import com.google.inject.Module;
 import io.trino.plugin.base.jmx.ConnectorObjectNameGeneratorModule;
-import io.trino.plugin.iceberg.InternalIcebergConnectorFactory;
+import io.trino.plugin.iceberg.IcebergConnectorFactory;
 import io.trino.plugin.varada.dispatcher.DispatcherProxiedConnectorTransformer;
 import io.trino.plugin.varada.dispatcher.ProxiedConnectorInitializer;
 import io.trino.plugin.warp.proxiedconnector.iceberg.IcebergProxiedConnectorTransformer;
@@ -47,7 +47,7 @@ public class IcebergProxiedConnectorInitializer
         try {
             Map<String, String> icebergConfig = getIcebergFilteredConfig(config);
             Module moduleInstance = binder -> {};
-            return InternalIcebergConnectorFactory.createConnector("internal-iceberg",
+            return IcebergConnectorFactory.createConnector("internal-iceberg",
                     icebergConfig,
                     context,
                     moduleInstance,
