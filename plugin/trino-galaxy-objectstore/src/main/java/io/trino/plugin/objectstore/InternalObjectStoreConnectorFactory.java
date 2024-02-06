@@ -77,7 +77,6 @@ public final class InternalObjectStoreConnectorFactory
                             new ConfigureCachingMetastoreModule(),
                             new GalaxyLocationSecurityModule()),
                     hiveMetastore,
-                    Optional.empty(),
                     Optional.empty());
 
             Module workSchedulerModule = conditionalModule(
