@@ -697,28 +697,30 @@ public class TestObjectStoreHiveConnectorTest
                         "('p_varchar', 8.0, 1.0, 0.0, null, null, null), " +
                         "('p_bigint', null, 1.0, 0.0, null, '8', '8'), " +
                         "(null, null, null, null, 4.0, null, null)");
+        // expect empty basic stats for empty partition due to clearRowCountWhenAllPartitionsHaveNoRows()
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'e1' AND p_bigint = 9)", tableName),
                 "SELECT * FROM VALUES " +
-                        "('c_boolean', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_bigint', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_double', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_timestamp', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_varchar', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_varbinary', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('p_varchar', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('p_bigint', 0.0, 0.0, 1.0, null, null, null), " +
-                        "(null, null, null, null, 0.0, null, null)");
+                        "('c_boolean', null, null, null, null, null, null), " +
+                        "('c_bigint', null, null, null, null, null, null), " +
+                        "('c_double', null, null, null, null, null, null), " +
+                        "('c_timestamp', null, null, null, null, null, null), " +
+                        "('c_varchar', null, null, null, null, null, null), " +
+                        "('c_varbinary', null, null, null, null, null, null), " +
+                        "('p_varchar', null, 1.0, 0.0, null, null, null), " +
+                        "('p_bigint', null, 1.0, 0.0, null, 9, 9), " +
+                        "(null, null, null, null, null, null, null)");
+        // expect empty basic stats for empty partition due to clearRowCountWhenAllPartitionsHaveNoRows()
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'e2' AND p_bigint = 9)", tableName),
                 "SELECT * FROM VALUES " +
-                        "('c_boolean', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_bigint', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_double', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_timestamp', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_varchar', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_varbinary', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('p_varchar', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('p_bigint', 0.0, 0.0, 1.0, null, null, null), " +
-                        "(null, null, null, null, 0.0, null, null)");
+                        "('c_boolean', null, null, null, null, null, null), " +
+                        "('c_bigint', null, null, null, null, null, null), " +
+                        "('c_double', null, null, null, null, null, null), " +
+                        "('c_timestamp', null, null, null, null, null, null), " +
+                        "('c_varchar', null, null, null, null, null, null), " +
+                        "('c_varbinary', null, null, null, null, null, null), " +
+                        "('p_varchar', null, 1.0, 0.0, null, null, null), " +
+                        "('p_bigint', null, 1.0, 0.0, null, 9, 9), " +
+                        "(null, null, null, null, null, null, null)");
 
         // Run analyze on the whole table
         assertUpdate("ANALYZE " + tableName, 16);
@@ -768,28 +770,30 @@ public class TestObjectStoreHiveConnectorTest
                         "('p_varchar', 8.0, 1.0, 0.0, null, null, null), " +
                         "('p_bigint', null, 1.0, 0.0, null, '8', '8'), " +
                         "(null, null, null, null, 4.0, null, null)");
+        // expect empty basic stats for empty partition due to clearRowCountWhenAllPartitionsHaveNoRows()
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'e1' AND p_bigint = 9)", tableName),
                 "SELECT * FROM VALUES " +
-                        "('c_boolean', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_bigint', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_double', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_timestamp', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_varchar', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_varbinary', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('p_varchar', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('p_bigint', 0.0, 0.0, 1.0, null, null, null), " +
-                        "(null, null, null, null, 0.0, null, null)");
+                        "('c_boolean', null, null, null, null, null, null), " +
+                        "('c_bigint', null, null, null, null, null, null), " +
+                        "('c_double', null, null, null, null, null, null), " +
+                        "('c_timestamp', null, null, null, null, null, null), " +
+                        "('c_varchar', null, null, null, null, null, null), " +
+                        "('c_varbinary', null, null, null, null, null, null), " +
+                        "('p_varchar', null, 1.0, 0.0, null, null, null), " +
+                        "('p_bigint', null, 1.0, 0.0, null, 9, 9), " +
+                        "(null, null, null, null, null, null, null)");
+        // expect empty basic stats for empty partition due to clearRowCountWhenAllPartitionsHaveNoRows()
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'e2' AND p_bigint = 9)", tableName),
                 "SELECT * FROM VALUES " +
-                        "('c_boolean', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_bigint', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_double', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_timestamp', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_varchar', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('c_varbinary', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('p_varchar', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('p_bigint', 0.0, 0.0, 1.0, null, null, null), " +
-                        "(null, null, null, null, 0.0, null, null)");
+                        "('c_boolean', null, null, null, null, null, null), " +
+                        "('c_bigint', null, null, null, null, null, null), " +
+                        "('c_double', null, null, null, null, null, null), " +
+                        "('c_timestamp', null, null, null, null, null, null), " +
+                        "('c_varchar', null, null, null, null, null, null), " +
+                        "('c_varbinary', null, null, null, null, null, null), " +
+                        "('p_varchar', null, 1.0, 0.0, null, null, null), " +
+                        "('p_bigint', null, 1.0, 0.0, null, 9, 9), " +
+                        "(null, null, null, null, null, null, null)");
 
         // Drop the partitioned test table
         assertUpdate("DROP TABLE " + tableName);
