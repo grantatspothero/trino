@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Optional;
 
 import static io.airlift.configuration.testing.ConfigAssertions.assertFullMapping;
 import static io.airlift.configuration.testing.ConfigAssertions.assertRecordedDefaults;
@@ -56,10 +57,10 @@ public class TestGalaxySystemAccessControlConfig
                 .setBackgroundProcessingThreads(3)
                 .setExpectedQueryParallelism(200)
                 .setReadOnlyCatalogs(ImmutableSet.of("sillycatalog", "funnycatalog"))
-                .setSharedCatalogSchemaNames(ImmutableMap.of(
+                .setSharedCatalogSchemaNames(Optional.of(ImmutableMap.of(
                         "my_catalog", new SharedSchemaNameAndAccepted("foo", true),
                         "his_catalog", new SharedSchemaNameAndAccepted("broken", false),
-                        "her_catalog", new SharedSchemaNameAndAccepted(null, false)));
+                        "her_catalog", new SharedSchemaNameAndAccepted(null, false))));
 
         assertFullMapping(properties, expected);
     }

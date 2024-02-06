@@ -23,10 +23,12 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Config for {@link GalaxyAccessControl} subsystem.
@@ -45,7 +47,7 @@ public class GalaxySystemAccessControlConfig
     // Currently, we allow at most 60 concurrent queries (20 queries and 40 "data definition"), this value is with some margin.
     private int expectedQueryParallelism = 100;
     private Set<String> readOnlyCatalogs = ImmutableSet.of();
-    private Map<String, SharedSchemaNameAndAccepted> sharedCatalogSchemaNames = ImmutableMap.of();
+    private Optional<Map<String, SharedSchemaNameAndAccepted>> sharedCatalogSchemaNames = Optional.empty();
 
     @NotNull
     public FilterColumnsAcceleration getFilterColumnsAcceleration()
@@ -95,7 +97,7 @@ public class GalaxySystemAccessControlConfig
 
     public GalaxySystemAccessControlConfig setReadOnlyCatalogs(Set<String> readOnlyCatalogs)
     {
-        this.readOnlyCatalogs = ImmutableSet.copyOf(readOnlyCatalogs);
+        this.readOnlyCatalogs = ImmutableSet.copyOf(requireNonNull(readOnlyCatalogs));
         return this;
     }
 
@@ -108,24 +110,29 @@ public class GalaxySystemAccessControlConfig
     }
 
     @NotNull
-    public Map<String, SharedSchemaNameAndAccepted> getSharedCatalogSchemaNames()
+    public Optional<Map<String, SharedSchemaNameAndAccepted>> getSharedCatalogSchemaNames()
     {
         return sharedCatalogSchemaNames;
     }
 
-    public GalaxySystemAccessControlConfig setSharedCatalogSchemaNames(Map<String, SharedSchemaNameAndAccepted> sharedCatalogSchemaNames)
+    public GalaxySystemAccessControlConfig setSharedCatalogSchemaNames(Optional<Map<String, SharedSchemaNameAndAccepted>> sharedCatalogSchemaNames)
     {
-        this.sharedCatalogSchemaNames = ImmutableMap.copyOf(sharedCatalogSchemaNames);
+        this.sharedCatalogSchemaNames = requireNonNull(sharedCatalogSchemaNames, "sharedCatalogSchemaNames is null");
         return this;
     }
 
     @Config("galaxy.shared-catalog-schemas")
     public GalaxySystemAccessControlConfig setSharedCatalogSchemaNames(String sharedCatalogSchemaNames)
     {
-        Map<String, String> splitStrings = ImmutableMap.copyOf(Splitter.on(",").trimResults().omitEmptyStrings().withKeyValueSeparator("->").split(sharedCatalogSchemaNames));
-        ImmutableMap.Builder<String, SharedSchemaNameAndAccepted> builder = ImmutableMap.builder();
-        splitStrings.forEach((catalogName, value) -> builder.put(catalogName, decodeSharedSchemaString(value)));
-        this.sharedCatalogSchemaNames = builder.buildOrThrow();
+        if (sharedCatalogSchemaNames.isBlank()) {
+            this.sharedCatalogSchemaNames = Optional.empty();
+        }
+        else {
+            Map<String, String> splitStrings = ImmutableMap.copyOf(Splitter.on(",").trimResults().omitEmptyStrings().withKeyValueSeparator("->").split(sharedCatalogSchemaNames));
+            ImmutableMap.Builder<String, SharedSchemaNameAndAccepted> builder = ImmutableMap.builder();
+            splitStrings.forEach((catalogName, value) -> builder.put(catalogName, decodeSharedSchemaString(value)));
+            this.sharedCatalogSchemaNames = Optional.of(builder.buildOrThrow());
+        }
         return this;
     }
 

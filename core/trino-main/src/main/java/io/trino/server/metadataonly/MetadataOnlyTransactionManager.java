@@ -456,8 +456,8 @@ public class MetadataOnlyTransactionManager
             GalaxyAccessControlConfig galaxyAccessControlConfig = new GalaxyAccessControlConfig()
                     .setCatalogNames(requiredServiceProperty(serviceProperties, "galaxy.catalog-names"));
             GalaxySystemAccessControlConfig systemConfig = new GalaxySystemAccessControlConfig()
-                    .setReadOnlyCatalogs(requiredServiceProperty(serviceProperties, "galaxy.read-only-catalogs"))
-                    .setSharedCatalogSchemaNames(requiredServiceProperty(serviceProperties, "galaxy.shared-catalog-schemas"));
+                    .setReadOnlyCatalogs(serviceProperties.getOrDefault("galaxy.read-only-catalogs", ""))
+                    .setSharedCatalogSchemaNames(serviceProperties.getOrDefault("galaxy.shared-catalog-schemas", ""));
             StaticCatalogResolver catalogResolver = new StaticCatalogResolver(galaxyAccessControlConfig, systemConfig);
 
             galaxyMetadataAccessControl.addController(transactionId, new GalaxySystemAccessController(securityClient, catalogResolver, permissionsCache, Optional.of(transactionId)));
