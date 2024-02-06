@@ -14,12 +14,14 @@
 package io.trino.server.galaxy.autoscaling;
 
 import com.google.inject.Binder;
+import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 
 import static io.airlift.configuration.ConditionalModule.conditionalModule;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.trino.server.galaxy.autoscaling.GalaxyTrinoAutoscalingConfig.AutoscalingMethod.TIME_OPTIMAL;
 import static io.trino.server.galaxy.autoscaling.GalaxyTrinoAutoscalingConfig.AutoscalingMethod.TIME_RATIO;
+import static org.weakref.jmx.guice.ExportBinder.newExporter;
 
 public class GalaxyTrinoAutoscalingModule
         extends AbstractConfigurationAwareModule
@@ -28,6 +30,8 @@ public class GalaxyTrinoAutoscalingModule
     protected void setup(Binder binder)
     {
         configBinder(binder).bindConfig(GalaxyTrinoAutoscalingConfig.class);
+        binder.bind(TrinoAutoscalingStats.class).in(Scopes.SINGLETON);
+        newExporter(binder).export(TrinoAutoscalingStats.class).withGeneratedName();
 
         install(conditionalModule(
                 GalaxyTrinoAutoscalingConfig.class,

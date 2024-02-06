@@ -48,13 +48,16 @@ public class WorkerRecommendationProvider
     private final QueryStatsCalculator statsCalculator;
     private final WorkerCountEstimator workerCountEstimator;
 
+    private final TrinoAutoscalingStats trinoAutoscalerStats;
+
     @Inject
     public WorkerRecommendationProvider(
             NodeSchedulerConfig nodeSchedulerConfig,
             GalaxyTrinoAutoscalingConfig config,
             InternalNodeManager nodeManager,
             DispatchManager dispatchManager,
-            WorkerCountEstimator workerCountEstimator)
+            WorkerCountEstimator workerCountEstimator,
+            TrinoAutoscalingStats trinoAutoscalerStats)
     {
         this.includeCoordinator = nodeSchedulerConfig.isIncludeCoordinator();
         this.nodeManager = requireNonNull(nodeManager, "nodeManager is null");
@@ -67,6 +70,7 @@ public class WorkerRecommendationProvider
                 dispatchManager::getQueries,
                 this::getActiveNodes);
         this.workerCountEstimator = requireNonNull(workerCountEstimator, "workerCountEstimator is null");
+        this.trinoAutoscalerStats = requireNonNull(trinoAutoscalerStats, "trinoAutoscalerStats is null");
     }
 
     @PostConstruct
@@ -77,8 +81,10 @@ public class WorkerRecommendationProvider
                     () -> {
                         try {
                             statsCalculator.calculateQueryStats();
+                            trinoAutoscalerStats.getSuccessfulRuns().update(1);
                         }
                         catch (Throwable t) {
+                            trinoAutoscalerStats.getFailedRuns().update(1);
                             log.error(t, "Error calculating running query metrics");
                         }
                     },
@@ -115,6 +121,11 @@ public class WorkerRecommendationProvider
                 averageWorkerParallelism,
                 activeNodes);
 
+        trinoAutoscalerStats.updateEstimatorMetrics(
+                cpuTimeToProcessQueriesMillis,
+                averageWorkerParallelism,
+                activeNodes,
+                recommendedNodes);
         log.info("TrinoWorkers recommendation: %s; Inputs: (timeToProcess: %s, averageWorkerParallelism: %s, activeNodes: %s); Stats age: %s",
                 recommendedNodes, cpuTimeToProcessQueriesMillis, averageWorkerParallelism, activeNodes, statsCalculator.getAge());
 
