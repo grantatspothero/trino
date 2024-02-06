@@ -25,6 +25,12 @@ public class SapHanaPlugin
 
     private final LicenseManager licenseManager;
 
+    @SuppressWarnings("unused") // public no-arg constructor is required for build-pt
+    public SapHanaPlugin()
+    {
+        this(() -> true);
+    }
+
     public SapHanaPlugin(LicenseManager licenseManager)
     {
         this.licenseManager = requireNonNull(licenseManager, "licenseManager is null");
