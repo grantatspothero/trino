@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import static com.google.common.collect.Iterables.getOnlyElement;
 
-public class TestStarburstSqlServerPlugin
+public class TestGalaxySqlServerPlugin
 {
     @Test
     public void testCreateConnector()
