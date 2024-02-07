@@ -201,30 +201,4 @@
             </testResource>
         </testResources>
     </build>
-
-    <profiles>
-        <profile>
-            <id>jdbc-integration-tests</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <!-- 6 was seen to improve TestSynapseConnectorTest compared to 4 threads -->
-                            <threadCount>6</threadCount>
-                            <includes>
-                                <include>**/TestSynapseInstanceCleaner.java</include>
-                                <include>**/TestSynapseConnectorTest.java</include>
-                            </includes>
-                            <dependenciesToScan>
-                                <dependency>io.trino:starburst-synapse:test-jar</dependency>
-                            </dependenciesToScan>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
-
 </project>

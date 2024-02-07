@@ -777,7 +777,6 @@ jobs:
             !:trino-galaxy-snowflake,
             !:trino-galaxy-sqlserver,
             !:trino-galaxy-stargate,
-            !:trino-galaxy-synapse,
             !:trino-google-sheets,
             !:trino-hdfs,
             !:trino-hive,
@@ -922,7 +921,6 @@ jobs:
             - { modules: plugin/trino-galaxy-snowflake }
             - { modules: plugin/trino-galaxy-sqlserver }
             - { modules: plugin/trino-galaxy-stargate, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
-            - { modules: plugin/trino-galaxy-synapse, profile: jdbc-integration-tests }
             - { modules: plugin/trino-clickhouse }
             - { modules: plugin/trino-delta-lake }
             - { modules: plugin/trino-delta-lake, profile: cloud-tests }
@@ -1046,7 +1044,6 @@ jobs:
           matrix.modules != 'plugin/trino-singlestore'
           && matrix.modules != 'plugin/trino-galaxy-oracle'
           && matrix.modules != 'plugin/trino-galaxy-salesforce'
-          && matrix.modules != 'plugin/trino-galaxy-synapse'
           && matrix.modules != 'plugin/trino-galaxy-snowflake'
           && matrix.modules != 'plugin/trino-mongodb'
           && matrix.modules != 'plugin/starburst-snowflake'
@@ -1252,16 +1249,6 @@ jobs:
           fi
           export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
           $MAVEN test ${MAVEN_TEST} -pl ${{ matrix.modules }} ${{ matrix.profile != '' && format('-P {0}', matrix.profile) || '' }} ${SNOWFLAKE_CONFIG}
-      - name: Synapse Maven Tests
-        if: matrix.modules == 'plugin/trino-galaxy-synapse'
-        env:
-          SYNAPSE_CONFIG: >-
-            -Dtest.synapse.jdbc.endpoint=${{ secrets.SYNAPSE_ENDPOINT }}
-            -Dtest.synapse.jdbc.user=${{ secrets.SYNAPSE_USER }}
-            -Dtest.synapse.jdbc.password=${{ secrets.SYNAPSE_PASSWORD }}
-        run: |
-          export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
-          $MAVEN test ${MAVEN_TEST} -pl ${{ matrix.modules }} ${{ matrix.profile != '' && format('-P {0}', matrix.profile) || '' }} ${SYNAPSE_CONFIG}
       - name: Mongodb Maven Tests
         if: matrix.modules == 'plugin/trino-mongodb'
         env:
