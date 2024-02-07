@@ -65,7 +65,8 @@ public class TestIcebergConfig
                 .setMaterializedViewsStorageSchema(null)
                 .setRegisterTableProcedureEnabled(false)
                 .setSortedWritingEnabled(true)
-                .setQueryPartitionFilterRequired(false));
+                .setQueryPartitionFilterRequired(false)
+                .setSplitManagerThreads(Runtime.getRuntime().availableProcessors() * 2));
     }
 
     @Test
@@ -96,6 +97,7 @@ public class TestIcebergConfig
                 .put("iceberg.register-table-procedure.enabled", "true")
                 .put("iceberg.sorted-writing-enabled", "false")
                 .put("iceberg.query-partition-filter-required", "true")
+                .put("iceberg.split-manager-threads", "42")
                 .buildOrThrow();
 
         IcebergConfig expected = new IcebergConfig()
@@ -122,7 +124,8 @@ public class TestIcebergConfig
                 .setMaterializedViewsStorageSchema("mv_storage_schema")
                 .setRegisterTableProcedureEnabled(true)
                 .setSortedWritingEnabled(false)
-                .setQueryPartitionFilterRequired(true);
+                .setQueryPartitionFilterRequired(true)
+                .setSplitManagerThreads(42);
 
         assertFullMapping(properties, expected);
     }
