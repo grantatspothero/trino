@@ -192,7 +192,7 @@ public class GalaxyHiveMetastore
             // TODO[https://github.com/starburstdata/galaxy-trino/issues/1856] filter columns on server side
             return transformValues(
                     filterKeys(metastore.getTableStatistics(databaseName, tableName).columnStatistics(), columnNames::contains),
-                    GalaxyMetastoreUtils::fromGalaxyColumnStatistics);
+                    stats -> GalaxyMetastoreUtils.fromGalaxyColumnStatistics(stats, rowCount));
         }
         catch (EntityNotFoundException e) {
             throw new TableNotFoundException(SchemaTableName.schemaTableName(databaseName, tableName));
@@ -226,11 +226,14 @@ public class GalaxyHiveMetastore
             Map<PartitionName, Statistics> galaxyPartitionStatistics = metastore.getPartitionStatistics(databaseName, tableName, galaxyPartitionNames);
 
             ImmutableMap.Builder<String, Map<String, HiveColumnStatistics>> result = ImmutableMap.builder();
-            galaxyPartitionStatistics.forEach((name, stats) -> {
+            for (Entry<PartitionName, Statistics> entry : galaxyPartitionStatistics.entrySet()) {
+                PartitionName name = entry.getKey();
+                Statistics stats = entry.getValue();
+                OptionalLong rowCount = stats.basicStatistics().rowCount();
                 result.put(
                         galaxyPartitionNameToSourcePartitionName.get(name),
-                        transformValues(filterKeys(stats.columnStatistics(), columnNames::contains), GalaxyMetastoreUtils::fromGalaxyColumnStatistics));
-            });
+                        transformValues(filterKeys(stats.columnStatistics(), columnNames::contains), columnStatistics -> GalaxyMetastoreUtils.fromGalaxyColumnStatistics(columnStatistics, rowCount)));
+            }
             return result.buildOrThrow();
         }
         catch (EntityNotFoundException e) {
