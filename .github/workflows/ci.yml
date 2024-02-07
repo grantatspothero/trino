@@ -919,7 +919,6 @@ jobs:
             - { modules: plugin/trino-bigquery, profile: cloud-tests-arrow-and-fte }
             - { modules: plugin/trino-cassandra }
             - { modules: plugin/trino-galaxy-dynamodb }
-            - { modules: plugin/trino-galaxy-dynamodb, profile: jdbc-integration-tests }
             - { modules: plugin/trino-galaxy-snowflake }
             - { modules: plugin/trino-galaxy-snowflake, profile: jdbc-integration-tests }
             - { modules: plugin/trino-galaxy-snowflake, profile: parallel-integration-tests }
