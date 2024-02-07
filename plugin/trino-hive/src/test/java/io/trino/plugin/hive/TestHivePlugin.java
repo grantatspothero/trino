@@ -114,7 +114,8 @@ public class TestHivePlugin
                         "galaxy.metastore.shared-secret", "1234567890123456789012345678901234567890123456789012345678901234",
                         "galaxy.metastore.server-uri", "https://example.com",
                         "galaxy.metastore.default-data-dir", "/tmp"),
-                new TestingConnectorContext());
+                new TestingConnectorContext())
+                .shutdown();
 
         assertThatThrownBy(() -> factory.create(
                 "test",
