@@ -287,6 +287,15 @@ final class GalaxyMetastoreUtils
 
     public static HiveColumnStatistics fromGalaxyColumnStatistics(ColumnStatistics columnStatistics)
     {
+        OptionalLong nullsCount = columnStatistics.nullsCount();
+        OptionalLong distinctValues = columnStatistics.distinctValuesCount();
+        OptionalLong distinctValuesWithNullsCount;
+        if (distinctValues.isEmpty()) {
+            distinctValuesWithNullsCount = OptionalLong.empty();
+        }
+        else {
+            distinctValuesWithNullsCount = OptionalLong.of(distinctValues.getAsLong() + (nullsCount.orElse(0) > 0 ? 1 : 0));
+        }
         return new HiveColumnStatistics(
                 columnStatistics.integerStatistics().map(GalaxyMetastoreUtils::fromGalaxyIntegerStatistics),
                 columnStatistics.doubleStatistics().map(GalaxyMetastoreUtils::fromGalaxyDoubleStatistics),
@@ -295,12 +304,21 @@ final class GalaxyMetastoreUtils
                 columnStatistics.booleanStatistics().map(GalaxyMetastoreUtils::fromGalaxyBooleanStatistics),
                 columnStatistics.maxValueSizeInBytes(),
                 columnStatistics.totalSizeInBytes(),
-                columnStatistics.nullsCount(),
-                columnStatistics.distinctValuesCount());
+                nullsCount,
+                distinctValuesWithNullsCount);
     }
 
     public static ColumnStatistics toGalaxyColumnStatistics(HiveColumnStatistics columnStatistics)
     {
+        OptionalLong nullsCount = columnStatistics.getNullsCount();
+        OptionalLong distinctValuesWithNullCount = columnStatistics.getDistinctValuesWithNullCount();
+        OptionalLong distinctValuesCount;
+        if (distinctValuesWithNullCount.isEmpty()) {
+            distinctValuesCount = OptionalLong.empty();
+        }
+        else {
+            distinctValuesCount = OptionalLong.of(distinctValuesWithNullCount.getAsLong() - (nullsCount.orElse(0) > 0 ? 1 : 0));
+        }
         return new ColumnStatistics(
                 columnStatistics.getIntegerStatistics().map(GalaxyMetastoreUtils::toGalaxyIntegerStatistics),
                 columnStatistics.getDoubleStatistics().map(GalaxyMetastoreUtils::toGalaxyDoubleStatistics),
@@ -309,8 +327,8 @@ final class GalaxyMetastoreUtils
                 columnStatistics.getBooleanStatistics().map(GalaxyMetastoreUtils::toGalaxyBooleanStatistics),
                 columnStatistics.getMaxValueSizeInBytes(),
                 columnStatistics.getTotalSizeInBytes(),
-                columnStatistics.getNullsCount(),
-                columnStatistics.getDistinctValuesCount());
+                nullsCount,
+                distinctValuesCount);
     }
 
     public static IntegerStatistics fromGalaxyIntegerStatistics(ColumnStatistics.IntegerStatistics integerStatistics)
