@@ -332,49 +332,4 @@
             </plugins>
         </pluginManagement>
     </build>
-
-    <profiles>
-        <profile>
-            <id>jdbc-integration-tests</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <threadCount>3</threadCount>
-                            <includes>
-                                <include>**/TestSnowflakeInstanceCleaner.java</include>
-                                <include>**/TestJdbcSnowflakeConnectorTest.java</include>
-                            </includes>
-                            <dependenciesToScan>
-                                <dependency>io.trino:starburst-snowflake:test-jar</dependency>
-                            </dependenciesToScan>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>parallel-integration-tests</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <includes>
-                                <include>**/TestParallelSnowflakeConnectorTest.java</include>
-                                <include>**/TestParallelSnowflakeTypeMapping.java</include>
-                            </includes>
-                            <dependenciesToScan>
-                                <dependency>io.trino:starburst-snowflake:test-jar</dependency>
-                            </dependenciesToScan>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-
-    </profiles>
 </project>
