@@ -502,7 +502,7 @@ public final class ThriftMetastoreUtil
         return partitionBuilder.build();
     }
 
-    public static HiveColumnStatistics fromMetastoreApiColumnStatistics(ColumnStatisticsObj columnStatistics, OptionalLong rowCount)
+    public static HiveColumnStatistics fromMetastoreApiColumnStatistics(ColumnStatisticsObj columnStatistics)
     {
         if (columnStatistics.getStatsData().isSetLongStats()) {
             LongColumnStatsData longStatsData = columnStatistics.getStatsData().getLongStats();
@@ -766,7 +766,7 @@ public final class ThriftMetastoreUtil
         return result.buildOrThrow();
     }
 
-    public static ColumnStatisticsObj createMetastoreColumnStatistics(String columnName, HiveType columnType, HiveColumnStatistics statistics, OptionalLong rowCount)
+    public static ColumnStatisticsObj createMetastoreColumnStatistics(String columnName, HiveType columnType, HiveColumnStatistics statistics)
     {
         TypeInfo typeInfo = columnType.getTypeInfo();
         checkArgument(typeInfo.getCategory() == PRIMITIVE, "unsupported type: %s", columnType);

@@ -45,7 +45,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.OptionalLong;
 import java.util.Set;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -94,7 +93,7 @@ public class RecordingHiveMetastore
     }
 
     @Override
-    public Map<String, HiveColumnStatistics> getTableColumnStatistics(String databaseName, String tableName, Set<String> columnNames, OptionalLong rowCount)
+    public Map<String, HiveColumnStatistics> getTableColumnStatistics(String databaseName, String tableName, Set<String> columnNames)
     {
         return filterKeys(
                 recording.getTableStatistics(
@@ -109,10 +108,10 @@ public class RecordingHiveMetastore
     public Map<String, Map<String, HiveColumnStatistics>> getPartitionColumnStatistics(
             String databaseName,
             String tableName,
-            Map<String, OptionalLong> partitionNamesWithRowCount,
+            Set<String> partitionNames,
             Set<String> columnNames)
     {
-        Set<HivePartitionName> hivePartitionNames = partitionNamesWithRowCount.keySet().stream()
+        Set<HivePartitionName> hivePartitionNames = partitionNames.stream()
                 .map(partitionName -> hivePartitionName(new HiveTableName(databaseName, tableName), partitionName))
                 .collect(toImmutableSet());
 

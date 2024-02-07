@@ -186,13 +186,14 @@ public class GalaxyHiveMetastore
     }
 
     @Override
-    public Map<String, HiveColumnStatistics> getTableColumnStatistics(String databaseName, String tableName, Set<String> columnNames, OptionalLong rowCount)
+    public Map<String, HiveColumnStatistics> getTableColumnStatistics(String databaseName, String tableName, Set<String> columnNames)
     {
         try {
             // TODO[https://github.com/starburstdata/galaxy-trino/issues/1856] filter columns on server side
+            Statistics tableStatistics = metastore.getTableStatistics(databaseName, tableName);
             return transformValues(
-                    filterKeys(metastore.getTableStatistics(databaseName, tableName).columnStatistics(), columnNames::contains),
-                    stats -> GalaxyMetastoreUtils.fromGalaxyColumnStatistics(stats, rowCount));
+                    filterKeys(tableStatistics.columnStatistics(), columnNames::contains),
+                    stats -> GalaxyMetastoreUtils.fromGalaxyColumnStatistics(stats, tableStatistics.basicStatistics().rowCount()));
         }
         catch (EntityNotFoundException e) {
             throw new TableNotFoundException(SchemaTableName.schemaTableName(databaseName, tableName));
@@ -206,13 +207,13 @@ public class GalaxyHiveMetastore
     }
 
     @Override
-    public Map<String, Map<String, HiveColumnStatistics>> getPartitionColumnStatistics(String databaseName, String tableName, Map<String, OptionalLong> partitionNamesWithRowCount, Set<String> columnNames)
+    public Map<String, Map<String, HiveColumnStatistics>> getPartitionColumnStatistics(String databaseName, String tableName, Set<String> partitionNames, Set<String> columnNames)
     {
         try {
             ImmutableList.Builder<PartitionName> galaxyPartitionNamesBuilder = ImmutableList.builder();
             ImmutableMap.Builder<PartitionName, String> galaxyPartitionNameToSourcePartitionNameBuilder = ImmutableMap.builder();
 
-            partitionNamesWithRowCount.keySet().forEach(partitionName -> {
+            partitionNames.forEach(partitionName -> {
                 List<String> partitionValues = extractPartitionValues(partitionName);
                 PartitionName galaxyPartitionName = new PartitionName(partitionValues);
                 galaxyPartitionNamesBuilder.add(galaxyPartitionName);
