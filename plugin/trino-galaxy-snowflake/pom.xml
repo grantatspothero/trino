@@ -224,23 +224,6 @@
     </dependencies>
 
     <build>
-        <testResources>
-            <testResource>
-                <filtering>true</filtering>
-                <directory>src/test/resources</directory>
-                <includes>
-                    <include>io/trino/plugin/snowflake/test-snowflake-plugin-versions.properties</include>
-                </includes>
-            </testResource>
-            <testResource>
-                <filtering>false</filtering>
-                <directory>src/test/resources</directory>
-                <excludes>
-                    <exclude>io/trino/plugin/snowflake/test-snowflake-plugin-versions.properties</exclude>
-                </excludes>
-            </testResource>
-        </testResources>
-
         <pluginManagement>
             <plugins>
                 <plugin>
