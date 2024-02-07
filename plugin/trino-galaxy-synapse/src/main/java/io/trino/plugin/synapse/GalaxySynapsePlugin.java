@@ -15,11 +15,11 @@ package io.trino.plugin.synapse;
 
 import io.trino.plugin.jdbc.JdbcPlugin;
 
-public class SynapsePlugin
+public class GalaxySynapsePlugin
         extends JdbcPlugin
 {
-    public SynapsePlugin()
+    public GalaxySynapsePlugin()
     {
-        super("synapse", new SynapseModule());
+        super("synapse", new GalaxySynapseModule());
     }
 }

@@ -41,7 +41,7 @@ import java.lang.annotation.Target;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.trino.plugin.sqlserver.GalaxySqlServerClientModule.getConnectionFactory;
 
-public class SynapseModule
+public class GalaxySynapseModule
         extends AbstractConfigurationAwareModule
 {
     @Override
