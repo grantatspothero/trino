@@ -13,10 +13,24 @@
  */
 package io.trino.plugin.synapse;
 
+import com.google.common.collect.ImmutableMap;
+import io.trino.spi.connector.ConnectorFactory;
+import io.trino.testing.TestingConnectorContext;
 import org.junit.jupiter.api.Test;
 
-public class TestDummy
+import static com.google.common.collect.Iterables.getOnlyElement;
+
+public class TestGalaxySynapsePlugin
 {
     @Test
-    public void buildRequiresTestToExist() {}
+    public void testCreateConnector()
+    {
+        connectorFactory().create("test", ImmutableMap.of("connection-url", "jdbc:sqlserver:test"), new TestingConnectorContext())
+                .shutdown();
+    }
+
+    private static ConnectorFactory connectorFactory()
+    {
+        return getOnlyElement(new GalaxySynapsePlugin().getConnectorFactories());
+    }
 }
