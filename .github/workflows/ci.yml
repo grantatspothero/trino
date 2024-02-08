@@ -284,7 +284,7 @@ jobs:
       - name: Clean Maven Output
         if: false # not needed in Galaxy as following steps are skipped
         run: $MAVEN clean -pl '!:trino-server,!:trino-cli'
-      - uses: docker/setup-qemu-action@v2
+      - uses: docker/setup-qemu-action@v3
         if: false # Galaxy builds docker image in a separate job
         with:
           platforms: arm64,ppc64le
@@ -1346,7 +1346,7 @@ jobs:
         with:
           cache: restore
           cleanup-node: true
-      - uses: dorny/paths-filter@v2
+      - uses: dorny/paths-filter@v3
         id: filter
         with:
           filters: |
