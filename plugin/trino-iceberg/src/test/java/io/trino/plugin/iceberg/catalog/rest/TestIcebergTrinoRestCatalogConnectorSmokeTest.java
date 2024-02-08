@@ -33,6 +33,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.Optional;
 
@@ -98,6 +100,8 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
                                 .put("iceberg.catalog.type", "rest")
                                 .put("iceberg.rest-catalog.uri", testServer.getBaseUrl().toString())
                                 .put("iceberg.writer-sort-buffer-size", "1MB")
+                                .put("iceberg.register-table-procedure.enabled", "true")
+                                .put("iceberg.rest-catalog.vended-credentials-enabled", "false")
                                 .buildOrThrow())
                 .setInitialTables(REQUIRED_TPCH_TABLES)
                 .build();
@@ -136,7 +140,7 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
     @Override
     protected void dropTableFromMetastore(String tableName)
     {
-        // used when registering a table, which is not supported by the REST catalog
+        backend.dropTable(toIdentifier(tableName), false);
     }
 
     @Override
@@ -156,102 +160,6 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
     protected boolean locationExists(String location)
     {
         return java.nio.file.Files.exists(Path.of(location));
-    }
-
-    @Test
-    @Override
-    public void testRegisterTableWithTableLocation()
-    {
-        assertThatThrownBy(super::testRegisterTableWithTableLocation)
-                .hasMessageContaining("register_table procedure is disabled");
-    }
-
-    @Test
-    @Override
-    public void testRegisterTableWithComments()
-    {
-        assertThatThrownBy(super::testRegisterTableWithComments)
-                .hasMessageContaining("register_table procedure is disabled");
-    }
-
-    @Test
-    @Override
-    public void testRegisterTableWithShowCreateTable()
-    {
-        assertThatThrownBy(super::testRegisterTableWithShowCreateTable)
-                .hasMessageContaining("register_table procedure is disabled");
-    }
-
-    @Test
-    @Override
-    public void testRegisterTableWithReInsert()
-    {
-        assertThatThrownBy(super::testRegisterTableWithReInsert)
-                .hasMessageContaining("register_table procedure is disabled");
-    }
-
-    @Test
-    @Override
-    public void testRegisterTableWithDifferentTableName()
-    {
-        assertThatThrownBy(super::testRegisterTableWithDifferentTableName)
-                .hasMessageContaining("register_table procedure is disabled");
-    }
-
-    @Test
-    @Override
-    public void testRegisterTableWithMetadataFile()
-    {
-        assertThatThrownBy(super::testRegisterTableWithMetadataFile)
-                .hasMessageContaining("register_table procedure is disabled");
-    }
-
-    @Test
-    @Override
-    public void testRegisterTableWithTrailingSpaceInLocation()
-    {
-        assertThatThrownBy(super::testRegisterTableWithTrailingSpaceInLocation)
-                .hasMessageContaining("register_table procedure is disabled");
-    }
-
-    @Test
-    @Override
-    public void testUnregisterTable()
-    {
-        assertThatThrownBy(super::testUnregisterTable)
-                .hasMessageContaining("unregisterTable is not supported for Iceberg REST catalogs");
-    }
-
-    @Test
-    @Override
-    public void testUnregisterBrokenTable()
-    {
-        assertThatThrownBy(super::testUnregisterBrokenTable)
-                .hasMessageContaining("unregisterTable is not supported for Iceberg REST catalogs");
-    }
-
-    @Test
-    @Override
-    public void testUnregisterTableNotExistingTable()
-    {
-        assertThatThrownBy(super::testUnregisterTableNotExistingTable)
-                .hasMessageContaining("unregisterTable is not supported for Iceberg REST catalogs");
-    }
-
-    @Test
-    @Override
-    public void testRepeatUnregisterTable()
-    {
-        assertThatThrownBy(super::testRepeatUnregisterTable)
-                .hasMessageContaining("unregisterTable is not supported for Iceberg REST catalogs");
-    }
-
-    @Test
-    @Override
-    public void testRegisterTableWithDroppedTable()
-    {
-        assertThatThrownBy(super::testRegisterTableWithDroppedTable)
-                .hasMessageContaining("register_table procedure is disabled");
     }
 
     @Test
@@ -306,7 +214,12 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
     @Override
     protected void deleteDirectory(String location)
     {
-        // used when unregistering a table, which is not supported by the REST catalog
+        try {
+            deleteRecursively(Path.of(location), ALLOW_INSECURE);
+        }
+        catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     private TableIdentifier toIdentifier(String tableName)

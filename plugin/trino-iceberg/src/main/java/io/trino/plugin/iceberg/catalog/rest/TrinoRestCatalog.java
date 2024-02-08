@@ -23,6 +23,7 @@ import io.jsonwebtoken.jackson.io.JacksonSerializer;
 import io.trino.cache.EvictableCacheBuilder;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.base.util.MaybeLazy;
+import io.trino.plugin.hive.LocationAccessControl;
 import io.trino.plugin.iceberg.ColumnIdentity;
 import io.trino.plugin.iceberg.IcebergSchemaProperties;
 import io.trino.plugin.iceberg.catalog.TrinoCatalog;
@@ -87,6 +88,7 @@ public class TrinoRestCatalog
 {
     private static final int PER_QUERY_CACHE_SIZE = 1000;
 
+    private final LocationAccessControl locationAccessControl;
     private final RESTSessionCatalog restSessionCatalog;
     private final CatalogName catalogName;
     private final SessionType sessionType;
@@ -98,12 +100,14 @@ public class TrinoRestCatalog
             .build();
 
     public TrinoRestCatalog(
+            LocationAccessControl locationAccessControl,
             RESTSessionCatalog restSessionCatalog,
             CatalogName catalogName,
             SessionType sessionType,
             String trinoVersion,
             boolean useUniqueTableLocation)
     {
+        this.locationAccessControl = requireNonNull(locationAccessControl, "locationAccessControl is null");
         this.restSessionCatalog = requireNonNull(restSessionCatalog, "restSessionCatalog is null");
         this.catalogName = requireNonNull(catalogName, "catalogName is null");
         this.sessionType = requireNonNull(sessionType, "sessionType is null");
@@ -294,13 +298,16 @@ public class TrinoRestCatalog
     @Override
     public void registerTable(ConnectorSession session, SchemaTableName tableName, TableMetadata tableMetadata)
     {
-        throw new TrinoException(NOT_SUPPORTED, "registerTable is not supported for Iceberg REST catalog");
+        locationAccessControl.checkCanUseLocation(session.getIdentity(), tableMetadata.location());
+        restSessionCatalog.registerTable(convert(session), toIdentifier(tableName), tableMetadata.metadataFileLocation());
     }
 
     @Override
     public void unregisterTable(ConnectorSession session, SchemaTableName tableName)
     {
-        throw new TrinoException(NOT_SUPPORTED, "unregisterTable is not supported for Iceberg REST catalogs");
+        if (!restSessionCatalog.dropTable(convert(session), toIdentifier(tableName))) {
+            throw new TableNotFoundException(tableName);
+        }
     }
 
     @Override

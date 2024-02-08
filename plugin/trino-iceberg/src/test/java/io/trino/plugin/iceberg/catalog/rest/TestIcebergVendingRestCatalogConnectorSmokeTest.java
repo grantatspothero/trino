@@ -280,7 +280,7 @@ public class TestIcebergVendingRestCatalogConnectorSmokeTest
     public void testUnregisterTable()
     {
         assertThatThrownBy(super::testUnregisterTable)
-                .hasMessageContaining("unregisterTable is not supported for Iceberg REST catalogs");
+                .hasMessageContaining("register_table procedure is disabled");
     }
 
     @Test
@@ -288,15 +288,7 @@ public class TestIcebergVendingRestCatalogConnectorSmokeTest
     public void testUnregisterBrokenTable()
     {
         assertThatThrownBy(super::testUnregisterTable)
-                .hasMessageContaining("unregisterTable is not supported for Iceberg REST catalogs");
-    }
-
-    @Test
-    @Override
-    public void testUnregisterTableNotExistingTable()
-    {
-        assertThatThrownBy(super::testUnregisterTableNotExistingTable)
-                .hasMessageContaining("unregisterTable is not supported for Iceberg REST catalogs");
+                .hasMessageContaining("register_table procedure is disabled");
     }
 
     @Test
@@ -304,7 +296,7 @@ public class TestIcebergVendingRestCatalogConnectorSmokeTest
     public void testRepeatUnregisterTable()
     {
         assertThatThrownBy(super::testRepeatUnregisterTable)
-                .hasMessageContaining("unregisterTable is not supported for Iceberg REST catalogs");
+                .hasMessageContaining("register_table procedure is disabled");
     }
 
     @Test

@@ -24,8 +24,14 @@ import io.trino.plugin.iceberg.catalog.BaseTrinoCatalogTest;
 import io.trino.plugin.iceberg.catalog.TrinoCatalog;
 import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.ConnectorMetadata;
+import io.trino.spi.connector.SchemaTableName;
+import io.trino.spi.security.AccessDeniedException;
+import io.trino.spi.security.ConnectorIdentity;
 import io.trino.spi.security.PrincipalType;
 import io.trino.spi.security.TrinoPrincipal;
+import org.apache.iceberg.PartitionSpec;
+import org.apache.iceberg.SortOrder;
+import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.rest.DelegatingRestSessionCatalog;
 import org.apache.iceberg.rest.RESTSessionCatalog;
 import org.assertj.core.util.Files;
@@ -60,7 +66,16 @@ public class TestTrinoRestCatalog
 
         restSessionCatalog.initialize(catalogName, ImmutableMap.of());
 
-        return new TrinoRestCatalog(restSessionCatalog, new CatalogName(catalogName), NONE, "test", useUniqueTableLocations);
+        LocationAccessControl locationAccessControl = new LocationAccessControl() {
+            @Override
+            public void checkCanUseLocation(ConnectorIdentity identity, String location)
+            {
+                if (location.contains("denied")) {
+                    throw new AccessDeniedException("User %s is not allowed to use location: %s".formatted(identity.getUser(), location));
+                }
+            }
+        };
+        return new TrinoRestCatalog(locationAccessControl, restSessionCatalog, new CatalogName(catalogName), NONE, "test", useUniqueTableLocations);
     }
 
     @Test
@@ -113,5 +128,19 @@ public class TestTrinoRestCatalog
         finally {
             catalog.dropNamespace(SESSION, namespace);
         }
+    }
+
+    @Test
+    public void testRegisterTableLocationAccessControl()
+    {
+        assertThatThrownBy(() -> createTrinoCatalog(false).registerTable(
+                SESSION,
+                new SchemaTableName("test_schema", "test_table"),
+                TableMetadata.buildFromEmpty()
+                        .addPartitionSpec(PartitionSpec.unpartitioned())
+                        .setDefaultSortOrder(SortOrder.unsorted())
+                        .setLocation("s3://test-bucket/denied")
+                        .build()))
+                .hasMessage("Access Denied: User user is not allowed to use location: s3://test-bucket/denied");
     }
 }
