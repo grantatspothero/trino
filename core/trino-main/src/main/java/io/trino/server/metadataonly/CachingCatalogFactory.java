@@ -62,14 +62,14 @@ public class CachingCatalogFactory
     private final Optional<AccountContext> accountContext;
     private final ScheduledExecutorService executorService;
 
-    private record Key(AccountId accountId, String catalogName, CatalogHandleType type, Map<String, String> properties)
+    private record Key(AccountId accountId, String catalogName, CatalogHandleType type, Map<String, String> decryptedProperties)
     {
         private Key
         {
             requireNonNull(accountId, "accountId is null");
             requireNonNull(catalogName, "catalogName is null");
             requireNonNull(type, "type is null");
-            requireNonNull(properties, "properties is null");
+            requireNonNull(decryptedProperties, "decryptedProperties is null");
         }
     }
 
@@ -154,10 +154,9 @@ public class CachingCatalogFactory
     @Override
     public CatalogConnector createCatalog(CatalogProperties catalogProperties)
     {
-        return getOrBuildCatalogConnector(catalogProperties.getCatalogHandle(), Optional.of(catalogProperties), keyFor(catalogProperties), () -> {
-            Map<String, String> decryptedCatalogProperties = accountContext().decryptCatalogProperties(catalogProperties.getCatalogHandle().getCatalogName());
-            return catalogFactory.createCatalog(new CatalogProperties(catalogProperties.getCatalogHandle(), catalogProperties.getConnectorName(), decryptedCatalogProperties));
-        });
+        Map<String, String> decryptedCatalogProperties = accountContext().decryptCatalogProperties(catalogProperties.getCatalogHandle().getCatalogName());
+        return getOrBuildCatalogConnector(catalogProperties.getCatalogHandle(), Optional.of(catalogProperties), keyFor(catalogProperties, decryptedCatalogProperties), () ->
+                catalogFactory.createCatalog(new CatalogProperties(catalogProperties.getCatalogHandle(), catalogProperties.getConnectorName(), decryptedCatalogProperties)));
     }
 
     @Override
@@ -234,9 +233,9 @@ public class CachingCatalogFactory
         return wrappedConnector;
     }
 
-    private Key keyFor(CatalogProperties catalogProperties)
+    private Key keyFor(CatalogProperties catalogProperties, Map<String, String> decryptedProperties)
     {
-        return new Key(accountContext().accountId(), "CATALOG_" + catalogProperties.getCatalogHandle().getCatalogName(), catalogProperties.getCatalogHandle().getType(), ImmutableMap.copyOf(catalogProperties.getProperties()));
+        return new Key(accountContext().accountId(), "CATALOG_" + catalogProperties.getCatalogHandle().getCatalogName(), catalogProperties.getCatalogHandle().getType(), ImmutableMap.copyOf(decryptedProperties));
     }
 
     private Key keyFor(CatalogHandle catalogHandle, ConnectorName connectorName)
