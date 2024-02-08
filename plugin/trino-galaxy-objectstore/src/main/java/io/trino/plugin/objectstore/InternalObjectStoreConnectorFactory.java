@@ -108,7 +108,6 @@ public final class InternalObjectStoreConnectorFactory
                     deltaConfig,
                     context,
                     deltaMetastoreModule,
-                    Optional.empty(),
                     combine(
                             new ConfigureCachingMetastoreModule(),
                             new GalaxyLocationSecurityModule(),
