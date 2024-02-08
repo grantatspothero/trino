@@ -71,7 +71,7 @@ import org.apache.iceberg.Transaction;
 import org.apache.iceberg.avro.Avro;
 import org.apache.iceberg.mapping.MappingUtil;
 import org.apache.iceberg.mapping.NameMapping;
-import org.apache.iceberg.parquet.TrinoParquetUtil;
+import org.apache.iceberg.parquet.ParquetUtil;
 import org.apache.iceberg.types.TypeUtil;
 import org.apache.iceberg.types.Types;
 import org.apache.parquet.hadoop.metadata.ParquetMetadata;
@@ -405,7 +405,7 @@ public class MigrateProcedure
     {
         try (ParquetDataSource dataSource = new TrinoParquetDataSource(file, new ParquetReaderOptions(), new FileFormatDataSourceStats())) {
             ParquetMetadata metadata = MetadataReader.readFooter(dataSource, Optional.empty());
-            return TrinoParquetUtil.footerMetrics(metadata, Stream.empty(), metricsConfig, nameMapping);
+            return ParquetUtil.footerMetrics(metadata, Stream.empty(), metricsConfig, nameMapping);
         }
         catch (IOException e) {
             throw new UncheckedIOException("Failed to read file footer: " + file.location(), e);

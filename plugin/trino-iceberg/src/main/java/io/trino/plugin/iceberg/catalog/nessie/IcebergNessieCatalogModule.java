@@ -49,7 +49,6 @@ public class IcebergNessieCatalogModule
     {
         HttpClientBuilder builder = HttpClientBuilder.builder()
                 .withUri(icebergNessieCatalogConfig.getServerUri())
-                .withEnableApiCompatibilityCheck(false)
                 .withDisableCompression(!icebergNessieCatalogConfig.isCompressionEnabled())
                 .withReadTimeout(toIntExact(icebergNessieCatalogConfig.getReadTimeout().toMillis()))
                 .withConnectionTimeout(toIntExact(icebergNessieCatalogConfig.getConnectionTimeout().toMillis()));
