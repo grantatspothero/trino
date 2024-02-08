@@ -20,6 +20,9 @@ import io.trino.plugin.exchange.filesystem.containers.MinioStorage;
 import io.trino.spi.exchange.ExchangeManager;
 import org.junit.jupiter.api.AfterAll;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static io.trino.plugin.exchange.filesystem.containers.MinioStorage.getExchangeManagerProperties;
 import static java.util.UUID.randomUUID;
 
@@ -34,8 +37,11 @@ public class TestS3FileSystemExchangeManager
         this.minioStorage = new MinioStorage("test-exchange-spooling-" + randomUUID());
         minioStorage.start();
 
+        Map<String, String> exchangeManagerProperties = new HashMap<>(getExchangeManagerProperties(minioStorage));
+        // this test requires bigger, default, value of allowed page size
+        exchangeManagerProperties.remove("exchange.max-page-storage-size");
         return new FileSystemExchangeManagerFactory().create(
-                getExchangeManagerProperties(minioStorage),
+                exchangeManagerProperties,
                 new TestExchangeManagerContext());
     }
 

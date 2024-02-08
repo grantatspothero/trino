@@ -97,6 +97,8 @@ public class MinioStorage
                 .put("exchange.s3.endpoint", "http://" + minioStorage.getMinio().getMinioApiEndpoint())
                 // create more granular source handles given the fault-tolerant execution target task input size is set to lower value for testing
                 .put("exchange.source-handle-target-data-size", "1MB")
+                // disallow large data pages to make memory buffer in filesystem exchange smaller and lower memory pressure
+                .put("exchange.max-page-storage-size", "2MB")
                 .buildOrThrow();
     }
 }
