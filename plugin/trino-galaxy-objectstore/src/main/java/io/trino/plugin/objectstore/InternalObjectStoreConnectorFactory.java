@@ -96,8 +96,7 @@ public final class InternalObjectStoreConnectorFactory
                             new ConfigureCachingMetastoreModule(),
                             new GalaxyLocationSecurityModule(),
                             workSchedulerModule),
-                    icebergCatalogModule,
-                    Optional.empty());
+                    icebergCatalogModule);
 
             Map<String, String> deltaConfig = new HashMap<>(filteredConfig(config, "DELTA"));
             // The procedure is disabled in OSS because of security issues.

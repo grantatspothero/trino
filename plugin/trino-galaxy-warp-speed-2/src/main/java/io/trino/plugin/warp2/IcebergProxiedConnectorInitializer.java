@@ -51,7 +51,6 @@ public class IcebergProxiedConnectorInitializer
                     icebergConfig,
                     context,
                     moduleInstance,
-                    Optional.empty(),
                     Optional.empty());
         }
         catch (Exception e) {
