@@ -63,7 +63,6 @@ import io.trino.testing.TestingGalaxyCatalogInfoSupplier;
 import io.trino.transaction.ForTransactionManager;
 import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -150,14 +149,6 @@ public class TestGalaxyQueries
     private void initWithQueryRunner(QueryRunner queryRunner)
     {
         queryRunner.execute(format("CREATE SCHEMA %s.%s", "memory", "tiny"));
-    }
-
-    @BeforeEach
-    public void setFeatureFlags()
-    {
-        TestingAccountClient accountClient = getTestingAccountClient();
-        accountClient.upsertAccountFeatureFlag("COLUMN_MASKS", true);
-        accountClient.upsertAccountFeatureFlag("ROW_FILTERS", true);
     }
 
     @AfterEach

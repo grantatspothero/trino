@@ -593,42 +593,42 @@ public class GalaxyAccessControl
     @Override
     public void checkCanGrantSchemaPrivilege(SystemSecurityContext context, io.trino.spi.security.Privilege privilege, CatalogSchemaName schema, TrinoPrincipal grantee, boolean grantOption)
     {
-        validateEntityKindPrivilege("granted", EntityKind.SCHEMA, privilege);
+        validateEntityKindPrivilege(context, "granted", EntityKind.SCHEMA, privilege, schema.getCatalogName(), schema.getSchemaName());
         // Galaxy does the checking
     }
 
     @Override
     public void checkCanDenySchemaPrivilege(SystemSecurityContext context, io.trino.spi.security.Privilege privilege, CatalogSchemaName schema, TrinoPrincipal grantee)
     {
-        validateEntityKindPrivilege("denied", EntityKind.SCHEMA, privilege);
+        validateEntityKindPrivilege(context, "denied", EntityKind.SCHEMA, privilege, schema.getCatalogName(), schema.getSchemaName());
         // Galaxy does the checking
     }
 
     @Override
     public void checkCanRevokeSchemaPrivilege(SystemSecurityContext context, io.trino.spi.security.Privilege privilege, CatalogSchemaName schema, TrinoPrincipal revokee, boolean grantOption)
     {
-        validateEntityKindPrivilege("revoked", EntityKind.SCHEMA, privilege);
+        validateEntityKindPrivilege(context, "revoked", EntityKind.SCHEMA, privilege, schema.getCatalogName(), schema.getSchemaName());
         // Galaxy does the checking
     }
 
     @Override
     public void checkCanGrantTablePrivilege(SystemSecurityContext context, io.trino.spi.security.Privilege privilege, CatalogSchemaTableName table, TrinoPrincipal grantee, boolean grantOption)
     {
-        validateEntityKindPrivilege("granted", EntityKind.TABLE, privilege);
+        validateEntityKindPrivilege(context, "granted", EntityKind.TABLE, privilege, table.getCatalogName(), table.getSchemaTableName().getSchemaName());
         // Galaxy does the checking
     }
 
     @Override
     public void checkCanDenyTablePrivilege(SystemSecurityContext context, io.trino.spi.security.Privilege privilege, CatalogSchemaTableName table, TrinoPrincipal grantee)
     {
-        validateEntityKindPrivilege("denied", EntityKind.TABLE, privilege);
+        validateEntityKindPrivilege(context, "denied", EntityKind.TABLE, privilege, table.getCatalogName(), table.getSchemaTableName().getSchemaName());
         // Galaxy does the checking
     }
 
     @Override
     public void checkCanRevokeTablePrivilege(SystemSecurityContext context, io.trino.spi.security.Privilege privilege, CatalogSchemaTableName table, TrinoPrincipal revokee, boolean grantOption)
     {
-        validateEntityKindPrivilege("revoked", EntityKind.TABLE, privilege);
+        validateEntityKindPrivilege(context, "revoked", EntityKind.TABLE, privilege, table.getCatalogName(), table.getSchemaTableName().getSchemaName());
         // Galaxy does the checking
     }
 
@@ -1207,10 +1207,17 @@ public class GalaxyAccessControl
         return isSystemOrInformationSchema(catalogSchemaName);
     }
 
-    private static void validateEntityKindPrivilege(String operation, EntityKind entityKind, io.trino.spi.security.Privilege privilege)
+    private void validateEntityKindPrivilege(SystemSecurityContext context, String operation, EntityKind entityKind, io.trino.spi.security.Privilege privilege, String catalogName, String schemaName)
     {
         if (!getPrivilegesForEntityKind(entityKind).contains(privilege)) {
             throw operationNotAllowed("Privilege %s may not be %s to entity kind %s".formatted(privilege, operation, entityKind));
+        }
+        Optional<SharedSchemaNameAndAccepted> optionalSharedSchema = controllerSupplier.apply(context.getIdentity()).getSharedCatalogSchemaName(catalogName);
+        if (optionalSharedSchema.isPresent()) {
+            SharedSchemaNameAndAccepted sharedSchema = optionalSharedSchema.get();
+            if (!sharedSchema.accepted() || !sharedSchema.schemaName().equals(schemaName)) {
+                throw operationNotAllowed("Privileges may not be %s on shared data product catalog %s in schema %s because the shared schema is %s".formatted(operation, catalogName, schemaName, sharedSchema.schemaName()));
+            }
         }
     }
 
