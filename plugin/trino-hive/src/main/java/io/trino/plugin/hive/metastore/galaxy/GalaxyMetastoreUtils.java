@@ -37,7 +37,6 @@ import io.trino.plugin.hive.metastore.SortingColumn.Order;
 import io.trino.plugin.hive.metastore.Storage;
 import io.trino.plugin.hive.metastore.StorageFormat;
 import io.trino.plugin.hive.metastore.Table;
-import io.trino.plugin.hive.util.HiveBucketing.BucketingVersion;
 
 import java.util.List;
 import java.util.Map.Entry;
@@ -221,7 +220,6 @@ final class GalaxyMetastoreUtils
     {
         return new HiveBucketProperty(
                 bucketProperty.bucketedBy(),
-                BucketingVersion.BUCKETING_V1,
                 bucketProperty.bucketCount(),
                 bucketProperty.sortedBy().stream()
                         .map(GalaxyMetastoreUtils::fromGalaxySortingColumn)
