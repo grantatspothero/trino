@@ -157,7 +157,7 @@ public class TestObjectStoreProperties
                         ('objectstore.parquet_use_column_names', 'true', 'boolean'),
                         ('objectstore.parquet_vectorized_decoding_enabled', 'true', 'boolean'),
                         ('objectstore.parquet_writer_batch_size', '10000', 'integer'),
-                        ('objectstore.parquet_writer_block_size', '134217728B', 'varchar'),
+                        ('objectstore.parquet_writer_block_size', '128MB', 'varchar'),
                         ('objectstore.parquet_writer_page_size', '1048576B', 'varchar'),
                         ('objectstore.parquet_writer_page_value_count', '60000', 'integer'),
                         ('objectstore.partition_statistics_sample_size', '100', 'integer'),
