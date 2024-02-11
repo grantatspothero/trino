@@ -425,8 +425,7 @@ public class TestObjectStoreIcebergConnectorTest
     {
         // TODO https://github.com/trinodb/trino/issues/16273 The connector can't read row types having ambiguous field names in ORC files. e.g. row(X int, x int)
         assertThatThrownBy(super::testDropAmbiguousRowFieldCaseSensitivity)
-                .hasMessageContaining("Error opening Iceberg split")
-                .hasStackTraceContaining("Multiple entries with same key");
+                .hasMessageContaining("Invalid schema: multiple fields for name");
     }
 
     @Override
