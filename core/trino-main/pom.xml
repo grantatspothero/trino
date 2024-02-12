@@ -290,11 +290,6 @@
 
         <dependency>
             <groupId>io.starburst.stargate</groupId>
-            <artifactId>stargate-exceptions</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.starburst.stargate</groupId>
             <artifactId>stargate-ids</artifactId>
         </dependency>
 
