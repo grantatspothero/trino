@@ -891,8 +891,8 @@ public class SqlQueryExecution
             this.failureDetector = requireNonNull(failureDetector, "failureDetector is null");
             this.nodeTaskMap = requireNonNull(nodeTaskMap, "nodeTaskMap is null");
             this.executionPolicies = requireNonNull(executionPolicies, "executionPolicies is null");
-            this.planOptimizers = planOptimizersFactory.get();
-            this.alternativeOptimizers = alternativesOptimizersFactory.get();
+            this.planOptimizers = planOptimizersFactory.getPlanOptimizers();
+            this.alternativeOptimizers = alternativesOptimizersFactory.getPlanOptimizers();
             this.statsCalculator = requireNonNull(statsCalculator, "statsCalculator is null");
             this.costCalculator = requireNonNull(costCalculator, "costCalculator is null");
             this.historyBasedStatsCalculator = requireNonNull(historyBasedStatsCalculator, "historyBasedStatsCalculator is null");
