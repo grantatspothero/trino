@@ -48,6 +48,7 @@ import io.trino.memory.context.SimpleLocalMemoryContext;
 import io.trino.operator.DirectExchangeClient;
 import io.trino.operator.DirectExchangeClientSupplier;
 import io.trino.server.HttpRequestSessionContextFactory;
+import io.trino.server.ResultQueryInfo;
 import io.trino.server.SessionContext;
 import io.trino.server.galaxy.catalogs.DecryptionContextProvider;
 import io.trino.server.protocol.QueryResultRows;
@@ -279,7 +280,7 @@ public class MetadataOnlyStatementResource
                             .setRunningPercentage(OptionalDouble.empty())
                             .setProgressPercentage(OptionalDouble.empty())
                             .build(),
-                    toQueryError(dispatchQuery.getFullQueryInfo()),
+                    toQueryError(new ResultQueryInfo(dispatchQuery.getFullQueryInfo())),
                     ImmutableList.of(),
                     null,
                     null);
@@ -380,7 +381,7 @@ public class MetadataOnlyStatementResource
                         .setRunningPercentage(OptionalDouble.empty())
                         .setProgressPercentage(OptionalDouble.empty())
                         .build(),
-                toQueryError(queryInfo),
+                toQueryError(new ResultQueryInfo(queryInfo)),
                 ImmutableList.of(),
                 queryInfo.getUpdateType(),
                 updateCount);

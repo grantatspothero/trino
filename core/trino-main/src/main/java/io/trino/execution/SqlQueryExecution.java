@@ -52,6 +52,7 @@ import io.trino.operator.ForScheduler;
 import io.trino.operator.RetryPolicy;
 import io.trino.server.BasicQueryInfo;
 import io.trino.server.DynamicFilterService;
+import io.trino.server.ResultQueryInfo;
 import io.trino.server.protocol.Slug;
 import io.trino.server.resultscache.FilteredResultsCacheEntry;
 import io.trino.server.resultscache.ResultsCacheAnalyzer;
@@ -756,6 +757,17 @@ public class SqlQueryExecution
     public void registerResultsCacheEntry(ResultsCacheEntry resultsCacheEntry)
     {
         stateMachine.setResultsCacheEntry(resultsCacheEntry);
+    }
+
+    @Override
+    public ResultQueryInfo getResultQueryInfo()
+    {
+        Optional<QueryScheduler> scheduler = Optional.ofNullable(queryScheduler.get());
+        return stateMachine.getFinalQueryInfo()
+                .map(ResultQueryInfo::new)
+                .orElseGet(() -> stateMachine.updateResultQueryInfo(
+                        scheduler.map(QueryScheduler::getBasicStageInfo),
+                        () -> scheduler.map(QueryScheduler::getStageInfo)));
     }
 
     @Override
