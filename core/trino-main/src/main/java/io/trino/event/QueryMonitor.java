@@ -86,14 +86,17 @@ import org.joda.time.DateTime;
 
 import java.time.Duration;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static com.google.common.base.Suppliers.memoize;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.trino.execution.QueryState.QUEUED;
@@ -174,11 +177,11 @@ public class QueryMonitor
                                 queryInfo.getSelf(),
                                 Optional.empty(),
                                 Optional.empty(),
+                                Optional::empty,
                                 Optional.empty(),
                                 Optional.empty(),
                                 Optional.empty(),
-                                Optional.empty(),
-                                ImmutableList.of())));
+                                ImmutableList::of)));
     }
 
     public void queryImmediateFailureEvent(BasicQueryInfo queryInfo, ExecutionFailureInfo failure)
@@ -196,11 +199,11 @@ public class QueryMonitor
                         queryInfo.getSelf(),
                         Optional.empty(),
                         Optional.empty(),
+                        Optional::empty,
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
-                        Optional.empty(),
-                        ImmutableList.of()),
+                        ImmutableList::of),
                 new QueryStatistics(
                         ofMillis(0),
                         ofMillis(0),
@@ -261,9 +264,13 @@ public class QueryMonitor
 
     public void queryCompletedEvent(QueryInfo queryInfo)
     {
+        Map<Boolean, QueryCompletedEvent> memo = new HashMap<>();
         QueryStats queryStats = queryInfo.getQueryStats();
-        eventListenerManager.queryCompleted(requiresAnonymizedPlan ->
-                new QueryCompletedEvent(
+
+        eventListenerManager.queryCompleted(requiresAnonymizedPlan -> {
+            QueryCompletedEvent queryCompletedEvent = memo.get(requiresAnonymizedPlan);
+            if (queryCompletedEvent == null) {
+                queryCompletedEvent = new QueryCompletedEvent(
                         createQueryMetadata(queryInfo, requiresAnonymizedPlan),
                         createQueryStatistics(queryInfo),
                         createQueryContext(
@@ -276,19 +283,22 @@ public class QueryMonitor
                         queryInfo.getWarnings(),
                         ofEpochMilli(queryStats.getCreateTime().getMillis()),
                         ofEpochMilli(queryStats.getExecutionStartTime().getMillis()),
-                        ofEpochMilli(queryStats.getEndTime() != null ? queryStats.getEndTime().getMillis() : 0)));
-
+                        ofEpochMilli(queryStats.getEndTime() != null ? queryStats.getEndTime().getMillis() : 0));
+                memo.put(requiresAnonymizedPlan, queryCompletedEvent);
+            }
+            return queryCompletedEvent;
+        });
         logQueryTimeline(queryInfo);
     }
 
     public QueryMetadata createQueryMetadata(QueryInfo queryInfo, boolean requiresAnonymizedPlan)
     {
         Anonymizer anonymizer = requiresAnonymizedPlan ? new CounterBasedAnonymizer() : new NoOpAnonymizer();
-        Optional<String> payloadJson = queryInfo.getOutputStage().flatMap(stage -> stageInfoCodec.toJsonWithLengthLimit(stage, maxJsonLimit));
+        Supplier<Optional<String>> payloadJsonProvider = memoize(() -> queryInfo.getOutputStage().flatMap(stage -> stageInfoCodec.toJsonWithLengthLimit(stage, maxJsonLimit)));
         // Pre-process stage details if StageInfo is dropped due to Kafka payload size limit
-        List<StageDetails> overflowStageDetails = payloadJson.isPresent()
+        Supplier<List<StageDetails>> overflowStageDetailsProvider = memoize(() -> payloadJsonProvider.get().isPresent()
                 ? ImmutableList.of()
-                : queryInfo.getOutputStage().stream().flatMap(stage -> GalaxyQueryHistoryProcessor.processStageDetails(stage).stream()).collect(toImmutableList());
+                : queryInfo.getOutputStage().stream().flatMap(stage -> GalaxyQueryHistoryProcessor.processStageDetails(stage).stream()).collect(toImmutableList()));
         return new QueryMetadata(
                 queryInfo.getQueryId().toString(),
                 queryInfo.getSession().getTransactionId().map(TransactionId::toString),
@@ -301,11 +311,11 @@ public class QueryMonitor
                 queryInfo.getSelf(),
                 createTextQueryPlan(queryInfo, anonymizer),
                 createJsonQueryPlan(queryInfo, anonymizer),
-                payloadJson,
+                payloadJsonProvider,
                 queryInfo.getResultsCacheResultStatus(),
                 queryInfo.getResultsCacheResultSize(),
                 queryInfo.isResultsCacheEligible(),
-                overflowStageDetails);
+                overflowStageDetailsProvider);
     }
 
     public QueryStatistics createQueryStatistics(QueryInfo queryInfo)
@@ -360,7 +370,7 @@ public class QueryMonitor
                 queryInfo.isFinalQueryInfo(),
                 getCpuDistributions(queryInfo),
                 getStageOutputBufferUtilizations(queryInfo),
-                operatorSummaries.build(),
+                memoize(() -> operatorStats.stream().map(operatorStatsCodec::toJson).toList()),
                 ImmutableList.copyOf(queryInfo.getQueryStats().getOptimizerRulesSummaries()),
                 serializedPlanNodeStatsAndCosts);
     }

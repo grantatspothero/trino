@@ -20,6 +20,7 @@ import io.trino.spi.Unstable;
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
 
@@ -44,11 +45,11 @@ public class QueryMetadata
     private final Optional<String> plan;
     private final Optional<String> jsonPlan;
 
-    private final Optional<String> payload;
+    private final Supplier<Optional<String>> payloadProvider;
     private final Optional<String> resultsCacheResultStatus;
     private final Optional<Long> resultsCacheResultSize;
     private final Optional<Boolean> resultsCacheEligible;
-    private final List<StageDetails> overflowStageDetails;
+    private final Supplier<List<StageDetails>> overflowStageDetailsProvider;
 
     @JsonCreator
     @Unstable
@@ -70,6 +71,43 @@ public class QueryMetadata
             Optional<Boolean> resultsCacheEligible,
             List<StageDetails> overflowStageDetails)
     {
+        this(
+                queryId,
+                transactionId,
+                query,
+                updateType,
+                preparedQuery,
+                queryState,
+                tables,
+                routines,
+                uri,
+                plan,
+                jsonPlan,
+                () -> payload,
+                resultsCacheResultStatus,
+                resultsCacheResultSize,
+                resultsCacheEligible,
+                () -> overflowStageDetails);
+    }
+
+    public QueryMetadata(
+            String queryId,
+            Optional<String> transactionId,
+            String query,
+            Optional<String> updateType,
+            Optional<String> preparedQuery,
+            String queryState,
+            List<TableInfo> tables,
+            List<RoutineInfo> routines,
+            URI uri,
+            Optional<String> plan,
+            Optional<String> jsonPlan,
+            Supplier<Optional<String>> payloadProvider,
+            Optional<String> resultsCacheResultStatus,
+            Optional<Long> resultsCacheResultSize,
+            Optional<Boolean> resultsCacheEligible,
+            Supplier<List<StageDetails>> overflowStageDetailsProvider)
+    {
         this.queryId = requireNonNull(queryId, "queryId is null");
         this.transactionId = requireNonNull(transactionId, "transactionId is null");
         this.query = requireNonNull(query, "query is null");
@@ -81,11 +119,11 @@ public class QueryMetadata
         this.uri = requireNonNull(uri, "uri is null");
         this.plan = requireNonNull(plan, "plan is null");
         this.jsonPlan = requireNonNull(jsonPlan, "jsonPlan is null");
-        this.payload = requireNonNull(payload, "payload is null");
+        this.payloadProvider = requireNonNull(payloadProvider, "payloadProvider is null");
         this.resultsCacheResultStatus = requireNonNull(resultsCacheResultStatus, "resultsCacheResultStatus is null");
         this.resultsCacheResultSize = requireNonNull(resultsCacheResultSize, "resultsCacheResultSize is null");
         this.resultsCacheEligible = requireNonNull(resultsCacheEligible, "resultsCacheEligible is null");
-        this.overflowStageDetails = requireNonNull(overflowStageDetails, "overflowStageDetails is null");
+        this.overflowStageDetailsProvider = requireNonNull(overflowStageDetailsProvider, "overflowStageDetailsProvider is null");
     }
 
     @JsonProperty
@@ -157,7 +195,7 @@ public class QueryMetadata
     @JsonProperty
     public Optional<String> getPayload()
     {
-        return payload;
+        return payloadProvider.get();
     }
 
     @JsonProperty
@@ -181,6 +219,6 @@ public class QueryMetadata
     @JsonProperty
     public List<StageDetails> getOverflowStageDetails()
     {
-        return overflowStageDetails;
+        return overflowStageDetailsProvider.get();
     }
 }
