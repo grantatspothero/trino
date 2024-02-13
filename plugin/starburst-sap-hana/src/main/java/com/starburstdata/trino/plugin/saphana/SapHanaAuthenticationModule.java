@@ -17,6 +17,7 @@ import com.sap.db.jdbc.Driver;
 import com.starburstdata.trino.plugin.jdbc.JdbcConnectionPoolConfig;
 import com.starburstdata.trino.plugin.jdbc.PoolingConnectionFactory;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.opentelemetry.api.OpenTelemetry;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
@@ -43,6 +44,7 @@ import java.util.Properties;
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
+import static java.util.Objects.requireNonNull;
 
 public class SapHanaAuthenticationModule
         extends AbstractConfigurationAwareModule
@@ -76,13 +78,15 @@ public class SapHanaAuthenticationModule
                 BaseJdbcConfig config,
                 JdbcConnectionPoolConfig poolConfig,
                 CredentialProvider credentialProvider,
-                IdentityCacheMapping identityCacheMapping)
+                IdentityCacheMapping identityCacheMapping,
+                OpenTelemetry openTelemetry)
         {
             checkArgument(!poolConfig.isConnectionPoolEnabled(), "Galaxy SAP HANA connector does not support connection pooling");
             if (poolConfig.isConnectionPoolEnabled()) {
                 return new PoolingConnectionFactory(catalogName.toString(), Driver.class, config, poolConfig, credentialProvider, identityCacheMapping);
             }
             Properties socketFactoryProperties = buildSocketFactoryProperties(catalogHandle, localRegionConfig, crossRegionConfig, sshConfig);
+            requireNonNull(openTelemetry, "openTelemetry is null"); // TODO (https://github.com/starburstdata/galaxy-trino/issues/1799) - Add support for OpenTelemetry in Galaxy SAP HANA
             return new GalaxySapHanaConnectionFactory(new Driver(), config.getConnectionUrl(), socketFactoryProperties, new DefaultCredentialPropertiesProvider(credentialProvider));
         }
 
