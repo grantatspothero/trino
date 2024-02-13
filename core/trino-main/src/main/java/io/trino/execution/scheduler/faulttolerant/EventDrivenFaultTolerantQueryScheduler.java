@@ -1326,11 +1326,6 @@ public class EventDrivenFaultTolerantQueryScheduler
                 return IsReadyForExecutionResult.notReady();
             }
 
-            StageExecution stageExecution = stageExecutions.get(getStageId(subPlan.getFragment().getId()));
-            if (stageExecution != null) {
-                stageExecution.setSpeculative(speculative);
-            }
-
             if (speculative) {
                 log.debug("scheduling speculative %s/%s; sources: finished=%s; kinds=%s",
                         queryStateMachine.getQueryId(),
