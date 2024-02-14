@@ -13,6 +13,8 @@
  */
 package io.trino.plugin.warp;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.inject.Module;
 import io.trino.plugin.varada.dispatcher.CachingPlugin;
 import io.trino.spi.Plugin;
 import io.trino.spi.connector.ConnectorFactory;
@@ -20,12 +22,26 @@ import io.trino.spi.connector.ConnectorFactory;
 import java.util.List;
 
 public class WarpSpeedPlugin
-        extends CachingPlugin
         implements Plugin
 {
+    private final CachingPlugin cachingPlugin;
+
+    public WarpSpeedPlugin()
+    {
+        this(null, null);
+    }
+
+    @VisibleForTesting
+    WarpSpeedPlugin(Module storageEngineModule, Module amazonModule)
+    {
+        cachingPlugin = new CachingPlugin();
+        cachingPlugin.withStorageEngineModule(storageEngineModule);
+        cachingPlugin.withAmazonModule(amazonModule);
+    }
+
     @Override
     public Iterable<ConnectorFactory> getConnectorFactories()
     {
-        return List.of(new WarpSpeedConnectorFactory(super.getConnectorFactory()));
+        return List.of(new WarpSpeedConnectorFactory(cachingPlugin.getConnectorFactory()));
     }
 }

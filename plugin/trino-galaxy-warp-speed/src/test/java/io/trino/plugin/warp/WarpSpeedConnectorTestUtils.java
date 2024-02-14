@@ -25,11 +25,9 @@ public abstract class WarpSpeedConnectorTestUtils
 {
     public static Plugin getPlugin()
     {
-        WarpSpeedPlugin warpSpeedPlugin = new WarpSpeedPlugin();
-        warpSpeedPlugin.withAmazonModule(new CloudVendorStubModule());
-        warpSpeedPlugin.withStorageEngineModule(new VaradaStubsStorageEngineModule());
-
-        return warpSpeedPlugin;
+        return new WarpSpeedPlugin(
+                new VaradaStubsStorageEngineModule(),
+                new CloudVendorStubModule());
     }
 
     public static Map<String, String> getProperties()
