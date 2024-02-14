@@ -13,6 +13,7 @@
  */
 package io.trino.server.galaxy;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.inject.Binder;
@@ -23,6 +24,7 @@ import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import io.airlift.node.NodeConfig;
 import io.airlift.node.NodeInfo;
+import io.airlift.openmetrics.MetricsConfig;
 import io.trino.server.PrefixObjectNameGeneratorModule.PrefixObjectNameGenerator;
 import org.weakref.jmx.MBeanExporter;
 import org.weakref.jmx.ObjectNameGenerator;
@@ -81,5 +83,13 @@ public class GalaxyCustomerMetricsModule
         // Not used in customer metrics resource
         nodeConfig.setEnvironment("ignored");
         return new NodeInfo(nodeConfig);
+    }
+
+    @ForCustomerMetrics
+    @Singleton
+    @Provides
+    public MetricsConfig createMetricsConfig()
+    {
+        return new MetricsConfig().setJmxObjectNames(ImmutableList.of());
     }
 }

@@ -14,6 +14,7 @@
 package io.trino.server.galaxy;
 
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Closer;
 import io.airlift.http.client.HttpClient;
@@ -52,7 +53,11 @@ public class TestGalaxyCustomerMetricsResource
         Logging.initialize();
 
         client = new JettyHttpClient();
-        server = TestingTrinoServer.builder().build();
+        server = TestingTrinoServer.builder()
+                .setProperties(ImmutableMap.<String, String>builder()
+                        .put("openmetrics.jmx-object-names", "org.eclipse.jetty.util.thread:*")
+                        .buildOrThrow())
+                .build();
     }
 
     @AfterAll

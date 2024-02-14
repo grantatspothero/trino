@@ -40,7 +40,7 @@ public class GalaxyCustomerMetricsResource
     public GalaxyCustomerMetricsResource(
             MBeanServer mbeanServer,
             @ForCustomerMetrics MBeanExporter mbeanExporter,
-            MetricsConfig metricsConfig,
+            @ForCustomerMetrics MetricsConfig metricsConfig,
             @ForCustomerMetrics NodeInfo nodeInfo)
     {
         super(mbeanServer, mbeanExporter, metricsConfig, nodeInfo);
