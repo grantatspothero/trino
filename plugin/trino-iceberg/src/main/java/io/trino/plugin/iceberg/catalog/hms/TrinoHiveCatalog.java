@@ -32,6 +32,7 @@ import io.trino.plugin.hive.metastore.Database;
 import io.trino.plugin.hive.metastore.HivePrincipal;
 import io.trino.plugin.hive.metastore.MetastoreUtil;
 import io.trino.plugin.hive.metastore.PrincipalPrivileges;
+import io.trino.plugin.hive.metastore.TableInfo;
 import io.trino.plugin.hive.metastore.cache.CachingHiveMetastore;
 import io.trino.plugin.hive.util.HiveUtil;
 import io.trino.plugin.iceberg.IcebergTableName;
@@ -388,7 +389,7 @@ public class TrinoHiveCatalog
     {
         ImmutableSet.Builder<SchemaTableName> tablesListBuilder = ImmutableSet.builder();
         for (String schemaName : listNamespaces(session, namespace)) {
-            metastore.getTables(schemaName).forEach(tableName -> tablesListBuilder.add(new SchemaTableName(schemaName, tableName)));
+            metastore.getTables(schemaName).forEach(tableInfo -> tablesListBuilder.add(tableInfo.tableName()));
         }
         return tablesListBuilder.build().asList();
     }
@@ -592,8 +593,9 @@ public class TrinoHiveCatalog
     {
         // Filter on ICEBERG_MATERIALIZED_VIEW_COMMENT is used to avoid listing hive views in case of a shared HMS and to distinguish from standard views
         return listNamespaces(session, namespace).stream()
-                .flatMap(schema -> metastore.getTablesWithParameter(schema, TABLE_COMMENT, ICEBERG_MATERIALIZED_VIEW_COMMENT).stream()
-                        .map(table -> new SchemaTableName(schema, table)))
+                .flatMap(schema -> metastore.getTables(schema).stream())
+                .filter(tableInfo -> tableInfo.extendedRelationType() == TableInfo.ExtendedRelationType.TRINO_MATERIALIZED_VIEW)
+                .map(TableInfo::tableName)
                 .collect(toImmutableList());
     }
 

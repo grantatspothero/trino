@@ -30,6 +30,7 @@ import io.trino.plugin.hive.TableType;
 import io.trino.plugin.hive.metastore.Column;
 import io.trino.plugin.hive.metastore.Database;
 import io.trino.plugin.hive.metastore.PrincipalPrivileges;
+import io.trino.plugin.hive.metastore.TableInfo;
 import io.trino.plugin.hive.metastore.cache.CachingHiveMetastore;
 import io.trino.plugin.hive.util.HiveUtil;
 import io.trino.plugin.iceberg.ColumnIdentity;
@@ -351,7 +352,7 @@ public class TrinoGalaxyCatalog
         return namespace.map(Stream::of)
                 .orElseGet(() -> metastore.getAllDatabases().stream())
                 .flatMap(schema -> metastore.getTables(schema).stream()
-                        .map(table -> new SchemaTableName(schema, table)))
+                        .map(tableInfo -> new SchemaTableName(tableInfo.tableName().getSchemaName(), tableInfo.tableName().getTableName())))
                 .collect(toImmutableList());
     }
 
@@ -634,12 +635,12 @@ public class TrinoGalaxyCatalog
     @Override
     public List<SchemaTableName> listMaterializedViews(ConnectorSession session, Optional<String> namespace)
     {
-        // Filter on ICEBERG_MATERIALIZED_VIEW_COMMENT is used to avoid listing hive views in case of a shared HMS and to distinguish from standard views
         return namespace.<List<String>>map(ImmutableList::of)
                 .orElseGet(metastore::getAllDatabases)
                 .stream()
-                .flatMap(schema -> metastore.getTablesWithParameter(schema, TABLE_COMMENT, ICEBERG_MATERIALIZED_VIEW_COMMENT).stream()
-                        .map(table -> new SchemaTableName(schema, table)))
+                .flatMap(schema -> metastore.getTables(schema).stream())
+                .filter(tableInfo -> tableInfo.extendedRelationType() == TableInfo.ExtendedRelationType.TRINO_MATERIALIZED_VIEW)
+                .map(TableInfo::tableName)
                 .collect(toImmutableList());
     }
 

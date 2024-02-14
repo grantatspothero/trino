@@ -50,7 +50,6 @@ import io.trino.plugin.hive.security.SqlStandardAccessControlMetadataMetastore;
 import io.trino.plugin.hive.util.ValidTxnWriteIdList;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ConnectorSession;
-import io.trino.spi.connector.RelationType;
 import io.trino.spi.connector.SchemaNotFoundException;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TableNotFoundException;
@@ -238,7 +237,16 @@ public class SemiTransactionalHiveMetastore
         return delegate.getDatabase(databaseName);
     }
 
-    public synchronized List<String> getAllTables(String databaseName)
+    public synchronized Optional<List<TableInfo>> getTables()
+    {
+        checkReadable();
+        if (!tableActions.isEmpty()) {
+            throw new UnsupportedOperationException("Listing all tables after adding/dropping/altering tables/views in a transaction is not supported");
+        }
+        return delegate.getTables();
+    }
+
+    public synchronized List<TableInfo> getTables(String databaseName)
     {
         checkReadable();
         if (!tableActions.isEmpty()) {
@@ -254,33 +262,6 @@ public class SemiTransactionalHiveMetastore
             throw new UnsupportedOperationException("Streaming all tables after adding/dropping/altering tables/views in a transaction is not supported");
         }
         return delegate.streamTables(session, databaseName);
-    }
-
-    public synchronized Optional<List<SchemaTableName>> getAllTables()
-    {
-        checkReadable();
-        if (!tableActions.isEmpty()) {
-            throw new UnsupportedOperationException("Listing all tables after adding/dropping/altering tables/views in a transaction is not supported");
-        }
-        return delegate.getAllTables();
-    }
-
-    public synchronized Map<String, RelationType> getRelationTypes(String databaseName)
-    {
-        checkReadable();
-        if (!tableActions.isEmpty()) {
-            throw new UnsupportedOperationException("Listing all relations after adding/dropping/altering tables/views in a transaction is not supported");
-        }
-        return delegate.getRelationTypes(databaseName);
-    }
-
-    public synchronized Optional<Map<SchemaTableName, RelationType>> getRelationTypes()
-    {
-        checkReadable();
-        if (!tableActions.isEmpty()) {
-            throw new UnsupportedOperationException("Listing all relations after adding/dropping/altering tables/views in a transaction is not supported");
-        }
-        return delegate.getAllRelationTypes();
     }
 
     public synchronized Optional<Table> getTable(String databaseName, String tableName)
@@ -474,24 +455,6 @@ public class SemiTransactionalHiveMetastore
                 schemaTableName,
                 table,
                 modifiedPartitionMap);
-    }
-
-    public synchronized List<String> getAllViews(String databaseName)
-    {
-        checkReadable();
-        if (!tableActions.isEmpty()) {
-            throw new UnsupportedOperationException("Listing all tables after adding/dropping/altering tables/views in a transaction is not supported");
-        }
-        return delegate.getViews(databaseName);
-    }
-
-    public synchronized Optional<List<SchemaTableName>> getAllViews()
-    {
-        checkReadable();
-        if (!tableActions.isEmpty()) {
-            throw new UnsupportedOperationException("Listing all tables after adding/dropping/altering tables/views in a transaction is not supported");
-        }
-        return delegate.getAllViews();
     }
 
     public synchronized void createDatabase(ConnectorSession session, Database database)

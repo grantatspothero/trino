@@ -21,6 +21,7 @@ import com.google.common.collect.Maps;
 import io.airlift.http.client.HttpClient;
 import io.airlift.log.Logger;
 import io.starburst.stargate.metastore.client.Column;
+import io.starburst.stargate.metastore.client.DatabaseTableName;
 import io.starburst.stargate.metastore.client.EntityAlreadyExistsException;
 import io.starburst.stargate.metastore.client.EntityNotFoundException;
 import io.starburst.stargate.metastore.client.GetTablesResult;
@@ -50,10 +51,10 @@ import io.trino.plugin.hive.metastore.PartitionWithStatistics;
 import io.trino.plugin.hive.metastore.PrincipalPrivileges;
 import io.trino.plugin.hive.metastore.StatisticsUpdateMode;
 import io.trino.plugin.hive.metastore.Table;
+import io.trino.plugin.hive.metastore.TableInfo;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ColumnNotFoundException;
 import io.trino.spi.connector.ConnectorSession;
-import io.trino.spi.connector.RelationType;
 import io.trino.spi.connector.SchemaNotFoundException;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TableNotFoundException;
@@ -71,6 +72,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Strings.emptyToNull;
@@ -82,9 +84,11 @@ import static com.google.common.collect.Streams.stream;
 import static io.trino.filesystem.Locations.appendPath;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_FILESYSTEM_ERROR;
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_METASTORE_ERROR;
+import static io.trino.plugin.hive.HiveMetadata.TABLE_COMMENT;
 import static io.trino.plugin.hive.HiveMetadata.TRINO_QUERY_ID_NAME;
 import static io.trino.plugin.hive.HivePartitionManager.extractPartitionValues;
 import static io.trino.plugin.hive.TableType.MANAGED_TABLE;
+import static io.trino.plugin.hive.ViewReaderUtil.ICEBERG_MATERIALIZED_VIEW_COMMENT;
 import static io.trino.plugin.hive.metastore.MetastoreUtil.makePartitionName;
 import static io.trino.plugin.hive.metastore.MetastoreUtil.toPartitionName;
 import static io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreSessionProperties.getMetastoreStreamTablesFetchSize;
@@ -291,10 +295,24 @@ public class GalaxyHiveMetastore
     }
 
     @Override
-    public List<String> getTables(String databaseName)
+    public List<TableInfo> getTables(String databaseName)
     {
         try {
-            return ImmutableList.copyOf(metastore.getTableNames(databaseName, Optional.empty()));
+            Collection<String> tables = metastore.getTableNames(databaseName, Optional.empty());
+            Collection<String> views = metastore.getTableNames(databaseName, Optional.of(TableType.VIRTUAL_VIEW.name()));
+            Collection<String> materializedViews = metastore.getTableNamesWithParameter(databaseName, TABLE_COMMENT, ICEBERG_MATERIALIZED_VIEW_COMMENT);
+
+            ImmutableMap.Builder<String, TableInfo> result = ImmutableMap.builder();
+            for (String name : tables) {
+                result.put(name, new TableInfo(new SchemaTableName(databaseName, name), TableInfo.ExtendedRelationType.TABLE));
+            }
+            for (String name : views) {
+                result.put(name, new TableInfo(new SchemaTableName(databaseName, name), TableInfo.ExtendedRelationType.TRINO_VIEW));
+            }
+            for (String name : materializedViews) {
+                result.put(name, new TableInfo(new SchemaTableName(databaseName, name), TableInfo.ExtendedRelationType.TRINO_MATERIALIZED_VIEW));
+            }
+            return ImmutableList.copyOf(result.buildKeepingLast().values());
         }
         catch (MetastoreException e) {
             throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
@@ -302,83 +320,19 @@ public class GalaxyHiveMetastore
     }
 
     @Override
-    public Optional<List<SchemaTableName>> getAllTables()
+    public Optional<List<TableInfo>> getAllTables()
     {
         if (!batchMetadataFetch) {
             return Optional.empty();
         }
         try {
-            return Optional.of(metastore.getAllTableNames().stream()
-                    .map(name -> new SchemaTableName(name.databaseName(), name.tableName()))
-                    .collect(toImmutableList()));
-        }
-        catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
-        }
-        catch (RuntimeException e) {
-            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
-        }
-    }
+            Collection<DatabaseTableName> tables = metastore.getAllTableNames();
+            Collection<DatabaseTableName> views = metastore.getAllViewNames();
 
-    @Override
-    public Map<String, RelationType> getRelationTypes(String databaseName)
-    {
-        // TODO: Consider adding a new endpoint to galaxy metastore
-        ImmutableMap.Builder<String, RelationType> relationTypes = ImmutableMap.builder();
-        getTables(databaseName).forEach(name -> relationTypes.put(name, RelationType.TABLE));
-        getViews(databaseName).forEach(name -> relationTypes.put(name, RelationType.VIEW));
-        return relationTypes.buildKeepingLast();
-    }
-
-    @Override
-    public Optional<Map<SchemaTableName, RelationType>> getAllRelationTypes()
-    {
-        // TODO: Consider adding a new endpoint to galaxy metastore
-        return getAllTables().flatMap(relations -> getAllViews().map(views -> {
-            ImmutableMap.Builder<SchemaTableName, RelationType> relationTypes = ImmutableMap.builder();
-            relations.forEach(name -> relationTypes.put(name, RelationType.TABLE));
-            views.forEach(name -> relationTypes.put(name, RelationType.VIEW));
-            return relationTypes.buildKeepingLast();
-        }));
-    }
-
-    @Override
-    public List<String> getTablesWithParameter(String databaseName, String parameterKey, String parameterValue)
-    {
-        try {
-            return ImmutableList.copyOf(metastore.getTableNamesWithParameter(databaseName, parameterKey, parameterValue));
-        }
-        catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
-        }
-        catch (RuntimeException e) {
-            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
-        }
-    }
-
-    @Override
-    public List<String> getViews(String databaseName)
-    {
-        try {
-            return ImmutableList.copyOf(metastore.getTableNames(databaseName, Optional.of(TableType.VIRTUAL_VIEW.name())));
-        }
-        catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
-        }
-        catch (RuntimeException e) {
-            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
-        }
-    }
-
-    @Override
-    public Optional<List<SchemaTableName>> getAllViews()
-    {
-        if (!batchMetadataFetch) {
-            return Optional.empty();
-        }
-        try {
-            return Optional.of(metastore.getAllViewNames().stream()
-                    .map(name -> new SchemaTableName(name.databaseName(), name.tableName()))
+            // TODO: return materialized views from here ???
+            return Optional.of(Stream.concat(
+                            tables.stream().map(name -> new TableInfo(new SchemaTableName(name.databaseName(), name.tableName()), TableInfo.ExtendedRelationType.TABLE)),
+                            views.stream().map(name -> new TableInfo(new SchemaTableName(name.databaseName(), name.tableName()), TableInfo.ExtendedRelationType.TRINO_VIEW)))
                     .collect(toImmutableList()));
         }
         catch (MetastoreException e) {

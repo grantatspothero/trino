@@ -28,10 +28,10 @@ import io.trino.plugin.hive.metastore.PartitionWithStatistics;
 import io.trino.plugin.hive.metastore.PrincipalPrivileges;
 import io.trino.plugin.hive.metastore.StatisticsUpdateMode;
 import io.trino.plugin.hive.metastore.Table;
+import io.trino.plugin.hive.metastore.TableInfo;
 import io.trino.plugin.hive.projection.PartitionProjection;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ConnectorSession;
-import io.trino.spi.connector.RelationType;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TableNotFoundException;
 import io.trino.spi.function.LanguageFunction;
@@ -121,34 +121,14 @@ public class HiveMetastoreClosure
         delegate.updatePartitionStatistics(table, mode, partitionUpdates);
     }
 
-    public List<String> getTables(String databaseName)
-    {
-        return delegate.getTables(databaseName);
-    }
-
-    public Optional<List<SchemaTableName>> getAllTables()
+    public Optional<List<TableInfo>> getTables()
     {
         return delegate.getAllTables();
     }
 
-    public Map<String, RelationType> getRelationTypes(String databaseName)
+    public List<TableInfo> getTables(String databaseName)
     {
-        return delegate.getRelationTypes(databaseName);
-    }
-
-    public Optional<Map<SchemaTableName, RelationType>> getAllRelationTypes()
-    {
-        return delegate.getAllRelationTypes();
-    }
-
-    public List<String> getViews(String databaseName)
-    {
-        return delegate.getViews(databaseName);
-    }
-
-    public Optional<List<SchemaTableName>> getAllViews()
-    {
-        return delegate.getAllViews();
+        return delegate.getTables(databaseName);
     }
 
     public Iterator<Table> streamTables(ConnectorSession session, String databaseName)
@@ -157,7 +137,7 @@ public class HiveMetastoreClosure
                 // Default streamTables implementation provided here has the benefit of hitting the caching metastore
                 // (transaction-scoped and global if enabled).
                 .orElseGet(() -> getTables(databaseName).stream()
-                        .map(tableName -> getTable(databaseName, tableName))
+                        .map(tableInfo -> getTable(tableInfo.tableName().getSchemaName(), tableInfo.tableName().getTableName()))
                         .flatMap(Optional::stream)
                         .iterator());
     }
