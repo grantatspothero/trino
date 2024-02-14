@@ -176,7 +176,6 @@ import static io.trino.plugin.iceberg.IcebergSessionProperties.isUseFileSizeFrom
 import static io.trino.plugin.iceberg.IcebergSessionProperties.useParquetBloomFilter;
 import static io.trino.plugin.iceberg.IcebergSplitManager.ICEBERG_DOMAIN_COMPACTION_THRESHOLD;
 import static io.trino.plugin.iceberg.IcebergSplitSource.partitionMatchesPredicate;
-import static io.trino.plugin.iceberg.IcebergUtil.canEnforceConstraintWithinPartitioningSpec;
 import static io.trino.plugin.iceberg.IcebergUtil.deserializePartitionValue;
 import static io.trino.plugin.iceberg.IcebergUtil.getColumnHandle;
 import static io.trino.plugin.iceberg.IcebergUtil.getPartitionKeys;
@@ -345,11 +344,8 @@ public class IcebergPageSourceProvider
 
         TupleDomain<IcebergColumnHandle> effectivePredicate = simplifyPredicate(
                 new SplitSpec(tableSchema, partitionSpec, partitionKeys),
-                getEffectivePredicate(
-                        tableSchema,
-                        partitionKeys,
-                        dynamicFilter.getCurrentPredicate().transformKeys(IcebergColumnHandle.class::cast),
-                        unenforcedPredicate))
+                unenforcedPredicate,
+                dynamicFilter.getCurrentPredicate().transformKeys(IcebergColumnHandle.class::cast))
                 .transformKeys(IcebergColumnHandle.class::cast);
         if (effectivePredicate.isNone()) {
             return new EmptyPageSource();
@@ -423,28 +419,6 @@ public class IcebergPageSourceProvider
                 dataPageSource.get(),
                 projectionsAdapter,
                 deletePredicate);
-    }
-
-    private TupleDomain<IcebergColumnHandle> getEffectivePredicate(
-            Schema tableSchema,
-            Map<Integer, Optional<String>> partitionKeys,
-            TupleDomain<IcebergColumnHandle> dynamicFilterPredicate,
-            TupleDomain<IcebergColumnHandle> unenforcedPredicate)
-    {
-        TupleDomain<IcebergColumnHandle> effectivePredicate = unenforcedPredicate.intersect(dynamicFilterPredicate);
-        if (dynamicFilterPredicate.isAll() || dynamicFilterPredicate.isNone() || partitionKeys.isEmpty()) {
-            return effectivePredicate;
-        }
-        Set<IcebergColumnHandle> partitionColumns = partitionKeys.keySet().stream()
-                .map(fieldId -> getColumnHandle(tableSchema.findField(fieldId), typeManager))
-                .collect(toImmutableSet());
-        Supplier<Map<ColumnHandle, NullableValue>> partitionValues = memoize(() -> getPartitionValues(partitionColumns, partitionKeys));
-        if (!partitionMatchesPredicate(partitionColumns, partitionValues, effectivePredicate)) {
-            return TupleDomain.none();
-        }
-        // Filter out partition columns domains from the dynamic filter because they should be irrelevant at data file level
-        return effectivePredicate
-                .filter((columnHandle, domain) -> !partitionKeys.containsKey(columnHandle.getId()));
     }
 
     private Set<IcebergColumnHandle> requiredColumnsForDeletes(Schema schema, List<DeleteFile> deletes)
@@ -580,15 +554,17 @@ public class IcebergPageSourceProvider
             ConnectorTableHandle tableHandle,
             TupleDomain<ColumnHandle> predicate)
     {
-        return simplifyPredicate(getSplitSpec(tableHandle, split), predicate.transformKeys(IcebergColumnHandle.class::cast).intersect(((IcebergTableHandle) tableHandle).getUnenforcedPredicate()))
+        return simplifyPredicate(getSplitSpec(tableHandle, split), ((IcebergTableHandle) tableHandle).getUnenforcedPredicate(), predicate)
                 .transformKeys(ColumnHandle.class::cast);
     }
 
     private TupleDomain<IcebergColumnHandle> simplifyPredicate(
             SplitSpec splitSpec,
-            TupleDomain<IcebergColumnHandle> predicate)
+            TupleDomain<IcebergColumnHandle> unenforcedPredicate,
+            TupleDomain<ColumnHandle> predicate)
     {
-        return prunePredicate(splitSpec, predicate).simplify(ICEBERG_DOMAIN_COMPACTION_THRESHOLD);
+        return prunePredicate(splitSpec, predicate.intersect(unenforcedPredicate))
+                .simplify(ICEBERG_DOMAIN_COMPACTION_THRESHOLD);
     }
 
     @Override
@@ -623,7 +599,7 @@ public class IcebergPageSourceProvider
     {
     }
 
-    private TupleDomain<IcebergColumnHandle> prunePredicate(SplitSpec splitSpec, TupleDomain<IcebergColumnHandle> predicate)
+    private TupleDomain<IcebergColumnHandle> prunePredicate(SplitSpec splitSpec, TupleDomain<ColumnHandle> predicate)
     {
         if (predicate.isNone() || predicate.isAll() || splitSpec.partitionSpec.isUnpartitioned()) {
             return predicate.transformKeys(IcebergColumnHandle.class::cast);
@@ -639,7 +615,7 @@ public class IcebergPageSourceProvider
         }
 
         return predicate.transformKeys(IcebergColumnHandle.class::cast)
-                .filter((columnHandle, domain) -> !canEnforceConstraintWithinPartitioningSpec(typeManager.getTypeOperators(), splitSpec.partitionSpec, columnHandle, domain));
+                .filter((columnHandle, domain) -> !partitionColumns.contains(columnHandle));
     }
 
     public ReaderPageSourceWithRowPositions createDataPageSource(
