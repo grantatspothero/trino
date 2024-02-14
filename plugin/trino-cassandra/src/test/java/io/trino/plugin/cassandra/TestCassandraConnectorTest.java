@@ -166,6 +166,45 @@ public class TestCassandraConnectorTest
         return Optional.of(dataMappingTestSetup);
     }
 
+    @Test
+    public void testSelectWithClusterKeyAndSecondaryIndex()
+    {
+        for (boolean withClusteringKey : ImmutableList.of(true, false)) {
+            String table = "test_cluster_key_" + randomNameSuffix();
+
+            if (withClusteringKey) {
+                onCassandra("CREATE TABLE tpch." + table + "(col1 text, col2 text, col3 tinyint, PRIMARY KEY ((col1, col2), col3)) WITH CLUSTERING ORDER BY (col3 ASC)");
+            }
+            else {
+                onCassandra("CREATE TABLE tpch." + table + "(col1 text, col2 text, col3 tinyint, PRIMARY KEY ((col1, col2)))");
+            }
+            onCassandra("CREATE INDEX ON tpch." + table + " (col1)");
+            onCassandra("CREATE INDEX ON tpch." + table + " (col2)");
+
+            onCassandra("INSERT INTO tpch." + table + "(col1, col2, col3) VALUES('value1', 'value21', 1)");
+            onCassandra("INSERT INTO tpch." + table + "(col1, col2, col3) VALUES('value1', 'value22', 2)");
+
+            // Execute a query on Trino with where clause having all the secondary key column and having a clustering key(ENTITY_ID)
+            assertQuery("SELECT * FROM tpch." + table + " WHERE col1 = 'value1' AND col2 = 'value21' AND col3 = 1", "VALUES ('value1', 'value21', 1)");
+            // Execute a query on Trino with where clause not having all the secondary key column and having a clustering key(ENTITY_ID)
+            if (withClusteringKey) {
+                assertQuery("SELECT * FROM tpch." + table + " WHERE col1 = 'value1' AND col3 = 1", "VALUES ('value1', 'value21', 1), ('value1', 'value22', 2)");
+            }
+            else {
+                assertQuery("SELECT * FROM tpch." + table + " WHERE col1 = 'value1' AND col3 = 1", "VALUES ('value1', 'value21', 1)");
+            }
+
+            onCassandra("DROP INDEX tpch." + table + "_col1_idx");
+            onCassandra("DROP INDEX tpch." + table + "_col2_idx");
+
+            // Repeat the same SELECT statement without index
+            assertQuery("SELECT * FROM tpch." + table + " WHERE col1 = 'value1' AND col2 = 'value21' AND col3 = 1", "VALUES ('value1', 'value21', 1)");
+            assertQuery("SELECT * FROM tpch." + table + " WHERE col1 = 'value1' AND col3 = 1", "VALUES ('value1', 'value21', 1)");
+
+            onCassandra("DROP TABLE tpch." + table);
+        }
+    }
+
     @Override
     protected String dataMappingTableName(String trinoTypeName)
     {
