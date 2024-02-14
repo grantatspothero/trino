@@ -35,6 +35,7 @@ import io.trino.testing.sql.TestTable;
 import org.bson.Document;
 import org.bson.types.Decimal128;
 import org.bson.types.ObjectId;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -82,6 +83,17 @@ public class TestMongoConnectorTest
     public void initTestSchema()
     {
         assertUpdate("CREATE SCHEMA IF NOT EXISTS test");
+    }
+
+    @AfterAll
+    public void destroy()
+    {
+        if (server != null) {
+            server.close();
+            server = null;
+        }
+        client.close();
+        client = null;
     }
 
     @Override
