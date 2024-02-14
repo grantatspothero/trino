@@ -395,7 +395,7 @@ public class GlueHiveMetastore
             partition = Partition.builder(partition).setParameters(updatedStatisticsParameters).build();
             Map<String, HiveColumnStatistics> updatedColumnStatistics = updatedStatistics.getColumnStatistics();
 
-            PartitionInput partitionInput = GlueInputConverter.convertPartition(partition);
+            PartitionInput partitionInput = convertPartition(partition);
             partitionInput.setParameters(partition.getParameters());
 
             partitionUpdateRequests.add(new BatchUpdatePartitionRequestEntry()
@@ -565,7 +565,7 @@ public class GlueHiveMetastore
         }
         catch (AlreadyExistsException e) {
             // Do not throw SchemaAlreadyExistsException if this query has already created the database.
-            // This may happen when an actually successful metastore create call is retried,
+            // This may happen when an actually successful metastore create call is retried
             // because of a timeout on our side.
             String expectedQueryId = database.getParameters().get(TRINO_QUERY_ID_NAME);
             if (expectedQueryId != null) {
@@ -654,7 +654,7 @@ public class GlueHiveMetastore
         }
         catch (AlreadyExistsException e) {
             // Do not throw TableAlreadyExistsException if this query has already created the table.
-            // This may happen when an actually successful metastore create call is retried,
+            // This may happen when an actually successful metastore create call is retried
             // because of a timeout on our side.
             String expectedQueryId = table.getParameters().get(TRINO_QUERY_ID_NAME);
             if (expectedQueryId != null) {
@@ -767,7 +767,7 @@ public class GlueHiveMetastore
         }
     }
 
-    private TableInput convertGlueTableToTableInput(com.amazonaws.services.glue.model.Table glueTable, String newTableName)
+    private static TableInput convertGlueTableToTableInput(com.amazonaws.services.glue.model.Table glueTable, String newTableName)
     {
         return new TableInput()
                 .withName(newTableName)
@@ -1014,8 +1014,7 @@ public class GlueHiveMetastore
                             .withTableName(tableName)
                             .withExpression(expression)
                             .withSegment(segment)
-                            // We are interested in the partition values and excluding column schema
-                            // avoids the problem of a large response.
+                            // We need the partition values, and not column schema which is very large
                             .withExcludeColumnSchema(true)
                             .withMaxResults(AWS_GLUE_GET_PARTITIONS_MAX_RESULTS),
                     GetPartitionsRequest::setNextToken,
@@ -1043,7 +1042,7 @@ public class GlueHiveMetastore
      * </pre>
      *
      * @param partitionNames List of full partition names
-     * @return Mapping of partition name to partition object
+     * @return Mapping of partition name to the partition object
      */
     @Override
     public Map<String, Optional<Partition>> getPartitionsByNames(Table table, List<String> partitionNames)
@@ -1175,7 +1174,7 @@ public class GlueHiveMetastore
     private static void propagatePartitionErrorToTrinoException(String databaseName, String tableName, List<PartitionError> partitionErrors)
     {
         if (partitionErrors != null && !partitionErrors.isEmpty()) {
-            ErrorDetail errorDetail = partitionErrors.get(0).getErrorDetail();
+            ErrorDetail errorDetail = partitionErrors.getFirst().getErrorDetail();
             String glueExceptionCode = errorDetail.getErrorCode();
 
             switch (glueExceptionCode) {
