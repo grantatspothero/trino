@@ -15,7 +15,6 @@ Azure Storage <hive-azure>
 Google Cloud Storage <hive-gcs-tutorial>
 IBM Cloud Object Storage <hive-cos>
 Storage Caching <hive-caching>
-Alluxio <hive-alluxio>
 Object storage file formats <object-storage-file-formats>
 ```
 
