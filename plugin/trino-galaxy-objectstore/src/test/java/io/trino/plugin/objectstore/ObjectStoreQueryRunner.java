@@ -37,6 +37,7 @@ import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.GalaxyQueryRunner;
 import io.trino.testing.QueryRunner;
 import io.trino.tpch.TpchTable;
+import io.trino.util.AutoCloseableCloser;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -283,7 +284,7 @@ public final class ObjectStoreQueryRunner
         public static void main(String[] args)
                 throws Exception
         {
-            run(TableType.HIVE);
+            run(TableType.HIVE, AutoCloseableCloser.create());
         }
     }
 
@@ -294,7 +295,7 @@ public final class ObjectStoreQueryRunner
         public static void main(String[] args)
                 throws Exception
         {
-            run(TableType.ICEBERG);
+            run(TableType.ICEBERG, AutoCloseableCloser.create());
         }
     }
 
@@ -305,7 +306,7 @@ public final class ObjectStoreQueryRunner
         public static void main(String[] args)
                 throws Exception
         {
-            run(TableType.DELTA);
+            run(TableType.DELTA, AutoCloseableCloser.create());
         }
     }
 
@@ -316,22 +317,22 @@ public final class ObjectStoreQueryRunner
         public static void main(String[] args)
                 throws Exception
         {
-            run(TableType.HUDI);
+            run(TableType.HUDI, AutoCloseableCloser.create());
         }
     }
 
-    static QueryRunner run(TableType tableType)
+    static QueryRunner run(TableType tableType, AutoCloseableCloser closer)
             throws Exception
     {
         Logging.initialize();
 
         String bucketName = "test-bucket";
-        MinioStorage minio = new MinioStorage(bucketName);
-        GalaxyCockroachContainer cockroach = new GalaxyCockroachContainer();
-        TestingGalaxyMetastore metastore = new TestingGalaxyMetastore(cockroach);
-        TestingLocationSecurityServer locationSecurityServer = new TestingLocationSecurityServer((session, location) -> false);
+        MinioStorage minio = closer.register(new MinioStorage(bucketName));
+        GalaxyCockroachContainer cockroach = closer.register(new GalaxyCockroachContainer());
+        TestingGalaxyMetastore metastore = closer.register(new TestingGalaxyMetastore(cockroach));
+        TestingLocationSecurityServer locationSecurityServer = closer.register(new TestingLocationSecurityServer((session, location) -> false));
         minio.start();
-        TestingAccountFactory testingAccountFactory = new DockerTestingAccountFactory(cockroach);
+        TestingAccountFactory testingAccountFactory = closer.register(new DockerTestingAccountFactory(cockroach));
         TestingAccountClient account = testingAccountFactory.createAccountClient();
 
         DistributedQueryRunner queryRunner = builder()

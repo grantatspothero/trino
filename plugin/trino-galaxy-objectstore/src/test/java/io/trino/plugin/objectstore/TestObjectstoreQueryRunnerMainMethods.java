@@ -16,6 +16,7 @@ package io.trino.plugin.objectstore;
 import com.google.common.collect.ImmutableList;
 import io.trino.testing.MaterializedRow;
 import io.trino.testing.QueryRunner;
+import io.trino.util.AutoCloseableCloser;
 import org.junit.jupiter.api.Test;
 
 import static io.trino.plugin.objectstore.ObjectStoreQueryRunner.run;
@@ -28,7 +29,8 @@ public class TestObjectstoreQueryRunnerMainMethods
             throws Exception
     {
         for (TableType tableType : TableType.values()) {
-            try (QueryRunner queryRunner = run(tableType)) {
+            try (AutoCloseableCloser closer = AutoCloseableCloser.create();
+                    QueryRunner queryRunner = run(tableType, closer)) {
                 assertThat(queryRunner.execute("SHOW CATALOGS")).contains(new MaterializedRow(ImmutableList.of("objectstore")));
             }
         }
