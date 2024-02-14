@@ -597,7 +597,7 @@ public class SemiTransactionalHiveMetastore
     // TODO: Allow updating statistics for 2 tables in the same transaction
     public synchronized void setTableStatistics(Table table, PartitionStatistics tableStatistics)
     {
-        AcidTransaction transaction = currentHiveTransaction.isPresent() ? currentHiveTransaction.get().getTransaction() : NO_ACID_TRANSACTION;
+        AcidTransaction transaction = getOptionalAcidTransaction();
         setExclusive(delegate -> delegate.updateTableStatistics(table.getDatabaseName(), table.getTableName(), transaction, OVERWRITE_SOME_COLUMNS, tableStatistics));
     }
 
@@ -752,7 +752,7 @@ public class SemiTransactionalHiveMetastore
         if (oldTableAction == null) {
             Table table = getExistingTable(schemaTableName.getSchemaName(), schemaTableName.getTableName());
             if (isAcidTransactionRunning()) {
-                table = Table.builder(table).setWriteId(OptionalLong.of(currentHiveTransaction.orElseThrow().getTransaction().getWriteId())).build();
+                table = Table.builder(table).setWriteId(OptionalLong.of(getRequiredAcidTransaction().getWriteId())).build();
             }
             PartitionStatistics currentStatistics = getTableStatistics(databaseName, tableName, Optional.empty());
             tableActions.put(
@@ -788,7 +788,7 @@ public class SemiTransactionalHiveMetastore
         throw new IllegalStateException("Unknown action type: " + oldTableAction.getType());
     }
 
-    private boolean isAcidTransactionRunning()
+    private synchronized boolean isAcidTransactionRunning()
     {
         return currentHiveTransaction.isPresent() && currentHiveTransaction.get().getTransaction().isAcidTransactionRunning();
     }
@@ -1148,10 +1148,14 @@ public class SemiTransactionalHiveMetastore
         }
     }
 
-    private synchronized AcidTransaction getCurrentAcidTransaction()
+    private synchronized AcidTransaction getRequiredAcidTransaction()
     {
-        return currentHiveTransaction.map(HiveTransaction::getTransaction)
-                .orElseThrow(() -> new IllegalStateException("currentHiveTransaction not present"));
+        return currentHiveTransaction.orElseThrow(() -> new IllegalStateException("currentHiveTransaction not present")).getTransaction();
+    }
+
+    private synchronized AcidTransaction getOptionalAcidTransaction()
+    {
+        return currentHiveTransaction.map(HiveTransaction::getTransaction).orElse(NO_ACID_TRANSACTION);
     }
 
     private String getPartitionName(String databaseName, String tableName, List<String> partitionValues)
@@ -1345,7 +1349,7 @@ public class SemiTransactionalHiveMetastore
         }
     }
 
-    public boolean isFinished()
+    public synchronized boolean isFinished()
     {
         return state == State.FINISHED;
     }
@@ -1593,7 +1597,7 @@ public class SemiTransactionalHiveMetastore
     {
         checkHoldsLock();
 
-        AcidTransaction transaction = currentHiveTransaction.isEmpty() ? NO_ACID_TRANSACTION : currentHiveTransaction.get().getTransaction();
+        AcidTransaction transaction = getOptionalAcidTransaction();
 
         Committer committer = new Committer(transaction);
         try {
@@ -1907,15 +1911,14 @@ public class SemiTransactionalHiveMetastore
                     true));
 
             if (isAcidTransactionRunning()) {
-                AcidTransaction transaction = getCurrentAcidTransaction();
+                AcidTransaction transaction = getRequiredAcidTransaction();
                 updateTableWriteId(table.getDatabaseName(), table.getTableName(), transaction.getAcidTransactionId(), transaction.getWriteId(), OptionalLong.empty());
             }
         }
 
         private void prepareMergeExistingTable(ConnectorIdentity identity, TableAndMore tableAndMore)
         {
-            checkArgument(currentHiveTransaction.isPresent(), "currentHiveTransaction isn't present");
-            AcidTransaction transaction = currentHiveTransaction.get().getTransaction();
+            AcidTransaction transaction = getRequiredAcidTransaction();
             checkArgument(transaction.isMerge(), "transaction should be merge, but is %s", transaction);
 
             deleteOnly = false;
@@ -2485,7 +2488,7 @@ public class SemiTransactionalHiveMetastore
     }
 
     @GuardedBy("this")
-    private void checkReadable()
+    private synchronized void checkReadable()
     {
         checkHoldsLock();
 
@@ -2501,7 +2504,7 @@ public class SemiTransactionalHiveMetastore
     }
 
     @GuardedBy("this")
-    private void setShared()
+    private synchronized void setShared()
     {
         checkHoldsLock();
 
@@ -2510,7 +2513,7 @@ public class SemiTransactionalHiveMetastore
     }
 
     @GuardedBy("this")
-    private void setExclusive(ExclusiveOperation exclusiveOperation)
+    private synchronized void setExclusive(ExclusiveOperation exclusiveOperation)
     {
         checkHoldsLock();
 
