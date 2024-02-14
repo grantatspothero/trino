@@ -40,6 +40,11 @@ public class CassandraPartition
         indexedColumnPredicatePushdown = false;
     }
 
+    public static CassandraPartition unpartitioned(TupleDomain<ColumnHandle> tupleDomain, boolean indexedColumnPredicatePushdown)
+    {
+        return new CassandraPartition(null, UNPARTITIONED_ID, tupleDomain, indexedColumnPredicatePushdown);
+    }
+
     @JsonCreator
     public CassandraPartition(
             @JsonProperty("key") byte[] key,

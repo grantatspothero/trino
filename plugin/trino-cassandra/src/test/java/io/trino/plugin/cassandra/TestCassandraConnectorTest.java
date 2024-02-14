@@ -187,12 +187,7 @@ public class TestCassandraConnectorTest
             // Execute a query on Trino with where clause having all the secondary key column and having a clustering key(ENTITY_ID)
             assertQuery("SELECT * FROM tpch." + table + " WHERE col1 = 'value1' AND col2 = 'value21' AND col3 = 1", "VALUES ('value1', 'value21', 1)");
             // Execute a query on Trino with where clause not having all the secondary key column and having a clustering key(ENTITY_ID)
-            if (withClusteringKey) {
-                assertQuery("SELECT * FROM tpch." + table + " WHERE col1 = 'value1' AND col3 = 1", "VALUES ('value1', 'value21', 1), ('value1', 'value22', 2)");
-            }
-            else {
-                assertQuery("SELECT * FROM tpch." + table + " WHERE col1 = 'value1' AND col3 = 1", "VALUES ('value1', 'value21', 1)");
-            }
+            assertQuery("SELECT * FROM tpch." + table + " WHERE col1 = 'value1' AND col3 = 1", "VALUES ('value1', 'value21', 1)");
 
             onCassandra("DROP INDEX tpch." + table + "_col1_idx");
             onCassandra("DROP INDEX tpch." + table + "_col2_idx");
