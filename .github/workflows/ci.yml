@@ -775,7 +775,6 @@ jobs:
             !:trino-galaxy-warp-speed-2,
             !:trino-galaxy-salesforce,
             !:trino-galaxy-snowflake,
-            !:trino-galaxy-sqlserver,
             !:trino-galaxy-stargate,
             !:trino-google-sheets,
             !:trino-hdfs,
@@ -919,7 +918,6 @@ jobs:
             - { modules: plugin/trino-cassandra }
             - { modules: plugin/trino-galaxy-dynamodb }
             - { modules: plugin/trino-galaxy-snowflake }
-            - { modules: plugin/trino-galaxy-sqlserver }
             - { modules: plugin/trino-galaxy-stargate, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
             - { modules: plugin/trino-clickhouse }
             - { modules: plugin/trino-delta-lake }

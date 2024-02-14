@@ -23,6 +23,12 @@ public class StarburstSqlServerPlugin
         implements Plugin
 {
     private final LicenseManager licenseManager;
+    private static final LicenseManager NOOP_LICENSE_MANAGER = () -> true;
+
+    public StarburstSqlServerPlugin()
+    {
+        this(NOOP_LICENSE_MANAGER);
+    }
 
     public StarburstSqlServerPlugin(LicenseManager licenseManager)
     {

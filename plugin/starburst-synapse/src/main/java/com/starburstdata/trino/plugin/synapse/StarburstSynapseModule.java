@@ -15,17 +15,16 @@ import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
-import com.microsoft.sqlserver.jdbc.SQLServerDriver;
 import com.starburstdata.trino.plugin.jdbc.JdbcConnectionPoolConfig;
-import com.starburstdata.trino.plugin.jdbc.PoolingConnectionFactory;
+import com.starburstdata.trino.plugin.sqlserver.StarburstSqlServerClientModule;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
-import io.trino.plugin.base.CatalogName;
+import io.opentelemetry.api.OpenTelemetry;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
-import io.trino.plugin.jdbc.DriverConnectionFactory;
 import io.trino.plugin.jdbc.ForBaseJdbc;
 import io.trino.plugin.jdbc.ForJdbcDynamicFiltering;
-import io.trino.plugin.jdbc.IdentityCacheMapping;
 import io.trino.plugin.jdbc.JdbcClient;
 import io.trino.plugin.jdbc.JdbcJoinPushdownSupportModule;
 import io.trino.plugin.jdbc.JdbcRecordSetProvider;
@@ -35,10 +34,11 @@ import io.trino.plugin.jdbc.MaxDomainCompactionThreshold;
 import io.trino.plugin.jdbc.credential.CredentialProvider;
 import io.trino.plugin.jdbc.ptf.Query;
 import io.trino.plugin.sqlserver.SqlServerConfig;
-import io.trino.plugin.sqlserver.SqlServerConnectionFactory;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.ConnectorRecordSetProvider;
 import io.trino.spi.connector.ConnectorSplitManager;
 import io.trino.spi.function.table.ConnectorTableFunction;
+import io.trino.sshtunnel.SshTunnelConfig;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -103,27 +103,16 @@ public class StarburstSynapseModule
     @Singleton
     @DefaultSynapseBinding
     public static ConnectionFactory getConnectionFactory(
-            CatalogName catalogName,
+            CatalogHandle catalogHandle,
             BaseJdbcConfig config,
-            JdbcConnectionPoolConfig connectionPoolingConfig,
             SqlServerConfig sqlServerConfig,
-            CredentialProvider credentialProvider,
-            IdentityCacheMapping identityCacheMapping)
+            SshTunnelConfig sshConfig,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig,
+            CredentialProvider credentials,
+            OpenTelemetry openTelemetry)
     {
-        if (connectionPoolingConfig.isConnectionPoolEnabled()) {
-            return new SqlServerConnectionFactory(
-                    new PoolingConnectionFactory(
-                            catalogName.toString(),
-                            SQLServerDriver.class,
-                            config,
-                            connectionPoolingConfig,
-                            credentialProvider,
-                            identityCacheMapping),
-                    sqlServerConfig.isSnapshotIsolationDisabled());
-        }
-        return new SqlServerConnectionFactory(
-                new DriverConnectionFactory(new SQLServerDriver(), config, credentialProvider),
-                sqlServerConfig.isSnapshotIsolationDisabled());
+        return StarburstSqlServerClientModule.getConnectionFactory(catalogHandle, config, sqlServerConfig, localRegionConfig, crossRegionConfig, sshConfig, credentials, openTelemetry);
     }
 
     @Retention(RetentionPolicy.RUNTIME)

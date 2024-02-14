@@ -161,7 +161,7 @@
     </artifactSet>
 
     <artifactSet to="plugin/galaxy-sqlserver">
-        <artifact id="${project.groupId}:trino-galaxy-sqlserver:zip:${project.version}">
+        <artifact id="${project.groupId}:starburst-sqlserver:zip:${project.version}">
             <unpack />
         </artifact>
     </artifactSet>
@@ -173,7 +173,7 @@
     </artifactSet>
 
     <artifactSet to="plugin/galaxy-synapse">
-        <artifact id="${project.groupId}:trino-galaxy-synapse:zip:${project.version}">
+        <artifact id="${project.groupId}:starburst-synapse:zip:${project.version}">
             <unpack />
         </artifact>
     </artifactSet>
