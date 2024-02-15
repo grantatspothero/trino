@@ -15,7 +15,6 @@
 
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>
-        <air.test.jvm.additional-arguments>${extraJavaVectorArgs}</air.test.jvm.additional-arguments>
         <dep.keycloak.version>21.1.2</dep.keycloak.version>
         <!-- Nessie version (matching to Iceberg release) must be bumped along with Iceberg version bump to avoid compatibility issues -->
         <dep.nessie.version>0.59.0</dep.nessie.version>
