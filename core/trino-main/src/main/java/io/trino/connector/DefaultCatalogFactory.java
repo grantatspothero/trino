@@ -19,7 +19,6 @@ import io.airlift.node.NodeInfo;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;
 import io.trino.connector.informationschema.InformationSchemaConnector;
-import io.trino.connector.informationschema.InformationSchemaPageSourceProvider;
 import io.trino.connector.system.CoordinatorSystemTablesProvider;
 import io.trino.connector.system.StaticSystemTablesProvider;
 import io.trino.connector.system.SystemConnector;
@@ -27,6 +26,7 @@ import io.trino.connector.system.SystemTablesProvider;
 import io.trino.execution.scheduler.NodeSchedulerConfig;
 import io.trino.metadata.InternalNodeManager;
 import io.trino.metadata.Metadata;
+import io.trino.security.AccessControl;
 import io.trino.spi.PageIndexerFactory;
 import io.trino.spi.PageSorter;
 import io.trino.spi.VersionEmbedder;
@@ -54,6 +54,7 @@ public class DefaultCatalogFactory
         implements CatalogFactory
 {
     private final Metadata metadata;
+    private final AccessControl accessControl;
 
     private final InternalNodeManager nodeManager;
     private final PageSorter pageSorter;
@@ -63,7 +64,6 @@ public class DefaultCatalogFactory
     private final OpenTelemetry openTelemetry;
     private final TransactionManager transactionManager;
     private final TypeManager typeManager;
-    private final InformationSchemaPageSourceProvider informationSchemaPageSourceProvider;
 
     private final boolean schedulerIncludeCoordinator;
     private final int maxPrefetchedInformationSchemaPrefixes;
@@ -73,6 +73,7 @@ public class DefaultCatalogFactory
     @Inject
     public DefaultCatalogFactory(
             Metadata metadata,
+            AccessControl accessControl,
             InternalNodeManager nodeManager,
             PageSorter pageSorter,
             PageIndexerFactory pageIndexerFactory,
@@ -80,12 +81,12 @@ public class DefaultCatalogFactory
             VersionEmbedder versionEmbedder,
             OpenTelemetry openTelemetry,
             TransactionManager transactionManager,
-            InformationSchemaPageSourceProvider informationSchemaPageSourceProvider,
             TypeManager typeManager,
             NodeSchedulerConfig nodeSchedulerConfig,
             OptimizerConfig optimizerConfig)
     {
         this.metadata = requireNonNull(metadata, "metadata is null");
+        this.accessControl = requireNonNull(accessControl, "accessControl is null");
         this.nodeManager = requireNonNull(nodeManager, "nodeManager is null");
         this.pageSorter = requireNonNull(pageSorter, "pageSorter is null");
         this.pageIndexerFactory = requireNonNull(pageIndexerFactory, "pageIndexerFactory is null");
@@ -93,7 +94,6 @@ public class DefaultCatalogFactory
         this.versionEmbedder = requireNonNull(versionEmbedder, "versionEmbedder is null");
         this.openTelemetry = requireNonNull(openTelemetry, "openTelemetry is null");
         this.transactionManager = requireNonNull(transactionManager, "transactionManager is null");
-        this.informationSchemaPageSourceProvider = requireNonNull(informationSchemaPageSourceProvider, "informationSchemaPageSourceProvider is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.schedulerIncludeCoordinator = nodeSchedulerConfig.isIncludeCoordinator();
         this.maxPrefetchedInformationSchemaPrefixes = optimizerConfig.getMaxPrefetchedInformationSchemaPrefixes();
@@ -139,15 +139,17 @@ public class DefaultCatalogFactory
     {
         Tracer tracer = createTracer(catalogHandle);
 
-        ConnectorServices catalogConnector = new ConnectorServices(
-                tracer,
-                catalogHandle,
-                connector);
+        ConnectorServices catalogConnector = new ConnectorServices(tracer, catalogHandle, connector);
 
         ConnectorServices informationSchemaConnector = new ConnectorServices(
                 tracer,
                 createInformationSchemaCatalogHandle(catalogHandle),
-                new InformationSchemaConnector(catalogHandle.getCatalogName(), nodeManager, metadata, maxPrefetchedInformationSchemaPrefixes, informationSchemaPageSourceProvider));
+                new InformationSchemaConnector(
+                        catalogHandle.getCatalogName(),
+                        nodeManager,
+                        metadata,
+                        accessControl,
+                        maxPrefetchedInformationSchemaPrefixes));
 
         SystemTablesProvider systemTablesProvider;
         if (nodeManager.getCurrentNode().isCoordinator()) {

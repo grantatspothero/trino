@@ -362,7 +362,6 @@ public class LocalQueryRunner
             boolean alwaysRevokeMemory,
             int nodeCountForStats,
             Map<String, List<PropertyMetadata<?>>> defaultSessionProperties,
-            BiFunction<Metadata, AccessControl, InformationSchemaPageSourceProvider> informationSchemaPageSourceFactory,
             BiFunction<Metadata, AccessControl, SystemTable> tableCommentFactory,
             BiFunction<Metadata, AccessControl, SystemTable> materializedViewFactory,
             Function<Metadata, Metadata> metadataDecorator,
@@ -427,6 +426,7 @@ public class LocalQueryRunner
         NodeInfo nodeInfo = new NodeInfo("test");
         catalogFactory.setCatalogFactory(new DefaultCatalogFactory(
                 metadata,
+                accessControl,
                 nodeManager,
                 pageSorter,
                 pageIndexerFactory,
@@ -434,7 +434,6 @@ public class LocalQueryRunner
                 testingVersionEmbedder(),
                 OpenTelemetry.noop(),
                 transactionManager,
-                informationSchemaPageSourceFactory.apply(metadata, accessControl),
                 typeManager,
                 nodeSchedulerConfig,
                 optimizerConfig));
@@ -1332,12 +1331,6 @@ public class LocalQueryRunner
             return this;
         }
 
-        public Builder withInformationSchemaPageSourceFactory(BiFunction<Metadata, AccessControl, InformationSchemaPageSourceProvider> informationSchemaPageSourceFactory)
-        {
-            this.informationSchemaPageSourceFactory = requireNonNull(informationSchemaPageSourceFactory, "informationSchemaPageSourceFactory is null");
-            return this;
-        }
-
         public Builder withTableCommentFactory(BiFunction<Metadata, AccessControl, SystemTable> tableCommentFactory)
         {
             this.tableCommentFactory = requireNonNull(tableCommentFactory, "tableCommentFactory is null");
@@ -1360,7 +1353,6 @@ public class LocalQueryRunner
                     alwaysRevokeMemory,
                     nodeCountForStats,
                     defaultSessionProperties,
-                    informationSchemaPageSourceFactory,
                     tableCommentFactory,
                     materializedViewFactory,
                     metadataDecorator,
