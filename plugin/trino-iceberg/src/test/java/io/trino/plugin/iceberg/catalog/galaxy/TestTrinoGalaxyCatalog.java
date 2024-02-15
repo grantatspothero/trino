@@ -20,7 +20,6 @@ import io.trino.plugin.hive.HiveSchemaProperties;
 import io.trino.plugin.hive.metastore.Database;
 import io.trino.plugin.hive.metastore.cache.CachingHiveMetastore;
 import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastore;
-import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastoreConfig;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.hive.util.HiveUtil;
 import io.trino.plugin.iceberg.IcebergSchemaProperties;
@@ -75,8 +74,7 @@ public class TestTrinoGalaxyCatalog
         GalaxyHiveMetastore metastore = new GalaxyHiveMetastore(
                 galaxyMetastore.getMetastore(),
                 HDFS_FILE_SYSTEM_FACTORY,
-                tempDir.toUri().toString(),
-                new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
+                tempDir.toUri().toString());
         CachingHiveMetastore cachingHiveMetastore = createPerTransactionCache(metastore, 1000);
         TestingTypeManager typeManager = new TestingTypeManager();
         return new TestableTrinoGalaxyCatalog(

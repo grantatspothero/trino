@@ -21,7 +21,6 @@ import com.google.common.collect.Maps;
 import io.airlift.http.client.HttpClient;
 import io.airlift.log.Logger;
 import io.starburst.stargate.metastore.client.Column;
-import io.starburst.stargate.metastore.client.DatabaseTableName;
 import io.starburst.stargate.metastore.client.EntityAlreadyExistsException;
 import io.starburst.stargate.metastore.client.EntityNotFoundException;
 import io.starburst.stargate.metastore.client.GetTablesResult;
@@ -72,7 +71,6 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
-import java.util.stream.Stream;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Strings.emptyToNull;
@@ -117,23 +115,20 @@ public class GalaxyHiveMetastore
     private final Metastore metastore;
     private final TrinoFileSystem fileSystem;
     private final String defaultDirectory;
-    private final boolean batchMetadataFetch;
 
     public GalaxyHiveMetastore(GalaxyHiveMetastoreConfig config, TrinoFileSystemFactory fileSystemFactory, HttpClient httpClient)
     {
         this(
                 new RestMetastore(config.getMetastoreId(), config.getSharedSecret(), config.getServerUri(), httpClient),
                 fileSystemFactory,
-                config.getDefaultDataDirectory(),
-                config.isBatchMetadataFetch());
+                config.getDefaultDataDirectory());
     }
 
-    public GalaxyHiveMetastore(Metastore metastore, TrinoFileSystemFactory fileSystemFactory, String defaultDirectory, boolean batchMetadataFetch)
+    public GalaxyHiveMetastore(Metastore metastore, TrinoFileSystemFactory fileSystemFactory, String defaultDirectory)
     {
         this.metastore = requireNonNull(metastore, "metastore is null");
         this.defaultDirectory = requireNonNull(defaultDirectory, "defaultDirectory is null");
         this.fileSystem = fileSystemFactory.create(ConnectorIdentity.ofUser(DEFAULT_METASTORE_USER));
-        this.batchMetadataFetch = batchMetadataFetch;
     }
 
     @Override
@@ -316,30 +311,6 @@ public class GalaxyHiveMetastore
         }
         catch (MetastoreException e) {
             throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
-        }
-    }
-
-    @Override
-    public Optional<List<TableInfo>> getAllTables()
-    {
-        if (!batchMetadataFetch) {
-            return Optional.empty();
-        }
-        try {
-            Collection<DatabaseTableName> tables = metastore.getAllTableNames();
-            Collection<DatabaseTableName> views = metastore.getAllViewNames();
-
-            // TODO: return materialized views from here ???
-            return Optional.of(Stream.concat(
-                            tables.stream().map(name -> new TableInfo(new SchemaTableName(name.databaseName(), name.tableName()), TableInfo.ExtendedRelationType.TABLE)),
-                            views.stream().map(name -> new TableInfo(new SchemaTableName(name.databaseName(), name.tableName()), TableInfo.ExtendedRelationType.TRINO_VIEW)))
-                    .collect(toImmutableList()));
-        }
-        catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
-        }
-        catch (RuntimeException e) {
-            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 

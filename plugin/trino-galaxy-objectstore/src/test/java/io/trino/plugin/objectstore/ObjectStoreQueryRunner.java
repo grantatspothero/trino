@@ -24,7 +24,6 @@ import io.trino.connector.MockConnectorPlugin;
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystem;
 import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastore;
-import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastoreConfig;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.plugin.tpch.TpchPlugin;
@@ -258,7 +257,7 @@ public final class ObjectStoreQueryRunner
             throws Exception
     {
         Path basePath = queryRunner.getCoordinator().getBaseDataDir().resolve("data");
-        GalaxyHiveMetastore hiveMetastore = new GalaxyHiveMetastore(metastore.getMetastore(), HDFS_FILE_SYSTEM_FACTORY, basePath.toFile().getAbsolutePath(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
+        GalaxyHiveMetastore hiveMetastore = new GalaxyHiveMetastore(metastore.getMetastore(), HDFS_FILE_SYSTEM_FACTORY, basePath.toFile().getAbsolutePath());
         // TpchObjectStoreHudiTablesInitializer wont work here because it cannot cast CoordinatorDispatcherConnector to ObjectStoreConnector.
         // It is not-trivial to expose the injector or any other internal component of the connector (even just for testing). So TpchWarpSpeedObjectStoreHudiTablesInitializer stays with using the old approach of getting a metastore
         TpchWarpSpeedObjectStoreHudiTablesInitializer loader = new TpchWarpSpeedObjectStoreHudiTablesInitializer(hiveMetastore, trinoFileSystem, tables);

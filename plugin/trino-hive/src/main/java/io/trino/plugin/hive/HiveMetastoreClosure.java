@@ -121,11 +121,6 @@ public class HiveMetastoreClosure
         delegate.updatePartitionStatistics(table, mode, partitionUpdates);
     }
 
-    public Optional<List<TableInfo>> getTables()
-    {
-        return delegate.getAllTables();
-    }
-
     public List<TableInfo> getTables(String databaseName)
     {
         return delegate.getTables(databaseName);

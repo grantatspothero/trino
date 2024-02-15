@@ -32,7 +32,6 @@ import java.util.Map;
 
 import static io.trino.plugin.hive.metastore.MetastoreInvocations.assertMetastoreInvocationsForQuery;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.GET_ALL_DATABASES;
-import static io.trino.plugin.hive.metastore.MetastoreMethod.GET_ALL_TABLES;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.GET_TABLE;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.GET_TABLES;
 import static io.trino.plugin.hive.metastore.MetastoreMethod.STREAM_TABLES;
@@ -114,15 +113,13 @@ public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
     {
         assertMetastoreInvocations("SELECT * FROM information_schema.tables",
                 ImmutableMultiset.<MetastoreMethod>builder()
-                        .add(GET_ALL_DATABASES)
-                        .add(GET_ALL_TABLES)
-                        .add(GET_TABLES)
+                        .addCopies(GET_ALL_DATABASES, 2)
+                        .addCopies(GET_TABLES, 2)
                         .build());
         assertMetastoreInvocations("SELECT * FROM system.jdbc.tables",
                 ImmutableMultiset.<MetastoreMethod>builder()
-                        .add(GET_ALL_DATABASES)
-                        .add(GET_ALL_TABLES)
-                        .add(GET_TABLES)
+                        .addCopies(GET_ALL_DATABASES, 2)
+                        .addCopies(GET_TABLES, 2)
                         .build());
     }
 
@@ -156,9 +153,8 @@ public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
                         .build());
         assertMetastoreInvocations("SELECT * FROM system.jdbc.tables WHERE table_schem LIKE 'test%'",
                 ImmutableMultiset.<MetastoreMethod>builder()
-                        .add(GET_ALL_DATABASES)
-                        .add(GET_ALL_TABLES)
-                        .add(GET_TABLES)
+                        .addCopies(GET_ALL_DATABASES, 2)
+                        .addCopies(GET_TABLES, 2)
                         .build());
     }
 
@@ -172,21 +168,18 @@ public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
                         .build());
         assertMetastoreInvocations("SELECT * FROM system.jdbc.tables WHERE table_name = 'test_table_0'",
                 ImmutableMultiset.<MetastoreMethod>builder()
-                        .add(GET_ALL_DATABASES)
-                        .add(GET_ALL_TABLES)
-                        .add(GET_TABLES)
+                        .addCopies(GET_ALL_DATABASES, 2)
+                        .addCopies(GET_TABLES, 2)
                         .build());
         assertMetastoreInvocations("SELECT * FROM system.jdbc.tables WHERE table_name LIKE 'test\\_table\\_0' ESCAPE '\\'",
                 ImmutableMultiset.<MetastoreMethod>builder()
-                        .add(GET_ALL_DATABASES)
-                        .add(GET_ALL_TABLES)
-                        .add(GET_TABLES)
+                        .addCopies(GET_ALL_DATABASES, 2)
+                        .addCopies(GET_TABLES, 2)
                         .build());
         assertMetastoreInvocations("SELECT * FROM system.jdbc.tables WHERE table_name LIKE 'test_table_0' ESCAPE '\\'",
                 ImmutableMultiset.<MetastoreMethod>builder()
-                        .add(GET_ALL_DATABASES)
-                        .add(GET_ALL_TABLES)
-                        .add(GET_TABLES)
+                        .addCopies(GET_ALL_DATABASES, 2)
+                        .addCopies(GET_TABLES, 2)
                         .build());
     }
 
@@ -200,9 +193,8 @@ public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
                         .build());
         assertMetastoreInvocations("SELECT * FROM system.jdbc.tables WHERE table_name LIKE 'test%'",
                 ImmutableMultiset.<MetastoreMethod>builder()
-                        .add(GET_ALL_DATABASES)
-                        .add(GET_ALL_TABLES)
-                        .add(GET_TABLES)
+                        .addCopies(GET_ALL_DATABASES, 2)
+                        .addCopies(GET_TABLES, 2)
                         .build());
     }
 
@@ -211,13 +203,13 @@ public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
     {
         assertMetastoreInvocations("SELECT * FROM information_schema.views",
                 ImmutableMultiset.<MetastoreMethod>builder()
-                        .add(GET_ALL_TABLES)
+                        .add(GET_ALL_DATABASES)
+                        .add(GET_TABLES)
                         .build());
         assertMetastoreInvocations("SELECT * FROM system.jdbc.tables WHERE table_type = 'VIEW'",
                 ImmutableMultiset.<MetastoreMethod>builder()
-                        .add(GET_ALL_DATABASES)
-                        .add(GET_ALL_TABLES)
-                        .add(GET_TABLES)
+                        .addCopies(GET_ALL_DATABASES, 2)
+                        .addCopies(GET_TABLES, 2)
                         .build());
     }
 
@@ -251,9 +243,8 @@ public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
                         .build());
         assertMetastoreInvocations("SELECT * FROM system.jdbc.tables WHERE table_type = 'VIEW' AND table_schem LIKE 'test%'",
                 ImmutableMultiset.<MetastoreMethod>builder()
-                        .add(GET_ALL_DATABASES)
-                        .add(GET_ALL_TABLES)
-                        .add(GET_TABLES)
+                        .addCopies(GET_ALL_DATABASES, 2)
+                        .addCopies(GET_TABLES, 2)
                         .build());
     }
 
@@ -267,9 +258,8 @@ public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
                         .build());
         assertMetastoreInvocations("SELECT * FROM system.jdbc.tables WHERE table_type = 'VIEW' AND table_name = 'test_table_0'",
                 ImmutableMultiset.<MetastoreMethod>builder()
-                        .add(GET_ALL_DATABASES)
-                        .add(GET_ALL_TABLES)
-                        .add(GET_TABLES)
+                        .addCopies(GET_ALL_DATABASES, 2)
+                        .addCopies(GET_TABLES, 2)
                         .build());
     }
 
@@ -283,9 +273,8 @@ public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
                         .build());
         assertMetastoreInvocations("SELECT * FROM system.jdbc.tables WHERE table_type = 'VIEW' AND table_name LIKE 'test%'",
                 ImmutableMultiset.<MetastoreMethod>builder()
-                        .add(GET_ALL_DATABASES)
-                        .add(GET_ALL_TABLES)
-                        .add(GET_TABLES)
+                        .addCopies(GET_ALL_DATABASES, 2)
+                        .addCopies(GET_TABLES, 2)
                         .build());
     }
 

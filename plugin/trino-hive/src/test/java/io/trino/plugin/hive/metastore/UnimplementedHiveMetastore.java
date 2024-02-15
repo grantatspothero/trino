@@ -89,12 +89,6 @@ public class UnimplementedHiveMetastore
     }
 
     @Override
-    public Optional<List<TableInfo>> getAllTables()
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public Optional<Iterator<Table>> streamTables(ConnectorSession session, String databaseName)
     {
         throw new UnsupportedOperationException();

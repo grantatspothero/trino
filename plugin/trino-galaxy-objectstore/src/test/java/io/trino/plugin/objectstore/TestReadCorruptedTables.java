@@ -23,7 +23,6 @@ import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hive.metastore.PrincipalPrivileges;
 import io.trino.plugin.hive.metastore.Table;
 import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastore;
-import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastoreConfig;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.iceberg.IcebergPlugin;
 import io.trino.plugin.iceberg.catalog.AbstractIcebergTableOperations;
@@ -128,8 +127,7 @@ public class TestReadCorruptedTables
         HiveMetastore metastore = new GalaxyHiveMetastore(
                 galaxyMetastore.getMetastore(),
                 HDFS_FILE_SYSTEM_FACTORY,
-                DEFAULT_DATA_DIRECTORY,
-                new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
+                DEFAULT_DATA_DIRECTORY);
 
         // Register Iceberg tables: register_table-equivalent, but without any validation
         for (Map.Entry<String, IcebergTable> entry : Map.of(

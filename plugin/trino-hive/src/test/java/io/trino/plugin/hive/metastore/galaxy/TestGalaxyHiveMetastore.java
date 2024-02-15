@@ -43,7 +43,7 @@ public class TestGalaxyHiveMetastore
         tempDir.toFile().mkdirs();
         cockroach = new GalaxyCockroachContainer();
         testingGalaxyMetastore = new TestingGalaxyMetastore(cockroach);
-        metastore = new GalaxyHiveMetastore(testingGalaxyMetastore.getMetastore(), HDFS_FILE_SYSTEM_FACTORY, tempDir.toUri().toString(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
+        metastore = new GalaxyHiveMetastore(testingGalaxyMetastore.getMetastore(), HDFS_FILE_SYSTEM_FACTORY, tempDir.toUri().toString());
     }
 
     @Override

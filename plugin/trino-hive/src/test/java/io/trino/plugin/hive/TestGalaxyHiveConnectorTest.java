@@ -17,7 +17,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastore;
-import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastoreConfig;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.testing.DistributedQueryRunner;
@@ -50,7 +49,7 @@ public class TestGalaxyHiveConnectorTest
 
         Function<QueryRunner, HiveMetastore> metastore = queryRunner -> {
             File baseDir = queryRunner.getCoordinator().getBaseDataDir().resolve("hive_data").toFile();
-            return new GalaxyHiveMetastore(testingGalaxyMetastore.getMetastore(), HDFS_FILE_SYSTEM_FACTORY, baseDir.getAbsolutePath(), new GalaxyHiveMetastoreConfig().isBatchMetadataFetch());
+            return new GalaxyHiveMetastore(testingGalaxyMetastore.getMetastore(), HDFS_FILE_SYSTEM_FACTORY, baseDir.getAbsolutePath());
         };
 
         // Use a compression codec that's fast and doesn't cause GCLocker
