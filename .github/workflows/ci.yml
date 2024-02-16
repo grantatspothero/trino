@@ -1221,13 +1221,15 @@ jobs:
       - name: Salesforce Maven Tests
         if: matrix.modules == 'plugin/trino-galaxy-salesforce'
         env:
-          SALESFORCE_CONFIG: >-
-            -Dsalesforce.test.basic.auth.user=${{ secrets.SALESFORCE_USERNAME }}
-            -Dsalesforce.test.basic.auth.password=${{ secrets.SALESFORCE_PASSWORD }}
-            -Dsalesforce.test.basic.auth.security-token=${{ secrets.SALESFORCE_SECURITY_TOKEN }}
+          SALESFORCE_BASIC_AUTH_USER_USERNAME: ${{ secrets.SALESFORCE_BASIC_AUTH_USER_USERNAME }}
+          SALESFORCE_BASIC_AUTH_USER_PASSWORD: ${{ secrets.SALESFORCE_BASIC_AUTH_USER_PASSWORD }}
+          SALESFORCE_BASIC_AUTH_USER_SECURITY_TOKEN: ${{ secrets.SALESFORCE_BASIC_AUTH_USER_SECURITY_TOKEN }}
         run: |
           export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
-          $MAVEN test ${MAVEN_TEST} -pl ${{ matrix.modules }} ${{ matrix.profile != '' && format('-P {0}', matrix.profile) || '' }} ${SALESFORCE_CONFIG}
+          ./mvnw test ${MAVEN_TEST} -pl ${{ matrix.modules }} \
+            -Dsalesforce.test.basic.auth.user="${SALESFORCE_BASIC_AUTH_USER_USERNAME}" \
+            -Dsalesforce.test.basic.auth.password="${SALESFORCE_BASIC_AUTH_USER_PASSWORD}" \
+            -Dsalesforce.test.basic.auth.security-token="${SALESFORCE_BASIC_AUTH_USER_SECURITY_TOKEN}"
       - name: Snowflake Maven Tests
         if: matrix.modules == 'plugin/trino-galaxy-snowflake'
         env:
