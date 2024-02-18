@@ -36,7 +36,7 @@ public class TestWarpSpeedObjectStoreHiveCacheSubqueriesTest
     }
 
     @Override
-    protected boolean simplifyIsPrune()
+    protected boolean getUnenforcedPredicateIsPrune()
     {
         return true;
     }
