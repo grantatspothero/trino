@@ -283,6 +283,16 @@ public class TestCacheDataOperator
         {
             return TupleDomain.all();
         }
+
+        @Override
+        public TupleDomain<ColumnHandle> prunePredicate(
+                Session session,
+                Split split,
+                TableHandle table,
+                TupleDomain<ColumnHandle> predicate)
+        {
+            return predicate;
+        }
     }
 
     private static class PassThroughOperator
