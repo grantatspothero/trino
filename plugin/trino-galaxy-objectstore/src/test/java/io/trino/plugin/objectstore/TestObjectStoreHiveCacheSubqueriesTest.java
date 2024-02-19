@@ -114,4 +114,10 @@ public class TestObjectStoreHiveCacheSubqueriesTest
     {
         return new ObjectStorePlugin();
     }
+
+    @Override
+    protected boolean supportsDataColumnPruning()
+    {
+        return false;
+    }
 }
