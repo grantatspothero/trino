@@ -86,12 +86,10 @@ public class RedshiftAuthenticationModule
                 SshTunnelConfig sshTunnelConfig,
                 OpenTelemetry openTelemetry)
         {
-            return new DriverConnectionFactory(
-                    new Driver(),
-                    config.getConnectionUrl(),
-                    getDriverProperties(catalogHandle, localRegionConfig, crossRegionConfig, sshTunnelConfig),
-                    credentialProvider,
-                    openTelemetry);
+            return DriverConnectionFactory.builder(new Driver(), config.getConnectionUrl(), credentialProvider)
+                    .setConnectionProperties(getDriverProperties(catalogHandle, localRegionConfig, crossRegionConfig, sshTunnelConfig))
+                    .setOpenTelemetry(openTelemetry)
+                    .build();
         }
     }
 

@@ -69,6 +69,9 @@ public class PostgreSqlConnectionFactoryModule
 
         CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(connectionProperties::setProperty, CatalogNetworkMonitorProperties.generateFrom(crossRegionConfig, catalogHandle));
 
-        return new DriverConnectionFactory(new Driver(), config.getConnectionUrl(), connectionProperties, credentialProvider, openTelemetry);
+        return DriverConnectionFactory.builder(new Driver(), config.getConnectionUrl(), credentialProvider)
+                .setConnectionProperties(connectionProperties)
+                .setOpenTelemetry(openTelemetry)
+                .build();
     }
 }

@@ -76,11 +76,11 @@ public class DruidJdbcClientModule
                 .withTlsEnabled(config.getConnectionUrl().toLowerCase(ENGLISH).startsWith(CONNECT_STRING_PREFIX + "url=https"));
         CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(galaxyProperties::setProperty, catalogNetworkMonitorProperties);
 
-        return new DriverConnectionFactory(
+        return DriverConnectionFactory.builder(
                 new GalaxyDruidDriver(galaxyProperties),
                 config.getConnectionUrl(),
-                new Properties(),
-                credentialProvider,
-                openTelemetry);
+                credentialProvider)
+                .setOpenTelemetry(openTelemetry)
+                .build();
     }
 }

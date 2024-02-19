@@ -82,7 +82,10 @@ public class MariaDbClientModule
 
         CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(properties::setProperty, CatalogNetworkMonitorProperties.generateFrom(crossRegionConfig, catalogHandle));
 
-        return new DriverConnectionFactory(new Driver(), config.getConnectionUrl(), properties, credentialProvider, openTelemetry);
+        return DriverConnectionFactory.builder(new Driver(), config.getConnectionUrl(), credentialProvider)
+                .setConnectionProperties(properties)
+                .setOpenTelemetry(openTelemetry)
+                .build();
     }
 
     private static Properties getConnectionProperties()
