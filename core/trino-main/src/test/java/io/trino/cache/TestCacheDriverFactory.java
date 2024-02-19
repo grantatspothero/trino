@@ -28,7 +28,6 @@ import io.trino.operator.DevNullOperator;
 import io.trino.operator.Driver;
 import io.trino.operator.DriverContext;
 import io.trino.operator.DriverFactory;
-import io.trino.spi.NodeManager;
 import io.trino.spi.block.TestingBlockEncodingSerde;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheManager;
@@ -358,12 +357,6 @@ public class TestCacheDriverFactory
         public TestSplitCache getSplitCache(PlanSignature signature)
         {
             return splitCache;
-        }
-
-        @Override
-        public PreferredAddressProvider getPreferredAddressProvider(PlanSignature signature, NodeManager nodeManager)
-        {
-            throw new UnsupportedOperationException();
         }
 
         @Override

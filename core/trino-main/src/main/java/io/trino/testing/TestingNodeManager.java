@@ -74,6 +74,11 @@ public class TestingNodeManager
         nodes.add(node);
     }
 
+    public void removeNode(Node node)
+    {
+        nodes.remove(node);
+    }
+
     @Override
     public Set<Node> getAllNodes()
     {
