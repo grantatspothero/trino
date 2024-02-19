@@ -648,7 +648,6 @@ jobs:
             !:starburst-sqlserver,
             !:starburst-stargate,
             !:starburst-synapse,
-            !:starburst-testing,
             !:trino-accumulo,
             !:trino-base-jdbc,
             !:trino-bigquery,
