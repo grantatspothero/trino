@@ -1446,6 +1446,7 @@ jobs:
             - suite-stargate
             - suite-subquery-cache
             - suite-synapse
+            - suite-snowflake
             - suite-s3-compatibility
             - suite-1
             - suite-2
@@ -1573,6 +1574,8 @@ jobs:
           GCP_STORAGE_BUCKET:
           SYNAPSE_ENDPOINT:
           SYNAPSE_USER:
+          SNOWFLAKE_ACCOUNT_NAME:
+          SNOWFLAKE_PASSWORD:
           SYNAPSE_PASSWORD:
           TABULAR_CREDENTIAL:
           TABULAR_WAREHOUSE:
@@ -1653,6 +1656,8 @@ jobs:
           SYNAPSE_ENDPOINT: ${{ secrets.SYNAPSE_ENDPOINT }}
           SYNAPSE_USER: ${{ secrets.SYNAPSE_USER }}
           SYNAPSE_PASSWORD: ${{ secrets.SYNAPSE_PASSWORD }}
+          SNOWFLAKE_ACCOUNT_NAME: ${{ secrets.SNOWFLAKE_ACCOUNT_NAME }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
           TABULAR_CREDENTIAL: ${{ secrets.TABULAR_CREDENTIAL }}
           TABULAR_WAREHOUSE: ${{ secrets.TABULAR_WAREHOUSE }}
         run: |
@@ -1692,69 +1697,3 @@ jobs:
           check_name: ${{ github.job }} with secrets
           conclusion: ${{ job.status }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-
-  # TODO: Don't always run the Snowflake tests; add impact analysis or integrate with above if possible.
-  snowflake-pt:
-    runs-on: [self-hosted, sep-cicd, gha-fleet-large]
-    needs: build-pt
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-          - config-default
-        suite:
-          - suite-snowflake
-        jdk:
-          - 17
-    timeout-minutes: 120
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0 # checkout all commits, as the build result depends on `git describe` equivalent
-      - name: Product tests artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: product tests and server tarball
-      - name: Fix artifact permissions
-        run: |
-          find . -type f -name \*-executable.jar -exec chmod 0777 {} \;
-      - uses: ./.github/actions/setup
-      - name: Product Tests
-        env:
-          SNOWFLAKE_ACCOUNT_NAME: ${{ secrets.SNOWFLAKE_ACCOUNT_NAME }}
-          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
-        # Suite timeouts after 1h45m, just before job timeouts (2h)
-        run: |
-          if [[ -z "$SNOWFLAKE_ACCOUNT_NAME" ]] || [[ -z "$SNOWFLAKE_PASSWORD" ]]; then
-              [[ -z "$SNOWFLAKE_ACCOUNT_NAME" ]] && echo "SNOWFLAKE_ACCOUNT_NAME is unset or empty" >&2
-              [[ -z "$SNOWFLAKE_PASSWORD" ]] && echo "SNOWFLAKE_PASSWORD is unset or empty" >&2
-              exit 1
-          fi
-          testing/bin/ptl suite run \
-              --suite ${{ matrix.suite }} \
-              --config ${{ matrix.config }} \
-              --logs-dir logs/ \
-              --output PRINT_WRITE \
-              --timeout 105m \
-              --bind=off \
-              --trino-jdk-version temurin21
-      - name: Upload test results
-        uses: actions/upload-artifact@v2
-        if: failure() # TODO: Condition on job running.
-        with:
-          name: results snowflake-product-tests (${{ matrix.config }}, ${{ matrix.suite }}, ${{ matrix.jdk }})
-          path: |
-            presto-product-tests/target/*
-            logs/*
-            **/*.hprof
-          retention-days: 30
-      - name: Upload test report
-        uses: actions/upload-artifact@v2
-        # Always upload the test report for the annotate.yml workflow,
-        # but only the single XML file to keep the artifact small
-        if: always() # TODO: Condition on job running.
-        with:
-          # Name prefix is checked in the `Annotate checks` workflow
-          name: test report pt (${{ matrix.config }}, ${{ matrix.suite }}, ${{ matrix.jdk }})
-          path: testing/trino-product-tests/target/reports/**/testng-results.xml
-          retention-days: ${{ env.TEST_REPORT_RETENTION_DAYS }}
