@@ -47,9 +47,9 @@ import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
  * Similar to {@link io.trino.plugin.hive.metastore.thrift.TestHiveMetastoreMetadataQueriesAccessOperations},
  * but it doesn't extend the class because the access count differs. TODO this class currently does not set up any test schemas/tables.
  * <p>
- * Similar to {@link TestObjectStoreFileAndMetastoreAccessOperations}.
+ * Similar to {@link TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations}.
  *
- * @see TestObjectStoreFileAndMetastoreAccessOperations
+ * @see TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
  */
 @Execution(SAME_THREAD) // metastore invocation counters shares mutable state so can't be run from many threads simultaneously
 public class TestObjectStoreGalaxyMetastoreMetadataQueriesAccessOperations
