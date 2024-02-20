@@ -908,6 +908,10 @@ jobs:
             - { modules: plugin/starburst-oracle }
             - { modules: plugin/starburst-sap-hana }
             - { modules: plugin/starburst-snowflake, profile: default, cloud: amazon-web-service }
+            - { modules: plugin/starburst-snowflake, profile: default, cloud: azure }
+            - { modules: plugin/starburst-snowflake, profile: jdbc-integration-tests, cloud: amazon-web-service }
+            - { modules: plugin/starburst-snowflake, profile: parallel-integration-tests, cloud: amazon-web-service }
+            - { modules: plugin/starburst-snowflake, profile: fte-tests, cloud: amazon-web-service }
             - { modules: plugin/starburst-sqlserver }
             - { modules: plugin/starburst-stargate, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
             - { modules: plugin/starburst-synapse }
