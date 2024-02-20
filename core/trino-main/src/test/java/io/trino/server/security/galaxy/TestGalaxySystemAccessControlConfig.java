@@ -33,7 +33,7 @@ public class TestGalaxySystemAccessControlConfig
     public void testDefaults()
     {
         assertRecordedDefaults(recordDefaults(GalaxySystemAccessControlConfig.class)
-                .setFilterColumnsAcceleration(FilterColumnsAcceleration.NONE)
+                .setFilterColumnsAcceleration(FilterColumnsAcceleration.FCX2)
                 .setBackgroundProcessingThreads(8)
                 .setExpectedQueryParallelism(100)
                 .setReadOnlyCatalogs("")
@@ -45,7 +45,7 @@ public class TestGalaxySystemAccessControlConfig
             throws IOException
     {
         Map<String, String> properties = ImmutableMap.<String, String>builder()
-                .put("galaxy.filter-columns-acceleration", "FCX2")
+                .put("galaxy.filter-columns-acceleration", "NONE")
                 .put("galaxy.access-control-background-threads", "3")
                 .put("galaxy.expected-query-parallelism", "200")
                 .put("galaxy.read-only-catalogs", "sillycatalog,funnycatalog")
@@ -53,7 +53,7 @@ public class TestGalaxySystemAccessControlConfig
                 .buildOrThrow();
 
         GalaxySystemAccessControlConfig expected = new GalaxySystemAccessControlConfig()
-                .setFilterColumnsAcceleration(FilterColumnsAcceleration.FCX2)
+                .setFilterColumnsAcceleration(FilterColumnsAcceleration.NONE)
                 .setBackgroundProcessingThreads(3)
                 .setExpectedQueryParallelism(200)
                 .setReadOnlyCatalogs(ImmutableSet.of("sillycatalog", "funnycatalog"))

@@ -42,7 +42,7 @@ public class GalaxySystemAccessControlConfig
         FCX2,
     }
 
-    private FilterColumnsAcceleration filterColumnsAcceleration = FilterColumnsAcceleration.NONE;
+    private FilterColumnsAcceleration filterColumnsAcceleration = FilterColumnsAcceleration.FCX2;
     private int backgroundProcessingThreads = 8;
     // Currently, we allow at most 60 concurrent queries (20 queries and 40 "data definition"), this value is with some margin.
     private int expectedQueryParallelism = 100;
