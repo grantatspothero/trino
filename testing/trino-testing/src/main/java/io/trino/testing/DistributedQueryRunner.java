@@ -133,7 +133,6 @@ public class DistributedQueryRunner
             String environment,
             Module additionalModule,
             Optional<Path> baseDataDir,
-            Optional<SpanProcessor> spanProcessor,
             Optional<FactoryConfiguration> systemAccessControlConfiguration,
             Optional<List<SystemAccessControl>> systemAccessControls,
             List<EventListener> eventListeners,
@@ -159,7 +158,6 @@ public class DistributedQueryRunner
                     environment,
                     additionalModule,
                     baseDataDir,
-                    spanProcessor,
                     Optional.empty(),
                     Optional.of(ImmutableList.of()),
                     ImmutableList.of());
@@ -187,7 +185,6 @@ public class DistributedQueryRunner
                     environment,
                     additionalModule,
                     baseDataDir,
-                    spanProcessor,
                     systemAccessControlConfiguration,
                     systemAccessControls,
                     eventListeners);
@@ -201,7 +198,6 @@ public class DistributedQueryRunner
                     environment,
                     additionalModule,
                     baseDataDir,
-                    spanProcessor,
                     systemAccessControlConfiguration,
                     systemAccessControls,
                     eventListeners));
@@ -233,7 +229,6 @@ public class DistributedQueryRunner
             String environment,
             Module additionalModule,
             Optional<Path> baseDataDir,
-            Optional<SpanProcessor> spanProcessor,
             Optional<FactoryConfiguration> systemAccessControlConfiguration,
             Optional<List<SystemAccessControl>> systemAccessControls,
             List<EventListener> eventListeners)
@@ -245,7 +240,7 @@ public class DistributedQueryRunner
                 environment,
                 additionalModule,
                 baseDataDir,
-                spanProcessor.or(() -> Optional.of(SimpleSpanProcessor.create(spanExporter))),
+                Optional.of(SimpleSpanProcessor.create(spanExporter)),
                 systemAccessControlConfiguration,
                 systemAccessControls,
                 eventListeners));
@@ -677,7 +672,6 @@ public class DistributedQueryRunner
         private String environment = ENVIRONMENT;
         private Module additionalModule = EMPTY_MODULE;
         private Optional<Path> baseDataDir = Optional.empty();
-        private Optional<SpanProcessor> spanProcessor = Optional.empty();
         private Optional<FactoryConfiguration> systemAccessControlConfiguration = Optional.empty();
         private Optional<List<SystemAccessControl>> systemAccessControls = Optional.empty();
         private List<EventListener> eventListeners = ImmutableList.of();
@@ -800,13 +794,6 @@ public class DistributedQueryRunner
             return setSystemAccessControls(ImmutableList.of(requireNonNull(systemAccessControl, "systemAccessControl is null")));
         }
 
-        @CanIgnoreReturnValue
-        public SELF setSpanProcessor(SpanProcessor spanProcessor)
-        {
-            this.spanProcessor = Optional.of(spanProcessor);
-            return self();
-        }
-
         @SuppressWarnings("unused")
         @CanIgnoreReturnValue
         public SELF setSystemAccessControls(List<SystemAccessControl> systemAccessControls)
@@ -894,7 +881,6 @@ public class DistributedQueryRunner
                     environment,
                     additionalModule,
                     baseDataDir,
-                    spanProcessor,
                     systemAccessControlConfiguration,
                     systemAccessControls,
                     eventListeners,
