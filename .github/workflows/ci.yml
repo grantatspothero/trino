@@ -19,6 +19,8 @@ defaults:
     shell: bash --noprofile --norc -euo pipefail {0}
 
 env:
+  # An envar that signals to tests we are executing in the CI environment
+  CONTINUOUS_INTEGRATION: true
   # credentials for the private repository
   mavenReleaseUsername: ${{ secrets.CODE_ARTIFACT_USERNAME }}
   mavenReleasePassword: ${{ secrets.CODE_ARTIFACT_PASSWORD }}
@@ -27,8 +29,6 @@ env:
   # certificates for Galaxy metastore
   GALAXY_SERVICE_PEM: ${{ secrets.GALAXY_SERVICE_PEM }}
   GALAXY_PORTAL_PEM: ${{ secrets.GALAXY_PORTAL_PEM }}
-  # An envar that signals to tests we are executing in the CI environment
-  CONTINUOUS_INTEGRATION: true
   RETRY: ".github/bin/retry"
   # allow overriding Maven command
   MAVEN: "./mvnw -s .github/settings.xml"
@@ -227,7 +227,6 @@ jobs:
           secret-id: ${{ secrets.SEP_SECRETS_AWS_ID }}
       - uses: ./.github/actions/setup
         with:
-          distribution: 'temurin'
           java-version: ${{ matrix.java-version }}
       - name: Check SPI backward compatibility
         run: |
@@ -265,16 +264,35 @@ jobs:
         with:
           cleanup-node: true
       - name: Maven Install
+        if: false # not needed in Galaxy as following steps are skipped
         run: |
           export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
-          echo JDBC shading test disabled for Galaxy because this repo does not publish JDBC driver
-          # $MAVEN clean install ${MAVEN_FAST_INSTALL} -pl '!:trino-docs,!:trino-server-rpm'
+          $MAVEN clean install ${MAVEN_FAST_INSTALL} -pl '!:trino-docs,!:trino-server-rpm'
+      - name: Test Server RPM
+        if: false # not needed for Galaxy, as RPM is not published
+        run: |
+          export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
+          $MAVEN verify -B --strict-checksums -P ci -pl :trino-server-rpm
       - name: Test JDBC shading
+        if: false # not needed for Galaxy, JDBC is not published
         # Run only integration tests to verify JDBC driver shading
         run: |
-          echo JDBC shading test disabled for Galaxy because this repo does not publish JDBC driver
-          # $MAVEN clean install ${MAVEN_FAST_INSTALL} -pl :trino-jdbc -am
-          # $MAVEN failsafe:integration-test -B --strict-checksums -P ci -pl :trino-jdbc
+          export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
+          $MAVEN failsafe:integration-test failsafe:verify -B --strict-checksums -P ci -pl :trino-jdbc
+      - name: Clean Maven Output
+        if: false # not needed in Galaxy as following steps are skipped
+        run: $MAVEN clean -pl '!:trino-server,!:trino-cli'
+      - uses: docker/setup-qemu-action@v2
+        if: false # Galaxy builds docker image in a separate job
+        with:
+          platforms: arm64,ppc64le
+      - name: Build and Test Docker Image
+        if: false # Galaxy builds docker image in a separate job
+        run: core/docker/build.sh
+      - name: Remove Trino from local Maven repo to avoid caching it
+        # Avoid caching artifacts built in this job, cache should only include dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: rm -rf ~/.m2/repository/io/trino/trino-*
 
   check-commits-dispatcher:
     runs-on: [self-hosted, sep-cicd, gha-fleet-nano]
@@ -875,9 +893,9 @@ jobs:
             - { modules: plugin/trino-opensearch }
             - { modules: plugin/trino-pinot }
             - { modules: plugin/trino-postgresql }
-            - { modules: plugin/trino-redshift, profile: default}
-            - { modules: plugin/trino-redshift, profile: cloud-tests}
-            - { modules: plugin/trino-redshift, profile: fte-tests}
+            - { modules: plugin/trino-redshift }
+            - { modules: plugin/trino-redshift, profile: cloud-tests }
+            - { modules: plugin/trino-redshift, profile: fte-tests }
             - { modules: plugin/trino-resource-group-managers }
             - { modules: plugin/trino-sqlserver }
             - { modules: testing/trino-faulttolerant-tests, profile: default }
@@ -936,7 +954,6 @@ jobs:
           login-docker: true
       - uses: ./.github/actions/setup
         with:
-          distribution: 'temurin'
           cache: restore
           cleanup-node: ${{ format('{0}', matrix.modules == 'plugin/trino-singlestore') }}
           java-version: ${{ matrix.jdk != '' && matrix.jdk || '21' }}
