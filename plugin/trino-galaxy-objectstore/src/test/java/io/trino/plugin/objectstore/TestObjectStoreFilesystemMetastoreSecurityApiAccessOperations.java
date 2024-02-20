@@ -692,17 +692,28 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
     @EnumSource(TableType.class)
     public void testShowStatsForTableWithFilter(TableType type)
     {
-        assertUpdate("CREATE TABLE test_show_stats_with_filter AS SELECT 2 AS age", 1);
+        assertUpdate("CREATE TABLE test_show_stats_with_filter WITH (type = '" + type + "') AS SELECT 2 AS age", 1);
 
         assertInvocations("SHOW STATS FOR (SELECT * FROM test_show_stats_with_filter where age >= 2)",
                 ImmutableMultiset.<MetastoreMethod>builder()
                         .add(GET_TABLE)
-                        .add(GET_TABLE_STATISTICS)
+                        .addCopies(GET_TABLE_STATISTICS, occurrences(type, 1, 0, 0))
                         .build(),
                 switch (type) {
-                    case HIVE -> ImmutableMultiset.of();
-                    case ICEBERG -> ImmutableMultiset.of();
-                    case DELTA -> ImmutableMultiset.of();
+                    case HIVE -> ImmutableMultiset.<FileOperation>builder()
+                            .build();
+                    case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
+                            .add(new FileOperation(MANIFEST, "", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(SNAPSHOT, "snap-1.avro", INPUT_FILE_GET_LENGTH))
+                            .add(new FileOperation(SNAPSHOT, "snap-1.avro", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(METADATA_JSON, "00001.metadata.json", INPUT_FILE_NEW_STREAM))
+                            .build();
+                    case DELTA -> ImmutableMultiset.<FileOperation>builder()
+                            .add(new FileOperation(LAST_CHECKPOINT, "_last_checkpoint", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000000.json", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(TRANSACTION_LOG_JSON, "00000000000000000001.json", INPUT_FILE_NEW_STREAM))
+                            .add(new FileOperation(TRINO_EXTENDED_STATS_JSON, "extended_stats.json", INPUT_FILE_NEW_STREAM))
+                            .build();
                 });
     }
 
