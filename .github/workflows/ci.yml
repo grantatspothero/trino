@@ -679,7 +679,6 @@ jobs:
       - name: Maven Tests
         run: |
           $MAVEN test ${MAVEN_TEST} -pl '
-            !:galaxy-buffer-exchange-tests,
             !:starburst-base-jdbc,
             !:starburst-ci-cd,
             !:starburst-dynamodb,
@@ -715,6 +714,8 @@ jobs:
             !:starburst-salesforce,
             !:trino-galaxy-snowflake,
             !:trino-galaxy-stargate,
+            !:galaxy-buffer-exchange-tests,
+            !:trino-tests-galaxy-buffer-exchange,
             !:trino-google-sheets,
             !:trino-hdfs,
             !:trino-hive,
@@ -746,7 +747,6 @@ jobs:
             !:trino-sqlserver,
             !:trino-test-jdbc-compatibility-old-server,
             !:trino-tests,
-            !:trino-tests-galaxy-buffer-exchange,
             !:trino-thrift'
       - name: Upload test results
         uses: actions/upload-artifact@v3
@@ -878,6 +878,9 @@ jobs:
             - { modules: plugin/trino-galaxy-warp-speed, profile: iceberg-delta, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
             - { modules: plugin/trino-galaxy-warp-speed-2 }
             - { modules: plugin/trino-galaxy-warp-speed-2, profile: iceberg-delta, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
+            - { modules: testing/trino-tests-galaxy-buffer-exchange }
+            - { modules: galaxy-buffer-service/galaxy-buffer-exchange-tests, profile: test-buffer-exchange-failure-recovery }
+            - { modules: galaxy-buffer-service/galaxy-buffer-exchange-tests }
             - { modules: plugin/trino-google-sheets }
             - { modules: plugin/trino-hive, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
             - { modules: plugin/trino-hive, profile: fte-tests }
@@ -904,9 +907,6 @@ jobs:
             - { modules: testing/trino-faulttolerant-tests, profile: test-fault-tolerant-hive, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
             - { modules: testing/trino-faulttolerant-tests, profile: test-fault-tolerant-iceberg }
             - { modules: testing/trino-tests, runners: [ self-hosted, sep-cicd, gha-fleet-large ] }
-            - { modules: testing/trino-tests-galaxy-buffer-exchange }
-            - { modules: galaxy-buffer-service/galaxy-buffer-exchange-tests, profile: test-buffer-exchange-failure-recovery }
-            - { modules: galaxy-buffer-service/galaxy-buffer-exchange-tests }
           EOF
           ./.github/bin/build-matrix-from-impacted.py -v -i gib-impacted.log -m .github/test-matrix.yaml -o matrix.json
           echo "Matrix: $(jq '.' matrix.json)"
