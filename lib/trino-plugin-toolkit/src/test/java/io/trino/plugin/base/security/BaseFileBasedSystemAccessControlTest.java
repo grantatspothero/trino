@@ -130,7 +130,6 @@ public abstract class BaseFileBasedSystemAccessControlTest
 
     @Test
     public void testEverythingImplemented()
-            throws NoSuchMethodException
     {
         assertAllMethodsOverridden(SystemAccessControl.class, FileBasedSystemAccessControl.class);
     }

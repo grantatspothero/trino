@@ -74,12 +74,6 @@
         </artifact>
     </artifactSet>
 
-    <artifactSet to="plugin/memory-cache">
-        <artifact id="${project.groupId}:trino-memory-cache:zip:${project.version}">
-            <unpack />
-        </artifact>
-    </artifactSet>
-
     <artifactSet to="plugin/blackhole">
         <artifact id="${project.groupId}:trino-blackhole:zip:${project.version}">
             <unpack />
@@ -324,6 +318,12 @@
 
     <artifactSet to="plugin/memory">
         <artifact id="${project.groupId}:trino-memory:zip:${project.version}">
+            <unpack />
+        </artifact>
+    </artifactSet>
+
+    <artifactSet to="plugin/memory-cache">
+        <artifact id="${project.groupId}:trino-memory-cache:zip:${project.version}">
             <unpack />
         </artifact>
     </artifactSet>

@@ -95,6 +95,7 @@ values. Typical usage does not require you to configure them.
     * `SNAPPY`
     * `ZSTD`
     * `GZIP`
+
     The equivalent catalog session property is `compression_codec`.
   - `SNAPPY`
 * - `delta.max-partitions-per-writer`

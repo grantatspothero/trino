@@ -541,7 +541,7 @@ public class QueuedStatementResource
             long lastToken = this.lastToken.get();
             // token should be the last token or the next token
             if (token != lastToken && token != lastToken + 1) {
-                throw new WebApplicationException(GONE);
+                throw new WebApplicationException(Response.Status.GONE);
             }
             // advance (or stay at) the token
             this.lastToken.compareAndSet(lastToken, token);

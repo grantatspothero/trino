@@ -43,6 +43,7 @@ import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
 import static io.trino.plugin.iceberg.IcebergTestUtils.checkOrcFileSorting;
 import static io.trino.plugin.iceberg.IcebergTestUtils.checkParquetFileSorting;
 import static io.trino.plugin.iceberg.catalog.rest.RestCatalogTestUtils.backendCatalog;
+import static java.lang.String.format;
 import static org.apache.iceberg.FileFormat.PARQUET;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
@@ -153,7 +154,7 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
     @Override
     protected String schemaPath()
     {
-        return String.format("%s/%s", warehouseLocation, getSession().getSchema());
+        return format("%s/%s", warehouseLocation, getSession().getSchema());
     }
 
     @Override

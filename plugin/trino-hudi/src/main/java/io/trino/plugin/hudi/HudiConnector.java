@@ -80,12 +80,6 @@ public class HudiConnector
         this.tableProperties = ImmutableList.copyOf(requireNonNull(tableProperties, "tableProperties is null"));
     }
 
-    @VisibleForTesting
-    public Injector getInjector()
-    {
-        return injector;
-    }
-
     @Override
     public ConnectorMetadata getMetadata(ConnectorSession session, ConnectorTransactionHandle transactionHandle)
     {
@@ -164,5 +158,11 @@ public class HudiConnector
     public final void shutdown()
     {
         lifeCycleManager.stop();
+    }
+
+    @VisibleForTesting
+    public Injector getInjector()
+    {
+        return injector;
     }
 }

@@ -154,6 +154,7 @@ public class TestDeltaLakeCacheIds
     {
         if (executorService != null) {
             executorService.shutdownNow();
+            executorService = null;
         }
     }
 

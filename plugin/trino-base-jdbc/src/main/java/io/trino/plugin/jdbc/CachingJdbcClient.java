@@ -57,7 +57,6 @@ import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
@@ -661,7 +660,7 @@ public class CachingJdbcClient
     {
         return sessionProperties.stream()
                 .map(property -> Map.entry(property.getName(), getSessionProperty(session, property)))
-                .collect(toImmutableMap(Entry::getKey, Entry::getValue));
+                .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     private static Object getSessionProperty(ConnectorSession session, PropertyMetadata<?> property)

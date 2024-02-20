@@ -115,7 +115,6 @@ public final class Split
         return remotelyAccessible.orElse(connectorSplit.isRemotelyAccessible());
     }
 
-    @JsonIgnore
     public boolean isRemotelyAccessibleIfNodeMissing()
     {
         return connectorSplit.isRemotelyAccessibleIfNodeMissing();

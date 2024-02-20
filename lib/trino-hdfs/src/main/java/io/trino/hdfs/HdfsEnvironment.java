@@ -47,6 +47,7 @@ public class HdfsEnvironment
     }
 
     private static final Logger log = Logger.get(HdfsEnvironment.class);
+
     private final OpenTelemetry openTelemetry;
     private final HdfsConfiguration hdfsConfiguration;
     private final HdfsAuthentication hdfsAuthentication;

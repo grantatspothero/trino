@@ -95,10 +95,10 @@ public final class HiveSessionProperties
     private static final String PARQUET_USE_BLOOM_FILTER = "parquet_use_bloom_filter";
     private static final String PARQUET_MAX_READ_BLOCK_SIZE = "parquet_max_read_block_size";
     private static final String PARQUET_MAX_READ_BLOCK_ROW_COUNT = "parquet_max_read_block_row_count";
+    private static final String PARQUET_SMALL_FILE_THRESHOLD = "parquet_small_file_threshold";
     private static final String PARQUET_NATIVE_ZSTD_DECOMPRESSOR_ENABLED = "parquet_native_zstd_decompressor_enabled";
     private static final String PARQUET_NATIVE_SNAPPY_DECOMPRESSOR_ENABLED = "parquet_native_snappy_decompressor_enabled";
     private static final String PARQUET_VECTORIZED_DECODING_ENABLED = "parquet_vectorized_decoding_enabled";
-    private static final String PARQUET_SMALL_FILE_THRESHOLD = "parquet_small_file_threshold";
     private static final String PARQUET_WRITER_BLOCK_SIZE = "parquet_writer_block_size";
     private static final String PARQUET_WRITER_PAGE_SIZE = "parquet_writer_page_size";
     private static final String PARQUET_WRITER_BATCH_SIZE = "parquet_writer_batch_size";
@@ -360,6 +360,12 @@ public final class HiveSessionProperties
                             }
                         },
                         false),
+                dataSizeProperty(
+                        PARQUET_SMALL_FILE_THRESHOLD,
+                        "Parquet: Size below which a parquet file will be read entirely",
+                        parquetReaderConfig.getSmallFileThreshold(),
+                        value -> validateMaxDataSize(PARQUET_SMALL_FILE_THRESHOLD, value, DataSize.valueOf(PARQUET_READER_MAX_SMALL_FILE_THRESHOLD)),
+                        false),
                 booleanProperty(
                         PARQUET_NATIVE_ZSTD_DECOMPRESSOR_ENABLED,
                         "Enable using native zstd library for faster decompression of parquet files",
@@ -374,12 +380,6 @@ public final class HiveSessionProperties
                         PARQUET_VECTORIZED_DECODING_ENABLED,
                         "Enable using Java Vector API for faster decoding of parquet files",
                         parquetReaderConfig.isVectorizedDecodingEnabled(),
-                        false),
-                dataSizeProperty(
-                        PARQUET_SMALL_FILE_THRESHOLD,
-                        "Parquet: Size below which a parquet file will be read entirely",
-                        parquetReaderConfig.getSmallFileThreshold(),
-                        value -> validateMaxDataSize(PARQUET_SMALL_FILE_THRESHOLD, value, DataSize.valueOf(PARQUET_READER_MAX_SMALL_FILE_THRESHOLD)),
                         false),
                 dataSizeProperty(
                         PARQUET_WRITER_BLOCK_SIZE,
@@ -752,6 +752,11 @@ public final class HiveSessionProperties
         return session.getProperty(PARQUET_MAX_READ_BLOCK_ROW_COUNT, Integer.class);
     }
 
+    public static DataSize getParquetSmallFileThreshold(ConnectorSession session)
+    {
+        return session.getProperty(PARQUET_SMALL_FILE_THRESHOLD, DataSize.class);
+    }
+
     public static boolean isParquetNativeZstdDecompressorEnabled(ConnectorSession session)
     {
         return session.getProperty(PARQUET_NATIVE_ZSTD_DECOMPRESSOR_ENABLED, Boolean.class);
@@ -765,11 +770,6 @@ public final class HiveSessionProperties
     public static boolean isParquetVectorizedDecodingEnabled(ConnectorSession session)
     {
         return session.getProperty(PARQUET_VECTORIZED_DECODING_ENABLED, Boolean.class);
-    }
-
-    public static DataSize getParquetSmallFileThreshold(ConnectorSession session)
-    {
-        return session.getProperty(PARQUET_SMALL_FILE_THRESHOLD, DataSize.class);
     }
 
     public static DataSize getParquetWriterBlockSize(ConnectorSession session)

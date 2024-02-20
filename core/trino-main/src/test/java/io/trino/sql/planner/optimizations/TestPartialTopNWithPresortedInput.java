@@ -123,24 +123,24 @@ public class TestPartialTopNWithPresortedInput
     {
         List<PlanMatchPattern.Ordering> orderBy = ImmutableList.of(sort("t_col_a", ASCENDING, FIRST));
         assertDistributedPlan("SELECT col_a FROM table_a ORDER BY 1 ASC NULLS FIRST LIMIT 10", output(
-                topN(10, orderBy, FINAL,
-                        exchange(LOCAL, GATHER, ImmutableList.of(),
-                                exchange(REMOTE, GATHER, ImmutableList.of(),
-                                        limit(
-                                                10,
-                                                ImmutableList.of(),
-                                                true,
-                                                orderBy.stream()
-                                                        .map(PlanMatchPattern.Ordering::getField)
-                                                        .collect(toImmutableList()),
-                                                tableScan("table_a", ImmutableMap.of("t_col_a", "col_a"))))))));
+                        topN(10, orderBy, FINAL,
+                                exchange(LOCAL, GATHER, ImmutableList.of(),
+                                        exchange(REMOTE, GATHER, ImmutableList.of(),
+                                                limit(
+                                                        10,
+                                                        ImmutableList.of(),
+                                                        true,
+                                                        orderBy.stream()
+                                                                .map(PlanMatchPattern.Ordering::getField)
+                                                                .collect(toImmutableList()),
+                                                        tableScan("table_a", ImmutableMap.of("t_col_a", "col_a"))))))));
 
         assertDistributedPlan("SELECT col_a FROM table_a ORDER BY 1 ASC NULLS FIRST", output(
-                exchange(REMOTE, GATHER, orderBy,
-                        exchange(LOCAL, GATHER, orderBy,
-                                sort(orderBy,
-                                        exchange(REMOTE, REPARTITION,
-                                                tableScan("table_a", ImmutableMap.of("t_col_a", "col_a"))))))));
+                        exchange(REMOTE, GATHER, orderBy,
+                                exchange(LOCAL, GATHER, orderBy,
+                                        sort(orderBy,
+                                                exchange(REMOTE, REPARTITION,
+                                                        tableScan("table_a", ImmutableMap.of("t_col_a", "col_a"))))))));
 
         orderBy = ImmutableList.of(sort("t_col_a", ASCENDING, LAST));
         assertDistributedPlan("SELECT col_a FROM table_a ORDER BY 1 ASC NULLS LAST LIMIT 10", output(
@@ -160,38 +160,38 @@ public class TestPartialTopNWithPresortedInput
     {
         List<PlanMatchPattern.Ordering> orderBy = ImmutableList.of(sort("col_b", ASCENDING, LAST));
         assertDistributedPlan("SELECT col_b, COUNT(*) OVER (ORDER BY col_b) FROM table_a ORDER BY col_b LIMIT 5", output(
-                topN(5, orderBy, FINAL,
-                        exchange(LOCAL, GATHER, ImmutableList.of(),
-                                limit(
-                                        5,
-                                        ImmutableList.of(),
-                                        true,
-                                        orderBy.stream()
-                                                .map(PlanMatchPattern.Ordering::getField)
-                                                .collect(toImmutableList()),
-                                        exchange(LOCAL, REPARTITION, ImmutableList.of(),
-                                                window(
-                                                        p -> p.specification(
-                                                                ImmutableList.of(),
-                                                                ImmutableList.of("col_b"),
-                                                                ImmutableMap.of("col_b", ASC_NULLS_LAST)),
-                                                        anyTree(
-                                                                tableScan("table_a", ImmutableMap.of("col_b", "col_b"))))))))));
+                        topN(5, orderBy, FINAL,
+                                exchange(LOCAL, GATHER, ImmutableList.of(),
+                                        limit(
+                                                5,
+                                                ImmutableList.of(),
+                                                true,
+                                                orderBy.stream()
+                                                        .map(PlanMatchPattern.Ordering::getField)
+                                                        .collect(toImmutableList()),
+                                                exchange(LOCAL, REPARTITION, ImmutableList.of(),
+                                                        window(
+                                                                p -> p.specification(
+                                                                        ImmutableList.of(),
+                                                                        ImmutableList.of("col_b"),
+                                                                        ImmutableMap.of("col_b", ASC_NULLS_LAST)),
+                                                                anyTree(
+                                                                        tableScan("table_a", ImmutableMap.of("col_b", "col_b"))))))))));
     }
 
     @Test
     public void testWithConstantProperty()
     {
         assertDistributedPlan("SELECT * FROM (VALUES (1), (1)) AS t (id) WHERE id = 1 ORDER BY 1 LIMIT 1", output(
-                topN(1, ImmutableList.of(sort("id", ASCENDING, LAST)), FINAL,
-                        exchange(LOCAL, GATHER, ImmutableList.of(),
-                                limit(1, ImmutableList.of(), true, ImmutableList.of("id"),
-                                        anyTree(
-                                                values(
-                                                        ImmutableList.of("id"),
-                                                        ImmutableList.of(
-                                                                ImmutableList.of(new LongLiteral("1")),
-                                                                ImmutableList.of(new LongLiteral("1"))))))))));
+                        topN(1, ImmutableList.of(sort("id", ASCENDING, LAST)), FINAL,
+                                exchange(LOCAL, GATHER, ImmutableList.of(),
+                                        limit(1, ImmutableList.of(), true, ImmutableList.of("id"),
+                                                anyTree(
+                                                        values(
+                                                                ImmutableList.of("id"),
+                                                                ImmutableList.of(
+                                                                        ImmutableList.of(new LongLiteral("1")),
+                                                                        ImmutableList.of(new LongLiteral("1"))))))))));
     }
 
     @Test

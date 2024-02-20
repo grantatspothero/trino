@@ -62,8 +62,7 @@ public class TrinoFileSystemCache
 
     public static final String CACHE_KEY = "fs.cache.credentials";
 
-    // visible for BaseObjectStoreConnectorTest
-    public static final TrinoFileSystemCache INSTANCE = new TrinoFileSystemCache();
+    static final TrinoFileSystemCache INSTANCE = new TrinoFileSystemCache();
 
     private final AtomicLong unique = new AtomicLong();
 

@@ -705,6 +705,7 @@ public final class BlockAssertions
         for (int i = start; i < end; i++) {
             type.writeLong(builder, i);
         }
+
         return builder.buildValueBlock();
     }
 

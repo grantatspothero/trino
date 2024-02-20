@@ -22,7 +22,6 @@ public class TestAllowAllSystemAccessControl
 {
     @Test
     public void testEverythingImplemented()
-            throws Exception
     {
         assertAllMethodsOverridden(SystemAccessControl.class, AllowAllSystemAccessControl.class);
     }

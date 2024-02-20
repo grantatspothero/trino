@@ -77,7 +77,11 @@ public class RegisterPartitionProcedure
     private final LocationAccessControl locationAccessControl;
 
     @Inject
-    public RegisterPartitionProcedure(HiveConfig hiveConfig, TransactionalMetadataFactory hiveMetadataFactory, TrinoFileSystemFactory fileSystemFactory, LocationAccessControl locationAccessControl)
+    public RegisterPartitionProcedure(
+            HiveConfig hiveConfig,
+            TransactionalMetadataFactory hiveMetadataFactory,
+            TrinoFileSystemFactory fileSystemFactory,
+            LocationAccessControl locationAccessControl)
     {
         this.allowRegisterPartition = hiveConfig.isAllowRegisterPartition();
         this.hiveMetadataFactory = requireNonNull(hiveMetadataFactory, "hiveMetadataFactory is null");
@@ -138,7 +142,6 @@ public class RegisterPartitionProcedure
                 String partitionName = makePartName(partitionColumns, partitionValues);
                 throw new TrinoException(ALREADY_EXISTS, format("Partition [%s] is already registered with location %s", partitionName, partition.get().getStorage().getLocation()));
             }
-
             if (location != null) {
                 locationAccessControl.checkCanUseLocation(session.getIdentity(), location);
             }

@@ -59,7 +59,8 @@ public class TestDeltaLakeCacheSubqueriesTest
             throws Exception
     {
         DistributedQueryRunner queryRunner = createDeltaLakeQueryRunner(DELTA_CATALOG, EXTRA_PROPERTIES,
-                ImmutableMap.of("delta.register-table-procedure.enabled", "true"));
+                ImmutableMap.of("delta.register-table-procedure.enabled", "true",
+                        "delta.enable-non-concurrent-writes", "true"));
         copyTpchTables(queryRunner, "tpch", TINY_SCHEMA_NAME, queryRunner.getDefaultSession(), REQUIRED_TABLES);
         return queryRunner;
     }

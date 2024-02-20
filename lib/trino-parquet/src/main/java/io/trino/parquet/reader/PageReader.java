@@ -72,6 +72,7 @@ public final class PageReader
                 metadata,
                 columnChunk,
                 offsetIndex);
+
         return new PageReader(
                 dataSourceId,
                 metadata.getCodec().getParquetCompressionCodec(),
