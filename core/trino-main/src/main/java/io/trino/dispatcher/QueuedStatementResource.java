@@ -784,11 +784,6 @@ public class QueuedStatementResource
             return drainStarted;
         }
 
-        public synchronized boolean isDrainCompleted()
-        {
-            return drainCompleted;
-        }
-
         public synchronized DrainState getDrainState()
         {
             return new DrainState(getDrainStateType(), drainTimeoutTask.map(DrainTimeoutTask::getMaxDrainTime));
