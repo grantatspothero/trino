@@ -82,7 +82,7 @@ public class SystemConnectorModule
 
         Multibinder<ConnectorTableFunction> tableFunctions = Multibinder.newSetBinder(binder, ConnectorTableFunction.class);
 
-// Only registered on coordinator to avoid dependency issues
+        // Only registered on coordinator to avoid dependency issues
         ServerConfig serverConfig = buildConfigObject(ServerConfig.class);
         if (serverConfig.isDataframeApiEnabled() && serverConfig.isCoordinator()) {
             tableFunctions.addBinding().toProvider(AnalyzeLogicalPlan.class).in(Scopes.SINGLETON);

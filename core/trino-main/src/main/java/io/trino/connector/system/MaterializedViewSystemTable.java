@@ -57,7 +57,7 @@ import static java.util.Objects.requireNonNull;
 public class MaterializedViewSystemTable
         implements SystemTable
 {
-    public static final ConnectorTableMetadata TABLE_DEFINITION = tableMetadataBuilder(
+    private static final ConnectorTableMetadata TABLE_DEFINITION = tableMetadataBuilder(
             new SchemaTableName("metadata", "materialized_views"))
             .column("catalog_name", createUnboundedVarcharType())
             .column("schema_name", createUnboundedVarcharType())
@@ -139,7 +139,7 @@ public class MaterializedViewSystemTable
         return displayTable.build().cursor();
     }
 
-    public void addMaterializedViewForCatalog(Session session, InMemoryRecordSet.Builder displayTable, QualifiedTablePrefix tablePrefix, boolean needFreshness)
+    private void addMaterializedViewForCatalog(Session session, InMemoryRecordSet.Builder displayTable, QualifiedTablePrefix tablePrefix, boolean needFreshness)
     {
         getMaterializedViews(session, metadata, accessControl, tablePrefix).forEach((tableName, definition) -> {
             QualifiedObjectName name = new QualifiedObjectName(tablePrefix.getCatalogName(), tableName.getSchemaName(), tableName.getTableName());

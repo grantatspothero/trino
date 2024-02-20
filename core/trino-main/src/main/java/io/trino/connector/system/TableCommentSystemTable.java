@@ -62,7 +62,7 @@ public class TableCommentSystemTable
 
     private static final SchemaTableName COMMENT_TABLE_NAME = new SchemaTableName("metadata", "table_comments");
 
-    public static final ConnectorTableMetadata COMMENT_TABLE = tableMetadataBuilder(COMMENT_TABLE_NAME)
+    private static final ConnectorTableMetadata COMMENT_TABLE = tableMetadataBuilder(COMMENT_TABLE_NAME)
             .column("catalog_name", createUnboundedVarcharType())
             .column("schema_name", createUnboundedVarcharType())
             .column("table_name", createUnboundedVarcharType())
@@ -117,18 +117,18 @@ public class TableCommentSystemTable
                     if (isImpossibleObjectName(schemaName)) {
                         continue;
                     }
-                    addTableCommentForCatalog(session, tablePrefix(catalog, Optional.of(schemaName), tableFilter), catalog, table);
+                    addTableCommentForCatalog(session, table, catalog, tablePrefix(catalog, Optional.of(schemaName), tableFilter));
                 }
             }
             else {
-                addTableCommentForCatalog(session, tablePrefix(catalog, Optional.empty(), tableFilter), catalog, table);
+                addTableCommentForCatalog(session, table, catalog, tablePrefix(catalog, Optional.empty(), tableFilter));
             }
         }
 
         return table.build().cursor();
     }
 
-    public void addTableCommentForCatalog(Session session, QualifiedTablePrefix prefix, String catalog, Builder table)
+    private void addTableCommentForCatalog(Session session, Builder table, String catalog, QualifiedTablePrefix prefix)
     {
         if (prefix.getTableName().isPresent()) {
             QualifiedObjectName relationName = new QualifiedObjectName(catalog, prefix.getSchemaName().orElseThrow(), prefix.getTableName().get());
