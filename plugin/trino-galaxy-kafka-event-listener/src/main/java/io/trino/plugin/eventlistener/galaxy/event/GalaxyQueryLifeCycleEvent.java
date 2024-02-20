@@ -15,6 +15,7 @@ package io.trino.plugin.eventlistener.galaxy.event;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.trino.spi.ErrorCode;
 import io.trino.spi.Unstable;
 
 import java.time.Instant;
@@ -32,6 +33,7 @@ public class GalaxyQueryLifeCycleEvent
     private final Instant eventTime;
     private final String queryText;
     private final Optional<String> principal;
+    private final Optional<ErrorCode> errorCode;
 
     @JsonCreator
     @Unstable
@@ -43,7 +45,8 @@ public class GalaxyQueryLifeCycleEvent
             String state,
             Instant eventTime,
             String queryText,
-            Optional<String> principal)
+            Optional<String> principal,
+            Optional<ErrorCode> errorCode)
     {
         this.accountId = requireNonNull(accountId, "accountId is null");
         this.clusterId = requireNonNull(clusterId, "clusterId is null");
@@ -53,6 +56,7 @@ public class GalaxyQueryLifeCycleEvent
         this.eventTime = requireNonNull(eventTime, "eventTime is null");
         this.queryText = requireNonNull(queryText, "queryText is null");
         this.principal = requireNonNull(principal, "principal is null");
+        this.errorCode = requireNonNull(errorCode, "errorCode is null");
     }
 
     @JsonProperty
@@ -101,5 +105,11 @@ public class GalaxyQueryLifeCycleEvent
     public Optional<String> getPrincipal()
     {
         return principal;
+    }
+
+    @JsonProperty
+    public Optional<ErrorCode> getErrorCode()
+    {
+        return errorCode;
     }
 }

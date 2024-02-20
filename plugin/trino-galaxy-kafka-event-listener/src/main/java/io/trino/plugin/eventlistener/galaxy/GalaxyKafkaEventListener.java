@@ -27,10 +27,12 @@ import io.trino.galaxy.kafka.KafkaPublisherConfig;
 import io.trino.galaxy.kafka.KafkaRecord;
 import io.trino.plugin.eventlistener.galaxy.event.GalaxyQueryCompletedEvent;
 import io.trino.plugin.eventlistener.galaxy.event.GalaxyQueryLifeCycleEvent;
+import io.trino.spi.ErrorCode;
 import io.trino.spi.eventlistener.EventListener;
 import io.trino.spi.eventlistener.QueryCompletedEvent;
 import io.trino.spi.eventlistener.QueryContext;
 import io.trino.spi.eventlistener.QueryCreatedEvent;
+import io.trino.spi.eventlistener.QueryFailureInfo;
 import io.trino.spi.eventlistener.QueryMetadata;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -96,7 +98,7 @@ public class GalaxyKafkaEventListener
     public void queryCreated(QueryCreatedEvent event)
     {
         // QueryState = QUEUED
-        publishLifeCycleEvent(event.getCreateTime(), event.getMetadata(), event.getContext());
+        publishLifeCycleEvent(event.getCreateTime(), event.getMetadata(), event.getContext(), Optional.empty());
     }
 
     @Override
@@ -119,10 +121,10 @@ public class GalaxyKafkaEventListener
         kafkaPublisher.submit(new KafkaRecord(eventKafkaTopic, bytes));
 
         // QueryState = FINISHED or FAILED
-        publishLifeCycleEvent(event.getEndTime(), event.getMetadata(), event.getContext());
+        publishLifeCycleEvent(event.getEndTime(), event.getMetadata(), event.getContext(), event.getFailureInfo().map(QueryFailureInfo::getErrorCode));
     }
 
-    private void publishLifeCycleEvent(Instant eventTime, QueryMetadata metadata, QueryContext context)
+    private void publishLifeCycleEvent(Instant eventTime, QueryMetadata metadata, QueryContext context, Optional<ErrorCode> errorCode)
     {
         lifeCycleEventKafkaTopic.ifPresent(topic -> {
             // Use the event type, query ID and query state as the unique message identifier
@@ -136,7 +138,8 @@ public class GalaxyKafkaEventListener
                     metadata.getQueryState(),
                     eventTime,
                     metadata.getQuery(),
-                    context.getPrincipal());
+                    context.getPrincipal(),
+                    errorCode);
             CloudEvent lifeCycleCloudEvent = new CloudEventBuilder()
                     .withId(id)
                     .withType(QUERY_LIFECYCLE_EVENT_TYPE)
