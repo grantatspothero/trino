@@ -113,7 +113,7 @@ public class RevokeTask
         if (isWildcard(tableName)) {
             validateWildcard(session, metadata, statement, tableName);
         }
-        else if (!metadata.isView(session, tableName)) {
+        else if (!metadata.isMaterializedView(session, tableName) && !metadata.isView(session, tableName)) {
             RedirectionAwareTableHandle redirection = metadata.getRedirectionAwareTableHandle(session, tableName);
             if (redirection.tableHandle().isEmpty()) {
                 throw semanticException(TABLE_NOT_FOUND, statement, "Table '%s' does not exist", tableName);
