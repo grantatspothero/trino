@@ -4,15 +4,16 @@ on:
   push:
     branches:
       - master
-  workflow_dispatch:
-  schedule:
-    # Used to schedule Salesforce tests
-    - cron: "2 0 * * *"  # Salesforce has limitation on accessing data in parallel. Schedule is different from cork to avoid running jobs in parallel.
   pull_request:
     paths-ignore:
       - 'docs/**'
   repository_dispatch:
     types: [test-with-secrets-command]
+  workflow_dispatch:
+  schedule:
+    # Used to schedule Salesforce tests
+    # 2h apart from Cork's schedule
+    - cron: "0 2 * * *"
 
 defaults:
   run:
