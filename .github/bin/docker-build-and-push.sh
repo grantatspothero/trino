@@ -90,7 +90,6 @@ galaxy-query-monitor-event-listener
 galaxy-objectstore
 galaxy-oracle
 galaxy-salesforce
-galaxy-sap-hana
 galaxy-snowflake
 galaxy-sqlserver
 galaxy-stargate
@@ -111,6 +110,7 @@ pinot
 postgresql
 redshift
 resource-group-managers
+sap-hana
 session-property-managers
 teradata-functions
 tpcds
