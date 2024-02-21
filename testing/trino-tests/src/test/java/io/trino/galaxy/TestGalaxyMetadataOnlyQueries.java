@@ -48,14 +48,12 @@ import io.trino.server.metadataonly.MetadataOnlyConfig;
 import io.trino.server.metadataonly.MetadataOnlyTransactionManager;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.server.testing.TestingTrinoServer;
-import io.trino.sql.query.QueryAssertions.QueryAssert;
 import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.GalaxyQueryRunner;
 import io.trino.testing.MaterializedResult;
 import io.trino.testing.QueryRunner;
 import jakarta.ws.rs.core.MediaType;
-import org.assertj.core.api.AssertProvider;
 import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -83,7 +81,6 @@ import static io.starburst.stargate.crypto.TestingMasterKeyCrypto.TRINO_KEY;
 import static io.starburst.stargate.crypto.TestingMasterKeyCrypto.createPortalCrypto;
 import static io.trino.plugin.objectstore.TestingObjectStoreUtils.createObjectStoreProperties;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
-import static io.trino.sql.query.QueryAssertions.QueryAssert.newQueryAssert;
 import static io.trino.testing.MaterializedResult.resultBuilder;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.util.Locale.ENGLISH;
@@ -219,16 +216,14 @@ public class TestGalaxyMetadataOnlyQueries
     public void testSimpleSelect()
     {
         assertThat(queryMetadata("SELECT '123'"))
-                .skippingTypesCheck()
-                .matches(matchResult("123"));
+                .isEqualTo(matchResult("123"));
     }
 
     @Test
     public void testTpchSelect()
     {
         assertThat(queryMetadata("SELECT table_name, table_type FROM tpch.information_schema.tables LIMIT 1"))
-                .skippingTypesCheck()
-                .matches(matchResult("applicable_roles", "BASE TABLE"));
+                .isEqualTo(matchResult("applicable_roles", "BASE TABLE"));
     }
 
     @Test
@@ -240,25 +235,24 @@ public class TestGalaxyMetadataOnlyQueries
                 WHERE table_schema = 'information_schema' AND table_type IN ('VIEW')
                 ORDER by table_name
                 """))
-                .skippingTypesCheck()
-                .matches(matchResult());
+                .isEqualTo(matchResult());
     }
 
     @Test
     public void testObjectStore()
     {
         assertThat(queryMetadata("SHOW TABLES FROM objectstore.default"))
-                .matches(resultBuilder(getSession())
+                .isEqualTo(resultBuilder(getSession())
+                        .row("metadata_object_store_table_delta")
                         .row("metadata_object_store_table_hive")
                         .row("metadata_object_store_table_iceberg")
-                        .row("metadata_object_store_table_delta")
                         .build());
 
         assertThat(queryMetadata("SELECT table_name, column_name FROM objectstore.information_schema.columns WHERE table_name LIKE 'metada___object_store_table_%' "))
-                .matches(resultBuilder(getSession())
+                .isEqualTo(resultBuilder(getSession())
+                        .row("metadata_object_store_table_delta", "a")
                         .row("metadata_object_store_table_hive", "a")
                         .row("metadata_object_store_table_iceberg", "a")
-                        .row("metadata_object_store_table_delta", "a")
                         .build());
     }
 
@@ -274,8 +268,7 @@ public class TestGalaxyMetadataOnlyQueries
     {
         queryMetadata("CREATE MATERIALIZED VIEW objectstore.default.metadata_object_store_materialized_view_iceberg AS (SELECT * FROM objectstore.default.metadata_object_store_table_iceberg LIMIT 1)");
         assertThat(queryMetadata("SHOW CREATE MATERIALIZED VIEW objectstore.default.metadata_object_store_materialized_view_iceberg"))
-                .skippingTypesCheck()
-                .matches(matchResult("""
+                .isEqualTo(matchResult("""
                      CREATE MATERIALIZED VIEW objectstore.default.metadata_object_store_materialized_view_iceberg
                      WITH (
                         storage_schema = 'default'
@@ -288,11 +281,10 @@ public class TestGalaxyMetadataOnlyQueries
                      )"""));
     }
 
-    private AssertProvider<QueryAssert> queryMetadata(@Language("SQL") String statement)
+    private MaterializedResult queryMetadata(@Language("SQL") String statement)
     {
         Request request = buildRequest(statement);
-        MaterializedResult materializedResult = materialized(httpClient.execute(request, createJsonResponseHandler(QUERY_RESULTS_CODEC)));
-        return newQueryAssert(statement, getDistributedQueryRunner(), getSession(), materializedResult);
+        return materialized(httpClient.execute(request, createJsonResponseHandler(QUERY_RESULTS_CODEC)));
     }
 
     private Request buildRequest(String statement)

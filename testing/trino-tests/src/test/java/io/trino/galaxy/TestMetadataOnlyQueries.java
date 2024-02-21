@@ -41,7 +41,6 @@ import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.metadataonly.MetadataOnlyTransactionManager;
 import io.trino.server.security.galaxy.TestingAccountFactory;
-import io.trino.sql.query.QueryAssertions.QueryAssert;
 import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.GalaxyQueryRunner;
@@ -49,7 +48,6 @@ import io.trino.testing.MaterializedResult;
 import io.trino.testing.QueryRunner;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
-import org.assertj.core.api.AssertProvider;
 import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -74,7 +72,6 @@ import static io.airlift.http.client.StatusResponseHandler.createStatusResponseH
 import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_FACTORY;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
-import static io.trino.sql.query.QueryAssertions.QueryAssert.newQueryAssert;
 import static io.trino.testing.MaterializedResult.resultBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -167,16 +164,14 @@ public class TestMetadataOnlyQueries
     public void testSimpleSelect()
     {
         assertThat(queryMetadata("SELECT '123'"))
-                .skippingTypesCheck()
-                .matches(matchResult("123"));
+                .isEqualTo(matchResult("123"));
     }
 
     @Test
     public void testTpchSelect()
     {
         assertThat(queryMetadata("SELECT table_name, table_type FROM tpch.information_schema.tables LIMIT 1"))
-                .skippingTypesCheck()
-                .matches(matchResult("applicable_roles", "BASE TABLE"));
+                .isEqualTo(matchResult("applicable_roles", "BASE TABLE"));
     }
 
     @Test
@@ -188,8 +183,7 @@ public class TestMetadataOnlyQueries
                 WHERE table_schema = 'information_schema' AND table_type IN ('VIEW')
                 ORDER by table_name
                 """))
-                .skippingTypesCheck()
-                .matches(matchResult());
+                .isEqualTo(matchResult());
     }
 
     @Test
@@ -238,11 +232,10 @@ public class TestMetadataOnlyQueries
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT.code());
     }
 
-    private AssertProvider<QueryAssert> queryMetadata(@Language("SQL") String statement)
+    private MaterializedResult queryMetadata(@Language("SQL") String statement)
     {
         Request request = buildRequest(statement);
-        MaterializedResult materializedResult = materialized(httpClient.execute(request, createJsonResponseHandler(QUERY_RESULTS_CODEC)));
-        return newQueryAssert(statement, getDistributedQueryRunner(), getSession(), materializedResult);
+        return materialized(httpClient.execute(request, createJsonResponseHandler(QUERY_RESULTS_CODEC)));
     }
 
     private Request buildRequest(String statement)

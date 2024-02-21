@@ -304,11 +304,6 @@ public class QueryAssertions
             return () -> new QueryAssert(runner, session, query, result, false, false, false);
         }
 
-        public static AssertProvider<QueryAssert> newQueryAssert(String query, QueryRunner runner, Session session, MaterializedResult result)
-        {
-            return () -> new QueryAssert(runner, session, query, result, false, false, false);
-        }
-
         private QueryAssert(
                 QueryRunner runner,
                 Session session,
