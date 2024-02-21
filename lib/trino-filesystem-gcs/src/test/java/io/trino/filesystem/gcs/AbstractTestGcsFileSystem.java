@@ -21,6 +21,7 @@ import com.google.cloud.storage.testing.RemoteStorageHelper;
 import io.trino.filesystem.AbstractTestTrinoFileSystem;
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystem;
+import io.trino.filesystem.gcs.galaxy.GcsRegionEnforcementConfig;
 import io.trino.spi.security.ConnectorIdentity;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -59,7 +60,7 @@ public abstract class AbstractTestGcsFileSystem
         byte[] jsonKeyBytes = Base64.getDecoder().decode(gcpCredentialKey);
         GcsFileSystemConfig config = new GcsFileSystemConfig().setJsonKey(new String(jsonKeyBytes, UTF_8));
         GcsStorageFactory storageFactory = new GcsStorageFactory(config);
-        this.gcsFileSystemFactory = new GcsFileSystemFactory(config, storageFactory);
+        this.gcsFileSystemFactory = new GcsFileSystemFactory(config, new GcsRegionEnforcementConfig(), storageFactory);
         this.storage = storageFactory.create(ConnectorIdentity.ofUser("test"));
         String bucket = RemoteStorageHelper.generateBucketName();
         storage.create(BucketInfo.of(bucket));

@@ -18,6 +18,7 @@ import com.google.inject.Module;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
 import io.trino.filesystem.gcs.galaxy.GalaxyTransportOptionsConfigurer;
+import io.trino.filesystem.gcs.galaxy.GcsRegionEnforcementConfig;
 import io.trino.filesystem.gcs.galaxy.StorageOptionsConfigurer;
 
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
@@ -34,5 +35,6 @@ public class GcsFileSystemModule
         binder.bind(GcsFileSystemFactory.class).in(Scopes.SINGLETON);
         Multibinder<StorageOptionsConfigurer> optionsConfigurers = newSetBinder(binder, StorageOptionsConfigurer.class);
         optionsConfigurers.addBinding().to(GalaxyTransportOptionsConfigurer.class).in(Scopes.SINGLETON);
+        configBinder(binder).bindConfig(GcsRegionEnforcementConfig.class);
     }
 }

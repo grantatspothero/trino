@@ -129,6 +129,11 @@
 
         <dependency>
             <groupId>io.trino</groupId>
+            <artifactId>trino-cache</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.trino</groupId>
             <artifactId>trino-filesystem</artifactId>
         </dependency>
 
@@ -217,6 +222,7 @@
                             <excludes>
                                 <exclude>**/TestGcsFileSystemGcs.java</exclude>
                                 <exclude>**/TestGcsFileSystemNetworkTracking.java</exclude>
+                                <exclude>**/TestGcsLocationRegionValidator.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -235,6 +241,7 @@
                             <includes>
                                 <include>**/TestGcsFileSystemGcs.java</include>
                                 <include>**/TestGcsFileSystemNetworkTracking.java</include>
+                                <include>**/TestGcsLocationRegionValidator.java</include>
                             </includes>
                         </configuration>
                     </plugin>

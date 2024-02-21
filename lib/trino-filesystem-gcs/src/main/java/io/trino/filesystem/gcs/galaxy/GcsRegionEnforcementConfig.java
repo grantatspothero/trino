@@ -11,29 +11,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.filesystem;
+package io.trino.filesystem.gcs.galaxy;
 
-import io.trino.spi.connector.ConnectorSession;
-import io.trino.spi.security.ConnectorIdentity;
+import io.airlift.configuration.Config;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.Optional;
 
-public interface TrinoFileSystemFactory
+public class GcsRegionEnforcementConfig
 {
-    TrinoFileSystem create(ConnectorIdentity identity);
+    private Optional<String> enforcedRegion = Optional.empty();
 
-    default TrinoFileSystem create(ConnectorSession session)
+    @NotNull
+    public Optional<String> getEnforcedRegion()
     {
-        return create(session.getIdentity());
+        return enforcedRegion;
     }
 
-    default Optional<String> validate(ConnectorIdentity identity, Location location)
+    @Config("galaxy.gcs.region-enforcement.enforced-region")
+    public GcsRegionEnforcementConfig setEnforcedRegion(String enforcedRegion)
     {
-        return Optional.empty();
-    }
-
-    default Optional<String> validate(ConnectorSession session, Location location)
-    {
-        return validate(session.getIdentity(), location);
+        this.enforcedRegion = Optional.ofNullable(enforcedRegion);
+        return this;
     }
 }

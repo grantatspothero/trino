@@ -147,7 +147,10 @@ final class SwitchingFileSystem
 
     private TrinoFileSystem fileSystem(Location location)
     {
-        return createFileSystem(determineFactory(location));
+        TrinoFileSystemFactory trinoFileSystemFactory = determineFactory(location);
+        // perform region enforcement for the GCS native filesystem
+        enforceRegion(trinoFileSystemFactory, location);
+        return createFileSystem(trinoFileSystemFactory);
     }
 
     private TrinoFileSystemFactory determineFactory(Location location)
@@ -156,6 +159,15 @@ final class SwitchingFileSystem
                 .map(factories::get)
                 .or(() -> hdfsFactory)
                 .orElseThrow(() -> new IllegalArgumentException("No factory for location: " + location));
+    }
+
+    private void enforceRegion(TrinoFileSystemFactory factory, Location location)
+    {
+        Optional<String> message = session.map(session -> factory.validate(session, location))
+                .orElseGet(() -> factory.validate(identity.orElseThrow(), location));
+        if (message.isPresent()) {
+            throw new IllegalArgumentException(message.get());
+        }
     }
 
     private TrinoFileSystem createFileSystem(TrinoFileSystemFactory factory)

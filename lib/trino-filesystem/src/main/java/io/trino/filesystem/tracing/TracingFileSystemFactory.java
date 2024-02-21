@@ -14,10 +14,13 @@
 package io.trino.filesystem.tracing;
 
 import io.opentelemetry.api.trace.Tracer;
+import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystem;
 import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.security.ConnectorIdentity;
+
+import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
@@ -43,5 +46,17 @@ public final class TracingFileSystemFactory
     public TrinoFileSystem create(ConnectorSession session)
     {
         return new TracingFileSystem(tracer, delegate.create(session));
+    }
+
+    @Override
+    public Optional<String> validate(ConnectorIdentity identity, Location location)
+    {
+        return delegate.validate(identity, location);
+    }
+
+    @Override
+    public Optional<String> validate(ConnectorSession session, Location location)
+    {
+        return delegate.validate(session, location);
     }
 }

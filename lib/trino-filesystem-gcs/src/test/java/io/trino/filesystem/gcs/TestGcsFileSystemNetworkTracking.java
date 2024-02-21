@@ -29,6 +29,7 @@ import io.trino.filesystem.TrinoInputFile;
 import io.trino.filesystem.TrinoInputStream;
 import io.trino.filesystem.TrinoOutputFile;
 import io.trino.filesystem.gcs.galaxy.GalaxyTransportOptionsConfigurer;
+import io.trino.filesystem.gcs.galaxy.GcsRegionEnforcementConfig;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.spi.TrinoException;
@@ -226,7 +227,7 @@ public class TestGcsFileSystemNetworkTracking
                 .setCrossRegionReadLimit(crossRegionReadLimit)
                 .setCrossRegionWriteLimit(crossRegionWriteLimit);
         GalaxyTransportOptionsConfigurer configurer = new GalaxyTransportOptionsConfigurer(catalogHandle, localRegionConfig, crossRegionConfig);
-        return new GcsFileSystemFactory(config, new GcsStorageFactory(ImmutableSet.of(configurer), config));
+        return new GcsFileSystemFactory(config, new GcsRegionEnforcementConfig(), new GcsStorageFactory(ImmutableSet.of(configurer), config));
     }
 
     private static Storage createStorageClient()
