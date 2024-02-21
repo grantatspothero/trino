@@ -19,7 +19,7 @@
         <air.test.parallel>instances</air.test.parallel>
         <air.test.thread-count>1</air.test.thread-count>
         <!-- overide warp version to use new FS-->
-        <dep.warp-speed.version>435.0.17</dep.warp-speed.version>
+        <dep.warp-speed.version>435.0.19</dep.warp-speed.version>
     </properties>
 
     <dependencies>
