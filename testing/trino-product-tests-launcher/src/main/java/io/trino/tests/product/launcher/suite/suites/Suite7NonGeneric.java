@@ -16,10 +16,13 @@ package io.trino.tests.product.launcher.suite.suites;
 import com.google.common.collect.ImmutableList;
 import io.trino.tests.product.launcher.env.EnvironmentConfig;
 import io.trino.tests.product.launcher.env.EnvironmentDefaults;
+import io.trino.tests.product.launcher.env.environment.EnvMultinodeKerberosKudu;
 import io.trino.tests.product.launcher.env.environment.EnvMultinodePostgresql;
 import io.trino.tests.product.launcher.env.environment.EnvMultinodeSqlserver;
+import io.trino.tests.product.launcher.env.environment.EnvSinglenodeKerberosHdfsImpersonationCrossRealm;
 import io.trino.tests.product.launcher.env.environment.EnvSinglenodeSparkHive;
 import io.trino.tests.product.launcher.env.environment.EnvSinglenodeSparkHiveNoStatsFallback;
+import io.trino.tests.product.launcher.env.environment.EnvTwoKerberosHives;
 import io.trino.tests.product.launcher.env.environment.EnvTwoMixedHives;
 import io.trino.tests.product.launcher.suite.Suite;
 import io.trino.tests.product.launcher.suite.SuiteTestRun;
@@ -27,6 +30,7 @@ import io.trino.tests.product.launcher.suite.SuiteTestRun;
 import java.util.List;
 
 import static com.google.common.base.Verify.verify;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.tests.product.launcher.suite.SuiteTestRun.testOnEnvironment;
 
 public class Suite7NonGeneric
@@ -34,6 +38,14 @@ public class Suite7NonGeneric
 {
     @Override
     public List<SuiteTestRun> getTestRuns(EnvironmentConfig config)
+    {
+        return testRuns(config).stream()
+                // Galaxy does not support Kerberos
+                .filter(run -> !run.getEnvironment().getSimpleName().contains("Kerberos"))
+                .collect(toImmutableList());
+    }
+
+    private List<SuiteTestRun> testRuns(EnvironmentConfig config)
     {
         verify(config.getHadoopBaseImage().equals(EnvironmentDefaults.HADOOP_BASE_IMAGE), "The suite should be run with default HADOOP_BASE_IMAGE. Leave HADOOP_BASE_IMAGE unset.");
 
@@ -50,19 +62,17 @@ public class Suite7NonGeneric
                 testOnEnvironment(EnvSinglenodeSparkHiveNoStatsFallback.class)
                         .withGroups("configured_features", "hive_spark_no_stats_fallback")
                         .build(),
-                // Disable kerberized tests for Galaxy Trino, since kerberos feature isn't used
-//                testOnEnvironment(EnvSinglenodeKerberosHdfsImpersonationCrossRealm.class)
-//                        .withGroups("configured_features", "storage_formats", "cli", "hdfs_impersonation", "hive_kerberos")
-//                        .build(),
-//                testOnEnvironment(EnvMultinodeKerberosKudu.class)
-//                        .withGroups("configured_features", "kudu")
-//                        .build(),
+                testOnEnvironment(EnvSinglenodeKerberosHdfsImpersonationCrossRealm.class)
+                        .withGroups("configured_features", "storage_formats", "cli", "hdfs_impersonation", "hive_kerberos")
+                        .build(),
+                testOnEnvironment(EnvMultinodeKerberosKudu.class)
+                        .withGroups("configured_features", "kudu")
+                        .build(),
                 testOnEnvironment(EnvTwoMixedHives.class)
                         .withGroups("configured_features", "two_hives")
+                        .build(),
+                testOnEnvironment(EnvTwoKerberosHives.class)
+                        .withGroups("configured_features", "two_hives")
                         .build());
-                // Disable kerberized tests for Galaxy Trino, since kerberos feature isn't used
-//                testOnEnvironment(EnvTwoKerberosHives.class)
-//                        .withGroups("configured_features", "two_hives")
-//                        .build());
     }
 }
