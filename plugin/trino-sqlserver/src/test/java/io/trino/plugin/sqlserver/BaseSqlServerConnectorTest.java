@@ -41,7 +41,6 @@ import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.IntStream.range;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.abort;
 
 public abstract class BaseSqlServerConnectorTest
         extends BaseJdbcConnectorTest
@@ -126,20 +125,6 @@ public abstract class BaseSqlServerConnectorTest
     public void testSelectInformationSchemaColumns()
     {
         super.testSelectInformationSchemaColumns();
-    }
-
-    @Test
-    @Override
-    public void testColumnsListingModes()
-    {
-        abort("not supported.");
-    }
-
-    @Test
-    @Override
-    public void testCommentsListingModes()
-    {
-        abort("not supported.");
     }
 
     @Override
