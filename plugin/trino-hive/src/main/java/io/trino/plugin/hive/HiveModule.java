@@ -20,8 +20,6 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
-import io.airlift.concurrent.BoundedExecutor;
-import io.airlift.concurrent.ExecutorServiceAdapter;
 import io.airlift.event.client.EventClient;
 import io.trino.plugin.base.CatalogName;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
@@ -55,9 +53,6 @@ import io.trino.plugin.hive.parquet.ParquetPageSourceFactory;
 import io.trino.plugin.hive.parquet.ParquetReaderConfig;
 import io.trino.plugin.hive.parquet.ParquetWriterConfig;
 import io.trino.plugin.hive.rcfile.RcFilePageSourceFactory;
-import io.trino.plugin.hive.schemadiscovery.ForSchemaDiscovery;
-import io.trino.plugin.hive.schemadiscovery.SchemaDiscoveryConfig;
-import io.trino.plugin.hive.schemadiscovery.SchemaDiscoverySystemTableProvider;
 import io.trino.plugin.hive.util.BlockJsonSerde;
 import io.trino.plugin.hive.util.HiveBlockEncodingSerde;
 import io.trino.spi.block.Block;
@@ -93,7 +88,6 @@ public class HiveModule
         configBinder(binder).bindConfig(HiveConfig.class);
         configBinder(binder).bindConfig(HiveMetastoreConfig.class);
         configBinder(binder).bindConfig(SortingFileWriterConfig.class, "hive");
-        configBinder(binder).bindConfig(SchemaDiscoveryConfig.class);
 
         binder.bind(HiveSessionProperties.class).in(Scopes.SINGLETON);
         binder.bind(HiveTableProperties.class).in(Scopes.SINGLETON);
@@ -114,7 +108,6 @@ public class HiveModule
         Multibinder<SystemTableProvider> systemTableProviders = newSetBinder(binder, SystemTableProvider.class);
         systemTableProviders.addBinding().to(PartitionsSystemTableProvider.class).in(Scopes.SINGLETON);
         systemTableProviders.addBinding().to(PropertiesSystemTableProvider.class).in(Scopes.SINGLETON);
-        systemTableProviders.addBinding().to(SchemaDiscoverySystemTableProvider.class).in(Scopes.SINGLETON);
         newOptionalBinder(binder, HiveRedirectionsProvider.class)
                 .setDefault().to(NoneHiveRedirectionsProvider.class).in(Scopes.SINGLETON);
         newOptionalBinder(binder, HiveMaterializedViewMetadataFactory.class)
@@ -188,14 +181,6 @@ public class HiveModule
     public ExecutorService createHiveClientExecutor(CatalogName catalogName)
     {
         return newCachedThreadPool(daemonThreadsNamed("hive-" + catalogName + "-%s"));
-    }
-
-    @ForSchemaDiscovery
-    @Singleton
-    @Provides
-    public ExecutorService createSchemaDiscoveryExecutor(ExecutorService executor, SchemaDiscoveryConfig config)
-    {
-        return ExecutorServiceAdapter.from(new BoundedExecutor(executor, config.getExecutorThreadCount()));
     }
 
     @ForHiveTransactionHeartbeats

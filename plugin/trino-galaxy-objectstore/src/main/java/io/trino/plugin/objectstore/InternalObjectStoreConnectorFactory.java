@@ -27,6 +27,7 @@ import io.trino.plugin.hive.InternalHiveConnectorFactory;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hudi.InternalHudiConnectorFactory;
 import io.trino.plugin.iceberg.InternalIcebergConnectorFactory;
+import io.trino.plugin.objectstore.hive.schemadiscovery.HiveSchemaDiscoveryModule;
 import io.trino.plugin.objectstore.scheduler.GalaxyWorkSchedulerModule;
 import io.trino.spi.classloader.ThreadContextClassLoader;
 import io.trino.spi.connector.CatalogHandle;
@@ -70,6 +71,7 @@ public final class InternalObjectStoreConnectorFactory
                     filteredConfig(config, "HIVE"),
                     context,
                     combine(
+                            new HiveSchemaDiscoveryModule(),
                             new ConfigureCachingMetastoreModule(),
                             new GalaxyLocationSecurityModule()),
                     hiveMetastore,

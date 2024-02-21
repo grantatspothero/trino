@@ -176,7 +176,7 @@ jobs:
           git push origin "${TRINO_VERSION}"
 
   deploy-maven:
-    # Only deploy buffer service artifacts for merges to galaxy*, or for PRs with the 'with-images' label
+    # Only deploy maven artifacts for merges to a branch, or for PRs with the 'with-images' label
     if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'with-images')
     runs-on: [ self-hosted, sep-cicd, gha-fleet-small ]
     timeout-minutes: 30
@@ -201,7 +201,7 @@ jobs:
         run: |
           export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
           $RETRY $MAVEN deploy -B --strict-checksums -V -T 1C -DskipTests -Dair.check.skip-all -Dgib.disable -am \
-            -pl :galaxy-buffer-discovery-client,:galaxy-buffer-data-client,:galaxy-buffer-discovery-server,:galaxy-buffer-data-server \
+            -pl :galaxy-buffer-discovery-client,:galaxy-buffer-data-client,:galaxy-buffer-discovery-server,:galaxy-buffer-data-server,:schema-discovery-core \
             -Drevision=${{ needs.determine-version.outputs.version }}
 
   maven-checks:
