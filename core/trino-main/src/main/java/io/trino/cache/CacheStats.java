@@ -26,6 +26,7 @@ public class CacheStats
     private final CounterStat cacheHits = new CounterStat();
     private final CounterStat cacheMiss = new CounterStat();
     private final CounterStat splitRejected = new CounterStat();
+    private final CounterStat splitFailoverHappened = new CounterStat();
     private final CounterStat missingSplitId = new CounterStat();
     private final CounterStat predicateTooBig = new CounterStat();
     private final CounterStat splitsTooBig = new CounterStat();
@@ -52,6 +53,13 @@ public class CacheStats
     public CounterStat getSplitRejected()
     {
         return splitRejected;
+    }
+
+    @Managed
+    @Nested
+    public CounterStat getSplitFailoverHappened()
+    {
+        return splitFailoverHappened;
     }
 
     @Managed
@@ -109,6 +117,11 @@ public class CacheStats
     public void recordSplitRejected()
     {
         splitRejected.update(1);
+    }
+
+    public void recordSplitFailoverHappened()
+    {
+        splitFailoverHappened.update(1);
     }
 
     public void recordMissingSplitId()
