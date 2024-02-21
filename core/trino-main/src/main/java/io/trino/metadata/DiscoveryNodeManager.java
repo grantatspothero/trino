@@ -30,6 +30,7 @@ import io.airlift.http.client.HttpClient;
 import io.airlift.log.Logger;
 import io.airlift.node.NodeInfo;
 import io.trino.client.NodeVersion;
+import io.trino.connector.CatalogManagerConfig;
 import io.trino.failuredetector.FailureDetector;
 import io.trino.server.InternalCommunicationConfig;
 import io.trino.spi.connector.CatalogHandle;
@@ -99,7 +100,8 @@ public final class DiscoveryNodeManager
             FailureDetector failureDetector,
             NodeVersion expectedNodeVersion,
             @ForNodeManager HttpClient httpClient,
-            InternalCommunicationConfig internalCommunicationConfig)
+            InternalCommunicationConfig internalCommunicationConfig,
+            CatalogManagerConfig catalogManagerConfig)
     {
         this.serviceSelector = requireNonNull(serviceSelector, "serviceSelector is null");
         this.failureDetector = requireNonNull(failureDetector, "failureDetector is null");
