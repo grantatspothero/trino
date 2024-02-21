@@ -15,17 +15,13 @@ package io.trino.spi.eventlistener;
 
 import static java.util.Objects.requireNonNull;
 
-// TODO: remove time fields without unit after this has been in production for 30 days
 public record StageDetails(
         String id,
         String state,
         long tasks,
         boolean fullyBlocked,
-        long scheduledTime,
         long scheduledTimeMs,
-        long blockedTime,
         long blockedTimeMs,
-        long cpuTime,
         long cpuTimeMs,
         long inputBuffer)
 {

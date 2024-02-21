@@ -60,10 +60,7 @@ public final class GalaxyQueryHistoryProcessor
                 stageInfo.getTasks().size(),
                 stageInfo.getStageStats().isFullyBlocked(),
                 stageInfo.getStageStats().getTotalScheduledTime().toMillis(),
-                stageInfo.getStageStats().getTotalScheduledTime().toMillis(),
                 stageInfo.getStageStats().getTotalBlockedTime().toMillis(),
-                stageInfo.getStageStats().getTotalBlockedTime().toMillis(),
-                stageInfo.getStageStats().getTotalCpuTime().toMillis(),
                 stageInfo.getStageStats().getTotalCpuTime().toMillis(),
                 getStageInputBuffer(stageInfo));
     }
