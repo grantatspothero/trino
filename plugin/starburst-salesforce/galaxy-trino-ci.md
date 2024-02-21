@@ -5,7 +5,7 @@
 - Tests are scheduled to run every night
 
 ### Test resource
-Salesforce test instance is shared across `starburst-trino-plugins`, `galaxy-trino`, `stargate` repositories.
+Salesforce test instance is shared across `cork`, `galaxy-trino`, `stargate` repositories.
 
 **Note:** The tests use basic user/password auth. User's password periodically expires every three months.
 Tests using expired password will fail with an `INVALID_OPERATION_WITH_EXPIRED_PASSWORD` error.

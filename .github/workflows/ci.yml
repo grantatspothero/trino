@@ -548,7 +548,6 @@ jobs:
       matrix:
         modules:
           - plugin/starburst-salesforce
-          - plugin/trino-galaxy-salesforce
     timeout-minutes: 30
     if: "(github.event_name == 'schedule') || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'salesforce')) || (github.event_name == 'workflow_dispatch')"
     steps:
@@ -569,7 +568,7 @@ jobs:
           export MAVEN_OPTS="${MAVEN_INSTALL_OPTS}"
           ./mvnw clean install ${MAVEN_FAST_INSTALL} -am -pl ${{ matrix.modules }}
       - name: Run Salesforce tests
-        if: contains(matrix.modules, 'starburst-salesforce') || contains(matrix.modules, 'trino-galaxy-salesforce')
+        if: contains(matrix.modules, 'starburst-salesforce')
         env:
           SALESFORCE_BASIC_AUTH_USER_USERNAME: ${{ secrets.SALESFORCE_BASIC_AUTH_USER_USERNAME }}
           SALESFORCE_BASIC_AUTH_USER_PASSWORD: ${{ secrets.SALESFORCE_BASIC_AUTH_USER_PASSWORD }}
@@ -697,7 +696,7 @@ jobs:
             !:trino-galaxy-oracle,
             !:trino-galaxy-warp-speed,
             !:trino-galaxy-warp-speed-2,
-            !:trino-galaxy-salesforce,
+            !:starburst-salesforce,
             !:trino-galaxy-snowflake,
             !:trino-galaxy-stargate,
             !:trino-google-sheets,

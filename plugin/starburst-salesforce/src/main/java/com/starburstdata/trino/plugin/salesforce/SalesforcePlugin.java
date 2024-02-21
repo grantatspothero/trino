@@ -24,6 +24,12 @@ public class SalesforcePlugin
 {
     private final LicenseManager licenseManager;
 
+    @SuppressWarnings("unused") // public no-arg constructor is required for build-pt
+    public SalesforcePlugin()
+    {
+        this(() -> true);
+    }
+
     public SalesforcePlugin(LicenseManager licenseManager)
     {
         this.licenseManager = requireNonNull(licenseManager, "licenseManager is null");
