@@ -54,7 +54,6 @@ import io.trino.spi.type.TypeManager;
 import io.trino.split.PageSourceProvider;
 import io.trino.sql.planner.PlanNodeIdAllocator;
 import io.trino.sql.planner.plan.PlanNodeId;
-import io.trino.testing.TestingSplit;
 import io.trino.testing.TestingTaskContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -104,7 +103,7 @@ public class TestCacheDriverFactory
     private static final Session TEST_SESSION = testSessionBuilder().build();
     private static final SignatureKey SIGNATURE_KEY = new SignatureKey("key");
     private static final CacheSplitId SPLIT_ID = new CacheSplitId("split");
-    private static final ScheduledSplit SPLIT = new ScheduledSplit(0, new PlanNodeId("id"), new Split(TEST_CATALOG_HANDLE, new TestingSplit(false, ImmutableList.of())));
+    private static final ScheduledSplit SPLIT = new ScheduledSplit(0, new PlanNodeId("id"), new Split(TEST_CATALOG_HANDLE, createRemoteSplit()));
     private final PlanNodeIdAllocator planNodeIdAllocator = new PlanNodeIdAllocator();
     private TestSplitCache splitCache;
     private CacheManagerRegistry registry;
