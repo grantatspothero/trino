@@ -61,9 +61,6 @@ public final class S3FileSystemFactory
     {
         S3ClientBuilder s3 = S3Client.builder();
 
-        Optional<StaticCredentialsProvider> staticCredentialsProvider = getStaticCredentialsProvider(config);
-        staticCredentialsProvider.ifPresent(s3::credentialsProvider);
-
         s3.overrideConfiguration(ClientOverrideConfiguration.builder()
                 .addExecutionInterceptor(AwsSdkTelemetry.builder(openTelemetry)
                         .setCaptureExperimentalSpanAttributes(true)
@@ -71,10 +68,8 @@ public final class S3FileSystemFactory
                         .build().newExecutionInterceptor())
                 .build());
 
-        if ((config.getAwsAccessKey() != null) && (config.getAwsSecretKey() != null)) {
-            s3.credentialsProvider(StaticCredentialsProvider.create(
-                    AwsBasicCredentials.create(config.getAwsAccessKey(), config.getAwsSecretKey())));
-        }
+        Optional<StaticCredentialsProvider> staticCredentialsProvider = getStaticCredentialsProvider(config);
+        staticCredentialsProvider.ifPresent(s3::credentialsProvider);
 
         Optional.ofNullable(config.getRegion()).map(Region::of).ifPresent(s3::region);
         Optional.ofNullable(config.getEndpoint()).map(URI::create).ifPresent(s3::endpointOverride);
