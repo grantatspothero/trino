@@ -16,13 +16,9 @@ package io.trino.tests.product.launcher.env.jdk;
 import com.google.inject.Inject;
 import io.trino.tests.product.launcher.env.EnvironmentOptions;
 
-import static io.trino.tests.product.launcher.Configurations.nameForJdkProvider;
-
 public class Temurin19JdkProvider
         extends AdoptiumApiResolvingJdkProvider
 {
-    public static final String TEMURIN_19 = nameForJdkProvider(Temurin19JdkProvider.class);
-
     @Inject
     public Temurin19JdkProvider(EnvironmentOptions environmentOptions)
     {
