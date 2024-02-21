@@ -38,7 +38,7 @@ public class IcebergRestCatalogConfig
     private Optional<String> warehouse = Optional.empty();
     private Security security = Security.NONE;
     private SessionType sessionType = SessionType.NONE;
-    private boolean vendedCredentialsEnabled = true;
+    private boolean vendedCredentialsEnabled;
 
     @NotNull
     public URI getBaseUri()

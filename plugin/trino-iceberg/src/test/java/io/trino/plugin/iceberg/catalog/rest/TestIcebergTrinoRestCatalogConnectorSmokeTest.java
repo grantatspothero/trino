@@ -100,9 +100,8 @@ public class TestIcebergTrinoRestCatalogConnectorSmokeTest
                                 .put("iceberg.file-format", format.name())
                                 .put("iceberg.catalog.type", "rest")
                                 .put("iceberg.rest-catalog.uri", testServer.getBaseUrl().toString())
-                                .put("iceberg.writer-sort-buffer-size", "1MB")
                                 .put("iceberg.register-table-procedure.enabled", "true")
-                                .put("iceberg.rest-catalog.vended-credentials-enabled", "false")
+                                .put("iceberg.writer-sort-buffer-size", "1MB")
                                 .buildOrThrow())
                 .setInitialTables(REQUIRED_TPCH_TABLES)
                 .build();
