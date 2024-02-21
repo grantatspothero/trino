@@ -62,30 +62,6 @@
         </artifact>
     </artifactSet>
 
-    <artifactSet to="plugin/example-http">
-        <artifact id="${project.groupId}:trino-example-http:zip:${project.version}">
-            <unpack />
-        </artifact>
-    </artifactSet>
-
-    <artifactSet to="plugin/memory">
-        <artifact id="${project.groupId}:trino-memory:zip:${project.version}">
-            <unpack />
-        </artifact>
-    </artifactSet>
-
-    <artifactSet to="plugin/blackhole">
-        <artifact id="${project.groupId}:trino-blackhole:zip:${project.version}">
-            <unpack />
-        </artifact>
-    </artifactSet>
-
-    <artifactSet to="plugin/elasticsearch">
-        <artifact id="${project.groupId}:trino-elasticsearch:zip:${project.version}">
-            <unpack />
-        </artifact>
-    </artifactSet>
-
     <artifactSet to="plugin/galaxy-dynamodb">
         <artifact id="${project.groupId}:trino-galaxy-dynamodb:zip:${project.version}">
             <unpack />
@@ -174,12 +150,6 @@
 
     <artifactSet to="plugin/galaxy-query-monitor-event-listener">
         <artifact id="${project.groupId}:trino-galaxy-query-monitor-event-listener:zip:${project.version}">
-            <unpack />
-        </artifact>
-    </artifactSet>
-
-    <artifactSet to="plugin/kinesis">
-        <artifact id="${project.groupId}:trino-kinesis:zip:${project.version}">
             <unpack />
         </artifact>
     </artifactSet>
