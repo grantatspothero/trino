@@ -91,7 +91,7 @@ jobs:
           echo "version=${version}" >> $GITHUB_OUTPUT
           echo "version: \`${version}\`" >> $GITHUB_STEP_SUMMARY
 
-  docker-images-21:
+  docker-images:
     # Only build images for merges to galaxy*, or for PRs with the 'with-images' label
     if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'with-images')
     runs-on: [self-hosted, sep-cicd, gha-fleet-small]
