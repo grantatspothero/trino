@@ -170,13 +170,6 @@ jobs:
         run: $MAVEN clean -pl '!:trino-server,!:trino-cli'
       - name: Build and Push Trino Docker Images [JDK 19]
         run: .github/bin/docker-build-and-push.sh -v "${TRINO_VERSION}" -j 19 -p
-      - name: Tag release commit
-        if: github.event_name == 'push'
-        run: |
-          git config user.name 'Galaxy Trino Automation'
-          git config user.email ''
-          git tag -m '' "${TRINO_VERSION}" HEAD
-          git push origin "${TRINO_VERSION}"
 
   docker-images-21:
     # Only build images for merges to galaxy*, or for PRs with the 'with-images' label
@@ -259,6 +252,13 @@ jobs:
         run: $MAVEN clean -pl '!:trino-server,!:trino-cli'
       - name: Build and Push Trino Docker Images [JDK 21]
         run: .github/bin/docker-build-and-push.sh -v "${TRINO_VERSION}" -j 21 -p
+      - name: Tag release commit
+        if: github.event_name == 'push'
+        run: |
+          git config user.name 'Galaxy Trino Automation'
+          git config user.email ''
+          git tag -m '' "${TRINO_VERSION}" HEAD
+          git push origin "${TRINO_VERSION}"
 
   deploy-maven:
     # Only deploy buffer service artifacts for merges to galaxy*, or for PRs with the 'with-images' label
