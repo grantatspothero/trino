@@ -97,7 +97,7 @@ jobs:
     runs-on: [self-hosted, sep-cicd, gha-fleet-small]
     needs: determine-version
     env:
-      TRINO_VERSION: ${{ needs.determine-version.outputs.version }}-jdk21
+      TRINO_VERSION: ${{ needs.determine-version.outputs.version }}
     steps:
       - name: Free Disk Space
         run: |
