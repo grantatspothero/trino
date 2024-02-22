@@ -35,9 +35,7 @@ public class MongoClientConfig
     private int connectionTimeout = 10_000;
     private int socketTimeout;
     private int maxConnectionIdleTime;
-    // TODO: revert sslEnabled back to boolean when galaxy does not support customers configuring connection-url
-    // see: https://github.com/starburstdata/stargate/issues/4474
-    private Boolean tlsEnabled;
+    private boolean tlsEnabled;
 
     // query configurations
     private int cursorBatchSize; // use driver default
@@ -216,14 +214,14 @@ public class MongoClientConfig
         return this;
     }
 
-    public Boolean getTlsEnabled()
+    public boolean getTlsEnabled()
     {
         return this.tlsEnabled;
     }
 
     @Config("mongodb.tls.enabled")
     @LegacyConfig("mongodb.ssl.enabled")
-    public MongoClientConfig setTlsEnabled(Boolean tlsEnabled)
+    public MongoClientConfig setTlsEnabled(boolean tlsEnabled)
     {
         this.tlsEnabled = tlsEnabled;
         return this;

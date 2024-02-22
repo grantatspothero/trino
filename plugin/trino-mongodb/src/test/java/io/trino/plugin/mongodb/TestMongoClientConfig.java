@@ -36,7 +36,7 @@ public class TestMongoClientConfig
                 .setMaxWaitTime(120_000)
                 .setConnectionTimeout(10_000)
                 .setSocketTimeout(0)
-                .setTlsEnabled(null)
+                .setTlsEnabled(false)
                 .setMaxConnectionIdleTime(0)
                 .setCursorBatchSize(0)
                 .setReadPreference(ReadPreferenceType.PRIMARY)
