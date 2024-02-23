@@ -20,8 +20,6 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
 import java.io.IOException;
 
 import static io.trino.filesystem.azure.AbstractTestAzureFileSystem.AccountKind.HIERARCHICAL;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @TestInstance(Lifecycle.PER_CLASS)
 class TestAzureFileSystemGen2Hierarchical
@@ -31,8 +29,6 @@ class TestAzureFileSystemGen2Hierarchical
     void setup()
             throws IOException
     {
-        assertThat(System.getenv("ABFS_HIERARCHICAL_ACCOUNT")).isEqualTo("todo");
-        assumeTrue(false);
         initialize(getRequiredEnvironmentVariable("ABFS_HIERARCHICAL_ACCOUNT"), getRequiredEnvironmentVariable("ABFS_HIERARCHICAL_ACCESS_KEY"), HIERARCHICAL);
     }
 }
