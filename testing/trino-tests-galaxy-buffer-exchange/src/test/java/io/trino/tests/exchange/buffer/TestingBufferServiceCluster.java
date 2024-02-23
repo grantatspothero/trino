@@ -293,7 +293,7 @@ public class TestingBufferServiceCluster
                              discovery-service.uri=%s
                              node.external-address=%s
                              """.formatted(port, internalDiscoveryUri, newContainer.getHost())),
-                    "/opt/data-server/etc/config.properties");
+                    "/opt/app/etc/config.properties");
             newContainer.withFixedExposedPort(port, port);
             newContainer.withCreateContainerCmdModifier(c -> c.withHostName(hostName))
                     .withStartupCheckStrategy(new IsRunningStartupCheckStrategy())
