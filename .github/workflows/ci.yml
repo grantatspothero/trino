@@ -679,6 +679,7 @@ jobs:
             !:starburst-salesforce,
             !:trino-galaxy-snowflake,
             !:trino-galaxy-stargate,
+            !:galaxy-buffer-testing,
             !:galaxy-buffer-exchange-tests,
             !:trino-tests-galaxy-buffer-exchange,
             !:trino-google-sheets,

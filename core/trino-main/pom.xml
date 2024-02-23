@@ -511,6 +511,13 @@
         </dependency>
 
         <dependency>
+            <groupId>io.starburst.stargate.buffer</groupId>
+            <artifactId>galaxy-buffer-testing</artifactId>
+            <version>435-galaxy-1-SNAPSHOT</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>io.trino</groupId>
             <artifactId>trino-exchange-filesystem</artifactId>
             <scope>test</scope>
