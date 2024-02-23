@@ -119,7 +119,7 @@ public class HistoryBasedStatsCalculator
         this.signatureCacheMBean = new CacheStatsMBean(signatureCache);
     }
 
-    // we do not use loader here, so there is no race
+    // We invalidate only to save memory. The cache entry is never loaded again so there actually is no race.
     @SuppressModernizer
     private static <K, V> Cache<K, V> buildUnsafeCacheWithInvalidationRace(CacheBuilder<? super K, ? super V> cacheBuilder)
     {
