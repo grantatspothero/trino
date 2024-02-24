@@ -17,8 +17,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 
-import java.io.IOException;
-
 import static io.trino.filesystem.azure.AbstractTestAzureFileSystem.AccountKind.BLOB;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -29,10 +27,9 @@ class TestAzureFileSystemBlob
 {
     @BeforeAll
     void setup()
-            throws IOException
     {
         assertThat(System.getenv("ABFS_BLOB_ACCOUNT")).isEqualTo("todo");
         assumeTrue(false);
-        initialize(getRequiredEnvironmentVariable("ABFS_BLOB_ACCOUNT"), getRequiredEnvironmentVariable("ABFS_BLOB_ACCESS_KEY"), BLOB);
+        initializeWithAccessKey(getRequiredEnvironmentVariable("ABFS_BLOB_ACCOUNT"), getRequiredEnvironmentVariable("ABFS_BLOB_ACCESS_KEY"), BLOB);
     }
 }
