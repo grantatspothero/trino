@@ -16,6 +16,7 @@ package io.trino.filesystem.azure;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobContainerClientBuilder;
 import com.azure.storage.file.datalake.DataLakeFileSystemClient;
+import com.azure.storage.file.datalake.DataLakeServiceClient;
 import com.azure.storage.file.datalake.DataLakeServiceClientBuilder;
 import com.azure.storage.file.datalake.models.PathItem;
 import com.azure.storage.file.datalake.options.DataLakePathDeleteOptions;
@@ -36,6 +37,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
 import java.io.IOException;
 
 import static com.azure.storage.common.Utility.urlEncode;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Locale.ROOT;
 import static java.util.Objects.requireNonNull;
 import static java.util.UUID.randomUUID;
@@ -64,17 +66,20 @@ public abstract class AbstractTestAzureFileSystem
     private TrinoFileSystem fileSystem;
 
     protected void initializeWithAccessKey(String account, String accountKey, AccountKind accountKind)
+            throws IOException
     {
         initialize(account, new AzureAuthAccessKey(accountKey), accountKind);
     }
 
     protected void initializeWithOAuth(String account, String tenantId, String clientId, String clientSecret, AccountKind accountKind)
+            throws IOException
     {
         String clientEndpoint = "https://login.microsoftonline.com/%s/oauth2/v2.0/token".formatted(tenantId);
         initialize(account, new AzureAuthOauth(clientEndpoint, tenantId, clientId, clientSecret), accountKind);
     }
 
     private void initialize(String account, AzureAuth azureAuth, AccountKind accountKind)
+            throws IOException
     {
         this.account = requireNonNull(account, "account is null");
         this.azureAuth = requireNonNull(azureAuth, "azureAuth is null");
@@ -89,6 +94,13 @@ public abstract class AbstractTestAzureFileSystem
         blobContainerClient = builder.buildClient();
         // this will fail if the container already exists, which is what we want
         blobContainerClient.create();
+        boolean isHierarchicalNamespaceEnabled = isHierarchicalNamespaceEnabled();
+        if (accountKind == AccountKind.HIERARCHICAL) {
+            checkState(isHierarchicalNamespaceEnabled, "Expected hierarchical namespaces to be enabled for storage account %s and container %s with account kind %s".formatted(account, containerName, accountKind));
+        }
+        else {
+            checkState(!isHierarchicalNamespaceEnabled, "Expected hierarchical namespaces to not be enabled for storage account %s and container %s with account kind %s".formatted(account, containerName, accountKind));
+        }
 
         fileSystem = new AzureFileSystemFactory(
                 OpenTelemetry.noop(),
@@ -99,6 +111,18 @@ public abstract class AbstractTestAzureFileSystem
                 new CrossRegionConfig()).create(ConnectorIdentity.ofUser("test"));
 
         cleanupFiles();
+    }
+
+    private boolean isHierarchicalNamespaceEnabled()
+            throws IOException
+    {
+        DataLakeFileSystemClient fileSystemClient = createDataLakeFileSystemClient();
+        try {
+            return fileSystemClient.getDirectoryClient("/").exists();
+        }
+        catch (RuntimeException e) {
+            throw new IOException("Failed to check whether hierarchical namespaces is enabled for the storage account %s and container %s".formatted(account, containerName));
+        }
     }
 
     @AfterAll
@@ -121,11 +145,7 @@ public abstract class AbstractTestAzureFileSystem
     private void cleanupFiles()
     {
         if (accountKind == AccountKind.HIERARCHICAL) {
-            DataLakeServiceClientBuilder serviceClientBuilder = new DataLakeServiceClientBuilder()
-                    .endpoint("https://%s.dfs.core.windows.net".formatted(account));
-            azureAuth.setAuth(account, serviceClientBuilder);
-            DataLakeFileSystemClient fileSystemClient = serviceClientBuilder.buildClient().getFileSystemClient(containerName);
-
+            DataLakeFileSystemClient fileSystemClient = createDataLakeFileSystemClient();
             DataLakePathDeleteOptions deleteRecursiveOptions = new DataLakePathDeleteOptions().setIsRecursive(true);
             for (PathItem pathItem : fileSystemClient.listPaths()) {
                 if (pathItem.isDirectory()) {
@@ -139,6 +159,15 @@ public abstract class AbstractTestAzureFileSystem
         else {
             blobContainerClient.listBlobs().forEach(item -> blobContainerClient.getBlobClient(urlEncode(item.getName())).deleteIfExists());
         }
+    }
+
+    private DataLakeFileSystemClient createDataLakeFileSystemClient()
+    {
+        DataLakeServiceClientBuilder serviceClientBuilder = new DataLakeServiceClientBuilder()
+                .endpoint("https://%s.dfs.core.windows.net".formatted(account));
+        azureAuth.setAuth(account, serviceClientBuilder);
+        DataLakeServiceClient serviceClient = serviceClientBuilder.buildClient();
+        return serviceClient.getFileSystemClient(containerName);
     }
 
     @Override
