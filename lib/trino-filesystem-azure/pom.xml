@@ -219,6 +219,8 @@
                                 <exclude>**/TestAzureFileSystemGen2Flat.java</exclude>
                                 <exclude>**/TestAzureFileSystemGen2Hierarchical.java</exclude>
                                 <exclude>**/TestAzureFileSystemNetworkTracking.java</exclude>
+                                <exclude>**/TestAzureFileSystemOAuthGen2Flat.java</exclude>
+                                <exclude>**/TestAzureFileSystemOAuthGen2Hierarchical.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -243,6 +245,8 @@
                                 <include>**/TestAzureFileSystemGen2Flat.java</include>
                                 <include>**/TestAzureFileSystemGen2Hierarchical.java</include>
                                 <include>**/TestAzureFileSystemNetworkTracking.java</include>
+                                <include>**/TestAzureFileSystemOAuthGen2Flat.java</include>
+                                <include>**/TestAzureFileSystemOAuthGen2Hierarchical.java</include>
                             </includes>
                         </configuration>
                     </plugin>
