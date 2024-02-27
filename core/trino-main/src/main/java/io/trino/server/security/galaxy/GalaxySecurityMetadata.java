@@ -54,7 +54,9 @@ import io.trino.transaction.TransactionId;
 
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.starburst.stargate.accesscontrol.privilege.GrantKind.ALLOW;
@@ -63,6 +65,7 @@ import static io.trino.server.security.galaxy.GalaxyIdentity.createViewOrFunctio
 import static io.trino.server.security.galaxy.GalaxyIdentity.toDispatchSession;
 import static io.trino.spi.StandardErrorCode.CATALOG_NOT_FOUND;
 import static io.trino.spi.StandardErrorCode.FUNCTION_NOT_FOUND;
+import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.trino.spi.StandardErrorCode.INVALID_VIEW;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.connector.SchemaTableName.schemaTableName;
@@ -111,19 +114,19 @@ public class GalaxySecurityMetadata
         if (grantor.isPresent()) {
             throw new TrinoException(NOT_SUPPORTED, "Galaxy does not support creating a role with an explicit grantor");
         }
-        accessControlClient.createRole(toDispatchSession(session), new RoleName(role));
+        handleClientError(() -> accessControlClient.createRole(toDispatchSession(session), new RoleName(role)));
     }
 
     @Override
     public void dropRole(Session session, String role)
     {
-        accessControlClient.dropRole(toDispatchSession(session), new RoleName(role));
+        handleClientError(() -> accessControlClient.dropRole(toDispatchSession(session), new RoleName(role)));
     }
 
     @Override
     public Set<String> listRoles(Session session)
     {
-        return accessControlClient.listRoles(toDispatchSession(session)).keySet().stream()
+        return handleClientError(() -> accessControlClient.listRoles(toDispatchSession(session))).keySet().stream()
                 .map(RoleName::getName)
                 .collect(toImmutableSet());
     }
@@ -131,7 +134,7 @@ public class GalaxySecurityMetadata
     @Override
     public Set<RoleGrant> listRoleGrants(Session session, TrinoPrincipal principal)
     {
-        return toTrinoRoleGrants(accessControlClient.listRoleGrants(toDispatchSession(session), toGalaxyPrincipal(principal), false));
+        return toTrinoRoleGrants(handleClientError(() -> accessControlClient.listRoleGrants(toDispatchSession(session), toGalaxyPrincipal(principal), false)));
     }
 
     @Override
@@ -152,7 +155,7 @@ public class GalaxySecurityMetadata
             }
         }
 
-        accessControlClient.grantRoles(dispatchSession, roleGrants.build());
+        handleClientError(() -> accessControlClient.grantRoles(dispatchSession, roleGrants.build()));
     }
 
     @Override
@@ -167,19 +170,19 @@ public class GalaxySecurityMetadata
                 roleGrants.add(new io.starburst.stargate.accesscontrol.client.RoleGrant(toGalaxyPrincipal(grantee), new RoleName(role), adminOption));
             }
         }
-        accessControlClient.revokeRoles(toDispatchSession(session), roleGrants.build());
+        handleClientError(() -> accessControlClient.revokeRoles(toDispatchSession(session), roleGrants.build()));
     }
 
     @Override
     public Set<RoleGrant> listApplicableRoles(Session session, TrinoPrincipal principal)
     {
-        return toTrinoRoleGrants(accessControlClient.listRoleGrants(toDispatchSession(session), toGalaxyPrincipal(principal), true));
+        return toTrinoRoleGrants(handleClientError(() -> accessControlClient.listRoleGrants(toDispatchSession(session), toGalaxyPrincipal(principal), true)));
     }
 
     @Override
     public Set<String> listEnabledRoles(Identity identity)
     {
-        return accessControlClient.listEnabledRoles(toDispatchSession(identity)).keySet().stream()
+        return handleClientError(() -> accessControlClient.listEnabledRoles(toDispatchSession(identity))).keySet().stream()
                 .map(RoleName::getName)
                 .collect(toImmutableSet());
     }
@@ -237,7 +240,7 @@ public class GalaxySecurityMetadata
         Set<CreateEntityPrivilege> entityPrivileges = privileges.stream()
                 .map(privilege -> new CreateEntityPrivilege(toGalaxyPrivilege(privilege), allow, granteeRole, grantOption))
                 .collect(toImmutableSet());
-        accessControlClient.addEntityPrivileges(toDispatchSession(session), entityId, entityPrivileges);
+        handleClientError(() -> accessControlClient.addEntityPrivileges(toDispatchSession(session), entityId, entityPrivileges));
     }
 
     public void revokeEntityPrivileges(Session session, EntityId entityId, Set<Privilege> privileges, TrinoPrincipal grantee, boolean grantOption)
@@ -250,7 +253,7 @@ public class GalaxySecurityMetadata
         Set<RevokeEntityPrivilege> entityPrivileges = privileges.stream()
                 .map(privilege -> new RevokeEntityPrivilege(toGalaxyPrivilege(privilege), granteeRole, grantOption))
                 .collect(toImmutableSet());
-        accessControlClient.revokeEntityPrivileges(toDispatchSession(session), entityId, entityPrivileges);
+        handleClientError(() -> accessControlClient.revokeEntityPrivileges(toDispatchSession(session), entityId, entityPrivileges));
     }
 
     @Override
@@ -276,7 +279,7 @@ public class GalaxySecurityMetadata
             entityId = catalogId;
         }
 
-        return accessControlClient.listTableGrants(toDispatchSession(session), entityId).stream()
+        return handleClientError(() -> accessControlClient.listTableGrants(toDispatchSession(session), entityId)).stream()
                 // Trino's GrantInfo does not contain grantKind.  For now, only show ALLOW privileges,
                 // pending a change to Trino to pass GrantKind through
                 .filter(details -> details.getGrantKind() == ALLOW)
@@ -303,7 +306,7 @@ public class GalaxySecurityMetadata
         if (isSystemCatalog(schema.getCatalogName())) {
             return Optional.of(SYSTEM_ROLE);
         }
-        RoleName owner = accessControlClient.getEntityPrivileges(toDispatchSession(session), toSchemaEntity(session.getTransactionId(), schema)).getOwner();
+        RoleName owner = handleClientError(() -> accessControlClient.getEntityPrivileges(toDispatchSession(session), toSchemaEntity(session.getTransactionId(), schema))).getOwner();
         return Optional.of(new TrinoPrincipal(ROLE, owner.getName()));
     }
 
@@ -315,10 +318,10 @@ public class GalaxySecurityMetadata
             throw new TrinoException(NOT_SUPPORTED, "Galaxy only supports a ROLE as an owner");
         }
 
-        accessControlClient.setEntityOwner(
+        handleClientError(() -> accessControlClient.setEntityOwner(
                 toDispatchSession(session),
                 toSchemaEntity(session.getTransactionId(), schema),
-                new RoleName(owner.getName()));
+                new RoleName(owner.getName())));
     }
 
     @Override
@@ -329,10 +332,10 @@ public class GalaxySecurityMetadata
             throw new TrinoException(NOT_SUPPORTED, "Galaxy only supports a ROLE as an owner");
         }
 
-        accessControlClient.setEntityOwner(
+        handleClientError(() -> accessControlClient.setEntityOwner(
                 toDispatchSession(session),
                 toTableEntity(session.getTransactionId(), new QualifiedObjectName(table.getCatalogName(), table.getSchemaTableName().getSchemaName(), table.getSchemaTableName().getTableName())),
-                new RoleName(owner.getName()));
+                new RoleName(owner.getName())));
     }
 
     /**
@@ -343,7 +346,7 @@ public class GalaxySecurityMetadata
     public Optional<Identity> getViewRunAsIdentity(Session session, CatalogSchemaTableName viewName)
     {
         DispatchSession dispatchSession = toDispatchSession(session);
-        EntityPrivileges privileges = accessControlClient.getEntityPrivileges(dispatchSession, dispatchSession.getRoleId(), toTableEntity(session.getTransactionId(), viewName));
+        EntityPrivileges privileges = handleClientError(() -> accessControlClient.getEntityPrivileges(dispatchSession, dispatchSession.getRoleId(), toTableEntity(session.getTransactionId(), viewName)));
         if (!privileges.isExplicitOwner()) {
             throw new TrinoException(INVALID_VIEW,
                     format("View '%s' does not have an explicit owner role, which is not allowed. Please define an explicit owner with an 'ALTER VIEW %s SET AUTHORIZATION ROLE' command. For more information, visit docs.starburst.io/starburst-galaxy/security/privileges.html", viewName, viewName));
@@ -360,7 +363,7 @@ public class GalaxySecurityMetadata
     public Optional<Identity> getMetadataViewRunAsIdentity(Session session, CatalogSchemaTableName viewName)
     {
         DispatchSession dispatchSession = toDispatchSession(session);
-        EntityPrivileges privileges = accessControlClient.getEntityPrivileges(dispatchSession, dispatchSession.getRoleId(), toTableEntity(session.getTransactionId(), viewName));
+        EntityPrivileges privileges = handleClientError(() -> accessControlClient.getEntityPrivileges(dispatchSession, dispatchSession.getRoleId(), toTableEntity(session.getTransactionId(), viewName)));
         if (!privileges.isExplicitOwner()) {
             return Optional.empty();
         }
@@ -381,7 +384,7 @@ public class GalaxySecurityMetadata
             throw new TrinoException(FUNCTION_NOT_FOUND, "SECURITY DEFINER Function %s must be in schema galaxy.functions".formatted(functionName));
         }
         DispatchSession dispatchSession = toDispatchSession(session);
-        EntityPrivileges privileges = accessControlClient.getEntityPrivileges(dispatchSession, dispatchSession.getRoleId(), toFunctionEntity(session.getTransactionId(), functionName));
+        EntityPrivileges privileges = handleClientError(() -> accessControlClient.getEntityPrivileges(dispatchSession, dispatchSession.getRoleId(), toFunctionEntity(session.getTransactionId(), functionName)));
         if (!privileges.isExplicitOwner()) {
             return Optional.empty();
         }
@@ -393,7 +396,7 @@ public class GalaxySecurityMetadata
     {
         // this will never happen but be safe
         throwIfSystemCatalog(schema);
-        accessControlClient.entityCreated(toDispatchSession(session), toSchemaEntity(session.getTransactionId(), schema));
+        handleClientError(() -> accessControlClient.entityCreated(toDispatchSession(session), toSchemaEntity(session.getTransactionId(), schema)));
     }
 
     @Override
@@ -402,7 +405,7 @@ public class GalaxySecurityMetadata
         // this will never happen but be safe
         throwIfSystemCatalog(sourceSchema);
         throwIfSystemCatalog(targetSchema);
-        accessControlClient.entityRenamed(toDispatchSession(session), toSchemaEntity(session.getTransactionId(), sourceSchema), toSchemaEntity(session.getTransactionId(), targetSchema));
+        handleClientError(() -> accessControlClient.entityRenamed(toDispatchSession(session), toSchemaEntity(session.getTransactionId(), sourceSchema), toSchemaEntity(session.getTransactionId(), targetSchema)));
     }
 
     @Override
@@ -410,7 +413,7 @@ public class GalaxySecurityMetadata
     {
         // this will never happen but be safe
         throwIfSystemCatalog(schema);
-        accessControlClient.entityDropped(toDispatchSession(session), toSchemaEntity(session.getTransactionId(), schema));
+        handleClientError(() -> accessControlClient.entityDropped(toDispatchSession(session), toSchemaEntity(session.getTransactionId(), schema)));
     }
 
     @Override
@@ -418,7 +421,7 @@ public class GalaxySecurityMetadata
     {
         // this will never happen but be safe
         throwIfSystemCatalog(table);
-        accessControlClient.entityCreated(toDispatchSession(session), toTableEntity(session.getTransactionId(), table));
+        handleClientError(() -> accessControlClient.entityCreated(toDispatchSession(session), toTableEntity(session.getTransactionId(), table)));
     }
 
     @Override
@@ -427,7 +430,7 @@ public class GalaxySecurityMetadata
         // this will never happen but be safe
         throwIfSystemCatalog(sourceTable);
         throwIfSystemCatalog(targetTable);
-        accessControlClient.entityRenamed(toDispatchSession(session), toTableEntity(session.getTransactionId(), sourceTable), toTableEntity(session.getTransactionId(), targetTable));
+        handleClientError(() -> accessControlClient.entityRenamed(toDispatchSession(session), toTableEntity(session.getTransactionId(), sourceTable), toTableEntity(session.getTransactionId(), targetTable)));
     }
 
     @Override
@@ -435,7 +438,7 @@ public class GalaxySecurityMetadata
     {
         // this will never happen but be safe
         throwIfSystemCatalog(table);
-        accessControlClient.entityDropped(toDispatchSession(session), toTableEntity(session.getTransactionId(), table));
+        handleClientError(() -> accessControlClient.entityDropped(toDispatchSession(session), toTableEntity(session.getTransactionId(), table)));
     }
 
     @Override
@@ -443,7 +446,7 @@ public class GalaxySecurityMetadata
     {
         // this will never happen but be safe
         throwIfSystemCatalog(table);
-        accessControlClient.entityCreated(toDispatchSession(session), toColumnEntity(session.getTransactionId(), table, column));
+        handleClientError(() -> accessControlClient.entityCreated(toDispatchSession(session), toColumnEntity(session.getTransactionId(), table, column)));
     }
 
     @Override
@@ -451,7 +454,7 @@ public class GalaxySecurityMetadata
     {
         // this will never happen but be safe
         throwIfSystemCatalog(table);
-        accessControlClient.entityRenamed(toDispatchSession(session), toColumnEntity(session.getTransactionId(), table, oldName), toColumnEntity(session.getTransactionId(), table, newName));
+        handleClientError(() -> accessControlClient.entityRenamed(toDispatchSession(session), toColumnEntity(session.getTransactionId(), table, oldName), toColumnEntity(session.getTransactionId(), table, newName)));
     }
 
     @Override
@@ -459,7 +462,7 @@ public class GalaxySecurityMetadata
     {
         // this will never happen but be safe
         throwIfSystemCatalog(table);
-        accessControlClient.entityDropped(toDispatchSession(session), toColumnEntity(session.getTransactionId(), table, column));
+        handleClientError(() -> accessControlClient.entityDropped(toDispatchSession(session), toColumnEntity(session.getTransactionId(), table, column)));
     }
 
     @Override
@@ -467,7 +470,7 @@ public class GalaxySecurityMetadata
     {
         // this will never happen but be safe
         throwIfSystemCatalog(table);
-        accessControlClient.columnTypeChanged(toDispatchSession(session), toColumnEntity(session.getTransactionId(), table, column), oldType, newType);
+        handleClientError(() -> accessControlClient.columnTypeChanged(toDispatchSession(session), toColumnEntity(session.getTransactionId(), table, column), oldType, newType));
     }
 
     @Override
@@ -475,10 +478,30 @@ public class GalaxySecurityMetadata
     {
         // this will never happen but be safe
         throwIfSystemCatalog(table);
-        accessControlClient.analyzeTableFinished(toDispatchSession(session), toTableEntity(session.getTransactionId(), table));
+        handleClientError(() -> accessControlClient.analyzeTableFinished(toDispatchSession(session), toTableEntity(session.getTransactionId(), table)));
     }
 
     // Helper methods
+
+    private static void handleClientError(Runnable routine)
+    {
+        try {
+            routine.run();
+        }
+        catch (Exception e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Access Control: " + firstNonNull(e.getMessage(), e), e);
+        }
+    }
+
+    private static <V> V handleClientError(Supplier<V> routine)
+    {
+        try {
+            return routine.get();
+        }
+        catch (Exception e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Access Control: " + firstNonNull(e.getMessage(), e), e);
+        }
+    }
 
     private static GalaxyPrincipal toGalaxyPrincipal(TrinoPrincipal principal)
     {

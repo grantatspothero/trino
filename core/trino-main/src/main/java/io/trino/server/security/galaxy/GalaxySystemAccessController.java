@@ -31,6 +31,7 @@ import io.starburst.stargate.identity.DispatchSession;
 import io.trino.server.galaxy.GalaxyPermissionsCache;
 import io.trino.server.galaxy.GalaxyPermissionsCache.GalaxyQueryPermissions;
 import io.trino.server.galaxy.catalogs.CatalogResolver;
+import io.trino.spi.TrinoException;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.security.Identity;
 import io.trino.spi.security.SystemSecurityContext;
@@ -43,13 +44,16 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.trino.server.security.galaxy.GalaxyIdentity.getContextRoleId;
 import static io.trino.server.security.galaxy.GalaxyIdentity.getRowFilterAndColumnMaskUserString;
 import static io.trino.server.security.galaxy.GalaxyIdentity.toDispatchSession;
+import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static java.util.Objects.requireNonNull;
 
 public class GalaxySystemAccessController
@@ -104,7 +108,7 @@ public class GalaxySystemAccessController
      */
     public EntityPrivileges getEntityPrivileges(Identity identity, EntityId entity)
     {
-        return accessControlClient.getEntityPrivileges(toDispatchSession(identity), getContextRoleId(identity), entity);
+        return handleClientError(() -> accessControlClient.getEntityPrivileges(toDispatchSession(identity), getContextRoleId(identity), entity));
     }
 
     public Map<RoleName, RoleId> listEnabledRoles(Identity identity)
@@ -114,7 +118,7 @@ public class GalaxySystemAccessController
 
     public Map<RoleName, RoleId> listEnabledRoles(Identity identity, Function<Identity, DispatchSession> sessionCreator)
     {
-        return accessControlClient.listEnabledRoles(sessionCreator.apply(identity));
+        return handleClientError(() -> accessControlClient.listEnabledRoles(sessionCreator.apply(identity)));
     }
 
     public Predicate<String> getCatalogVisibility(SystemSecurityContext context, Set<String> requestedCatalogs)
@@ -155,7 +159,7 @@ public class GalaxySystemAccessController
                 throw new UnsupportedOperationException("Cannot provide visibility for schema when no schema names were provided: " + schemaName);
             };
         }
-        ContentsVisibility visibility = accessControlClient.getVisibilityForSchemas(toDispatchSession(context.getIdentity()), catalogId, schemaNames);
+        ContentsVisibility visibility = handleClientError(() -> accessControlClient.getVisibilityForSchemas(toDispatchSession(context.getIdentity()), catalogId, schemaNames));
         return schemaName -> {
             checkArgument(schemaNames.contains(schemaName), "Invalid schema name consulted in predicate constructed for %s: %s", schemaNames, schemaName);
             return visibility.isVisible(schemaName);
@@ -179,7 +183,7 @@ public class GalaxySystemAccessController
     public String getRoleDisplayName(Identity identity, RoleId roleId)
     {
         // Not cached because this is used for error messages only, so at most once per query.
-        return accessControlClient.listRoles(toDispatchSession(identity)).entrySet().stream()
+        return handleClientError(() -> accessControlClient.listRoles(toDispatchSession(identity))).entrySet().stream()
                 .filter(entry -> roleId.equals(entry.getValue()))
                 .map(Map.Entry::getKey)
                 .findFirst()
@@ -189,7 +193,7 @@ public class GalaxySystemAccessController
 
     public boolean canExecuteFunction(SystemSecurityContext context, FunctionId functionId)
     {
-        return accessControlClient.canExecuteFunction(toDispatchSession(context.getIdentity()), functionId);
+        return handleClientError(() -> accessControlClient.canExecuteFunction(toDispatchSession(context.getIdentity()), functionId));
     }
 
     public boolean canExecuteUserDefinedFunction(SystemSecurityContext context, FunctionId functionId)
@@ -249,5 +253,15 @@ public class GalaxySystemAccessController
     private GalaxyQueryPermissions getCache(SystemSecurityContext context)
     {
         return galaxyPermissionsCache.getCache(accessControlClient, context.getQueryId(), toDispatchSession(context.getIdentity()));
+    }
+
+    private static <V> V handleClientError(Supplier<V> routine)
+    {
+        try {
+            return routine.get();
+        }
+        catch (Exception e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Access Control: " + firstNonNull(e.getMessage(), e), e);
+        }
     }
 }

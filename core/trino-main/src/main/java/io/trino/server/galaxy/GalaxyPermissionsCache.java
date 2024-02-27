@@ -33,6 +33,7 @@ import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.identity.DispatchSession;
 import io.trino.server.security.galaxy.GalaxySystemAccessControlConfig;
 import io.trino.spi.QueryId;
+import io.trino.spi.TrinoException;
 import org.weakref.jmx.Managed;
 import org.weakref.jmx.Nested;
 
@@ -44,7 +45,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -52,6 +55,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.MoreCollectors.onlyElement;
 import static com.google.common.collect.Streams.stream;
 import static io.trino.cache.SafeCaches.buildNonEvictableCache;
+import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 
@@ -109,13 +113,13 @@ public class GalaxyPermissionsCache
         {
             entityPrivileges = buildNonEvictableCache(
                     CacheBuilder.newBuilder(),
-                    CacheLoader.from(key -> trinoSecurityApi.getEntityPrivileges(session, key.roleId(), key.entity())));
+                    CacheLoader.from(key -> handleClientError(() -> trinoSecurityApi.getEntityPrivileges(session, key.roleId(), key.entity()))));
 
             catalogVisibility = buildNonEvictableCache(
                     CacheBuilder.newBuilder(),
                     BulkOnlyLoader.of(catalogIds -> {
                         Set<CatalogId> catalogIdsSet = ImmutableSet.copyOf(catalogIds);
-                        ContentsVisibility catalogVisibility = trinoSecurityApi.getCatalogVisibility(session, catalogIdsSet);
+                        ContentsVisibility catalogVisibility = handleClientError(() -> trinoSecurityApi.getCatalogVisibility(session, catalogIdsSet));
                         return catalogIdsSet.stream()
                                 .collect(toImmutableMap(identity(), ignored -> catalogVisibility));
                     }));
@@ -133,7 +137,7 @@ public class GalaxyPermissionsCache
                                 .map(TableVisibilityKey::schemaName)
                                 .collect(toImmutableSet());
 
-                        Map<String, ContentsVisibility> visibility = trinoSecurityApi.getTableVisibility(session, catalogId, schemaNames);
+                        Map<String, ContentsVisibility> visibility = handleClientError(() -> trinoSecurityApi.getTableVisibility(session, catalogId, schemaNames));
                         return visibility.entrySet().stream()
                                 .collect(toImmutableMap(entry -> new TableVisibilityKey(catalogId, entry.getKey()), Entry::getValue));
                     }));
@@ -154,14 +158,14 @@ public class GalaxyPermissionsCache
                         Set<String> tableNames = stream(keys)
                                 .map(VisibilityForTablesKey::tableName)
                                 .collect(toImmutableSet());
-                        ContentsVisibility visibility = trinoSecurityApi.getVisibilityForTables(session, catalogId, schemaName, tableNames);
+                        ContentsVisibility visibility = handleClientError(() -> trinoSecurityApi.getVisibilityForTables(session, catalogId, schemaName, tableNames));
                         return tableNames.stream()
                                 .collect(toImmutableMap(tableName -> new VisibilityForTablesKey(catalogId, schemaName, tableName), tableName -> visibility.isVisible(tableName)));
                     }));
 
             functions = buildNonEvictableCache(
                     CacheBuilder.newBuilder(),
-                    CacheLoader.from(key -> trinoSecurityApi.getAvailableFunctions(session)));
+                    CacheLoader.from(key -> handleClientError(() -> trinoSecurityApi.getAvailableFunctions(session))));
         }
 
         public EntityPrivileges getEntityPrivileges(RoleId roleId, EntityId entity)
@@ -294,6 +298,16 @@ public class GalaxyPermissionsCache
                 requireNonNull(schemaName, "schemaName is null");
                 requireNonNull(tableName, "tableName is null");
             }
+        }
+    }
+
+    private static <V> V handleClientError(Supplier<V> routine)
+    {
+        try {
+            return routine.get();
+        }
+        catch (Exception e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Access Control: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 }

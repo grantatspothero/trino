@@ -16,8 +16,6 @@ package io.trino.server.security.galaxy;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import io.starburst.stargate.accesscontrol.client.EntityNotFoundException;
-import io.starburst.stargate.accesscontrol.client.OperationNotAllowedException;
 import io.starburst.stargate.id.RoleId;
 import io.starburst.stargate.id.RoleName;
 import io.trino.Session;
@@ -49,10 +47,11 @@ import static io.trino.server.security.galaxy.GalaxyTestHelper.ACCOUNT_ADMIN;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.FEARLESS_LEADER;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.LACKEY_FOLLOWER;
 import static io.trino.server.security.galaxy.GalaxyTestHelper.PUBLIC;
+import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
+import static io.trino.testing.assertions.TrinoExceptionAssert.assertTrinoExceptionThrownBy;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
@@ -103,9 +102,9 @@ public class TestGalaxySecurityMetadata
         assertThat(helper.getActiveRoles(adminContext()).keySet()).doesNotContain(new RoleName("role1"));
 
         // RoleId public doesn't have the privilege to create a role
-        assertThatThrownBy(() -> metadataApi.createRole(publicSession(), "role1", Optional.empty()))
-                .isInstanceOf(OperationNotAllowedException.class)
-                .hasMessage("Operation not allowed: CREATE_ROLE");
+        assertTrinoExceptionThrownBy(() -> metadataApi.createRole(publicSession(), "role1", Optional.empty()))
+                .hasErrorCode(GENERIC_INTERNAL_ERROR)
+                .hasMessage("Error accessing Galaxy Access Control: Operation not allowed: CREATE_ROLE");
 
         // RoleId admin has the privilege to create a role
         metadataApi.createRole(adminSession(), "role1", Optional.empty());
@@ -117,9 +116,9 @@ public class TestGalaxySecurityMetadata
         assertThat(helper.getActiveRoles(adminContext()).keySet()).contains(new RoleName("role1"));
 
         // RoleId public doesn't have the privilege to drop a role
-        assertThatThrownBy(() -> metadataApi.dropRole(publicSession(), "role1"))
-                .isInstanceOf(OperationNotAllowedException.class)
-                .hasMessage("Operation not allowed: DELETE_ROLE");
+        assertTrinoExceptionThrownBy(() -> metadataApi.dropRole(publicSession(), "role1"))
+                .hasErrorCode(GENERIC_INTERNAL_ERROR)
+                .hasMessage("Error accessing Galaxy Access Control: Operation not allowed: DELETE_ROLE");
 
         // RoleId admin has the privilege to drop a role
         metadataApi.dropRole(adminSession(), "role1");
@@ -131,9 +130,9 @@ public class TestGalaxySecurityMetadata
     @Test
     public void testCreateRole()
     {
-        assertThatThrownBy(() -> metadataApi.createRole(publicSession(), "FailedRole", Optional.empty()))
-                .isInstanceOf(OperationNotAllowedException.class)
-                .hasMessage("Operation not allowed: CREATE_ROLE");
+        assertTrinoExceptionThrownBy(() -> metadataApi.createRole(publicSession(), "FailedRole", Optional.empty()))
+                .hasErrorCode(GENERIC_INTERNAL_ERROR)
+                .hasMessage("Error accessing Galaxy Access Control: Operation not allowed: CREATE_ROLE");
         metadataApi.createRole(adminSession(), "SAChild1", Optional.empty());
 
         // It exists for all roles
@@ -153,12 +152,12 @@ public class TestGalaxySecurityMetadata
         // The capitalization of the role name doesn't matter
         assertThat(metadataApi.roleExists(adminSession(), "sAChIlD2")).isTrue();
 
-        assertThatThrownBy(() -> metadataApi.dropRole(publicSession(), "sacHILD2"))
-                .isInstanceOf(OperationNotAllowedException.class)
-                .hasMessage("Operation not allowed: DELETE_ROLE");
-        assertThatThrownBy(() -> metadataApi.dropRole(adminSession(), "FailedRole"))
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage("Role not found: failedrole");
+        assertTrinoExceptionThrownBy(() -> metadataApi.dropRole(publicSession(), "sacHILD2"))
+                .hasErrorCode(GENERIC_INTERNAL_ERROR)
+                .hasMessage("Error accessing Galaxy Access Control: Operation not allowed: DELETE_ROLE");
+        assertTrinoExceptionThrownBy(() -> metadataApi.dropRole(adminSession(), "FailedRole"))
+                .hasErrorCode(GENERIC_INTERNAL_ERROR)
+                .hasMessage("Error accessing Galaxy Access Control: Role not found: failedrole");
         metadataApi.dropRole(adminSession(), "SACHILD2");
         assertThat(metadataApi.roleExists(adminSession(), "sachild2")).isFalse();
     }
@@ -177,7 +176,7 @@ public class TestGalaxySecurityMetadata
         // No roles currently granted to public running public session
         assertThat(getGrantedRoleNames(metadataApi.listRoleGrants(publicSession(), rolePrincipal(PUBLIC)))).containsOnly(PUBLIC);
 
-        // No roles currently granted to public running admin session
+       // No roles currently granted to public running admin session
         assertThat(getGrantedRoleNames(metadataApi.listRoleGrants(adminSession(), rolePrincipal(PUBLIC)))).containsOnly(PUBLIC);
 
         // No roles granted to lackey_follower

@@ -260,6 +260,7 @@ public class TestGalaxyMetadataApiSpec
         // Illegal role names
         for (String name : ImmutableList.of("my-role", "my role", "my#role", "my$role", "interminably_long_excessively_long_disgustingly_comically_long_role")) {
             assertThatThrownBy(() -> securityApi.createRole(admin(), name, Optional.empty()))
+                    .cause()
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Illegal role name: " + name);
         }
@@ -271,6 +272,7 @@ public class TestGalaxyMetadataApiSpec
 
         // Test role already exists
         assertThatThrownBy(() -> securityApi.createRole(admin(), FEARLESS_LEADER, Optional.empty()))
+                .cause()
                 .isInstanceOf(OperationNotAllowedException.class)
                 .hasMessage("Operation not allowed: Duplicate value for role name");
 
@@ -279,6 +281,7 @@ public class TestGalaxyMetadataApiSpec
 
             // A role with no privileges can't create a role
             assertThatThrownBy(() -> securityApi.createRole(fromRole(roleId), newRoleName, Optional.empty()))
+                    .cause()
                     .isInstanceOf(OperationNotAllowedException.class)
                     .hasMessage("Operation not allowed: CREATE_ROLE");
 
@@ -322,6 +325,7 @@ public class TestGalaxyMetadataApiSpec
     {
         // Dropping an unknown role results in an exception
         assertThatThrownBy(() -> securityApi.dropRole(admin(), "unrecognized_role"))
+                .cause()
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Role not found: unrecognized_role");
 
@@ -332,6 +336,7 @@ public class TestGalaxyMetadataApiSpec
 
             // The outer role can't drop the new one, because it has no relationship with the new one.
             assertThatThrownBy(() -> securityApi.dropRole(fromRole(roleId), newRoleName))
+                    .cause()
                     .isInstanceOf(OperationNotAllowedException.class)
                     .hasMessage("Operation not allowed: DELETE_ROLE");
             securityApi.dropRole(admin(), newRoleName);
@@ -524,6 +529,7 @@ public class TestGalaxyMetadataApiSpec
                             Session isolatedSession = fromUserAndRole(isolatedUserId, isolatedRoleId);
                             // With no privileges or ownership, granting is not allowed
                             assertThatThrownBy(() -> securityApi.grantRoles(isolatedSession, ImmutableSet.of(grantedRoleName), ImmutableSet.of(grantee), false, Optional.empty()))
+                                    .cause()
                                     .isInstanceOf(OperationNotAllowedException.class)
                                     .hasMessageMatching("Operation not allowed: User does not have privileges to grant role.*");
 
@@ -582,6 +588,7 @@ public class TestGalaxyMetadataApiSpec
 
                             // otherRole has no relation to grantedRole, so revoking the grant fails
                             assertThatThrownBy(() -> securityApi.revokeRoles(isolcatedSession, ImmutableSet.of(grantedRoleName), ImmutableSet.of(grantee), false, Optional.empty()))
+                                    .cause()
                                     .isInstanceOf(OperationNotAllowedException.class)
                                     .hasMessageMatching("Operation not allowed: User does not have privileges to revoke.*");
 
@@ -594,6 +601,7 @@ public class TestGalaxyMetadataApiSpec
 
                             // The role has a grant without admin option, so it cannot revoke the original grant
                             assertThatThrownBy(() -> securityApi.revokeRoles(isolcatedSession, ImmutableSet.of(grantedRoleName), ImmutableSet.of(grantee), false, Optional.empty()))
+                                    .cause()
                                     .isInstanceOf(OperationNotAllowedException.class)
                                     .hasMessageMatching("Operation not allowed: User does not have privileges to revoke.*");
 
@@ -709,6 +717,7 @@ public class TestGalaxyMetadataApiSpec
                             Runnable checkNotAllowed = () -> {
                                 // The new role has no rights to add entity privileges
                                 assertThatThrownBy(() -> securityApi.grantTablePrivileges(fromRole(roleId), qualifiedTable, ImmutableSet.of(privilege), rolePrincipal(roleName), grantOption))
+                                        .cause()
                                         .isInstanceOf(OperationNotAllowedException.class)
                                         .hasMessageMatching("Operation not allowed: User does not have the right to grant privileges.*");
                             };
@@ -906,6 +915,7 @@ public class TestGalaxyMetadataApiSpec
                     Runnable checkNotAllowed = () -> {
                         // The new role has no rights to add entity privileges
                         assertThatThrownBy(() -> securityApi.revokeTablePrivileges(fromRole(roleId), qualifiedTable, ImmutableSet.of(privilege), rolePrincipal(roleName), false))
+                                .cause()
                                 .isInstanceOf(OperationNotAllowedException.class)
                                 .hasMessageMatching("Operation not allowed: User does not have the right to revoke privileges.*");
                     };
