@@ -72,6 +72,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Strings.emptyToNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -95,6 +96,7 @@ import static io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreUtils.toGalax
 import static io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreUtils.toPartitionNames;
 import static io.trino.plugin.hive.util.HiveUtil.escapeSchemaName;
 import static io.trino.spi.StandardErrorCode.ALREADY_EXISTS;
+import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.trino.spi.StandardErrorCode.NOT_FOUND;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
 import static io.trino.spi.security.PrincipalType.USER;
@@ -137,7 +139,10 @@ public class GalaxyHiveMetastore
                     .map(GalaxyMetastoreUtils::fromGalaxyDatabase);
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -148,7 +153,10 @@ public class GalaxyHiveMetastore
             return ImmutableList.copyOf(metastore.getDatabaseNames());
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -160,7 +168,10 @@ public class GalaxyHiveMetastore
                     .map(GalaxyMetastoreUtils::fromGalaxyTable);
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -180,7 +191,10 @@ public class GalaxyHiveMetastore
             throw new TableNotFoundException(table.getSchemaTableName());
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -198,7 +212,10 @@ public class GalaxyHiveMetastore
             throw new TrinoException(NOT_FOUND, "A partition was not found");
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -218,7 +235,10 @@ public class GalaxyHiveMetastore
             throw new TrinoException(NOT_FOUND, "A partition was not found");
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -243,7 +263,10 @@ public class GalaxyHiveMetastore
             throw new PartitionNotFoundException(new SchemaTableName(table.getDatabaseName(), table.getTableName()), partitionName.partitionValues());
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -254,7 +277,7 @@ public class GalaxyHiveMetastore
             return ImmutableList.copyOf(metastore.getTableNames(databaseName, Optional.empty()));
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
         }
     }
 
@@ -270,7 +293,10 @@ public class GalaxyHiveMetastore
                     .collect(toImmutableList()));
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -303,7 +329,10 @@ public class GalaxyHiveMetastore
             return ImmutableList.copyOf(metastore.getTableNamesWithParameter(databaseName, parameterKey, parameterValue));
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -314,7 +343,10 @@ public class GalaxyHiveMetastore
             return ImmutableList.copyOf(metastore.getTableNames(databaseName, Optional.of(TableType.VIRTUAL_VIEW.name())));
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -330,7 +362,10 @@ public class GalaxyHiveMetastore
                     .collect(toImmutableList()));
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -357,7 +392,10 @@ public class GalaxyHiveMetastore
                     return fromGalaxyTable(delegate.next());
                 }
                 catch (MetastoreException e) {
-                    throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+                    throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+                }
+                catch (RuntimeException e) {
+                    throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
                 }
             }
         });
@@ -378,6 +416,7 @@ public class GalaxyHiveMetastore
                     return endOfData();
                 }
                 GetTablesResult result = metastore.getTables(databaseName, desiredLimit, nextToken);
+
                 firstRequest = false;
                 nextToken = result.nextToken();
                 return result.tables();
@@ -413,7 +452,10 @@ public class GalaxyHiveMetastore
             throw new SchemaAlreadyExistsException(database.getDatabaseName());
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
         }
 
         if (database.getLocation().isPresent()) {
@@ -437,7 +479,10 @@ public class GalaxyHiveMetastore
             throw new SchemaNotFoundException(databaseName);
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -454,7 +499,10 @@ public class GalaxyHiveMetastore
             throw new SchemaAlreadyExistsException(newDatabaseName);
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -484,7 +532,10 @@ public class GalaxyHiveMetastore
             throw new SchemaNotFoundException(table.getDatabaseName());
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -499,7 +550,10 @@ public class GalaxyHiveMetastore
                         .orElseThrow(() -> new TableNotFoundException(new SchemaTableName(databaseName, tableName)));
             }
             catch (MetastoreException e) {
-                throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+                throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+            }
+            catch (RuntimeException e) {
+                throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
             }
             if (table.tableType().equals(MANAGED_TABLE.name())) {
                 deleteLocation = Optional.ofNullable(emptyToNull(table.storage().location()));
@@ -513,7 +567,10 @@ public class GalaxyHiveMetastore
             throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
 
         deleteLocation.ifPresent(location -> deleteDir(Location.of(location)));
@@ -545,7 +602,10 @@ public class GalaxyHiveMetastore
             throw new TableNotFoundException(newTable.getSchemaTableName());
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -562,7 +622,10 @@ public class GalaxyHiveMetastore
             throw new TableAlreadyExistsException(new SchemaTableName(newDatabaseName, newTableName));
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -576,7 +639,10 @@ public class GalaxyHiveMetastore
             throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -590,7 +656,10 @@ public class GalaxyHiveMetastore
             throw new ColumnNotFoundException(new SchemaTableName(databaseName, tableName), columnName);
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -607,7 +676,10 @@ public class GalaxyHiveMetastore
             throw new TrinoException(ALREADY_EXISTS, "Column already exists: " + columnName);
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -624,7 +696,10 @@ public class GalaxyHiveMetastore
             throw new TrinoException(ALREADY_EXISTS, "Column already exists: " + newColumnName);
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -638,15 +713,23 @@ public class GalaxyHiveMetastore
             throw new ColumnNotFoundException(new SchemaTableName(databaseName, tableName), columnName);
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
     @Override
     public Optional<Partition> getPartition(Table table, List<String> partitionValues)
     {
-        return metastore.getPartition(table.getDatabaseName(), table.getTableName(), new PartitionName(partitionValues))
-                .map(GalaxyMetastoreUtils::fromGalaxyPartition);
+        try {
+            return metastore.getPartition(table.getDatabaseName(), table.getTableName(), new PartitionName(partitionValues))
+                    .map(GalaxyMetastoreUtils::fromGalaxyPartition);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
+        }
     }
 
     @Override
@@ -662,7 +745,10 @@ public class GalaxyHiveMetastore
             return Optional.empty();
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -681,7 +767,10 @@ public class GalaxyHiveMetastore
                     .collect(toImmutableMap(Entry::getKey, Entry::getValue));
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -703,7 +792,10 @@ public class GalaxyHiveMetastore
             throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
@@ -711,24 +803,29 @@ public class GalaxyHiveMetastore
     public void dropPartition(String databaseName, String tableName, List<String> partitionValues, boolean deleteData)
     {
         Optional<String> deleteLocation = Optional.empty();
-        if (deleteData) {
-            io.starburst.stargate.metastore.client.Table table = metastore.getTable(databaseName, tableName)
-                    .orElseThrow(() -> new TableNotFoundException(new SchemaTableName(databaseName, tableName)));
-            io.starburst.stargate.metastore.client.Partition partition = metastore.getPartition(databaseName, tableName, new PartitionName(partitionValues))
-                    .orElseThrow(() -> new PartitionNotFoundException(new SchemaTableName(databaseName, tableName), partitionValues));
-            if (table.tableType().equals(MANAGED_TABLE.name())) {
-                deleteLocation = Optional.ofNullable(emptyToNull(partition.storage().location()));
+        try {
+            if (deleteData) {
+                io.starburst.stargate.metastore.client.Table table = metastore.getTable(databaseName, tableName)
+                        .orElseThrow(() -> new TableNotFoundException(new SchemaTableName(databaseName, tableName)));
+                io.starburst.stargate.metastore.client.Partition partition = metastore.getPartition(databaseName, tableName, new PartitionName(partitionValues))
+                        .orElseThrow(() -> new PartitionNotFoundException(new SchemaTableName(databaseName, tableName), partitionValues));
+                if (table.tableType().equals(MANAGED_TABLE.name())) {
+                    deleteLocation = Optional.ofNullable(emptyToNull(partition.storage().location()));
+                }
+            }
+
+            try {
+                metastore.dropPartition(databaseName, tableName, new PartitionName(partitionValues));
+            }
+            catch (EntityNotFoundException e) {
+                throw new PartitionNotFoundException(new SchemaTableName(databaseName, tableName), partitionValues);
+            }
+            catch (MetastoreException e) {
+                throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
             }
         }
-
-        try {
-            metastore.dropPartition(databaseName, tableName, new PartitionName(partitionValues));
-        }
-        catch (EntityNotFoundException e) {
-            throw new PartitionNotFoundException(new SchemaTableName(databaseName, tableName), partitionValues);
-        }
-        catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
 
         deleteLocation.ifPresent(location -> deleteDir(Location.of(location)));
@@ -747,7 +844,10 @@ public class GalaxyHiveMetastore
             throw new PartitionNotFoundException(new SchemaTableName(databaseName, tableName), partition.getPartition().getValues());
         }
         catch (MetastoreException e) {
-            throw new TrinoException(HIVE_METASTORE_ERROR, e.getMessage(), e);
+            throw new TrinoException(HIVE_METASTORE_ERROR, firstNonNull(e.getMessage(), e).toString(), e);
+        }
+        catch (RuntimeException e) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "Error accessing Galaxy Metastore: " + firstNonNull(e.getMessage(), e), e);
         }
     }
 
