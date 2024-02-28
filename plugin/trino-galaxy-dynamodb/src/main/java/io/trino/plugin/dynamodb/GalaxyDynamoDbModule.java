@@ -39,6 +39,7 @@ import java.lang.annotation.Target;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Set;
 
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static java.util.Objects.requireNonNull;
@@ -78,7 +79,7 @@ public class GalaxyDynamoDbModule
         return new RetryingConnectionFactory(
                 new StatisticsAwareConnectionFactory(
                         new DynamoDbConnectionFactory(dynamoDbConfig, credentialProvider)),
-                new RetryingConnectionFactory.DefaultRetryStrategy());
+                Set.of(new RetryingConnectionFactory.DefaultRetryStrategy()));
     }
 
     private static void createDir(String absoluteDirPath)
