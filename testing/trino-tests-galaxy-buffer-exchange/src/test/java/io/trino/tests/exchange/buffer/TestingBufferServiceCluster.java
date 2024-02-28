@@ -292,6 +292,7 @@ public class TestingBufferServiceCluster
                              spooling.directory=file:///tmp
                              discovery-service.uri=%s
                              node.external-address=%s
+                             trino.plane-id=a-trino-plane
                              """.formatted(port, internalDiscoveryUri, newContainer.getHost())),
                     "/opt/app/etc/config.properties");
             newContainer.withFixedExposedPort(port, port);
