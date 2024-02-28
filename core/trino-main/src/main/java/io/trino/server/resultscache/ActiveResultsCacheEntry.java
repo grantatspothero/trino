@@ -21,13 +21,9 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import io.airlift.concurrent.MoreFutures;
 import io.airlift.log.Logger;
-import io.trino.Session;
 import io.trino.client.Column;
-import io.trino.client.QueryData;
 import io.trino.server.protocol.QueryResultRows;
-import io.trino.server.protocol.data.InlineJsonQueryDataProducer;
 import io.trino.spi.QueryId;
-import io.trino.spi.TrinoException;
 import io.trino.spi.security.Identity;
 
 import java.time.Instant;
@@ -42,7 +38,6 @@ import static io.trino.server.resultscache.ResultsCacheEntry.ResultsCacheResult.
 import static io.trino.server.resultscache.ResultsCacheEntry.ResultsCacheResult.Status.CACHING;
 import static io.trino.server.resultscache.ResultsCacheEntry.ResultsCacheResult.Status.NO_COLUMNS;
 import static io.trino.server.resultscache.ResultsCacheEntry.ResultsCacheResult.Status.OVER_MAX_SIZE;
-import static io.trino.spi.StandardErrorCode.SERIALIZATION_ERROR;
 import static java.util.Objects.requireNonNull;
 
 public class ActiveResultsCacheEntry
@@ -152,9 +147,8 @@ public class ActiveResultsCacheEntry
         return Optional.of(entryResult);
     }
 
-    public void appendResults(Session session, List<Column> columns, QueryResultRows resultRows)
+    public void appendResults(List<Column> columns, QueryResultRows resultRows)
     {
-        InlineJsonQueryDataProducer queryDataProducer = new InlineJsonQueryDataProducer();
         List<CompletionCallback> completionCallbacks = new ArrayList<>();
         try {
             synchronized (this) {
@@ -193,10 +187,7 @@ public class ActiveResultsCacheEntry
                 }
 
                 log.debug("QueryId: %s, appending to cache entry, %s bytes, %s current total size", queryId, logicalSizeInBytes, currentSize);
-                QueryData queryData = queryDataProducer.produce(session, resultRows, true, throwable -> {
-                    throw new TrinoException(SERIALIZATION_ERROR, "Error converting output to client protocol", throwable);
-                });
-                resultsData.get().addRecords(queryData.getData());
+                resultsData.get().addRecords(resultRows);
             }
         }
         finally {

@@ -30,8 +30,6 @@ import io.starburst.stargate.metadata.StatementRequest;
 import io.trino.Session;
 import io.trino.client.Column;
 import io.trino.client.FailureInfo;
-import io.trino.client.QueryData;
-import io.trino.client.QueryDataFormats;
 import io.trino.client.QueryError;
 import io.trino.client.QueryResults;
 import io.trino.client.StatementStats;
@@ -53,8 +51,6 @@ import io.trino.server.SessionContext;
 import io.trino.server.galaxy.catalogs.DecryptionContextProvider;
 import io.trino.server.protocol.QueryResultRows;
 import io.trino.server.protocol.Slug;
-import io.trino.server.protocol.data.QueryDataProducer;
-import io.trino.server.protocol.data.QueryDataProducerFactory;
 import io.trino.server.security.InternalPrincipal;
 import io.trino.server.security.ResourceSecurity;
 import io.trino.spi.ErrorCode;
@@ -88,7 +84,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalDouble;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -138,7 +133,6 @@ public class MetadataOnlyStatementResource
     private final SecretSealer secretSealer;
     private final MetadataOnlySystemState systemState;
     private final DecryptionContextProvider decryptionContextProvider;
-    private final QueryDataProducerFactory queryDataProducerFactory;
 
     @Inject
     public MetadataOnlyStatementResource(
@@ -152,8 +146,7 @@ public class MetadataOnlyStatementResource
             SecretSealer secretSealer,
             QueryManagerConfig queryManagerConfig,
             MetadataOnlySystemState systemState,
-            DecryptionContextProvider decryptionContextProvider,
-            QueryDataProducerFactory queryDataProducerFactory)
+            DecryptionContextProvider decryptionContextProvider)
     {
         this.sessionContextFactory = requireNonNull(sessionContextFactory, "sessionContextFactory is null");
         this.dispatchManager = requireNonNull(dispatchManager, "dispatchManager is null");
@@ -166,7 +159,6 @@ public class MetadataOnlyStatementResource
         this.maxWaitTime = queryManagerConfig.getClientTimeout();
         this.systemState = requireNonNull(systemState, "systemState is null");
         this.decryptionContextProvider = requireNonNull(decryptionContextProvider, "decryptionContextProvider is null");
-        this.queryDataProducerFactory = requireNonNull(queryDataProducerFactory, "queryDataProducerFactory is null");
     }
 
     /**
@@ -210,7 +202,7 @@ public class MetadataOnlyStatementResource
 
         systemState.incrementActiveRequests();
         try {
-            return executeQuery(queryId, request.accountId(), transactionId, statement, sessionContext, request.catalogs(), request.serviceProperties(), httpHeaders);
+            return executeQuery(queryId, request.accountId(), transactionId, statement, sessionContext, request.catalogs(), request.serviceProperties());
         }
         finally {
             systemState.decrementAndGetActiveRequests();
@@ -229,7 +221,7 @@ public class MetadataOnlyStatementResource
         return formatSql(statement).trim();
     }
 
-    private QueryResults executeQuery(QueryId queryId, AccountId accountId, TransactionId transactionId, String statement, SessionContext sessionContext, List<QueryCatalog> catalogs, Map<String, String> serviceProperties, HttpHeaders httpHeaders)
+    private QueryResults executeQuery(QueryId queryId, AccountId accountId, TransactionId transactionId, String statement, SessionContext sessionContext, List<QueryCatalog> catalogs, Map<String, String> serviceProperties)
     {
         Span span = tracer.spanBuilder("metadata-query")
                 .setAttribute(TrinoAttributes.QUERY_ID, queryId.toString())
@@ -251,7 +243,7 @@ public class MetadataOnlyStatementResource
             try (var ignore = scopedSpan(registerQueryCatalogsSpan)) {
                 transactionManager.registerQueryCatalogs(accountId, sessionContext.getIdentity(), transactionId, queryId, catalogs, serviceProperties, span, decryptProc);
             }
-            return executeQuery(statement, span, sessionContext.withTransactionId(transactionId), queryId, httpHeaders);
+            return executeQuery(statement, span, sessionContext.withTransactionId(transactionId), queryId);
         }
         catch (Throwable e) {
             dispatchManager.failQuery(queryId, e);
@@ -266,7 +258,7 @@ public class MetadataOnlyStatementResource
         }
     }
 
-    private QueryResults executeQuery(String query, Span span, SessionContext sessionContext, QueryId queryId, HttpHeaders httpHeaders)
+    private QueryResults executeQuery(String query, Span span, SessionContext sessionContext, QueryId queryId)
     {
         getQueryFuture(dispatchManager.createQuery(queryId, span, Slug.createNew(), sessionContext, query));
         getQueryFuture(dispatchManager.waitForDispatched(queryId));
@@ -350,10 +342,13 @@ public class MetadataOnlyStatementResource
         QueryInfo queryInfo = dispatchQuery.getFullQueryInfo();
 
         List<Column> columns = null;
-        QueryResultRows resultRows = QueryResultRows.empty(session);
+        QueryResultRows resultRows = null;
         Long updateCount = null;
         if (queryInfo.getState() != FAILED) {
-            QueryResultRows.Builder builder = queryResultRowsBuilder(session);
+            QueryResultRows.Builder builder = queryResultRowsBuilder(session)
+                    .withExceptionConsumer(throwable -> {
+                        throw new TrinoException(SERIALIZATION_ERROR, "Error converting output to client protocol", throwable);
+                    });
             if (!pages.isEmpty()) {
                 columns = createColumns(columnNames.get(), columnTypes.get(), true);
                 builder.withColumnsAndTypes(columns, columnTypes.get()).addPages(pages);
@@ -371,12 +366,6 @@ public class MetadataOnlyStatementResource
             }
         }
 
-        Set<String> supportedDataFormats = QueryDataFormats.fromHeaderValue(httpHeaders.getHeaderString(session.getProtocolHeaders().requestSupportedQueryDataFormats()));
-        QueryDataProducer queryDataProducer = queryDataProducerFactory.create(session, queryId, supportedDataFormats);
-        QueryData queryData = queryDataProducer.produce(session, resultRows, true, throwable -> {
-            throw new TrinoException(SERIALIZATION_ERROR, "Error converting output to client protocol", throwable);
-        });
-
         span.setStatus(StatusCode.OK);
         return new QueryResults(
                 queryId.toString(),
@@ -384,7 +373,7 @@ public class MetadataOnlyStatementResource
                 null,
                 null,
                 columns,
-                queryData,
+                resultRows,
                 StatementStats.builder()
                         .setState(queryInfo.getState().toString())
                         .setRunningPercentage(OptionalDouble.empty())

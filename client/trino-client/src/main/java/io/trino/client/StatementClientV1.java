@@ -57,7 +57,6 @@ import static com.google.common.net.HttpHeaders.USER_AGENT;
 import static io.trino.client.HttpStatusCodes.shouldRetry;
 import static io.trino.client.JsonCodec.jsonCodec;
 import static io.trino.client.ProtocolHeaders.TRINO_HEADERS;
-import static io.trino.client.QueryDataFormatResolver.jsonInlineOnlyResolver;
 import static java.lang.String.format;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
@@ -70,6 +69,7 @@ class StatementClientV1
         implements StatementClient
 {
     private static final MediaType MEDIA_TYPE_TEXT = MediaType.parse("text/plain; charset=utf-8");
+    private static final JsonCodec<QueryResults> QUERY_RESULTS_CODEC = jsonCodec(QueryResults.class);
 
     private static final Splitter COLLECTION_HEADER_SPLITTER = Splitter.on('=').limit(2).trimResults();
     private static final String USER_AGENT_VALUE = StatementClientV1.class.getSimpleName() +
@@ -99,23 +99,14 @@ class StatementClientV1
     private final Optional<String> originalUser;
     private final String clientCapabilities;
     private final boolean compressionDisabled;
-    private final JsonCodec<QueryResults> jsonCodec;
-    private final Set<String> supportedQueryDataFormats;
 
     private final AtomicReference<State> state = new AtomicReference<>(State.RUNNING);
 
     public StatementClientV1(Call.Factory httpCallFactory, ClientSession session, String query, Optional<Set<String>> clientCapabilities)
     {
-        // By default, we want only to support original protocol behaviour - inline json
-        this(httpCallFactory, jsonInlineOnlyResolver(), session, query, clientCapabilities);
-    }
-
-    public StatementClientV1(Call.Factory httpCallFactory, QueryDataFormatResolver formatResolver, ClientSession session, String query, Optional<Set<String>> clientCapabilities)
-    {
         requireNonNull(httpCallFactory, "httpCallFactory is null");
         requireNonNull(session, "session is null");
         requireNonNull(query, "query is null");
-        requireNonNull(formatResolver, "formatResolver is null");
 
         this.httpCallFactory = httpCallFactory;
         this.timeZone = session.getTimeZone();
@@ -133,13 +124,11 @@ class StatementClientV1
                 .map(Enum::name)
                 .collect(toImmutableSet())));
         this.compressionDisabled = session.isCompressionDisabled();
-        this.jsonCodec = jsonCodec(QueryResults.class, new QueryDataJsonSerializationModule(formatResolver));
-        this.supportedQueryDataFormats = formatResolver.supportedFormats();
 
         Request request = buildQueryRequest(session, query);
 
         // Always materialize the first response to avoid losing the response body if the initial response parsing fails
-        JsonResponse<QueryResults> response = JsonResponse.execute(jsonCodec, httpCallFactory, request, OptionalLong.empty());
+        JsonResponse<QueryResults> response = JsonResponse.execute(QUERY_RESULTS_CODEC, httpCallFactory, request, OptionalLong.empty());
         if ((response.getStatusCode() != HTTP_OK) || !response.hasValue()) {
             state.compareAndSet(State.RUNNING, State.CLIENT_ERROR);
             throw requestFailedException("starting query", request, response);
@@ -214,8 +203,6 @@ class StatementClientV1
             builder.addHeader(GALAXY_CATALOGS_HEADER, session.getQueryCatalogsHeader());
         }
 
-        builder.addHeader(TRINO_HEADERS.requestSupportedQueryDataFormats(), QueryDataFormats.toHeaderValue(supportedQueryDataFormats));
-
         return builder.build();
     }
 
@@ -271,7 +258,7 @@ class StatementClientV1
     public QueryData currentData()
     {
         checkState(isRunning(), "current position is not valid (cursor past end)");
-        return currentResults.get().getData();
+        return currentResults.get();
     }
 
     @Override
@@ -416,7 +403,7 @@ class StatementClientV1
 
             JsonResponse<QueryResults> response;
             try {
-                response = JsonResponse.execute(jsonCodec, httpCallFactory, request, OptionalLong.of(MAX_MATERIALIZED_JSON_RESPONSE_SIZE));
+                response = JsonResponse.execute(QUERY_RESULTS_CODEC, httpCallFactory, request, OptionalLong.of(MAX_MATERIALIZED_JSON_RESPONSE_SIZE));
             }
             catch (RuntimeException e) {
                 cause = e;

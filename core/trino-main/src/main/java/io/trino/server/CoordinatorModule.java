@@ -108,7 +108,6 @@ import io.trino.server.galaxy.autoscaling.GalaxyTrinoAutoscalingModule;
 import io.trino.server.protocol.ExecutingStatementResource;
 import io.trino.server.protocol.QueryInfoUrlFactory;
 import io.trino.server.protocol.StatementResponseFilter;
-import io.trino.server.protocol.data.QueryDataFormatsModule;
 import io.trino.server.remotetask.RemoteTaskStats;
 import io.trino.server.resultscache.ResultsCacheModule;
 import io.trino.server.security.galaxy.GalaxySecurityModule;
@@ -170,7 +169,6 @@ public class CoordinatorModule
         install(conditionalModule(GalaxyEnabledConfig.class, GalaxyEnabledConfig::isGalaxyRbacEnabled, new GalaxySecurityModule()));
 
         install(new WebUiModule());
-        install(new QueryDataFormatsModule());
 
         // coordinator announcement
         discoveryBinder(binder).bindHttpAnnouncement("trino-coordinator");
