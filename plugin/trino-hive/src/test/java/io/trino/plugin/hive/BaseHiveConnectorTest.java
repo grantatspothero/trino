@@ -5136,7 +5136,7 @@ public abstract class BaseHiveConnectorTest
         assertUpdate("ALTER TABLE test_rename_column RENAME COLUMN orderkey TO new_orderkey");
         assertQuery("SELECT new_orderkey, orderstatus FROM test_rename_column", "SELECT orderkey, orderstatus FROM orders");
         assertQueryFails("ALTER TABLE test_rename_column RENAME COLUMN \"$path\" TO test", ".* Cannot rename hidden column");
-        assertQueryFails("ALTER TABLE test_rename_column RENAME COLUMN orderstatus TO new_orderstatus", "Renaming partition columns is not supported.*");
+        assertQueryFails("ALTER TABLE test_rename_column RENAME COLUMN orderstatus TO new_orderstatus", ".*Renaming partition columns is not supported.*");
         assertQuery("SELECT new_orderkey, orderstatus FROM test_rename_column", "SELECT orderkey, orderstatus FROM orders");
         assertUpdate("DROP TABLE test_rename_column");
     }
@@ -5162,7 +5162,7 @@ public abstract class BaseHiveConnectorTest
         assertQueryFails("ALTER TABLE test_drop_column DROP COLUMN \"$path\"", ".* Cannot drop hidden column");
         assertQueryFails("ALTER TABLE test_drop_column DROP COLUMN orderstatus", "Cannot drop partition column.*");
         assertUpdate("ALTER TABLE test_drop_column DROP COLUMN orderkey");
-        assertQueryFails("ALTER TABLE test_drop_column DROP COLUMN custkey", "Cannot drop the only non-partition column in a table.*");
+        assertQueryFails("ALTER TABLE test_drop_column DROP COLUMN custkey", ".*Cannot drop the only non-partition column in a table.*");
         assertQuery("SELECT * FROM test_drop_column", "SELECT custkey, orderstatus FROM orders");
 
         assertUpdate("DROP TABLE test_drop_column");
