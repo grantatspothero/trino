@@ -58,6 +58,8 @@ import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.lang.String.format;
 import static org.apache.iceberg.BaseMetastoreTableOperations.METADATA_LOCATION_PROP;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.abort;
 
 /**
  * Test ObjectStore connector materialized views with Galaxy metastore.
@@ -66,6 +68,7 @@ public class TestObjectStoreGalaxyMaterializedView
         extends BaseObjectStoreMaterializedViewTest
 {
     private static final String TEST_CATALOG = "iceberg";
+    private static final String ICEBERG_LEGACY_MV_CATALOG = "iceberg_legacy_mv";
 
     private final String bucketName = "test-bucket-" + randomNameSuffix();
     private MinioStorage minio;
@@ -108,11 +111,26 @@ public class TestObjectStoreGalaxyMaterializedView
                 .addPlugin(new IcebergPlugin())
                 .addPlugin(new ObjectStorePlugin())
                 .addCatalog(TEST_CATALOG, "galaxy_objectstore", false, properties)
+                .addCatalog(ICEBERG_LEGACY_MV_CATALOG,
+                        "galaxy_objectstore",
+                        false,
+                        createObjectStoreProperties(
+                                ICEBERG,
+                                ImmutableMap.<String, String>builder()
+                                        .putAll(locationSecurityServer.getClientConfig())
+                                        .put("galaxy.catalog-id", "c-9234567890")
+                                        .buildOrThrow(),
+                                "galaxy",
+                                metastore.getMetastoreConfig(minio.getS3Url()),
+                                minio.getHiveS3Config(),
+                                Map.of("ICEBERG__iceberg.materialized-views.hide-storage-table", "false")))
                 .addPlugin(new TpchPlugin())
                 .addCatalog("tpch", "tpch", true, ImmutableMap.of())
                 .build();
+
         queryRunner.execute("CREATE SCHEMA %s.%s".formatted(TEST_CATALOG, queryRunner.getDefaultSession().getSchema().orElseThrow()));
         queryRunner.execute("GRANT SELECT ON tpch.\"*\".\"*\" TO ROLE %s WITH GRANT OPTION".formatted(ACCOUNT_ADMIN));
+        queryRunner.execute("GRANT ALL PRIVILEGES ON SCHEMA %s.%s TO ROLE %s WITH GRANT OPTION".formatted(ICEBERG_LEGACY_MV_CATALOG, queryRunner.getDefaultSession().getSchema().orElseThrow(), ACCOUNT_ADMIN));
 
         // Allows for tests in BaseIcebergMaterializedViewTest which use non_existent to check for not found
         galaxyTestHelper.getAccountClient()
@@ -135,6 +153,17 @@ public class TestObjectStoreGalaxyMaterializedView
     {
         Table table = metastore.getMetastore().getTable("default", materializedViewName).orElseThrow();
         return table.parameters().get(METADATA_LOCATION_PROP);
+    }
+
+    // TODO(https://github.com/starburstdata/galaxy-trino/issues/1947)
+    @Override
+    @Test
+    public void testDropLegacyMaterializedView()
+    {
+        // setup not possible in Galaxy Metastore
+        assertThatThrownBy(super::testDropLegacyMaterializedView)
+                .hasMessageMatching("View 'iceberg\\.default\\.test_drop_legacy_materialized_.*' does not have an explicit owner role.*");
+        abort();
     }
 
     @Test

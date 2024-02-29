@@ -744,18 +744,19 @@ public class TrinoHiveCatalog
                 log.warn(e, "Failed to drop storage table '%s.%s' for materialized view '%s'", storageSchema, storageTableName, viewName);
             }
         }
+        else {
+            String storageMetadataLocation = view.getParameters().get(METADATA_LOCATION_PROP);
+            checkState(storageMetadataLocation != null, "Storage location missing in definition of materialized view " + viewName);
 
-        String storageMetadataLocation = view.getParameters().get(METADATA_LOCATION_PROP);
-        checkState(storageMetadataLocation != null, "Storage location missing in definition of materialized view " + viewName);
-
-        TrinoFileSystem fileSystem = fileSystemFactory.create(session);
-        TableMetadata metadata = TableMetadataParser.read(new ForwardingFileIo(fileSystem), storageMetadataLocation);
-        String storageLocation = metadata.location();
-        try {
-            fileSystem.deleteDirectory(Location.of(storageLocation));
-        }
-        catch (IOException e) {
-            log.warn(e, "Failed to delete storage location '%s' for materialized view '%s'", storageLocation, viewName);
+            TrinoFileSystem fileSystem = fileSystemFactory.create(session);
+            TableMetadata metadata = TableMetadataParser.read(new ForwardingFileIo(fileSystem), storageMetadataLocation);
+            String storageLocation = metadata.location();
+            try {
+                fileSystem.deleteDirectory(Location.of(storageLocation));
+            }
+            catch (IOException e) {
+                log.warn(e, "Failed to delete storage location '%s' for materialized view '%s'", storageLocation, viewName);
+            }
         }
 
         Optional<String> refreshJobId = Optional.ofNullable(view.getParameters().get(REFRESH_JOB_ID_PROPERTY));

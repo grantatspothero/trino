@@ -50,6 +50,7 @@ import io.trino.testing.QueryRunner;
 import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.TableMetadataParser;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.Map;
@@ -66,6 +67,8 @@ import static io.trino.testing.TestingConnectorSession.SESSION;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.lang.String.format;
 import static org.apache.iceberg.BaseMetastoreTableOperations.METADATA_LOCATION_PROP;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.abort;
 
 /**
  * Test ObjectStore connector materialized views with Glue metastore.
@@ -140,6 +143,16 @@ public class TestObjectStoreGlueMaterializedView
                         .withName(materializedViewName))
                 .getTable();
         return getTableParameters(table).get(METADATA_LOCATION_PROP);
+    }
+
+    // TODO(https://github.com/starburstdata/galaxy-trino/issues/1946)
+    @Test
+    @Override
+    public void testDropLegacyMaterializedView()
+    {
+        assertThatThrownBy(super::testDropLegacyMaterializedView)
+                .hasMessageContaining("Catalog 'iceberg_legacy_mv' not found");
+        abort();
     }
 
     @AfterAll
