@@ -40,4 +40,10 @@ public class TestWarpSpeedObjectStoreHiveCacheSubqueriesTest
     {
         return true;
     }
+
+    @Override
+    protected boolean effectivePredicateReturnedPerSplit()
+    {
+        return false;
+    }
 }
