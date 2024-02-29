@@ -106,7 +106,7 @@ import java.util.OptionalDouble;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.airlift.log.Level.DEBUG;
 import static io.airlift.log.Level.INFO;
-import static io.trino.SystemSessionProperties.HISTORY_BASED_STATISTICS_ENABLED;
+import static io.trino.SystemSessionProperties.HISTORY_BASED_STATS_ENABLED;
 import static io.trino.execution.QueryState.FAILED;
 import static io.trino.execution.QueryState.FINISHED;
 import static io.trino.metadata.GlobalFunctionCatalog.BUILTIN_SCHEMA;
@@ -662,7 +662,7 @@ public class TestHistoryBasedStatsCalculator
     private static Session sessionWithHistoryBasedStatsEnabled()
     {
         return TestingSession.testSessionBuilder()
-                .setSystemProperty(HISTORY_BASED_STATISTICS_ENABLED, "true")
+                .setSystemProperty(HISTORY_BASED_STATS_ENABLED, "true")
                 .build();
     }
 

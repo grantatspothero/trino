@@ -25,7 +25,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.parallel.Execution;
 
 import static io.trino.SystemSessionProperties.COLLECT_PLAN_STATISTICS_FOR_ALL_QUERIES;
-import static io.trino.SystemSessionProperties.HISTORY_BASED_STATISTICS_ENABLED;
+import static io.trino.SystemSessionProperties.HISTORY_BASED_STATS_ENABLED;
 import static io.trino.plugin.tpch.TpchConnectorFactory.TPCH_COLUMN_NAMING_PROPERTY;
 import static io.trino.testing.assertions.Assert.assertEventually;
 import static io.trino.testing.statistics.MetricComparisonStrategies.absoluteError;
@@ -52,7 +52,7 @@ public class TestTpchDistributedStats
                         // Stats for non-EXPLAIN queries are not collected by default
                         .setSystemProperty(COLLECT_PLAN_STATISTICS_FOR_ALL_QUERIES, "true")
                         // To test statistics estimation, let's disable history based stats
-                        .setSystemProperty(HISTORY_BASED_STATISTICS_ENABLED, "false"))
+                        .setSystemProperty(HISTORY_BASED_STATS_ENABLED, "false"))
                 .buildWithoutCatalogs();
         runner.createCatalog(
                 "tpch",

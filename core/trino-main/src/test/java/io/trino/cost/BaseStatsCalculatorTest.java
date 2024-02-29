@@ -18,7 +18,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.parallel.Execution;
 
-import static io.trino.SystemSessionProperties.HISTORY_BASED_STATISTICS_ENABLED;
+import static io.trino.SystemSessionProperties.HISTORY_BASED_STATS_ENABLED;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT;
@@ -32,7 +32,7 @@ public abstract class BaseStatsCalculatorTest
     @BeforeAll
     public void setUp()
     {
-        tester = new StatsCalculatorTester(testSessionBuilder().setSystemProperty(HISTORY_BASED_STATISTICS_ENABLED, "false").build());
+        tester = new StatsCalculatorTester(testSessionBuilder().setSystemProperty(HISTORY_BASED_STATS_ENABLED, "false").build());
     }
 
     @AfterAll

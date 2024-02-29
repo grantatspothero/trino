@@ -131,7 +131,7 @@ import static io.trino.SystemSessionProperties.FAULT_TOLERANT_EXECUTION_ARBITRAR
 import static io.trino.SystemSessionProperties.FAULT_TOLERANT_EXECUTION_ARBITRARY_DISTRIBUTION_WRITE_TASK_TARGET_SIZE_MIN;
 import static io.trino.SystemSessionProperties.FAULT_TOLERANT_EXECUTION_HASH_DISTRIBUTION_COMPUTE_TASK_TARGET_SIZE;
 import static io.trino.SystemSessionProperties.FAULT_TOLERANT_EXECUTION_HASH_DISTRIBUTION_WRITE_TASK_TARGET_SIZE;
-import static io.trino.SystemSessionProperties.HISTORY_BASED_STATISTICS_ENABLED;
+import static io.trino.SystemSessionProperties.HISTORY_BASED_STATS_ENABLED;
 import static io.trino.SystemSessionProperties.JOIN_REORDERING_STRATEGY;
 import static io.trino.SystemSessionProperties.MAX_WRITER_TASK_COUNT;
 import static io.trino.SystemSessionProperties.QUERY_MAX_MEMORY_PER_NODE;
@@ -8938,7 +8938,7 @@ public abstract class BaseHiveConnectorTest
     public void testExplainOfCreateTableAs()
     {
         Session session = Session.builder(getSession())
-                .setSystemProperty(HISTORY_BASED_STATISTICS_ENABLED, "false")
+                .setSystemProperty(HISTORY_BASED_STATS_ENABLED, "false")
                 .build();
         String query = "CREATE TABLE copy_orders AS SELECT * FROM orders";
         MaterializedResult result = computeActual(session, "EXPLAIN " + query);
@@ -8955,7 +8955,7 @@ public abstract class BaseHiveConnectorTest
                     // this test works with DF when dynamic-filtering.small-partitioned.range-row-limit-per-driver is crossed, but that does not
                     // happen for sf1 so we disable DF completely since the above property cannot be changed per session
                     .setSystemProperty(ENABLE_DYNAMIC_FILTERING, "false")
-                    .setSystemProperty(HISTORY_BASED_STATISTICS_ENABLED, "true")
+                    .setSystemProperty(HISTORY_BASED_STATS_ENABLED, "true")
                     .build();
             assertQuerySucceeds("call system.system.flush_history_based_stats_cache()");
             String tableName = "orders_correlated" + randomNameSuffix();

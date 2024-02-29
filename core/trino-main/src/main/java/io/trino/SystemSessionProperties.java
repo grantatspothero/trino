@@ -217,7 +217,7 @@ public final class SystemSessionProperties
     public static final String MIN_INPUT_SIZE_PER_TASK = "min_input_size_per_task";
     public static final String MIN_INPUT_ROWS_PER_TASK = "min_input_rows_per_task";
     public static final String USE_EXACT_PARTITIONING = "use_exact_partitioning";
-    public static final String HISTORY_BASED_STATISTICS_ENABLED = "history_based_stats_enabled";
+    public static final String HISTORY_BASED_STATS_ENABLED = "history_based_stats_enabled";
     public static final String USE_COST_BASED_PARTITIONING = "use_cost_based_partitioning";
     public static final String USE_SUB_PLAN_ALTERNATIVES = "use_sub_plan_alternatives";
     public static final String FORCE_SPILLING_JOIN = "force_spilling_join";
@@ -1131,7 +1131,7 @@ public final class SystemSessionProperties
                         optimizerConfig.isUseExactPartitioning(),
                         false),
                 booleanProperty(
-                        HISTORY_BASED_STATISTICS_ENABLED,
+                        HISTORY_BASED_STATS_ENABLED,
                         "Enable using historical query statistics to estimate current query stats. Disabling also disables historical stats collection",
                         optimizerConfig.isHistoryBasedStatisticsEnabled(),
                         false),
@@ -2090,9 +2090,9 @@ public final class SystemSessionProperties
         return session.getSystemProperty(USE_EXACT_PARTITIONING, Boolean.class);
     }
 
-    public static boolean isHistoryBasedStatisticsEnabled(Session session)
+    public static boolean isHistoryBasedStatsEnabled(Session session)
     {
-        return session.getSystemProperty(HISTORY_BASED_STATISTICS_ENABLED, Boolean.class);
+        return session.getSystemProperty(HISTORY_BASED_STATS_ENABLED, Boolean.class);
     }
 
     public static boolean isUseCostBasedPartitioning(Session session)

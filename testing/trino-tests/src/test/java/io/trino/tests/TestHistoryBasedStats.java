@@ -39,7 +39,7 @@ import org.junit.jupiter.api.parallel.Execution;
 import static io.airlift.log.Level.DEBUG;
 import static io.airlift.log.Level.INFO;
 import static io.airlift.units.DataSize.Unit.MEGABYTE;
-import static io.trino.SystemSessionProperties.HISTORY_BASED_STATISTICS_ENABLED;
+import static io.trino.SystemSessionProperties.HISTORY_BASED_STATS_ENABLED;
 import static io.trino.SystemSessionProperties.JOIN_DISTRIBUTION_TYPE;
 import static io.trino.SystemSessionProperties.JOIN_MAX_BROADCAST_TABLE_SIZE;
 import static io.trino.SystemSessionProperties.JOIN_REORDERING_STRATEGY;
@@ -62,7 +62,7 @@ public class TestHistoryBasedStats
             .setSchema("default")
             .setSystemProperty(JOIN_DISTRIBUTION_TYPE, JoinDistributionType.AUTOMATIC.name())
             .setSystemProperty(JOIN_REORDERING_STRATEGY, JoinReorderingStrategy.AUTOMATIC.name())
-            .setSystemProperty(HISTORY_BASED_STATISTICS_ENABLED, "true")
+            .setSystemProperty(HISTORY_BASED_STATS_ENABLED, "true")
             .build();
 
     @BeforeAll

@@ -69,7 +69,7 @@ import java.util.function.BiConsumer;
 
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static io.trino.SystemSessionProperties.isHistoryBasedStatisticsEnabled;
+import static io.trino.SystemSessionProperties.isHistoryBasedStatsEnabled;
 import static io.trino.execution.QueryState.FINISHED;
 import static io.trino.execution.StageInfo.getAllStages;
 import static io.trino.spi.resourcegroups.QueryType.DATA_DEFINITION;
@@ -138,7 +138,7 @@ public class HistoryBasedStatsCalculator
     @VisibleForTesting
     Optional<Double> getOutputRowCount(PlanNode node, Lookup lookup, Session session)
     {
-        if (!isHistoryBasedStatisticsEnabled(session)) {
+        if (!isHistoryBasedStatsEnabled(session)) {
             return Optional.empty();
         }
 
@@ -189,7 +189,7 @@ public class HistoryBasedStatsCalculator
             return;
         }
 
-        if (!isHistoryBasedStatisticsEnabled(session)) {
+        if (!isHistoryBasedStatsEnabled(session)) {
             return;
         }
 
