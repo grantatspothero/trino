@@ -26,6 +26,7 @@ import io.trino.plugin.iceberg.IcebergMaterializedViewDefinition;
 import io.trino.plugin.iceberg.IcebergUtil;
 import io.trino.plugin.iceberg.PartitionTransforms.ColumnTransform;
 import io.trino.plugin.iceberg.WorkScheduler;
+import io.trino.plugin.iceberg.fileio.ForwardingFileIo;
 import io.trino.plugin.iceberg.fileio.ForwardingOutputFile;
 import io.trino.spi.TrinoException;
 import io.trino.spi.catalog.CatalogName;
@@ -373,6 +374,14 @@ public abstract class AbstractTrinoCatalog
         TableMetadataParser.write(metadata, new ForwardingOutputFile(fileSystem, metadataFileLocation));
 
         return metadataFileLocation;
+    }
+
+    protected void dropMaterializedViewStorage(TrinoFileSystem fileSystem, String storageMetadataLocation)
+            throws IOException
+    {
+        TableMetadata metadata = TableMetadataParser.read(new ForwardingFileIo(fileSystem), storageMetadataLocation);
+        String storageLocation = metadata.location();
+        fileSystem.deleteDirectory(Location.of(storageLocation));
     }
 
     protected SchemaTableName createMaterializedViewStorageTable(

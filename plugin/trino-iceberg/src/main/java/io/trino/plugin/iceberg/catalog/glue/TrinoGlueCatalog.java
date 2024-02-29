@@ -93,6 +93,7 @@ import org.apache.iceberg.Transaction;
 import org.apache.iceberg.exceptions.NotFoundException;
 import org.apache.iceberg.io.FileIO;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -1227,12 +1228,28 @@ public class TrinoGlueCatalog
                     encodeMaterializedViewData(fromConnectorMaterializedViewDefinition(definition)),
                     isUsingSystemSecurity ? null : session.getUser(),
                     createMaterializedViewProperties(session, storageMetadataLocation, refreshJobId));
-            if (existing.isPresent()) {
-                updateTable(viewName.getSchemaName(), materializedViewTableInput);
+            try {
+                if (existing.isPresent()) {
+                    updateTable(viewName.getSchemaName(), materializedViewTableInput);
+                }
+                else {
+                    createTable(viewName.getSchemaName(), materializedViewTableInput);
+                }
             }
-            else {
-                createTable(viewName.getSchemaName(), materializedViewTableInput);
+            catch (RuntimeException e) {
+                try {
+                    dropMaterializedViewStorage(fileSystemFactory.create(session), storageMetadataLocation.toString());
+                }
+                catch (Exception suppressed) {
+                    LOG.warn(suppressed, "Failed to clean up metadata '%s' for materialized view '%s'", storageMetadataLocation, viewName);
+                    if (e != suppressed) {
+                        e.addSuppressed(suppressed);
+                    }
+                }
+                throw e;
             }
+
+            existing.ifPresent(existingView -> dropMaterializedViewStorage(session, existingView));
         }
         else {
             createMaterializedViewWithStorageTable(session, viewName, definition, materializedViewProperties, existing);
@@ -1273,7 +1290,7 @@ public class TrinoGlueCatalog
                     }
                 }
             }
-            dropStorageTable(session, existing.get());
+            dropMaterializedViewStorage(session, existing.get());
         }
         else {
             createTable(viewName.getSchemaName(), materializedViewTableInput);
@@ -1352,12 +1369,12 @@ public class TrinoGlueCatalog
         }
         materializedViewCache.invalidate(viewName);
         Optional<String> refreshJobId = Optional.ofNullable(getTableParameters(view).get(REFRESH_JOB_ID_PROPERTY));
-        dropStorageTable(session, view);
+        dropMaterializedViewStorage(session, view);
         deleteTable(view.getDatabaseName(), view.getName());
         refreshJobId.ifPresent(jobId -> workScheduler.deleteJobSchedule(session, jobId));
     }
 
-    private void dropStorageTable(ConnectorSession session, com.amazonaws.services.glue.model.Table view)
+    private void dropMaterializedViewStorage(ConnectorSession session, com.amazonaws.services.glue.model.Table view)
     {
         Map<String, String> parameters = getTableParameters(view);
         String storageTableName = parameters.get(STORAGE_TABLE);
@@ -1369,6 +1386,16 @@ public class TrinoGlueCatalog
             }
             catch (TrinoException e) {
                 LOG.warn(e, "Failed to drop storage table '%s.%s' for materialized view '%s'", storageSchema, storageTableName, view.getName());
+            }
+        }
+        else {
+            String storageMetadataLocation = parameters.get(METADATA_LOCATION_PROP);
+            checkState(storageMetadataLocation != null, "Storage location missing in definition of materialized view " + view.getName());
+            try {
+                dropMaterializedViewStorage(fileSystemFactory.create(session), storageMetadataLocation);
+            }
+            catch (IOException e) {
+                LOG.warn(e, "Failed to delete storage table metadata '%s' for materialized view '%s'", storageMetadataLocation, view.getName());
             }
         }
     }
