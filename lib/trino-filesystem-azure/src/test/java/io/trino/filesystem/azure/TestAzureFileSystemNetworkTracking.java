@@ -54,11 +54,9 @@ import java.io.OutputStream;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static com.azure.storage.blob.models.AccountKind.BLOB_STORAGE;
 import static com.azure.storage.blob.models.AccountKind.STORAGE_V2;
 import static com.azure.storage.common.Utility.urlEncode;
 import static com.google.common.base.Preconditions.checkState;
-import static io.trino.filesystem.azure.AbstractTestAzureFileSystem.AccountKind.BLOB;
 import static io.trino.filesystem.azure.AbstractTestAzureFileSystem.AccountKind.FLAT;
 import static io.trino.filesystem.azure.AbstractTestAzureFileSystem.AccountKind.HIERARCHICAL;
 import static java.util.Locale.ROOT;
@@ -134,9 +132,6 @@ public class TestAzureFileSystemNetworkTracking
                 return HIERARCHICAL;
             }
             return FLAT;
-        }
-        if (accountInfo.getAccountKind() == BLOB_STORAGE) {
-            return BLOB;
         }
         throw new IOException("Unsupported account kind '%s'".formatted(accountInfo.getAccountKind()));
     }
