@@ -674,6 +674,7 @@ jobs:
             !:starburst-salesforce,
             !:starburst-sap-hana,
             !:starburst-snowflake,
+            !:starburst-sqlserver,
             !:starburst-stargate,
             !:starburst-synapse,
             !:starburst-testing,
