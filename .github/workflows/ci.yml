@@ -111,12 +111,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: 21
-      - name: Login to the Docker Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ${{ secrets.LABS_DOCKER_REGISTRY }}
-          username: ${{ secrets.LABS_DOCKER_REGISTRY_USERNAME }}
-          password: ${{ secrets.LABS_DOCKER_REGISTRY_PASSWORD }}
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
