@@ -318,6 +318,7 @@ public class TestIcebergCacheIds
                 partitionDataJson,
                 deletes,
                 SplitWeight.standard(),
+                TupleDomain.all(),
                 ImmutableMap.of());
     }
 

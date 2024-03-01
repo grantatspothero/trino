@@ -275,6 +275,7 @@ public class IcebergPageSourceProvider
                 split.getDeletes(),
                 dynamicFilter,
                 tableHandle.getUnenforcedPredicate(),
+                split.getFileStatisticsDomain(),
                 split.getPath(),
                 split.getStart(),
                 split.getLength(),
@@ -295,6 +296,7 @@ public class IcebergPageSourceProvider
             List<DeleteFile> deletes,
             DynamicFilter dynamicFilter,
             TupleDomain<IcebergColumnHandle> unenforcedPredicate,
+            TupleDomain<IcebergColumnHandle> fileStatisticsDomain,
             String path,
             long start,
             long length,
@@ -345,7 +347,8 @@ public class IcebergPageSourceProvider
         TupleDomain<IcebergColumnHandle> effectivePredicate = getUnenforcedPredicate(
                 new SplitSpec(tableSchema, partitionSpec, partitionKeys),
                 unenforcedPredicate,
-                dynamicFilter.getCurrentPredicate().transformKeys(IcebergColumnHandle.class::cast))
+                dynamicFilter.getCurrentPredicate().transformKeys(IcebergColumnHandle.class::cast),
+                fileStatisticsDomain)
                 .transformKeys(IcebergColumnHandle.class::cast);
         if (effectivePredicate.isNone()) {
             return new EmptyPageSource();
@@ -554,16 +557,32 @@ public class IcebergPageSourceProvider
             ConnectorTableHandle tableHandle,
             TupleDomain<ColumnHandle> dynamicFilter)
     {
-        return getUnenforcedPredicate(getSplitSpec(tableHandle, split), ((IcebergTableHandle) tableHandle).getUnenforcedPredicate(), dynamicFilter)
+        IcebergSplit icebergSplit = (IcebergSplit) split;
+        return getUnenforcedPredicate(
+                getSplitSpec(tableHandle, split),
+                ((IcebergTableHandle) tableHandle).getUnenforcedPredicate(),
+                dynamicFilter,
+                icebergSplit.getFileStatisticsDomain())
                 .transformKeys(ColumnHandle.class::cast);
     }
 
     private TupleDomain<IcebergColumnHandle> getUnenforcedPredicate(
             SplitSpec splitSpec,
             TupleDomain<IcebergColumnHandle> unenforcedPredicate,
-            TupleDomain<ColumnHandle> dynamicFilter)
+            TupleDomain<ColumnHandle> dynamicFilter,
+            TupleDomain<IcebergColumnHandle> fileStatisticsDomain)
     {
-        return prunePredicate(splitSpec, dynamicFilter.intersect(unenforcedPredicate))
+        return prunePredicate(
+                splitSpec,
+                // We reach here when we could not prune the split using file level stats, table predicate
+                // and the dynamic filter in the coordinator during split generation. The file level stats
+                // in IcebergSplit#fileStatisticsDomain could help to prune this split when a more selective dynamic filter
+                // is available now, without having to access parquet/orc file footer for row-group/stripe stats.
+                TupleDomain.intersect(ImmutableList.of(
+                        unenforcedPredicate,
+                        fileStatisticsDomain,
+                        dynamicFilter)),
+                fileStatisticsDomain)
                 .simplify(ICEBERG_DOMAIN_COMPACTION_THRESHOLD);
     }
 
@@ -574,7 +593,11 @@ public class IcebergPageSourceProvider
             ConnectorTableHandle tableHandle,
             TupleDomain<ColumnHandle> predicate)
     {
-        return prunePredicate(getSplitSpec(tableHandle, split), predicate.transformKeys(IcebergColumnHandle.class::cast))
+        IcebergSplit icebergSplit = (IcebergSplit) split;
+        return prunePredicate(
+                getSplitSpec(tableHandle, split),
+                predicate.transformKeys(IcebergColumnHandle.class::cast),
+                icebergSplit.getFileStatisticsDomain())
                 .transformKeys(ColumnHandle.class::cast);
     }
 
@@ -599,9 +622,9 @@ public class IcebergPageSourceProvider
     {
     }
 
-    private TupleDomain<IcebergColumnHandle> prunePredicate(SplitSpec splitSpec, TupleDomain<ColumnHandle> predicate)
+    private TupleDomain<IcebergColumnHandle> prunePredicate(SplitSpec splitSpec, TupleDomain<ColumnHandle> predicate, TupleDomain<IcebergColumnHandle> fileStatisticsDomain)
     {
-        if (predicate.isNone() || predicate.isAll() || splitSpec.partitionSpec.isUnpartitioned()) {
+        if (predicate.isNone() || predicate.isAll()) {
             return predicate.transformKeys(IcebergColumnHandle.class::cast);
         }
 
@@ -615,7 +638,9 @@ public class IcebergPageSourceProvider
         }
 
         return predicate.transformKeys(IcebergColumnHandle.class::cast)
-                .filter((columnHandle, domain) -> !partitionColumns.contains(columnHandle));
+                .filter((columnHandle, domain) -> !partitionColumns.contains(columnHandle))
+                // remove domains from predicate that fully contain split data because they are irrelevant for filtering
+                .filter((handle, domain) -> !domain.contains(fileStatisticsDomain.getDomain(handle, domain.getType())));
     }
 
     public ReaderPageSourceWithRowPositions createDataPageSource(
