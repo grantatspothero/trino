@@ -30,7 +30,6 @@ public class IcebergMetadataFactory
     private final CatalogHandle trinoCatalogHandle;
     private final JsonCodec<CommitTaskData> commitTaskCodec;
     private final TrinoCatalogFactory catalogFactory;
-    private final WorkScheduler workScheduler;
     private final IcebergFileSystemFactory fileSystemFactory;
     private final TableStatisticsWriter tableStatisticsWriter;
 
@@ -41,7 +40,6 @@ public class IcebergMetadataFactory
             CatalogHandle trinoCatalogHandle,
             JsonCodec<CommitTaskData> commitTaskCodec,
             TrinoCatalogFactory catalogFactory,
-            WorkScheduler workScheduler,
             IcebergFileSystemFactory fileSystemFactory,
             TableStatisticsWriter tableStatisticsWriter)
     {
@@ -50,7 +48,6 @@ public class IcebergMetadataFactory
         this.trinoCatalogHandle = requireNonNull(trinoCatalogHandle, "trinoCatalogHandle is null");
         this.commitTaskCodec = requireNonNull(commitTaskCodec, "commitTaskCodec is null");
         this.catalogFactory = requireNonNull(catalogFactory, "catalogFactory is null");
-        this.workScheduler = requireNonNull(workScheduler, "workScheduler is null");
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.tableStatisticsWriter = requireNonNull(tableStatisticsWriter, "tableStatisticsWriter is null");
     }
@@ -63,7 +60,6 @@ public class IcebergMetadataFactory
                 trinoCatalogHandle,
                 commitTaskCodec,
                 catalogFactory.create(identity),
-                workScheduler,
                 fileSystemFactory,
                 tableStatisticsWriter);
     }

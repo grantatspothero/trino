@@ -121,7 +121,6 @@ public class TestIcebergCacheIds
                         new NoopWorkScheduler(),
                         new NodeVersion("test_version"),
                         new IcebergSecurityConfig()),
-                new NoopWorkScheduler(),
                 new DefaultIcebergFileSystemFactory(HDFS_FILE_SYSTEM_FACTORY),
                 new TableStatisticsWriter(new NodeVersion("test-version")));
         icebergMetadata = new IcebergCacheMetadata(
