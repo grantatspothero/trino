@@ -807,7 +807,7 @@ public abstract class BaseConnectorTest
     public void testDescribeTable()
     {
         // TODO: this is redundant with testShowColumns()
-        assertThat(query("DESCRIBE orders")).matches(getDescribeOrdersResult());
+        assertThat(query("DESCRIBE orders")).result().matches(getDescribeOrdersResult());
     }
 
     protected MaterializedResult getDescribeOrdersResult()
@@ -1764,7 +1764,7 @@ public abstract class BaseConnectorTest
 
         // test SHOW COLUMNS
         assertThat(query("SHOW COLUMNS FROM " + viewName))
-                .matches(resultBuilder(getSession(), VARCHAR, VARCHAR, VARCHAR, VARCHAR)
+                .result().matches(resultBuilder(getSession(), VARCHAR, VARCHAR, VARCHAR, VARCHAR)
                         .row("x", "bigint", "", "")
                         .row("y", "varchar(3)", "", "")
                         .build());
@@ -6486,6 +6486,7 @@ public abstract class BaseConnectorTest
                         .build());
 
         assertThat(query("SHOW FUNCTIONS FROM " + computeScalar("SELECT current_path")))
+                .result()
                 .skippingTypesCheck()
                 .matches(resultBuilder(getSession())
                         .row(name, "bigint", "integer", "scalar", true, "t42")

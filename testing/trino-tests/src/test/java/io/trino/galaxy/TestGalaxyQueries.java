@@ -154,9 +154,11 @@ public class TestGalaxyQueries
     public void verifyCleanup()
     {
         assertThat(query("SHOW ROLES"))
+                .result()
                 .skippingTypesCheck()
                 .matches(varcharColumnResult("accountadmin", "public"));
         assertThat(query("SHOW SCHEMAS FROM memory"))
+                .result()
                 .skippingTypesCheck()
                 .matches(varcharColumnResult("information_schema", "tiny", "default"));
     }
@@ -267,50 +269,64 @@ public class TestGalaxyQueries
                 .build());
 
         assertThat(query("SHOW ROLES"))
+                .result()
                 .skippingTypesCheck()
                 .matches(allRoles);
         assertThat(query(publicSession(), "SHOW ROLES"))
+                .result()
                 .skippingTypesCheck()
                 .matches(allRoles);
 
         assertThat(query("SELECT * FROM system.information_schema.roles"))
+                .result()
                 .skippingTypesCheck()
                 .matches(allRoles);
         assertThat(query(publicSession(), "SELECT * FROM system.information_schema.roles"))
+                .result()
                 .skippingTypesCheck()
                 .matches(allRoles);
         assertThat(query("SELECT * FROM tpch.information_schema.roles"))
+                .result()
                 .skippingTypesCheck()
                 .matches(allRoles);
         assertThat(query(publicSession(), "SELECT * FROM tpch.information_schema.roles"))
+                .result()
                 .skippingTypesCheck()
                 .matches(allRoles);
 
         assertThat(query("SHOW CURRENT ROLES"))
+                .result()
                 .skippingTypesCheck()
                 .matches(adminRoles);
         assertThat(query(publicSession(), "SHOW CURRENT ROLES"))
+                .result()
                 .skippingTypesCheck()
                 .matches(publicRoles);
 
         assertThat(query("SELECT * FROM system.information_schema.ENABLED_ROLES"))
+                .result()
                 .skippingTypesCheck()
                 .matches(adminRoles);
         assertThat(query(publicSession(), "SELECT * FROM system.information_schema.ENABLED_ROLES"))
+                .result()
                 .skippingTypesCheck()
                 .matches(publicRoles);
         assertThat(query("SELECT * FROM tpch.information_schema.ENABLED_ROLES"))
+                .result()
                 .skippingTypesCheck()
                 .matches(allRoles);
         assertThat(query(publicSession(), "SELECT * FROM tpch.information_schema.enabled_roles"))
+                .result()
                 .skippingTypesCheck()
                 .matches(publicRoles);
 
         // role grants only shows the direct grants of the user, and is not transitive
         assertThat(query("SHOW ROLE GRANTS"))
+                .result()
                 .skippingTypesCheck()
                 .matches(varcharColumnResult("accountadmin", "public"));
         assertThat(query(publicSession(), "SHOW ROLE GRANTS"))
+                .result()
                 .skippingTypesCheck()
                 .matches(varcharColumnResult("accountadmin", "public"));
 
@@ -324,15 +340,19 @@ public class TestGalaxyQueries
 
         // role grants are for the user, so both roles show
         assertThat(query("SELECT * FROM system.information_schema.applicable_roles"))
+                .result()
                 .skippingTypesCheck()
                 .matches(rowGrants);
         assertThat(query(publicSession(), "SELECT * FROM system.information_schema.applicable_roles"))
+                .result()
                 .skippingTypesCheck()
                 .matches(rowGrants);
         assertThat(query("SELECT * FROM tpch.information_schema.applicable_roles"))
+                .result()
                 .skippingTypesCheck()
                 .matches(rowGrants);
         assertThat(query(publicSession(), "SELECT * FROM tpch.information_schema.applicable_roles"))
+                .result()
                 .skippingTypesCheck()
                 .matches(rowGrants);
     }
@@ -345,6 +365,7 @@ public class TestGalaxyQueries
                 .build();
 
         assertThat(query(session, "SHOW ROLE GRANTS"))
+                .result()
                 .skippingTypesCheck()
                 .matches(varcharColumnResult(allRoles));
 
@@ -356,6 +377,7 @@ public class TestGalaxyQueries
 
         // role grants are for the user, so both roles show
         assertThat(query(session, "SELECT * FROM system.information_schema.applicable_roles"))
+                .result()
                 .skippingTypesCheck()
                 .matches(rowGrants);
     }
@@ -368,6 +390,7 @@ public class TestGalaxyQueries
                 .build();
 
         assertThat(query(session, "SHOW ROLE GRANTS"))
+                .result()
                 .skippingTypesCheck()
                 .matches(varcharColumnResult(allRoles));
 
@@ -379,6 +402,7 @@ public class TestGalaxyQueries
 
         // role grants are for the user, so both roles show
         assertThat(query(session, "SELECT * FROM system.information_schema.applicable_roles"))
+                .result()
                 .skippingTypesCheck()
                 .matches(rowGrants);
     }
@@ -477,9 +501,11 @@ public class TestGalaxyQueries
         }
 
         assertThat(query("SHOW CATALOGS"))
+                .result()
                 .skippingTypesCheck()
                 .matches(varcharColumnResult("system", "tpch", "memory"));
         assertThat(query(publicSession(), "SHOW CATALOGS"))
+                .result()
                 .skippingTypesCheck()
                 .matches(varcharColumnResult(ImmutableSet.<String>builder()
                         .add("system")
@@ -488,21 +514,27 @@ public class TestGalaxyQueries
                         .build()));
 
         assertThat(query("SHOW SCHEMAS FROM memory"))
+                .result()
                 .skippingTypesCheck()
                 .matches(varcharColumnResult(adminSchemas));
         assertThat(query(publicSession(), "SHOW SCHEMAS FROM memory"))
+                .result()
                 .matches(varcharColumnResult(publicSchemas));
 
         assertThat(query("SELECT schema_name FROM memory.information_schema.schemata"))
+                .result()
                 .skippingTypesCheck()
                 .matches(varcharColumnResult(adminSchemas));
         assertThat(query(publicSession(), "SELECT schema_name FROM memory.information_schema.schemata"))
+                .result()
                 .matches(varcharColumnResult(publicSchemas));
 
         assertThat(query("SHOW SCHEMAS FROM memory"))
+                .result()
                 .skippingTypesCheck()
                 .matches(varcharColumnResult(adminSchemas));
         assertThat(query(publicSession(), "SHOW SCHEMAS FROM memory"))
+                .result()
                 .matches(varcharColumnResult(publicSchemas));
     }
 
@@ -527,6 +559,7 @@ public class TestGalaxyQueries
         assertUpdate(publicSession(), "INSERT INTO memory.my_schema.my_table (my_column) VALUES ('d')", 1);
 
         assertThat(query("select * from memory.my_schema.my_table"))
+                .result()
                 .matches(varcharColumnResult("a", "c", "d"));
         assertQueryFails(publicSession(), "select * from memory.my_schema.my_table", "line 1:8: Relation not found or not allowed");
 
@@ -542,6 +575,7 @@ public class TestGalaxyQueries
         assertQueryFails(publicSession(), "DELETE FROM memory.my_schema.my_table where  my_column = 'a'", "This connector does not support modifying table rows");
 
         assertThat(query("select * from memory.my_schema.my_table"))
+                .result()
                 .matches(varcharColumnResult("a", "c", "d"));
 
         // GRANT UPDATE
@@ -558,12 +592,14 @@ public class TestGalaxyQueries
         assertQueryFails(publicSession(), "UPDATE memory.my_schema.my_table SET my_column = 'changed'", "This connector does not support modifying table rows");
 
         assertThat(query("select * from memory.my_schema.my_table"))
+                .result()
                 .matches(varcharColumnResult("a", "c", "d"));
 
         // GRANT SELECT
         assertQueryFails(publicSession(), "select * from memory.my_schema.my_table", "line 1:8: Relation not found or not allowed");
         assertUpdate("GRANT SELECT ON TABLE memory.my_schema.my_table TO ROLE public");
         assertThat(query(publicSession(), "select * from memory.my_schema.my_table"))
+                .result()
                 .matches(varcharColumnResult("a", "c", "d"));
 
         verifyTableVisibility("accountadmin", getSession(), ImmutableSet.of(MY_SCHEMA_TABLE), ALL_TABLE_PRIVILEGES);
@@ -613,6 +649,7 @@ public class TestGalaxyQueries
                 .collect(toImmutableSet());
         for (String adminTableSchema : tableSchemas) {
             assertThat(query(session, "SHOW TABLES FROM memory." + adminTableSchema))
+                    .result()
                     .skippingTypesCheck()
                     .matches(varcharColumnResult(visibleTables.stream()
                                     .filter(name -> adminTableSchema.equals(name.getSchemaName()))
@@ -627,6 +664,7 @@ public class TestGalaxyQueries
                 "WHERE table_schema not in ('information_schema', 'tiny')";
 
         assertThat(query(session, selectAllVisibleTables))
+                .result()
                 .skippingTypesCheck()
                 .matches(varcharColumnResult(visibleTables.stream()
                         .map(SchemaTableName::toString)
@@ -652,6 +690,7 @@ public class TestGalaxyQueries
             }
         }
         assertThat(query(session, selectTableGrants))
+                .result()
                 .skippingTypesCheck()
                 .matches(rowGrantsBuilder.build());
     }
@@ -729,6 +768,7 @@ public class TestGalaxyQueries
 
         assertUpdate("CREATE VIEW memory.my_schema.my_view SECURITY INVOKER AS SELECT 'value' as my_value");
         assertThat(query("SELECT * FROM memory.my_schema.my_view"))
+                .result()
                 .skippingTypesCheck()
                 .matches(varcharColumnResult("value"));
         assertUpdate("ALTER VIEW memory.my_schema.my_view SET AUTHORIZATION ROLE PUBLIC");
@@ -754,7 +794,7 @@ public class TestGalaxyQueries
 
         // Revoke all privileges to make it easy to identify added ones
         assertUpdate("REVOKE SELECT, UPDATE, INSERT, DELETE ON memory.my_schema.my_view FROM ROLE accountadmin");
-        assertThat(query("SHOW GRANTS ON memory.my_schema.my_view")).skippingTypesCheck().matches(emptyResult);
+        assertThat(query("SHOW GRANTS ON memory.my_schema.my_view")).result().skippingTypesCheck().matches(emptyResult);
 
         assertUpdate("CREATE ROLE view_privileges_role");
 
@@ -770,7 +810,7 @@ public class TestGalaxyQueries
             assertUpdate("DENY %s ON memory.my_schema.my_view TO ROLE view_privileges_role".formatted(privilege));
 
             // It's there but Trino doesn't show it yet :(
-            assertThat(query("SHOW GRANTS ON memory.my_schema.my_view")).skippingTypesCheck().matches(emptyResult);
+            assertThat(query("SHOW GRANTS ON memory.my_schema.my_view")).result().skippingTypesCheck().matches(emptyResult);
 
             // Revoke it
             assertUpdate("REVOKE %s ON memory.my_schema.my_view FROM ROLE view_privileges_role".formatted(privilege));
@@ -798,10 +838,12 @@ public class TestGalaxyQueries
         String findQuerySql = "SELECT 'found' FROM system.runtime.queries WHERE query_id = '" + queryId + "'";
         // user can always see their own query
         assertThat(query(newUserSession, findQuerySql))
+                .result()
                 .skippingTypesCheck()
                 .matches(varcharColumnResult("found"));
         // admin can see query because it has my_role active
         assertThat(query(findQuerySql))
+                .result()
                 .skippingTypesCheck()
                 .matches(varcharColumnResult("found"));
         // public can not see query
@@ -817,9 +859,11 @@ public class TestGalaxyQueries
         accountClient.grantAccountPrivilege(queryHistoryGrant);
 
         assertThat(query(publicSession(), findQuerySql))
+                .result()
                 .skippingTypesCheck()
                 .matches(varcharColumnResult("found"));
         assertThat(query(anotherUserSession, findQuerySql))
+                .result()
                 .skippingTypesCheck()
                 .matches(varcharColumnResult("found"));
 
@@ -846,6 +890,7 @@ public class TestGalaxyQueries
                 .row("test_update", true)
                 .build();
         assertThat(query("SELECT * FROM memory.definer_views.test_table"))
+                .result()
                 .matches(tableContents);
 
         // Create a view of the table
@@ -853,6 +898,7 @@ public class TestGalaxyQueries
 
         // Verify by select from the view
         assertThat(query("SELECT * FROM memory.definer_views.test_view"))
+                .result()
                 .matches(tableContents);
 
         // Make a view_user role
@@ -869,6 +915,7 @@ public class TestGalaxyQueries
 
         // When the user assumes role view_user, she can read through the view
         assertThat(query(viewUserSession, "SELECT * FROM memory.definer_views.test_view"))
+                .result()
                 .matches(tableContents);
 
         // Clean up
@@ -889,6 +936,7 @@ public class TestGalaxyQueries
                 .row("test_update", true)
                 .build();
         assertThat(query("SELECT * FROM memory.definer_views.test_table"))
+                .result()
                 .matches(tableContents);
 
         // Create a view of the table
@@ -921,7 +969,7 @@ public class TestGalaxyQueries
         // Create the base table, insert a row and verify the contents
         assertUpdate(baseTableOwnerSession, "CREATE TABLE memory.definer_views.base_table(col1 VARCHAR, col2 BOOLEAN)");
         assertUpdate(baseTableOwnerSession, "INSERT INTO memory.definer_views.base_table VALUES('test_update', true)", 1);
-        assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.base_table")).matches(tableContents);
+        assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.base_table")).result().matches(tableContents);
 
         // originally, the views cannot be created
         assertThat(query(innerViewOwnerSessionNoGrantOption, "CREATE VIEW memory.definer_views.inner_view_no_grant_option_definer AS SELECT * FROM memory.definer_views.base_table"))
@@ -941,8 +989,8 @@ public class TestGalaxyQueries
         assertUpdate(innerViewOwnerSessionNoGrantOption, "CREATE VIEW memory.definer_views.inner_view_no_grant_option_invoker SECURITY INVOKER AS SELECT * FROM memory.definer_views.base_table");
 
         // they are also allowed to be queried when the view owner queries them
-        assertThat(query(innerViewOwnerSessionNoGrantOption, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer")).matches(tableContents);
-        assertThat(query(innerViewOwnerSessionNoGrantOption, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker")).matches(tableContents);
+        assertThat(query(innerViewOwnerSessionNoGrantOption, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer")).result().matches(tableContents);
+        assertThat(query(innerViewOwnerSessionNoGrantOption, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker")).result().matches(tableContents);
 
         // however, without the grant option, another role won't be able to query the view
         assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
@@ -970,7 +1018,7 @@ public class TestGalaxyQueries
 
         // grant with grant option, and the definer view can now be queried, but invoker still needs the grant
         assertUpdate(baseTableOwnerSession, "GRANT SELECT ON TABLE memory.definer_views.base_table TO ROLE inner_view_owner_no_grant_option WITH GRANT OPTION");
-        assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer")).matches(tableContents);
+        assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer")).result().matches(tableContents);
         assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker"))
                 .failure()
                 .isInstanceOf(RuntimeException.class)
@@ -978,8 +1026,8 @@ public class TestGalaxyQueries
 
         // give base table access to outer_view_owner, and now querying should work for outer_view_owner role
         assertUpdate(baseTableOwnerSession, "GRANT SELECT ON TABLE memory.definer_views.base_table TO ROLE outer_view_owner");
-        assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer")).matches(tableContents);
-        assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker")).matches(tableContents);
+        assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer")).result().matches(tableContents);
+        assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker")).result().matches(tableContents);
 
         // make sure this doesn't work for base_table_owner, as they don't have view privileges
         assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
@@ -993,23 +1041,23 @@ public class TestGalaxyQueries
 
         // grant inner_view_owner_no_grant_option to base_table_owner role and querying the views should succeed
         assertUpdate("GRANT inner_view_owner_no_grant_option TO ROLE base_table_owner");
-        assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer")).matches(tableContents);
-        assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker")).matches(tableContents);
+        assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer")).result().matches(tableContents);
+        assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker")).result().matches(tableContents);
 
         // revoke the grant option -- now querying by outer_view_owner should fail again,
         // but base_table_owner should still succeed, as it has the view owner in its active role set
         assertUpdate(baseTableOwnerSession, "REVOKE SELECT ON TABLE memory.definer_views.base_table FROM ROLE inner_view_owner_no_grant_option");
         assertUpdate(baseTableOwnerSession, "GRANT SELECT ON TABLE memory.definer_views.base_table TO ROLE inner_view_owner_no_grant_option");
 
-        assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer")).matches(tableContents);
-        assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker")).matches(tableContents);
+        assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer")).result().matches(tableContents);
+        assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker")).result().matches(tableContents);
 
         assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_definer"))
                 .failure()
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Access Denied: View owner does not have sufficient privileges: View owner 'inner_view_owner_no_grant_option' cannot create view that selects from memory.definer_views.base_table: Role inner_view_owner_no_grant_option does not have the privilege SELECT WITH GRANT OPTION on the columns [col2, col1]");
         // invoker is still good
-        assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker")).matches(tableContents);
+        assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view_no_grant_option_invoker")).result().matches(tableContents);
 
         // revoke the role grant and the definer view isn't accessible to either role anymore
         assertUpdate("REVOKE inner_view_owner_no_grant_option FROM ROLE base_table_owner");
@@ -1059,7 +1107,7 @@ public class TestGalaxyQueries
         // Create the base table, insert a row and verify the contents
         assertUpdate(baseTableOwnerSession, "CREATE TABLE memory.views_test.base_table(col1 VARCHAR, col2 VARCHAR, col3 BOOLEAN)");
         assertUpdate(baseTableOwnerSession, "INSERT INTO memory.views_test.base_table VALUES('abc', 'def', true)", 1);
-        assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.views_test.base_table")).matches(tableContents);
+        assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.views_test.base_table")).result().matches(tableContents);
 
         // Grant SELECT col1 and col2 on base_table to view_owner with grant option
         CatalogId memoryCatalogId = testingAccountClient.getOrCreateCatalog("memory");
@@ -1071,15 +1119,15 @@ public class TestGalaxyQueries
                 toDispatchSession(baseTableOwnerSession),
                 new ColumnId(memoryCatalogId, "views_test", "base_table", "col2"),
                 ImmutableSet.of(new CreateEntityPrivilege(io.starburst.stargate.accesscontrol.privilege.Privilege.SELECT, ALLOW, new RoleName("view_owner"), true)));
-        assertThat(query(viewOwnerSession, "SELECT * FROM memory.views_test.base_table")).matches(col1Col2Contents);
+        assertThat(query(viewOwnerSession, "SELECT * FROM memory.views_test.base_table")).result().matches(col1Col2Contents);
 
         // Create new definer and invoker views
         assertUpdate(viewOwnerSession, "CREATE VIEW memory.views_test.definer_view AS SELECT * FROM memory.views_test.base_table");
         assertUpdate(viewOwnerSession, "CREATE VIEW memory.views_test.invoker_view SECURITY INVOKER AS SELECT * FROM memory.views_test.base_table");
 
         // view_owner sees only col1 when querying the views
-        assertThat(query(viewOwnerSession, "SELECT * FROM memory.views_test.definer_view")).matches(col1Col2Contents);
-        assertThat(query(viewOwnerSession, "SELECT * FROM memory.views_test.invoker_view")).matches(col1Col2Contents);
+        assertThat(query(viewOwnerSession, "SELECT * FROM memory.views_test.definer_view")).result().matches(col1Col2Contents);
+        assertThat(query(viewOwnerSession, "SELECT * FROM memory.views_test.invoker_view")).result().matches(col1Col2Contents);
 
         // view_viewer cannot query the views
         assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.definer_view"))
@@ -1094,7 +1142,7 @@ public class TestGalaxyQueries
         // Grant view_viewer SELECT on the views. The definer view can be queried, but not the invoker
         assertUpdate("GRANT SELECT ON TABLE memory.views_test.definer_view TO ROLE view_viewer");
         assertUpdate("GRANT SELECT ON TABLE memory.views_test.invoker_view TO ROLE view_viewer");
-        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.definer_view")).matches(col1Col2Contents);
+        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.definer_view")).result().matches(col1Col2Contents);
         assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.invoker_view"))
                 .failure()
                 .isInstanceOf(RuntimeException.class)
@@ -1102,8 +1150,8 @@ public class TestGalaxyQueries
 
         // Grant view_viewer SELECT on the base table.
         assertUpdate("GRANT SELECT ON TABLE memory.views_test.base_table TO ROLE view_viewer");
-        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.definer_view")).matches(col1Col2Contents);
-        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.invoker_view")).matches(col1Col2Contents);
+        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.definer_view")).result().matches(col1Col2Contents);
+        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.invoker_view")).result().matches(col1Col2Contents);
 
         // Revoke view_viewer SELECT on the base table and then grant it SELECT on col1
         assertUpdate("REVOKE SELECT ON TABLE memory.views_test.base_table FROM ROLE view_viewer");
@@ -1111,8 +1159,8 @@ public class TestGalaxyQueries
                 toDispatchSession(baseTableOwnerSession),
                 new ColumnId(memoryCatalogId, "views_test", "base_table", "col1"),
                 ImmutableSet.of(new CreateEntityPrivilege(io.starburst.stargate.accesscontrol.privilege.Privilege.SELECT, ALLOW, new RoleName("view_viewer"), true)));
-        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.definer_view")).matches(col1Contents);
-        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.invoker_view")).matches(col1Contents);
+        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.definer_view")).result().matches(col1Contents);
+        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.invoker_view")).result().matches(col1Contents);
 
         // Revoke view_viewer SELECT on both views. Grant SELECT on col1 to both views.
         assertUpdate("REVOKE SELECT ON TABLE memory.views_test.definer_view FROM ROLE view_viewer");
@@ -1125,13 +1173,13 @@ public class TestGalaxyQueries
                 toDispatchSession(baseTableOwnerSession),
                 new ColumnId(memoryCatalogId, "views_test", "invoker_view", "col1"),
                 ImmutableSet.of(new CreateEntityPrivilege(io.starburst.stargate.accesscontrol.privilege.Privilege.SELECT, ALLOW, new RoleName("view_viewer"), true)));
-        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.definer_view")).matches(col1Contents);
-        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.invoker_view")).matches(col1Contents);
+        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.definer_view")).result().matches(col1Contents);
+        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.invoker_view")).result().matches(col1Contents);
 
         // Grant view_viewer SELECT on the base table again
         assertUpdate("GRANT SELECT ON TABLE memory.views_test.base_table TO ROLE view_viewer");
-        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.definer_view")).matches(col1Contents);
-        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.invoker_view")).matches(col1Contents);
+        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.definer_view")).result().matches(col1Contents);
+        assertThat(query(viewViewerSession, "SELECT * FROM memory.views_test.invoker_view")).result().matches(col1Contents);
 
         // Clean up
         assertUpdate("DROP VIEW memory.views_test.invoker_view");
@@ -1162,20 +1210,20 @@ public class TestGalaxyQueries
         // Create the base table, insert a row and verify the contents
         assertUpdate(baseTableOwnerSession, "CREATE TABLE memory.definer_views.base_table(col1 VARCHAR, col2 BOOLEAN)");
         assertUpdate(baseTableOwnerSession, "INSERT INTO memory.definer_views.base_table VALUES('test_update', true)", 1);
-        assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.base_table")).matches(tableContents);
+        assertThat(query(baseTableOwnerSession, "SELECT * FROM memory.definer_views.base_table")).result().matches(tableContents);
 
         assertUpdate(baseTableOwnerSession, "GRANT SELECT ON TABLE memory.definer_views.base_table TO ROLE inner_view_owner WITH GRANT OPTION");
 
         // Create the inner view and verify contents
         assertUpdate(innerViewOwnerSession, "CREATE VIEW memory.definer_views.inner_view AS SELECT * FROM memory.definer_views.base_table");
-        assertThat(query(innerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view")).matches(tableContents);
+        assertThat(query(innerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view")).result().matches(tableContents);
 
         // Grant select on inner_view to role outer_view_owner with grant option
         assertUpdate(innerViewOwnerSession, "GRANT SELECT ON TABLE memory.definer_views.inner_view TO ROLE outer_view_owner WITH GRANT OPTION");
 
         // Create the outer view and verify contents
         assertUpdate(outerViewOwnerSession, "CREATE VIEW memory.definer_views.outer_view AS SELECT * FROM memory.definer_views.inner_view");
-        assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.outer_view")).matches(tableContents);
+        assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.outer_view")).result().matches(tableContents);
 
         // Verify that outer_view_owner cannot access base_table
         assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.base_table"))
@@ -1185,7 +1233,7 @@ public class TestGalaxyQueries
 
         // Grant SELECT on outer_view to test_role and verify contents
         assertUpdate(outerViewOwnerSession, "GRANT SELECT ON TABLE memory.definer_views.outer_view TO ROLE test_role");
-        assertThat(query(testRoleSession, "SELECT * FROM memory.definer_views.outer_view")).matches(tableContents);
+        assertThat(query(testRoleSession, "SELECT * FROM memory.definer_views.outer_view")).result().matches(tableContents);
 
         // Verify that test_role cannot access either inner_view or base_table
         for (String tableName : ImmutableList.of("inner_view", "base_table")) {
@@ -1213,14 +1261,14 @@ public class TestGalaxyQueries
 
         // Grant it again and they all work again
         assertUpdate(getSession(), "GRANT SELECT ON TABLE memory.definer_views.base_table TO ROLE inner_view_owner WITH GRANT OPTION");
-        assertThat(query(innerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view")).matches(tableContents);
-        assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.outer_view")).matches(tableContents);
-        assertThat(query(testRoleSession, "SELECT * FROM memory.definer_views.outer_view")).matches(tableContents);
+        assertThat(query(innerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view")).result().matches(tableContents);
+        assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.outer_view")).result().matches(tableContents);
+        assertThat(query(testRoleSession, "SELECT * FROM memory.definer_views.outer_view")).result().matches(tableContents);
 
         // Revoke the SELECT grant to outer_view_owner on the inner_view and verify that
         // inner_view_owner can still access the view, but outer_view_owner and test_role cannot
         assertUpdate(getSession(), "REVOKE SELECT ON TABLE memory.definer_views.inner_view FROM ROLE outer_view_owner");
-        assertThat(query(innerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view")).matches(tableContents);
+        assertThat(query(innerViewOwnerSession, "SELECT * FROM memory.definer_views.inner_view")).result().matches(tableContents);
         assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.outer_view"))
                 .failure()
                 .isInstanceOf(RuntimeException.class)
@@ -1232,8 +1280,8 @@ public class TestGalaxyQueries
 
         // Grant it again and they all work again
         assertUpdate(getSession(), "GRANT SELECT ON TABLE memory.definer_views.inner_view TO ROLE outer_view_owner WITH GRANT OPTION");
-        assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.outer_view")).matches(tableContents);
-        assertThat(query(testRoleSession, "SELECT * FROM memory.definer_views.outer_view")).matches(tableContents);
+        assertThat(query(outerViewOwnerSession, "SELECT * FROM memory.definer_views.outer_view")).result().matches(tableContents);
+        assertThat(query(testRoleSession, "SELECT * FROM memory.definer_views.outer_view")).result().matches(tableContents);
 
         // Clean up
         assertUpdate("DROP VIEW memory.definer_views.outer_view");
@@ -1269,7 +1317,7 @@ public class TestGalaxyQueries
         // Create the base table, insert a row and verify the contents
         assertUpdate(filterOwner, "CREATE TABLE memory.row_filters.base_table(base_col1 VARCHAR, base_col2 BOOLEAN)");
         assertUpdate(filterOwner, "INSERT INTO memory.row_filters.base_table VALUES('filtered', true), ('unfiltered', false)", 2);
-        assertThat(query(filterOwner, "SELECT * FROM memory.row_filters.base_table")).matches(baseTableContents);
+        assertThat(query(filterOwner, "SELECT * FROM memory.row_filters.base_table")).result().matches(baseTableContents);
 
         // Create the subquery table, insert a row and verify the contents
         assertUpdate(filterOwner, "CREATE TABLE memory.row_filters.subquery_table(match_column VARCHAR)");
@@ -1278,7 +1326,7 @@ public class TestGalaxyQueries
                 .row("filtered")
                 .build();
         TestingAccountClient client = getTestingAccountClient();
-        assertThat(query(filterOwner, "SELECT * FROM memory.row_filters.subquery_table")).matches(subqueryTableContents);
+        assertThat(query(filterOwner, "SELECT * FROM memory.row_filters.subquery_table")).result().matches(subqueryTableContents);
 
         // Make the row filter, owned by filterOwner
         RowFilterId rowFilterId = client.createRowFilter(
@@ -1299,7 +1347,7 @@ public class TestGalaxyQueries
 
         // Show that the row filter is in effect for filterOwner
         assertUpdate("GRANT policy_enabler TO ROLE filter_owner");
-        assertThat(query(filterOwner, "SELECT * FROM memory.row_filters.base_table")).matches(filteredTableContents);
+        assertThat(query(filterOwner, "SELECT * FROM memory.row_filters.base_table")).result().matches(filteredTableContents);
 
         // Create a "reader" who doesn't have access to subquery_table
         Session tableReaderSession = createUserAndGrantedRole("table_reader");
@@ -1313,7 +1361,7 @@ public class TestGalaxyQueries
                 .hasMessage("line 1:8: Relation not found or not allowed");
 
         // Show that we only get the filtered row when querying the base_table
-        assertThat(query(tableReaderSession, "SELECT * FROM memory.row_filters.base_table")).matches(filteredTableContents);
+        assertThat(query(tableReaderSession, "SELECT * FROM memory.row_filters.base_table")).result().matches(filteredTableContents);
 
         // Clean up
         client.deletePolicy(policyId);
@@ -1352,7 +1400,7 @@ public class TestGalaxyQueries
         // Create the base table, insert a row and verify the contents
         assertUpdate(maskOwner, "CREATE TABLE memory.column_masks.column_mask_test_table(base_col1 VARCHAR, base_col2 BOOLEAN)");
         assertUpdate(maskOwner, "INSERT INTO memory.column_masks.column_mask_test_table VALUES('unmasked_1', true), ('unmasked_2', false)", 2);
-        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(unmaskedTableContents);
+        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).result().matches(unmaskedTableContents);
 
         TestingAccountClient client = getTestingAccountClient();
 
@@ -1372,32 +1420,32 @@ public class TestGalaxyQueries
         PolicyId policyId = client.createColumnMaskPolicy("column_mask_policy", "memory.column_masks.column_mask_test_table", "has_tag(tag1)", policyEnablerId, columnMaskId);
 
         // Show that before the tag is applied, the mask owner sees unmasked results
-        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(unmaskedTableContents);
+        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).result().matches(unmaskedTableContents);
 
         // Apply the tag to base_col1 of the column_mask_test_table
         client.applyTag(tagId, EntityKind.COLUMN, "memory.column_masks.column_mask_test_table.base_col1");
 
         // Show that before the enabling role is granted, the mask_owner sees unmasked results
-        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(unmaskedTableContents);
+        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).result().matches(unmaskedTableContents);
 
         // Grant the enabling role to mask_owner
         assertUpdate("GRANT policy_enabler TO ROLE mask_owner");
 
         // Show that mask_owner sees masked results
-        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(maskedTableContents);
+        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).result().matches(maskedTableContents);
 
         // Create an unrelated "reader" role, and grant SELECT on the table
         Session tableReader = createUserAndGrantedRole("table_reader");
         assertUpdate("GRANT SELECT ON table memory.column_masks.column_mask_test_table TO ROLE table_reader");
 
         // Show that before being granted , the table_reader sees unmasked results
-        assertThat(query(tableReader, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(unmaskedTableContents);
+        assertThat(query(tableReader, "SELECT * FROM memory.column_masks.column_mask_test_table")).result().matches(unmaskedTableContents);
 
         // Grant the enabling role to table_reader
         assertUpdate("GRANT policy_enabler TO ROLE table_reader");
 
         // Show that table_reader now sees masked results
-        assertThat(query(tableReader, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(maskedTableContents);
+        assertThat(query(tableReader, "SELECT * FROM memory.column_masks.column_mask_test_table")).result().matches(maskedTableContents);
 
         // Update the column mask expression
         client.updateColumnMask(columnMaskId, "UPDATED_MASK", "'UPDATED_MASK'", ColumnMaskType.VARCHAR);
@@ -1407,16 +1455,16 @@ public class TestGalaxyQueries
                 .build();
 
         // Show that mask_owner and table_reader see new results
-        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(updatedMaskedTableContents);
-        assertThat(query(tableReader, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(updatedMaskedTableContents);
+        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).result().matches(updatedMaskedTableContents);
+        assertThat(query(tableReader, "SELECT * FROM memory.column_masks.column_mask_test_table")).result().matches(updatedMaskedTableContents);
 
         // Delete that policy and mask
         client.deletePolicy(policyId);
         client.deleteColumnMask(columnMaskId);
 
         // Show that mask_owner and table_reader see unmasked results
-        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(unmaskedTableContents);
-        assertThat(query(tableReader, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(unmaskedTableContents);
+        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).result().matches(unmaskedTableContents);
+        assertThat(query(tableReader, "SELECT * FROM memory.column_masks.column_mask_test_table")).result().matches(unmaskedTableContents);
 
         // Create a policy and mask that depends on a table that only mask_owner can access
         assertUpdate(maskOwner, "CREATE TABLE memory.column_masks.subquery_table(match_column VARCHAR)");
@@ -1426,7 +1474,7 @@ public class TestGalaxyQueries
                 .build();
 
         // mask_owner can query subquery_table
-        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.subquery_table")).matches(subqueryTableContents);
+        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.subquery_table")).result().matches(subqueryTableContents);
 
         // table_reader cannot query subquery_table
         assertThat(query(tableReader, "SELECT * FROM memory.column_masks.subquery_table"))
@@ -1450,8 +1498,8 @@ public class TestGalaxyQueries
                 .build();
 
         // Both mask_owner and table_reader see the masked values when querying column_mask_test_table
-        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(maskedTableContents);
-        assertThat(query(tableReader, "SELECT * FROM memory.column_masks.column_mask_test_table")).matches(maskedTableContents);
+        assertThat(query(maskOwner, "SELECT * FROM memory.column_masks.column_mask_test_table")).result().matches(maskedTableContents);
+        assertThat(query(tableReader, "SELECT * FROM memory.column_masks.column_mask_test_table")).result().matches(maskedTableContents);
 
         // Clean up
         client.deletePolicy(policyId);
