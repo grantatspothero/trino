@@ -19,7 +19,7 @@
         <air.test.parallel>instances</air.test.parallel>
         <air.test.thread-count>1</air.test.thread-count>
         <!-- overide warp version to use new FS-->
-        <dep.warp-speed.version>436.0.0</dep.warp-speed.version>
+        <dep.warp-speed.version>436.0.2</dep.warp-speed.version>
     </properties>
 
     <dependencies>
@@ -65,6 +65,12 @@
             <groupId>com.starburstdata.presto</groupId>
             <artifactId>warp-speed-object-store</artifactId>
             <version>${dep.warp-speed.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.trino</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.starburstdata.presto</groupId>

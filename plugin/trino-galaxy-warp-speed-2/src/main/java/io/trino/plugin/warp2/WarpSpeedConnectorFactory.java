@@ -20,6 +20,7 @@ import io.trino.plugin.varada.configuration.ProxiedConnectorConfiguration;
 import io.trino.plugin.varada.di.InitializationModule;
 import io.trino.plugin.varada.dispatcher.DispatcherConnectorFactory;
 import io.trino.plugin.varada.dispatcher.connectors.ConnectorTaskExecutor;
+import io.trino.plugin.varada.objectstore.di.ObjectStoreFakeSessionModule;
 import io.trino.plugin.varada.objectstore.di.WarpSpeedObjectStoreModule;
 import io.trino.spi.connector.Connector;
 import io.trino.spi.connector.ConnectorContext;
@@ -58,7 +59,7 @@ public class WarpSpeedConnectorFactory
     @Override
     public Connector create(String catalogName, Map<String, String> config, ConnectorContext context)
     {
-        Optional<List<Class<? extends InitializationModule>>> optionalModules = Optional.of(List.of(WarpSpeedObjectStoreModule.class, DummyTaskExecutorModule.class));
+        Optional<List<Class<? extends InitializationModule>>> optionalModules = Optional.of(List.of(WarpSpeedObjectStoreModule.class, DummyTaskExecutorModule.class, ObjectStoreFakeSessionModule.class));
 
         String proxyConnectorName = new MultiPrefixConfigurationWrapper(config).getOrDefault(ProxiedConnectorConfiguration.PROXIED_CONNECTOR,
                 ObjectStoreProxyConnectorInitializer.CONNECTOR_NAME);
