@@ -32,7 +32,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
-import static io.trino.plugin.iceberg.IcebergQueryRunner.ICEBERG_CATALOG;
+import static io.trino.plugin.iceberg.IcebergTestUtils.getIcebergConnectorInjector;
 import static io.trino.testing.TestingSession.testSession;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
@@ -62,7 +62,7 @@ public class TestIcebergGetTableStatisticsOperations
         queryRunner.installPlugin(new TestingIcebergPlugin(metastoreDir));
         queryRunner.createCatalog("iceberg", "iceberg", ImmutableMap.of());
 
-        HiveMetastore metastore = ((IcebergConnector) queryRunner.getCoordinator().getConnector(ICEBERG_CATALOG)).getInjector()
+        HiveMetastore metastore = getIcebergConnectorInjector(queryRunner)
                 .getInstance(HiveMetastoreFactory.class)
                 .createMetastore(Optional.empty());
 
