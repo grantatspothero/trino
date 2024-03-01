@@ -14,7 +14,6 @@ Azure Storage <hive-azure>
 Google Cloud Storage <hive-gcs-tutorial>
 IBM Cloud Object Storage <hive-cos>
 Storage Caching <hive-caching>
-Object storage file formats <object-storage-file-formats>
 ```
 
 The Hive connector allows querying data stored in an
