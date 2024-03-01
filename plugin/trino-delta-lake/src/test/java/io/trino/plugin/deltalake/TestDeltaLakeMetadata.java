@@ -676,7 +676,6 @@ public class TestDeltaLakeMetadata
             simulateStatisticsRequest(session, tableName);
             assertInputInfo(session, tableName,  new DeltaLakeInputInfoBuilder()
                     .setExtendedStatisticsMetric("REQUESTED_PRESENT")
-                    .setNumberOfDataFiles(Optional.of(1))
                     .build());
 
         });
@@ -696,7 +695,6 @@ public class TestDeltaLakeMetadata
             simulateStatisticsRequest(session, tableName);
             assertInputInfo(session, tableName,  new DeltaLakeInputInfoBuilder()
                     .setExtendedStatisticsMetric("REQUESTED_NOT_PRESENT")
-                    .setNumberOfDataFiles(Optional.of(1))
                     .build());
         });
 
@@ -710,10 +708,14 @@ public class TestDeltaLakeMetadata
         assertUpdate("CREATE TABLE " + tableName + " (a VARCHAR)");
         assertUpdate("INSERT INTO " + tableName + " VALUES('txt1'), ('txt2')", 2);
 
+        String catalog = getSession().getCatalog().orElseThrow();
+        Session sessionWithoutCheckpointFiltering = Session.builder(getSession())
+                .setCatalogSessionProperty(catalog, "checkpoint_filtering_enabled", "false")
+                .build();
         // Number of data files metric is not present until cache is loaded
         assertInputInfoNumberOfDataFiles(tableName, Optional.empty(), 1);
 
-        assertQuerySucceeds("SELECT * FROM " + tableName); // Fill cache
+        assertQuerySucceeds(sessionWithoutCheckpointFiltering,"SELECT * FROM " + tableName); // Fill cache
         assertInputInfoNumberOfDataFiles(tableName, Optional.of(1), 1);
 
         assertUpdate("INSERT INTO " + tableName + " VALUES('txt3')", 1);
@@ -721,15 +723,15 @@ public class TestDeltaLakeMetadata
         assertUpdate("INSERT INTO " + tableName + " VALUES('txt3')", 1);
         assertUpdate("INSERT INTO " + tableName + " VALUES('txt3')", 1);
         assertUpdate("INSERT INTO " + tableName + " VALUES('txt3')", 1);
-        assertQuerySucceeds("SELECT * FROM " + tableName); // Fill cache
+        assertQuerySucceeds(sessionWithoutCheckpointFiltering,"SELECT * FROM " + tableName); // Fill cache
         assertInputInfoNumberOfDataFiles(tableName, Optional.of(6), 6);
 
         assertUpdate("UPDATE " + tableName + " SET a = 'txt10' WHERE a = 'txt2'", 1);
-        assertQuerySucceeds("SELECT * FROM " + tableName); // Fill cache
+        assertQuerySucceeds(sessionWithoutCheckpointFiltering,"SELECT * FROM " + tableName); // Fill cache
         assertInputInfoNumberOfDataFiles(tableName, Optional.of(7), 7);
 
         assertUpdate("DELETE FROM " + tableName, 7);
-        assertQuerySucceeds("SELECT * FROM " + tableName); // Fill cache
+        assertQuerySucceeds(sessionWithoutCheckpointFiltering,"SELECT * FROM " + tableName); // Fill cache
         assertInputInfoNumberOfDataFiles(tableName, Optional.of(0), 8);
     }
 
