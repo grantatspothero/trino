@@ -26,7 +26,7 @@ public class ConfigureCachingMetastoreModule
     protected void setup(Binder binder)
     {
         configBinder(binder).bindConfigDefaults(CachingHiveMetastoreConfig.class, config -> {
-            // CachingMetastore may cache the fact table does not exist. In ObjectStore connector there are 2 such metatores (Hive, Delta, Hudi).
+            // CachingMetastore may cache the fact table does not exist. In ObjectStore connector there are 3 such metastores (Hive, Delta, Hudi).
             // Caching table non-existence may prevent accessing the table after it's created, as ObjectStoreMetadata.getTableHandle stops as soon as
             // any of the underlying connector reports "table does not exist".
             config.setCacheMissing(false);
