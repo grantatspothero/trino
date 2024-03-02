@@ -654,9 +654,15 @@ public class AccessControlManager
         requireNonNull(catalogName, "catalogName is null");
         requireNonNull(tableColumns, "tableColumns is null");
 
-        Set<SchemaTableName> filteredTables = filterTables(securityContext, catalogName, tableColumns.keySet());
-        if (!filteredTables.equals(tableColumns.keySet())) {
-            tableColumns = Maps.filterKeys(tableColumns, filteredTables::contains);
+        // TODO (https://github.com/starburstdata/stargate/issues/12932) we probably can skip the check for information_schema as well
+        //  but this requires more discussion
+        if (tableColumns.keySet().stream().anyMatch(schemaTableName -> "information_schema".equals(schemaTableName.getSchemaName()))) {
+            // This call is meant as a pre-filter, but in Galaxy filterTables is actually expensive
+            // the privilege checks happen in filter columns below
+            Set<SchemaTableName> filteredTables = filterTables(securityContext, catalogName, tableColumns.keySet());
+            if (!filteredTables.equals(tableColumns.keySet())) {
+                tableColumns = Maps.filterKeys(tableColumns, filteredTables::contains);
+            }
         }
 
         if (tableColumns.isEmpty()) {

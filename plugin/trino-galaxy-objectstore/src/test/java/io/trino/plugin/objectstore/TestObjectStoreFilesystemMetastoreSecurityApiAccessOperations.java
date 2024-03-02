@@ -262,7 +262,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                         .replace(tableName, "test_ctas_different_catalog"))
                                 .setExpected(ImmutableMultiset.<String>builder()
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/role")
-                                        .addCopies("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/schema/c-xxx/tiny/tableVisibility", tableForm ? 0 : 1) // TODO due to Trino bug, hide-inaccessible-columns does not apply to "AS TABLE t"
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/schema/c-xxx/test_schema/privileges/r-xxx")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/tiny/nation/privileges/r-xxx")
                                         .add("galaxy-access-control POST /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_ctas_different_catalog/:create")
@@ -298,7 +297,6 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                                         .replaceAll("(/[cr])-\\d+(/|$)", "$1-xxx$2"))
                                 .setExpected(ImmutableMultiset.<String>builder()
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/role")
-                                        .add("galaxy-access-control PUT /api/v1/galaxy/security/trino/entity/schema/c-xxx/tiny/tableVisibility")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/schema/c-xxx/test_schema/privileges/r-xxx")
                                         .add("galaxy-access-control GET /api/v1/galaxy/security/trino/entity/table/c-xxx/tiny/nation/privileges/r-xxx")
                                         .add("galaxy-access-control POST /api/v1/galaxy/security/trino/entity/table/c-xxx/test_schema/test_create_view_different_catalog/:create")
