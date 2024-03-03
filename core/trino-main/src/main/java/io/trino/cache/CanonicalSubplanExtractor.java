@@ -67,7 +67,7 @@ import static com.google.common.collect.Streams.stream;
 import static io.trino.cache.CanonicalSubplan.TopNRankingKey;
 import static io.trino.sql.DynamicFilters.isDynamicFilter;
 import static io.trino.sql.ExpressionFormatter.formatExpression;
-import static io.trino.sql.ExpressionUtils.extractConjuncts;
+import static io.trino.sql.ir.IrUtils.extractConjuncts;
 import static io.trino.sql.planner.DeterminismEvaluator.isDeterministic;
 import static io.trino.sql.planner.ExpressionExtractor.extractExpressions;
 import static io.trino.sql.planner.plan.AggregationNode.Step.PARTIAL;
