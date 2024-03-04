@@ -1349,16 +1349,6 @@ public class Analysis
                 .orElse(FALSE);
     }
 
-    public List<Field> getMaterializedViewStorageTableFields(Table node)
-    {
-        return materializedViewStorageTableFields.get(NodeRef.of(node));
-    }
-
-    public void setMaterializedViewStorageTableFields(Table node, List<Field> fields)
-    {
-        materializedViewStorageTableFields.put(NodeRef.of(node), fields);
-    }
-
     public List<PatternInputAnalysis> getPatternInputsAnalysis(Expression expression)
     {
         return patternInputsAnalysis.get(NodeRef.of(expression));
@@ -1397,6 +1387,16 @@ public class Analysis
     public void addResolvedLabels(Map<NodeRef<Identifier>, String> labels)
     {
         resolvedLabels.putAll(labels);
+    }
+
+    public List<Field> getMaterializedViewStorageTableFields(Table node)
+    {
+        return materializedViewStorageTableFields.get(NodeRef.of(node));
+    }
+
+    public void setMaterializedViewStorageTableFields(Table node, List<Field> fields)
+    {
+        materializedViewStorageTableFields.put(NodeRef.of(node), fields);
     }
 
     @Immutable
