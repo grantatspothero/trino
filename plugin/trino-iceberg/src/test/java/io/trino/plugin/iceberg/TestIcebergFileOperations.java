@@ -44,7 +44,6 @@ import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.INPUT_
 import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.INPUT_FILE_LAST_MODIFIED;
 import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.INPUT_FILE_NEW_STREAM;
 import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.OUTPUT_FILE_CREATE;
-import static io.trino.filesystem.TrackingFileSystemFactory.OperationType.OUTPUT_FILE_CREATE_OR_OVERWRITE;
 import static io.trino.plugin.iceberg.IcebergQueryRunner.ICEBERG_CATALOG;
 import static io.trino.plugin.iceberg.IcebergSessionProperties.COLLECT_EXTENDED_STATISTICS_ON_WRITE;
 import static io.trino.plugin.iceberg.TestIcebergFileOperations.FileType.DATA;
@@ -121,7 +120,7 @@ public class TestIcebergFileOperations
                         .add(new FileOperation(METADATA_JSON, OUTPUT_FILE_CREATE))
                         .add(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH))
                         .add(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM))
-                        .add(new FileOperation(SNAPSHOT, OUTPUT_FILE_CREATE_OR_OVERWRITE))
+                        .add(new FileOperation(SNAPSHOT, OUTPUT_FILE_CREATE))
                         .build());
     }
 
@@ -133,7 +132,7 @@ public class TestIcebergFileOperations
                         .add(new FileOperation(METADATA_JSON, OUTPUT_FILE_CREATE))
                         .add(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH))
                         .add(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM))
-                        .add(new FileOperation(SNAPSHOT, OUTPUT_FILE_CREATE_OR_OVERWRITE))
+                        .add(new FileOperation(SNAPSHOT, OUTPUT_FILE_CREATE))
                         .build());
         assertFileSystemAccesses("CREATE OR REPLACE TABLE test_create_or_replace (id VARCHAR, age INT)",
                 ImmutableMultiset.<FileOperation>builder()
@@ -141,7 +140,7 @@ public class TestIcebergFileOperations
                         .add(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM))
                         .add(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH))
                         .add(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM))
-                        .add(new FileOperation(SNAPSHOT, OUTPUT_FILE_CREATE_OR_OVERWRITE))
+                        .add(new FileOperation(SNAPSHOT, OUTPUT_FILE_CREATE))
                         .build());
     }
 
@@ -155,8 +154,8 @@ public class TestIcebergFileOperations
                         .add(new FileOperation(METADATA_JSON, OUTPUT_FILE_CREATE))
                         .add(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH))
                         .add(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM))
-                        .add(new FileOperation(SNAPSHOT, OUTPUT_FILE_CREATE_OR_OVERWRITE))
-                        .add(new FileOperation(MANIFEST, OUTPUT_FILE_CREATE_OR_OVERWRITE))
+                        .add(new FileOperation(SNAPSHOT, OUTPUT_FILE_CREATE))
+                        .add(new FileOperation(MANIFEST, OUTPUT_FILE_CREATE))
                         .build());
 
         assertFileSystemAccesses(
@@ -167,8 +166,8 @@ public class TestIcebergFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, OUTPUT_FILE_CREATE), 2) // TODO (https://github.com/trinodb/trino/issues/15439): it would be good to publish data and stats in one commit
                         .add(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH))
                         .add(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM))
-                        .add(new FileOperation(SNAPSHOT, OUTPUT_FILE_CREATE_OR_OVERWRITE))
-                        .add(new FileOperation(MANIFEST, OUTPUT_FILE_CREATE_OR_OVERWRITE))
+                        .add(new FileOperation(SNAPSHOT, OUTPUT_FILE_CREATE))
+                        .add(new FileOperation(MANIFEST, OUTPUT_FILE_CREATE))
                         .add(new FileOperation(STATS, OUTPUT_FILE_CREATE))
                         .build());
     }
@@ -183,9 +182,9 @@ public class TestIcebergFileOperations
                         .add(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM))
                         .add(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH))
                         .add(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM))
-                        .add(new FileOperation(SNAPSHOT, OUTPUT_FILE_CREATE_OR_OVERWRITE))
-                        .add(new FileOperation(MANIFEST, OUTPUT_FILE_CREATE_OR_OVERWRITE))
                         .add(new FileOperation(STATS, OUTPUT_FILE_CREATE))
+                        .add(new FileOperation(SNAPSHOT, OUTPUT_FILE_CREATE))
+                        .add(new FileOperation(MANIFEST, OUTPUT_FILE_CREATE))
                         .build());
 
         assertFileSystemAccesses(
@@ -195,9 +194,9 @@ public class TestIcebergFileOperations
                         .addCopies(new FileOperation(METADATA_JSON, INPUT_FILE_NEW_STREAM), 2)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_NEW_STREAM), 2)
                         .addCopies(new FileOperation(SNAPSHOT, INPUT_FILE_GET_LENGTH), 2)
-                        .add(new FileOperation(SNAPSHOT, OUTPUT_FILE_CREATE_OR_OVERWRITE))
-                        .add(new FileOperation(MANIFEST, OUTPUT_FILE_CREATE_OR_OVERWRITE))
                         .add(new FileOperation(MANIFEST, INPUT_FILE_NEW_STREAM))
+                        .add(new FileOperation(MANIFEST, OUTPUT_FILE_CREATE))
+                        .add(new FileOperation(SNAPSHOT, OUTPUT_FILE_CREATE))
                         .add(new FileOperation(STATS, OUTPUT_FILE_CREATE))
                         .build());
     }

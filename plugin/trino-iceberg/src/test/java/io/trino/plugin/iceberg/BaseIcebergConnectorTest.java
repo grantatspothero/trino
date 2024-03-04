@@ -67,10 +67,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.Timeout;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -137,7 +137,6 @@ import static io.trino.testing.TransactionBuilder.transaction;
 import static io.trino.testing.assertions.Assert.assertEventually;
 import static java.lang.String.format;
 import static java.lang.String.join;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.ZoneOffset.UTC;
 import static java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 import static java.util.Collections.nCopies;
@@ -4204,11 +4203,12 @@ public abstract class BaseIcebergConnectorTest
         dataFile.put("file_size_in_bytes", alteredValue);
 
         // Write altered metadata
-        try (OutputStream out = fileSystem.newOutputFile(Location.of(manifestFile)).createOrOverwrite();
-                DataFileWriter<GenericData.Record> dataFileWriter = new DataFileWriter<>(new GenericDatumWriter<>(schema))) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (DataFileWriter<GenericData.Record> dataFileWriter = new DataFileWriter<>(new GenericDatumWriter<>(schema))) {
             dataFileWriter.create(schema, out);
             dataFileWriter.append(entry);
         }
+        fileSystem.newOutputFile(Location.of(manifestFile)).createOrOverwrite(out.toByteArray());
 
         // Ignoring Iceberg provided file size makes the query succeed
         Session session = Session.builder(getSession())
@@ -7095,11 +7095,11 @@ public abstract class BaseIcebergConnectorTest
         // Add duplicate field to produce validation error while reading the metadata file
         fieldsNode.add(newFieldNode);
 
-        String modifiedJson = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonNode);
-        try (OutputStream outputStream = fileSystem.newOutputFile(Location.of(metadataFileLocation)).createOrOverwrite()) {
-            // Corrupt metadata file by overwriting the invalid metadata content
-            outputStream.write(modifiedJson.getBytes(UTF_8));
-        }
+        byte[] modifiedJson = mapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(jsonNode);
+
+        // Corrupt metadata file by overwriting the invalid metadata content
+        fileSystem.newOutputFile(Location.of(metadataFileLocation)).createOrOverwrite(modifiedJson);
+
         assertThatThrownBy(() -> query("SELECT * FROM " + tableName))
                 .hasMessage("Invalid metadata file for table tpch.%s".formatted(tableName));
 
