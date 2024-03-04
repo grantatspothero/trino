@@ -552,7 +552,7 @@ public class TestDeltaLakeConnectorTest
         String createTableSql = format("CREATE TABLE %s AS TABLE tpch.tiny.nation", tableName);
         if (compressionCodec == HiveCompressionCodec.LZ4) {
             // TODO (https://github.com/trinodb/trino/issues/9142) Support LZ4 compression with native Parquet writer
-            assertQueryFails(session, createTableSql, "Unsupported codec: " + compressionCodec);
+            assertQueryFails(session, createTableSql, isObjectStore() ? "Compression codec LZ4 not supported for Parquet" : ("Unsupported codec: " + compressionCodec));
             return;
         }
         assertUpdate(session, createTableSql, 25);
