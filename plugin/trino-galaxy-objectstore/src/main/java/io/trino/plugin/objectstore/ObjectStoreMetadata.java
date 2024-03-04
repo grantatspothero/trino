@@ -1058,6 +1058,20 @@ public class ObjectStoreMetadata
     }
 
     @Override
+    public void dropNotNullConstraint(ConnectorSession session, ConnectorTableHandle tableHandle, ColumnHandle column)
+    {
+        TableType tableType = tableType(tableHandle);
+        switch (tableType) {
+            case HIVE, HUDI -> throw new TrinoException(NOT_SUPPORTED, "Dropping NOT NULL constraint in %s tables is not supported".formatted(tableType.displayName()));
+            default -> {
+                // handled below
+            }
+        }
+        delegate(tableType).dropNotNullConstraint(unwrap(tableType, session), tableHandle, column);
+        flushMetadataCache(tableName(tableHandle));
+    }
+
+    @Override
     public void renameColumn(ConnectorSession session, ConnectorTableHandle tableHandle, ColumnHandle source, String target)
     {
         TableType tableType = tableType(tableHandle);
