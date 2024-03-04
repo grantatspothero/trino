@@ -212,7 +212,7 @@
         <!-- released from https://github.com/starburstdata/varada -->
         <dep.warp-speed.version>438.2.0</dep.warp-speed.version>
         <!-- released from https://github.com/starburstdata/starburst-dataframe -->
-        <dep.starburst-dataframe.version>0.5.0.20240201-b4f4176</dep.starburst-dataframe.version>
+        <dep.starburst-dataframe.version>0.8.0.20240301-3689fe1</dep.starburst-dataframe.version>
         <!-- released from https://github.com/starburstdata/stargate -->
         <dep.stargate.version>stargate-13935-gd1fbe79eae</dep.stargate.version>
 
