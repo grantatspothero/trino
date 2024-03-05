@@ -206,11 +206,11 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
     @EnumSource(TableType.class)
     public void testCreateTableAsSelectFromDifferentCatalog(TableType type)
     {
-        testCreateTableAsSelectFromDifferentCatalog(type, "SELECT * FROM tpch.tiny.nation", false);
-        testCreateTableAsSelectFromDifferentCatalog(type, "TABLE tpch.tiny.nation", true);
+        testCreateTableAsSelectFromDifferentCatalog(type, "SELECT * FROM tpch.tiny.nation");
+        testCreateTableAsSelectFromDifferentCatalog(type, "TABLE tpch.tiny.nation");
     }
 
-    private void testCreateTableAsSelectFromDifferentCatalog(TableType type, @Language("SQL") String sourceForm, boolean tableForm)
+    private void testCreateTableAsSelectFromDifferentCatalog(TableType type, @Language("SQL") String sourceForm)
     {
         // Need random name because this test creates tables twice
         String tableName = "test_ctas_different_catalog" + randomNameSuffix();
