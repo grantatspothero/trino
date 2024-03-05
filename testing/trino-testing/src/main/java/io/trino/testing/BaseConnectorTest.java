@@ -56,7 +56,6 @@ import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.parallel.Isolated;
 
 import java.time.Instant;
 import java.time.ZonedDateTime;
@@ -179,7 +178,6 @@ import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 /**
  * Generic test for connectors.
  */
-@Isolated
 @TestInstance(PER_CLASS)
 public abstract class BaseConnectorTest
         extends AbstractTestQueries
