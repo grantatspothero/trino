@@ -36,7 +36,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Predicates.in;
 import static com.google.common.base.Predicates.not;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static io.trino.plugin.cassandra.CassandraPartition.unpartitioned;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
@@ -109,14 +108,9 @@ public class CassandraPartitionManager
             if (sb.length() > 0) {
                 CassandraPartition partition = partitions.get(0);
                 TupleDomain<ColumnHandle> filterIndexedColumn = TupleDomain.withColumnDomains(Maps.filterKeys(remainingTupleDomain.getDomains().get(), not(in(indexedColumns))));
-                CassandraPartition redefinedPartition;
-                if (partition.getKey() == null) {
-                    redefinedPartition = unpartitioned(filterIndexedColumn, true);
-                }
-                else {
-                    redefinedPartition = new CassandraPartition(partition.getKey(), sb.toString(), filterIndexedColumn, true);
-                }
-                return new CassandraPartitionResult(ImmutableList.of(redefinedPartition), filterIndexedColumn);
+                partitions = new ArrayList<>();
+                partitions.add(new CassandraPartition(partition.getKey(), sb.toString(), filterIndexedColumn, true));
+                return new CassandraPartitionResult(partitions, filterIndexedColumn);
             }
         }
         return new CassandraPartitionResult(partitions, remainingTupleDomain);
