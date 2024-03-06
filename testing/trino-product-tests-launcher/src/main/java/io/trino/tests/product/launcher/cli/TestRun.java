@@ -351,6 +351,7 @@ public final class TestRun
                                 .add(
                                         jdkProvider.getJavaCommand(),
                                         "-Xmx1g",
+                                        "--enable-preview",
                                         // Force Parallel GC to ensure MaxHeapFreeRatio is respected
                                         "-XX:+UseParallelGC",
                                         "-XX:MinHeapFreeRatio=10",

@@ -190,6 +190,7 @@
              were observed allocating large number of byte[] of about 1.6MB in size, thus being treated as humongous allocations and preventing heap saturation.
              Force bigger region size in attempt to help G1 utilize heap fully. -->
         <air.test.jvm.additional-arguments.default>
+            --enable-preview
             -XX:G1HeapRegionSize=32M
             -XX:+UnlockDiagnosticVMOptions
             <!-- bump from default of 2 -->
