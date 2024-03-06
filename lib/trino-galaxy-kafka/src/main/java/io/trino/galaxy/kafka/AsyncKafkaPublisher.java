@@ -138,6 +138,10 @@ public class AsyncKafkaPublisher
             shutdownAndAwaitTermination(executorService, 10, TimeUnit.SECONDS);
         }
         deadLetterWriterExecutor.shutdownNow();
+
+        if (!buffer.isEmpty()) {
+            log.warn("%s - %s events not published", loggingName, buffer.size());
+        }
         log.info("%s - Destroyed", loggingName);
     }
 
