@@ -17,6 +17,8 @@ package io.trino.plugin.hive.metastore.thrift;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.instrumentation.apachehttpclient.v5_2.ApacheHttpClient5Telemetry;
 import io.trino.spi.NodeManager;
 import io.trino.sshtunnel.SshTunnelConfig;
 import io.trino.sshtunnel.SshTunnelManager;
@@ -58,12 +60,14 @@ public class HttpThriftMetastoreClientFactory
     private final Optional<ThriftHttpMetastoreConfig.AuthenticationMode> authenticationMode;
     private final Optional<String> token;
     private final Map<String, String> additionalHeaders;
+    private final OpenTelemetry openTelemetry;
 
     @Inject
     public HttpThriftMetastoreClientFactory(
             SshTunnelConfig sshTunnelConfig,
             ThriftHttpMetastoreConfig httpMetastoreConfig,
-            NodeManager nodeManager)
+            NodeManager nodeManager,
+            OpenTelemetry openTelemetry)
     {
         this.sshTunnelProperties = SshTunnelProperties.generateFrom(sshTunnelConfig);
         this.readTimeoutMillis = toIntExact(httpMetastoreConfig.getReadTimeout().toMillis());
@@ -71,6 +75,7 @@ public class HttpThriftMetastoreClientFactory
         this.authenticationMode = httpMetastoreConfig.getAuthenticationMode();
         this.token = httpMetastoreConfig.getHttpBearerToken();
         this.additionalHeaders = ImmutableMap.copyOf(httpMetastoreConfig.getAdditionalHeaders());
+        this.openTelemetry = requireNonNull(openTelemetry, "openTelemetry is null");
     }
 
     @Override
@@ -93,7 +98,7 @@ public class HttpThriftMetastoreClientFactory
     private TTransport createHttpTransport(URI uri)
             throws TTransportException
     {
-        HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
+        HttpClientBuilder httpClientBuilder = ApacheHttpClient5Telemetry.builder(openTelemetry).build().newHttpClientBuilder();
         if ("https".equals(uri.getScheme().toLowerCase(ENGLISH))) {
             checkArgument(token.isPresent(), "'hive.metastore.http.client.bearer-token' must be set while using https metastore URIs in 'hive.metastore.uri'");
             checkArgument(authenticationMode.isPresent(), "'hive.metastore.http.client.authentication.type' must be set while using http/https metastore URIs in 'hive.metastore.uri'");
