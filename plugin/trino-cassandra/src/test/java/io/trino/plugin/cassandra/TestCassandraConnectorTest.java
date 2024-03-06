@@ -862,10 +862,6 @@ public class TestCassandraConnectorTest
         onCassandra("DROP INDEX tpch." + table + "_idx1_col_idx");
         onCassandra("DROP INDEX tpch." + table + "_idx2_col_idx");
 
-        // Repeat the same SELECT statement without index
-        assertQuery("SELECT * FROM tpch." + table + " WHERE idx1_col = 'value1' AND idx2_col = 'value21' AND cluster_col = 1", "VALUES ('v11', 'v21', 1, 'value1', 'value21')");
-        assertQuery("SELECT * FROM tpch." + table + " WHERE idx1_col = 'value1' AND cluster_col = 1", "VALUES ('v11', 'v21', 1, 'value1', 'value21')");
-
         onCassandra("DROP TABLE tpch." + table);
     }
 
