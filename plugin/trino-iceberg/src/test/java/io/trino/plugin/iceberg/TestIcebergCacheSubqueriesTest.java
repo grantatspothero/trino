@@ -147,12 +147,6 @@ public class TestIcebergCacheSubqueriesTest
         getQueryRunner().execute(sql);
     }
 
-    @Override
-    protected boolean supportsDataColumnPruning()
-    {
-        return false;
-    }
-
     protected IcebergTableHandle getIcebergTableHandle(TableHandle tableHandle)
     {
         return (IcebergTableHandle) tableHandle.getConnectorHandle();
