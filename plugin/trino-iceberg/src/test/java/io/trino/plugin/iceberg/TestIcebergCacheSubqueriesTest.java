@@ -89,7 +89,7 @@ public class TestIcebergCacheSubqueriesTest
             Optional<TableHandle> tableHandler = withTransaction(session -> getDistributedQueryRunner().getCoordinator()
                     .getPlannerContext().getMetadata()
                     .getTableHandle(session, new QualifiedObjectName(ICEBERG_CATALOG, session.getSchema().get(), testTable.getName())));
-            IcebergTableHandle icebergTableHandle = (IcebergTableHandle) tableHandler.get().getConnectorHandle();
+            IcebergTableHandle icebergTableHandle = getIcebergTableHandle(tableHandler.get());
 
             @Language("SQL") String selectQuery = """
                     select name from %s where year = 2000
@@ -157,5 +157,10 @@ public class TestIcebergCacheSubqueriesTest
     protected boolean effectivePredicateReturnedPerSplit()
     {
         return false;
+    }
+
+    protected IcebergTableHandle getIcebergTableHandle(TableHandle tableHandle)
+    {
+        return (IcebergTableHandle) tableHandle.getConnectorHandle();
     }
 }

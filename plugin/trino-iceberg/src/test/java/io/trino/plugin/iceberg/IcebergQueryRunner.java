@@ -20,10 +20,12 @@ import io.airlift.http.server.testing.TestingHttpServer;
 import io.airlift.log.Level;
 import io.airlift.log.Logger;
 import io.airlift.log.Logging;
+import io.trino.metadata.FunctionBundle;
 import io.trino.plugin.hive.containers.HiveHadoop;
 import io.trino.plugin.hive.containers.HiveMinioDataLake;
 import io.trino.plugin.iceberg.catalog.jdbc.TestingIcebergJdbcServer;
 import io.trino.plugin.tpch.TpchPlugin;
+import io.trino.spi.Plugin;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import io.trino.testing.containers.Minio;
@@ -83,6 +85,9 @@ public final class IcebergQueryRunner
         private Optional<File> metastoreDirectory = Optional.empty();
         private ImmutableMap.Builder<String, String> icebergProperties = ImmutableMap.builder();
         private Optional<SchemaInitializer> schemaInitializer = Optional.empty();
+        private Optional<Plugin> icebergPlugin = Optional.empty();
+        private Optional<String> icebergConnectorName = Optional.empty();
+        private Optional<FunctionBundle> functions = Optional.empty();
 
         protected Builder()
         {
@@ -130,6 +135,24 @@ public final class IcebergQueryRunner
             return self();
         }
 
+        public Builder setIcebergPlugin(Plugin icebergPlugin)
+        {
+            this.icebergPlugin = Optional.of(icebergPlugin);
+            return self();
+        }
+
+        public Builder setIcebergConnectorName(String icebergConnectorName)
+        {
+            this.icebergConnectorName = Optional.of(icebergConnectorName);
+            return self();
+        }
+
+        public Builder setFunctions(FunctionBundle functions)
+        {
+            this.functions = Optional.of(functions);
+            return self();
+        }
+
         @Override
         public DistributedQueryRunner build()
                 throws Exception
@@ -140,8 +163,9 @@ public final class IcebergQueryRunner
                 queryRunner.createCatalog("tpch", "tpch");
 
                 Path dataDir = metastoreDirectory.map(File::toPath).orElseGet(() -> queryRunner.getCoordinator().getBaseDataDir().resolve("iceberg_data"));
-                queryRunner.installPlugin(new TestingIcebergPlugin(dataDir));
-                queryRunner.createCatalog(ICEBERG_CATALOG, "iceberg", icebergProperties.buildOrThrow());
+                queryRunner.installPlugin(icebergPlugin.orElseGet(() -> new TestingIcebergPlugin(dataDir)));
+                queryRunner.createCatalog(ICEBERG_CATALOG, icebergConnectorName.orElse("iceberg"), icebergProperties.buildOrThrow());
+                functions.ifPresent(queryRunner::addFunctions);
                 schemaInitializer.orElseGet(() -> SchemaInitializer.builder().build()).accept(queryRunner);
 
                 return queryRunner;
