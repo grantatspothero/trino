@@ -151,7 +151,7 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                     case HIVE -> ImmutableMultiset.of();
                     case ICEBERG -> ImmutableMultiset.<FileOperation>builder()
                             .add(new FileOperation(METADATA_JSON, "00000.metadata.json", "OutputFile.create"))
-                            .add(new FileOperation(SNAPSHOT, "snap-1.avro", "OutputFile.createOrOverwrite"))
+                            .add(new FileOperation(SNAPSHOT, "snap-1.avro", "OutputFile.create"))
                             .add(new FileOperation(SNAPSHOT, "snap-1.avro", "InputFile.length"))
                             .add(new FileOperation(SNAPSHOT, "snap-1.avro", "InputFile.newStream"))
                             .build();
@@ -184,12 +184,12 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             .add(new FileOperation(METADATA_JSON, "00000.metadata.json", "OutputFile.create"))
                             .add(new FileOperation(METADATA_JSON, "00000.metadata.json", "InputFile.newStream"))
                             .add(new FileOperation(METADATA_JSON, "00001.metadata.json", "OutputFile.create"))
-                            .add(new FileOperation(SNAPSHOT, "snap-1.avro", "OutputFile.createOrOverwrite"))
+                            .add(new FileOperation(SNAPSHOT, "snap-1.avro", "OutputFile.create"))
                             .add(new FileOperation(SNAPSHOT, "snap-1.avro", "InputFile.length"))
                             .add(new FileOperation(SNAPSHOT, "snap-1.avro", "InputFile.newStream"))
                             .add(new FileOperation(DATA, "no partition", "OutputFile.create"))
                             .add(new FileOperation(STATS, "", "OutputFile.create"))
-                            .add(new FileOperation(MANIFEST, "", "OutputFile.createOrOverwrite"))
+                            .add(new FileOperation(MANIFEST, "", "OutputFile.create"))
                             .build();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
                             .add(new FileOperation(DATA, "no partition", "OutputFile.create"))
@@ -236,12 +236,12 @@ public class TestObjectStoreFilesystemMetastoreSecurityApiAccessOperations
                             .add(new FileOperation(METADATA_JSON, "00000.metadata.json", "OutputFile.create"))
                             .add(new FileOperation(METADATA_JSON, "00000.metadata.json", "InputFile.newStream"))
                             .add(new FileOperation(METADATA_JSON, "00001.metadata.json", "OutputFile.create"))
-                            .add(new FileOperation(SNAPSHOT, "snap-1.avro", "OutputFile.createOrOverwrite"))
+                            .add(new FileOperation(SNAPSHOT, "snap-1.avro", "OutputFile.create"))
                             .add(new FileOperation(SNAPSHOT, "snap-1.avro", "InputFile.length"))
                             .add(new FileOperation(SNAPSHOT, "snap-1.avro", "InputFile.newStream"))
                             .add(new FileOperation(DATA, "no partition", "OutputFile.create"))
                             .add(new FileOperation(STATS, "", "OutputFile.create"))
-                            .add(new FileOperation(MANIFEST, "", "OutputFile.createOrOverwrite"))
+                            .add(new FileOperation(MANIFEST, "", "OutputFile.create"))
                             .build();
                     case DELTA -> ImmutableMultiset.<FileOperation>builder()
                             .add(new FileOperation(DATA, "no partition", "OutputFile.create"))
