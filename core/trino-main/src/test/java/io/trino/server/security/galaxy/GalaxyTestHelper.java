@@ -127,6 +127,9 @@ public class GalaxyTestHelper
         if (accountFactory != null) {
             accountFactory.close();
         }
+        if (accessControl != null) {
+            accessControl.shutdown();
+        }
     }
 
     public GalaxyCockroachContainer getCockroach()

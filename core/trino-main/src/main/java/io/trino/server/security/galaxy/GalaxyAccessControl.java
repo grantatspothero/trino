@@ -811,6 +811,12 @@ public class GalaxyAccessControl
         }
     }
 
+    @Override
+    public void shutdown()
+    {
+        backgroundExecutorService.shutdown();
+    }
+
     // Helper methods that provide explanations for denied access
 
     private void checkRoleOwnsQuery(Identity identity, Identity queryOwner, Consumer<String> denier)
