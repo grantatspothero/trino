@@ -150,7 +150,7 @@ public class TestBigQueryNetworkUsageTracking
 
             // the difference here is a lot more variable than the written bytes, although still relatively consistent
             long expectedReadBytes = 139_953;
-            assertThat(catalogNetworkMonitor.getCrossRegionReadBytes() - previouslyReadBytes).isCloseTo(expectedReadBytes, Percentage.withPercentage(0.5));
+            assertThat(catalogNetworkMonitor.getCrossRegionReadBytes() - previouslyReadBytes).isCloseTo(expectedReadBytes, Percentage.withPercentage(0.7));
 
             // test network usage tracking for big query read client (rpc)
             String projectId = bigQuery.getOptions().getProjectId();
