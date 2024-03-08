@@ -273,7 +273,8 @@ public class QueryStateMachine
                 version);
     }
 
-    static QueryStateMachine beginWithTicker(
+    @VisibleForTesting
+    public static QueryStateMachine beginWithTicker(
             Optional<TransactionId> existingTransactionId,
             String query,
             Optional<String> preparedQuery,

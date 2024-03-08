@@ -13,6 +13,7 @@
  */
 package io.trino.execution.scheduler.faulttolerant;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
@@ -428,7 +429,8 @@ public class EventDrivenFaultTolerantQueryScheduler
     }
 
     @ThreadSafe
-    private static class StageRegistry
+    @VisibleForTesting
+    static class StageRegistry
     {
         private final QueryStateMachine queryStateMachine;
         private final AtomicReference<SubPlan> plan;
@@ -663,7 +665,8 @@ public class EventDrivenFaultTolerantQueryScheduler
         }
     }
 
-    private static class Scheduler
+    @VisibleForTesting
+    static class Scheduler
             implements EventListener<Void>
     {
         private static final int EVENT_BUFFER_CAPACITY = 100;
@@ -1011,7 +1014,8 @@ public class EventDrivenFaultTolerantQueryScheduler
         /**
          * @return whether processing should continue
          */
-        private boolean schedule()
+        @VisibleForTesting
+        boolean schedule()
         {
             if (checkComplete()) {
                 return false;
@@ -1540,7 +1544,8 @@ public class EventDrivenFaultTolerantQueryScheduler
             }
         }
 
-        private StageId getStageId(PlanFragmentId fragmentId)
+        @VisibleForTesting
+        StageId getStageId(PlanFragmentId fragmentId)
         {
             return StageId.create(queryStateMachine.getQueryId(), fragmentId);
         }
@@ -1876,7 +1881,8 @@ public class EventDrivenFaultTolerantQueryScheduler
             return null;
         }
 
-        private StageExecution getStageExecution(StageId stageId)
+        @VisibleForTesting
+        StageExecution getStageExecution(StageId stageId)
         {
             StageExecution execution = stageExecutions.get(stageId);
             checkState(execution != null, "stage execution does not exist for stage: %s", stageId);
@@ -2056,6 +2062,11 @@ public class EventDrivenFaultTolerantQueryScheduler
         public boolean isExchangeClosed()
         {
             return exchangeClosed;
+        }
+
+        public boolean isSpeculative()
+        {
+            return speculative;
         }
 
         public void setSpeculative(boolean speculative)
@@ -3191,7 +3202,8 @@ public class EventDrivenFaultTolerantQueryScheduler
         }
     }
 
-    private static class SchedulingDelayer
+    @VisibleForTesting
+    static class SchedulingDelayer
     {
         private final long minRetryDelayInMillis;
         private final long maxRetryDelayInMillis;
@@ -3200,7 +3212,8 @@ public class EventDrivenFaultTolerantQueryScheduler
 
         private long currentDelayInMillis;
 
-        private SchedulingDelayer(Duration minRetryDelay, Duration maxRetryDelay, double retryDelayScaleFactor, Stopwatch stopwatch)
+        @VisibleForTesting
+        SchedulingDelayer(Duration minRetryDelay, Duration maxRetryDelay, double retryDelayScaleFactor, Stopwatch stopwatch)
         {
             this.minRetryDelayInMillis = requireNonNull(minRetryDelay, "minRetryDelay is null").toMillis();
             this.maxRetryDelayInMillis = requireNonNull(maxRetryDelay, "maxRetryDelay is null").toMillis();

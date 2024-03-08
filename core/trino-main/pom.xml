@@ -512,8 +512,29 @@
 
         <dependency>
             <groupId>io.starburst.stargate.buffer</groupId>
+            <artifactId>galaxy-buffer-data-server</artifactId>
+            <version>${revision}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.starburst.stargate.buffer</groupId>
+            <artifactId>galaxy-buffer-discovery-server</artifactId>
+            <version>${revision}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.starburst.stargate.buffer</groupId>
+            <artifactId>galaxy-buffer-exchange</artifactId>
+            <version>${revision}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.starburst.stargate.buffer</groupId>
             <artifactId>galaxy-buffer-testing</artifactId>
-            <version>435-galaxy-1-SNAPSHOT</version>
+            <version>${revision}</version>
             <scope>test</scope>
         </dependency>
 
