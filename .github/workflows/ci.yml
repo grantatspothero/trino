@@ -343,6 +343,8 @@ jobs:
       - name: Build and Test Docker Image
         if: false # Galaxy builds docker image in a separate job
         run: core/docker/build.sh
+      - name: Build and Test AMD64 Docker Image with JDK 22-ea
+        run: core/docker/build.sh -j 22-ea -a amd64
 
   check-commits-dispatcher:
     runs-on: [self-hosted, sep-cicd, gha-fleet-nano]
