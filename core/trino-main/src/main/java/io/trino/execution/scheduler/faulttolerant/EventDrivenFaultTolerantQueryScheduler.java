@@ -807,9 +807,9 @@ public class EventDrivenFaultTolerantQueryScheduler
             this.runtimeAdaptivePartitioningMaxTaskSizeInBytes = requireNonNull(runtimeAdaptivePartitioningMaxTaskSize, "runtimeAdaptivePartitioningMaxTaskSize is null").toBytes();
             this.stageEstimationForEagerParentEnabled = stageEstimationForEagerParentEnabled;
             this.schedulerSpan = tracer.spanBuilder("scheduler")
-                .setParent(Context.current().with(queryStateMachine.getSession().getQuerySpan()))
-                .setAttribute(TrinoAttributes.QUERY_ID, queryStateMachine.getQueryId().toString())
-                .startSpan();
+                    .setParent(Context.current().with(queryStateMachine.getSession().getQuerySpan()))
+                    .setAttribute(TrinoAttributes.QUERY_ID, queryStateMachine.getQueryId().toString())
+                    .startSpan();
 
             if (log.isDebugEnabled()) {
                 eventDebugInfos = Optional.of(new EventDebugInfos(queryStateMachine.getQueryId().toString(), EVENTS_DEBUG_INFOS_PER_BUCKET));
