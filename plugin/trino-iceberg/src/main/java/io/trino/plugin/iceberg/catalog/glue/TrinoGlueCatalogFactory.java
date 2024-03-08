@@ -22,7 +22,6 @@ import io.trino.plugin.hive.metastore.glue.GlueHiveMetastoreConfig;
 import io.trino.plugin.hive.metastore.glue.GlueMetastoreStats;
 import io.trino.plugin.iceberg.IcebergConfig;
 import io.trino.plugin.iceberg.IcebergSecurityConfig;
-import io.trino.plugin.iceberg.WorkScheduler;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
 import io.trino.plugin.iceberg.catalog.TrinoCatalog;
 import io.trino.plugin.iceberg.catalog.TrinoCatalogFactory;
@@ -40,7 +39,6 @@ public class TrinoGlueCatalogFactory
         implements TrinoCatalogFactory
 {
     private final CatalogName catalogName;
-    private final WorkScheduler workScheduler;
     private final TrinoFileSystemFactory fileSystemFactory;
     private final TypeManager typeManager;
     private final boolean cacheTableMetadata;
@@ -56,7 +54,6 @@ public class TrinoGlueCatalogFactory
     @Inject
     public TrinoGlueCatalogFactory(
             CatalogName catalogName,
-            WorkScheduler workScheduler,
             TrinoFileSystemFactory fileSystemFactory,
             TypeManager typeManager,
             IcebergTableOperationsProvider tableOperationsProvider,
@@ -69,7 +66,6 @@ public class TrinoGlueCatalogFactory
             AWSGlueAsync glueClient)
     {
         this.catalogName = requireNonNull(catalogName, "catalogName is null");
-        this.workScheduler = requireNonNull(workScheduler, "workScheduler is null");
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.cacheTableMetadata = catalogConfig.isCacheTableMetadata();
@@ -95,7 +91,6 @@ public class TrinoGlueCatalogFactory
     {
         return new TrinoGlueCatalog(
                 catalogName,
-                workScheduler,
                 fileSystemFactory,
                 typeManager,
                 cacheTableMetadata,
