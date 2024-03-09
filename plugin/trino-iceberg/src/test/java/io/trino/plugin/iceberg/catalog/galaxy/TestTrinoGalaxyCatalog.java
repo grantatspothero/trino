@@ -24,6 +24,7 @@ import io.trino.plugin.hive.metastore.galaxy.GalaxyHiveMetastoreConfig;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
 import io.trino.plugin.hive.util.HiveUtil;
 import io.trino.plugin.iceberg.IcebergSchemaProperties;
+import io.trino.plugin.iceberg.NoopWorkScheduler;
 import io.trino.plugin.iceberg.catalog.BaseTrinoCatalogTest;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
 import io.trino.plugin.iceberg.catalog.TrinoCatalog;
@@ -136,7 +137,7 @@ public class TestTrinoGalaxyCatalog
 
         public TestableTrinoGalaxyCatalog(CatalogName catalogName, TypeManager typeManager, CachingHiveMetastore metastore, TrinoFileSystemFactory fileSystemFactory, IcebergTableOperationsProvider tableOperationsProvider, boolean useUniqueTableLocation, boolean cacheTableMetadata, boolean hideMaterializedViewStorageTable)
         {
-            super(catalogName, typeManager, metastore, fileSystemFactory, tableOperationsProvider, useUniqueTableLocation, cacheTableMetadata, hideMaterializedViewStorageTable);
+            super(catalogName, new NoopWorkScheduler(), typeManager, metastore, fileSystemFactory, tableOperationsProvider, useUniqueTableLocation, cacheTableMetadata, hideMaterializedViewStorageTable);
             this.metastore = requireNonNull(metastore, "metastore is null");
             this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         }

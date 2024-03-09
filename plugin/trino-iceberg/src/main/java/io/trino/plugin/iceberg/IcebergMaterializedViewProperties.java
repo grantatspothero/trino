@@ -25,6 +25,7 @@ import static io.trino.spi.session.PropertyMetadata.stringProperty;
 
 public class IcebergMaterializedViewProperties
 {
+    public static final String REFRESH_SCHEDULE = "refresh_schedule";
     public static final String STORAGE_SCHEMA = "storage_schema";
 
     private final List<PropertyMetadata<?>> materializedViewProperties;
@@ -34,6 +35,13 @@ public class IcebergMaterializedViewProperties
     {
         ImmutableList.Builder<PropertyMetadata<?>> materializedViewProperties = ImmutableList.builder();
         materializedViewProperties.addAll(ossProperties(icebergConfig, tableProperties));
+        if (icebergConfig.isScheduledMaterializedViewRefreshEnabled()) {
+            materializedViewProperties.add(stringProperty(
+                    REFRESH_SCHEDULE,
+                    "Cron schedule to use for refreshing the materialized view",
+                    null,
+                    false));
+        }
         this.materializedViewProperties = materializedViewProperties.build();
     }
 
@@ -53,6 +61,11 @@ public class IcebergMaterializedViewProperties
     public List<PropertyMetadata<?>> getMaterializedViewProperties()
     {
         return materializedViewProperties;
+    }
+
+    public static Optional<String> getRefreshSchedule(Map<String, Object> materializedViewProperties)
+    {
+        return Optional.ofNullable((String) materializedViewProperties.get(REFRESH_SCHEDULE));
     }
 
     public static Optional<String> getStorageSchema(Map<String, Object> materializedViewProperties)

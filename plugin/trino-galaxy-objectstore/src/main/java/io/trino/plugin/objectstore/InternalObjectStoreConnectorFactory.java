@@ -28,6 +28,7 @@ import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hudi.InternalHudiConnectorFactory;
 import io.trino.plugin.iceberg.InternalIcebergConnectorFactory;
 import io.trino.plugin.objectstore.hive.schemadiscovery.HiveSchemaDiscoveryModule;
+import io.trino.plugin.objectstore.scheduler.GalaxyWorkSchedulerModule;
 import io.trino.spi.classloader.ThreadContextClassLoader;
 import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.Connector;
@@ -87,7 +88,8 @@ public final class InternalObjectStoreConnectorFactory
                     context,
                     combine(
                             new ConfigureCachingMetastoreModule(),
-                            new GalaxyLocationSecurityModule()),
+                            new GalaxyLocationSecurityModule(),
+                            new GalaxyWorkSchedulerModule()),
                     icebergCatalogModule,
                     fileSystemFactory);
 
@@ -123,6 +125,7 @@ public final class InternalObjectStoreConnectorFactory
                     new ObjectStoreModule(),
                     new GalaxyLocationSecurityModule(),
                     new FileSystemModule(catalogName, context.getNodeManager(), context.getOpenTelemetry()),
+                    new GalaxyWorkSchedulerModule(),
                     binder -> {
                         binder.bind(TypeManager.class).toInstance(context.getTypeManager());
                         binder.bind(OpenTelemetry.class).toInstance(context.getOpenTelemetry());

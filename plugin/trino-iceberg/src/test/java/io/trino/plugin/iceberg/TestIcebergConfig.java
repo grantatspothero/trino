@@ -64,6 +64,7 @@ public class TestIcebergConfig
                 .setHideMaterializedViewStorageTable(true)
                 .setMaterializedViewsStorageSchema(null)
                 .setRegisterTableProcedureEnabled(false)
+                .setScheduledMaterializedViewRefreshEnabled(false)
                 .setSortedWritingEnabled(true)
                 .setQueryPartitionFilterRequired(false));
     }
@@ -94,6 +95,7 @@ public class TestIcebergConfig
                 .put("iceberg.materialized-views.hide-storage-table", "false")
                 .put("iceberg.materialized-views.storage-schema", "mv_storage_schema")
                 .put("iceberg.register-table-procedure.enabled", "true")
+                .put("iceberg.scheduled-materialized-view-refresh-enabled", "true")
                 .put("iceberg.sorted-writing-enabled", "false")
                 .put("iceberg.query-partition-filter-required", "true")
                 .buildOrThrow();
@@ -121,6 +123,7 @@ public class TestIcebergConfig
                 .setHideMaterializedViewStorageTable(false)
                 .setMaterializedViewsStorageSchema("mv_storage_schema")
                 .setRegisterTableProcedureEnabled(true)
+                .setScheduledMaterializedViewRefreshEnabled(true)
                 .setSortedWritingEnabled(false)
                 .setQueryPartitionFilterRequired(true);
 

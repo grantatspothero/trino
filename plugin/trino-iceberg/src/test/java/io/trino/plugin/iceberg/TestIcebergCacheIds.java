@@ -118,6 +118,7 @@ public class TestIcebergCacheIds
                         HDFS_FILE_SYSTEM_FACTORY,
                         TESTING_TYPE_MANAGER,
                         tableOperationsProvider,
+                        new NoopWorkScheduler(),
                         new NodeVersion("test_version"),
                         new IcebergSecurityConfig()),
                 new DefaultIcebergFileSystemFactory(HDFS_FILE_SYSTEM_FACTORY),

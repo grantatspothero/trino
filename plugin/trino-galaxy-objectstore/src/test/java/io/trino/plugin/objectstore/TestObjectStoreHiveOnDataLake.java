@@ -99,6 +99,9 @@ public class TestObjectStoreHiveOnDataLake
                         .put("HUDI__hive.metastore-refresh-interval", "1d")
                         // This is required to enable AWS Athena partition projection
                         .put("HIVE__hive.partition-projection-enabled", "true")
+                        // For Galaxy work scheduler
+                        .put("ICEBERG__galaxy.cluster-id", "w-8888888888")
+                        .put("OBJECTSTORE__galaxy.cluster-id", "w-8888888888")
                         .buildOrThrow())
                 .build();
     }

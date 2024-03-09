@@ -48,6 +48,10 @@ public final class TestingObjectStoreUtils
             properties.put("DELTA__hive.metastore-cache-ttl", "2m");
             properties.put("HUDI__hive.metastore-cache-ttl", "2m");
         }
+        if (!extraObjectStoreProperties.containsKey("OBJECTSTORE__galaxy.cluster-id")) {
+            properties.put("ICEBERG__galaxy.cluster-id", "w-9999999999");
+            properties.put("OBJECTSTORE__galaxy.cluster-id", "w-9999999999");
+        }
         properties.putAll(extraObjectStoreProperties);
 
         properties.put("HIVE__hive.metastore", metastoreType);
