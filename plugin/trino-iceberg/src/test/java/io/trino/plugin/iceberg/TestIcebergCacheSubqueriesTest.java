@@ -153,12 +153,6 @@ public class TestIcebergCacheSubqueriesTest
         return false;
     }
 
-    @Override
-    protected boolean effectivePredicateReturnedPerSplit()
-    {
-        return false;
-    }
-
     protected IcebergTableHandle getIcebergTableHandle(TableHandle tableHandle)
     {
         return (IcebergTableHandle) tableHandle.getConnectorHandle();
