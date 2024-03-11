@@ -680,6 +680,8 @@ public class RedshiftClient
                         RedshiftClient::writeChar));
 
             case Types.VARCHAR: {
+                // TODO https://github.com/starburstdata/galaxy-trino/issues/1776 Remove this checkArgument once the type name is resolved
+                checkArgument(type.getColumnSize().isPresent(), "column size not present for type '%s'", type.getJdbcTypeName().orElse(""));
                 int length = type.getRequiredColumnSize();
                 return Optional.of(varcharColumnMapping(
                         length < VarcharType.MAX_LENGTH
