@@ -1038,7 +1038,7 @@ public class DeltaLakeMetadata
                 List<RemoveFileEntry> removeFileEntries;
                 ProtocolEntry protocolEntry;
                 if (replaceExistingTable) {
-                    commitVersion = getMandatoryCurrentVersion(fileSystem, location) + 1;
+                    commitVersion = getMandatoryCurrentVersion(fileSystem, location, tableHandle.getReadVersion()) + 1;
                     transactionLogWriter = transactionLogWriterFactory.newWriter(session, location);
                     try (Stream<AddFileEntry> activeFiles = transactionLogAccess.getActiveFiles(session, getSnapshot(session, tableHandle), tableHandle.getMetadataEntry(), tableHandle.getProtocolEntry())) {
                         removeFileEntries = activeFiles
@@ -1398,7 +1398,7 @@ public class DeltaLakeMetadata
             }
             else {
                 TrinoFileSystem fileSystem = fileSystemFactory.create(session);
-                commitVersion = getMandatoryCurrentVersion(fileSystem, handle.getLocation()) + 1;
+                commitVersion = getMandatoryCurrentVersion(fileSystem, handle.getLocation(), handle.getReadVersion().orElseThrow()) + 1;
                 if (commitVersion != handle.getReadVersion().getAsLong() + 1) {
                     throw new TransactionConflictException(format("Conflicting concurrent writes found. Expected transaction log version: %s, actual version: %s",
                             handle.getReadVersion().getAsLong(),
@@ -2022,7 +2022,7 @@ public class DeltaLakeMetadata
             throws IOException
     {
         TrinoFileSystem fileSystem = fileSystemFactory.create(session);
-        long currentVersion = getMandatoryCurrentVersion(fileSystem, handle.getLocation());
+        long currentVersion = getMandatoryCurrentVersion(fileSystem, handle.getLocation(), handle.getReadVersion());
 
         boolean isBlindAppend = sourceTableHandles.stream()
                 .filter(sourceTableHandle -> sourceTableHandle instanceof DeltaLakeTableHandle)
@@ -2220,7 +2220,7 @@ public class DeltaLakeMetadata
             long createdTime = Instant.now().toEpochMilli();
 
             TrinoFileSystem fileSystem = fileSystemFactory.create(session);
-            long currentVersion = getMandatoryCurrentVersion(fileSystem, tableLocation);
+            long currentVersion = getMandatoryCurrentVersion(fileSystem, tableLocation, handle.getReadVersion());
             if (currentVersion != handle.getReadVersion()) {
                 throw new TransactionConflictException(format("Conflicting concurrent writes found. Expected transaction log version: %s, actual version: %s", handle.getReadVersion(), currentVersion));
             }
@@ -3761,7 +3761,7 @@ public class DeltaLakeMetadata
 
             long writeTimestamp = Instant.now().toEpochMilli();
             TrinoFileSystem fileSystem = fileSystemFactory.create(session);
-            long currentVersion = getMandatoryCurrentVersion(fileSystem, tableLocation);
+            long currentVersion = getMandatoryCurrentVersion(fileSystem, tableLocation, tableHandle.getReadVersion());
             if (currentVersion != tableHandle.getReadVersion()) {
                 throw new TransactionConflictException(format("Conflicting concurrent writes found. Expected transaction log version: %s, actual version: %s", tableHandle.getReadVersion(), currentVersion));
             }
