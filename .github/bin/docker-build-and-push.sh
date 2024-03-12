@@ -106,6 +106,7 @@ memory-cache
 mongodb
 ml
 mysql
+opensearch
 pinot
 postgresql
 redshift
