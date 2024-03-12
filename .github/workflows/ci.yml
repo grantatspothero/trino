@@ -1367,12 +1367,14 @@ jobs:
           config:
             - default
           suite:
+            # Starburst suites
             - suite-objectstore
-            - suite-stargate
-            - suite-subquery-cache
             - suite-sap-hana
-            - suite-synapse
+            - suite-stargate
             - suite-starburst-snowflake
+            - suite-subquery-cache
+            - suite-synapse
+            # End of Starburst suites
             - suite-s3-compatibility
             - suite-1
             - suite-2
