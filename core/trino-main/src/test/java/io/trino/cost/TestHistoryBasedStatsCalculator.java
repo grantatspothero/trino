@@ -86,6 +86,7 @@ import io.trino.sql.planner.plan.SortNode;
 import io.trino.sql.planner.plan.TableScanNode;
 import io.trino.sql.planner.plan.UnionNode;
 import io.trino.sql.planner.plan.ValuesNode;
+import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.SymbolReference;
 import io.trino.testing.TestingMetadata.TestingColumnHandle;
 import io.trino.testing.TestingSession;
@@ -121,7 +122,6 @@ import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.sql.DynamicFilters.createDynamicFilterExpression;
 import static io.trino.sql.ir.IrUtils.and;
 import static io.trino.sql.planner.SystemPartitioningHandle.SOURCE_DISTRIBUTION;
-import static io.trino.sql.planner.iterative.rule.test.PlanBuilder.expression;
 import static io.trino.sql.planner.plan.AggregationNode.Step.FINAL;
 import static io.trino.sql.planner.plan.AggregationNode.Step.INTERMEDIATE;
 import static io.trino.sql.planner.plan.AggregationNode.Step.PARTIAL;
@@ -212,7 +212,7 @@ public class TestHistoryBasedStatsCalculator
         HistoryBasedStatsCalculator calculator = createStatsCalculator();
         Session session = sessionWithHistoryBasedStatsEnabled();
 
-        FilterNode node = new FilterNode(new PlanNodeId("filter"), tableScan("tableScan", "table"), expression("a=b"));
+        FilterNode node = new FilterNode(new PlanNodeId("filter"), tableScan("tableScan", "table"), new ComparisonExpression(EQUAL, new SymbolReference("a"), new SymbolReference("b")));
 
         // both aren't cached
         assertThat(calculator.getOutputRowCount(node, Lookup.noLookup(), session)).isEmpty();
@@ -240,7 +240,7 @@ public class TestHistoryBasedStatsCalculator
                 new FilterNode(
                         new PlanNodeId("filter"),
                         tableScan("tableScan", "table"),
-                        expression("a=b")),
+                        new ComparisonExpression(EQUAL, new SymbolReference("a"), new SymbolReference("b"))),
                 Assignments.of());
 
         calculator.queryFinished(queryInfo(ImmutableMap.of(node.getId(), 777)), node, session);
@@ -344,12 +344,12 @@ public class TestHistoryBasedStatsCalculator
                 tableScan("tableScan", "table"),
                 and(
                         createDynamicFilterExpression(METADATA, new DynamicFilterId("df"), BIGINT, new SymbolReference("df_symbol"), EQUAL, false),
-                        expression("a=b")));
+                        new ComparisonExpression(EQUAL, new SymbolReference("a"), new SymbolReference("b"))));
 
         PlanNode noDfNode = new FilterNode(
                 new PlanNodeId("filter"),
                 tableScan("tableScan", "table"),
-                expression("a=b"));
+                new ComparisonExpression(EQUAL, new SymbolReference("a"), new SymbolReference("b")));
         // df stats are not there, the dfNode should be cached with exact df
         calculator.queryFinished(queryInfo(ImmutableMap.of(dfNode.getId(), 2)), dfNode, session);
 
@@ -399,17 +399,17 @@ public class TestHistoryBasedStatsCalculator
                 "top_join",
                 join(
                         "left_subjoin",
-                        new FilterNode(new PlanNodeId("filter1"), tableScan("tableScan", "table"), expression("a=b")),
-                        new FilterNode(new PlanNodeId("filter2"), tableScan("tableScan", "table"), expression("c=d"))),
-                new FilterNode(new PlanNodeId("filter3"), tableScan("tableScan", "table"), expression("e=f")));
+                        new FilterNode(new PlanNodeId("filter1"), tableScan("tableScan", "table"), new ComparisonExpression(EQUAL, new SymbolReference("a"), new SymbolReference("b"))),
+                        new FilterNode(new PlanNodeId("filter2"), tableScan("tableScan", "table"), new ComparisonExpression(EQUAL, new SymbolReference("c"), new SymbolReference("d")))),
+                new FilterNode(new PlanNodeId("filter3"), tableScan("tableScan", "table"), new ComparisonExpression(EQUAL, new SymbolReference("e"), new SymbolReference("f"))));
 
         PlanNode equivalentJoin = join(
                 "top_join",
-                new FilterNode(new PlanNodeId("filter1"), tableScan("tableScan", "table"), expression("a=b")),
+                new FilterNode(new PlanNodeId("filter1"), tableScan("tableScan", "table"), new ComparisonExpression(EQUAL, new SymbolReference("a"), new SymbolReference("b"))),
                 join(
                         "right_subjoin",
-                        new FilterNode(new PlanNodeId("filter2"), tableScan("tableScan", "table"), expression("c=d")),
-                        new FilterNode(new PlanNodeId("filter3"), tableScan("tableScan", "table"), expression("e=f"))));
+                        new FilterNode(new PlanNodeId("filter2"), tableScan("tableScan", "table"), new ComparisonExpression(EQUAL, new SymbolReference("c"), new SymbolReference("d"))),
+                        new FilterNode(new PlanNodeId("filter3"), tableScan("tableScan", "table"), new ComparisonExpression(EQUAL, new SymbolReference("e"), new SymbolReference("f")))));
 
         calculator.queryFinished(queryInfo(ImmutableMap.of(join.getId(), 9)), join, session);
 
@@ -431,7 +431,7 @@ public class TestHistoryBasedStatsCalculator
         Session session = sessionWithHistoryBasedStatsEnabled();
 
         AggregationNode singleAggregation = singleAggregation(new PlanNodeId("aggregation"),
-                new FilterNode(new PlanNodeId("filter"), tableScan("tableScan", "table"), expression("a=b")),
+                new FilterNode(new PlanNodeId("filter"), tableScan("tableScan", "table"), new ComparisonExpression(EQUAL, new SymbolReference("a"), new SymbolReference("b"))),
                 ImmutableMap.of(),
                 singleGroupingSet(ImmutableList.of(new Symbol("a"))));
 
@@ -480,8 +480,8 @@ public class TestHistoryBasedStatsCalculator
 
         JoinNode join = join(
                 "join",
-                new FilterNode(new PlanNodeId("filter1"), tableScan("tableScan", "table"), expression("a=b")),
-                new FilterNode(new PlanNodeId("filter2"), tableScan("tableScan", "table"), expression("c=d")));
+                new FilterNode(new PlanNodeId("filter1"), tableScan("tableScan", "table"), new ComparisonExpression(EQUAL, new SymbolReference("a"), new SymbolReference("b"))),
+                new FilterNode(new PlanNodeId("filter2"), tableScan("tableScan", "table"), new ComparisonExpression(EQUAL, new SymbolReference("c"), new SymbolReference("d"))));
         AggregationNode singleAggregation = singleAggregation(new PlanNodeId("aggregation"),
                 join,
                 ImmutableMap.of(),
@@ -565,12 +565,12 @@ public class TestHistoryBasedStatsCalculator
         HistoryBasedStatsCalculator calculator = createStatsCalculator();
         Session session = sessionWithHistoryBasedStatsEnabled();
 
-        FilterNode node = new FilterNode(new PlanNodeId("filter"), tableScan("tableScan", "table"), expression("a=b"));
+        FilterNode node = new FilterNode(new PlanNodeId("filter"), tableScan("tableScan", "table"), new ComparisonExpression(EQUAL, new SymbolReference("a"), new SymbolReference("b")));
         FilterNode enforcedConstraintNode = new FilterNode(
                 new PlanNodeId("filter"),
                 tableScan("tableScan", "table",
                         TupleDomain.withColumnDomains(ImmutableMap.of(new TestingColumnHandle("a"), Domain.singleValue(BIGINT, 1L)))),
-                expression("a=b"));
+                new ComparisonExpression(EQUAL, new SymbolReference("a"), new SymbolReference("b")));
 
         calculator.queryFinished(queryInfo(ImmutableMap.of(node.getId(), 777)), enforcedConstraintNode, session);
 
@@ -591,8 +591,8 @@ public class TestHistoryBasedStatsCalculator
         PlanNode node = new UnionNode(
                 new PlanNodeId("union"),
                 ImmutableList.of(
-                        new FilterNode(new PlanNodeId("filter1"), tableScan("tableScan", "table"), expression("a=b")),
-                        new FilterNode(new PlanNodeId("filter2"), tableScan("tableScan", "table"), expression("c=d"))),
+                        new FilterNode(new PlanNodeId("filter1"), tableScan("tableScan", "table"), new ComparisonExpression(EQUAL, new SymbolReference("a"), new SymbolReference("b"))),
+                        new FilterNode(new PlanNodeId("filter2"), tableScan("tableScan", "table"), new ComparisonExpression(EQUAL, new SymbolReference("c"), new SymbolReference("d")))),
                 ArrayListMultimap.create(),
                 ImmutableList.of());
 
@@ -609,7 +609,7 @@ public class TestHistoryBasedStatsCalculator
         HistoryBasedStatsCalculator calculator = createStatsCalculator();
         Session session = sessionWithHistoryBasedStatsEnabled();
 
-        FilterNode lastCardinalityChangingNode = new FilterNode(new PlanNodeId("filter"), tableScan("tableScan", "table"), expression("a=b"));
+        FilterNode lastCardinalityChangingNode = new FilterNode(new PlanNodeId("filter"), tableScan("tableScan", "table"), new ComparisonExpression(EQUAL, new SymbolReference("a"), new SymbolReference("b")));
         PlanNode node = new SortNode(
                 new PlanNodeId("sort"),
                 new ProjectNode(
@@ -640,7 +640,7 @@ public class TestHistoryBasedStatsCalculator
         HistoryBasedStatsCalculator calculator = createStatsCalculator();
         Session session = sessionWithHistoryBasedStatsEnabled();
 
-        FilterNode node = new FilterNode(new PlanNodeId("filter"), tableScan("tableScan", "table"), expression("a=b"));
+        FilterNode node = new FilterNode(new PlanNodeId("filter"), tableScan("tableScan", "table"), new ComparisonExpression(EQUAL, new SymbolReference("a"), new SymbolReference("b")));
 
         calculator.queryFinished(queryInfo(FAILED, SELECT, ImmutableMap.of(node.getId(), 777), ImmutableMap.of()), node, session);
 
