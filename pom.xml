@@ -200,6 +200,8 @@
             -XX:+EnableDynamicAgentLoading
         </air.test.jvm.additional-arguments.default>
         <air.test.jvm.additional-arguments>${air.test.jvm.additional-arguments.default}</air.test.jvm.additional-arguments>
+
+        <!-- starburst specific configuration -->
         <starburst-license.header-file>${air.main.basedir}/.mvn/license/starburst-header.txt</starburst-license.header-file>
 
         <!-- Publish artifacts to our internal Maven repository -->
@@ -211,6 +213,8 @@
         <air.repository.release.url>https://starburstdata-sep-cicd-843985043183.d.codeartifact.us-east-2.amazonaws.com/maven/releases/</air.repository.release.url>
         <extraJavaVectorArgs>--add-modules=jdk.incubator.vector</extraJavaVectorArgs>
 
+        <dep.sap-hana-jdbc.version>2.17.12</dep.sap-hana-jdbc.version>
+
         <!-- released from https://github.com/starburstdata/varada -->
         <dep.warp-speed.version>438.2.0</dep.warp-speed.version>
         <!-- released from https://github.com/starburstdata/starburst-dataframe -->
@@ -220,6 +224,14 @@
 
         <!-- bump temporarily until new airbase release due to https://github.com/FasterXML/jackson-core/issues/1207 -->
         <dep.jackson.version>2.17.0</dep.jackson.version>
+
+        <air.repository.snapshot.id>starburstdata-sep.snapshots</air.repository.snapshot.id>
+        <air.repository.snapshot.name>Starburstdata Snapshots</air.repository.snapshot.name>
+        <air.repository.snapshot.url>https://starburstdata-sep-cicd-843985043183.d.codeartifact.us-east-2.amazonaws.com/maven/snapshots/</air.repository.snapshot.url>
+        <air.repository.release.id>starburstdata-sep.releases</air.repository.release.id>
+        <air.repository.release.name>Starburstdata Releases</air.repository.release.name>
+        <air.repository.release.url>https://starburstdata-sep-cicd-843985043183.d.codeartifact.us-east-2.amazonaws.com/maven/releases/</air.repository.release.url>
+        <extraJavaVectorArgs>--add-modules=jdk.incubator.vector</extraJavaVectorArgs>
 
         <!-- keep dependency properties sorted -->
         <dep.accumulo-hadoop.version>2.7.7-1</dep.accumulo-hadoop.version>
@@ -237,7 +249,6 @@
         <dep.duct-tape.version>1.0.8</dep.duct-tape.version>
         <dep.errorprone.version>2.25.0</dep.errorprone.version>
         <dep.flyway.version>10.9.0</dep.flyway.version>
-        <dep.sap-hana-jdbc.version>2.17.12</dep.sap-hana-jdbc.version>
         <dep.google.http.client.version>1.44.1</dep.google.http.client.version>
         <dep.hudi.version>0.12.3</dep.hudi.version>
         <dep.iceberg.version>1.4.3</dep.iceberg.version>
