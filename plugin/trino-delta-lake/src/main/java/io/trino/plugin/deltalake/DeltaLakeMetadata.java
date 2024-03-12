@@ -3118,8 +3118,8 @@ public class DeltaLakeMetadata
         ImmutableList.Builder<Integer> dereferenceIndices = ImmutableList.builder();
 
         if (!column.isBaseColumn()) {
-            dereferenceNames.addAll(existingProjectionInfo.get().getDereferencePhysicalNames());
-            dereferenceIndices.addAll(existingProjectionInfo.get().getDereferenceIndices());
+            dereferenceNames.addAll(existingProjectionInfo.orElseThrow().getDereferencePhysicalNames());
+            dereferenceIndices.addAll(existingProjectionInfo.orElseThrow().getDereferenceIndices());
         }
 
         Type columnType = switch (columnMappingMode) {
@@ -3902,7 +3902,7 @@ public class DeltaLakeMetadata
             columnType = column.getBaseType();
         }
         else {
-            DeltaLakeColumnProjectionInfo projectionInfo = column.getProjectionInfo().get();
+            DeltaLakeColumnProjectionInfo projectionInfo = column.getProjectionInfo().orElseThrow();
             columnName = column.getQualifiedPhysicalName();
             columnType = projectionInfo.getType();
         }
