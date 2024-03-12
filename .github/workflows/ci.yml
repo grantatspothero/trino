@@ -1071,6 +1071,7 @@ jobs:
         if: always()
         run: .github/bin/s3/delete-s3-bucket.sh || true
       - name: Cloud Object Store Tests
+        id: tests-objectstore
         # Cloud tests are separate because they are time intensive, requiring cross-cloud network communication
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TRINO_AWS_ACCESS_KEY_ID }}
@@ -1141,10 +1142,12 @@ jobs:
         run: |
           $MAVEN test ${MAVEN_TEST} -pl :trino-singlestore -Dmemsql.license=${MEMSQL_LICENSE}
       - name: Galaxy Oracle Maven Tests
+        id: tests-galaxy-oracle
         if: matrix.modules == 'plugin/trino-galaxy-oracle'
         run: |
           $MAVEN test ${MAVEN_TEST} -pl ${{ matrix.modules }} ${{ matrix.profile != '' && format('-P {0}', matrix.profile) || '' }}
       - name: Snowflake Maven Tests
+        id: tests-galaxy-snowflake
         if: matrix.modules == 'plugin/trino-galaxy-snowflake'
         env:
           SNOWFLAKE_CONFIG: >-
@@ -1305,12 +1308,16 @@ jobs:
               || steps.tests-gcs.outcome == 'failure'
               || steps.tests-delta.outcome == 'failure'
               || steps.tests-memsql.outcome == 'failure'
+              || steps.tests-objectstore.outcome == 'failure'
+              || steps.tests-galaxy-oracle.outcome == 'failure'
+              || steps.tests-galaxy-snowflake.outcome == 'failure'
               || steps.tests-mongodb.outcome == 'failure'
               || steps.tests-bq.outcome == 'failure'
               || steps.tests-bq-smoke.outcome == 'failure'
               || steps.tests-bq-ci.outcome == 'failure'
               || steps.tests-iceberg.outcome == 'failure'
               || steps.tests-redshift.outcome == 'failure'
+              || steps.tests-snowflake.outcome == 'failure'
             }}
           upload-heap-dump: ${{ env.SECRETS_PRESENT == '' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
       - name: Update PR check
