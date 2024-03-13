@@ -73,10 +73,4 @@ public class ObjectStoreProxyConnectorInitializer
                 binder -> {},
                 context);
     }
-
-    @Override
-    public String getProxiedConnectorName()
-    {
-        return CONNECTOR_NAME;
-    }
 }

@@ -16,7 +16,6 @@ package io.trino.plugin.warp2;
 import com.google.inject.Module;
 import io.trino.plugin.base.jmx.ConnectorObjectNameGeneratorModule;
 import io.trino.plugin.iceberg.InternalIcebergConnectorFactory;
-import io.trino.plugin.varada.configuration.ProxiedConnectorConfiguration;
 import io.trino.plugin.varada.dispatcher.DispatcherProxiedConnectorTransformer;
 import io.trino.plugin.varada.dispatcher.ProxiedConnectorInitializer;
 import io.trino.plugin.warp.proxiedconnector.iceberg.IcebergProxiedConnectorTransformer;
@@ -58,11 +57,5 @@ public class IcebergProxiedConnectorInitializer
         catch (Exception e) {
             throw new RuntimeException("cant create iceberg connector", e);
         }
-    }
-
-    @Override
-    public String getProxiedConnectorName()
-    {
-        return ProxiedConnectorConfiguration.ICEBERG_CONNECTOR_NAME;
     }
 }
