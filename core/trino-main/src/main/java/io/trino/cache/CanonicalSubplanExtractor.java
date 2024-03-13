@@ -31,6 +31,10 @@ import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.SortOrder;
+import io.trino.sql.ir.CanonicalAggregation;
+import io.trino.sql.ir.Expression;
+import io.trino.sql.ir.LambdaExpression;
+import io.trino.sql.ir.SymbolReference;
 import io.trino.sql.planner.OrderingScheme;
 import io.trino.sql.planner.Symbol;
 import io.trino.sql.planner.SymbolsExtractor;
@@ -45,11 +49,6 @@ import io.trino.sql.planner.plan.ProjectNode;
 import io.trino.sql.planner.plan.TableScanNode;
 import io.trino.sql.planner.plan.TopNNode;
 import io.trino.sql.planner.plan.TopNRankingNode;
-import io.trino.sql.tree.Expression;
-import io.trino.sql.tree.FunctionCall;
-import io.trino.sql.tree.LambdaExpression;
-import io.trino.sql.tree.Node;
-import io.trino.sql.tree.SymbolReference;
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -66,7 +65,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Streams.stream;
 import static io.trino.cache.CanonicalSubplan.TopNRankingKey;
 import static io.trino.sql.DynamicFilters.isDynamicFilter;
-import static io.trino.sql.ExpressionFormatter.formatExpression;
+import static io.trino.sql.ir.ExpressionFormatter.formatExpression;
 import static io.trino.sql.ir.IrUtils.extractConjuncts;
 import static io.trino.sql.planner.DeterminismEvaluator.isDeterministic;
 import static io.trino.sql.planner.ExpressionExtractor.extractExpressions;
@@ -202,16 +201,9 @@ public final class CanonicalSubplanExtractor
             for (Map.Entry<Symbol, Aggregation> entry : node.getAggregations().entrySet()) {
                 Symbol symbol = entry.getKey();
                 Aggregation aggregation = entry.getValue();
-                FunctionCall canonicalAggregation = new FunctionCall(
-                        Optional.empty(),
-                        aggregation.getResolvedFunction().toQualifiedName(),
-                        Optional.empty(),
-                        // represent aggregation mask as filter expression
-                        aggregation.getMask().map(mask -> canonicalSymbolMapper.map(mask).toSymbolReference()),
-                        Optional.empty(),
-                        false,
-                        Optional.empty(),
-                        Optional.empty(),
+                CanonicalAggregation canonicalAggregation = new CanonicalAggregation(
+                        aggregation.getResolvedFunction(),
+                        aggregation.getMask().map(canonicalSymbolMapper::map),
                         aggregation.getArguments().stream()
                                 .map(canonicalSymbolMapper::map)
                                 .collect(toImmutableList()));
@@ -475,7 +467,7 @@ public final class CanonicalSubplanExtractor
 
         private boolean containsLambdaExpression(Expression expression)
         {
-            return stream(Traverser.<Node>forTree(Node::getChildren).depthFirstPreOrder(expression))
+            return stream(Traverser.<Expression>forTree(Expression::getChildren).depthFirstPreOrder(expression))
                     .anyMatch(instanceOf(LambdaExpression.class));
         }
 
