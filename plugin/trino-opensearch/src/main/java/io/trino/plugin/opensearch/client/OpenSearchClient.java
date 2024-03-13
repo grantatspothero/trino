@@ -33,11 +33,18 @@ import io.airlift.json.ObjectMapperProvider;
 import io.airlift.log.Logger;
 import io.airlift.stats.TimeStat;
 import io.airlift.units.Duration;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.opensearch.AwsSecurityConfig;
 import io.trino.plugin.opensearch.OpenSearchConfig;
 import io.trino.plugin.opensearch.OpenSearchErrorCode;
 import io.trino.plugin.opensearch.PasswordConfig;
+import io.trino.plugin.opensearch.client.galaxy.RegionEnforcerInterceptor;
+import io.trino.plugin.opensearch.client.galaxy.SshHostRegionEnforcerInterceptor;
+import io.trino.plugin.opensearch.client.galaxy.SshTunnelConnectingIOReactor;
 import io.trino.spi.TrinoException;
+import io.trino.sshtunnel.SshTunnelConfig;
+import io.trino.sshtunnel.SshTunnelManager;
+import io.trino.sshtunnel.SshTunnelProperties;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.apache.http.HttpEntity;
@@ -51,8 +58,10 @@ import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
+import org.apache.http.impl.nio.conn.PoolingNHttpClientConnectionManager;
 import org.apache.http.impl.nio.reactor.IOReactorConfig;
 import org.apache.http.message.BasicHeader;
+import org.apache.http.nio.reactor.IOReactorException;
 import org.apache.http.util.EntityUtils;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.search.ClearScrollRequest;
@@ -73,6 +82,7 @@ import javax.net.ssl.SSLContext;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -131,10 +141,13 @@ public class OpenSearchClient
     @Inject
     public OpenSearchClient(
             OpenSearchConfig config,
+            LocalRegionConfig localRegionConfig,
+            SshTunnelConfig sshTunnelConfig,
             Optional<AwsSecurityConfig> awsSecurityConfig,
             Optional<PasswordConfig> passwordConfig)
     {
-        client = createClient(config, awsSecurityConfig, passwordConfig, backpressureStats);
+        Optional<SshTunnelProperties> sshTunnelProperties = SshTunnelProperties.generateFrom(sshTunnelConfig);
+        client = createClient(config, localRegionConfig, sshTunnelProperties, awsSecurityConfig, passwordConfig, backpressureStats);
 
         this.ignorePublishAddress = config.isIgnorePublishAddress();
         this.scrollSize = config.getScrollSize();
@@ -190,6 +203,8 @@ public class OpenSearchClient
 
     private static BackpressureRestHighLevelClient createClient(
             OpenSearchConfig config,
+            LocalRegionConfig localRegionConfig,
+            Optional<SshTunnelProperties> sshTunnelProperties,
             Optional<AwsSecurityConfig> awsSecurityConfig,
             Optional<PasswordConfig> passwordConfig,
             TimeStat backpressureStats)
@@ -225,6 +240,12 @@ public class OpenSearchClient
                 }
             }
 
+            sshTunnelProperties.ifPresentOrElse(tunnelProperties -> clientBuilder
+                            .addInterceptorFirst(
+                                    new SshHostRegionEnforcerInterceptor(localRegionConfig.getAllowedIpAddresses(), tunnelProperties.getServer().getHost()))
+                            .setConnectionManager(getConnectionManager(config, reactorConfig, tunnelProperties)),
+                    () -> clientBuilder.addInterceptorFirst(new RegionEnforcerInterceptor(localRegionConfig.getAllowedIpAddresses())));
+
             passwordConfig.ifPresent(securityConfig -> {
                 CredentialsProvider credentials = new BasicCredentialsProvider();
                 credentials.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(securityConfig.getUser(), securityConfig.getPassword()));
@@ -240,6 +261,21 @@ public class OpenSearchClient
         });
 
         return new BackpressureRestHighLevelClient(builder, config, backpressureStats);
+    }
+
+    private static PoolingNHttpClientConnectionManager getConnectionManager(OpenSearchConfig config, IOReactorConfig reactorConfig, SshTunnelProperties sshTunnelProperties)
+    {
+        SshTunnelManager sshTunnelManager = SshTunnelManager.getCached(sshTunnelProperties);
+        try {
+            PoolingNHttpClientConnectionManager manager = new PoolingNHttpClientConnectionManager(
+                    new SshTunnelConnectingIOReactor(reactorConfig, sshTunnelManager));
+            manager.setMaxTotal(config.getMaxHttpConnections());
+            manager.setDefaultMaxPerRoute(config.getMaxHttpConnections());
+            return manager;
+        }
+        catch (IOReactorException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     private static AWSCredentialsProvider getAwsCredentialsProvider(AwsSecurityConfig config)

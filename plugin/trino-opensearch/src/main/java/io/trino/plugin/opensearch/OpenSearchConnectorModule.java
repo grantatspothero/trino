@@ -16,9 +16,11 @@ package io.trino.plugin.opensearch;
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.opensearch.client.OpenSearchClient;
 import io.trino.plugin.opensearch.ptf.RawQuery;
 import io.trino.spi.function.table.ConnectorTableFunction;
+import io.trino.sshtunnel.SshTunnelConfig;
 
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
@@ -43,6 +45,8 @@ public class OpenSearchConnectorModule
         newExporter(binder).export(OpenSearchClient.class).withGeneratedName();
 
         configBinder(binder).bindConfig(OpenSearchConfig.class);
+        configBinder(binder).bindConfig(LocalRegionConfig.class);
+        configBinder(binder).bindConfig(SshTunnelConfig.class);
 
         newOptionalBinder(binder, AwsSecurityConfig.class);
         newOptionalBinder(binder, PasswordConfig.class);
