@@ -18,6 +18,7 @@ import io.grpc.netty.shaded.io.netty.channel.ChannelHandlerContext;
 import io.grpc.netty.shaded.io.netty.channel.socket.DatagramPacket;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
+import io.trino.spi.galaxy.CatalogConnectionType;
 
 public class GalaxyMetricsRecordingInboundChannelHandler
         extends GalaxyMetricsRecordingChannelHandler
@@ -31,16 +32,16 @@ public class GalaxyMetricsRecordingInboundChannelHandler
     public void channelRead(ChannelHandlerContext ctx, Object msg)
             throws Exception
     {
-        boolean isCrossRegion = ctx.channel().attr(isCrossRegionKey).get();
+        CatalogConnectionType catalogConnectionType = ctx.channel().attr(catalogConnectionTypeAttributeKey).get();
         if (msg instanceof ByteBuf buffer) {
             if (buffer.readableBytes() > 0) {
-                getCatalogNetworkMonitor().recordReadBytes(isCrossRegion, buffer.readableBytes());
+                getCatalogNetworkMonitor().recordReadBytes(catalogConnectionType, buffer.readableBytes());
             }
         }
         else if (msg instanceof DatagramPacket packet) {
             ByteBuf buffer = packet.content();
             if (buffer.readableBytes() > 0) {
-                getCatalogNetworkMonitor().recordReadBytes(isCrossRegion, buffer.readableBytes());
+                getCatalogNetworkMonitor().recordReadBytes(catalogConnectionType, buffer.readableBytes());
             }
         }
         else {

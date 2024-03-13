@@ -16,6 +16,7 @@ package io.trino.plugin.base.galaxy;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import io.trino.spi.galaxy.CatalogConnectionType;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -77,6 +78,22 @@ public class RegionVerifier
             return true;
         }
         return false;
+    }
+
+    public CatalogConnectionType getCatalogConnectionType(String serverType, InetSocketAddress socketAddress)
+    {
+        if (isCrossRegionAccess(serverType, socketAddress)) {
+            return CatalogConnectionType.CROSS_REGION;
+        }
+        return CatalogConnectionType.INTRA_REGION;
+    }
+
+    public CatalogConnectionType getCatalogConnectionType(String serverType, List<InetAddress> addresses)
+    {
+        if (isCrossRegionAccess(serverType, addresses)) {
+            return CatalogConnectionType.CROSS_REGION;
+        }
+        return CatalogConnectionType.INTRA_REGION;
     }
 
     private static InetAddress extractInetAddress(InetSocketAddress socketAddress)

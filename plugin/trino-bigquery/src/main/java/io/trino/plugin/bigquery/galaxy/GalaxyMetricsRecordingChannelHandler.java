@@ -21,6 +21,7 @@ import io.grpc.netty.shaded.io.netty.util.AttributeKey;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.RegionVerifier;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
+import io.trino.spi.galaxy.CatalogConnectionType;
 import io.trino.spi.galaxy.CatalogNetworkMonitor;
 
 import java.util.Optional;
@@ -44,7 +45,7 @@ public class GalaxyMetricsRecordingChannelHandler
     protected final boolean crossRegionAllowed;
     protected final Optional<DataSize> crossRegionReadLimit;
     protected final Optional<DataSize> crossRegionWriteLimit;
-    protected final AttributeKey<Boolean> isCrossRegionKey = AttributeKey.valueOf("isCrossRegion");
+    protected final AttributeKey<CatalogConnectionType> catalogConnectionTypeAttributeKey = AttributeKey.valueOf("catalogConnectionType");
 
     public GalaxyMetricsRecordingChannelHandler(RegionVerifierProperties regionVerifierProperties, CatalogNetworkMonitorProperties catalogNetworkMonitorProperties)
     {

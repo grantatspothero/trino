@@ -15,6 +15,7 @@ package io.trino.plugin.base.galaxy;
 
 import com.google.common.net.HostAndPort;
 import io.airlift.units.DataSize;
+import io.trino.spi.galaxy.CatalogConnectionType;
 import io.trino.sshtunnel.SshTunnelManager;
 import io.trino.sshtunnel.SshTunnelManager.Tunnel;
 import io.trino.sshtunnel.SshTunnelProperties;
@@ -82,7 +83,7 @@ public class GalaxySqlSocketFactory
 
     class SocketWrapperAndVerifier
     {
-        private boolean isCrossRegion;
+        private CatalogConnectionType catalogConnectionType;
 
         public SocketAddress redirectAddress(SocketAddress socketAddress)
         {
@@ -92,11 +93,11 @@ public class GalaxySqlSocketFactory
                 SshTunnelManager tunnelManager = sshTunnelManager.get();
                 Tunnel tunnel = tunnelManager.getOrCreateTunnel(HostAndPort.fromParts(inetSocketAddress.getHostString(), inetSocketAddress.getPort()));
                 // Verify that the SSH server will be within the region-local IP ranges (because it will be our first network hop)
-                isCrossRegion = regionVerifier.isCrossRegionAccess("SSH tunnel server", toInetAddresses(tunnelManager.getSshServer().getHost()));
+                catalogConnectionType = regionVerifier.getCatalogConnectionType("SSH tunnel server", toInetAddresses(tunnelManager.getSshServer().getHost()));
                 return new InetSocketAddress("127.0.0.1", tunnel.getLocalTunnelPort());
             }
 
-            isCrossRegion = regionVerifier.isCrossRegionAccess("Database server", inetSocketAddress);
+            catalogConnectionType = regionVerifier.getCatalogConnectionType("Database server", inetSocketAddress);
             return inetSocketAddress;
         }
 
@@ -107,9 +108,9 @@ public class GalaxySqlSocketFactory
                 verify(crossRegionReadLimit.isPresent(), "Cross-region read limit must be present to query cross-region catalog");
                 verify(crossRegionWriteLimit.isPresent(), "Cross-region write limit must be present to query cross-region catalog");
 
-                return getCrossRegionCatalogNetworkMonitor(catalogName, catalogId, crossRegionReadLimit.get().toBytes(), crossRegionWriteLimit.get().toBytes()).monitorInputStream(isCrossRegion, inputStream);
+                return getCrossRegionCatalogNetworkMonitor(catalogName, catalogId, crossRegionReadLimit.get().toBytes(), crossRegionWriteLimit.get().toBytes()).monitorInputStream(catalogConnectionType, inputStream);
             }
-            return getCatalogNetworkMonitor(catalogName, catalogId).monitorInputStream(isCrossRegion, inputStream);
+            return getCatalogNetworkMonitor(catalogName, catalogId).monitorInputStream(catalogConnectionType, inputStream);
         }
 
         public OutputStream getOutputStream(OutputStream outputStream)
@@ -119,9 +120,9 @@ public class GalaxySqlSocketFactory
                 verify(crossRegionReadLimit.isPresent(), "Cross-region read limit must be present to query cross-region catalog");
                 verify(crossRegionWriteLimit.isPresent(), "Cross-region write limit must be present to query cross-region catalog");
 
-                return getCrossRegionCatalogNetworkMonitor(catalogName, catalogId, crossRegionReadLimit.get().toBytes(), crossRegionWriteLimit.get().toBytes()).monitorOutputStream(isCrossRegion, outputStream);
+                return getCrossRegionCatalogNetworkMonitor(catalogName, catalogId, crossRegionReadLimit.get().toBytes(), crossRegionWriteLimit.get().toBytes()).monitorOutputStream(catalogConnectionType, outputStream);
             }
-            return getCatalogNetworkMonitor(catalogName, catalogId).monitorOutputStream(isCrossRegion, outputStream);
+            return getCatalogNetworkMonitor(catalogName, catalogId).monitorOutputStream(catalogConnectionType, outputStream);
         }
     }
 

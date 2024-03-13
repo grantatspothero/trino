@@ -37,7 +37,7 @@ public class TestCatalogNetworkMonitor
             CatalogNetworkMonitor catalogNetworkMonitor = getCrossRegionCatalogNetworkMonitor("foocatalog", "c-1234567890", MAX_CROSS_REGION_BYTES, MAX_CROSS_REGION_BYTES);
             try (InputStream baseInputStream = new ByteArrayInputStream(new byte[CHUNK_SIZE])) {
                 // create monitored input stream, read a certain amount of bytes, and verify that the amount read is correctly reported
-                InputStream monitoredInputStream = catalogNetworkMonitor.monitorInputStream(true, baseInputStream);
+                InputStream monitoredInputStream = catalogNetworkMonitor.monitorInputStream(CatalogConnectionType.CROSS_REGION, baseInputStream);
 
                 monitoredInputStream.readNBytes(CHUNK_SIZE);
                 long readBytes = catalogNetworkMonitor.getCrossRegionReadBytes();
@@ -51,7 +51,7 @@ public class TestCatalogNetworkMonitor
         CatalogNetworkMonitor catalogNetworkMonitor = getCrossRegionCatalogNetworkMonitor("foocatalog", "c-1234567890", MAX_CROSS_REGION_BYTES, MAX_CROSS_REGION_BYTES);
         try (InputStream baseInputStream = new ByteArrayInputStream(new byte[CHUNK_SIZE])) {
             // create monitored input stream, read a certain amount of bytes, and verify that the amount read is correctly reported
-            InputStream monitoredInputStream = catalogNetworkMonitor.monitorInputStream(true, baseInputStream);
+            InputStream monitoredInputStream = catalogNetworkMonitor.monitorInputStream(CatalogConnectionType.CROSS_REGION, baseInputStream);
 
             assertThatThrownBy(() -> monitoredInputStream.readNBytes(CHUNK_SIZE))
                     .hasMessage("Cross-region read data transfer limit of 0GB per worker exceeded. To increase this limit, contact Starburst support.");

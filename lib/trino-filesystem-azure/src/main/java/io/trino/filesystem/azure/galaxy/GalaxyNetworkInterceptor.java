@@ -17,6 +17,7 @@ import io.airlift.units.DataSize;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.RegionVerifier;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
+import io.trino.spi.galaxy.CatalogConnectionType;
 import io.trino.spi.galaxy.CatalogNetworkMonitor;
 import jakarta.validation.constraints.NotNull;
 import okhttp3.Interceptor;
@@ -57,16 +58,16 @@ public class GalaxyNetworkInterceptor
             throws IOException
     {
         Request request = chain.request();
-        boolean isCrossRegion = regionVerifier.isCrossRegionAccess("Database server", toInetAddresses(request.url().host()));
+        CatalogConnectionType catalogConnectionType = regionVerifier.getCatalogConnectionType("Database server", toInetAddresses(request.url().host()));
         CatalogNetworkMonitor networkMonitor = getCatalogNetworkMonitor();
 
         Response response = chain.proceed(request);
         if (response.isSuccessful()) {
             if (request.body() != null) {
-                networkMonitor.recordWriteBytes(isCrossRegion, request.body().contentLength());
+                networkMonitor.recordWriteBytes(catalogConnectionType, request.body().contentLength());
             }
             if (response.body() != null) {
-                networkMonitor.recordReadBytes(isCrossRegion, response.body().contentLength());
+                networkMonitor.recordReadBytes(catalogConnectionType, response.body().contentLength());
             }
         }
         return response;

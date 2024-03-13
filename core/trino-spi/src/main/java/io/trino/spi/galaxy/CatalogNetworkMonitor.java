@@ -111,31 +111,36 @@ public final class CatalogNetworkMonitor
                 .toString();
     }
 
-    public InputStream monitorInputStream(boolean crossRegion, InputStream inputStream)
+    public InputStream monitorInputStream(CatalogConnectionType catalogConnectionType, InputStream inputStream)
     {
-        return new MonitoredInputStream(getNetworkMonitor(crossRegion), inputStream);
+        return new MonitoredInputStream(getNetworkMonitor(catalogConnectionType), inputStream);
     }
 
-    public OutputStream monitorOutputStream(boolean crossRegion, OutputStream outputStream)
+    public OutputStream monitorOutputStream(CatalogConnectionType catalogConnectionType, OutputStream outputStream)
     {
-        return new MonitoredOutputStream(getNetworkMonitor(crossRegion), outputStream);
+        return new MonitoredOutputStream(getNetworkMonitor(catalogConnectionType), outputStream);
     }
 
-    public void recordReadBytes(boolean crossRegion, long bytes)
+    public void recordReadBytes(CatalogConnectionType catalogConnectionType, long bytes)
     {
-        getNetworkMonitor(crossRegion).recordReadBytes(bytes);
+        getNetworkMonitor(catalogConnectionType).recordReadBytes(bytes);
     }
 
-    public void recordWriteBytes(boolean crossRegion, long bytes)
+    public void recordWriteBytes(CatalogConnectionType catalogConnectionType, long bytes)
     {
-        getNetworkMonitor(crossRegion).recordWriteBytes(bytes);
+        getNetworkMonitor(catalogConnectionType).recordWriteBytes(bytes);
     }
 
-    private NetworkMonitor getNetworkMonitor(boolean crossRegion)
+    private NetworkMonitor getNetworkMonitor(CatalogConnectionType catalogConnectionType)
     {
-        return crossRegion
-                ? crossRegionMonitor.orElseThrow(
-                        () -> new IllegalArgumentException("Cross-region querying is not allowed for catalog %s".formatted(catalogName)))
-                : intraRegionMonitor;
+        switch (catalogConnectionType) {
+            case CROSS_REGION:
+                return crossRegionMonitor.orElseThrow(
+                        () -> new IllegalArgumentException("Cross-region querying is not allowed for catalog %s".formatted(catalogName)));
+            case INTRA_REGION:
+                return intraRegionMonitor;
+            default:
+                throw new IllegalArgumentException("Unknown catalog connection type: " + catalogConnectionType);
+        }
     }
 }

@@ -21,6 +21,7 @@ import io.airlift.units.DataSize;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.RegionVerifier;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
+import io.trino.spi.galaxy.CatalogConnectionType;
 import io.trino.sshtunnel.SshTunnelManager;
 import io.trino.sshtunnel.SshTunnelManager.Tunnel;
 import io.trino.sshtunnel.SshTunnelProperties;
@@ -59,7 +60,7 @@ public class GalaxyMySqlSocketFactory
 
         return new Socket()
         {
-            private boolean crossRegionAddress;
+            private CatalogConnectionType catalogConnectionType;
 
             @Override
             public void connect(SocketAddress endpoint)
@@ -83,11 +84,11 @@ public class GalaxyMySqlSocketFactory
                     SshTunnelManager tunnelManager = sshTunnelManager.get();
                     Tunnel tunnel = tunnelManager.getOrCreateTunnel(HostAndPort.fromParts(inetSocketAddress.getHostString(), inetSocketAddress.getPort()));
                     // Verify that the SSH server will be in the allowed IP ranges (because it will be our first network hop)
-                    crossRegionAddress = regionVerifier.isCrossRegionAccess("SSH tunnel server", toInetAddresses(tunnelManager.getSshServer().getHost()));
+                    catalogConnectionType = regionVerifier.getCatalogConnectionType("SSH tunnel server", toInetAddresses(tunnelManager.getSshServer().getHost()));
                     return new InetSocketAddress("127.0.0.1", tunnel.getLocalTunnelPort());
                 }
 
-                crossRegionAddress = regionVerifier.isCrossRegionAccess("Database server", inetSocketAddress);
+                catalogConnectionType = regionVerifier.getCatalogConnectionType("Database server", inetSocketAddress);
                 return inetSocketAddress;
             }
 
@@ -99,9 +100,9 @@ public class GalaxyMySqlSocketFactory
                     verify(crossRegionReadLimit.isPresent(), "Cross-region read limit must be present to query cross-region catalog");
                     verify(crossRegionWriteLimit.isPresent(), "Cross-region write limit must be present to query cross-region catalog");
 
-                    return getCrossRegionCatalogNetworkMonitor(catalogName, catalogId, crossRegionReadLimit.get().toBytes(), crossRegionWriteLimit.get().toBytes()).monitorInputStream(crossRegionAddress, super.getInputStream());
+                    return getCrossRegionCatalogNetworkMonitor(catalogName, catalogId, crossRegionReadLimit.get().toBytes(), crossRegionWriteLimit.get().toBytes()).monitorInputStream(catalogConnectionType, super.getInputStream());
                 }
-                return getCatalogNetworkMonitor(catalogName, catalogId).monitorInputStream(crossRegionAddress, super.getInputStream());
+                return getCatalogNetworkMonitor(catalogName, catalogId).monitorInputStream(catalogConnectionType, super.getInputStream());
             }
 
             @Override
@@ -112,9 +113,9 @@ public class GalaxyMySqlSocketFactory
                     verify(crossRegionReadLimit.isPresent(), "Cross-region read limit must be present to query cross-region catalog");
                     verify(crossRegionWriteLimit.isPresent(), "Cross-region write limit must be present to query cross-region catalog");
 
-                    return getCrossRegionCatalogNetworkMonitor(catalogName, catalogId, crossRegionReadLimit.get().toBytes(), crossRegionWriteLimit.get().toBytes()).monitorOutputStream(crossRegionAddress, super.getOutputStream());
+                    return getCrossRegionCatalogNetworkMonitor(catalogName, catalogId, crossRegionReadLimit.get().toBytes(), crossRegionWriteLimit.get().toBytes()).monitorOutputStream(catalogConnectionType, super.getOutputStream());
                 }
-                return getCatalogNetworkMonitor(catalogName, catalogId).monitorOutputStream(crossRegionAddress, super.getOutputStream());
+                return getCatalogNetworkMonitor(catalogName, catalogId).monitorOutputStream(catalogConnectionType, super.getOutputStream());
             }
         };
     }

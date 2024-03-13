@@ -20,6 +20,7 @@ import io.grpc.netty.shaded.io.netty.channel.socket.DatagramPacket;
 import io.grpc.netty.shaded.io.netty.util.Attribute;
 import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.RegionVerifierProperties;
+import io.trino.spi.galaxy.CatalogConnectionType;
 
 import java.net.SocketAddress;
 
@@ -37,8 +38,8 @@ public class GalaxyMetricsRecordingOutboundChannelHandler
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise)
             throws Exception
     {
-        Attribute<Boolean> isCrossRegionAttr = ctx.channel().attr(isCrossRegionKey);
-        isCrossRegionAttr.set(regionVerifier.isCrossRegionAccess("Database server", asInetSocketAddress(remoteAddress)));
+        Attribute<CatalogConnectionType> catalogConnectionTypeAttr = ctx.channel().attr(catalogConnectionTypeAttributeKey);
+        catalogConnectionTypeAttr.set(regionVerifier.getCatalogConnectionType("Database server", asInetSocketAddress(remoteAddress)));
         super.connect(ctx, remoteAddress, localAddress, promise);
     }
 
@@ -46,16 +47,16 @@ public class GalaxyMetricsRecordingOutboundChannelHandler
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
             throws Exception
     {
-        boolean isCrossRegion = ctx.channel().attr(isCrossRegionKey).get();
+        CatalogConnectionType catalogConnectionType = ctx.channel().attr(catalogConnectionTypeAttributeKey).get();
         if (msg instanceof ByteBuf buffer) {
             if (buffer.readableBytes() > 0) {
-                getCatalogNetworkMonitor().recordWriteBytes(isCrossRegion, buffer.readableBytes());
+                getCatalogNetworkMonitor().recordWriteBytes(catalogConnectionType, buffer.readableBytes());
             }
         }
         else if (msg instanceof DatagramPacket packet) {
             ByteBuf buffer = packet.content();
             if (buffer.readableBytes() > 0) {
-                getCatalogNetworkMonitor().recordWriteBytes(isCrossRegion, buffer.readableBytes());
+                getCatalogNetworkMonitor().recordWriteBytes(catalogConnectionType, buffer.readableBytes());
             }
         }
         else {

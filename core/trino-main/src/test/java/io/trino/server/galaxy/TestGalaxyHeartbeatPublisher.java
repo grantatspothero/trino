@@ -24,6 +24,7 @@ import io.trino.galaxy.kafka.TestingKafkaPublisher;
 import io.trino.server.galaxy.events.CatalogMetricsSnapshot;
 import io.trino.server.galaxy.events.HeartbeatEvent;
 import io.trino.server.galaxy.events.HeartbeatPublisher;
+import io.trino.spi.galaxy.CatalogConnectionType;
 import io.trino.spi.galaxy.CatalogNetworkMonitor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -63,7 +64,7 @@ public class TestGalaxyHeartbeatPublisher
             CatalogNetworkMonitor catalogNetworkMonitor = CatalogNetworkMonitor.getCrossRegionCatalogNetworkMonitor("foocatalog", "c-1234567890", MAX_CROSS_REGION_BYTES, MAX_CROSS_REGION_BYTES);
             try (InputStream baseInputStream = new ByteArrayInputStream(new byte[CHUNK_SIZE])) {
                 // create monitored input stream, read a certain amount of bytes, and verify that the amount read is correctly reported
-                InputStream monitoredInputStream = catalogNetworkMonitor.monitorInputStream(true, baseInputStream);
+                InputStream monitoredInputStream = catalogNetworkMonitor.monitorInputStream(CatalogConnectionType.CROSS_REGION, baseInputStream);
 
                 monitoredInputStream.readNBytes(CHUNK_SIZE);
                 long readBytes = catalogNetworkMonitor.getCrossRegionReadBytes();
