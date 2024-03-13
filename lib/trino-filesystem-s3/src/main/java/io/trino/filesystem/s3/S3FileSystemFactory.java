@@ -93,6 +93,9 @@ public final class S3FileSystemFactory
                     .build());
         }
 
+        // see https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/s3-cross-region.html
+        s3.crossRegionAccessEnabled(crossRegionConfig.getAllowCrossRegionAccess());
+
         Properties connectionProperties = new Properties();
         RegionVerifierProperties.addRegionVerifierProperties(connectionProperties::setProperty, RegionVerifierProperties.generateFrom(localRegionConfig, crossRegionConfig));
         CatalogNetworkMonitorProperties catalogNetworkMonitorProperties = CatalogNetworkMonitorProperties.generateFrom(crossRegionConfig, catalogHandle)

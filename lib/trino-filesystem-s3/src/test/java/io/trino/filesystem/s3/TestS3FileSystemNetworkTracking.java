@@ -51,6 +51,7 @@ import java.io.OutputStream;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -59,6 +60,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @TestMethodOrder(OrderAnnotation.class)
 public class TestS3FileSystemNetworkTracking
 {
+    private static final String ALTERNATE_REGION = "us-west-2";
     private static final int BYTES_IN_MEGABYTE = 1024 * 1024;
     private static final DataSize HIGH_CROSS_REGION_LIMIT = DataSize.of(1, Unit.GIGABYTE);
     private static final DataSize ZERO_CROSS_REGION_LIMIT = DataSize.ofBytes(0);
@@ -73,6 +75,7 @@ public class TestS3FileSystemNetworkTracking
     public void init()
     {
         Logging.initialize();
+        checkState(!region.equals(ALTERNATE_REGION), "AWS_REGION and ALTERNATE_REGION cannot be the same");
     }
 
     @Test
@@ -220,7 +223,8 @@ public class TestS3FileSystemNetworkTracking
                 OpenTelemetry.noop(),
                 new S3FileSystemConfig()
                         .setAwsAccessKey(accessKey)
-                        .setAwsSecretKey(secretKey).setRegion(region)
+                        .setAwsSecretKey(secretKey)
+                        .setRegion(ALTERNATE_REGION)
                         .setStreamingPartSize(DataSize.valueOf("5.5MB")),
                 CatalogHandle.fromId(catalogId),
                 new LocalRegionConfig()
