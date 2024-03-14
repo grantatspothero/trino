@@ -244,7 +244,7 @@
         <dep.cassandra.version>4.17.0</dep.cassandra.version>
         <dep.cloudevents.version>2.2.0</dep.cloudevents.version>
         <dep.confluent.version>7.5.1</dep.confluent.version>
-        <dep.docker.images.version>91</dep.docker.images.version>
+        <dep.docker.images.version>92</dep.docker.images.version>
         <dep.drift.version>1.21</dep.drift.version>
         <dep.errorprone.version>2.26.1</dep.errorprone.version>
         <dep.flyway.version>10.10.0</dep.flyway.version>
