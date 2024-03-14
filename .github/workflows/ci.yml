@@ -23,9 +23,9 @@ env:
   # An envar that signals to tests we are executing in the CI environment
   CONTINUOUS_INTEGRATION: true
   # credentials for the private repository
-  mavenReleaseUsername: ${{ secrets.CODE_ARTIFACT_USERNAME }}
+  mavenReleaseUsername: ${{ vars.CODE_ARTIFACT_USERNAME }}
   mavenReleasePassword: ${{ secrets.CODE_ARTIFACT_PASSWORD }}
-  mavenSnapshotsUsername: ${{ secrets.CODE_ARTIFACT_USERNAME }}
+  mavenSnapshotsUsername: ${{ vars.CODE_ARTIFACT_USERNAME }}
   mavenSnapshotsPassword: ${{ secrets.CODE_ARTIFACT_PASSWORD }}
   # certificates for Galaxy metastore
   GALAXY_SERVICE_PEM: ${{ secrets.GALAXY_SERVICE_PEM }}
@@ -270,9 +270,9 @@ jobs:
       - name: Set up AWS code-artifacts login
         uses: ./.github/actions/starburst-setup
         with:
-          aws-access-key-id: ${{ secrets.ENG_AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ vars.ENG_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.ENG_AWS_SECRET_ACCESS_KEY }}
-          secret-id: ${{ secrets.SEP_SECRETS_AWS_ID }}
+          secret-id: ${{ vars.SEP_SECRETS_AWS_ID }}
       - uses: ./.github/actions/setup
         with:
           cache: ${{ matrix.cache }}
@@ -306,10 +306,9 @@ jobs:
       - name: Set up AWS code-artifacts login
         uses: ./.github/actions/starburst-setup
         with:
-          aws-access-key-id: ${{ secrets.ENG_AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ vars.ENG_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.ENG_AWS_SECRET_ACCESS_KEY }}
-          secret-id:
-            ${{ secrets.SEP_SECRETS_AWS_ID }}
+          secret-id: ${{ vars.SEP_SECRETS_AWS_ID }}
       - uses: ./.github/actions/setup
         with:
           cache: 'restore'
@@ -412,9 +411,9 @@ jobs:
       - name: Set up AWS code-artifacts login
         uses: ./.github/actions/starburst-setup
         with:
-          aws-access-key-id: ${{ secrets.ENG_AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ vars.ENG_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.ENG_AWS_SECRET_ACCESS_KEY }}
-          secret-id: ${{ secrets.SEP_SECRETS_AWS_ID }}
+          secret-id: ${{ vars.SEP_SECRETS_AWS_ID }}
       - uses: ./.github/actions/setup
         with:
           cache: restore
@@ -460,9 +459,9 @@ jobs:
       - name: Set up AWS code-artifacts login
         uses: ./.github/actions/starburst-setup
         with:
-          aws-access-key-id: ${{ secrets.ENG_AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ vars.ENG_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.ENG_AWS_SECRET_ACCESS_KEY }}
-          secret-id: ${{ secrets.SEP_SECRETS_AWS_ID }}
+          secret-id: ${{ vars.SEP_SECRETS_AWS_ID }}
       - name: "Login to ECR pull-through cache"
         shell: bash
         run: |
@@ -514,9 +513,9 @@ jobs:
       - name: Set up AWS code-artifacts login
         uses: ./.github/actions/starburst-setup
         with:
-          aws-access-key-id: ${{ secrets.ENG_AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ vars.ENG_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.ENG_AWS_SECRET_ACCESS_KEY }}
-          secret-id: ${{ secrets.SEP_SECRETS_AWS_ID }}
+          secret-id: ${{ vars.SEP_SECRETS_AWS_ID }}
       - uses: ./.github/actions/setup
         with:
           cache: restore
@@ -527,8 +526,8 @@ jobs:
       - name: Run Hive Cloud Tests
         id: tests
         env:
-          ABFS_CONTAINER: ${{ secrets.AZURE_ABFS_CONTAINER }}
-          ABFS_ACCOUNT: ${{ secrets.AZURE_ABFS_ACCOUNT }}
+          ABFS_CONTAINER: ${{ vars.AZURE_ABFS_CONTAINER }}
+          ABFS_ACCOUNT: ${{ vars.AZURE_ABFS_ACCOUNT }}
           ABFS_ACCESSKEY: ${{ secrets.AZURE_ABFS_ACCESSKEY }}
           AWS_ACCESS_KEY_ID: ${{ vars.TRINO_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TRINO_AWS_SECRET_ACCESS_KEY }}
@@ -580,9 +579,9 @@ jobs:
       - name: Set up AWS code-artifacts login
         uses: ./.github/actions/starburst-setup
         with:
-          aws-access-key-id: ${{ secrets.ENG_AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ vars.ENG_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.ENG_AWS_SECRET_ACCESS_KEY }}
-          secret-id: ${{ secrets.SEP_SECRETS_AWS_ID }}
+          secret-id: ${{ vars.SEP_SECRETS_AWS_ID }}
       - uses: ./.github/actions/setup
         with:
           java-version: 21
@@ -593,7 +592,7 @@ jobs:
       - name: Run Salesforce tests
         if: contains(matrix.modules, 'starburst-salesforce')
         env:
-          SALESFORCE_BASIC_AUTH_USER_USERNAME: ${{ secrets.SALESFORCE_BASIC_AUTH_USER_USERNAME }}
+          SALESFORCE_BASIC_AUTH_USER_USERNAME: ${{ vars.SALESFORCE_BASIC_AUTH_USER_USERNAME }}
           SALESFORCE_BASIC_AUTH_USER_PASSWORD: ${{ secrets.SALESFORCE_BASIC_AUTH_USER_PASSWORD }}
           SALESFORCE_BASIC_AUTH_USER_SECURITY_TOKEN: ${{ secrets.SALESFORCE_BASIC_AUTH_USER_SECURITY_TOKEN }}
         run: |
@@ -671,9 +670,9 @@ jobs:
       - name: Set up AWS code-artifacts login
         uses: ./.github/actions/starburst-setup
         with:
-          aws-access-key-id: ${{ secrets.ENG_AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ vars.ENG_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.ENG_AWS_SECRET_ACCESS_KEY }}
-          secret-id: ${{ secrets.SEP_SECRETS_AWS_ID }}
+          secret-id: ${{ vars.SEP_SECRETS_AWS_ID }}
           login-docker: true
       - uses: ./.github/actions/setup
         with:
@@ -776,9 +775,9 @@ jobs:
       - name: Set up AWS code-artifacts login
         uses: ./.github/actions/starburst-setup
         with:
-          aws-access-key-id: ${{ secrets.ENG_AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ vars.ENG_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.ENG_AWS_SECRET_ACCESS_KEY }}
-          secret-id: ${{ secrets.SEP_SECRETS_AWS_ID }}
+          secret-id: ${{ vars.SEP_SECRETS_AWS_ID }}
       - uses: ./.github/actions/setup
         with:
           cache: restore
@@ -921,9 +920,9 @@ jobs:
       - name: Set up AWS code-artifacts and ECR login
         uses: ./.github/actions/starburst-setup
         with:
-          aws-access-key-id: ${{ secrets.ENG_AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ vars.ENG_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.ENG_AWS_SECRET_ACCESS_KEY }}
-          secret-id: ${{ secrets.SEP_SECRETS_AWS_ID }}
+          secret-id: ${{ vars.SEP_SECRETS_AWS_ID }}
           login-docker: true
       - uses: ./.github/actions/setup
         with:
@@ -978,7 +977,7 @@ jobs:
       - name: Run Snowflake AWS tests
         id: tests-snowflake-aws
         env:
-          SNOWFLAKE_ACCOUNT_NAME: ${{ secrets.SNOWFLAKE_ACCOUNT_NAME }}
+          SNOWFLAKE_ACCOUNT_NAME: ${{ vars.SNOWFLAKE_ACCOUNT_NAME }}
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
         if: >-
           contains(matrix.modules, 'starburst-snowflake') &&
@@ -996,9 +995,9 @@ jobs:
       - name: Run Snowflake Azure tests
         id: tests-snowflake-azure
         env:
-          SNOWFLAKE_AZURE_ACCOUNT_NAME: ${{ secrets.SNOWFLAKE_AZURE_ACCOUNT_NAME }}
+          SNOWFLAKE_AZURE_ACCOUNT_NAME: ${{ vars.SNOWFLAKE_AZURE_ACCOUNT_NAME }}
           SNOWFLAKE_AZURE_PASSWORD: ${{ secrets.SNOWFLAKE_AZURE_PASSWORD }}
-          SNOWFLAKE_AZURE_REGION: ${{ secrets.SNOWFLAKE_AZURE_REGION }}
+          SNOWFLAKE_AZURE_REGION: ${{ vars.SNOWFLAKE_AZURE_REGION }}
         if: >-
           contains(matrix.modules, 'starburst-snowflake') &&
           contains(matrix.cloud, 'azure') &&
@@ -1015,8 +1014,8 @@ jobs:
       - name: Run Synapse tests
         id: tests-synapse
         env:
-          SYNAPSE_ENDPOINT: ${{ secrets.SYNAPSE_ENDPOINT }}
-          SYNAPSE_USER: ${{ secrets.SYNAPSE_USER }}
+          SYNAPSE_ENDPOINT: ${{ vars.SYNAPSE_ENDPOINT }}
+          SYNAPSE_USER: ${{ vars.SYNAPSE_USER }}
           SYNAPSE_PASSWORD: ${{ secrets.SYNAPSE_PASSWORD }}
         if: >-
           contains(matrix.modules, 'starburst-synapse') &&
@@ -1341,9 +1340,9 @@ jobs:
       - name: Set up AWS code-artifacts login
         uses: ./.github/actions/starburst-setup
         with:
-          aws-access-key-id: ${{ secrets.ENG_AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ vars.ENG_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.ENG_AWS_SECRET_ACCESS_KEY }}
-          secret-id: ${{ secrets.SEP_SECRETS_AWS_ID }}
+          secret-id: ${{ vars.SEP_SECRETS_AWS_ID }}
       - uses: ./.github/actions/setup
         with:
           cache: restore
@@ -1574,9 +1573,9 @@ jobs:
       - name: Run ECR login
         uses: ./.github/actions/starburst-setup
         with:
-          aws-access-key-id: ${{ secrets.ENG_AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ vars.ENG_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.ENG_AWS_SECRET_ACCESS_KEY }}
-          secret-id: ${{ secrets.SEP_SECRETS_AWS_ID }}
+          secret-id: ${{ vars.SEP_SECRETS_AWS_ID }}
           login-docker: true
       - name: Product tests artifact
         uses: actions/download-artifact@v4
@@ -1617,10 +1616,10 @@ jobs:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
           GCP_CREDENTIALS_KEY: ${{ secrets.GCP_CREDENTIALS_KEY }}
           GCP_STORAGE_BUCKET: ${{ vars.GCP_STORAGE_BUCKET }}
-          SYNAPSE_ENDPOINT: ${{ secrets.SYNAPSE_ENDPOINT }}
-          SYNAPSE_USER: ${{ secrets.SYNAPSE_USER }}
+          SYNAPSE_ENDPOINT: ${{ vars.SYNAPSE_ENDPOINT }}
+          SYNAPSE_USER: ${{ vars.SYNAPSE_USER }}
           SYNAPSE_PASSWORD: ${{ secrets.SYNAPSE_PASSWORD }}
-          SNOWFLAKE_ACCOUNT_NAME: ${{ secrets.SNOWFLAKE_ACCOUNT_NAME }}
+          SNOWFLAKE_ACCOUNT_NAME: ${{ vars.SNOWFLAKE_ACCOUNT_NAME }}
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
           SNOWFLAKE_URL: ${{ vars.SNOWFLAKE_URL }}
           SNOWFLAKE_USER: ${{ vars.SNOWFLAKE_USER }}
