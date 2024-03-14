@@ -537,9 +537,9 @@ public class TestCanonicalSubplanExtractor
         assertThat(subplan.getOriginalSymbolMapping()).containsExactly(
                 entry(new CacheColumnId("[cache_column1]"), new Symbol("symbol1")),
                 entry(new CacheColumnId("[cache_column2]"), new Symbol("symbol2")),
-                entry(canonicalExpressionToColumnId(new ArithmeticBinaryExpression(ADD, new SymbolReference("[cache_column1]"), new LongLiteral("1"))), new Symbol("projection1")));
+                entry(canonicalExpressionToColumnId(new ArithmeticBinaryExpression(ADD, new SymbolReference("[cache_column1]"), new LongLiteral(1))), new Symbol("projection1")));
         assertThat(subplan.getAssignments()).containsExactly(
-                entry(canonicalExpressionToColumnId(new ArithmeticBinaryExpression(ADD, new SymbolReference("[cache_column1]"), new LongLiteral("1"))), new ArithmeticBinaryExpression(ADD, new SymbolReference("[cache_column1]"), new LongLiteral("1"))),
+                entry(canonicalExpressionToColumnId(new ArithmeticBinaryExpression(ADD, new SymbolReference("[cache_column1]"), new LongLiteral(1))), new ArithmeticBinaryExpression(ADD, new SymbolReference("[cache_column1]"), new LongLiteral(1))),
                 entry(new CacheColumnId("[cache_column2]"), new SymbolReference("[cache_column2]")));
 
         assertThat(subplan.getConjuncts()).isEmpty();
@@ -569,14 +569,14 @@ public class TestCanonicalSubplanExtractor
         assertThat(subplan.getOriginalSymbolMapping()).containsExactly(
                 entry(new CacheColumnId("[cache_column1]"), new Symbol("symbol1")),
                 entry(new CacheColumnId("[cache_column2]"), new Symbol("symbol2")),
-                entry(canonicalExpressionToColumnId(new ArithmeticBinaryExpression(ADD, new SymbolReference("[cache_column1]"), new LongLiteral("1"))), new Symbol("projection1")));
+                entry(canonicalExpressionToColumnId(new ArithmeticBinaryExpression(ADD, new SymbolReference("[cache_column1]"), new LongLiteral(1))), new Symbol("projection1")));
         assertThat(subplan.getAssignments()).containsExactly(
-                entry(canonicalExpressionToColumnId(new ArithmeticBinaryExpression(ADD, new SymbolReference("[cache_column1]"), new LongLiteral("1"))), new ArithmeticBinaryExpression(ADD, new SymbolReference("[cache_column1]"), new LongLiteral("1"))),
+                entry(canonicalExpressionToColumnId(new ArithmeticBinaryExpression(ADD, new SymbolReference("[cache_column1]"), new LongLiteral(1))), new ArithmeticBinaryExpression(ADD, new SymbolReference("[cache_column1]"), new LongLiteral(1))),
                 entry(new CacheColumnId("[cache_column2]"), new SymbolReference("[cache_column2]")));
 
         assertThat(subplan.getConjuncts()).hasSize(1);
         Expression predicate = getOnlyElement(subplan.getConjuncts());
-        assertThat(predicate).isEqualTo(new ComparisonExpression(GREATER_THAN, new ArithmeticBinaryExpression(ADD, new SymbolReference("[cache_column1]"), new SymbolReference("[cache_column2]")), new LongLiteral("0")));
+        assertThat(predicate).isEqualTo(new ComparisonExpression(GREATER_THAN, new ArithmeticBinaryExpression(ADD, new SymbolReference("[cache_column1]"), new SymbolReference("[cache_column2]")), new LongLiteral(0)));
 
         assertThat(subplan.getDynamicConjuncts()).hasSize(1);
         Expression dynamicFilterExpression = getOnlyElement(subplan.getDynamicConjuncts());
@@ -614,7 +614,7 @@ public class TestCanonicalSubplanExtractor
 
         assertThat(subplan.getConjuncts()).hasSize(1);
         Expression predicate = getOnlyElement(subplan.getConjuncts());
-        assertThat(predicate).isEqualTo(new ComparisonExpression(GREATER_THAN, new ArithmeticBinaryExpression(ADD, new SymbolReference("[cache_column1]"), new SymbolReference("[cache_column2]")), new LongLiteral("0")));
+        assertThat(predicate).isEqualTo(new ComparisonExpression(GREATER_THAN, new ArithmeticBinaryExpression(ADD, new SymbolReference("[cache_column1]"), new SymbolReference("[cache_column2]")), new LongLiteral(0)));
 
         assertThat(subplan.getDynamicConjuncts()).hasSize(1);
         Expression dynamicFilterExpression = getOnlyElement(subplan.getDynamicConjuncts());
@@ -685,9 +685,9 @@ public class TestCanonicalSubplanExtractor
                 createTableScan(),
                 Assignments.of(
                         new Symbol("alias1"),
-                        new ArithmeticBinaryExpression(MULTIPLY, new SymbolReference("symbol1"), new LongLiteral("2")),
+                        new ArithmeticBinaryExpression(MULTIPLY, new SymbolReference("symbol1"), new LongLiteral(2)),
                         new Symbol("alias2"),
-                        new ArithmeticBinaryExpression(MULTIPLY, new SymbolReference("symbol1"), new LongLiteral("2")))));
+                        new ArithmeticBinaryExpression(MULTIPLY, new SymbolReference("symbol1"), new LongLiteral(2)))));
     }
 
     @Test
@@ -831,7 +831,7 @@ public class TestCanonicalSubplanExtractor
                 createTableScan(),
                 Assignments.of(
                         new Symbol("projection1"),
-                        new ArithmeticBinaryExpression(ADD, new SymbolReference("symbol1"), new LongLiteral("1")),
+                        new ArithmeticBinaryExpression(ADD, new SymbolReference("symbol1"), new LongLiteral(1)),
                         new Symbol("symbol2"),
                         new SymbolReference("symbol2")));
     }
@@ -843,7 +843,7 @@ public class TestCanonicalSubplanExtractor
                 createFilterNode(),
                 Assignments.of(
                         new Symbol("projection1"),
-                        new ArithmeticBinaryExpression(ADD, new SymbolReference("symbol1"), new LongLiteral("1")),
+                        new ArithmeticBinaryExpression(ADD, new SymbolReference("symbol1"), new LongLiteral(1)),
                         new Symbol("symbol2"),
                         new SymbolReference("symbol2")));
     }
@@ -855,7 +855,7 @@ public class TestCanonicalSubplanExtractor
                 new PlanNodeId("filter_node"),
                 createTableScan(),
                 and(
-                        new ComparisonExpression(GREATER_THAN, new ArithmeticBinaryExpression(ADD, new SymbolReference("symbol1"), new SymbolReference("symbol2")), new LongLiteral("0")),
+                        new ComparisonExpression(GREATER_THAN, new ArithmeticBinaryExpression(ADD, new SymbolReference("symbol1"), new SymbolReference("symbol2")), new LongLiteral(0)),
                         createDynamicFilterExpression(
                                 metadataManager,
                                 new DynamicFilterId("dynamic_filter_id"),
