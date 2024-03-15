@@ -33,6 +33,7 @@ import static com.google.common.collect.MoreCollectors.onlyElement;
 import static io.airlift.slice.Slices.utf8Slice;
 import static io.trino.spi.function.table.Descriptor.descriptor;
 import static io.trino.spi.type.BigintType.BIGINT;
+import static io.trino.spi.type.BooleanType.BOOLEAN;
 import static io.trino.spi.type.VarcharType.VARCHAR;
 
 public class ObjectStoreUnloadFunction
@@ -43,6 +44,7 @@ public class ObjectStoreUnloadFunction
     private static final String FORMAT_ARGUMENT_NAME = "FORMAT";
     private static final String COMPRESSION_ARGUMENT_NAME = "COMPRESSION";
     private static final String SEPARATOR_ARGUMENT_NAME = "SEPARATOR";
+    private static final String HEADER_ARGUMENT_NAME = "HEADER";
 
     private final ConnectorTableFunction unload;
 
@@ -72,6 +74,11 @@ public class ObjectStoreUnloadFunction
                         ScalarArgumentSpecification.builder()
                                 .name(SEPARATOR_ARGUMENT_NAME)
                                 .type(VARCHAR)
+                                .defaultValue(null)
+                                .build(),
+                        ScalarArgumentSpecification.builder()
+                                .name(HEADER_ARGUMENT_NAME)
+                                .type(BOOLEAN)
                                 .defaultValue(null)
                                 .build()),
                 new ReturnTypeSpecification.DescribedTable(descriptor(ImmutableList.of("path", "count"), ImmutableList.of(VARCHAR, BIGINT))));
