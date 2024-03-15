@@ -150,6 +150,12 @@ public class GalaxyIndexerTrinoSecurityApi
     }
 
     @Override
+    public EntityPrivileges getEntityPrivileges(DispatchSession session, EntityId entityId)
+    {
+        return TrinoSecurityApi.super.getEntityPrivileges(session, entityId);
+    }
+
+    @Override
     public Map<RoleName, RoleId> listEnabledRoles(DispatchSession session)
     {
         return ImmutableMap.of();
@@ -258,6 +264,12 @@ public class GalaxyIndexerTrinoSecurityApi
 
     @Override
     public void columnTypeChanged(DispatchSession session, ColumnId columnId, String oldType, String newType)
+    {
+        // Ignore
+    }
+
+    @Override
+    public void columnNotNullDropped(DispatchSession session, ColumnId columnId)
     {
         // Ignore
     }
