@@ -88,10 +88,6 @@ public class HttpThriftMetastoreClientFactory
                 new MetastoreSupportsDateStatistics(),
                 new AtomicInteger(Integer.MAX_VALUE),
                 new AtomicInteger(Integer.MAX_VALUE),
-                new AtomicInteger(Integer.MAX_VALUE),
-                new AtomicInteger(Integer.MAX_VALUE),
-                new AtomicInteger(Integer.MAX_VALUE),
-                new AtomicInteger(Integer.MAX_VALUE),
                 new AtomicInteger(Integer.MAX_VALUE));
     }
 
