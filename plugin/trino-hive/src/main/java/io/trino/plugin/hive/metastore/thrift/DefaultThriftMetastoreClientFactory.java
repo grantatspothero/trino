@@ -51,6 +51,7 @@ public class DefaultThriftMetastoreClientFactory
     private final String hostname;
 
     private final MetastoreSupportsDateStatistics metastoreSupportsDateStatistics = new MetastoreSupportsDateStatistics();
+    private final AtomicInteger chosenGetTableMetaAlternative = new AtomicInteger(Integer.MAX_VALUE);
     private final AtomicInteger chosenGetTableAlternative = new AtomicInteger(Integer.MAX_VALUE);
     private final AtomicInteger chosenAlterTransactionalTableAlternative = new AtomicInteger(Integer.MAX_VALUE);
     private final AtomicInteger chosenAlterPartitionsAlternative = new AtomicInteger(Integer.MAX_VALUE);
@@ -121,6 +122,7 @@ public class DefaultThriftMetastoreClientFactory
                 transportSupplier,
                 hostname,
                 metastoreSupportsDateStatistics,
+                chosenGetTableMetaAlternative,
                 chosenGetTableAlternative,
                 chosenAlterTransactionalTableAlternative,
                 chosenAlterPartitionsAlternative);
