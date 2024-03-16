@@ -50,6 +50,7 @@ import io.trino.plugin.hive.SchemaAlreadyExistsException;
 import io.trino.plugin.hive.TrinoViewUtil;
 import io.trino.plugin.hive.ViewAlreadyExistsException;
 import io.trino.plugin.hive.ViewReaderUtil;
+import io.trino.plugin.hive.metastore.TableInfo;
 import io.trino.plugin.hive.metastore.glue.GlueMetastoreStats;
 import io.trino.plugin.iceberg.IcebergMaterializedViewDefinition;
 import io.trino.plugin.iceberg.IcebergMetadata;
@@ -71,7 +72,6 @@ import io.trino.spi.connector.ConnectorViewDefinition;
 import io.trino.spi.connector.MaterializedViewNotFoundException;
 import io.trino.spi.connector.RelationColumnsMetadata;
 import io.trino.spi.connector.RelationCommentMetadata;
-import io.trino.spi.connector.RelationType;
 import io.trino.spi.connector.SchemaNotFoundException;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TableNotFoundException;
@@ -98,7 +98,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -114,7 +113,6 @@ import static com.google.common.base.Throwables.throwIfInstanceOf;
 import static com.google.common.base.Throwables.throwIfUnchecked;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Streams.stream;
 import static io.trino.cache.CacheUtils.uncheckedCacheGet;
@@ -374,18 +372,14 @@ public class TrinoGlueCatalog
     }
 
     @Override
-    public List<SchemaTableName> listTables(ConnectorSession session, Optional<String> namespace)
+    public List<TableInfo> listTables(ConnectorSession session, Optional<String> namespace)
     {
-        return listRelations(session, namespace)
-                .map(Entry::getKey)
+        return listNamespaces(session, namespace).stream()
+                .flatMap(glueNamespace -> getGlueTablesWithExceptionHandling(glueNamespace)
+                        .map(table -> new TableInfo(
+                                new SchemaTableName(glueNamespace, table.getName()),
+                                TableInfo.ExtendedRelationType.fromTableTypeAndComment(getTableType(table), getTableParameters(table).get(TABLE_COMMENT)))))
                 .collect(toImmutableList());
-    }
-
-    @Override
-    public Map<SchemaTableName, RelationType> getRelationTypes(ConnectorSession session, Optional<String> namespace)
-    {
-        return listRelations(session, namespace)
-                .collect(toImmutableMap(Entry::getKey, Entry::getValue));
     }
 
     @Override
@@ -1123,15 +1117,6 @@ public class TrinoGlueCatalog
     }
 
     @Override
-    public List<SchemaTableName> listViews(ConnectorSession session, Optional<String> namespace)
-    {
-        return listRelations(session, namespace)
-                .filter(entry -> entry.getValue() == RelationType.VIEW)
-                .map(Entry::getKey)
-                .collect(toImmutableList());
-    }
-
-    @Override
     public Optional<ConnectorViewDefinition> getView(ConnectorSession session, SchemaTableName viewName)
     {
         ConnectorViewDefinition cachedView = viewCache.getIfPresent(viewName);
@@ -1208,15 +1193,6 @@ public class TrinoGlueCatalog
         catch (AmazonServiceException e) {
             throw new TrinoException(ICEBERG_CATALOG_ERROR, e);
         }
-    }
-
-    @Override
-    public List<SchemaTableName> listMaterializedViews(ConnectorSession session, Optional<String> namespace)
-    {
-        return listRelations(session, namespace)
-                .filter(entry -> entry.getValue() == RelationType.MATERIALIZED_VIEW)
-                .map(Entry::getKey)
-                .collect(toImmutableList());
     }
 
     @Override
@@ -1623,29 +1599,6 @@ public class TrinoGlueCatalog
             throwIfInstanceOf(e.getCause(), TrinoException.class);
             throw new TrinoException(GENERIC_INTERNAL_ERROR, "Get table request failed: " + firstNonNull(e.getMessage(), e), e.getCause());
         }
-    }
-
-    private Stream<Entry<SchemaTableName, RelationType>> listRelations(ConnectorSession session, Optional<String> namespace)
-    {
-        List<String> namespaces = listNamespaces(session, namespace);
-        return namespaces.stream()
-                .flatMap(glueNamespace -> getGlueTablesWithExceptionHandling(glueNamespace)
-                        .map(table -> {
-                            String tableType = getTableType(table);
-                            Map<String, String> tableParameters = getTableParameters(table);
-                            RelationType relationType;
-                            if (isTrinoView(tableType, tableParameters)) {
-                                relationType = RelationType.VIEW;
-                            }
-                            else if (isTrinoMaterializedView(tableType, tableParameters)) {
-                                relationType = RelationType.MATERIALIZED_VIEW;
-                            }
-                            else {
-                                relationType = RelationType.TABLE;
-                            }
-
-                            return entry(new SchemaTableName(glueNamespace, table.getName()), relationType);
-                        }));
     }
 
     private Stream<com.amazonaws.services.glue.model.Table> getGlueTablesWithExceptionHandling(String glueNamespace)
