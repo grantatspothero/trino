@@ -93,7 +93,6 @@ public class HistoryBasedStatsCalculator
     private static final BiConsumer<PlanNodeId, StatsCachePlanSignature> NO_OP = (planNodeId, statsCachePlanSignature) -> {};
     // row count per sub plan signature
     private final Cache<StatsCachePlanSignature, Long> rowCountCache;
-    private final Metadata metadata;
     private final CacheMetadata cacheMetadata;
     private final ComposableStatsCalculator delegate;
     private final StatsNormalizer statsNormalizer;
@@ -104,12 +103,10 @@ public class HistoryBasedStatsCalculator
 
     @Inject
     public HistoryBasedStatsCalculator(
-            Metadata metadata,
             CacheMetadata cacheMetadata,
             ComposableStatsCalculator delegate,
             StatsNormalizer statsNormalizer)
     {
-        this.metadata = requireNonNull(metadata, "metadata is null");
         this.cacheMetadata = requireNonNull(cacheMetadata, "cacheMetadata is null");
         this.delegate = requireNonNull(delegate, "delegate is null");
         this.statsNormalizer = requireNonNull(statsNormalizer, "statsNormalizer is null");
@@ -305,7 +302,7 @@ public class HistoryBasedStatsCalculator
             Session session)
     {
         if (node instanceof JoinNode joinNode) {
-            return Join.from(joinNode, sources.get(0), sources.get(1), metadata);
+            return Join.from(joinNode, sources.get(0), sources.get(1));
         }
         if (node instanceof AggregationNode aggregationNode) {
             return Optional.of(Aggregation.from(aggregationNode, sources.get(0)));
@@ -318,7 +315,7 @@ public class HistoryBasedStatsCalculator
             return Optional.of(new Union(sources));
         }
         if (node instanceof FilterNode filterNode) {
-            return Optional.of(Filter.from(filterNode, sources.get(0), nonFilteringDynamicFilters, metadata));
+            return Optional.of(Filter.from(filterNode, sources.get(0), nonFilteringDynamicFilters));
         }
         if (node instanceof TableScanNode tableScan) {
             return TableScan.from(tableScan, session, cacheMetadata);
@@ -368,8 +365,7 @@ public class HistoryBasedStatsCalculator
         public static Optional<StatsCachePlanSignature> from(
                 JoinNode node,
                 StatsCachePlanSignature left,
-                StatsCachePlanSignature right,
-                Metadata metadata)
+                StatsCachePlanSignature right)
         {
             ImmutableSet.Builder<EquiJoinClause> criteria = ImmutableSet.builder();
             criteria.addAll(node.getCriteria());
@@ -396,7 +392,7 @@ public class HistoryBasedStatsCalculator
                 sources.add(right);
             }
 
-            Optional<Expression> filter = filters.isEmpty() ? Optional.empty() : Optional.of(combineConjuncts(metadata, filters));
+            Optional<Expression> filter = filters.isEmpty() ? Optional.empty() : Optional.of(combineConjuncts(filters));
             return Optional.of(new Join(node.getType(), criteria.build(), filter, sources.build()));
         }
     }
@@ -423,7 +419,7 @@ public class HistoryBasedStatsCalculator
     record Filter(Expression predicate, StatsCachePlanSignature source)
             implements StatsCachePlanSignature
     {
-        public static StatsCachePlanSignature from(FilterNode filterNode, StatsCachePlanSignature source, Set<DynamicFilterId> nonFilteringDynamicFilters, Metadata metadata)
+        public static StatsCachePlanSignature from(FilterNode filterNode, StatsCachePlanSignature source, Set<DynamicFilterId> nonFilteringDynamicFilters)
         {
             // TODO: ultimately the predicate needs to be decoupled from symbols and based on column ids
             Expression predicate = filterNode.getPredicate();
@@ -450,7 +446,7 @@ public class HistoryBasedStatsCalculator
                 // no filter left
                 return source;
             }
-            return new Filter(combineConjuncts(metadata, updatedPredicate), source);
+            return new Filter(combineConjuncts(updatedPredicate), source);
         }
     }
 

@@ -899,7 +899,6 @@ public class TestHistoryBasedStatsCalculator
     private static HistoryBasedStatsCalculator createStatsCalculator()
     {
         return new HistoryBasedStatsCalculator(
-                METADATA,
                 CACHE_METADATA,
                 new ComposableStatsCalculator(ImmutableList.of()),
                 new StatsNormalizer());
