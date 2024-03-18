@@ -21,6 +21,7 @@ import io.starburst.stargate.metastore.client.Metastore;
 import io.starburst.stargate.metastore.client.MetastoreId;
 import io.starburst.stargate.metastore.client.RestMetastore;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
+import io.trino.testing.containers.PrintingLogConsumer;
 import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.GenericContainer;
 
@@ -37,6 +38,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.server.galaxy.GalaxyImageConstants.STARGATE_IMAGE_TAG;
 import static io.trino.testing.containers.galaxy.PemUtils.getCertFile;
 import static io.trino.testing.containers.galaxy.PemUtils.getHostNameFromPem;
+import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.sql.DriverManager.getConnection;
 import static org.testcontainers.containers.wait.strategy.Wait.forLogMessage;
@@ -86,6 +88,7 @@ public class TestingGalaxyMetastore
             metastoreContainer.withFileSystemBind(propertiesFile.path().toAbsolutePath().toString(), "/tmp/config.properties", BindMode.READ_ONLY);
             metastoreContainer.withFileSystemBind(pemFile.getAbsolutePath(), pemFile.getPath(), BindMode.READ_ONLY);
             metastoreContainer.waitingFor(forLogMessage(".*SERVER STARTED.*", 1));
+            metastoreContainer.withLogConsumer(new PrintingLogConsumer(format("%-20s| ", "galaxy-metastore")));
             metastoreContainer.start();
             closer.register(metastoreContainer::stop);
 
