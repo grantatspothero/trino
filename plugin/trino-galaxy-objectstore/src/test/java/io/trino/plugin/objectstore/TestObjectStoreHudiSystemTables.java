@@ -51,7 +51,6 @@ public class TestObjectStoreHudiSystemTables
                 .withHiveS3Config(minio.getHiveS3Config())
                 .withMetastore(metastore)
                 .withLocationSecurityServer(locationSecurityServer)
-                .withPlugin(new ObjectStorePlugin())
                 .build();
 
         ObjectStoreQueryRunner.initializeTpchTablesHudi(queryRunner, ImmutableList.of(NATION), Location.of("s3://%s/hudi/tpch".formatted(bucketName)));

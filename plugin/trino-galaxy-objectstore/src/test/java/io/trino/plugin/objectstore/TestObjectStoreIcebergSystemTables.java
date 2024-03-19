@@ -55,7 +55,6 @@ public class TestObjectStoreIcebergSystemTables
                 .withHiveS3Config(minio.getHiveS3Config())
                 .withMetastore(metastore)
                 .withLocationSecurityServer(locationSecurityServer)
-                .withPlugin(new ObjectStorePlugin())
                 .build();
     }
 

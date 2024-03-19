@@ -47,7 +47,6 @@ public class TestObjectStoreHiveDynamicRowFiltering
                 .withHiveS3Config(minio.getHiveS3Config())
                 .withMetastore(metastore)
                 .withLocationSecurityServer(locationSecurityServer)
-                .withPlugin(new ObjectStorePlugin())
                 .build();
 
         ObjectStoreQueryRunner.initializeTpchTables(queryRunner, REQUIRED_TPCH_TABLES);

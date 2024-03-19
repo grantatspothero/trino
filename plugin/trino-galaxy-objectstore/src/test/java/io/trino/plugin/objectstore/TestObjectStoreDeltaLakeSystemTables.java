@@ -49,7 +49,6 @@ public class TestObjectStoreDeltaLakeSystemTables
                 .withHiveS3Config(minio.getHiveS3Config())
                 .withMetastore(metastore)
                 .withLocationSecurityServer(locationSecurityServer)
-                .withPlugin(new ObjectStorePlugin())
                 .build();
 
         queryRunner.execute(format("GRANT SELECT ON \"" + CATALOG + "\".\"" + TPCH_SCHEMA + "\".\"*\" TO ROLE %s WITH GRANT OPTION", ACCOUNT_ADMIN));

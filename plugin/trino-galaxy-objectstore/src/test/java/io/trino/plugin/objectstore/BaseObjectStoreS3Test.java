@@ -93,7 +93,6 @@ public abstract class BaseObjectStoreS3Test
                 .withLocationSecurityServer(locationSecurityServer)
                 .withCoordinatorProperties(Map.of())
                 .withExtraObjectStoreProperties(Map.of())
-                .withPlugin(new ObjectStorePlugin())
                 .build();
     }
 
