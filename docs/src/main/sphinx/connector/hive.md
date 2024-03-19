@@ -14,6 +14,7 @@ Amazon S3 <hive-s3>
 Azure Storage <hive-azure>
 Google Cloud Storage <hive-gcs-tutorial>
 IBM Cloud Object Storage <hive-cos>
+Storage Caching <hive-caching>
 Alluxio <hive-alluxio>
 Object storage file formats <object-storage-file-formats>
 ```
@@ -350,6 +351,8 @@ The Hive connector supports the following storage options:
 - {doc}`Google Cloud Storage <hive-gcs-tutorial>`
 - {doc}`IBM Cloud Object Storage <hive-cos>`
 
+The Hive connector also supports {doc}`storage caching <hive-caching>`.
+
 ## Security
 
 Please see the {doc}`/connector/hive-security` section for information on the
@@ -641,11 +644,11 @@ type conversions.
 * - `CHAR`
   - narrowing conversions for `CHAR`
 * - `TINYINT`
-  - `VARCHAR`, `SMALLINT`, `INTEGER`, `BIGINT`, `DECIMAL`
+  - `VARCHAR`, `SMALLINT`, `INTEGER`, `BIGINT`, `DOUBLE`, `DECIMAL`
 * - `SMALLINT`
-  - `VARCHAR`, `INTEGER`, `BIGINT`, `DECIMAL`
+  - `VARCHAR`, `INTEGER`, `BIGINT`, `DOUBLE`, `DECIMAL`
 * - `INTEGER`
-  - `VARCHAR`, `BIGINT`, `DECIMAL`
+  - `VARCHAR`, `BIGINT`, `DOUBLE`, `DECIMAL`
 * - `BIGINT`
   - `VARCHAR`, `DOUBLE`, `DECIMAL`
 * - `REAL`
