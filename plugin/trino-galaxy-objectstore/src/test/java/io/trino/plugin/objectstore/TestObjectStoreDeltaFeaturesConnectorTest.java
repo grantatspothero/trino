@@ -30,7 +30,9 @@ import io.trino.testing.QueryRunner;
 import io.trino.testing.minio.MinioClient;
 import io.trino.testing.sql.TestTable;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 
@@ -119,6 +121,12 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     public void preventDuplicatedTestCoverage(Method testMethod)
     {
         HELPER.preventDuplicatedTestCoverage(testMethod);
+    }
+
+    @BeforeEach
+    public void preventDuplicatedTestCoverage(TestInfo testInfo)
+    {
+        preventDuplicatedTestCoverage(testInfo.getTestMethod().orElseThrow());
     }
 
     @BeforeClass
@@ -288,6 +296,13 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     public void testAddColumn()
     {
         skipDuplicateTestCoverage("testAddColumn");
+    }
+
+    @Test
+    @Override
+    public void testAddColumnConcurrently()
+    {
+        skipDuplicateTestCoverage("testAddColumnConcurrently");
     }
 
     @Test
@@ -484,6 +499,13 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     public void testCreateOrReplaceTableAsSelectWhenTableDoesNotExists()
     {
         skipDuplicateTestCoverage("testCreateOrReplaceTableAsSelectWhenTableDoesNotExists");
+    }
+
+    @Test
+    @Override
+    public void testCreateOrReplaceTableConcurrently()
+    {
+        skipDuplicateTestCoverage("testCreateOrReplaceTableConcurrently");
     }
 
     @Test
@@ -775,6 +797,20 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
 
     @Test
     @Override
+    public void testDropNotNullConstraint()
+    {
+        skipDuplicateTestCoverage("testDropNotNullConstraint");
+    }
+
+    @Test
+    @Override
+    public void testDropNotNullConstraintWithColumnComment()
+    {
+        skipDuplicateTestCoverage("testDropNotNullConstraintWithColumnComment");
+    }
+
+    @Test
+    @Override
     public void testDropRowField()
     {
         skipDuplicateTestCoverage("testDropRowField");
@@ -939,6 +975,13 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     public void testInsertNegativeDate()
     {
         skipDuplicateTestCoverage("testInsertNegativeDate");
+    }
+
+    @Test
+    @Override
+    public void testInsertRowConcurrently()
+    {
+        skipDuplicateTestCoverage("testInsertRowConcurrently");
     }
 
     @Test
@@ -1688,6 +1731,13 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     public void testUpdateNotNullColumn()
     {
         skipDuplicateTestCoverage("testUpdateNotNullColumn");
+    }
+
+    @Test
+    @Override
+    public void testUpdateRowConcurrently()
+    {
+        skipDuplicateTestCoverage("testUpdateRowConcurrently");
     }
 
     @Test

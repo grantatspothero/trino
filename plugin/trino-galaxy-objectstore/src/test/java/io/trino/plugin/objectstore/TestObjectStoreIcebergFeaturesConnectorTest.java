@@ -28,7 +28,9 @@ import io.trino.testing.QueryFailedException;
 import io.trino.testing.QueryRunner;
 import io.trino.testing.TransactionBuilder;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 
@@ -189,6 +191,12 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
         HELPER.preventDuplicatedTestCoverage(testMethod);
     }
 
+    @BeforeEach
+    public void preventDuplicatedTestCoverage(TestInfo testInfo)
+    {
+        preventDuplicatedTestCoverage(testInfo.getTestMethod().orElseThrow());
+    }
+
     @Test
     @Override
     public void ensureDistributedQueryRunner()
@@ -254,6 +262,13 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     public void testAddColumn()
     {
         skipDuplicateTestCoverage("testAddColumn");
+    }
+
+    @Test
+    @Override
+    public void testAddColumnConcurrently()
+    {
+        skipDuplicateTestCoverage("testAddColumnConcurrently");
     }
 
     @Test
@@ -457,6 +472,13 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     public void testCreateOrReplaceTableAsSelectWhenTableDoesNotExists()
     {
         skipDuplicateTestCoverage("testCreateOrReplaceTableAsSelectWhenTableDoesNotExists");
+    }
+
+    @Test
+    @Override
+    public void testCreateOrReplaceTableConcurrently()
+    {
+        skipDuplicateTestCoverage("testCreateOrReplaceTableConcurrently");
     }
 
     @Test
@@ -769,6 +791,20 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
 
     @Test
     @Override
+    public void testDropNotNullConstraint()
+    {
+        skipDuplicateTestCoverage("testDropNotNullConstraint");
+    }
+
+    @Test
+    @Override
+    public void testDropNotNullConstraintWithColumnComment()
+    {
+        skipDuplicateTestCoverage("testDropNotNullConstraintWithColumnComment");
+    }
+
+    @Test
+    @Override
     public void testDropRowField()
     {
         skipDuplicateTestCoverage("testDropRowField");
@@ -926,6 +962,13 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     public void testInsertNegativeDate()
     {
         skipDuplicateTestCoverage("testInsertNegativeDate");
+    }
+
+    @Test
+    @Override
+    public void testInsertRowConcurrently()
+    {
+        skipDuplicateTestCoverage("testInsertRowConcurrently");
     }
 
     @Test
@@ -1696,6 +1739,13 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
     public void testUpdateNotNullColumn()
     {
         skipDuplicateTestCoverage("testUpdateNotNullColumn");
+    }
+
+    @Test
+    @Override
+    public void testUpdateRowConcurrently()
+    {
+        skipDuplicateTestCoverage("testUpdateRowConcurrently");
     }
 
     @Test

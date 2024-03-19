@@ -34,7 +34,9 @@ import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryFailedException;
 import io.trino.testing.QueryRunner;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 
@@ -482,6 +484,12 @@ public class TestObjectStoreHiveFeaturesConnectorTest
         HELPER.preventDuplicatedTestCoverage(testMethod);
     }
 
+    @BeforeEach
+    public void preventDuplicatedTestCoverage(TestInfo testInfo)
+    {
+        preventDuplicatedTestCoverage(testInfo.getTestMethod().orElseThrow());
+    }
+
     private void skipAuthorizationRelatedTest()
     {
         abort("Test is disabled. Hive authorization & roles work differently in Galaxy");
@@ -536,6 +544,13 @@ public class TestObjectStoreHiveFeaturesConnectorTest
     public void testAddColumn()
     {
         skipDuplicateTestCoverage("testAddColumn");
+    }
+
+    @Test
+    @Override
+    public void testAddColumnConcurrently()
+    {
+        skipDuplicateTestCoverage("testAddColumnConcurrently");
     }
 
     @Test
@@ -746,6 +761,13 @@ public class TestObjectStoreHiveFeaturesConnectorTest
     public void testCreateOrReplaceTableAsSelectWhenTableDoesNotExists()
     {
         skipDuplicateTestCoverage("testCreateOrReplaceTableAsSelectWhenTableDoesNotExists");
+    }
+
+    @Test
+    @Override
+    public void testCreateOrReplaceTableConcurrently()
+    {
+        skipDuplicateTestCoverage("testCreateOrReplaceTableConcurrently");
     }
 
     @Test
@@ -995,6 +1017,20 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     @Test
     @Override
+    public void testDropNotNullConstraint()
+    {
+        skipDuplicateTestCoverage("testDropNotNullConstraint");
+    }
+
+    @Test
+    @Override
+    public void testDropNotNullConstraintWithColumnComment()
+    {
+        skipDuplicateTestCoverage("testDropNotNullConstraintWithColumnComment");
+    }
+
+    @Test
+    @Override
     public void testDropRowField()
     {
         skipDuplicateTestCoverage("testDropRowField");
@@ -1138,6 +1174,13 @@ public class TestObjectStoreHiveFeaturesConnectorTest
     public void testInsertNegativeDate()
     {
         skipDuplicateTestCoverage("testInsertNegativeDate");
+    }
+
+    @Test
+    @Override
+    public void testInsertRowConcurrently()
+    {
+        skipDuplicateTestCoverage("testInsertRowConcurrently");
     }
 
     @Test

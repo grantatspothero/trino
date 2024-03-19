@@ -14,6 +14,7 @@
 package io.trino.plugin.objectstore;
 
 import io.trino.testing.BaseConnectorTest;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.testng.SkipException;
 
@@ -125,7 +126,7 @@ class ConnectorFeaturesTestHelper
     private String generateOverrides(Predicate<Method> testMethodFilter)
     {
         return Stream.of(BaseConnectorTest.class.getMethods())
-                .filter(method -> method.isAnnotationPresent(Test.class) && !isOverridden(method, connectorTestClass))
+                .filter(method -> (method.isAnnotationPresent(Test.class) || method.isAnnotationPresent(RepeatedTest.class)) && !isOverridden(method, connectorTestClass))
                 .filter(testMethodFilter)
                 .sorted(Comparator.comparing(Method::getName))
                 .map(method ->
