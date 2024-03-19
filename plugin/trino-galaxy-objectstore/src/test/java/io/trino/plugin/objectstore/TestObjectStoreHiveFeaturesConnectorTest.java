@@ -27,21 +27,16 @@ import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hive.metastore.file.FileHiveMetastore;
 import io.trino.plugin.hive.metastore.file.FileHiveMetastoreConfig;
 import io.trino.plugin.iceberg.IcebergPlugin;
-import io.trino.plugin.objectstore.ConnectorFeaturesTestHelper.TestFramework;
 import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.spi.connector.ConnectorTableMetadata;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryFailedException;
 import io.trino.testing.QueryRunner;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -71,8 +66,6 @@ public class TestObjectStoreHiveFeaturesConnectorTest
         extends BaseHiveConnectorTest
 {
     private static final ConnectorFeaturesTestHelper HELPER = new ConnectorFeaturesTestHelper(TestObjectStoreHiveFeaturesConnectorTest.class, TestObjectStoreHiveConnectorTest.class);
-
-    private TestFramework testFramework;
 
     @Override
     protected QueryRunner createQueryRunner()
@@ -187,18 +180,6 @@ public class TestObjectStoreHiveFeaturesConnectorTest
     protected boolean isObjectStore()
     {
         return true;
-    }
-
-    @BeforeClass
-    public void detectTestNg()
-    {
-        testFramework = TestFramework.TESTNG;
-    }
-
-    @BeforeAll
-    public void detectJunit()
-    {
-        testFramework = TestFramework.JUNIT;
     }
 
     @Override
@@ -478,16 +459,10 @@ public class TestObjectStoreHiveFeaturesConnectorTest
                 .hasMessageContaining("Executing OPTIMIZE on Hive tables is not supported");
     }
 
-    @BeforeMethod(alwaysRun = true)
-    public void preventDuplicatedTestCoverage(Method testMethod)
-    {
-        HELPER.preventDuplicatedTestCoverage(testMethod);
-    }
-
     @BeforeEach
     public void preventDuplicatedTestCoverage(TestInfo testInfo)
     {
-        preventDuplicatedTestCoverage(testInfo.getTestMethod().orElseThrow());
+        HELPER.preventDuplicatedTestCoverage(testInfo.getTestMethod().orElseThrow());
     }
 
     private void skipAuthorizationRelatedTest()
@@ -513,7 +488,7 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
     private void skipDuplicateTestCoverage(String methodName, Class<?>... args)
     {
-        HELPER.skipDuplicateTestCoverage(testFramework, methodName, args);
+        HELPER.skipDuplicateTestCoverage(methodName, args);
     }
 
     // Nested class because IntelliJ poorly handles case where one class is run sometimes as a test and sometimes as an application

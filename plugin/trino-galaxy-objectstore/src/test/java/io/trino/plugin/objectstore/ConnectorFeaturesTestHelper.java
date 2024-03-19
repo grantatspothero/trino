@@ -16,7 +16,6 @@ package io.trino.plugin.objectstore;
 import io.trino.testing.BaseConnectorTest;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
-import org.testng.SkipException;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -36,16 +35,11 @@ import static com.google.common.collect.MoreCollectors.onlyElement;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
+import static org.assertj.core.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.abort;
-import static org.testng.Assert.fail;
 
 class ConnectorFeaturesTestHelper
 {
-    enum TestFramework {
-        TESTNG,
-        JUNIT,
-    }
-
     private final Class<?> objectStoreConnectorFeaturesTestClass;
     private final Class<?> connectorTestClass;
     private final Class<?> objectStoreTestClass;
@@ -70,7 +64,7 @@ class ConnectorFeaturesTestHelper
         }
     }
 
-    void skipDuplicateTestCoverage(TestFramework testFramework, String methodName, Class<?>... args)
+    void skipDuplicateTestCoverage(String methodName, Class<?>... args)
     {
         try {
             Method ignored = objectStoreConnectorFeaturesTestClass.getDeclaredMethod(methodName, args); // validate we have the override
@@ -82,10 +76,7 @@ class ConnectorFeaturesTestHelper
             throw new RuntimeException(e);
         }
 
-        switch (testFramework) {
-            case TESTNG -> throw new SkipException("This method is probably run in %s".formatted(objectStoreTestClass.getSimpleName()));
-            case JUNIT -> abort("This method is probably run in %s".formatted(objectStoreTestClass.getSimpleName()));
-        }
+        abort("This method is probably run in %s".formatted(objectStoreTestClass.getSimpleName()));
     }
 
     private boolean isTestSpecializedForConnector(String methodName, Class<?>... args)

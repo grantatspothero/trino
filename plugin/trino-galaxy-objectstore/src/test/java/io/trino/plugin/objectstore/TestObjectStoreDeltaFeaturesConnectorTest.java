@@ -22,22 +22,17 @@ import io.starburst.stargate.id.FunctionId;
 import io.trino.plugin.deltalake.DeltaLakeQueryRunner;
 import io.trino.plugin.deltalake.TestDeltaLakeConnectorTest;
 import io.trino.plugin.hive.metastore.galaxy.TestingGalaxyMetastore;
-import io.trino.plugin.objectstore.ConnectorFeaturesTestHelper.TestFramework;
 import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import io.trino.testing.minio.MinioClient;
 import io.trino.testing.sql.TestTable;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 
 import static io.trino.plugin.base.util.Closables.closeAllSuppress;
 import static io.trino.plugin.deltalake.DeltaLakeMetadata.CREATE_OR_REPLACE_TABLE_AS_OPERATION;
@@ -62,7 +57,6 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
     private static final ConnectorFeaturesTestHelper HELPER = new ConnectorFeaturesTestHelper(TestObjectStoreDeltaFeaturesConnectorTest.class, TestObjectStoreDeltaConnectorTest.class);
 
     private TestingGalaxyMetastore galaxyMetastore;
-    private TestFramework testFramework;
 
     @Override
     protected QueryRunner createQueryRunner()
@@ -117,28 +111,10 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
         return true;
     }
 
-    @BeforeMethod(alwaysRun = true)
-    public void preventDuplicatedTestCoverage(Method testMethod)
-    {
-        HELPER.preventDuplicatedTestCoverage(testMethod);
-    }
-
     @BeforeEach
     public void preventDuplicatedTestCoverage(TestInfo testInfo)
     {
-        preventDuplicatedTestCoverage(testInfo.getTestMethod().orElseThrow());
-    }
-
-    @BeforeClass
-    public void detectTestNg()
-    {
-        testFramework = TestFramework.TESTNG;
-    }
-
-    @BeforeAll
-    public void detectJunit()
-    {
-        testFramework = TestFramework.JUNIT;
+        HELPER.preventDuplicatedTestCoverage(testInfo.getTestMethod().orElseThrow());
     }
 
     @Test
@@ -272,7 +248,7 @@ public class TestObjectStoreDeltaFeaturesConnectorTest
 
     private void skipDuplicateTestCoverage(String methodName, Class<?>... args)
     {
-        HELPER.skipDuplicateTestCoverage(testFramework, methodName, args);
+        HELPER.skipDuplicateTestCoverage(methodName, args);
     }
 
     // Nested class because IntelliJ poorly handles case where one class is run sometimes as a test and sometimes as an application

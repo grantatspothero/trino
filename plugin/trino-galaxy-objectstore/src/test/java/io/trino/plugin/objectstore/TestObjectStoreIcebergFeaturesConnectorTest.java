@@ -21,7 +21,6 @@ import io.trino.plugin.iceberg.IcebergConfig;
 import io.trino.plugin.iceberg.IcebergConnector;
 import io.trino.plugin.iceberg.IcebergFileFormat;
 import io.trino.plugin.iceberg.IcebergPlugin;
-import io.trino.plugin.objectstore.ConnectorFeaturesTestHelper.TestFramework;
 import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryFailedException;
@@ -31,11 +30,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -58,8 +54,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
         extends BaseIcebergConnectorTest
 {
     private static final ConnectorFeaturesTestHelper HELPER = new ConnectorFeaturesTestHelper(TestObjectStoreIcebergFeaturesConnectorTest.class, TestObjectStoreIcebergConnectorTest.class);
-
-    private TestFramework testFramework;
 
     protected TestObjectStoreIcebergFeaturesConnectorTest()
     {
@@ -142,18 +136,6 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
         fileSystem = ((IcebergConnector) objectStoreConnector.getInjector().getInstance(DelegateConnectors.class).icebergConnector()).getInjector().getInstance(TrinoFileSystemFactory.class).create(SESSION);
     }
 
-    @BeforeClass
-    public void detectTestNg()
-    {
-        testFramework = TestFramework.TESTNG;
-    }
-
-    @BeforeAll
-    public void detectJunit()
-    {
-        testFramework = TestFramework.JUNIT;
-    }
-
     @Override
     protected boolean isObjectStore()
     {
@@ -185,16 +167,10 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
         return checkParquetFileSorting(fileSystem.newInputFile(Location.of(path)), sortColumnName);
     }
 
-    @BeforeMethod(alwaysRun = true)
-    public void preventDuplicatedTestCoverage(Method testMethod)
-    {
-        HELPER.preventDuplicatedTestCoverage(testMethod);
-    }
-
     @BeforeEach
     public void preventDuplicatedTestCoverage(TestInfo testInfo)
     {
-        preventDuplicatedTestCoverage(testInfo.getTestMethod().orElseThrow());
+        HELPER.preventDuplicatedTestCoverage(testInfo.getTestMethod().orElseThrow());
     }
 
     @Test
@@ -238,7 +214,7 @@ public class TestObjectStoreIcebergFeaturesConnectorTest
 
     private void skipDuplicateTestCoverage(String methodName, Class<?>... args)
     {
-        HELPER.skipDuplicateTestCoverage(testFramework, methodName, args);
+        HELPER.skipDuplicateTestCoverage(methodName, args);
     }
 
     // Nested class because IntelliJ poorly handles case where one class is run sometimes as a test and sometimes as an application
