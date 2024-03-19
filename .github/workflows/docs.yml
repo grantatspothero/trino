@@ -1,9 +1,10 @@
 name: docs
 
-on:
-  pull_request:
-    paths:
-      - 'docs/**'
+# Disabled in Galaxy Trino, since it does not produce docs.
+#on:
+#  pull_request:
+#    paths:
+#      - 'docs/**'
 
 defaults:
   run:
