@@ -42,6 +42,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.trino.plugin.base.util.Closables.closeAllSuppress;
 import static io.trino.plugin.hive.HiveQueryRunner.copyTpchTablesBucketed;
@@ -88,7 +89,7 @@ public class TestObjectStoreHiveFeaturesConnectorTest
 
             queryRunner.installPlugin(new IcebergPlugin());
             Path metastoreDirectory = queryRunner.getCoordinator().getBaseDataDir().resolve("objectstore_data");
-            metastoreDirectory.toFile().mkdirs();
+            verify(metastoreDirectory.toFile().mkdirs());
             TrinoFileSystemFactory fileSystemFactory = new LocalFileSystemFactory(metastoreDirectory);
             HiveMetastore metastore = new FileHiveMetastore(
                     new NodeVersion("testversion"),
