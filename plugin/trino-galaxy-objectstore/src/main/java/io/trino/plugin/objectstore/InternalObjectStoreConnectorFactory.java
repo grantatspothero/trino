@@ -59,6 +59,7 @@ public final class InternalObjectStoreConnectorFactory
             Map<String, String> config,
             Optional<HiveMetastore> hiveMetastore,
             Optional<TrinoFileSystemFactory> fileSystemFactory,
+            Module hiveModule,
             Optional<Module> icebergCatalogModule,
             Optional<Module> deltaMetastoreModule,
             Module deltaModule,
@@ -73,6 +74,7 @@ public final class InternalObjectStoreConnectorFactory
                     filteredConfig(config, "HIVE"),
                     context,
                     combine(
+                            hiveModule,
                             new HiveSchemaDiscoveryModule(),
                             new ConfigureCachingMetastoreModule(),
                             new GalaxyLocationSecurityModule()),

@@ -31,7 +31,16 @@ public class ObjectStoreConnectorFactory
     @Override
     public Connector create(String catalogName, Map<String, String> config, ConnectorContext context)
     {
-        return createConnector(catalogName, config, Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), EMPTY_MODULE, context);
+        return createConnector(
+                catalogName,
+                config,
+                Optional.empty(),
+                Optional.empty(),
+                EMPTY_MODULE,
+                Optional.empty(),
+                Optional.empty(),
+                EMPTY_MODULE,
+                context);
     }
 
     @Override

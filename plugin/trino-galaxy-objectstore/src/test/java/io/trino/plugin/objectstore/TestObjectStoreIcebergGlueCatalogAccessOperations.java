@@ -167,6 +167,7 @@ public class TestObjectStoreIcebergGlueCatalogAccessOperations
                                         config,
                                         Optional.empty(),
                                         Optional.of(trackingFileSystemFactory),
+                                        EMPTY_MODULE,
                                         Optional.empty(),
                                         Optional.empty(),
                                         EMPTY_MODULE,

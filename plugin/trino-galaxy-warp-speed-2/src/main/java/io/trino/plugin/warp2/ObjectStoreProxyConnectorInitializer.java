@@ -30,6 +30,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.google.inject.util.Modules.EMPTY_MODULE;
+
 public class ObjectStoreProxyConnectorInitializer
         implements ProxiedConnectorInitializer
 {
@@ -68,9 +70,10 @@ public class ObjectStoreProxyConnectorInitializer
                 objectStoreConfig,
                 Optional.empty(),
                 Optional.empty(),
+                EMPTY_MODULE,
                 Optional.empty(),
                 Optional.empty(),
-                binder -> {},
+                EMPTY_MODULE,
                 context);
     }
 }

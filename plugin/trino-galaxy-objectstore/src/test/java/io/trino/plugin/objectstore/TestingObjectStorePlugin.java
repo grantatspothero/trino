@@ -14,7 +14,7 @@
 package io.trino.plugin.objectstore;
 
 import com.google.common.collect.ImmutableList;
-import io.trino.filesystem.TrinoFileSystemFactory;
+import com.google.inject.Module;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.spi.connector.ConnectorFactory;
 
@@ -24,17 +24,17 @@ public class TestingObjectStorePlugin
         extends ObjectStorePlugin
 {
     private final HiveMetastore metastore;
-    private final TrinoFileSystemFactory fileSystemFactory;
+    private final Module hiveModule;
 
-    public TestingObjectStorePlugin(HiveMetastore metastore, TrinoFileSystemFactory fileSystemFactory)
+    public TestingObjectStorePlugin(HiveMetastore metastore, Module hiveModule)
     {
         this.metastore = requireNonNull(metastore, "metastore is null");
-        this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
+        this.hiveModule = requireNonNull(hiveModule, "hiveModule is null");
     }
 
     @Override
     public Iterable<ConnectorFactory> getConnectorFactories()
     {
-        return ImmutableList.of(new TestingObjectStoreConnectorFactory(metastore, fileSystemFactory));
+        return ImmutableList.of(new TestingObjectStoreConnectorFactory(metastore, hiveModule));
     }
 }

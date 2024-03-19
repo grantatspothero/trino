@@ -44,6 +44,7 @@ import java.util.Map.Entry;
 
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.inject.multibindings.MapBinder.newMapBinder;
 import static io.trino.plugin.base.util.Closables.closeAllSuppress;
 import static io.trino.plugin.hive.HiveQueryRunner.copyTpchTablesBucketed;
 import static io.trino.plugin.hive.HiveTableProperties.STORAGE_FORMAT_PROPERTY;
@@ -88,9 +89,9 @@ public class TestObjectStoreHiveFeaturesConnectorTest
             queryRunner.createCatalog("tpch", "tpch", Map.of());
 
             queryRunner.installPlugin(new IcebergPlugin());
-            Path metastoreDirectory = queryRunner.getCoordinator().getBaseDataDir().resolve("objectstore_data");
-            verify(metastoreDirectory.toFile().mkdirs());
-            TrinoFileSystemFactory fileSystemFactory = new LocalFileSystemFactory(metastoreDirectory);
+            Path localFileSystemRootPath = queryRunner.getCoordinator().getBaseDataDir().resolve("objectstore_data");
+            verify(localFileSystemRootPath.toFile().mkdirs());
+            TrinoFileSystemFactory fileSystemFactory = new LocalFileSystemFactory(localFileSystemRootPath);
             HiveMetastore metastore = new FileHiveMetastore(
                     new NodeVersion("testversion"),
                     fileSystemFactory,
@@ -99,7 +100,11 @@ public class TestObjectStoreHiveFeaturesConnectorTest
                             .setCatalogDirectory("local:///")
                             .setMetastoreUser("test")
                             .setDisableLocationChecks(true));
-            queryRunner.installPlugin(new TestingObjectStorePlugin(metastore, fileSystemFactory));
+            queryRunner.installPlugin(new TestingObjectStorePlugin(
+                    metastore,
+                    binder -> newMapBinder(binder, String.class, TrinoFileSystemFactory.class)
+                            .addBinding("local")
+                            .toInstance(fileSystemFactory)));
 
             Map<String, String> objectStoreProperties = ImmutableMap.<String, String>builder()
                     // Hive
