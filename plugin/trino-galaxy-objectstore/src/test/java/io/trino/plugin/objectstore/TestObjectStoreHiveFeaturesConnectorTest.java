@@ -120,7 +120,6 @@ public class TestObjectStoreHiveFeaturesConnectorTest
                     .put("ICEBERG__galaxy.location-security.enabled", "false")
                     .put("ICEBERG__galaxy.account-url", "https://localhost:1234")
                     .put("ICEBERG__galaxy.catalog-id", "c-1234567890")
-                    .put("ICEBERG__galaxy.cluster-id", "w-9999999999")
                     // Delta
                     .put("DELTA__galaxy.location-security.enabled", "false")
                     .put("DELTA__galaxy.account-url", "https://localhost:1234")
@@ -134,7 +133,6 @@ public class TestObjectStoreHiveFeaturesConnectorTest
                     .put("OBJECTSTORE__galaxy.location-security.enabled", "false")
                     .put("OBJECTSTORE__galaxy.account-url", "https://localhost:1234")
                     .put("OBJECTSTORE__galaxy.catalog-id", "c-1234567890")
-                    .put("OBJECTSTORE__galaxy.cluster-id", "w-9999999999")
                     .buildOrThrow();
             queryRunner.createCatalog(catalog, "galaxy_objectstore", objectStoreProperties);
 

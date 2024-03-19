@@ -41,7 +41,11 @@ public class TestObjectStoreGalaxyMaterializedViewScheduling
         minio.start();
         metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyTestHelper.getCockroach()));
 
-        Map<String, String> properties = createCatalogProperties(Map.of("ICEBERG__iceberg.scheduled-materialized-view-refresh-enabled", "true"));
+        Map<String, String> properties = createCatalogProperties(Map.of(
+                "ICEBERG__iceberg.scheduled-materialized-view-refresh-enabled", "true",
+                "ICEBERG__galaxy.cluster-id", "w-1234567890",
+                "OBJECTSTORE__iceberg.scheduled-materialized-view-refresh-enabled", "true",
+                "OBJECTSTORE__galaxy.cluster-id", "w-1234567890"));
         Map<String, String> propertiesWithoutScheduling = createCatalogProperties(Map.of());
 
         return GalaxyQueryRunner.builder(TEST_CATALOG, "default")

@@ -31,11 +31,11 @@ public class IcebergMaterializedViewProperties
     private final List<PropertyMetadata<?>> materializedViewProperties;
 
     @Inject
-    public IcebergMaterializedViewProperties(IcebergConfig icebergConfig, IcebergTableProperties tableProperties)
+    public IcebergMaterializedViewProperties(IcebergConfig icebergConfig, GalaxyIcebergConfig galaxyIcebergConfig, IcebergTableProperties tableProperties)
     {
         ImmutableList.Builder<PropertyMetadata<?>> materializedViewProperties = ImmutableList.builder();
         materializedViewProperties.addAll(ossProperties(icebergConfig, tableProperties));
-        if (icebergConfig.isScheduledMaterializedViewRefreshEnabled()) {
+        if (galaxyIcebergConfig.isScheduledMaterializedViewRefreshEnabled()) {
             materializedViewProperties.add(stringProperty(
                     REFRESH_SCHEDULE,
                     "Cron schedule to use for refreshing the materialized view",

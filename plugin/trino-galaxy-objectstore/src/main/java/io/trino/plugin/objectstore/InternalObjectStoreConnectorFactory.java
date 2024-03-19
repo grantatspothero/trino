@@ -26,6 +26,7 @@ import io.trino.plugin.deltalake.InternalDeltaLakeConnectorFactory;
 import io.trino.plugin.hive.InternalHiveConnectorFactory;
 import io.trino.plugin.hive.metastore.HiveMetastore;
 import io.trino.plugin.hudi.InternalHudiConnectorFactory;
+import io.trino.plugin.iceberg.GalaxyIcebergConfig;
 import io.trino.plugin.iceberg.InternalIcebergConnectorFactory;
 import io.trino.plugin.objectstore.hive.schemadiscovery.HiveSchemaDiscoveryModule;
 import io.trino.plugin.objectstore.scheduler.GalaxyWorkSchedulerModule;
@@ -45,6 +46,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static io.airlift.configuration.ConditionalModule.conditionalModule;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.airlift.configuration.ConfigurationAwareModule.combine;
 
@@ -78,6 +80,11 @@ public final class InternalObjectStoreConnectorFactory
                     fileSystemFactory,
                     Optional.empty());
 
+            Module workSchedulerModule = conditionalModule(
+                    GalaxyIcebergConfig.class,
+                    GalaxyIcebergConfig::isScheduledMaterializedViewRefreshEnabled,
+                    new GalaxyWorkSchedulerModule());
+
             Map<String, String> icebergConfig = new HashMap<>(filteredConfig(config, "ICEBERG"));
             // The procedure is disabled in OSS because of security issues.
             // In Galaxy, they are addressed by location-based security and the procedure can be enabled by default.
@@ -89,7 +96,7 @@ public final class InternalObjectStoreConnectorFactory
                     combine(
                             new ConfigureCachingMetastoreModule(),
                             new GalaxyLocationSecurityModule(),
-                            new GalaxyWorkSchedulerModule()),
+                            workSchedulerModule),
                     icebergCatalogModule,
                     fileSystemFactory);
 
@@ -125,7 +132,7 @@ public final class InternalObjectStoreConnectorFactory
                     new ObjectStoreModule(),
                     new GalaxyLocationSecurityModule(),
                     new FileSystemModule(catalogName, context.getNodeManager(), context.getOpenTelemetry()),
-                    new GalaxyWorkSchedulerModule(),
+                    workSchedulerModule,
                     binder -> {
                         binder.bind(TypeManager.class).toInstance(context.getTypeManager());
                         binder.bind(OpenTelemetry.class).toInstance(context.getOpenTelemetry());

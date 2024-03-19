@@ -22,8 +22,8 @@ import java.net.URI;
 
 public class GalaxyAccountWorkConfig
 {
-    private String clusterId;
     private URI accountUri;
+    private String clusterId;
 
     @NotNull
     public URI getAccountUri()
