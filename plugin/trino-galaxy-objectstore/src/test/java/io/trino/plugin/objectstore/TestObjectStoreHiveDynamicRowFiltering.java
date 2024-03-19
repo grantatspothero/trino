@@ -19,7 +19,6 @@ import io.trino.server.galaxy.GalaxyCockroachContainer;
 import io.trino.server.security.galaxy.TestingAccountFactory;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
-import org.testng.annotations.AfterClass;
 
 import static io.trino.plugin.objectstore.TableType.HIVE;
 import static io.trino.server.security.galaxy.TestingAccountFactory.createTestingAccountFactory;
@@ -28,25 +27,15 @@ import static io.trino.testing.TestingNames.randomNameSuffix;
 public class TestObjectStoreHiveDynamicRowFiltering
         extends TestHiveDynamicRowFiltering
 {
-    private MinioStorage minio;
-    private TestingGalaxyMetastore metastore;
-
-    @AfterClass(alwaysRun = true)
-    public void tearDown()
-    {
-        metastore = null; // closed by closeAfterClass
-        minio = null; // closed by closeAfterClass
-    }
-
     @Override
     protected QueryRunner createQueryRunner()
             throws Exception
     {
         GalaxyCockroachContainer galaxyCockroachContainer = closeAfterClass(new GalaxyCockroachContainer());
-        minio = closeAfterClass(new MinioStorage("test-bucket-" + randomNameSuffix()));
+        MinioStorage minio = closeAfterClass(new MinioStorage("test-bucket-" + randomNameSuffix()));
         minio.start();
 
-        metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyCockroachContainer));
+        TestingGalaxyMetastore metastore = closeAfterClass(new TestingGalaxyMetastore(galaxyCockroachContainer));
 
         TestingLocationSecurityServer locationSecurityServer = closeAfterClass(new TestingLocationSecurityServer((session, location) -> !location.contains("denied")));
         TestingAccountFactory testingAccountFactory = closeAfterClass(createTestingAccountFactory(() -> galaxyCockroachContainer));
