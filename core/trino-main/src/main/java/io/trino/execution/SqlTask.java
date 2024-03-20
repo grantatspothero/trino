@@ -108,7 +108,6 @@ public class SqlTask
     private final AtomicReference<Span> taskSpan = new AtomicReference<>(Span.getInvalid());
     private final AtomicReference<String> traceToken = new AtomicReference<>();
     private final AtomicReference<Set<CatalogHandle>> catalogs = new AtomicReference<>();
-    private final AtomicBoolean catalogsLoaded = new AtomicBoolean(false);
 
     public static SqlTask createSqlTask(
             TaskId taskId,
@@ -761,15 +760,5 @@ public class SqlTask
     public Optional<String> getTraceToken()
     {
         return Optional.ofNullable(traceToken.get());
-    }
-
-    boolean areCatalogsLoaded()
-    {
-        return catalogsLoaded.get();
-    }
-
-    void setCatalogsLoaded()
-    {
-        catalogsLoaded.set(true);
     }
 }
