@@ -69,11 +69,12 @@ public abstract class AbstractApiClient
         };
     }
 
-    protected String execute(Request request)
+    protected Optional<String> execute(Request request)
     {
         StringResponse response = client.execute(request, createStringResponseHandler());
         return switch (response.getStatusCode()) {
-            case HTTP_OK, HTTP_NO_CONTENT -> response.getBody();
+            case HTTP_OK, HTTP_NO_CONTENT -> Optional.of(response.getBody());
+            case HTTP_NOT_FOUND -> Optional.empty();
             default -> throw new TrinoException(CATALOG_NOT_AVAILABLE, response.getBody());
         };
     }

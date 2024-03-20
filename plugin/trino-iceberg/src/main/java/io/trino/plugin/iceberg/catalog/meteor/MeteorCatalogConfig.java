@@ -15,7 +15,6 @@ package io.trino.plugin.iceberg.catalog.meteor;
 
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;
-import jakarta.validation.constraints.NotNull;
 
 import java.net.URI;
 
@@ -23,7 +22,6 @@ public class MeteorCatalogConfig
 {
     private URI catalogURI;
 
-    @NotNull
     public URI getCatalogUri()
     {
         return this.catalogURI;

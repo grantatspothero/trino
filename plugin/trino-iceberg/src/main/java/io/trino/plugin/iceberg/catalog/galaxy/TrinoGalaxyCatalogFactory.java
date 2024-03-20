@@ -22,6 +22,9 @@ import io.trino.plugin.iceberg.WorkScheduler;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
 import io.trino.plugin.iceberg.catalog.TrinoCatalog;
 import io.trino.plugin.iceberg.catalog.TrinoCatalogFactory;
+import io.trino.plugin.iceberg.catalog.meteor.MeteorCatalogClient;
+import io.trino.plugin.iceberg.catalog.meteor.MeteorTableLoader;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.security.ConnectorIdentity;
 import io.trino.spi.type.TypeManager;
 
@@ -39,6 +42,8 @@ public class TrinoGalaxyCatalogFactory
     private final TrinoFileSystemFactory fileSystemFactory;
     private final IcebergTableOperationsProvider tableOperationsProvider;
     private final WorkScheduler workScheduler;
+    private final CatalogHandle catalogHandle;
+    private final Optional<MeteorCatalogClient> meteorCatalogClient;
     private final boolean isUniqueTableLocation;
     private final boolean cacheTableMetadata;
     private final boolean hideMaterializedViewStorageTable;
@@ -51,6 +56,8 @@ public class TrinoGalaxyCatalogFactory
             TrinoFileSystemFactory fileSystemFactory,
             IcebergTableOperationsProvider tableOperationsProvider,
             WorkScheduler workScheduler,
+            CatalogHandle catalogHandle,
+            Optional<MeteorCatalogClient> meteorCatalogClient,
             IcebergConfig config,
             IcebergGalaxyCatalogConfig galaxyCatalogConfig)
     {
@@ -60,6 +67,8 @@ public class TrinoGalaxyCatalogFactory
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.tableOperationsProvider = requireNonNull(tableOperationsProvider, "tableOperationProvider is null");
         this.workScheduler = requireNonNull(workScheduler, "workScheduler is null");
+        this.catalogHandle = requireNonNull(catalogHandle, "catalogHandle is null");
+        this.meteorCatalogClient = requireNonNull(meteorCatalogClient, "meteorCatalogClient is null");
         this.isUniqueTableLocation = config.isUniqueTableLocation();
         this.cacheTableMetadata = galaxyCatalogConfig.isCacheTableMetadata();
         this.hideMaterializedViewStorageTable = config.isHideMaterializedViewStorageTable();
@@ -75,6 +84,7 @@ public class TrinoGalaxyCatalogFactory
                 createPerTransactionCache(metastoreFactory.createMetastore(Optional.empty()), 1000),
                 fileSystemFactory,
                 tableOperationsProvider,
+                meteorCatalogClient.map(client -> new MeteorTableLoader(fileSystemFactory, client, catalogHandle)),
                 isUniqueTableLocation,
                 cacheTableMetadata,
                 hideMaterializedViewStorageTable);

@@ -30,6 +30,7 @@ import io.trino.plugin.hive.metastore.glue.GlueMetastoreModule;
 import io.trino.plugin.hive.metastore.glue.GlueMetastoreStats;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
 import io.trino.plugin.iceberg.catalog.TrinoCatalogFactory;
+import io.trino.plugin.iceberg.catalog.meteor.MeteorCatalogSetupModule;
 import io.trino.plugin.iceberg.procedure.MigrateProcedure;
 import io.trino.spi.procedure.Procedure;
 
@@ -68,5 +69,7 @@ public class IcebergGlueCatalogModule
         install(new GlueMetastoreModule());
         Multibinder<Procedure> procedures = newSetBinder(binder, Procedure.class);
         procedures.addBinding().toProvider(MigrateProcedure.class).in(Scopes.SINGLETON);
+
+        install(new MeteorCatalogSetupModule());
     }
 }

@@ -22,6 +22,5 @@ public enum CatalogType
     REST,
     JDBC,
     NESSIE,
-    METEOR,
     /**/;
 }

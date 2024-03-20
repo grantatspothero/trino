@@ -33,6 +33,7 @@ import io.trino.plugin.iceberg.catalog.TrinoCatalogFactory;
 import io.trino.plugin.iceberg.catalog.galaxy.GalaxyMetastoreOperationsProvider;
 import io.trino.plugin.iceberg.catalog.galaxy.IcebergGalaxyCatalogConfig;
 import io.trino.plugin.iceberg.catalog.galaxy.TrinoGalaxyCatalogFactory;
+import io.trino.plugin.iceberg.catalog.meteor.MeteorCatalogSetupModule;
 import io.trino.plugin.iceberg.procedure.MigrateProcedure;
 import io.trino.spi.procedure.Procedure;
 
@@ -77,5 +78,6 @@ public class TestingIcebergGalaxyMetastoreCatalogModule
 
         newSetBinder(binder, SessionPropertiesProvider.class)
                 .addBinding().to(GalaxyMetastoreSessionProperties.class).in(Scopes.SINGLETON);
+        install(new MeteorCatalogSetupModule());
     }
 }

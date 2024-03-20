@@ -24,6 +24,7 @@ import io.trino.plugin.hive.metastore.galaxy.GalaxyMetastoreModule;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
 import io.trino.plugin.iceberg.catalog.MetastoreValidator;
 import io.trino.plugin.iceberg.catalog.TrinoCatalogFactory;
+import io.trino.plugin.iceberg.catalog.meteor.MeteorCatalogSetupModule;
 import io.trino.plugin.iceberg.procedure.MigrateProcedure;
 import io.trino.spi.procedure.Procedure;
 
@@ -52,5 +53,7 @@ public class IcebergGalaxyMetastoreCatalogModule
 
         Multibinder<Procedure> procedures = newSetBinder(binder, Procedure.class);
         procedures.addBinding().toProvider(MigrateProcedure.class).in(Scopes.SINGLETON);
+
+        install(new MeteorCatalogSetupModule());
     }
 }

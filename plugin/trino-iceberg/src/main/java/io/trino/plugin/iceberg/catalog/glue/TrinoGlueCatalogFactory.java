@@ -26,6 +26,9 @@ import io.trino.plugin.iceberg.WorkScheduler;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
 import io.trino.plugin.iceberg.catalog.TrinoCatalog;
 import io.trino.plugin.iceberg.catalog.TrinoCatalogFactory;
+import io.trino.plugin.iceberg.catalog.meteor.MeteorCatalogClient;
+import io.trino.plugin.iceberg.catalog.meteor.MeteorTableLoader;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.security.ConnectorIdentity;
 import io.trino.spi.type.TypeManager;
 import org.weakref.jmx.Flatten;
@@ -48,6 +51,8 @@ public class TrinoGlueCatalogFactory
     private final String trinoVersion;
     private final Optional<String> defaultSchemaLocation;
     private final AWSGlueAsync glueClient;
+    private final CatalogHandle catalogHandle;
+    private final Optional<MeteorCatalogClient> meteorCatalogClient;
     private final boolean isUniqueTableLocation;
     private final boolean hideMaterializedViewStorageTable;
     private final GlueMetastoreStats stats;
@@ -61,6 +66,8 @@ public class TrinoGlueCatalogFactory
             TypeManager typeManager,
             IcebergTableOperationsProvider tableOperationsProvider,
             NodeVersion nodeVersion,
+            CatalogHandle catalogHandle,
+            Optional<MeteorCatalogClient> meteorCatalogClient,
             GlueHiveMetastoreConfig glueConfig,
             IcebergConfig icebergConfig,
             IcebergGlueCatalogConfig catalogConfig,
@@ -80,6 +87,8 @@ public class TrinoGlueCatalogFactory
         this.isUniqueTableLocation = icebergConfig.isUniqueTableLocation();
         this.hideMaterializedViewStorageTable = icebergConfig.isHideMaterializedViewStorageTable();
         this.stats = requireNonNull(stats, "stats is null");
+        this.catalogHandle = requireNonNull(catalogHandle, "catalogHandle is null");
+        this.meteorCatalogClient = requireNonNull(meteorCatalogClient, "meteorCatalogClient is null");
         this.isUsingSystemSecurity = securityConfig.getSecuritySystem() == SYSTEM;
     }
 
@@ -103,6 +112,7 @@ public class TrinoGlueCatalogFactory
                 trinoVersion,
                 glueClient,
                 stats,
+                meteorCatalogClient.map(client -> new MeteorTableLoader(fileSystemFactory, client, catalogHandle)),
                 isUsingSystemSecurity,
                 defaultSchemaLocation,
                 isUniqueTableLocation,

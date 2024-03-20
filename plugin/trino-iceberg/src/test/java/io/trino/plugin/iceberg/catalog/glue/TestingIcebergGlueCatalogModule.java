@@ -29,6 +29,7 @@ import io.trino.plugin.hive.metastore.glue.GlueMetastoreModule;
 import io.trino.plugin.hive.metastore.glue.GlueMetastoreStats;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
 import io.trino.plugin.iceberg.catalog.TrinoCatalogFactory;
+import io.trino.plugin.iceberg.catalog.meteor.MeteorCatalogSetupModule;
 
 import java.util.function.Predicate;
 
@@ -72,5 +73,6 @@ public class TestingIcebergGlueCatalogModule
         newOptionalBinder(binder, Key.get(new TypeLiteral<Predicate<Table>>() {}, ForGlueHiveMetastore.class))
                 .setBinding().toInstance(table -> true);
         install(new GlueMetastoreModule());
+        install(new MeteorCatalogSetupModule());
     }
 }

@@ -18,15 +18,14 @@ import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.SchemaTableName;
+import io.trino.spi.connector.TableNotFoundException;
 import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.io.FileIO;
 
 import java.util.Optional;
 
 import static io.trino.plugin.base.galaxy.GalaxyCatalogVersionUtils.getRequiredCatalogId;
-import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_INVALID_METADATA;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 public class MeteorIcebergTableOperations
@@ -55,10 +54,10 @@ public class MeteorIcebergTableOperations
     protected String getRefreshedLocation(boolean invalidateCaches)
     {
         if (metadataLocation == null || invalidateCaches) {
-            metadataLocation = catalogClient.fetchMetadataLocation(session.getIdentity(), getRequiredCatalogId(catalogHandle.getVersion()).toString(), new SchemaTableName(database, tableName));
-            if (metadataLocation == null) {
-                throw new TrinoException(ICEBERG_INVALID_METADATA, format("Failed to fetch table %s metadata location. Either it is not present or state server is not responding", getSchemaTableName()));
-            }
+            String catalogId = getRequiredCatalogId(catalogHandle.getVersion()).toString();
+            SchemaTableName table = new SchemaTableName(database, tableName);
+            metadataLocation = catalogClient.fetchMetadataLocation(session.getIdentity(), catalogId, table)
+                    .orElseThrow(() -> new TableNotFoundException(table));
         }
 
         return metadataLocation;

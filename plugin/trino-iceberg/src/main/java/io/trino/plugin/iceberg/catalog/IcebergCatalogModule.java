@@ -23,7 +23,6 @@ import io.trino.plugin.iceberg.catalog.galaxy.IcebergGalaxyMetastoreCatalogModul
 import io.trino.plugin.iceberg.catalog.glue.IcebergGlueCatalogModule;
 import io.trino.plugin.iceberg.catalog.hms.IcebergHiveMetastoreCatalogModule;
 import io.trino.plugin.iceberg.catalog.jdbc.IcebergJdbcCatalogModule;
-import io.trino.plugin.iceberg.catalog.meteor.MeteorCatalogModule;
 import io.trino.plugin.iceberg.catalog.nessie.IcebergNessieCatalogModule;
 import io.trino.plugin.iceberg.catalog.rest.IcebergRestCatalogModule;
 
@@ -32,7 +31,6 @@ import static io.trino.plugin.iceberg.CatalogType.GALAXY_METASTORE;
 import static io.trino.plugin.iceberg.CatalogType.GLUE;
 import static io.trino.plugin.iceberg.CatalogType.HIVE_METASTORE;
 import static io.trino.plugin.iceberg.CatalogType.JDBC;
-import static io.trino.plugin.iceberg.CatalogType.METEOR;
 import static io.trino.plugin.iceberg.CatalogType.NESSIE;
 import static io.trino.plugin.iceberg.CatalogType.REST;
 import static io.trino.plugin.iceberg.CatalogType.TESTING_FILE_METASTORE;
@@ -50,7 +48,6 @@ public class IcebergCatalogModule
         bindCatalogModule(REST, new IcebergRestCatalogModule());
         bindCatalogModule(JDBC, new IcebergJdbcCatalogModule());
         bindCatalogModule(NESSIE, new IcebergNessieCatalogModule());
-        bindCatalogModule(METEOR, new MeteorCatalogModule());
     }
 
     private void bindCatalogModule(CatalogType catalogType, Module module)

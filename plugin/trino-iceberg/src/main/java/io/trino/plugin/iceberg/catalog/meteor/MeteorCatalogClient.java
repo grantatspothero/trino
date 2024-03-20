@@ -73,7 +73,7 @@ public class MeteorCatalogClient
                 .build(), SCHEMA_TABLE_NAME_LIST_JSON_CODEC);
     }
 
-    public String fetchMetadataLocation(ConnectorIdentity identity, String catalogId, SchemaTableName schemaTableName)
+    public Optional<String> fetchMetadataLocation(ConnectorIdentity identity, String catalogId, SchemaTableName schemaTableName)
     {
         return execute(prepareGet()
                 .setHeader("Authorization", getToken(identity))

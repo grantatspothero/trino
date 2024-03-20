@@ -14,28 +14,20 @@
 package io.trino.plugin.iceberg.catalog.meteor;
 
 import com.google.inject.Binder;
-import com.google.inject.Provides;
-import com.google.inject.Singleton;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
-import io.airlift.http.client.HttpClient;
 
-import static io.airlift.configuration.ConfigBinder.configBinder;
-import static io.airlift.http.client.HttpClientBinder.httpClientBinder;
+import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 
-public class MeteorCatalogModule
+public class MeteorCatalogSetupModule
         extends AbstractConfigurationAwareModule
 {
     @Override
     protected void setup(Binder binder)
     {
-        configBinder(binder).bindConfig(MeteorCatalogConfig.class);
-        httpClientBinder(binder).bindHttpClient("meteor-catalog-client", ForMeteorCatalog.class);
-    }
+        if (buildConfigObject(MeteorCatalogConfig.class).getCatalogUri() != null) {
+            install(new MeteorCatalogModule());
+        }
 
-    @Singleton
-    @Provides
-    private MeteorCatalogClient getMeteorCatalogClient(MeteorCatalogConfig config, @ForMeteorCatalog HttpClient client)
-    {
-        return new MeteorCatalogClient(client, config.getCatalogUri());
+        newOptionalBinder(binder, MeteorCatalogClient.class);
     }
 }

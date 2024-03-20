@@ -60,6 +60,7 @@ import io.trino.plugin.iceberg.WorkScheduler;
 import io.trino.plugin.iceberg.catalog.AbstractTrinoCatalog;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperations;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
+import io.trino.plugin.iceberg.catalog.meteor.MeteorTableLoader;
 import io.trino.plugin.iceberg.fileio.ForwardingFileIo;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogSchemaTableName;
@@ -184,6 +185,7 @@ public class TrinoGlueCatalog
     private final Optional<String> defaultSchemaLocation;
     private final AWSGlueAsync glueClient;
     private final GlueMetastoreStats stats;
+    private final Optional<MeteorTableLoader> meteorTableLoader;
     private final boolean hideMaterializedViewStorageTable;
     private final boolean isUsingSystemSecurity;
 
@@ -212,6 +214,7 @@ public class TrinoGlueCatalog
             String trinoVersion,
             AWSGlueAsync glueClient,
             GlueMetastoreStats stats,
+            Optional<MeteorTableLoader> meteorTableLoader,
             boolean isUsingSystemSecurity,
             Optional<String> defaultSchemaLocation,
             boolean useUniqueTableLocation,
@@ -224,6 +227,7 @@ public class TrinoGlueCatalog
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
         this.glueClient = requireNonNull(glueClient, "glueClient is null");
         this.stats = requireNonNull(stats, "stats is null");
+        this.meteorTableLoader = requireNonNull(meteorTableLoader, "meteorTableLoader is null");
         this.isUsingSystemSecurity = isUsingSystemSecurity;
         this.defaultSchemaLocation = requireNonNull(defaultSchemaLocation, "defaultSchemaLocation is null");
         this.hideMaterializedViewStorageTable = hideMaterializedViewStorageTable;
@@ -570,6 +574,11 @@ public class TrinoGlueCatalog
     @Override
     public Table loadTable(ConnectorSession session, SchemaTableName table)
     {
+        Optional<Table> meteorTable = meteorTableLoader.flatMap(loader -> loader.loadTable(session, table));
+        if (meteorTable.isPresent()) {
+            return meteorTable.get();
+        }
+
         if (viewCache.asMap().containsKey(table) || materializedViewCache.asMap().containsKey(table)) {
             throw new TableNotFoundException(table);
         }

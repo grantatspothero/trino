@@ -39,6 +39,7 @@ import io.trino.plugin.iceberg.WorkScheduler;
 import io.trino.plugin.iceberg.catalog.AbstractTrinoCatalog;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperations;
 import io.trino.plugin.iceberg.catalog.IcebergTableOperationsProvider;
+import io.trino.plugin.iceberg.catalog.meteor.MeteorTableLoader;
 import io.trino.plugin.iceberg.fileio.ForwardingFileIo;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.CatalogSchemaTableName;
@@ -140,6 +141,7 @@ public class TrinoGalaxyCatalog
     private final TypeManager typeManager;
     private final CachingHiveMetastore metastore;
     private final TrinoFileSystemFactory fileSystemFactory;
+    private final Optional<MeteorTableLoader> meteorTableLoader;
     private final boolean useUniqueTableLocation;
     private final boolean cacheTableMetadata;
     private final boolean hideMaterializedViewStorageTable;
@@ -155,6 +157,7 @@ public class TrinoGalaxyCatalog
             CachingHiveMetastore metastore,
             TrinoFileSystemFactory fileSystemFactory,
             IcebergTableOperationsProvider tableOperationsProvider,
+            Optional<MeteorTableLoader> meteorTableLoader,
             boolean useUniqueTableLocation,
             boolean cacheTableMetadata,
             boolean hideMaterializedViewStorageTable)
@@ -163,6 +166,7 @@ public class TrinoGalaxyCatalog
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.metastore = requireNonNull(metastore, "metastore is null");
         this.fileSystemFactory = requireNonNull(fileSystemFactory, "fileSystemFactory is null");
+        this.meteorTableLoader = requireNonNull(meteorTableLoader, "meteorTableLoader is null");
         this.useUniqueTableLocation = useUniqueTableLocation;
         this.cacheTableMetadata = cacheTableMetadata;
         this.hideMaterializedViewStorageTable = hideMaterializedViewStorageTable;
@@ -402,6 +406,11 @@ public class TrinoGalaxyCatalog
     @Override
     public Table loadTable(ConnectorSession session, SchemaTableName schemaTableName)
     {
+        Optional<Table> meteorTable = meteorTableLoader.flatMap(loader -> loader.loadTable(session, schemaTableName));
+        if (meteorTable.isPresent()) {
+            return meteorTable.get();
+        }
+
         TableMetadata metadata;
         try {
             metadata = uncheckedCacheGet(
