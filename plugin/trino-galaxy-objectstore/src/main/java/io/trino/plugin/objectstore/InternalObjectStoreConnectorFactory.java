@@ -18,7 +18,6 @@ import com.google.inject.Module;
 import io.airlift.bootstrap.Bootstrap;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;
-import io.trino.filesystem.TrinoFileSystemFactory;
 import io.trino.filesystem.manager.FileSystemModule;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.LocalRegionConfig;
@@ -58,7 +57,6 @@ public final class InternalObjectStoreConnectorFactory
             String catalogName,
             Map<String, String> config,
             Optional<HiveMetastore> hiveMetastore,
-            Optional<TrinoFileSystemFactory> fileSystemFactory,
             Module hiveModule,
             Optional<Module> icebergCatalogModule,
             Optional<Module> deltaMetastoreModule,
@@ -79,7 +77,7 @@ public final class InternalObjectStoreConnectorFactory
                             new ConfigureCachingMetastoreModule(),
                             new GalaxyLocationSecurityModule()),
                     hiveMetastore,
-                    fileSystemFactory,
+                    Optional.empty(),
                     Optional.empty());
 
             Module workSchedulerModule = conditionalModule(
@@ -100,7 +98,7 @@ public final class InternalObjectStoreConnectorFactory
                             new GalaxyLocationSecurityModule(),
                             workSchedulerModule),
                     icebergCatalogModule,
-                    fileSystemFactory);
+                    Optional.empty());
 
             Map<String, String> deltaConfig = new HashMap<>(filteredConfig(config, "DELTA"));
             // The procedure is disabled in OSS because of security issues.
@@ -111,7 +109,7 @@ public final class InternalObjectStoreConnectorFactory
                     deltaConfig,
                     context,
                     deltaMetastoreModule,
-                    fileSystemFactory,
+                    Optional.empty(),
                     combine(
                             new ConfigureCachingMetastoreModule(),
                             new GalaxyLocationSecurityModule(),

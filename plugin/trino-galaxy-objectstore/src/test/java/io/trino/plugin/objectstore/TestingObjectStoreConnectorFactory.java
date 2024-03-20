@@ -53,7 +53,6 @@ public class TestingObjectStoreConnectorFactory
                 catalogName,
                 config,
                 Optional.of(metastore),
-                Optional.empty(),
                 hiveModule,
                 Optional.of(new TestingIcebergGalaxyMetastoreCatalogModule(metastore)),
                 Optional.of(new TestingDeltaLakeMetastoreModule(metastore)),

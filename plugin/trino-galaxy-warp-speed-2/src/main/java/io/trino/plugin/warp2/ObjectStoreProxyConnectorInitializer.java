@@ -69,7 +69,6 @@ public class ObjectStoreProxyConnectorInitializer
                 catalogName,
                 objectStoreConfig,
                 Optional.empty(),
-                Optional.empty(),
                 EMPTY_MODULE,
                 Optional.empty(),
                 Optional.empty(),

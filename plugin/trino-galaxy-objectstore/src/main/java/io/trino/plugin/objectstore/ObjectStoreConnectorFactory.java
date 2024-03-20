@@ -35,7 +35,6 @@ public class ObjectStoreConnectorFactory
                 catalogName,
                 config,
                 Optional.empty(),
-                Optional.empty(),
                 EMPTY_MODULE,
                 Optional.empty(),
                 Optional.empty(),
