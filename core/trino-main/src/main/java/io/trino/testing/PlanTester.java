@@ -177,7 +177,6 @@ import io.trino.sql.parser.SqlParser;
 import io.trino.sql.planner.AdaptivePlanner;
 import io.trino.sql.planner.AlternativesOptimizers;
 import io.trino.sql.planner.CompilerConfig;
-import io.trino.sql.planner.IrTypeAnalyzer;
 import io.trino.sql.planner.LocalExecutionPlanner;
 import io.trino.sql.planner.LocalExecutionPlanner.LocalExecutionPlan;
 import io.trino.sql.planner.LogicalPlanner;
@@ -450,9 +449,8 @@ public class PlanTester
                 tablePropertyManager,
                 analyzePropertyManager,
                 tableProceduresPropertyManager);
-        IrTypeAnalyzer typeAnalyzer = new IrTypeAnalyzer(plannerContext);
-        this.statsCalculator = createNewStatsCalculator(plannerContext, typeAnalyzer);
-        this.scalarStatsCalculator = new ScalarStatsCalculator(plannerContext, typeAnalyzer);
+        this.statsCalculator = createNewStatsCalculator(plannerContext);
+        this.scalarStatsCalculator = new ScalarStatsCalculator(plannerContext);
         this.taskCountEstimator = new TaskCountEstimator(() -> nodeCountForStats);
         this.costCalculator = new CostCalculatorUsingExchanges(taskCountEstimator);
         this.estimatedExchangesCostCalculator = new CostCalculatorWithEstimatedExchanges(costCalculator, taskCountEstimator);
@@ -563,11 +561,11 @@ public class PlanTester
         return CatalogServiceProviderModule.createSessionPropertyManager(systemSessionProperties, connectorServicesProvider);
     }
 
-    private static StatsCalculator createNewStatsCalculator(PlannerContext plannerContext, IrTypeAnalyzer typeAnalyzer)
+    private static StatsCalculator createNewStatsCalculator(PlannerContext plannerContext)
     {
         StatsNormalizer normalizer = new StatsNormalizer();
-        ScalarStatsCalculator scalarStatsCalculator = new ScalarStatsCalculator(plannerContext, typeAnalyzer);
-        FilterStatsCalculator filterStatsCalculator = new FilterStatsCalculator(plannerContext, scalarStatsCalculator, normalizer, typeAnalyzer);
+        ScalarStatsCalculator scalarStatsCalculator = new ScalarStatsCalculator(plannerContext);
+        FilterStatsCalculator filterStatsCalculator = new FilterStatsCalculator(plannerContext, scalarStatsCalculator, normalizer);
         return new ComposableStatsCalculator(new StatsRulesProvider(plannerContext, scalarStatsCalculator, filterStatsCalculator, normalizer).get());
     }
 
@@ -755,7 +753,6 @@ public class PlanTester
         if (printPlan) {
             System.out.println(PlanPrinter.textLogicalPlan(
                     plan.getRoot(),
-                    plan.getTypes(),
                     plannerContext.getMetadata(),
                     plannerContext.getFunctionManager(),
                     plan.getStatsAndCosts(),
@@ -774,7 +771,6 @@ public class PlanTester
         tableExecuteContextManager.registerTableExecuteContextForQuery(taskContext.getQueryContext().getQueryId());
         LocalExecutionPlanner executionPlanner = new LocalExecutionPlanner(
                 plannerContext,
-                new IrTypeAnalyzer(plannerContext),
                 Optional.empty(),
                 pageSourceManager,
                 dynamicRowFilteringPageSourceProvider,
@@ -811,7 +807,6 @@ public class PlanTester
                 taskContext,
                 subplan.getFragment().getRoot(),
                 subplan.getFragment().getOutputPartitioningScheme().getOutputLayout(),
-                plan.getTypes(),
                 subplan.getFragment().getPartitionedSources(),
                 new NullOutputFactory());
 
@@ -894,7 +889,6 @@ public class PlanTester
     {
         return new PlanOptimizers(
                 plannerContext,
-                new IrTypeAnalyzer(plannerContext),
                 taskManagerConfig,
                 forceSingleNode,
                 splitManager,
@@ -914,7 +908,6 @@ public class PlanTester
     {
         return new AlternativesOptimizers(
                 plannerContext,
-                new IrTypeAnalyzer(plannerContext),
                 statsCalculator,
                 costCalculator,
                 new RuleStatsRecorder()).getPlanOptimizers();
@@ -946,7 +939,6 @@ public class PlanTester
                 new PlanSanityChecker(true),
                 idAllocator,
                 getPlannerContext(),
-                new IrTypeAnalyzer(plannerContext),
                 statsCalculator,
                 costCalculator,
                 warningCollector,
@@ -966,7 +958,6 @@ public class PlanTester
                 optimizers,
                 planFragmenter,
                 new PlanSanityChecker(false),
-                new IrTypeAnalyzer(plannerContext),
                 warningCollector,
                 planOptimizersStatsCollector,
                 new CachingTableStatsProvider(getPlannerContext().getMetadata(), session));

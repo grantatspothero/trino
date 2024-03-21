@@ -30,6 +30,7 @@ import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.SortOrder;
+import io.trino.spi.type.Type;
 import io.trino.sql.ir.CanonicalAggregation;
 import io.trino.sql.ir.Expression;
 import io.trino.sql.ir.LambdaExpression;
@@ -49,7 +50,6 @@ import io.trino.sql.planner.plan.ProjectNode;
 import io.trino.sql.planner.plan.TableScanNode;
 import io.trino.sql.planner.plan.TopNNode;
 import io.trino.sql.planner.plan.TopNRankingNode;
-import io.trino.type.UnknownType;
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -108,11 +108,10 @@ public final class CanonicalSubplanExtractor
         return new CacheColumnId("(" + formatExpression(expression) + ")");
     }
 
-    public static Symbol columnIdToSymbol(CacheColumnId columnId)
+    public static Symbol columnIdToSymbol(CacheColumnId columnId, Type type)
     {
         requireNonNull(columnId, "columnId is null");
-        // todo[https://github.com/starburstdata/cork/issues/517] use proper type
-        return new Symbol(UnknownType.UNKNOWN, columnId.toString());
+        return new Symbol(type, columnId.toString());
     }
 
     private static class Visitor
@@ -189,7 +188,7 @@ public final class CanonicalSubplanExtractor
             for (Symbol groupingKey : node.getGroupingKeys()) {
                 CacheColumnId columnId = requireNonNull(originalSymbolMapping.inverse().get(groupingKey));
                 groupByColumnsBuilder.add(columnId);
-                if (assignments.put(columnId, columnIdToSymbol(columnId).toSymbolReference()) != null) {
+                if (assignments.put(columnId, columnIdToSymbol(columnId, groupingKey.getType()).toSymbolReference()) != null) {
                     // duplicated column ids are not supported
                     return Optional.empty();
                 }
@@ -220,9 +219,10 @@ public final class CanonicalSubplanExtractor
             }
 
             // conjuncts that only contain group by symbols are pullable
+            BiMap<CacheColumnId, Symbol> symbolMapping = symbolMappingBuilder.buildOrThrow();
             Set<CacheColumnId> groupByColumns = groupByColumnsBuilder.build();
             Set<Symbol> groupBySymbols = groupByColumns.stream()
-                    .map(CanonicalSubplanExtractor::columnIdToSymbol)
+                    .map(id -> columnIdToSymbol(id, symbolMapping.get(id).getType()))
                     .collect(toImmutableSet());
             Map<Boolean, List<Expression>> conjuncts = subplan.getPullableConjuncts().stream()
                     .collect(partitioningBy(expression -> groupBySymbols.containsAll(SymbolsExtractor.extractAll(expression))));
@@ -230,7 +230,6 @@ public final class CanonicalSubplanExtractor
             Set<Expression> nonPullableConjuncts = ImmutableSet.copyOf(conjuncts.get(false));
 
             // validate order of assignments with aggregation output columns
-            BiMap<CacheColumnId, Symbol> symbolMapping = symbolMappingBuilder.buildOrThrow();
             verify(ImmutableList.copyOf(assignments.keySet())
                             .equals(node.getOutputSymbols().stream()
                                     .map(symbol -> requireNonNull(symbolMapping.inverse().get(symbol)))
@@ -511,8 +510,9 @@ public final class CanonicalSubplanExtractor
             BiMap<CacheColumnId, Symbol> symbolMapping = symbolMappingBuilder.build();
 
             // pass-through canonical output symbols
-            Map<CacheColumnId, Expression> assignments = columnHandles.keySet().stream()
-                    .collect(toImmutableMap(identity(), id -> columnIdToSymbol(id).toSymbolReference()));
+            Map<CacheColumnId, Expression> assignments = columnHandles.keySet().stream().collect(toImmutableMap(
+                    identity(),
+                    id -> columnIdToSymbol(id, symbolMapping.get(id).getType()).toSymbolReference()));
 
             return Optional.of(CanonicalSubplan.builderForTableScan(
                             new ScanFilterProjectKey(tableId.get()),

@@ -105,7 +105,6 @@ public class SplitSourceFactory
     private final ConnectorAwareAddressProvider connectorAwareAddressProvider;
     private final NodeInfo nodeInfo;
     private final boolean schedulerIncludeCoordinator;
-    private final IrTypeAnalyzer typeAnalyzer;
 
     @Inject
     public SplitSourceFactory(
@@ -115,8 +114,7 @@ public class SplitSourceFactory
             ConnectorAwareAddressProvider connectorAwareAddressProvider,
             CacheManagerRegistry cacheManagerRegistry,
             NodeInfo nodeInfo,
-            NodeSchedulerConfig nodeSchedulerConfig,
-            IrTypeAnalyzer typeAnalyzer)
+            NodeSchedulerConfig nodeSchedulerConfig)
     {
         this.splitManager = requireNonNull(splitManager, "splitManager is null");
         this.plannerContext = requireNonNull(plannerContext, "metadata is null");
@@ -125,7 +123,6 @@ public class SplitSourceFactory
         requireNonNull(cacheManagerRegistry, "cacheManagerRegistry is null"); // TODO (Raunaq) sync code with Cork
         this.nodeInfo = requireNonNull(nodeInfo, "nodeInfo is null");
         this.schedulerIncludeCoordinator = requireNonNull(nodeSchedulerConfig, "nodeSchedulerConfig is null").isIncludeCoordinator();
-        this.typeAnalyzer = requireNonNull(typeAnalyzer, "typeAnalyzer is null");
     }
 
     public Map<PlanNodeId, SplitSource> createSplitSources(Session session, Span stageSpan, PlanFragment fragment)
@@ -134,7 +131,7 @@ public class SplitSourceFactory
         try {
             // get splits for this fragment, this is lazy so split assignments aren't actually calculated here
             return fragment.getRoot().accept(
-                    new Visitor(session, stageSpan, TypeProvider.copyOf(fragment.getSymbols()), allSplitSources),
+                    new Visitor(session, stageSpan, allSplitSources),
                     null);
         }
         catch (Throwable t) {
@@ -158,18 +155,15 @@ public class SplitSourceFactory
     {
         private final Session session;
         private final Span stageSpan;
-        private final TypeProvider typeProvider;
         private final ImmutableList.Builder<SplitSource> splitSources;
 
         private Visitor(
                 Session session,
                 Span stageSpan,
-                TypeProvider typeProvider,
                 ImmutableList.Builder<SplitSource> allSplitSources)
         {
             this.session = session;
             this.stageSpan = stageSpan;
-            this.typeProvider = typeProvider;
             this.splitSources = allSplitSources;
         }
 
@@ -204,12 +198,12 @@ public class SplitSourceFactory
             DynamicFilter dynamicFilter = EMPTY;
             if (!dynamicFilters.isEmpty()) {
                 log.debug("Dynamic filters: %s", dynamicFilters);
-                dynamicFilter = dynamicFilterService.createDynamicFilter(session.getQueryId(), dynamicFilters, assignments, typeProvider);
+                dynamicFilter = dynamicFilterService.createDynamicFilter(session.getQueryId(), dynamicFilters, assignments);
             }
 
             Constraint constraint = filterPredicate
                     .map(predicate -> filterConjuncts(predicate, expression -> !DynamicFilters.isDynamicFilter(expression)))
-                    .map(predicate -> new LayoutConstraintEvaluator(plannerContext, typeAnalyzer, session, assignments, predicate))
+                    .map(predicate -> new LayoutConstraintEvaluator(plannerContext, session, assignments, predicate))
                     .map(evaluator -> new Constraint(TupleDomain.all(), evaluator::isCandidate, evaluator.getArguments())) // we are interested only in functional predicate here, so we set the summary to ALL.
                     .orElse(alwaysTrue());
 

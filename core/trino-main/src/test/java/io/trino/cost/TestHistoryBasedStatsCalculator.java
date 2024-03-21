@@ -737,7 +737,7 @@ public class TestHistoryBasedStatsCalculator
                         StageState.FINISHED,
                         new PlanFragment(new PlanFragmentId("0"),
                                 new ValuesNode(new PlanNodeId("mock"), 0),
-                                ImmutableMap.of(),
+                                ImmutableSet.of(),
                                 SystemPartitioningHandle.SOURCE_DISTRIBUTION,
                                 Optional.empty(),
                                 ImmutableList.of(),

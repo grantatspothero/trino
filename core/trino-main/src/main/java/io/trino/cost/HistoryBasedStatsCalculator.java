@@ -28,7 +28,6 @@ import io.trino.cache.CacheMetadata;
 import io.trino.execution.QueryInfo;
 import io.trino.execution.QueryState;
 import io.trino.execution.StageInfo;
-import io.trino.metadata.Metadata;
 import io.trino.server.DynamicFilterService;
 import io.trino.spi.QueryId;
 import io.trino.spi.cache.CacheColumnId;
@@ -128,7 +127,7 @@ public class HistoryBasedStatsCalculator
     {
         PlanNodeStatsEstimate calculatedStats = delegate.calculateStats(node, context);
         Optional<Double> outputRowCount = getOutputRowCount(node, context.lookup(), context.session());
-        return outputRowCount.map(rowCount -> statsNormalizer.normalize(new PlanNodeStatsEstimate(rowCount, calculatedStats.getSymbolStatistics()), context.types()))
+        return outputRowCount.map(rowCount -> statsNormalizer.normalize(new PlanNodeStatsEstimate(rowCount, calculatedStats.getSymbolStatistics()), node.getOutputSymbols()))
                 .orElse(calculatedStats);
     }
 
