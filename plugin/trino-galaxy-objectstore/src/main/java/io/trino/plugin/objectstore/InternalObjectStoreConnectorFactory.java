@@ -132,7 +132,6 @@ public final class InternalObjectStoreConnectorFactory
                     new ObjectStoreModule(),
                     new GalaxyLocationSecurityModule(),
                     new FileSystemModule(catalogName, context.getNodeManager(), context.getOpenTelemetry()),
-                    workSchedulerModule,
                     binder -> {
                         binder.bind(TypeManager.class).toInstance(context.getTypeManager());
                         binder.bind(OpenTelemetry.class).toInstance(context.getOpenTelemetry());
