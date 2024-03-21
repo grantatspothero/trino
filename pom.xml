@@ -271,7 +271,7 @@
 
         <!-- To make possible "real quick build": default is same as in airbase parent -->
         <failIfNoTests>true</failIfNoTests>
-   </properties>
+    </properties>
 
     <dependencyManagement>
         <dependencies>
