@@ -436,6 +436,9 @@ public class OpenSearchClient
                             if (e.getErrorCode().equals(OPENSEARCH_INVALID_METADATA.toErrorCode())) {
                                 continue;
                             }
+                            if (e.getCause() instanceof ResponseException cause && cause.getResponse().getStatusLine().getStatusCode() == 404) {
+                                continue;
+                            }
                             throw e;
                         }
                     }
