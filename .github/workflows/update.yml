@@ -24,7 +24,7 @@ jobs:
   check:
     runs-on: [self-hosted, sep-cicd, gha-fleet-nano]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
         with:
           cache: false
@@ -40,8 +40,8 @@ jobs:
           app_id: ${{ vars.TOKEN_GENERATOR_APP_ID }}
           private_key: ${{ secrets.TOKEN_GENERATOR_PRIVATE_KEY }}
       - name: Create Pull Request
-        # pin to 4.2.4
-        uses: peter-evans/create-pull-request@38e0b6e68b4c852a5500a94740f0e535e0d7ba54
+        # pin to 6.0.2
+        uses: peter-evans/create-pull-request@70a41aba780001da0a30141984ae2a0c95d8704e
         with:
           token: ${{ steps.generate_token.outputs.token }}
           title: 'Update Stargate version'
