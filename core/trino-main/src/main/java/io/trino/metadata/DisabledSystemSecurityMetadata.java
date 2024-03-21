@@ -228,6 +228,9 @@ public class DisabledSystemSecurityMetadata
     @Override
     public void finishStatisticsCollection(Session session, CatalogSchemaTableName table) {}
 
+    @Override
+    public void columnNotNullConstraintDropped(Session session, CatalogSchemaTableName table, String column) {}
+
     private static TrinoException notSupportedException(String catalogName)
     {
         return new TrinoException(NOT_SUPPORTED, "Catalog does not support permission management: " + catalogName);

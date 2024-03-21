@@ -481,6 +481,14 @@ public class GalaxySecurityMetadata
         handleClientError(() -> accessControlClient.analyzeTableFinished(toDispatchSession(session), toTableEntity(session.getTransactionId(), table)));
     }
 
+    @Override
+    public void columnNotNullConstraintDropped(Session session, CatalogSchemaTableName table, String column)
+    {
+        // this will never happen but be safe
+        throwIfSystemCatalog(table);
+        accessControlClient.columnNotNullDropped(toDispatchSession(session), toColumnEntity(session.getTransactionId(), table, column));
+    }
+
     // Helper methods
 
     private static void handleClientError(Runnable routine)

@@ -238,4 +238,9 @@ public interface SystemSecurityMetadata
      * A table has been analyzed
      */
     void finishStatisticsCollection(Session session, CatalogSchemaTableName table);
+
+    /**
+     * Column's NOT NULL constraint was dropped
+     */
+    void columnNotNullConstraintDropped(Session session, CatalogSchemaTableName table, String column);
 }

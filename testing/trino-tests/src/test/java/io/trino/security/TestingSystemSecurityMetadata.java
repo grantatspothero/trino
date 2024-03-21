@@ -290,4 +290,7 @@ class TestingSystemSecurityMetadata
 
     @Override
     public void finishStatisticsCollection(Session session, CatalogSchemaTableName table) {}
+
+    @Override
+    public void columnNotNullConstraintDropped(Session session, CatalogSchemaTableName table, String column) {}
 }
