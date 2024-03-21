@@ -89,12 +89,6 @@ public class TestWarpSpeedIcebergCacheSubqueriesTest
     }
 
     @Override
-    protected boolean effectivePredicateReturnedPerSplit()
-    {
-        return false;
-    }
-
-    @Override
     protected boolean getUnenforcedPredicateIsPrune()
     {
         return true;
