@@ -20,46 +20,26 @@ import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.ProvidesIntoSet;
 import com.mongodb.ConnectionString;
-import com.mongodb.MongoClientException;
 import com.mongodb.MongoClientSettings;
-import com.mongodb.ServerAddress;
-import com.mongodb.UnixServerAddress;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
-import com.mongodb.connection.BufferProvider;
-import com.mongodb.connection.SocketSettings;
-import com.mongodb.connection.SslSettings;
-import com.mongodb.connection.Stream;
-import com.mongodb.connection.StreamFactory;
-import com.mongodb.internal.connection.PowerOfTwoBufferPool;
-import com.mongodb.internal.connection.SocketStream;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.instrumentation.mongo.v3_1.MongoTelemetry;
-import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
 import io.trino.plugin.base.galaxy.CrossRegionConfig;
-import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
 import io.trino.plugin.base.galaxy.LocalRegionConfig;
-import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.base.session.SessionPropertiesProvider;
 import io.trino.plugin.mongodb.ptf.Query;
-import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.function.table.ConnectorTableFunction;
 import io.trino.spi.type.TypeManager;
 import io.trino.sshtunnel.SshTunnelConfig;
-import io.trino.sshtunnel.SshTunnelProperties;
 
-import java.util.Optional;
-import java.util.Properties;
 import java.util.Set;
 
-import static com.google.common.base.Verify.verify;
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.airlift.configuration.ConditionalModule.conditionalModule;
 import static io.airlift.configuration.ConfigBinder.configBinder;
-import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
-import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class MongoClientModule
@@ -133,62 +113,5 @@ public class MongoClientModule
             }
             options.applyConnectionString(new ConnectionString(config.getConnectionUrl()));
         };
-    }
-
-    @ProvidesIntoSet
-    @Singleton
-    public MongoClientSettingConfigurator sshTunnelConfigurator(CatalogHandle catalogHandle, LocalRegionConfig localRegionConfig, CrossRegionConfig crossRegionConfig, SshTunnelConfig sshConfig)
-    {
-        Optional<SshTunnelProperties> sshProperties = SshTunnelProperties.generateFrom(sshConfig);
-
-        return options -> options.streamFactoryFactory((SocketSettings socketSettings, SslSettings sslSettings) ->
-                new GalaxyStreamFactory(socketSettings, sslSettings, localRegionConfig, crossRegionConfig, sshProperties, catalogHandle));
-    }
-
-    private static class GalaxyStreamFactory
-            implements StreamFactory
-    {
-        private final SocketSettings settings;
-        private final SslSettings sslSettings;
-        private final BufferProvider bufferProvider = PowerOfTwoBufferPool.DEFAULT;
-        private final LocalRegionConfig localRegionConfig;
-        private final CrossRegionConfig crossRegionConfig;
-        private final Optional<SshTunnelProperties> sshTunnelProperties;
-        private final CatalogHandle catalogHandle;
-
-        public GalaxyStreamFactory(
-                SocketSettings settings,
-                SslSettings sslSettings,
-                LocalRegionConfig localRegionConfig,
-                CrossRegionConfig crossRegionConfig,
-                Optional<SshTunnelProperties> sshTunnelProperties,
-                CatalogHandle catalogHandle)
-        {
-            this.settings = requireNonNull(settings, "settings is null");
-            this.sslSettings = requireNonNull(sslSettings, "sslSettings is null");
-            this.localRegionConfig = requireNonNull(localRegionConfig, "localRegionConfig is null");
-            this.crossRegionConfig = requireNonNull(crossRegionConfig, "crossRegionConfig is null");
-            this.sshTunnelProperties = requireNonNull(sshTunnelProperties, "sshTunnelProperties is null");
-            this.catalogHandle = requireNonNull(catalogHandle, "catalogHandle is null");
-        }
-
-        @Override
-        public Stream create(ServerAddress serverAddress)
-        {
-            if (serverAddress instanceof UnixServerAddress) {
-                throw new MongoClientException("Galaxy only supports IP sockets, not unix domain sockets");
-            }
-            Properties properties = new Properties();
-
-            verify(!crossRegionConfig.getAllowCrossRegionAccess(), "Cross-region access not supported");
-            RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(localRegionConfig, crossRegionConfig));
-            sshTunnelProperties.ifPresent(sshProps -> addSshTunnelProperties(properties::setProperty, sshProps));
-
-            CatalogNetworkMonitorProperties catalogNetworkMonitorProperties = CatalogNetworkMonitorProperties.generateFrom(crossRegionConfig, catalogHandle)
-                    .withTlsEnabled(sslSettings.isEnabled());
-            CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(properties::setProperty, catalogNetworkMonitorProperties);
-
-            return new SocketStream(serverAddress, settings, sslSettings, new GalaxySqlSocketFactory(properties), bufferProvider);
-        }
     }
 }
