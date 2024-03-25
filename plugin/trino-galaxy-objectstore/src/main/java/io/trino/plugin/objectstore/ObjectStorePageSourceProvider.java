@@ -80,17 +80,6 @@ public class ObjectStorePageSourceProvider
         throw new VerifyException("Unhandled class: " + table.getClass().getName());
     }
 
-    @SuppressWarnings("deprecation") // interface method is deprecated
-    @Override
-    public TupleDomain<ColumnHandle> simplifyPredicate(
-            ConnectorSession session,
-            ConnectorSplit split,
-            ConnectorTableHandle table,
-            TupleDomain<ColumnHandle> predicate)
-    {
-        return getUnenforcedPredicate(session, split, table, predicate);
-    }
-
     @Override
     public TupleDomain<ColumnHandle> getUnenforcedPredicate(
             ConnectorSession session,
