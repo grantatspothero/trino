@@ -98,7 +98,6 @@ import static com.google.common.collect.Streams.stream;
 import static io.trino.plugin.base.expression.ConnectorExpressions.and;
 import static io.trino.plugin.base.expression.ConnectorExpressions.extractConjuncts;
 import static io.trino.plugin.jdbc.JdbcErrorCode.JDBC_NON_TRANSIENT_ERROR;
-import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.getListCommentsMode;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.isAggregationPushdownEnabled;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.isBulkListColumns;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.isComplexExpressionPushdown;
@@ -934,18 +933,11 @@ public class DefaultJdbcMetadata
     @Override
     public Iterator<RelationCommentMetadata> streamRelationComments(ConnectorSession session, Optional<String> schemaName, UnaryOperator<Set<SchemaTableName>> relationFilter)
     {
-        JdbcMetadataConfig.ListCommentsMode mode = getListCommentsMode(session);
-        return switch (mode) {
-            case CLASSIC -> JdbcMetadata.super.streamRelationComments(session, schemaName, relationFilter);
-
-            case DMA -> {
-                Map<SchemaTableName, RelationCommentMetadata> resultsByName = jdbcClient.getAllTableComments(session, schemaName).stream()
-                        .collect(toImmutableMap(RelationCommentMetadata::name, identity()));
-                yield relationFilter.apply(resultsByName.keySet()).stream()
-                        .map(resultsByName::get)
-                        .iterator();
-            }
-        };
+        Map<SchemaTableName, RelationCommentMetadata> resultsByName = jdbcClient.getAllTableComments(session, schemaName).stream()
+                .collect(toImmutableMap(RelationCommentMetadata::name, identity()));
+        return relationFilter.apply(resultsByName.keySet()).stream()
+                .map(resultsByName::get)
+                .iterator();
     }
 
     @Override

@@ -18,30 +18,11 @@ import io.airlift.configuration.ConfigDescription;
 import io.airlift.configuration.ConfigHidden;
 import io.airlift.configuration.DefunctConfig;
 import io.airlift.configuration.LegacyConfig;
-import io.trino.spi.connector.ConnectorSession;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
-
-import java.util.Optional;
 
 @DefunctConfig("allow-drop-table")
 public class JdbcMetadataConfig
 {
-    public enum ListCommentsMode
-    {
-        /**
-         * Traditional / legacy / battle tested mode.
-         */
-        CLASSIC,
-
-        /**
-         * Uses {@link JdbcClient#getAllTableComments(ConnectorSession, Optional)}
-         * <p>
-         * <em>DMA</em> stands for Direct Metadata Access.
-         */
-        DMA,
-    }
-
     private boolean complexExpressionPushdownEnabled = true;
     /*
      * Join pushdown is disabled by default as this is the safer option.
@@ -56,7 +37,6 @@ public class JdbcMetadataConfig
     private boolean topNPushdownEnabled = true;
 
     private boolean bulkListColumns; // default overridden in connectors that support other modes
-    private ListCommentsMode listCommentsMode = ListCommentsMode.DMA;
 
     // Pushed domains are transformed into SQL IN lists
     // (or sequence of range predicates) in JDBC connectors.
@@ -141,20 +121,6 @@ public class JdbcMetadataConfig
     public JdbcMetadataConfig setBulkListColumns(boolean bulkListColumns)
     {
         this.bulkListColumns = bulkListColumns;
-        return this;
-    }
-
-    @NotNull
-    public ListCommentsMode getListCommentsMode()
-    {
-        return listCommentsMode;
-    }
-
-    @Config("jdbc.list-comments-mode")
-    @ConfigDescription("Select implementation for listing tables' comments")
-    public JdbcMetadataConfig setListCommentsMode(ListCommentsMode listCommentsMode)
-    {
-        this.listCommentsMode = listCommentsMode;
         return this;
     }
 
