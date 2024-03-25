@@ -20,6 +20,7 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.starburstdata.trino.plugin.stargate.EnableWrites;
+import com.starburstdata.trino.plugin.stargate.StargateClient;
 import com.starburstdata.trino.plugin.stargate.StargateModule;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.plugin.jdbc.ConfiguringConnectionFactory;
@@ -45,7 +46,7 @@ public class GalaxyStargateModule
     {
         install(new StargateModule());
 
-        newOptionalBinder(binder, Key.get(JdbcClient.class, ForBaseJdbc.class)).setBinding().to(GalaxyStargateClient.class).in(Scopes.SINGLETON);
+        newOptionalBinder(binder, Key.get(JdbcClient.class, ForBaseJdbc.class)).setBinding().to(StargateClient.class).in(Scopes.SINGLETON);
 
         install(new GalaxyStargateAuthenticationModule());
         newOptionalBinder(binder, Key.get(ConnectionFactory.class, ForBaseJdbc.class))
