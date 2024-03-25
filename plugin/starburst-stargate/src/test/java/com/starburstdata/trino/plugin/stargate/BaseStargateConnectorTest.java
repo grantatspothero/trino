@@ -149,13 +149,6 @@ public abstract class BaseStargateConnectorTest
         abort("Stargate connector not support creating tables");
     }
 
-    @Test
-    @Override
-    public void testCommentsListingModes()
-    {
-        abort("not supported.");
-    }
-
     @Override
     protected Session joinPushdownEnabled(Session session)
     {

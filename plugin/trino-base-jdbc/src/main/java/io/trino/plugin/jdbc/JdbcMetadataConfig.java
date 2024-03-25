@@ -40,13 +40,6 @@ public class JdbcMetadataConfig
          * <em>DMA</em> stands for Direct Metadata Access.
          */
         DMA,
-
-        /**
-         * Uses {@link JdbcClient#getAllTableComments(ConnectorSession, Optional)}
-         * and processes schemas in multiple threads.
-         */
-        // TODO this probably isn't worth keeping around. Test on various connectors and remove the implementation if is not significantly better than DMA
-        DMA_P,
     }
 
     private boolean complexExpressionPushdownEnabled = true;
@@ -64,9 +57,6 @@ public class JdbcMetadataConfig
 
     private boolean bulkListColumns; // default overridden in connectors that support other modes
     private ListCommentsMode listCommentsMode = ListCommentsMode.DMA;
-    // This is for IO, so default value not based on number of cores.
-    // This ~limits number of concurrent queries to the remote database
-    private int maxMetadataBackgroundProcessingThreads = 8;
 
     // Pushed domains are transformed into SQL IN lists
     // (or sequence of range predicates) in JDBC connectors.
@@ -165,19 +155,6 @@ public class JdbcMetadataConfig
     public JdbcMetadataConfig setListCommentsMode(ListCommentsMode listCommentsMode)
     {
         this.listCommentsMode = listCommentsMode;
-        return this;
-    }
-
-    @Min(0)
-    public int getMaxMetadataBackgroundProcessingThreads()
-    {
-        return maxMetadataBackgroundProcessingThreads;
-    }
-
-    @Config("jdbc.metadata-background-threads")
-    public JdbcMetadataConfig setMaxMetadataBackgroundProcessingThreads(int maxMetadataBackgroundProcessingThreads)
-    {
-        this.maxMetadataBackgroundProcessingThreads = maxMetadataBackgroundProcessingThreads;
         return this;
     }
 

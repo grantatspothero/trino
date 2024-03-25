@@ -17,29 +17,21 @@ import com.google.common.base.Ticker;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import io.airlift.units.Duration;
-import jakarta.annotation.PreDestroy;
 
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
 
-import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.Executors.newFixedThreadPool;
 import static java.util.concurrent.TimeUnit.DAYS;
 
 public class DefaultJdbcMetadataFactory
         implements JdbcMetadataFactory
 {
-    private final int maxMetadataBackgroundProcessingThreads;
-    private final ExecutorService backgroundExecutorService;
     private final JdbcClient jdbcClient;
     private final Set<JdbcQueryEventListener> jdbcQueryEventListeners;
 
     @Inject
-    public DefaultJdbcMetadataFactory(JdbcMetadataConfig jdbcMetadataConfig, JdbcClient jdbcClient, Set<JdbcQueryEventListener> jdbcQueryEventListeners)
+    public DefaultJdbcMetadataFactory(JdbcClient jdbcClient, Set<JdbcQueryEventListener> jdbcQueryEventListeners)
     {
-        this.maxMetadataBackgroundProcessingThreads = jdbcMetadataConfig.getMaxMetadataBackgroundProcessingThreads();
-        this.backgroundExecutorService = newFixedThreadPool(maxMetadataBackgroundProcessingThreads, daemonThreadsNamed("jdbc-information-schema-%s"));
         this.jdbcClient = requireNonNull(jdbcClient, "jdbcClient is null");
         this.jdbcQueryEventListeners = ImmutableSet.copyOf(requireNonNull(jdbcQueryEventListeners, "queryEventListeners is null"));
     }
@@ -64,12 +56,6 @@ public class DefaultJdbcMetadataFactory
 
     protected JdbcMetadata create(JdbcClient transactionCachingJdbcClient)
     {
-        return new DefaultJdbcMetadata(maxMetadataBackgroundProcessingThreads, backgroundExecutorService, transactionCachingJdbcClient, true, jdbcQueryEventListeners);
-    }
-
-    @PreDestroy
-    public void destroy()
-    {
-        backgroundExecutorService.shutdownNow();
+        return new DefaultJdbcMetadata(transactionCachingJdbcClient, true, jdbcQueryEventListeners);
     }
 }

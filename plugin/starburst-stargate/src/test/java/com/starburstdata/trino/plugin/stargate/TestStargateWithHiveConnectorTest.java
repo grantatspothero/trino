@@ -538,4 +538,13 @@ public class TestStargateWithHiveConnectorTest
                 .hasMessageMatching("This connector does not support creating tables");
         abort("this is tested with another test class: " + TestStargateWithMemoryWritesEnabledConnectorTest.class);
     }
+
+    @Test
+    @Override
+    public void testCommentsListingModes()
+    {
+        assertThatThrownBy(super::testCommentsListingModes)
+                .hasMessageMatching("This connector does not support creating tables");
+        abort("this is tested with another test class");
+    }
 }

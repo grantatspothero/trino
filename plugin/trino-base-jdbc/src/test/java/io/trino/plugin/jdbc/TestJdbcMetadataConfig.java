@@ -35,7 +35,6 @@ public class TestJdbcMetadataConfig
                 .setTopNPushdownEnabled(true)
                 .setBulkListColumns(false)
                 .setListCommentsMode(JdbcMetadataConfig.ListCommentsMode.DMA)
-                .setMaxMetadataBackgroundProcessingThreads(8)
                 .setDomainCompactionThreshold(32));
     }
 
@@ -49,7 +48,6 @@ public class TestJdbcMetadataConfig
                 .put("aggregation-pushdown.enabled", "false")
                 .put("jdbc.bulk-list-columns.enabled", "true")
                 .put("jdbc.list-comments-mode", "CLASSIC")
-                .put("jdbc.metadata-background-threads", "13")
                 .put("domain-compaction-threshold", "42")
                 .put("topn-pushdown.enabled", "false")
                 .buildOrThrow();
@@ -62,7 +60,6 @@ public class TestJdbcMetadataConfig
                 .setTopNPushdownEnabled(false)
                 .setBulkListColumns(true)
                 .setListCommentsMode(JdbcMetadataConfig.ListCommentsMode.CLASSIC)
-                .setMaxMetadataBackgroundProcessingThreads(13)
                 .setDomainCompactionThreshold(42);
 
         assertFullMapping(properties, expected);

@@ -81,7 +81,6 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
-import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
@@ -98,7 +97,6 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Streams.stream;
 import static io.trino.plugin.base.expression.ConnectorExpressions.and;
 import static io.trino.plugin.base.expression.ConnectorExpressions.extractConjuncts;
-import static io.trino.plugin.base.util.Parallels.processWithAdditionalThreads;
 import static io.trino.plugin.jdbc.JdbcErrorCode.JDBC_NON_TRANSIENT_ERROR;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.getListCommentsMode;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.isAggregationPushdownEnabled;
@@ -122,24 +120,14 @@ public class DefaultJdbcMetadata
     private static final String DELETE_ROW_ID = "_trino_artificial_column_handle_for_delete_row_id_";
     private static final String MERGE_ROW_ID = "$merge_row_id";
 
-    private final int maxMetadataBackgroundProcessingThreads;
-    private final Executor backgroundExecutorService;
     private final JdbcClient jdbcClient;
     private final boolean precalculateStatisticsForPushdown;
     private final Set<JdbcQueryEventListener> jdbcQueryEventListeners;
 
     private final AtomicReference<Runnable> rollbackAction = new AtomicReference<>();
 
-    @Deprecated
     public DefaultJdbcMetadata(JdbcClient jdbcClient, boolean precalculateStatisticsForPushdown, Set<JdbcQueryEventListener> jdbcQueryEventListeners)
     {
-        this(-1, FailingExecutor.INSTANCE, jdbcClient, precalculateStatisticsForPushdown, jdbcQueryEventListeners);
-    }
-
-    public DefaultJdbcMetadata(int maxMetadataBackgroundProcessingThreads, Executor backgroundExecutorService, JdbcClient jdbcClient, boolean precalculateStatisticsForPushdown, Set<JdbcQueryEventListener> jdbcQueryEventListeners)
-    {
-        this.maxMetadataBackgroundProcessingThreads = maxMetadataBackgroundProcessingThreads;
-        this.backgroundExecutorService = requireNonNull(backgroundExecutorService, "backgroundExecutorService is null");
         this.jdbcClient = requireNonNull(jdbcClient, "jdbcClient is null");
         this.precalculateStatisticsForPushdown = precalculateStatisticsForPushdown;
         this.jdbcQueryEventListeners = ImmutableSet.copyOf(requireNonNull(jdbcQueryEventListeners, "queryEventListeners is null"));
@@ -956,28 +944,6 @@ public class DefaultJdbcMetadata
                 yield relationFilter.apply(resultsByName.keySet()).stream()
                         .map(resultsByName::get)
                         .iterator();
-            }
-
-            case DMA_P -> {
-                checkState(maxMetadataBackgroundProcessingThreads >= 0, "maxMetadataBackgroundProcessingThreads and backgroundExecutorService not provided");
-
-                ImmutableList.Builder<RelationCommentMetadata> results = ImmutableList.builder();
-                processWithAdditionalThreads(
-                        backgroundExecutorService,
-                        maxMetadataBackgroundProcessingThreads,
-                        schemaName.map(Set::of)
-                                .orElseGet(() -> jdbcClient.getSchemaNames(session)),
-                        schema -> {
-                            Map<SchemaTableName, RelationCommentMetadata> schemaResultsByName = jdbcClient.getAllTableComments(session, Optional.of(schema)).stream()
-                                    .collect(toImmutableMap(RelationCommentMetadata::name, identity()));
-                            List<RelationCommentMetadata> schemaResults = relationFilter.apply(schemaResultsByName.keySet()).stream()
-                                    .map(schemaResultsByName::get)
-                                    .collect(toImmutableList());
-                            synchronized (results) {
-                                results.addAll(schemaResults);
-                            }
-                        });
-                yield results.build().iterator();
             }
         };
     }
