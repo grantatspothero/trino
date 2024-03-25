@@ -100,9 +100,9 @@ import static io.trino.plugin.base.expression.ConnectorExpressions.and;
 import static io.trino.plugin.base.expression.ConnectorExpressions.extractConjuncts;
 import static io.trino.plugin.base.util.Parallels.processWithAdditionalThreads;
 import static io.trino.plugin.jdbc.JdbcErrorCode.JDBC_NON_TRANSIENT_ERROR;
-import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.getListColumnsMode;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.getListCommentsMode;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.isAggregationPushdownEnabled;
+import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.isBulkListColumns;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.isComplexExpressionPushdown;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.isComplexJoinPushdownEnabled;
 import static io.trino.plugin.jdbc.JdbcMetadataSessionProperties.isJoinPushdownEnabled;
@@ -933,18 +933,14 @@ public class DefaultJdbcMetadata
     @Override
     public Iterator<RelationColumnsMetadata> streamRelationColumns(ConnectorSession session, Optional<String> schemaName, UnaryOperator<Set<SchemaTableName>> relationFilter)
     {
-        JdbcMetadataConfig.ListColumnsMode mode = getListColumnsMode(session);
-        return switch (mode) {
-            case CLASSIC -> JdbcMetadata.super.streamRelationColumns(session, schemaName, relationFilter);
-
-            case DMA -> {
-                Map<SchemaTableName, RelationColumnsMetadata> resultsByName = stream(jdbcClient.getAllTableColumns(session, schemaName))
-                        .collect(toImmutableMap(RelationColumnsMetadata::name, identity()));
-                yield relationFilter.apply(resultsByName.keySet()).stream()
-                        .map(resultsByName::get)
-                        .iterator();
-            }
-        };
+        if (!isBulkListColumns(session)) {
+            return JdbcMetadata.super.streamRelationColumns(session, schemaName, relationFilter);
+        }
+        Map<SchemaTableName, RelationColumnsMetadata> resultsByName = stream(jdbcClient.getAllTableColumns(session, schemaName))
+                .collect(toImmutableMap(RelationColumnsMetadata::name, identity()));
+        return relationFilter.apply(resultsByName.keySet()).stream()
+                .map(resultsByName::get)
+                .iterator();
     }
 
     @Override

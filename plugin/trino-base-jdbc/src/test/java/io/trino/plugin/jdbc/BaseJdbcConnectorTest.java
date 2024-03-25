@@ -17,7 +17,6 @@ import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
 import io.airlift.units.Duration;
 import io.trino.Session;
-import io.trino.plugin.jdbc.JdbcMetadataConfig.ListColumnsMode;
 import io.trino.plugin.jdbc.JdbcMetadataConfig.ListCommentsMode;
 import io.trino.spi.QueryId;
 import io.trino.spi.connector.JoinCondition;
@@ -1514,7 +1513,7 @@ public abstract class BaseJdbcConnectorTest
     }
 
     @Test
-    public void testColumnsListingModes()
+    public void testBulkColumnListingOptions()
     {
         if (hasBehavior(SUPPORTS_CREATE_SCHEMA)) {
             String schemaName = "test_columns_listing_" + randomNameSuffix();
@@ -1533,7 +1532,7 @@ public abstract class BaseJdbcConnectorTest
                     }
                     String newNationName = newNation.getName().replaceFirst("^" + Pattern.quote(schemaName) + ".", "");
                     String newRegionName = newRegion.getName().replaceFirst("^" + Pattern.quote(schemaName) + ".", "");
-                    testColumnsListingModes(Optional.of(schemaName), Optional.of(newNationName), Optional.of(newRegionName));
+                    testBulkColumnListingOptions(Optional.of(schemaName), Optional.of(newNationName), Optional.of(newRegionName));
                 }
             }
             finally {
@@ -1542,26 +1541,26 @@ public abstract class BaseJdbcConnectorTest
             return;
         }
 
-        testColumnsListingModes(Optional.empty(), Optional.empty(), Optional.empty());
+        testBulkColumnListingOptions(Optional.empty(), Optional.empty(), Optional.empty());
     }
 
-    private void testColumnsListingModes(Optional<String> temporarySchema, Optional<String> temporaryNationTable, Optional<String> temporaryRegionTable)
+    private void testBulkColumnListingOptions(Optional<String> temporarySchema, Optional<String> temporaryNationTable, Optional<String> temporaryRegionTable)
     {
-        for (ListColumnsMode mode : ListColumnsMode.values()) {
+        for (boolean bulkListColumns : List.of(false, true)) {
             try {
-                testColumnsListingModes(temporarySchema, temporaryNationTable, temporaryRegionTable, mode);
+                testBulkColumnListingOptions(temporarySchema, temporaryNationTable, temporaryRegionTable, bulkListColumns);
             }
             catch (RuntimeException | AssertionError e) {
-                fail("Failure for mode " + mode, e);
+                fail("Failure for bulkListColumns " + bulkListColumns, e);
             }
         }
     }
 
-    private void testColumnsListingModes(Optional<String> temporarySchema, Optional<String> temporaryNationTable, Optional<String> temporaryRegionTable, ListColumnsMode mode)
+    private void testBulkColumnListingOptions(Optional<String> temporarySchema, Optional<String> temporaryNationTable, Optional<String> temporaryRegionTable, boolean bulkListColumns)
     {
         String catalogName = getSession().getCatalog().orElseThrow();
         Session session = Session.builder(getSession())
-                .setCatalogSessionProperty(catalogName, JdbcMetadataSessionProperties.LIST_COLUMNS_MODE, mode.name())
+                .setCatalogSessionProperty(catalogName, JdbcMetadataSessionProperties.BULK_LIST_COLUMNS, Boolean.toString(bulkListColumns))
                 .build();
 
         try {

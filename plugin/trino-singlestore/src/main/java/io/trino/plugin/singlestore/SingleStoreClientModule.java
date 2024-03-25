@@ -42,7 +42,7 @@ public class SingleStoreClientModule
     public void configure(Binder binder)
     {
         binder.bind(JdbcClient.class).annotatedWith(ForBaseJdbc.class).to(SingleStoreClient.class).in(Scopes.SINGLETON);
-        configBinder(binder).bindConfigDefaults(JdbcMetadataConfig.class, config -> config.setListColumnsMode(JdbcMetadataConfig.ListColumnsMode.DMA));
+        configBinder(binder).bindConfigDefaults(JdbcMetadataConfig.class, config -> config.setBulkListColumns(true));
         configBinder(binder).bindConfig(SingleStoreJdbcConfig.class);
         configBinder(binder).bindConfig(SingleStoreConfig.class);
         binder.install(new DecimalModule());

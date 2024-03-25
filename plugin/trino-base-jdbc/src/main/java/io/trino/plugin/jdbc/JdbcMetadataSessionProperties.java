@@ -16,7 +16,6 @@ package io.trino.plugin.jdbc;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import io.trino.plugin.base.session.SessionPropertiesProvider;
-import io.trino.plugin.jdbc.JdbcMetadataConfig.ListColumnsMode;
 import io.trino.plugin.jdbc.JdbcMetadataConfig.ListCommentsMode;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ConnectorSession;
@@ -39,7 +38,7 @@ public class JdbcMetadataSessionProperties
     public static final String COMPLEX_JOIN_PUSHDOWN_ENABLED = "complex_join_pushdown_enabled";
     public static final String AGGREGATION_PUSHDOWN_ENABLED = "aggregation_pushdown_enabled";
     public static final String TOPN_PUSHDOWN_ENABLED = "topn_pushdown_enabled";
-    public static final String LIST_COLUMNS_MODE = "experimental_list_columns_mode";
+    public static final String BULK_LIST_COLUMNS = "bulk_list_columns";
     public static final String LIST_COMMENTS_MODE = "experimental_list_comments_mode";
     public static final String DOMAIN_COMPACTION_THRESHOLD = "domain_compaction_threshold";
 
@@ -70,11 +69,11 @@ public class JdbcMetadataSessionProperties
                         "Enable aggregation pushdown",
                         jdbcMetadataConfig.isAggregationPushdownEnabled(),
                         false))
-                .add(enumProperty(
-                        LIST_COLUMNS_MODE,
-                        "Experimental: select implementation for listing tables' columns",
-                        ListColumnsMode.class,
-                        jdbcMetadataConfig.getListColumnsMode(),
+                .add(booleanProperty(
+                        BULK_LIST_COLUMNS,
+                        "Listing tables' columns in bulk",
+                        jdbcMetadataConfig.isBulkListColumns(),
+                        // Hidden because it's really a kill switch. Some connectors do not support it.
                         true))
                 .add(enumProperty(
                         LIST_COMMENTS_MODE,
@@ -127,9 +126,9 @@ public class JdbcMetadataSessionProperties
         return session.getProperty(TOPN_PUSHDOWN_ENABLED, Boolean.class);
     }
 
-    public static ListColumnsMode getListColumnsMode(ConnectorSession session)
+    public static boolean isBulkListColumns(ConnectorSession session)
     {
-        return session.getProperty(LIST_COLUMNS_MODE, ListColumnsMode.class);
+        return session.getProperty(BULK_LIST_COLUMNS, Boolean.class);
     }
 
     public static ListCommentsMode getListCommentsMode(ConnectorSession session)

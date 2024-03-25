@@ -532,9 +532,9 @@ public class TestStargateWithHiveConnectorTest
 
     @Test
     @Override
-    public void testColumnsListingModes()
+    public void testBulkColumnListingOptions()
     {
-        assertThatThrownBy(super::testColumnsListingModes)
+        assertThatThrownBy(super::testBulkColumnListingOptions)
                 .hasMessageMatching("This connector does not support creating tables");
         abort("this is tested with another test class: " + TestStargateWithMemoryWritesEnabledConnectorTest.class);
     }

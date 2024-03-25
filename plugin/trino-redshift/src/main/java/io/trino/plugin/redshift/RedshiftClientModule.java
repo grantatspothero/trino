@@ -36,7 +36,7 @@ public class RedshiftClientModule
     {
         configBinder(binder).bindConfig(RedshiftConfig.class);
         binder.bind(JdbcClient.class).annotatedWith(ForBaseJdbc.class).to(RedshiftClient.class).in(SINGLETON);
-        configBinder(binder).bindConfigDefaults(JdbcMetadataConfig.class, config -> config.setListColumnsMode(JdbcMetadataConfig.ListColumnsMode.DMA));
+        configBinder(binder).bindConfigDefaults(JdbcMetadataConfig.class, config -> config.setBulkListColumns(true));
         newSetBinder(binder, ConnectorTableFunction.class).addBinding().toProvider(Query.class).in(SINGLETON);
         configBinder(binder).bindConfig(JdbcStatisticsConfig.class);
 

@@ -15,6 +15,7 @@ package io.trino.plugin.jdbc;
 
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;
+import io.airlift.configuration.ConfigHidden;
 import io.airlift.configuration.DefunctConfig;
 import io.airlift.configuration.LegacyConfig;
 import io.trino.spi.connector.ConnectorSession;
@@ -26,19 +27,6 @@ import java.util.Optional;
 @DefunctConfig("allow-drop-table")
 public class JdbcMetadataConfig
 {
-    public enum ListColumnsMode
-    {
-        /**
-         * Traditional / legacy / battle tested mode.
-         */
-        CLASSIC,
-
-        /**
-         * Uses {@link JdbcClient#getAllTableColumns(ConnectorSession, Optional)}.
-         */
-        DMA,
-    }
-
     public enum ListCommentsMode
     {
         /**
@@ -74,7 +62,7 @@ public class JdbcMetadataConfig
 
     private boolean topNPushdownEnabled = true;
 
-    private ListColumnsMode listColumnsMode = ListColumnsMode.CLASSIC; // default overridden in connectors that support other modes
+    private boolean bulkListColumns; // default overridden in connectors that support other modes
     private ListCommentsMode listCommentsMode = ListCommentsMode.DMA;
     // This is for IO, so default value not based on number of cores.
     // This ~limits number of concurrent queries to the remote database
@@ -153,17 +141,16 @@ public class JdbcMetadataConfig
         return this.topNPushdownEnabled;
     }
 
-    @NotNull
-    public ListColumnsMode getListColumnsMode()
+    public boolean isBulkListColumns()
     {
-        return listColumnsMode;
+        return bulkListColumns;
     }
 
-    @Config("jdbc.list-columns-mode")
-    @ConfigDescription("Select implementation for listing tables' columns")
-    public JdbcMetadataConfig setListColumnsMode(ListColumnsMode listColumnsMode)
+    @Config("jdbc.bulk-list-columns.enabled")
+    @ConfigHidden // just a kill switch
+    public JdbcMetadataConfig setBulkListColumns(boolean bulkListColumns)
     {
-        this.listColumnsMode = listColumnsMode;
+        this.bulkListColumns = bulkListColumns;
         return this;
     }
 

@@ -53,7 +53,7 @@ public class MariaDbClientModule
     public void configure(Binder binder)
     {
         binder.bind(JdbcClient.class).annotatedWith(ForBaseJdbc.class).to(MariaDbClient.class).in(Scopes.SINGLETON);
-        configBinder(binder).bindConfigDefaults(JdbcMetadataConfig.class, config -> config.setListColumnsMode(JdbcMetadataConfig.ListColumnsMode.DMA));
+        configBinder(binder).bindConfigDefaults(JdbcMetadataConfig.class, config -> config.setBulkListColumns(true));
         configBinder(binder).bindConfig(MariaDbJdbcConfig.class);
         configBinder(binder).bindConfig(JdbcStatisticsConfig.class);
         binder.install(new DecimalModule());

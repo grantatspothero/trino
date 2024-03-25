@@ -35,7 +35,6 @@ import java.lang.annotation.Target;
 
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
-import static io.trino.plugin.jdbc.JdbcMetadataConfig.ListColumnsMode.DMA;
 import static java.util.Objects.requireNonNull;
 
 public class GalaxyStargateModule
@@ -54,7 +53,7 @@ public class GalaxyStargateModule
                 .to(Key.get(ConnectionFactory.class, ForStargate.class))
                 .in(Scopes.SINGLETON);
 
-        configBinder(binder).bindConfigDefaults(JdbcMetadataConfig.class, config -> config.setListColumnsMode(DMA));
+        configBinder(binder).bindConfigDefaults(JdbcMetadataConfig.class, config -> config.setBulkListColumns(true));
     }
 
     @Provides
