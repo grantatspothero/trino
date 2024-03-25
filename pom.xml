@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>152</version>
+        <version>153</version>
     </parent>
 
     <groupId>io.trino</groupId>
@@ -220,7 +220,7 @@
         <!-- released from https://github.com/starburstdata/starburst-dataframe -->
         <dep.starburst-dataframe.version>0.8.0.20240301-3689fe1</dep.starburst-dataframe.version>
         <!-- released from https://github.com/starburstdata/stargate -->
-        <dep.stargate.version>stargate-14167-g7f647d4448</dep.stargate.version>
+        <dep.stargate.version>stargate-14261-g6a40413acb</dep.stargate.version>
 
         <!-- bump temporarily until new airbase release due to https://github.com/FasterXML/jackson-core/issues/1207 -->
         <dep.jackson.version>2.17.0</dep.jackson.version>
@@ -236,7 +236,7 @@
         <!-- keep dependency properties sorted -->
         <dep.accumulo-hadoop.version>2.7.7-1</dep.accumulo-hadoop.version>
         <dep.accumulo.version>3.0.0</dep.accumulo.version>
-        <dep.airlift.version>242</dep.airlift.version>
+        <dep.airlift.version>243</dep.airlift.version>
         <dep.alluxio.version>311</dep.alluxio.version>
         <dep.antlr.version>4.13.1</dep.antlr.version>
         <dep.avro.version>1.11.3</dep.avro.version>
@@ -246,7 +246,7 @@
         <dep.confluent.version>7.5.1</dep.confluent.version>
         <dep.docker.images.version>91</dep.docker.images.version>
         <dep.drift.version>1.21</dep.drift.version>
-        <dep.errorprone.version>2.25.0</dep.errorprone.version>
+        <dep.errorprone.version>2.26.1</dep.errorprone.version>
         <dep.flyway.version>10.9.0</dep.flyway.version>
         <dep.google.http.client.version>1.44.1</dep.google.http.client.version>
         <dep.hudi.version>0.12.3</dep.hudi.version>
