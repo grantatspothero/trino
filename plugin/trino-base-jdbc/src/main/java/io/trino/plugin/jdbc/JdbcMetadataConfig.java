@@ -34,20 +34,9 @@ public class JdbcMetadataConfig
         CLASSIC,
 
         /**
-         * Like {@link #CLASSIC}, but processes tables in multiple threads.
-         */
-        PARALLEL,
-
-        /**
          * Uses {@link JdbcClient#getAllTableColumns(ConnectorSession, Optional)}.
          */
         DMA,
-
-        /**
-         * Uses {@link JdbcClient#getAllTableColumns(ConnectorSession, Optional)}
-         * and processes schemas in multiple threads.
-         */
-        DMA_P,
     }
 
     public enum ListCommentsMode

@@ -529,4 +529,13 @@ public class TestStargateWithHiveConnectorTest
                 .hasMessageMatching("This connector does not support creating tables");
         abort("https://starburstdata.atlassian.net/browse/SEP-9764");
     }
+
+    @Test
+    @Override
+    public void testColumnsListingModes()
+    {
+        assertThatThrownBy(super::testColumnsListingModes)
+                .hasMessageMatching("This connector does not support creating tables");
+        abort("this is tested with another test class: " + TestStargateWithMemoryWritesEnabledConnectorTest.class);
+    }
 }

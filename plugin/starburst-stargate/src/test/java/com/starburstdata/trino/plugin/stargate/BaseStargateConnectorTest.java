@@ -151,13 +151,6 @@ public abstract class BaseStargateConnectorTest
 
     @Test
     @Override
-    public void testColumnsListingModes()
-    {
-        abort("not supported.");
-    }
-
-    @Test
-    @Override
     public void testCommentsListingModes()
     {
         abort("not supported.");

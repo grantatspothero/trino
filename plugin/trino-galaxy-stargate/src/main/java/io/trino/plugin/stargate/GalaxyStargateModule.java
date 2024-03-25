@@ -54,8 +54,6 @@ public class GalaxyStargateModule
                 .to(Key.get(ConnectionFactory.class, ForStargate.class))
                 .in(Scopes.SINGLETON);
 
-        // DMA is a safe bet for Stargate connector, since we know exactly how the other system will behave.
-        // TODO DMA_P may actually perform better, especially if the remote is a data lake connector, which will iterate over schemas anyway.
         configBinder(binder).bindConfigDefaults(JdbcMetadataConfig.class, config -> config.setListColumnsMode(DMA));
     }
 

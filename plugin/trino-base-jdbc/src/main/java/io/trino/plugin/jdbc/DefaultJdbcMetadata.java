@@ -81,7 +81,6 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -938,54 +937,12 @@ public class DefaultJdbcMetadata
         return switch (mode) {
             case CLASSIC -> JdbcMetadata.super.streamRelationColumns(session, schemaName, relationFilter);
 
-            case PARALLEL -> {
-                checkState(maxMetadataBackgroundProcessingThreads >= 0, "maxMetadataBackgroundProcessingThreads and backgroundExecutorService not provided");
-
-                Set<SchemaTableName> tables = relationFilter.apply(ImmutableSet.copyOf(listTables(session, schemaName)));
-                Map<SchemaTableName, List<ColumnMetadata>> result = new ConcurrentHashMap<>();
-                processWithAdditionalThreads(
-                        backgroundExecutorService,
-                        maxMetadataBackgroundProcessingThreads,
-                        tables,
-                        tableName -> {
-                            Map<SchemaTableName, List<ColumnMetadata>> tableColumns = listTableColumns(session, new SchemaTablePrefix(tableName.getSchemaName(), tableName.getTableName()));
-                            // The map is 0 or 1 element
-                            result.putAll(tableColumns);
-                        });
-
-                yield result.entrySet().stream()
-                        .map(entry -> RelationColumnsMetadata.forTable(entry.getKey(), entry.getValue()))
-                        .iterator();
-            }
-
             case DMA -> {
                 Map<SchemaTableName, RelationColumnsMetadata> resultsByName = stream(jdbcClient.getAllTableColumns(session, schemaName))
                         .collect(toImmutableMap(RelationColumnsMetadata::name, identity()));
                 yield relationFilter.apply(resultsByName.keySet()).stream()
                         .map(resultsByName::get)
                         .iterator();
-            }
-
-            case DMA_P -> {
-                checkState(maxMetadataBackgroundProcessingThreads >= 0, "maxMetadataBackgroundProcessingThreads and backgroundExecutorService not provided");
-
-                ImmutableList.Builder<RelationColumnsMetadata> results = ImmutableList.builder();
-                processWithAdditionalThreads(
-                        backgroundExecutorService,
-                        maxMetadataBackgroundProcessingThreads,
-                        schemaName.map(Set::of)
-                                .orElseGet(() -> jdbcClient.getSchemaNames(session)),
-                        schema -> {
-                            Map<SchemaTableName, RelationColumnsMetadata> schemaResultsByName = stream(jdbcClient.getAllTableColumns(session, Optional.of(schema)))
-                                    .collect(toImmutableMap(RelationColumnsMetadata::name, identity()));
-                            List<RelationColumnsMetadata> schemaResults = relationFilter.apply(schemaResultsByName.keySet()).stream()
-                                    .map(schemaResultsByName::get)
-                                    .collect(toImmutableList());
-                            synchronized (results) {
-                                results.addAll(schemaResults);
-                            }
-                        });
-                yield results.build().iterator();
             }
         };
     }
