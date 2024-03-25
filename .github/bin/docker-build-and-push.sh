@@ -4,7 +4,7 @@ set -euo pipefail
 
 usage() {
     cat <<EOF 1>&2
-Usage: $0 [-h] [-p] [-a <ARCHITECTURES>] [-t <TAG>]
+Usage: $0 [-h] [-p] [-a <ARCHITECTURES>] [-j <JDK_VERSION>] [-v <TRINO_VERSION>]
 Builds the Galaxy-Trino Docker image
 
 -h       Display help
