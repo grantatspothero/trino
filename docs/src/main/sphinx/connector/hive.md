@@ -9,7 +9,6 @@
 :maxdepth: 1
 
 Security <hive-security>
-Storage Caching <hive-caching>
 ```
 
 The Hive connector allows querying data stored in an
@@ -346,8 +345,6 @@ storage systems:
 You must enable and configure the specific native file system access. If none is
 activated, the [legacy support](file-system-legacy) is used and must be
 configured.
-
-The Hive connector also supports {doc}`storage caching <hive-caching>`.
 
 (hive-security)=
 ## Security
