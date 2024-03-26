@@ -897,7 +897,7 @@ public class GalaxyAccessControl
     public static boolean canSkipListEnabledRoles(String query)
     {
         String trimmedQuery = query.trim();
-        String candidateString = trimmedQuery.substring(0, Math.min(10, query.length())).toLowerCase(Locale.ENGLISH);
+        String candidateString = trimmedQuery.substring(0, Math.min(10, trimmedQuery.length())).toLowerCase(Locale.ENGLISH);
         return DML_OPERATION_MATCHER.matcher(candidateString).matches();
     }
 
