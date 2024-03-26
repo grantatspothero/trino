@@ -15,8 +15,10 @@ package io.trino.plugin.mongodb;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.mongodb.client.MongoClients;
+import com.mongodb.client.GalaxyMongoClients;
 import io.trino.Session;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.spi.type.ArrayType;
 import io.trino.spi.type.TimeZoneKey;
 import io.trino.testing.AbstractTestQueryFramework;
@@ -31,6 +33,7 @@ import io.trino.testing.sql.TrinoSqlExecutor;
 import org.junit.jupiter.api.Test;
 
 import java.time.ZoneId;
+import java.util.Optional;
 
 import static io.trino.plugin.mongodb.MongoQueryRunner.createMongoQueryRunner;
 import static io.trino.spi.type.BigintType.BIGINT;
@@ -47,6 +50,7 @@ import static io.trino.spi.type.TinyintType.TINYINT;
 import static io.trino.spi.type.VarbinaryType.VARBINARY;
 import static io.trino.spi.type.VarcharType.VARCHAR;
 import static io.trino.spi.type.VarcharType.createVarcharType;
+import static io.trino.testing.TestingHandles.createTestCatalogHandle;
 import static io.trino.type.JsonType.JSON;
 import static java.lang.String.format;
 import static java.time.ZoneOffset.UTC;
@@ -439,6 +443,14 @@ public class TestMongoTypeMapping
 
     private DataSetup mongoCreateAndInsert(Session session, String databaseName, String tableNamePrefix)
     {
-        return new MongoCreateAndInsertDataSetup(new TrinoSqlExecutor(getQueryRunner(), session), MongoClients.create(server.getConnectionString()), databaseName, tableNamePrefix);
+        return new MongoCreateAndInsertDataSetup(
+                new TrinoSqlExecutor(getQueryRunner(), session),
+                GalaxyMongoClients.create(
+                        server.getConnectionString(),
+                        new LocalRegionConfig().setAllowedIpAddresses(ImmutableList.of("0.0.0.0/0")),
+                        new CrossRegionConfig(), Optional.empty(),
+                        createTestCatalogHandle("test")),
+                databaseName,
+                tableNamePrefix);
     }
 }

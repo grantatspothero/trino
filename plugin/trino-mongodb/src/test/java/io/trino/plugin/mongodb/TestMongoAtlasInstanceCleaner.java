@@ -13,13 +13,16 @@
  */
 package io.trino.plugin.mongodb;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Multimap;
+import com.mongodb.client.GalaxyMongoClients;
 import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
 import io.airlift.log.Logger;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.tpch.TpchTable;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -27,12 +30,14 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.trino.plugin.mongodb.TestingMongoAtlasInfoProvider.getConnectionString;
+import static io.trino.testing.TestingHandles.createTestCatalogHandle;
 
 public class TestMongoAtlasInstanceCleaner
 {
@@ -53,7 +58,12 @@ public class TestMongoAtlasInstanceCleaner
     {
         String connectionString = getConnectionString().getConnectionString();
         checkArgument(connectionString.matches("^mongodb(\\+srv)?://.*"));
-        this.client = MongoClients.create(connectionString);
+        this.client = GalaxyMongoClients.create(
+                connectionString,
+                new LocalRegionConfig().setAllowedIpAddresses(ImmutableList.of("0.0.0.0/0")),
+                new CrossRegionConfig(),
+                Optional.empty(),
+                createTestCatalogHandle("test"));
     }
 
     /**

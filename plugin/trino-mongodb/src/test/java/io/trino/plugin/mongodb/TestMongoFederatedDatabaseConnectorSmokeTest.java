@@ -17,8 +17,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mongodb.MongoCommandException;
+import com.mongodb.client.GalaxyMongoClients;
 import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.sql.planner.plan.LimitNode;
 import io.trino.testing.QueryFailedException;
 import io.trino.testing.QueryRunner;
@@ -28,10 +30,12 @@ import org.assertj.core.api.Assertions;
 import org.bson.Document;
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
 import java.util.Set;
 
 import static io.trino.plugin.mongodb.MongoAtlasQueryRunner.createMongoAtlasFederatedMongoQueryRunner;
 import static io.trino.plugin.mongodb.TestingMongoAtlasInfoProvider.getMongoAtlasFederatedDatabaseInfo;
+import static io.trino.testing.TestingHandles.createTestCatalogHandle;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -88,7 +92,12 @@ public class TestMongoFederatedDatabaseConnectorSmokeTest
      */
     private void setup()
     {
-        try (MongoClient client = MongoClients.create(clusterInfo.federatedDatabaseConnectionString())) {
+        try (MongoClient client = GalaxyMongoClients.create(
+                clusterInfo.federatedDatabaseConnectionString(),
+                new LocalRegionConfig().setAllowedIpAddresses(ImmutableList.of("0.0.0.0/0")),
+                new CrossRegionConfig(),
+                Optional.empty(),
+                createTestCatalogHandle("test"))) {
             try {
                 // Create underlying datasource through Atlas cluster
                 // https://www.mongodb.com/docs/atlas/data-federation/admin/cli/stores/create-store/
@@ -281,7 +290,12 @@ public class TestMongoFederatedDatabaseConnectorSmokeTest
             throw new RuntimeException(e);
         }
 
-        try (MongoClient client = MongoClients.create(clusterInfo.federatedDatabaseConnectionString())) {
+        try (MongoClient client = GalaxyMongoClients.create(
+                clusterInfo.federatedDatabaseConnectionString(),
+                new LocalRegionConfig().setAllowedIpAddresses(ImmutableList.of("0.0.0.0/0")),
+                new CrossRegionConfig(),
+                Optional.empty(),
+                createTestCatalogHandle("test"))) {
             try {
                 client.getDatabase(database).runCommand(
                         new Document(ImmutableMap.of(

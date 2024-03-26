@@ -21,8 +21,8 @@ import com.google.inject.Singleton;
 import com.google.inject.multibindings.ProvidesIntoSet;
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
+import com.mongodb.client.GalaxyMongoClients;
 import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.instrumentation.mongo.v3_1.MongoTelemetry;
@@ -30,12 +30,16 @@ import io.trino.plugin.base.galaxy.CrossRegionConfig;
 import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.base.session.SessionPropertiesProvider;
 import io.trino.plugin.mongodb.ptf.Query;
+import io.trino.spi.connector.CatalogHandle;
 import io.trino.spi.function.table.ConnectorTableFunction;
 import io.trino.spi.type.TypeManager;
 import io.trino.sshtunnel.SshTunnelConfig;
+import io.trino.sshtunnel.SshTunnelProperties;
 
+import java.util.Optional;
 import java.util.Set;
 
+import static com.google.common.base.Verify.verify;
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.airlift.configuration.ConditionalModule.conditionalModule;
@@ -79,12 +83,24 @@ public class MongoClientModule
 
     @Singleton
     @Provides
-    public static MongoSession createMongoSession(TypeManager typeManager, MongoClientConfig config, Set<MongoClientSettingConfigurator> configurators, OpenTelemetry openTelemetry)
+    public static MongoSession createMongoSession(
+            TypeManager typeManager,
+            MongoClientConfig config,
+            Set<MongoClientSettingConfigurator> configurators,
+            OpenTelemetry openTelemetry,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig,
+            SshTunnelConfig sshTunnelConfig,
+            CatalogHandle catalogHandle)
     {
+        Optional<SshTunnelProperties> sshTunnelProperties = SshTunnelProperties.generateFrom(sshTunnelConfig);
         MongoClientSettings.Builder options = MongoClientSettings.builder();
         configurators.forEach(configurator -> configurator.configure(options));
         options.addCommandListener(MongoTelemetry.builder(openTelemetry).build().newCommandListener());
-        MongoClient client = MongoClients.create(options.build());
+        MongoClientSettings settings = options.build();
+        verify(settings.getAutoEncryptionSettings() == null, "settings.getAutoEncryptionSettings() should be null"); // Required for region enforcement and SSH tunnel support.
+        verify(settings.getTransportSettings() == null, "settings.getTransportSettings() should be null"); // Required for region enforcement and SSH tunnel support.
+        MongoClient client = GalaxyMongoClients.create(settings, localRegionConfig, crossRegionConfig, sshTunnelProperties, catalogHandle);
 
         return new MongoSession(
                 typeManager,

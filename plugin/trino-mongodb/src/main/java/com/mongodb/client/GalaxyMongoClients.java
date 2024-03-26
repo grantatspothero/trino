@@ -16,8 +16,14 @@ package com.mongodb.client;
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoDriverInformation;
-import com.mongodb.client.internal.MongoClientImpl;
+import com.mongodb.client.internal.GalaxyMongoClientImpl;
 import com.mongodb.lang.Nullable;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
+import io.trino.spi.connector.CatalogHandle;
+import io.trino.sshtunnel.SshTunnelProperties;
+
+import java.util.Optional;
 
 /**
  * A factory for {@link MongoClient} instances.  Use of this class is now the recommended way to connect to MongoDB via the Java driver.
@@ -25,27 +31,21 @@ import com.mongodb.lang.Nullable;
  * @see MongoClient
  * @since 3.7
  */
-public final class MongoClients
+public final class GalaxyMongoClients
 {
-    /**
-     * Creates a new client with the default connection string "mongodb://localhost".
-     *
-     * @return the client
-     */
-    public static MongoClient create()
-    {
-        return create(new ConnectionString("mongodb://localhost"));
-    }
-
     /**
      * Create a new client with the given client settings.
      *
      * @param settings the settings
      * @return the client
      */
-    public static MongoClient create(final MongoClientSettings settings)
+    public static MongoClient create(final MongoClientSettings settings,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig,
+            Optional<SshTunnelProperties> sshTunnelProperties,
+            CatalogHandle catalogHandle)
     {
-        return create(settings, null);
+        return create(settings, null, localRegionConfig, crossRegionConfig, sshTunnelProperties, catalogHandle);
     }
 
     /**
@@ -55,9 +55,13 @@ public final class MongoClients
      * @return the client
      * @see #create(ConnectionString)
      */
-    public static MongoClient create(final String connectionString)
+    public static MongoClient create(final String connectionString,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig,
+            Optional<SshTunnelProperties> sshTunnelProperties,
+            CatalogHandle catalogHandle)
     {
-        return create(new ConnectionString(connectionString));
+        return create(new ConnectionString(connectionString), localRegionConfig, crossRegionConfig, sshTunnelProperties, catalogHandle);
     }
 
     /**
@@ -73,9 +77,13 @@ public final class MongoClients
      *
      * @see com.mongodb.MongoClientSettings.Builder#applyConnectionString(ConnectionString)
      */
-    public static MongoClient create(final ConnectionString connectionString)
+    public static MongoClient create(final ConnectionString connectionString,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig,
+            Optional<SshTunnelProperties> sshTunnelProperties,
+            CatalogHandle catalogHandle)
     {
-        return create(connectionString, null);
+        return create(connectionString, null, localRegionConfig, crossRegionConfig, sshTunnelProperties, catalogHandle);
     }
 
     /**
@@ -89,9 +97,18 @@ public final class MongoClients
      * @see com.mongodb.client.MongoClients#create(ConnectionString)
      */
     public static MongoClient create(final ConnectionString connectionString,
-            @Nullable final MongoDriverInformation mongoDriverInformation)
+            @Nullable final MongoDriverInformation mongoDriverInformation,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig,
+            Optional<SshTunnelProperties> sshTunnelProperties,
+            CatalogHandle catalogHandle)
     {
-        return create(MongoClientSettings.builder().applyConnectionString(connectionString).build(), mongoDriverInformation);
+        return create(MongoClientSettings.builder().applyConnectionString(connectionString).build(),
+                mongoDriverInformation,
+                localRegionConfig,
+                crossRegionConfig,
+                sshTunnelProperties,
+                catalogHandle);
     }
 
     /**
@@ -103,14 +120,18 @@ public final class MongoClients
      * @param mongoDriverInformation any driver information to associate with the MongoClient
      * @return the client
      */
-    public static MongoClient create(final MongoClientSettings settings, @Nullable final MongoDriverInformation mongoDriverInformation)
+    public static MongoClient create(final MongoClientSettings settings, @Nullable final MongoDriverInformation mongoDriverInformation,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig,
+            Optional<SshTunnelProperties> sshTunnelProperties,
+            CatalogHandle catalogHandle)
     {
         MongoDriverInformation.Builder builder = mongoDriverInformation == null ? MongoDriverInformation.builder()
                 : MongoDriverInformation.builder(mongoDriverInformation);
-        return new MongoClientImpl(settings, builder.driverName("sync").build());
+        return new GalaxyMongoClientImpl(settings, builder.driverName("sync").build(), localRegionConfig, crossRegionConfig, sshTunnelProperties, catalogHandle);
     }
 
-    private MongoClients()
+    private GalaxyMongoClients()
     {
     }
 }

@@ -13,13 +13,16 @@
  */
 package io.trino.plugin.mongodb;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.mongodb.client.GalaxyMongoClients;
 import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
 import io.airlift.log.Level;
 import io.airlift.log.Logger;
 import io.airlift.log.Logging;
 import io.trino.Session;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.plugin.tpch.TpchPlugin;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
@@ -27,11 +30,13 @@ import io.trino.tpch.TpchTable;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import static io.airlift.testing.Closeables.closeAllSuppress;
 import static io.trino.plugin.tpch.TpchMetadata.TINY_SCHEMA_NAME;
 import static io.trino.testing.QueryAssertions.copyTpchTables;
+import static io.trino.testing.TestingHandles.createTestCatalogHandle;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 
 public final class MongoQueryRunner
@@ -97,7 +102,12 @@ public final class MongoQueryRunner
 
     public static MongoClient createMongoClient(MongoServer server)
     {
-        return MongoClients.create(server.getConnectionString());
+        return GalaxyMongoClients.create(
+                server.getConnectionString(),
+                new LocalRegionConfig().setAllowedIpAddresses(ImmutableList.of("0.0.0.0/0")),
+                new CrossRegionConfig(),
+                Optional.empty(),
+                createTestCatalogHandle("test"));
     }
 
     public static void main(String[] args)

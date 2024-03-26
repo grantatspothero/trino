@@ -33,13 +33,17 @@ import com.mongodb.internal.client.model.changestream.ChangeStreamLevel;
 import com.mongodb.internal.connection.Cluster;
 import com.mongodb.internal.connection.DefaultClusterFactory;
 import com.mongodb.internal.connection.InternalConnectionPoolSettings;
-import com.mongodb.internal.connection.SocketStreamFactory;
 import com.mongodb.internal.connection.StreamFactory;
 import com.mongodb.internal.diagnostics.logging.Logger;
 import com.mongodb.internal.diagnostics.logging.Loggers;
 import com.mongodb.internal.session.ServerSessionPool;
 import com.mongodb.lang.Nullable;
 import com.mongodb.spi.dns.InetAddressResolver;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
+import io.trino.plugin.mongodb.galaxy.GalaxySocketStreamFactory;
+import io.trino.spi.connector.CatalogHandle;
+import io.trino.sshtunnel.SshTunnelProperties;
 import org.bson.BsonDocument;
 import org.bson.Document;
 import org.bson.codecs.configuration.CodecRegistry;
@@ -47,12 +51,12 @@ import org.bson.conversions.Bson;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
+import static com.google.common.base.Verify.verify;
 import static com.mongodb.assertions.Assertions.notNull;
-import static com.mongodb.client.internal.Crypts.createCrypt;
 import static com.mongodb.internal.connection.ClientMetadataHelper.createClientMetadataDocument;
 import static com.mongodb.internal.connection.ServerAddressHelper.getInetAddressResolver;
-import static com.mongodb.internal.connection.StreamFactoryHelper.getStreamFactoryFactoryFromSettings;
 import static com.mongodb.internal.event.EventListenerHelper.getCommandListener;
 import static java.lang.String.format;
 import static org.bson.codecs.configuration.CodecRegistries.withUuidRepresentation;
@@ -60,7 +64,7 @@ import static org.bson.codecs.configuration.CodecRegistries.withUuidRepresentati
 /**
  * <p>This class is not part of the public API and may be removed or changed at any time</p>
  */
-public final class MongoClientImpl
+public final class GalaxyMongoClientImpl
         implements MongoClient
 {
     private static final Logger LOGGER = Loggers.getLogger("client");
@@ -69,12 +73,24 @@ public final class MongoClientImpl
     private final MongoDriverInformation mongoDriverInformation;
     private final MongoClientDelegate delegate;
 
-    public MongoClientImpl(final MongoClientSettings settings, final MongoDriverInformation mongoDriverInformation)
+    public GalaxyMongoClientImpl(
+            final MongoClientSettings settings,
+            final MongoDriverInformation mongoDriverInformation,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig,
+            Optional<SshTunnelProperties> sshTunnelProperties,
+            CatalogHandle catalogHandle)
     {
-        this(createCluster(settings, mongoDriverInformation), mongoDriverInformation, settings, null);
+        this(
+                createCluster(settings, mongoDriverInformation, localRegionConfig, crossRegionConfig, sshTunnelProperties, catalogHandle),
+                mongoDriverInformation,
+                settings,
+                null);
     }
 
-    public MongoClientImpl(final Cluster cluster, final MongoDriverInformation mongoDriverInformation,
+    public GalaxyMongoClientImpl(
+            final Cluster cluster,
+            final MongoDriverInformation mongoDriverInformation,
             final MongoClientSettings settings,
             @Nullable final OperationExecutor operationExecutor)
     {
@@ -85,9 +101,10 @@ public final class MongoClientImpl
             throw new IllegalArgumentException("The contextProvider must be an instance of "
                     + SynchronousContextProvider.class.getName() + " when using the synchronous driver");
         }
+        verify(autoEncryptionSettings == null, "autoEncryptionSettings should be null");
         this.delegate = new MongoClientDelegate(notNull("cluster", cluster),
                 withUuidRepresentation(settings.getCodecRegistry(), settings.getUuidRepresentation()), this, operationExecutor,
-                autoEncryptionSettings == null ? null : createCrypt(this, autoEncryptionSettings), settings.getServerApi(),
+                null, settings.getServerApi(),
                 (SynchronousContextProvider) settings.getContextProvider());
         BsonDocument clientMetadataDocument = createClientMetadataDocument(settings.getApplicationName(), mongoDriverInformation);
         LOGGER.info(format("MongoClient with metadata %s created with settings %s", clientMetadataDocument.toJson(), settings));
@@ -239,30 +256,37 @@ public final class MongoClientImpl
         return delegate.getCodecRegistry();
     }
 
-    private static Cluster createCluster(final MongoClientSettings settings,
-            @Nullable final MongoDriverInformation mongoDriverInformation)
+    private static Cluster createCluster(
+            final MongoClientSettings settings,
+            @Nullable final MongoDriverInformation mongoDriverInformation,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig,
+            Optional<SshTunnelProperties> sshTunnelProperties,
+            CatalogHandle catalogHandle)
     {
         notNull("settings", settings);
         return new DefaultClusterFactory().createCluster(settings.getClusterSettings(), settings.getServerSettings(),
                 settings.getConnectionPoolSettings(), InternalConnectionPoolSettings.builder().build(),
-                getStreamFactory(settings, false), getStreamFactory(settings, true),
+                getStreamFactory(settings, false, localRegionConfig, crossRegionConfig, sshTunnelProperties, catalogHandle),
+                getStreamFactory(settings, true, localRegionConfig, crossRegionConfig, sshTunnelProperties, catalogHandle),
                 settings.getCredential(), settings.getLoggerSettings(), getCommandListener(settings.getCommandListeners()),
                 settings.getApplicationName(), mongoDriverInformation, settings.getCompressorList(), settings.getServerApi(),
                 settings.getDnsClient());
     }
 
-    private static StreamFactory getStreamFactory(final MongoClientSettings settings, final boolean isHeartbeat)
+    private static StreamFactory getStreamFactory(
+            final MongoClientSettings settings,
+            final boolean isHeartbeat,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig,
+            Optional<SshTunnelProperties> sshTunnelProperties,
+            CatalogHandle catalogHandle)
     {
         SocketSettings socketSettings = isHeartbeat ? settings.getHeartbeatSocketSettings() : settings.getSocketSettings();
         TransportSettings transportSettings = settings.getTransportSettings();
         InetAddressResolver inetAddressResolver = getInetAddressResolver(settings);
-        if (transportSettings == null) {
-            return new SocketStreamFactory(inetAddressResolver, socketSettings, settings.getSslSettings());
-        }
-        else {
-            return getStreamFactoryFactoryFromSettings(transportSettings, inetAddressResolver)
-                    .create(socketSettings, settings.getSslSettings());
-        }
+        verify(transportSettings == null, "transportSettings should be null");
+        return new GalaxySocketStreamFactory(socketSettings, settings.getSslSettings(), inetAddressResolver, localRegionConfig, crossRegionConfig, sshTunnelProperties, catalogHandle);
     }
 
     private <T> ListDatabasesIterable<T> createListDatabasesIterable(@Nullable final ClientSession clientSession, final Class<T> clazz)

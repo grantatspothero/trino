@@ -15,9 +15,11 @@ package io.trino.plugin.mongodb;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.mongodb.client.GalaxyMongoClients;
 import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
 import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
@@ -33,6 +35,7 @@ import static io.trino.plugin.mongodb.AuthenticatedMongoServer.createUser;
 import static io.trino.plugin.mongodb.AuthenticatedMongoServer.privilege;
 import static io.trino.plugin.mongodb.AuthenticatedMongoServer.resource;
 import static io.trino.plugin.mongodb.AuthenticatedMongoServer.role;
+import static io.trino.testing.TestingHandles.createTestCatalogHandle;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 import static java.util.Locale.ENGLISH;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -96,7 +99,12 @@ public class TestMongoPrivileges
     private static AuthenticatedMongoServer setupMongoServer()
     {
         AuthenticatedMongoServer mongoServer = new AuthenticatedMongoServer("4.2.0");
-        try (MongoClient client = MongoClients.create(mongoServer.rootUserConnectionString())) {
+        try (MongoClient client = GalaxyMongoClients.create(
+                mongoServer.rootUserConnectionString(),
+                new LocalRegionConfig().setAllowedIpAddresses(ImmutableList.of("0.0.0.0/0")),
+                new CrossRegionConfig(),
+                Optional.empty(),
+                createTestCatalogHandle("test"))) {
             DATABASES.forEach(database -> createDatabase(client, database));
             client.getDatabase("another").createCollection("_schema"); // this database/schema should not be visible
         }
