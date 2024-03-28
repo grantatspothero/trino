@@ -63,7 +63,7 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
         // Create schema with double slashes in the location. This will get inherited by the table locations.
         // This is the case that used to be erroneously handled by previous Trino versions, leading to table corruption.
         // This test verifies we can still read from and operate on such tables.
-        onTrino().executeQuery("CREATE SCHEMA delta." + schemaName + " WITH (location = 's3://galaxy-trino-ci/temp_files//" + schemaName + "')");
+        onTrino().executeQuery("CREATE SCHEMA delta." + schemaName + " WITH (location = 's3://galaxy-trino-ci-useast1/temp_files//" + schemaName + "')");
         closer.register(() -> onTrino().executeQuery("DROP SCHEMA delta." + schemaName));
         closer.register(() -> {
             onTrino().executeQuery("SHOW TABLES FROM delta." + schemaName).column(1).stream()
@@ -184,10 +184,10 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
             String tableLocationPrefixWithDoubleSlash = "temp_files//" + schemaName + "/" + tableName;
             String tableLocationPrefixWithoutDoubleSlash = "temp_files/" + schemaName + "/" + tableName;
             ListObjectsV2Request listObjectsRequestWithDoubleSlash = new ListObjectsV2Request()
-                    .withBucketName("galaxy-trino-ci")
+                    .withBucketName("galaxy-trino-ci-useast1")
                     .withPrefix(tableLocationPrefixWithDoubleSlash);
             ListObjectsV2Request listObjectsRequestWithoutDoubleSlash = new ListObjectsV2Request()
-                    .withBucketName("galaxy-trino-ci")
+                    .withBucketName("galaxy-trino-ci-useast1")
                     .withPrefix(tableLocationPrefixWithoutDoubleSlash);
 
             Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithDoubleSlash).getObjectSummaries()).isNotEmpty();
@@ -230,10 +230,10 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
             String tableLocationPrefixWithDoubleSlash = "temp_files//" + schemaName + "/" + tableName;
             String tableLocationPrefixWithoutDoubleSlash = "temp_files/" + schemaName + "/" + tableName;
             ListObjectsV2Request listObjectsRequestWithDoubleSlash = new ListObjectsV2Request()
-                    .withBucketName("galaxy-trino-ci")
+                    .withBucketName("galaxy-trino-ci-useast1")
                     .withPrefix(tableLocationPrefixWithDoubleSlash);
             ListObjectsV2Request listObjectsRequestWithoutDoubleSlash = new ListObjectsV2Request()
-                    .withBucketName("galaxy-trino-ci")
+                    .withBucketName("galaxy-trino-ci-useast1")
                     .withPrefix(tableLocationPrefixWithoutDoubleSlash);
 
             Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithDoubleSlash).getObjectSummaries()).isEmpty(); // old version didn't write anything here
@@ -439,7 +439,7 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
     private List<S3ObjectSummary> listPrefix(String prefix)
     {
         ListObjectsV2Request listObjectsRequest = new ListObjectsV2Request()
-                .withBucketName("galaxy-trino-ci")
+                .withBucketName("galaxy-trino-ci-useast1")
                 .withPrefix(prefix);
         return s3.listObjectsV2(listObjectsRequest).getObjectSummaries();
     }

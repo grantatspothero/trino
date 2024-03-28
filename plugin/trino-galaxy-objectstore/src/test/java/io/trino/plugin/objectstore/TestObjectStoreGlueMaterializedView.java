@@ -122,7 +122,7 @@ public class TestObjectStoreGlueMaterializedView
     @Override
     protected String getSchemaDirectory()
     {
-        return format("s3://galaxy-trino-ci/%s", schemaName);
+        return format("s3://galaxy-trino-ci-useast1/%s", schemaName);
     }
 
     @Override

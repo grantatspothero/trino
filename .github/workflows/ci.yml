@@ -1032,13 +1032,13 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TRINO_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TRINO_AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ vars.TRINO_AWS_REGION }}
+          AWS_REGION: us-east-1
         if: >-
           contains(matrix.modules, 'trino-galaxy-objectstore') && contains(matrix.profile, 'cloud-tests') &&
           (env.CI_SKIP_SECRETS_PRESENCE_CHECKS != '' || env.AWS_ACCESS_KEY_ID != '' || env.AWS_SECRET_ACCESS_KEY != '' || env.S3_BUCKET != '')
         run: |
           $MAVEN test ${MAVEN_TEST} ${{ format('-P {0}', matrix.profile) }} -pl :trino-galaxy-objectstore \
-          -Ds3.bucket="galaxy-trino-ci"
+          -Ds3.bucket="galaxy-trino-ci-useast1"
       - name: Azure FileSystem Cloud Tests
         id: tests-azure
         env:

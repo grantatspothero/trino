@@ -100,7 +100,7 @@ public class EnvMultinodeTrino415
         // This aligns with the AWS EnvironmentVariableCredentialsProvider.
         exportAWSCredential(container, "AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY");
         exportAWSCredential(container, "AWS_SECRET_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY_ID");
-        exportAWSCredential(container, "AWS_REGION");
+        container.withEnv("AWS_REGION", "us-east-1");
     }
 
     private static void exportAWSCredential(DockerContainer container, String containerVariableName, String... allowedVariableNames)

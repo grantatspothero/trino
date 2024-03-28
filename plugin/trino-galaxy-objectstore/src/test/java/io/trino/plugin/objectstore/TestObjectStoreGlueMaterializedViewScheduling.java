@@ -63,7 +63,7 @@ public class TestObjectStoreGlueMaterializedViewScheduling
                     .put("galaxy.catalog-id", "c-1234567890")
                     .buildOrThrow(),
             "glue",
-            ImmutableMap.of("hive.metastore.glue.default-warehouse-dir", "s3://galaxy-trino-ci/default"),
+            ImmutableMap.of("hive.metastore.glue.default-warehouse-dir", "s3://galaxy-trino-ci-useast1/default"),
             ImmutableMap.of(),
             additionalProperties);
     }
