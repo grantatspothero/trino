@@ -255,7 +255,9 @@ public class HeartbeatPublisher
                         monitor.getIntraRegionReadBytes(),
                         monitor.getIntraRegionWriteBytes(),
                         monitor.getCrossRegionReadBytes(),
-                        monitor.getCrossRegionWriteBytes()))
+                        monitor.getCrossRegionWriteBytes(),
+                        monitor.getPrivateLinkReadBytes(),
+                        monitor.getPrivateLinkWriteBytes()))
                 .collect(toImmutableList());
     }
 

@@ -80,8 +80,31 @@ public class RegionVerifier
         return false;
     }
 
+    public boolean isPrivateLinkAccess(List<InetAddress> addresses)
+    {
+        for (InetAddress inetAddress : addresses) {
+            if (isPrivateLinkAccess(inetAddress)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isPrivateLinkAccess(InetSocketAddress socketAddress)
+    {
+        return isPrivateLinkAccess(extractInetAddress(socketAddress));
+    }
+
+    public boolean isPrivateLinkAccess(InetAddress inetAddress)
+    {
+        return inetAddress.getHostAddress().startsWith("172.16.");
+    }
+
     public CatalogConnectionType getCatalogConnectionType(String serverType, InetSocketAddress socketAddress)
     {
+        if (isPrivateLinkAccess(socketAddress)) {
+            return CatalogConnectionType.PRIVATE_LINK;
+        }
         if (isCrossRegionAccess(serverType, socketAddress)) {
             return CatalogConnectionType.CROSS_REGION;
         }
@@ -90,6 +113,9 @@ public class RegionVerifier
 
     public CatalogConnectionType getCatalogConnectionType(String serverType, List<InetAddress> addresses)
     {
+        if (isPrivateLinkAccess(addresses)) {
+            return CatalogConnectionType.PRIVATE_LINK;
+        }
         if (isCrossRegionAccess(serverType, addresses)) {
             return CatalogConnectionType.CROSS_REGION;
         }

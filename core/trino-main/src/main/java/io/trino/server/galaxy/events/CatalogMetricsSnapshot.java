@@ -27,10 +27,12 @@ public class CatalogMetricsSnapshot
     private final long intraRegionWriteBytes;
     private final long crossRegionReadBytes;
     private final long crossRegionWriteBytes;
+    private final long privateLinkReadBytes;
+    private final long privateLinkWriteBytes;
 
     public CatalogMetricsSnapshot(String catalogId, String catalogName)
     {
-        this(catalogId, catalogName, 0, 0, 0, 0);
+        this(catalogId, catalogName, 0, 0, 0, 0, 0, 0);
     }
 
     @JsonCreator
@@ -40,7 +42,9 @@ public class CatalogMetricsSnapshot
             @JsonProperty("intraRegionReadBytes") long intraRegionReadBytes,
             @JsonProperty("intraRegionWriteBytes") long intraRegionWriteBytes,
             @JsonProperty("crossRegionReadBytes") long crossRegionReadBytes,
-            @JsonProperty("crossRegionWriteBytes") long crossRegionWriteBytes)
+            @JsonProperty("crossRegionWriteBytes") long crossRegionWriteBytes,
+            @JsonProperty("privateLinkReadBytes") long privateLinkReadBytes,
+            @JsonProperty("privateLinkWriteBytes") long privateLinkWriteBytes)
     {
         this.catalogId = requireNonNull(catalogId, "catalogId is null");
         this.catalogName = requireNonNull(catalogName, "catalogName is null");
@@ -52,6 +56,10 @@ public class CatalogMetricsSnapshot
         this.crossRegionReadBytes = crossRegionReadBytes;
         checkArgument(crossRegionWriteBytes >= 0, "crossRegionWriteBytes must be >= 0");
         this.crossRegionWriteBytes = crossRegionWriteBytes;
+        checkArgument(privateLinkReadBytes >= 0, "privateLinkReadBytes must be >= 0");
+        this.privateLinkReadBytes = privateLinkReadBytes;
+        checkArgument(privateLinkWriteBytes >= 0, "privateLinkWriteBytes must be >= 0");
+        this.privateLinkWriteBytes = privateLinkWriteBytes;
     }
 
     @JsonProperty
@@ -90,6 +98,18 @@ public class CatalogMetricsSnapshot
         return crossRegionWriteBytes;
     }
 
+    @JsonProperty
+    public long getPrivateLinkReadBytes()
+    {
+        return privateLinkReadBytes;
+    }
+
+    @JsonProperty
+    public long getPrivateLinkWriteBytes()
+    {
+        return privateLinkWriteBytes;
+    }
+
     public CatalogMetricsSnapshot minus(CatalogMetricsSnapshot other)
     {
         return new CatalogMetricsSnapshot(
@@ -98,6 +118,8 @@ public class CatalogMetricsSnapshot
                 intraRegionReadBytes - other.intraRegionReadBytes,
                 intraRegionWriteBytes - other.intraRegionWriteBytes,
                 crossRegionReadBytes - other.crossRegionReadBytes,
-                crossRegionWriteBytes - other.crossRegionWriteBytes);
+                crossRegionWriteBytes - other.crossRegionWriteBytes,
+                privateLinkReadBytes - other.privateLinkReadBytes,
+                privateLinkWriteBytes - other.privateLinkWriteBytes);
     }
 }

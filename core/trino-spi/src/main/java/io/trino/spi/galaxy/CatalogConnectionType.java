@@ -16,5 +16,6 @@ package io.trino.spi.galaxy;
 public enum CatalogConnectionType
 {
         CROSS_REGION,
-        INTRA_REGION
+        INTRA_REGION,
+        PRIVATE_LINK
 }

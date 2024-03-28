@@ -53,6 +53,7 @@ public final class CatalogNetworkMonitor
     private final String catalogId;
     private final NetworkMonitor intraRegionMonitor = new NetworkMonitor();
     private final Optional<NetworkMonitor> crossRegionMonitor;
+    private final NetworkMonitor privateLinkMonitor = new NetworkMonitor();
 
     private CatalogNetworkMonitor(String catalogName, String catalogId)
     {
@@ -101,6 +102,16 @@ public final class CatalogNetworkMonitor
         return crossRegionMonitor.map(NetworkMonitor::getWriteBytes).orElse(0L);
     }
 
+    public long getPrivateLinkReadBytes()
+    {
+        return privateLinkMonitor.getReadBytes();
+    }
+
+    public long getPrivateLinkWriteBytes()
+    {
+        return privateLinkMonitor.getWriteBytes();
+    }
+
     @Override
     public String toString()
     {
@@ -108,6 +119,7 @@ public final class CatalogNetworkMonitor
                 .add("catalogName=" + catalogName)
                 .add("intraRegionMonitor=" + intraRegionMonitor)
                 .add("crossRegionMonitor=" + crossRegionMonitor)
+                .add("privateLinkMonitor=" + privateLinkMonitor)
                 .toString();
     }
 
@@ -133,14 +145,12 @@ public final class CatalogNetworkMonitor
 
     private NetworkMonitor getNetworkMonitor(CatalogConnectionType catalogConnectionType)
     {
-        switch (catalogConnectionType) {
-            case CROSS_REGION:
-                return crossRegionMonitor.orElseThrow(
-                        () -> new IllegalArgumentException("Cross-region querying is not allowed for catalog %s".formatted(catalogName)));
-            case INTRA_REGION:
-                return intraRegionMonitor;
-            default:
-                throw new IllegalArgumentException("Unknown catalog connection type: " + catalogConnectionType);
-        }
+        return switch (catalogConnectionType) {
+            case CROSS_REGION -> crossRegionMonitor.orElseThrow(
+                    () -> new IllegalArgumentException("Cross-region querying is not allowed for catalog %s".formatted(catalogName)));
+            case INTRA_REGION -> intraRegionMonitor;
+            case PRIVATE_LINK -> privateLinkMonitor;
+            default -> throw new IllegalArgumentException("Unknown catalog connection type: " + catalogConnectionType);
+        };
     }
 }
