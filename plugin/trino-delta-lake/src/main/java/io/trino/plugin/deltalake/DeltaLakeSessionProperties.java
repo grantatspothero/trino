@@ -54,7 +54,6 @@ public final class DeltaLakeSessionProperties
         implements SessionPropertiesProvider
 {
     public static final String MAX_SPLIT_SIZE = "max_split_size";
-    public static final String MAX_INITIAL_SPLIT_SIZE = "max_initial_split_size";
     public static final String VACUUM_MIN_RETENTION = "vacuum_min_retention";
     private static final String HIVE_CATALOG_NAME = "hive_catalog_name";
     private static final String PARQUET_MAX_READ_BLOCK_SIZE = "parquet_max_read_block_size";
@@ -95,11 +94,6 @@ public final class DeltaLakeSessionProperties
                         MAX_SPLIT_SIZE,
                         "Max split size",
                         deltaLakeConfig.getMaxSplitSize(),
-                        true),
-                dataSizeProperty(
-                        MAX_INITIAL_SPLIT_SIZE,
-                        "Max initial split size",
-                        deltaLakeConfig.getMaxInitialSplitSize(),
                         true),
                 durationProperty(
                         VACUUM_MIN_RETENTION,
@@ -263,11 +257,6 @@ public final class DeltaLakeSessionProperties
     public static DataSize getMaxSplitSize(ConnectorSession session)
     {
         return session.getProperty(MAX_SPLIT_SIZE, DataSize.class);
-    }
-
-    public static DataSize getMaxInitialSplitSize(ConnectorSession session)
-    {
-        return session.getProperty(MAX_INITIAL_SPLIT_SIZE, DataSize.class);
     }
 
     public static Duration getVacuumMinRetention(ConnectorSession session)

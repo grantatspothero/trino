@@ -53,7 +53,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -65,7 +64,6 @@ import static io.trino.plugin.deltalake.DeltaLakeAnalyzeProperties.AnalyzeMode.F
 import static io.trino.plugin.deltalake.DeltaLakeColumnHandle.pathColumnHandle;
 import static io.trino.plugin.deltalake.DeltaLakeMetadata.createStatisticsPredicate;
 import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.getDynamicFilteringWaitTimeout;
-import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.getMaxInitialSplitSize;
 import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.getMaxSplitSize;
 import static io.trino.plugin.deltalake.transactionlog.DeltaLakeSchemaSupport.extractSchema;
 import static io.trino.plugin.deltalake.transactionlog.TransactionLogParser.deserializePartitionValue;
@@ -80,7 +78,6 @@ public class DeltaLakeSplitManager
     private final TypeManager typeManager;
     private final TransactionLogAccess transactionLogAccess;
     private final ExecutorService executor;
-    private final int maxInitialSplits;
     private final int maxSplitsPerSecond;
     private final int maxOutstandingSplits;
     private final double minimumAssignedSplitWeight;
@@ -101,7 +98,6 @@ public class DeltaLakeSplitManager
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.transactionLogAccess = requireNonNull(transactionLogAccess, "transactionLogAccess is null");
         this.executor = requireNonNull(executor, "executor is null");
-        this.maxInitialSplits = config.getMaxInitialSplits();
         this.maxSplitsPerSecond = config.getMaxSplitsPerSecond();
         this.maxOutstandingSplits = config.getMaxOutstandingSplits();
         this.minimumAssignedSplitWeight = config.getMinimumAssignedSplitWeight();
@@ -205,7 +201,6 @@ public class DeltaLakeSplitManager
                 tableHandle.getWriteType().isEmpty() &&
                         // When only partitioning columns projected, there is no point splitting the files
                         mayAnyDataColumnProjected(tableHandle);
-        AtomicInteger remainingInitialSplits = new AtomicInteger(maxInitialSplits);
         Optional<Instant> filesModifiedAfter = tableHandle.getAnalyzeHandle().flatMap(AnalyzeHandle::getFilesModifiedAfter);
         Optional<Long> maxScannedFileSizeInBytes = maxScannedFileSize.map(DataSize::toBytes);
 
@@ -279,8 +274,7 @@ public class DeltaLakeSplitManager
                             splitPath,
                             addAction.getCanonicalPartitionValues(),
                             statisticsPredicate,
-                            splittable,
-                            remainingInitialSplits)
+                            splittable)
                             .stream();
                 });
     }
@@ -348,8 +342,7 @@ public class DeltaLakeSplitManager
             String splitPath,
             Map<String, Optional<String>> partitionKeys,
             TupleDomain<DeltaLakeColumnHandle> statisticsPredicate,
-            boolean splittable,
-            AtomicInteger remainingInitialSplits)
+            boolean splittable)
     {
         long fileSize = addFileEntry.getSize();
 
@@ -371,13 +364,7 @@ public class DeltaLakeSplitManager
         ImmutableList.Builder<DeltaLakeSplit> splits = ImmutableList.builder();
         long currentOffset = 0;
         while (currentOffset < fileSize) {
-            long maxSplitSize;
-            if (remainingInitialSplits.get() > 0 && remainingInitialSplits.getAndDecrement() > 0) {
-                maxSplitSize = getMaxInitialSplitSize(session).toBytes();
-            }
-            else {
-                maxSplitSize = getMaxSplitSize(session).toBytes();
-            }
+            long maxSplitSize = getMaxSplitSize(session).toBytes();
             long splitSize = Math.min(maxSplitSize, fileSize - currentOffset);
 
             splits.add(new DeltaLakeSplit(
