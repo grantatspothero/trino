@@ -357,7 +357,7 @@ public final class AccumulatorCompiler
 
     private static void generateSetGroupCount(ClassDefinition definition, List<FieldDefinition> stateFields)
     {
-        Parameter groupCount = arg("groupCount", long.class);
+        Parameter groupCount = arg("groupCount", int.class);
 
         MethodDefinition method = definition.declareMethod(a(PUBLIC), "setGroupCount", type(void.class), groupCount);
         BytecodeBlock body = method.getBody();
@@ -714,7 +714,7 @@ public final class AccumulatorCompiler
         for (FieldDefinition stateField : stateFields) {
             if (grouped) {
                 Variable groupIds = scope.getVariable("groupIds");
-                loopBody.append(thisVariable.getField(stateField).invoke("setGroupId", void.class, groupIds.getElement(position).cast(long.class)));
+                loopBody.append(thisVariable.getField(stateField).invoke("setGroupId", void.class, groupIds.getElement(position)));
             }
             loopBody.append(thisVariable.getField(stateField));
         }
@@ -738,7 +738,7 @@ public final class AccumulatorCompiler
         Variable groupIds = scope.getVariable("groupIds");
         for (FieldDefinition stateField : stateFields) {
             BytecodeExpression state = scope.getThis().getField(stateField);
-            block.append(state.invoke("setGroupId", void.class, groupIds.getElement(position).cast(long.class)));
+            block.append(state.invoke("setGroupId", void.class, groupIds.getElement(position)));
         }
     }
 
@@ -808,14 +808,14 @@ public final class AccumulatorCompiler
             BytecodeExpression stateSerializer = thisVariable.getField(getOnlyElement(stateFieldAndDescriptors).getStateSerializerField());
             BytecodeExpression state = thisVariable.getField(getOnlyElement(stateFieldAndDescriptors).getStateField());
 
-            body.append(state.invoke("setGroupId", void.class, groupId.cast(long.class)))
+            body.append(state.invoke("setGroupId", void.class, groupId))
                     .append(stateSerializer.invoke("serialize", void.class, state.cast(AccumulatorState.class), out))
                     .ret();
         }
         else {
             for (StateFieldAndDescriptor stateFieldAndDescriptor : stateFieldAndDescriptors) {
                 BytecodeExpression state = thisVariable.getField(stateFieldAndDescriptor.getStateField());
-                body.append(state.invoke("setGroupId", void.class, groupId.cast(long.class)));
+                body.append(state.invoke("setGroupId", void.class, groupId));
             }
 
             generateSerializeState(definition, stateFieldAndDescriptors, out, thisVariable, body);
@@ -899,7 +899,7 @@ public final class AccumulatorCompiler
 
         for (FieldDefinition stateField : stateFields) {
             BytecodeExpression state = thisVariable.getField(stateField);
-            body.append(state.invoke("setGroupId", void.class, groupId.cast(long.class)));
+            body.append(state.invoke("setGroupId", void.class, groupId));
             states.add(state);
         }
 

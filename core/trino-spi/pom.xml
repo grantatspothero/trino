@@ -268,6 +268,20 @@
                                     <old>class io.trino.spi.Location</old>
                                     <new>class io.trino.spi.Location</new>
                                 </item>
+                                <item>
+                                    <ignore>true</ignore>
+                                    <code>java.method.parameterTypeChanged</code>
+                                    <old>parameter void io.trino.spi.function.GroupedAccumulatorState::setGroupId(===long===)</old>
+                                    <new>parameter void io.trino.spi.function.GroupedAccumulatorState::setGroupId(===int===)</new>
+                                    <parameterIndex>0</parameterIndex>
+                                </item>
+                                <item>
+                                    <ignore>true</ignore>
+                                    <code>java.method.parameterTypeChanged</code>
+                                    <old>parameter void io.trino.spi.function.GroupedAccumulatorState::ensureCapacity(===long===)</old>
+                                    <new>parameter void io.trino.spi.function.GroupedAccumulatorState::ensureCapacity(===int===)</new>
+                                    <parameterIndex>0</parameterIndex>
+                                </item>
                             </differences>
                         </revapi.differences>
                     </analysisConfiguration>
