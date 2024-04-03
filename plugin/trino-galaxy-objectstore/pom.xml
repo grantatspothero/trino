@@ -105,6 +105,11 @@
 
         <dependency>
             <groupId>io.starburst.stargate</groupId>
+            <artifactId>stargate-common</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.starburst.stargate</groupId>
             <artifactId>stargate-ids</artifactId>
         </dependency>
 
