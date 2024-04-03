@@ -131,7 +131,7 @@
     </artifactSet>
 
     <artifactSet to="plugin/galaxy-stargate">
-        <artifact id="${project.groupId}:trino-galaxy-stargate:zip:${project.version}">
+        <artifact id="${project.groupId}:starburst-stargate:zip:${project.version}">
             <unpack />
         </artifact>
     </artifactSet>

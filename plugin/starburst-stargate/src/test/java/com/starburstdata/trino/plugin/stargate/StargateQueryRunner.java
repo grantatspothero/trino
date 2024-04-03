@@ -182,6 +182,28 @@ public final class StargateQueryRunner
         return queryRunner;
     }
 
+    public static DistributedQueryRunner createRemoteStarburstQueryRunnerWithStarburstEnterprise(Map<String, String> connectorProperties)
+            throws Exception
+    {
+        DistributedQueryRunner queryRunner = createRemoteStarburstQueryRunner(Optional.empty());
+        addStarburstEnterpriseToRemoteStarburstQueryRunner(queryRunner, connectorProperties);
+        return queryRunner;
+    }
+
+    private static void addStarburstEnterpriseToRemoteStarburstQueryRunner(
+            DistributedQueryRunner queryRunner,
+            Map<String, String> connectorProperties)
+            throws Exception
+    {
+        try {
+            queryRunner.installPlugin(new StargatePlugin());
+            queryRunner.createCatalog("stargate", "stargate", connectorProperties);
+        }
+        catch (Exception e) {
+            throw closeAllSuppress(e, queryRunner);
+        }
+    }
+
     private static DistributedQueryRunner createStargateQueryRunner(
             boolean enableWrites,
             Map<String, String> extraProperties,

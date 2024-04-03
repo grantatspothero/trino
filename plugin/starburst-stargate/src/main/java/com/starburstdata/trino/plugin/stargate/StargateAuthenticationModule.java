@@ -14,19 +14,27 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.jdbc.TrinoDriver;
+import io.trino.plugin.base.galaxy.CatalogNetworkMonitorProperties;
+import io.trino.plugin.base.galaxy.CrossRegionConfig;
+import io.trino.plugin.base.galaxy.GalaxySqlSocketFactory;
+import io.trino.plugin.base.galaxy.LocalRegionConfig;
+import io.trino.plugin.base.galaxy.RegionVerifierProperties;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ConnectionFactory;
 import io.trino.plugin.jdbc.DriverConnectionFactory;
 import io.trino.plugin.jdbc.credential.CredentialProvider;
 import io.trino.plugin.jdbc.credential.CredentialProviderModule;
+import io.trino.spi.connector.CatalogHandle;
+import io.trino.sshtunnel.SshTunnelConfig;
+import io.trino.sshtunnel.SshTunnelProperties;
 
-import java.io.File;
 import java.util.Optional;
 import java.util.Properties;
 
 import static com.starburstdata.trino.plugin.stargate.StargateConfig.PASSWORD;
 import static io.airlift.configuration.ConditionalModule.conditionalModule;
 import static io.airlift.configuration.ConfigBinder.configBinder;
+import static io.trino.sshtunnel.SshTunnelPropertiesMapper.addSshTunnelProperties;
 
 public class StargateAuthenticationModule
         extends AbstractConfigurationAwareModule
@@ -54,30 +62,35 @@ public class StargateAuthenticationModule
         @Singleton
         @TransportConnectionFactory
         public ConnectionFactory getConnectionFactory(
+                CatalogHandle catalogHandle,
                 BaseJdbcConfig config,
-                StargateConfig connectorConfig,
-                StargateSslConfig sslConfig,
+                LocalRegionConfig localRegionConfig,
+                CrossRegionConfig crossRegionConfig,
+                SshTunnelConfig sshConfig,
                 CredentialProvider credentialProvider)
         {
             Properties properties = new Properties();
-            if (connectorConfig.isSslEnabled()) {
-                setSslProperties(properties, sslConfig);
-            }
-
-            return new DriverConnectionFactory(new TrinoDriver(), config.getConnectionUrl(), properties, credentialProvider);
+            Properties socketFactoryProperties = buildSocketFactoryProperties(catalogHandle, localRegionConfig, crossRegionConfig, sshConfig);
+            return new DriverConnectionFactory(new TrinoDriver(new GalaxySqlSocketFactory(socketFactoryProperties)), config.getConnectionUrl(), properties, credentialProvider);
         }
     }
 
-    private static void setSslProperties(Properties properties, StargateSslConfig sslConfig)
+    private static Properties buildSocketFactoryProperties(
+            CatalogHandle catalogHandle,
+            LocalRegionConfig localRegionConfig,
+            CrossRegionConfig crossRegionConfig,
+            SshTunnelConfig sshConfig)
     {
-        properties.setProperty("SSL", "true");
-        setOptionalProperty(properties, "SSLTrustStorePath", sslConfig.getTruststoreFile().map(File::getAbsolutePath));
-        setOptionalProperty(properties, "SSLTrustStorePassword", sslConfig.getTruststorePassword());
-        setOptionalProperty(properties, "SSLTrustStoreType", sslConfig.getTruststoreType());
-    }
+        Properties properties = new Properties();
+        RegionVerifierProperties.addRegionVerifierProperties(properties::setProperty, RegionVerifierProperties.generateFrom(localRegionConfig, crossRegionConfig));
 
-    private static void setOptionalProperty(Properties properties, String propertyKey, Optional<String> maybeValue)
-    {
-        maybeValue.ifPresent(value -> properties.setProperty(propertyKey, value));
+        Optional<SshTunnelProperties> sshTunnelProperties = SshTunnelProperties.generateFrom(sshConfig);
+        sshTunnelProperties.ifPresent(sshProps -> addSshTunnelProperties(properties::setProperty, sshProps));
+
+        // Do not enable TLS for secured clusters as plain socket is wrapped into SSLSocket in OkHttpClient library
+        CatalogNetworkMonitorProperties catalogNetworkMonitorProperties = CatalogNetworkMonitorProperties.generateFrom(crossRegionConfig, catalogHandle);
+        CatalogNetworkMonitorProperties.addCatalogNetworkMonitorProperties(properties::setProperty, catalogNetworkMonitorProperties);
+
+        return properties;
     }
 }

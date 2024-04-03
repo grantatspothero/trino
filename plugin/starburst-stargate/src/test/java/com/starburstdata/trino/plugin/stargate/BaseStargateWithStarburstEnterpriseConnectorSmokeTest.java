@@ -7,17 +7,16 @@
  *
  * Redistribution of this material is strictly prohibited.
  */
-package io.trino.plugin.stargate;
+package com.starburstdata.trino.plugin.stargate;
 
 import com.google.common.collect.ImmutableMap;
-import com.starburstdata.trino.plugin.stargate.StargateQueryRunner;
 import io.trino.plugin.jdbc.BaseJdbcConnectorSmokeTest;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import io.trino.testing.TestingConnectorBehavior;
 import org.junit.jupiter.api.Test;
 
-import static io.trino.plugin.stargate.GalaxyStargateQueryRunner.createRemoteStarburstQueryRunnerWithStarburstEnterprise;
+import static com.starburstdata.trino.plugin.stargate.StargateQueryRunner.createRemoteStarburstQueryRunnerWithStarburstEnterprise;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 

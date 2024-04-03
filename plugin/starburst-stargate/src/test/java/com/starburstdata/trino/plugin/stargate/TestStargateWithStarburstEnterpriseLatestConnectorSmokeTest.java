@@ -7,7 +7,7 @@
  *
  * Redistribution of this material is strictly prohibited.
  */
-package io.trino.plugin.stargate;
+package com.starburstdata.trino.plugin.stargate;
 
 import org.junit.jupiter.api.Test;
 
