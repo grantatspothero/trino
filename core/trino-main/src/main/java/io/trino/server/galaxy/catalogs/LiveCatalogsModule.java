@@ -88,6 +88,7 @@ public class LiveCatalogsModule
                     }
                 }
                 binder.bind(GalaxyCatalogInfoSupplier.class).to(EncryptedSecretsGalaxyCatalogInfoSupplier.class);
+                newExporter(binder).export(EncryptedSecretsGalaxyCatalogInfoSupplier.class).withGeneratedName();
                 switch (liveCatalogsConfig.getDeploymentType()) {
                     case DEFAULT, WARP_SPEED -> {
                         binder.bind(DecryptionContextProvider.class).to(TrinoDecryptionContextProvider.class).in(SINGLETON);

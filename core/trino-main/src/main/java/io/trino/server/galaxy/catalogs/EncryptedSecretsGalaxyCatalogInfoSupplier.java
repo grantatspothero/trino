@@ -15,16 +15,21 @@ package io.trino.server.galaxy.catalogs;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import io.airlift.stats.TimeStat;
 import io.starburst.stargate.catalog.CatalogVersionConfigurationApi;
 import io.starburst.stargate.catalog.DeploymentType;
 import io.starburst.stargate.catalog.QueryCatalog;
 import io.starburst.stargate.crypto.SecretSealer;
+import io.starburst.stargate.id.AccountId;
+import io.starburst.stargate.id.CatalogVersion;
 import io.starburst.stargate.id.CloudRegionId;
 import io.starburst.stargate.id.TrinoPlaneId;
 import io.starburst.stargate.identity.DispatchSession;
 import io.trino.connector.CatalogProperties;
 import io.trino.connector.ConnectorName;
 import io.trino.server.galaxy.GalaxyConfig;
+import org.weakref.jmx.Managed;
+import org.weakref.jmx.Nested;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,6 +41,8 @@ import static java.util.Objects.requireNonNull;
 public class EncryptedSecretsGalaxyCatalogInfoSupplier
         implements GalaxyCatalogInfoSupplier
 {
+    private final TimeStat configureCatalog = new TimeStat();
+    private final TimeStat decryptCatalogSecrets = new TimeStat();
     // used to configure the catalog
     private final CatalogVersionConfigurationApi catalogVersionConfigurationApi;
     private final CloudRegionId cloudRegionId;
@@ -64,17 +71,13 @@ public class EncryptedSecretsGalaxyCatalogInfoSupplier
     @Override
     public GalaxyCatalogInfo getGalaxyCatalogInfo(DispatchSession dispatchSession, GalaxyCatalogArgs galaxyCatalogArgs)
     {
-        QueryCatalog queryCatalog = SecretDecryption.decryptCatalog(
-                secretSealer,
+        QueryCatalog queryCatalog = decryptCatalogSecrets(
                 galaxyCatalogArgs.accountId(),
-                catalogVersionConfigurationApi.configureCatalog(
+                configureCatalog(
                         dispatchSession,
                         galaxyCatalogArgs.accountId(),
-                        galaxyCatalogArgs.catalogVersion(),
-                        cloudRegionId,
-                        Optional.of(trinoPlaneId),
-                        deploymentType),
-                decryptionContextProvider);
+                        galaxyCatalogArgs.catalogVersion()));
+
         Map<String, String> properties = new HashMap<>(queryCatalog.properties());
         properties.remove("galaxy.catalog-id");
         return new GalaxyCatalogInfo(
@@ -84,5 +87,43 @@ public class EncryptedSecretsGalaxyCatalogInfoSupplier
                         ImmutableMap.copyOf(properties)),
                 queryCatalog.readOnly(),
                 queryCatalog.sharedSchema());
+    }
+
+    private QueryCatalog configureCatalog(DispatchSession dispatchSession, AccountId accountId, CatalogVersion catalogVersion)
+    {
+        try (var ignored = configureCatalog.time()) {
+            return catalogVersionConfigurationApi.configureCatalog(
+                    dispatchSession,
+                    accountId,
+                    catalogVersion,
+                    cloudRegionId,
+                    Optional.of(trinoPlaneId),
+                    deploymentType);
+        }
+    }
+
+    private QueryCatalog decryptCatalogSecrets(AccountId accountId, QueryCatalog queryCatalog)
+    {
+        try (var ignored = decryptCatalogSecrets.time()) {
+            return SecretDecryption.decryptCatalog(
+                    secretSealer,
+                    accountId,
+                    queryCatalog,
+                    decryptionContextProvider);
+        }
+    }
+
+    @Managed
+    @Nested
+    public TimeStat getConfigureCatalog()
+    {
+        return configureCatalog;
+    }
+
+    @Managed
+    @Nested
+    public TimeStat getDecryptCatalogSecrets()
+    {
+        return decryptCatalogSecrets;
     }
 }
