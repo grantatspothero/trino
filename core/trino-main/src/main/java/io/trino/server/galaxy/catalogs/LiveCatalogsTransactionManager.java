@@ -58,6 +58,8 @@ import io.trino.transaction.TransactionManager;
 import io.trino.transaction.TransactionManagerConfig;
 import jakarta.annotation.PreDestroy;
 import org.joda.time.DateTime;
+import org.weakref.jmx.Managed;
+import org.weakref.jmx.Nested;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -75,6 +77,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
@@ -131,6 +134,7 @@ public class LiveCatalogsTransactionManager
     private final Duration maxCatalogStaleness;
     private final Duration maxOldVersionStaleness;
     private final Clock clock;
+    private final GalaxyLiveCatalogsCacheStats galaxyLiveCatalogsCacheStats;
 
     @Inject
     public LiveCatalogsTransactionManager(
@@ -150,6 +154,7 @@ public class LiveCatalogsTransactionManager
         this.maxCatalogStaleness = requireNonNull(liveCatalogsConfig.getMaxCatalogStaleness());
         this.maxOldVersionStaleness = requireNonNull(liveCatalogsConfig.getOldVersionStaleness());
         this.clock = requireNonNull(clock, "clock is null");
+        this.galaxyLiveCatalogsCacheStats = new GalaxyLiveCatalogsCacheStats(galaxyLiveCatalogs);
         scheduleIdleChecks(transactionManagerConfig.getIdleCheckInterval(), idleCheckExecutor);
     }
 
@@ -167,14 +172,24 @@ public class LiveCatalogsTransactionManager
                 UUID liveCatalogId = accountToCatalogVersionId
                         .computeIfAbsent(dispatchSession.accountId(), ignore -> new ConcurrentHashMap<>())
                         .computeIfAbsent(catalogVersion, ignore -> UUID.randomUUID());
-                GalaxyLiveCatalog galaxyLiveCatalog = this.galaxyLiveCatalogs.computeIfAbsent(liveCatalogId, ignore -> new GalaxyLiveCatalog(
-                        liveCatalogId,
-                        galaxyCatalogArgs,
-                        galaxyCatalogInfoSupplier.getGalaxyCatalogInfo(
-                                dispatchSession,
-                                galaxyCatalogArgs),
-                        catalogFactory,
-                        clock));
+                AtomicBoolean cacheHit = new AtomicBoolean(true);
+                GalaxyLiveCatalog galaxyLiveCatalog = galaxyLiveCatalogs.computeIfAbsent(liveCatalogId, ignored -> {
+                    cacheHit.set(false);
+                    return new GalaxyLiveCatalog(
+                            liveCatalogId,
+                            galaxyCatalogArgs,
+                            galaxyCatalogInfoSupplier.getGalaxyCatalogInfo(
+                                    dispatchSession,
+                                    galaxyCatalogArgs),
+                            catalogFactory,
+                            clock);
+                });
+                if (cacheHit.get()) {
+                    galaxyLiveCatalogsCacheStats.recordCacheHit();
+                }
+                else {
+                    galaxyLiveCatalogsCacheStats.recordCacheMiss();
+                }
                 verify(galaxyLiveCatalog.getCatalogConstructionArgs().equals(galaxyCatalogArgs), "Uuid collision");
                 galaxyLiveCatalogsForTransaction.add(galaxyLiveCatalog);
             }
@@ -262,6 +277,7 @@ public class LiveCatalogsTransactionManager
             finally {
                 writeLock.unlock();
                 for (GalaxyLiveCatalog removedGalaxyLiveCatalog : removedGalaxyLiveCatalogs.build()) {
+                    galaxyLiveCatalogsCacheStats.recordCachedCatalogExpired();
                     finishingExecutor.execute(() -> cleanUpGalaxyLiveCatalog(removedGalaxyLiveCatalog));
                 }
             }
@@ -643,6 +659,13 @@ public class LiveCatalogsTransactionManager
     private static <T> ListenableFuture<Void> asVoid(ListenableFuture<T> future)
     {
         return Futures.transform(future, v -> null, directExecutor());
+    }
+
+    @Managed
+    @Nested
+    public GalaxyLiveCatalogsCacheStats getGalaxyLiveCatalogsCacheStats()
+    {
+        return galaxyLiveCatalogsCacheStats;
     }
 
     @ThreadSafe

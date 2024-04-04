@@ -58,6 +58,7 @@ import static io.starburst.stargate.crypto.TestingMasterKeyCrypto.createVerifier
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.weakref.jmx.guice.ExportBinder.newExporter;
 
 public class LiveCatalogsModule
         extends AbstractConfigurationAwareModule
@@ -104,6 +105,7 @@ public class LiveCatalogsModule
             binder.bind(ConnectorServicesProvider.class).to(LiveCatalogsTransactionManager.class);
             binder.bind(CatalogManager.class).to(LiveCatalogsTransactionManager.class);
             binder.bind(TransactionManager.class).to(LiveCatalogsTransactionManager.class);
+            newExporter(binder).export(LiveCatalogsTransactionManager.class).withGeneratedName();
 
             //singletons
             binder.bind(ExecutorCleanup.class).asEagerSingleton();
