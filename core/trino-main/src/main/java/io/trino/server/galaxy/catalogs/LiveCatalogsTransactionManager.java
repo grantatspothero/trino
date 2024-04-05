@@ -102,6 +102,8 @@ import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static io.airlift.concurrent.MoreFutures.addExceptionCallback;
 import static io.trino.plugin.base.galaxy.GalaxyCatalogVersionUtils.fromCatalogIdAndLiveCatalogUniqueId;
 import static io.trino.plugin.base.galaxy.GalaxyCatalogVersionUtils.getRequiredLiveCatalogUniqueId;
+import static io.trino.server.galaxy.catalogs.AlertingLiveCatalogsErrorType.CATALOG_INITIALIZATION;
+import static io.trino.server.galaxy.catalogs.AlertingLiveCatalogsErrorType.buildAlertingLiveCatalogsErrorMessage;
 import static io.trino.spi.StandardErrorCode.ADMINISTRATIVELY_KILLED;
 import static io.trino.spi.StandardErrorCode.AUTOCOMMIT_WRITE_CONFLICT;
 import static io.trino.spi.StandardErrorCode.CATALOG_NOT_FOUND;
@@ -1067,6 +1069,15 @@ public class LiveCatalogsTransactionManager
                 if (catalogConnector == null) {
                     try (var ignored = initializeCatalog.time()) {
                         catalogConnector = catalogFactory.createCatalog(catalogProperties);
+                    }
+                    catch (Exception e) {
+                        log.error(e, buildAlertingLiveCatalogsErrorMessage(
+                                CATALOG_INITIALIZATION,
+                                galaxyCatalogArgs.accountId(),
+                                galaxyCatalogArgs.catalogVersion(),
+                                Optional.empty(),
+                                Optional.empty()));
+                        throw e;
                     }
                 }
                 return catalogConnector;
