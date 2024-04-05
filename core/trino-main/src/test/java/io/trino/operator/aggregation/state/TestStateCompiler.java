@@ -37,6 +37,7 @@ import io.trino.spi.function.AccumulatorState;
 import io.trino.spi.function.AccumulatorStateFactory;
 import io.trino.spi.function.AccumulatorStateSerializer;
 import io.trino.spi.function.GroupedAccumulatorState;
+import io.trino.spi.function.InOut;
 import io.trino.spi.type.ArrayType;
 import io.trino.spi.type.RowType;
 import io.trino.spi.type.Type;
@@ -373,6 +374,47 @@ public class TestStateCompiler
         }
     }
 
+    @Test
+    public void testEstimatedInOutStatesInstanceSizes()
+    {
+        AccumulatorStateFactory<InOut> factory = StateCompiler.generateInOutStateFactory(BIGINT);
+        InOut groupedState = factory.createGroupedState();
+        InOut singleState = factory.createSingleState();
+
+        long expectedGroupedSize =
+                instanceSize(groupedState.getClass()) +
+                new LongBigArray().sizeOf() + // values, 1024 longs
+                new BooleanBigArray().sizeOf(); // isNull, 1024 booleans
+
+        assertThat(groupedState.getEstimatedSize())
+                .isEqualTo(expectedGroupedSize)
+                .isEqualTo(17568);
+
+        assertThat(singleState.getEstimatedSize())
+                .isEqualTo(instanceSize(singleState.getClass()))
+                .isEqualTo(24);
+    }
+
+    @Test
+    public void testEstimatedStateInstanceSizes()
+    {
+        AccumulatorStateFactory<TestSimpleState> stateFactory = StateCompiler.generateStateFactory(TestSimpleState.class);
+        TestSimpleState groupedState = stateFactory.createGroupedState();
+        TestSimpleState singleState = stateFactory.createSingleState();
+
+        long expectedGroupedSize = instanceSize(groupedState.getClass()) +
+                new LongBigArray().sizeOf() +
+                new DoubleBigArray().sizeOf();
+
+        assertThat(groupedState.getEstimatedSize())
+                .isEqualTo(expectedGroupedSize)
+                .isEqualTo(24744);
+
+        assertThat(singleState.getEstimatedSize())
+                .isEqualTo(instanceSize(singleState.getClass()))
+                .isEqualTo(32);
+    }
+
     private static Slice toSlice(double... values)
     {
         Slice slice = Slices.allocate(values.length * Double.BYTES);
@@ -381,6 +423,18 @@ public class TestStateCompiler
             output.writeDouble(value);
         }
         return slice;
+    }
+
+    public interface TestSimpleState
+            extends AccumulatorState
+    {
+        long getLong();
+
+        void setLong(long value);
+
+        double getDouble();
+
+        void setDouble(double value);
     }
 
     public interface TestComplexState
