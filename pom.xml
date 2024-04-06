@@ -236,7 +236,7 @@
         <!-- keep dependency properties sorted -->
         <dep.accumulo-hadoop.version>2.7.7-1</dep.accumulo-hadoop.version>
         <dep.accumulo.version>3.0.0</dep.accumulo.version>
-        <dep.airlift.version>243</dep.airlift.version>
+        <dep.airlift.version>244</dep.airlift.version>
         <dep.alluxio.version>311</dep.alluxio.version>
         <dep.antlr.version>4.13.1</dep.antlr.version>
         <dep.avro.version>1.11.3</dep.avro.version>
@@ -2103,7 +2103,7 @@
             <dependency>
                 <groupId>net.bytebuddy</groupId>
                 <artifactId>byte-buddy</artifactId>
-                <version>1.14.12</version>
+                <version>1.14.13</version>
             </dependency>
 
             <dependency>
@@ -2366,6 +2366,12 @@
             </dependency>
 
             <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-api</artifactId>
+                <version>2.23.1</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.apache.maven</groupId>
                 <artifactId>maven-model</artifactId>
                 <version>3.9.6</version>
@@ -2572,14 +2578,14 @@
                 <!-- TODO temporary; force higher version until stargate repo is updated to airlift 240 -->
                 <groupId>org.glassfish.jersey.core</groupId>
                 <artifactId>jersey-common</artifactId>
-                <version>3.1.5</version>
+                <version>3.1.6</version>
             </dependency>
 
             <dependency>
                 <!-- TODO temporary; force higher version until stargate repo is updated to airlift 240 -->
                 <groupId>org.glassfish.jersey.core</groupId>
                 <artifactId>jersey-server</artifactId>
-                <version>3.1.5</version>
+                <version>3.1.6</version>
             </dependency>
 
             <!-- force newer version to be used for dependencies -->
