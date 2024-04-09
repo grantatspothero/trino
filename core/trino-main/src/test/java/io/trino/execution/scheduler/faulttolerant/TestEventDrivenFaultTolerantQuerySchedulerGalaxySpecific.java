@@ -93,12 +93,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 @TestInstance(PER_CLASS)
-class TestEventDrivenFaultTolerantQueryScheduler
+class TestEventDrivenFaultTolerantQuerySchedulerGalaxySpecific
         extends BasePlanTest
 {
     private static final ConnectorName testCatalogConnector = new ConnectorName("test_catalog_connector");
 
-    public TestEventDrivenFaultTolerantQueryScheduler()
+    public TestEventDrivenFaultTolerantQuerySchedulerGalaxySpecific()
     {
         super(ImmutableMap.of());
     }
