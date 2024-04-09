@@ -56,6 +56,7 @@ import io.trino.transaction.TransactionId;
 import io.trino.transaction.TransactionInfo;
 import io.trino.transaction.TransactionManager;
 import io.trino.transaction.TransactionManagerConfig;
+import jakarta.annotation.PreDestroy;
 import org.joda.time.DateTime;
 
 import java.time.Clock;
@@ -274,6 +275,14 @@ public class LiveCatalogsTransactionManager
         }
         catch (Throwable t) {
             log.error(t, "Error cleaning up catalog connector");
+        }
+    }
+
+    @PreDestroy
+    public void cleanUpAll()
+    {
+        for (GalaxyLiveCatalog galaxyLiveCatalog : galaxyLiveCatalogs.values()) {
+            cleanUpGalaxyLiveCatalog(galaxyLiveCatalog);
         }
     }
 
