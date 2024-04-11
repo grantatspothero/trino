@@ -14,7 +14,7 @@
 package io.trino.plugin.hive.metastore.galaxy;
 
 import io.airlift.configuration.Config;
-import io.starburst.stargate.metastore.client.MetastoreId;
+import io.starburst.stargate.id.MetastoreId;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;

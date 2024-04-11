@@ -14,7 +14,7 @@
 package io.trino.plugin.hive.metastore.galaxy;
 
 import com.google.common.collect.ImmutableMap;
-import io.starburst.stargate.metastore.client.MetastoreId;
+import io.starburst.stargate.id.MetastoreId;
 import org.testng.annotations.Test;
 
 import java.net.URI;
