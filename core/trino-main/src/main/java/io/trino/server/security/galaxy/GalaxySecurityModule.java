@@ -17,10 +17,10 @@ import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.airlift.http.client.HttpClient;
 import io.airlift.units.Duration;
 import io.starburst.stargate.accesscontrol.client.HttpTrinoSecurityClient;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
-import io.starburst.stargate.http.RetryingHttpClient;
 import io.trino.connector.CatalogManagerConfig;
 import io.trino.metadata.SystemSecurityMetadata;
 import io.trino.server.galaxy.GalaxyConfig;
@@ -33,7 +33,6 @@ import static com.google.inject.Scopes.SINGLETON;
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.airlift.http.client.HttpClientBinder.httpClientBinder;
-import static io.starburst.stargate.http.RetryingHttpClientBinder.retryingHttpClientBinder;
 import static io.trino.connector.CatalogManagerConfig.CatalogMangerKind.LIVE;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -78,12 +77,11 @@ public class GalaxySecurityModule
                     // this is subject to increase if we see throttling still, or decrease if we overwhelm RBAC
                     config.setMaxConnectionsPerServer(60);
                 });
-        retryingHttpClientBinder(binder).bindForBoundHttpClient(ForGalaxySystemAccessControl.class);
     }
 
     @Provides
     @Singleton
-    public static TrinoSecurityApi createTrinoSecurityApi(@ForGalaxySystemAccessControl RetryingHttpClient httpClient, GalaxyAccessControlConfig config)
+    public static TrinoSecurityApi createTrinoSecurityApi(@ForGalaxySystemAccessControl HttpClient httpClient, GalaxyAccessControlConfig config)
     {
         requireNonNull(config, "config is null");
         URI uri = config.getAccessControlOverrideUri().orElse(config.getAccountUri());

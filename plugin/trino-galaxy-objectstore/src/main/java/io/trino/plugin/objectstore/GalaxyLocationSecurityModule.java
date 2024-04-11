@@ -19,18 +19,17 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.airlift.http.client.HttpClient;
 import io.airlift.units.Duration;
 import io.starburst.stargate.accesscontrol.client.HttpTrinoLocationClient;
 import io.starburst.stargate.accesscontrol.client.HttpTrinoSecurityClient;
 import io.starburst.stargate.accesscontrol.client.TrinoLocationApi;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
-import io.starburst.stargate.http.RetryingHttpClient;
 import io.trino.plugin.hive.LocationAccessControl;
 
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 import static io.airlift.http.client.HttpClientBinder.httpClientBinder;
-import static io.starburst.stargate.http.RetryingHttpClientBinder.retryingHttpClientBinder;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class GalaxyLocationSecurityModule
@@ -78,19 +77,18 @@ public class GalaxyLocationSecurityModule
                         config.setIdleTimeout(new Duration(30, SECONDS));
                         config.setRequestTimeout(new Duration(10, SECONDS));
                     });
-            retryingHttpClientBinder(binder).bindForBoundHttpClient(ForGalaxyLocationSecurity.class);
         }
 
         @Provides
         @Singleton
-        public static TrinoLocationApi createTrinoLocationApi(@ForGalaxyLocationSecurity RetryingHttpClient httpClient, GalaxySecurityConfig config)
+        public static TrinoLocationApi createTrinoLocationApi(@ForGalaxyLocationSecurity HttpClient httpClient, GalaxySecurityConfig config)
         {
             return new HttpTrinoLocationClient(config.getAccountUri(), httpClient);
         }
 
         @Provides
         @Singleton
-        public static TrinoSecurityApi createTrinoSecurityApi(@ForGalaxyLocationSecurity RetryingHttpClient httpClient, GalaxySecurityConfig config)
+        public static TrinoSecurityApi createTrinoSecurityApi(@ForGalaxyLocationSecurity HttpClient httpClient, GalaxySecurityConfig config)
         {
             return new HttpTrinoSecurityClient(config.getAccessControlUri().orElse(config.getAccountUri()), httpClient);
         }

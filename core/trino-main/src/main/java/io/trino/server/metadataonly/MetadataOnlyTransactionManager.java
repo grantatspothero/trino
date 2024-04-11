@@ -31,7 +31,6 @@ import io.opentelemetry.context.Context;
 import io.starburst.stargate.accesscontrol.client.HttpTrinoSecurityClient;
 import io.starburst.stargate.accesscontrol.client.TrinoSecurityApi;
 import io.starburst.stargate.catalog.QueryCatalog;
-import io.starburst.stargate.http.RetryingHttpClient;
 import io.starburst.stargate.id.AccountId;
 import io.trino.NotInTransactionException;
 import io.trino.Session;
@@ -124,7 +123,7 @@ public class MetadataOnlyTransactionManager
     @Inject
     public MetadataOnlyTransactionManager(
             CachingCatalogFactory catalogFactory,
-            @ForGalaxySystemAccessControl RetryingHttpClient accessControlClient,
+            @ForGalaxySystemAccessControl HttpClient accessControlClient,
             MetadataAccessControllerSupplier accessController,
             MetadataSystemSecurityMetadata securityMetadata,
             GalaxyPermissionsCache permissionsCache,
