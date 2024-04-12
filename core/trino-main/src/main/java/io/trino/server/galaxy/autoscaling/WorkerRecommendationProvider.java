@@ -100,6 +100,10 @@ public class WorkerRecommendationProvider
         queryMetricsExecutor.shutdownNow();
     }
 
+    /**
+     * Calculates current WorkerRecommendation. This is used by the Trino Cluster Autoscaler
+     * to adequately size the worker pool. See TrinoAutoscalerResourceEventHandler and TrinoWorkerAutoscaler in Stargate repo.
+     */
     public WorkerRecommendation get()
     {
         return calculateBasedOnQueryRunningTime();
@@ -133,7 +137,10 @@ public class WorkerRecommendationProvider
     }
 
     /*
-     * Estimate the expected cpu time needed to finish current work
+     * Estimate the expected cpu time needed to finish currently running and pending queries.
+     *
+     * This is based on the average timer past queries took to complete. We also take currently running queries
+     * assuming the remaining cpu time is at least the cpu time already consumed.
      */
     @VisibleForTesting
     static long estimateCpuTimeToProcessQueriesMillis(QueryStats pastQueryStats, QueryStats runningQueryStats, long queuedQueriesCount)
@@ -173,6 +180,16 @@ public class WorkerRecommendationProvider
 
     public interface WorkerCountEstimator
     {
+        /**
+         * Given the inputs calculate the recommended cluster size.
+         *
+         * @param cpuTimeToProcessQueriesMillis (`T`) - the estimated cpu time needed by currently running queries and queued queries to finish
+         * @param activeNodes (`N`) - number of active trino-workers in the cluster
+         * @param averageWorkerParallelism (`avgPar`) - how many CPU seconds are processed in *wall second* by a single worker
+         *  - this is a rough approximation of current cluster CPU power
+         *
+         * @return an int representing optimal worker count
+         */
         int estimate(
                 long cpuTimeToProcessQueriesMillis,
                 double averageWorkerParallelism,

@@ -22,6 +22,16 @@ import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+/**
+ * Estimates new optimal cluster size to achieve target latency.
+ * <br>
+ * For scaleup, given some target latency, we can compute optimal cluster size. We want to achieve cluster size
+ * so the remaining time to finish all running and pending queries is smaller than target latency.
+ * For scaledown, if the expected remaining time to finish all running and pending queries is lower than scaledown threshold
+ * then new cluster size is scaleDownRatio * numberOfActiveWorkers.
+ * <br>
+ * Maximal cluster size is bounded by configuration outside of this class.
+ */
 public class QueryTimeBasedOptimalEstimator
         implements WorkerRecommendationProvider.WorkerCountEstimator
 {

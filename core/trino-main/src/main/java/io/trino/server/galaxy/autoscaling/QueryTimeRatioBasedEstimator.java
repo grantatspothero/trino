@@ -23,6 +23,15 @@ import static java.math.RoundingMode.CEILING;
 import static java.math.RoundingMode.FLOOR;
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Estimates new cluster size by a simple ratio scale.
+ *
+ * Given the scaleupRatio and scaleUpThresholdSeconds (can be zero) we compute new size as follows:
+ * If the expected remaining time to finish computations after rescale `timeToFinishWorkAfterRescaleSecs` is larger than
+ * scaleUpThresholdSeconds, then new cluster size is scaleUpRatio * numberOfActiveWorkers.
+ * If the expected remaining time to finish all running and pending queries is lower than scaledown threshold
+ * then new cluster size is scaleDownRatio * numberOfActiveWorkers.
+ */
 public class QueryTimeRatioBasedEstimator
         implements WorkerCountEstimator
 {
@@ -70,10 +79,11 @@ public class QueryTimeRatioBasedEstimator
         if (expectedRunningTimeSeconds < scaleDownThresholdSecs) {
             return roundToInt(activeNodes * scaleDownRatio, FLOOR);
         }
-        // COMPUTE the time it will take to finish work after waiting for rescale,
+
+        // Worker nodes take some time to start. Assume node will actively participate in query execution after scaleUpTimeSeconds.
         double timeToFinishWorkAfterRescaleSecs = expectedRunningTimeSeconds - scaleUpTimeSeconds;
 
-        // finally calculate if R on a scaled cluster is higher than threshold, so it can benefit from scaleup
+        // finally calculate if timeToFinishWorkAfterRescaleSecs on a scaled cluster is higher than threshold, so it can benefit from scaleup
         if ((timeToFinishWorkAfterRescaleSecs / scaleUpRatio) > scaleUpThresholdSeconds) {
             return roundToInt(activeNodes * scaleUpRatio, CEILING);
         }
