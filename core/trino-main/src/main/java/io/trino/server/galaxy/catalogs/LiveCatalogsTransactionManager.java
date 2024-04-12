@@ -27,6 +27,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import io.airlift.concurrent.BoundedExecutor;
 import io.airlift.log.Logger;
+import io.airlift.stats.TimeStat;
 import io.airlift.units.Duration;
 import io.starburst.stargate.id.AccountId;
 import io.starburst.stargate.id.CatalogId;
@@ -136,6 +137,7 @@ public class LiveCatalogsTransactionManager
     private final Duration maxOldVersionStaleness;
     private final Clock clock;
     private final GalaxyLiveCatalogsCacheStats galaxyLiveCatalogsCacheStats;
+    private final TimeStat initializeCatalog = new TimeStat(MILLISECONDS);
 
     @Inject
     public LiveCatalogsTransactionManager(
@@ -180,6 +182,7 @@ public class LiveCatalogsTransactionManager
                             liveCatalogId,
                             galaxyCatalogArgs,
                             catalogFactory,
+                            initializeCatalog,
                             galaxyCatalogInfoSupplier.getGalaxyCatalogInfo(
                                     dispatchSession,
                                     galaxyCatalogArgs),
@@ -669,6 +672,13 @@ public class LiveCatalogsTransactionManager
         return galaxyLiveCatalogsCacheStats;
     }
 
+    @Managed
+    @Nested
+    public TimeStat getInitializeCatalog()
+    {
+        return initializeCatalog;
+    }
+
     @ThreadSafe
     private static class TransactionMetadata
     {
@@ -990,6 +1000,7 @@ public class LiveCatalogsTransactionManager
         private final UUID id;
         private final GalaxyCatalogArgs galaxyCatalogArgs;
         private final CatalogFactory catalogFactory;
+        private final TimeStat initializeCatalog;
         private final CatalogProperties catalogProperties;
         private final boolean readOnly;
         private final Optional<SharedSchemaNameAndAccepted> sharedSchema;
@@ -1001,12 +1012,14 @@ public class LiveCatalogsTransactionManager
                 UUID id,
                 GalaxyCatalogArgs galaxyCatalogArgs,
                 CatalogFactory catalogFactory,
+                TimeStat initializeCatalog,
                 GalaxyCatalogInfo galaxyCatalogInfo,
                 Clock clock)
         {
             this.id = requireNonNull(id, "id is null");
             this.galaxyCatalogArgs = requireNonNull(galaxyCatalogArgs, "catalogConstructionArgs is null");
             this.catalogFactory = requireNonNull(catalogFactory, "catalogFactory is null");
+            this.initializeCatalog = requireNonNull(initializeCatalog, "initializeCatalog is null");
             requireNonNull(galaxyCatalogInfo, "galaxyCatalogInfo is null");
             CatalogProperties propertiesWithWrongVersion = galaxyCatalogInfo.catalogProperties();
             catalogProperties = new CatalogProperties(
@@ -1052,7 +1065,9 @@ public class LiveCatalogsTransactionManager
 
             synchronized (this) {
                 if (catalogConnector == null) {
-                    catalogConnector = catalogFactory.createCatalog(catalogProperties);
+                    try (var ignored = initializeCatalog.time()) {
+                        catalogConnector = catalogFactory.createCatalog(catalogProperties);
+                    }
                 }
                 return catalogConnector;
             }
