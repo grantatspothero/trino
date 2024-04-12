@@ -37,12 +37,13 @@ import java.util.Optional;
 
 import static io.trino.server.galaxy.catalogs.CatalogVersioningUtils.toCatalogHandle;
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class EncryptedSecretsGalaxyCatalogInfoSupplier
         implements GalaxyCatalogInfoSupplier
 {
-    private final TimeStat configureCatalog = new TimeStat();
-    private final TimeStat decryptCatalogSecrets = new TimeStat();
+    private final TimeStat configureCatalog = new TimeStat(MILLISECONDS);
+    private final TimeStat decryptCatalogSecrets = new TimeStat(MILLISECONDS);
     // used to configure the catalog
     private final CatalogVersionConfigurationApi catalogVersionConfigurationApi;
     private final CloudRegionId cloudRegionId;
