@@ -201,13 +201,7 @@ public class TestS3BackwardsCompatibilityDoubleSlashes
                 Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries()).isNotEmpty();
             }
             else {
-                // TODO Iceberg with Glue catalog leaves stats file behind on DROP TABLE.
-                // As seen in testVerifyLegacyDropTableBehavior, this is as least is not a regression.
-                Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries())
-                        .hasSize(1)
-                        .singleElement().extracting(S3ObjectSummary::getKey, InstanceOfAssertFactories.STRING)
-                        .matches("(temp_files)/(" + schemaName + ")/(" + tableName + "(?:-[a-z0-9]+)?)/(metadata)/([-a-z0-9_]+\\.stats)" +
-                                "#%2F\\1%2F%2F\\2%2F\\3%2F\\4%2F\\5");
+                Assertions.assertThat(s3.listObjectsV2(listObjectsRequestWithoutDoubleSlash).getObjectSummaries()).isEmpty();
             }
         }
         finally {
