@@ -222,6 +222,13 @@ public class TestCassandraConnectorTest
     }
 
     @Test
+    @Override
+    public void testSelectInformationSchemaColumns()
+    {
+        executeExclusively(super::testSelectInformationSchemaColumns);
+    }
+
+    @Test
     public void testPushdownUuidPartitionKeyPredicate()
     {
         try (TestCassandraTable testCassandraTable = testTable(
