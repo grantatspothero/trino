@@ -1030,7 +1030,7 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.TRINO_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.TRINO_AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: us-east-1
+          AWS_REGION: ${{ vars.TRINO_AWS_REGION }}
         if: >-
           contains(matrix.modules, 'trino-galaxy-objectstore') && contains(matrix.profile, 'cloud-tests') &&
           (env.CI_SKIP_SECRETS_PRESENCE_CHECKS != '' || env.AWS_ACCESS_KEY_ID != '' || env.AWS_SECRET_ACCESS_KEY != '' || env.S3_BUCKET != '')
