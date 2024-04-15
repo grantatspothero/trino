@@ -220,7 +220,7 @@
         <!-- released from https://github.com/starburstdata/starburst-dataframe -->
         <dep.starburst-dataframe.version>0.8.0.20240301-3689fe1</dep.starburst-dataframe.version>
         <!-- released from https://github.com/starburstdata/stargate -->
-        <dep.stargate.version>stargate-14643-ge404b85f4a</dep.stargate.version>
+        <dep.stargate.version>stargate-14702-g6c857168b6</dep.stargate.version>
 
         <!-- bump temporarily until new airbase release due to https://github.com/FasterXML/jackson-core/issues/1207 -->
         <dep.jackson.version>2.17.0</dep.jackson.version>
