@@ -179,10 +179,10 @@ public class LiveCatalogsTransactionManager
                     return new GalaxyLiveCatalog(
                             liveCatalogId,
                             galaxyCatalogArgs,
+                            catalogFactory,
                             galaxyCatalogInfoSupplier.getGalaxyCatalogInfo(
                                     dispatchSession,
                                     galaxyCatalogArgs),
-                            catalogFactory,
                             clock);
                 });
                 if (cacheHit.get()) {
@@ -990,22 +990,23 @@ public class LiveCatalogsTransactionManager
         private final UUID id;
         private final GalaxyCatalogArgs galaxyCatalogArgs;
         private final CatalogFactory catalogFactory;
-        private final boolean readOnly;
         private final CatalogProperties catalogProperties;
-        private final AtomicReference<Instant> lastTransactionEnd = new AtomicReference<>();
+        private final boolean readOnly;
         private final Optional<SharedSchemaNameAndAccepted> sharedSchema;
+        private final AtomicReference<Instant> lastTransactionEnd = new AtomicReference<>();
 
         private CatalogConnector catalogConnector;
 
         public GalaxyLiveCatalog(
                 UUID id,
                 GalaxyCatalogArgs galaxyCatalogArgs,
-                GalaxyCatalogInfo galaxyCatalogInfo,
                 CatalogFactory catalogFactory,
+                GalaxyCatalogInfo galaxyCatalogInfo,
                 Clock clock)
         {
             this.id = requireNonNull(id, "id is null");
             this.galaxyCatalogArgs = requireNonNull(galaxyCatalogArgs, "catalogConstructionArgs is null");
+            this.catalogFactory = requireNonNull(catalogFactory, "catalogFactory is null");
             requireNonNull(galaxyCatalogInfo, "galaxyCatalogInfo is null");
             CatalogProperties propertiesWithWrongVersion = galaxyCatalogInfo.catalogProperties();
             catalogProperties = new CatalogProperties(
@@ -1014,7 +1015,6 @@ public class LiveCatalogsTransactionManager
                     propertiesWithWrongVersion.connectorName(),
                     propertiesWithWrongVersion.properties());
             readOnly = galaxyCatalogInfo.readOnly();
-            this.catalogFactory = requireNonNull(catalogFactory, "catalogFactory is null");
             this.sharedSchema = galaxyCatalogInfo.sharedSchema();
             lastTransactionEnd.set(clock.instant());
         }
