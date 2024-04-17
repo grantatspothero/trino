@@ -43,6 +43,7 @@ import io.airlift.tracetoken.TraceTokenModule;
 import io.airlift.tracing.TracingModule;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.sdk.trace.SpanProcessor;
+import io.starburst.stargate.metrics.JvmMetricsModule;
 import io.trino.Session;
 import io.trino.SystemSessionPropertiesProvider;
 import io.trino.cache.CacheManagerModule;
@@ -300,6 +301,7 @@ public class TestingTrinoServer
                 .add(new PrefixObjectNameGeneratorModule("io.trino"))
                 .add(new TestingJmxModule())
                 .add(new JmxOpenMetricsModule())
+                .add(new JvmMetricsModule())
                 .add(new EventModule())
                 .add(new TraceTokenModule())
                 .add(new TracingModule("trino", VERSION))

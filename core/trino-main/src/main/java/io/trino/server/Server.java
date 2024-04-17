@@ -40,6 +40,7 @@ import io.airlift.openmetrics.JmxOpenMetricsModule;
 import io.airlift.tracetoken.TraceTokenModule;
 import io.airlift.tracing.TracingModule;
 import io.airlift.units.Duration;
+import io.starburst.stargate.metrics.JvmMetricsModule;
 import io.trino.cache.CacheManagerModule;
 import io.trino.cache.CacheManagerRegistry;
 import io.trino.client.NodeVersion;
@@ -124,6 +125,7 @@ public class Server
                 new JmxModule(),
                 new JmxHttpModule(),
                 new JmxOpenMetricsModule(),
+                new JvmMetricsModule(),
                 new LogJmxModule(),
                 new TraceTokenModule(),
                 new TracingModule("trino", trinoVersion),
