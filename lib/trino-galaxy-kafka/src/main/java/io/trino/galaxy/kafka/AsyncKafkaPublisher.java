@@ -188,15 +188,20 @@ public class AsyncKafkaPublisher
                         public void onFailure(Throwable t)
                         {
                             if (t instanceof RecordTooLargeException) {
-                                log.error(t, "%s - Raw payload size of %s bytes was too large to publish. Dropping record!", loggingName, record.getPayload().length);
-                                payloadTooLargeDroppedRecords.update(1);
-                                deadLetterWriterExecutor.execute(() -> {
-                                    try {
-                                        kafkaDeadLetterWriter.write(record.getTopic(), record.getPayload());
-                                    }
-                                    catch (Throwable t2) {
-                                        log.error(t2, "%s - Failed to write Kafka dead letter", loggingName);
-                                    }
+                                record.getFallbackSupplier().ifPresentOrElse(fallback -> {
+                                    log.warn(t, "%s - Raw payload size of %s bytes was too large. Fallback exists. Re-queueing.", loggingName, record.getPayload().length);
+                                    requeueFailedRecord(fallback.get());
+                                }, () -> {
+                                    log.error(t, "%s - Raw payload size of %s bytes was too large to publish. Dropping record!", loggingName, record.getPayload().length);
+                                    payloadTooLargeDroppedRecords.update(1);
+                                    deadLetterWriterExecutor.execute(() -> {
+                                        try {
+                                            kafkaDeadLetterWriter.write(record.getTopic(), record.getPayload());
+                                        }
+                                        catch (Throwable t2) {
+                                            log.error(t2, "%s - Failed to write Kafka dead letter", loggingName);
+                                        }
+                                    });
                                 });
                             }
                             else {

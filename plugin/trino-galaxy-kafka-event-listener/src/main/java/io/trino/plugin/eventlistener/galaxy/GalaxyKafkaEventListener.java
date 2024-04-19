@@ -33,7 +33,9 @@ import io.trino.spi.eventlistener.QueryCompletedEvent;
 import io.trino.spi.eventlistener.QueryContext;
 import io.trino.spi.eventlistener.QueryCreatedEvent;
 import io.trino.spi.eventlistener.QueryFailureInfo;
+import io.trino.spi.eventlistener.QueryIOMetadata;
 import io.trino.spi.eventlistener.QueryMetadata;
+import io.trino.spi.eventlistener.QueryStatistics;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.weakref.jmx.Managed;
@@ -42,7 +44,9 @@ import org.weakref.jmx.Nested;
 import java.net.URI;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.Collections;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
 
@@ -52,6 +56,7 @@ public class GalaxyKafkaEventListener
     private static final String QUERY_COMPLETED_EVENT_TYPE = "trino.query.event.completed";
     private static final String QUERY_LIFECYCLE_EVENT_TYPE = "trino.query.event.lifecycle";
     private static final EventFormat CLOUD_EVENT_JSON_FORMAT = EventFormatProvider.getInstance().resolveFormat(JsonFormat.CONTENT_TYPE);
+    private static final int QUERY_TEXT_TRIM_LENGTH = 1000;
 
     private final String accountId;
     private final String clusterId;
@@ -104,6 +109,21 @@ public class GalaxyKafkaEventListener
     @Override
     public void queryCompleted(QueryCompletedEvent event)
     {
+        kafkaPublisher.submit(new KafkaRecord(eventKafkaTopic, serializeGalaxyCouldEvent(event), Optional.of(getKafkaRecordFallback(event))));
+
+        // QueryState = FINISHED or FAILED
+        publishLifeCycleEvent(event.getEndTime(), event.getMetadata(), event.getContext(), event.getFailureInfo().map(QueryFailureInfo::getErrorCode));
+    }
+
+    private Supplier<KafkaRecord> getKafkaRecordFallback(QueryCompletedEvent event)
+    {
+        // When record size is too large first fall back to trimming all non-Galaxy fields, if that fails further trim all stage and tables data.
+        Supplier<KafkaRecord> basicInfoOnlyFallback = () -> new KafkaRecord(eventKafkaTopic, serializeGalaxyCouldEvent(trimQueryCompletedEvent(event, true)));
+        return () -> new KafkaRecord(eventKafkaTopic, serializeGalaxyCouldEvent(trimQueryCompletedEvent(event, false)), Optional.of(basicInfoOnlyFallback));
+    }
+
+    private byte[] serializeGalaxyCouldEvent(QueryCompletedEvent event)
+    {
         GalaxyQueryCompletedEvent galaxyEvent = new GalaxyQueryCompletedEvent(accountId, clusterId, deploymentId, event);
 
         // Use the event type and query ID as the unique message identifier
@@ -116,12 +136,8 @@ public class GalaxyKafkaEventListener
                 .withTime(OffsetDateTime.now())
                 .withData(completedEventJsonCodec.toJsonBytes(galaxyEvent))
                 .build();
-        byte[] bytes = CLOUD_EVENT_JSON_FORMAT.serialize(cloudEvent);
 
-        kafkaPublisher.submit(new KafkaRecord(eventKafkaTopic, bytes));
-
-        // QueryState = FINISHED or FAILED
-        publishLifeCycleEvent(event.getEndTime(), event.getMetadata(), event.getContext(), event.getFailureInfo().map(QueryFailureInfo::getErrorCode));
+        return CLOUD_EVENT_JSON_FORMAT.serialize(cloudEvent);
     }
 
     private void publishLifeCycleEvent(Instant eventTime, QueryMetadata metadata, QueryContext context, Optional<ErrorCode> errorCode)
@@ -149,6 +165,107 @@ public class GalaxyKafkaEventListener
                     .build();
             kafkaPublisher.submit(new KafkaRecord(topic, CLOUD_EVENT_JSON_FORMAT.serialize(lifeCycleCloudEvent)));
         });
+    }
+
+    private QueryCompletedEvent trimQueryCompletedEvent(QueryCompletedEvent event, boolean aggressive)
+    {
+        // trim event to galaxy query history fields only
+        QueryMetadata metadata = event.getMetadata();
+        QueryStatistics statistics = event.getStatistics();
+        QueryContext context = event.getContext();
+        return new QueryCompletedEvent(
+                new QueryMetadata(
+                        metadata.getQueryId(),
+                        metadata.getTransactionId(),
+                        event.getMetadata().getQuery().length() > QUERY_TEXT_TRIM_LENGTH ?
+                                "%s...".formatted(event.getMetadata().getQuery().substring(0, QUERY_TEXT_TRIM_LENGTH)) :
+                                event.getMetadata().getQuery(),
+                        metadata.getUpdateType(),
+                        Optional.empty(),
+                        metadata.getQueryState(),
+                        aggressive ? Collections.emptyList() : metadata.getTables(),
+                        Collections.emptyList(),
+                        metadata.getUri(),
+                        Optional.empty(), // skip query plan
+                        Optional.empty(),
+                        Optional.empty(),
+                        metadata.getResultsCacheResultStatus(),
+                        metadata.getResultsCacheResultSize(),
+                        metadata.isResultsCacheEligible(),
+                        aggressive ? Collections.emptyList() : metadata.getOverflowStageDetails()),
+                new QueryStatistics(
+                        statistics.getCpuTime(),
+                        statistics.getFailedCpuTime(),
+                        statistics.getWallTime(),
+                        statistics.getQueuedTime(),
+                        statistics.getScheduledTime(),
+                        Optional.empty(),
+                        statistics.getResourceWaitingTime(),
+                        statistics.getAnalysisTime(),
+                        statistics.getPlanningTime(),
+                        Optional.empty(),
+                        statistics.getExecutionTime(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        statistics.getPeakUserMemoryBytes(),
+                        statistics.getPeakTaskUserMemory(),
+                        statistics.getPeakTaskTotalMemory(),
+                        statistics.getPhysicalInputBytes(),
+                        statistics.getPhysicalInputRows(),
+                        statistics.getProcessedInputBytes(),
+                        statistics.getProcessedInputRows(),
+                        statistics.getInternalNetworkBytes(),
+                        statistics.getInternalNetworkRows(),
+                        statistics.getTotalBytes(),
+                        statistics.getTotalRows(),
+                        statistics.getOutputBytes(),
+                        statistics.getOutputRows(),
+                        statistics.getWrittenBytes(),
+                        statistics.getWrittenRows(),
+                        statistics.getSpilledBytes(),
+                        statistics.getCumulativeMemory(),
+                        statistics.getFailedCumulativeMemory(),
+                        aggressive ? Collections.emptyList() : statistics.getStageGcStatistics(),
+                        statistics.getCompletedSplits(),
+                        statistics.isComplete(),
+                        aggressive ? Collections.emptyList() : statistics.getCpuTimeDistribution(),
+                        Collections.emptyList(),
+                        aggressive ? Collections.emptyList() : statistics.getOperatorSummaries(),
+                        Collections.emptyList(),
+                        aggressive ? Optional.empty() : statistics.getPlanNodeStatsAndCosts()),
+                new QueryContext(
+                        context.getUser(),
+                        context.getOriginalUser(),
+                        context.getPrincipal(),
+                        Collections.emptySet(),
+                        Collections.emptySet(),
+                        Optional.empty(),
+                        context.getRemoteClientAddress(),
+                        context.getUserAgent(),
+                        context.getClientInfo(),
+                        Collections.emptySet(),
+                        Collections.emptySet(),
+                        context.getSource(),
+                        context.getTimezone(),
+                        context.getCatalog(),
+                        context.getSchema(),
+                        Optional.empty(),
+                        Collections.emptyMap(),
+                        context.getResourceEstimates(),
+                        context.getServerAddress(),
+                        context.getServerVersion(),
+                        context.getEnvironment(),
+                        context.getQueryType(),
+                        context.getRetryPolicy()),
+                aggressive ? new QueryIOMetadata(Collections.emptyList(), Optional.empty()) : event.getIoMetadata(),
+                event.getFailureInfo(),
+                Collections.emptyList(),
+                event.getCreateTime(),
+                event.getExecutionStartTime(),
+                event.getEndTime());
     }
 
     @Managed

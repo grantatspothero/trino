@@ -15,8 +15,10 @@ package io.trino.galaxy.kafka;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.errors.RecordTooLargeException;
 import org.testng.annotations.Test;
 
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 
@@ -161,6 +163,33 @@ public class TestAsyncKafkaPublisher
         // The first record (record1) should have been dropped since it was the oldest
         testingPublisher.awaitPublish(records -> records.containsAll(ImmutableList.of(record2, record3)), 5000);
         assertThat(testingPublisher.getPublishedRecords()).containsExactlyInAnyOrder(record2, record3);
+    }
+
+    @Test
+    public void testFailureFallback()
+            throws InterruptedException, TimeoutException
+    {
+        TestingKafkaPublisher testingPublisher = new TestingKafkaPublisher();
+        AsyncKafkaPublisher asyncKafkaPublisher = new AsyncKafkaPublisher("test", 2, testingPublisher);
+        asyncKafkaPublisher.initialize();
+
+        // Establish a RecordTooLargeException client
+        testingPublisher.setFutureState(immediateFailedFuture(new RecordTooLargeException()));
+
+        // Submit a record that falls back to a different record twice
+        KafkaRecord record3 = new KafkaRecord("topic", "3".getBytes(UTF_8));
+        KafkaRecord record2 = new KafkaRecord("topic", "2".getBytes(UTF_8), Optional.of(() -> record3));
+        KafkaRecord record1 = new KafkaRecord("topic", "1".getBytes(UTF_8), Optional.of(() -> record2));
+        asyncKafkaPublisher.submit(record1);
+
+        // Await for one retry to trigger fallback
+        testingPublisher.awaitAttempt(records -> records.size() == 2, 5000);
+
+        // Establish a succeeding client
+        testingPublisher.setFutureState(immediateFuture(null));
+
+        testingPublisher.awaitPublish(records -> records.contains(record3), 5000);
+        assertThat(testingPublisher.getPublishedRecords()).containsExactlyInAnyOrder(record3);
     }
 
     private static KafkaRecord newRecord(String topic, String value)

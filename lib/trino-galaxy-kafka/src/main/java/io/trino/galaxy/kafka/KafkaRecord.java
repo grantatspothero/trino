@@ -15,6 +15,8 @@ package io.trino.galaxy.kafka;
 
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
 
@@ -22,11 +24,18 @@ public class KafkaRecord
 {
     private final String topic;
     private final byte[] payload;
+    private Optional<Supplier<KafkaRecord>> fallbackSupplier;
 
     public KafkaRecord(String topic, byte[] payload)
     {
+        this(topic, payload, Optional.empty());
+    }
+
+    public KafkaRecord(String topic, byte[] payload, Optional<Supplier<KafkaRecord>> fallbackSupplier)
+    {
         this.topic = requireNonNull(topic, "topic is null");
         this.payload = requireNonNull(payload, "payload is null");
+        this.fallbackSupplier = requireNonNull(fallbackSupplier, "fallbackSupplier is null");
     }
 
     public String getTopic()
@@ -37,6 +46,11 @@ public class KafkaRecord
     public byte[] getPayload()
     {
         return payload;
+    }
+
+    public Optional<Supplier<KafkaRecord>> getFallbackSupplier()
+    {
+        return fallbackSupplier;
     }
 
     @Override
