@@ -241,7 +241,6 @@ class TestEventDrivenFaultTolerantQuerySchedulerGalaxySpecific
                                 .setConfigProperty("testing.enable-stats-logging", "false")
                                 .setConfigProperty("memory.heap-headroom", DataSize.succinctBytes(memoryHeadroom).toString())
                                 .setConfigProperty("draining.min-duration", "10s")
-                                .setConfigProperty("chunk.spool-merge-enabled", "true")
                                 .setConfigProperty("exchange.staleness-threshold", "2h"))
                 .setDataServersCount(3)
                 .build();
