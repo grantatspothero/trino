@@ -17,18 +17,22 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.trino.Session;
 import io.trino.cache.CommonPlanAdaptation.PlanSignatureWithPredicate;
+import io.trino.metadata.ResolvedFunction;
+import io.trino.metadata.TestingFunctionResolution;
 import io.trino.plugin.tpch.TpchColumnHandle;
 import io.trino.plugin.tpch.TpchConnectorFactory;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.cache.PlanSignature;
 import io.trino.spi.connector.ColumnHandle;
+import io.trino.spi.function.OperatorType;
 import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.predicate.ValueSet;
 import io.trino.spi.type.RowType;
 import io.trino.spi.type.Type;
 import io.trino.sql.DynamicFilters;
+import io.trino.sql.ir.ArithmeticBinaryExpression;
 import io.trino.sql.ir.ComparisonExpression;
 import io.trino.sql.ir.Constant;
 import io.trino.sql.ir.Expression;
@@ -49,13 +53,16 @@ import java.util.function.Predicate;
 
 import static io.trino.SystemSessionProperties.JOIN_REORDERING_STRATEGY;
 import static io.trino.cache.CanonicalSubplanExtractor.canonicalExpressionToColumnId;
+import static io.trino.cache.CanonicalSubplanExtractor.columnIdToSymbol;
 import static io.trino.cache.CommonSubqueriesExtractor.aggregationKey;
 import static io.trino.cache.CommonSubqueriesExtractor.combine;
+import static io.trino.cache.CommonSubqueriesExtractor.filterProjectKey;
 import static io.trino.cache.CommonSubqueriesExtractor.scanFilterProjectKey;
 import static io.trino.spi.predicate.Range.greaterThan;
 import static io.trino.spi.predicate.Range.lessThan;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.DoubleType.DOUBLE;
+import static io.trino.sql.ir.ArithmeticBinaryExpression.Operator.MULTIPLY;
 import static io.trino.sql.ir.BooleanLiteral.TRUE_LITERAL;
 import static io.trino.sql.ir.ComparisonExpression.Operator.GREATER_THAN;
 import static io.trino.sql.ir.ComparisonExpression.Operator.LESS_THAN;
@@ -92,6 +99,8 @@ public class TestCacheCommonSubqueries
             .build();
     private static final CacheColumnId NATIONKEY_COLUMN_ID = new CacheColumnId("[nationkey:bigint]");
     private static final CacheColumnId REGIONKEY_COLUMN_ID = new CacheColumnId("[regionkey:bigint]");
+    private static final TestingFunctionResolution FUNCTIONS = new TestingFunctionResolution();
+    private static final ResolvedFunction MULTIPLY_BIGINT = FUNCTIONS.resolveOperator(OperatorType.MULTIPLY, ImmutableList.of(BIGINT, BIGINT));
 
     private String testCatalogId;
 
@@ -269,6 +278,91 @@ public class TestCacheCommonSubqueries
                                                 anyTree(tableScan("nation")))),
                                         anyTree(loadCachedDataPlanNode(signature, columnHandles, dfDisjuncts -> dfDisjuncts.size() == 2, "NATIONKEY", "REGIONKEY"))),
                                 anyTree(node(ValuesNode.class))))));
+    }
+
+    @Test
+    public void testCommonProjectionOnDifferentLevels()
+    {
+        Expression mul2 = new ArithmeticBinaryExpression(MULTIPLY_BIGINT, MULTIPLY, new SymbolReference(BIGINT, "NATIONKEY"), new Constant(BIGINT, 2L));
+        Expression mul4 = new ArithmeticBinaryExpression(MULTIPLY_BIGINT, MULTIPLY, new SymbolReference(BIGINT, "NATIONKEY"), new Constant(BIGINT, 4L));
+        Expression aMul2Mul2 = new ArithmeticBinaryExpression(MULTIPLY_BIGINT, MULTIPLY, new SymbolReference(BIGINT, "MUL2_A"), new SymbolReference(BIGINT, "MUL2_A"));
+        Expression aMul4Mul4 = new ArithmeticBinaryExpression(MULTIPLY_BIGINT, MULTIPLY, new SymbolReference(BIGINT, "MUL4_A"), new SymbolReference(BIGINT, "MUL4_A"));
+        Expression bMul2Mul2 = new ArithmeticBinaryExpression(MULTIPLY_BIGINT, MULTIPLY, new SymbolReference(BIGINT, "MUL2_B_NEW"), new SymbolReference(BIGINT, "MUL2_B_NEW"));
+        Expression bMul4Mul4 = new ArithmeticBinaryExpression(MULTIPLY_BIGINT, MULTIPLY, new SymbolReference(BIGINT, "MUL4_B"), new SymbolReference(BIGINT, "MUL4_B"));
+
+        SymbolReference canonicalMul2 = columnIdToSymbol(canonicalExpressionToColumnId(new ArithmeticBinaryExpression(MULTIPLY_BIGINT, MULTIPLY, new SymbolReference(BIGINT, "[nationkey:bigint]"), new Constant(BIGINT, 2L))), BIGINT).toSymbolReference();
+        SymbolReference canonicalMul4 = columnIdToSymbol(canonicalExpressionToColumnId(new ArithmeticBinaryExpression(MULTIPLY_BIGINT, MULTIPLY, new SymbolReference(BIGINT, "[nationkey:bigint]"), new Constant(BIGINT, 4L))), BIGINT).toSymbolReference();
+        Expression canonicalMul2Mul2 = new ArithmeticBinaryExpression(MULTIPLY_BIGINT, MULTIPLY, canonicalMul2, canonicalMul2);
+        Expression canonicalMul4Mul4 = new ArithmeticBinaryExpression(MULTIPLY_BIGINT, MULTIPLY, canonicalMul4, canonicalMul4);
+        PlanSignatureWithPredicate signature = new PlanSignatureWithPredicate(
+                new PlanSignature(
+                        filterProjectKey(scanFilterProjectKey(new CacheTableId(testCatalogId + ":tiny:nation:0.01"))),
+                        Optional.empty(),
+                        ImmutableList.of(
+                                canonicalExpressionToColumnId(canonicalMul2),
+                                canonicalExpressionToColumnId(canonicalMul2Mul2),
+                                canonicalExpressionToColumnId(canonicalMul4Mul4)),
+                        ImmutableList.of(BIGINT, BIGINT, BIGINT)),
+                TupleDomain.all());
+
+        // Make sure that plan with ambiguous projections is correctly planned and validated
+        assertPlan("""
+                        SELECT nationkey_mul, nationkey_mul * nationkey_mul FROM (SELECT nationkey * 2 AS nationkey_mul FROM nation)
+                        UNION ALL
+                        SELECT nationkey * 2, nationkey_mul * nationkey_mul FROM (SELECT nationkey, nationkey * 4 AS nationkey_mul FROM nation)""",
+                anyTree(exchange(LOCAL,
+                        chooseAlternativeNode(
+                                strictProject(ImmutableMap.of(
+                                                "MUL2_A", expression(new SymbolReference(BIGINT, "MUL2_A")),
+                                                "MUL2_MUL2_A", expression(aMul2Mul2)),
+                                        strictProject(ImmutableMap.of("MUL2_A", expression(mul2)),
+                                                tableScan("nation", ImmutableMap.of("NATIONKEY", "nationkey")))),
+                                strictProject(ImmutableMap.of(
+                                                "MUL2_A", expression(new SymbolReference(BIGINT, "MUL2_A")),
+                                                "MUL2_MUL2_A", expression(new SymbolReference(BIGINT, "MUL2_MUL2_A"))),
+                                        cacheDataPlanNode(
+                                                strictProject(ImmutableMap.of(
+                                                                "MUL2_A", expression(new SymbolReference(BIGINT, "MUL2_A")),
+                                                                "MUL2_MUL2_A", expression(aMul2Mul2),
+                                                                "MUL4_MUL4_A", expression(aMul4Mul4)),
+                                                        strictProject(ImmutableMap.of(
+                                                                        "MUL2_A", expression(mul2),
+                                                                        "MUL4_A", expression(mul4),
+                                                                        "NATIONKEY", expression(new SymbolReference(BIGINT, "NATIONKEY"))),
+                                                                tableScan("nation", ImmutableMap.of("NATIONKEY", "nationkey")))))),
+                                strictProject(ImmutableMap.of(
+                                                "MUL2_A", expression(new SymbolReference(BIGINT, "MUL2_A")),
+                                                "MUL2_MUL2_A", expression(new SymbolReference(BIGINT, "MUL2_MUL2_A"))),
+                                        loadCachedDataPlanNode(
+                                                signature,
+                                                "MUL2_A", "MUL2_MUL2_A", "MUL4_MUL4_A"))),
+                        chooseAlternativeNode(
+                                strictProject(ImmutableMap.of(
+                                                "MUL2_B", expression(mul2),
+                                                "MUL4_MUL4_B", expression(bMul4Mul4)),
+                                        strictProject(ImmutableMap.of(
+                                                        "NATIONKEY", expression(new SymbolReference(BIGINT, "NATIONKEY")),
+                                                        "MUL4_B", expression(mul4)),
+                                                tableScan("nation", ImmutableMap.of("NATIONKEY", "nationkey")))),
+                                strictProject(ImmutableMap.of(
+                                                "MUL2_B", expression(new SymbolReference(BIGINT, "MUL2_B_NEW")),
+                                                "MUL4_MUL4_B", expression(new SymbolReference(BIGINT, "MUL4_MUL4_B"))),
+                                        cacheDataPlanNode(
+                                                strictProject(ImmutableMap.of(
+                                                                "MUL2_B_NEW", expression(new SymbolReference(BIGINT, "MUL2_B_NEW")),
+                                                                "MUL2_MUL2_B", expression(bMul2Mul2),
+                                                                "MUL4_MUL4_B", expression(bMul4Mul4)),
+                                                        strictProject(ImmutableMap.of(
+                                                                        "MUL2_B_NEW", expression(mul2),
+                                                                        "MUL4_B", expression(mul4),
+                                                                        "NATIONKEY", expression(new SymbolReference(BIGINT, "NATIONKEY"))),
+                                                                tableScan("nation", ImmutableMap.of("NATIONKEY", "nationkey")))))),
+                                strictProject(ImmutableMap.of(
+                                                "MUL2_B", expression(new SymbolReference(BIGINT, "MUL2_B_NEW")),
+                                                "MUL4_MUL4_B", expression(new SymbolReference(BIGINT, "MUL4_MUL4_B"))),
+                                        loadCachedDataPlanNode(
+                                                signature,
+                                                "MUL2_B_NEW", "MUL2_MUL2_B", "MUL4_MUL4_B"))))));
     }
 
     @Test
