@@ -30,6 +30,7 @@ import io.trino.execution.QueryState;
 import io.trino.execution.StageInfo;
 import io.trino.server.DynamicFilterService;
 import io.trino.spi.QueryId;
+import io.trino.spi.TrinoException;
 import io.trino.spi.cache.CacheColumnId;
 import io.trino.spi.cache.CacheTableId;
 import io.trino.spi.connector.ColumnHandle;
@@ -71,6 +72,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.trino.SystemSessionProperties.isHistoryBasedStatsEnabled;
 import static io.trino.execution.QueryState.FINISHED;
 import static io.trino.execution.StageInfo.getAllStages;
+import static io.trino.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.trino.spi.resourcegroups.QueryType.DATA_DEFINITION;
 import static io.trino.spi.resourcegroups.QueryType.DESCRIBE;
 import static io.trino.spi.resourcegroups.QueryType.EXPLAIN;
@@ -125,8 +127,14 @@ public class HistoryBasedStatsCalculator
     @Override
     public PlanNodeStatsEstimate calculateStats(PlanNode node, Context context)
     {
+        Optional<Double> outputRowCount;
+        try {
+            outputRowCount = getOutputRowCount(node, context.lookup(), context.session());
+        }
+        catch (Throwable t) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, "HISTORY BASED STATS CALCULATOR: failure to get output row count", t);
+        }
         PlanNodeStatsEstimate calculatedStats = delegate.calculateStats(node, context);
-        Optional<Double> outputRowCount = getOutputRowCount(node, context.lookup(), context.session());
         return outputRowCount.map(rowCount -> statsNormalizer.normalize(new PlanNodeStatsEstimate(rowCount, calculatedStats.getSymbolStatistics()), node.getOutputSymbols()))
                 .orElse(calculatedStats);
     }
