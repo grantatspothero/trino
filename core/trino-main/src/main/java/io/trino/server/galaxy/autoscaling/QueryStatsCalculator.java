@@ -82,7 +82,8 @@ public class QueryStatsCalculator
                 queryIdToCpuTime.put(query.getQueryId(), totalQueryCpuTimeMillis);
             }
         }
-        if (runningQueries != 0) {
+        // workers could be zero when query is waiting for cluster to start
+        if (runningQueries != 0 && workers > 0) {
             totalPerWorkerCpuMillis.update(queryIdToCpuTime, workers);
             // total Wall Millis counts the time difference between current and previous sample
             totalWallMillis.add(lastUpdateTimeStopwatch.elapsed(TimeUnit.MILLISECONDS));
