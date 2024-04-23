@@ -71,6 +71,7 @@ public class TestingLocationSecurityServer
     {
         return ImmutableMap.<String, String>builder()
                 .put("galaxy.account-url", server.getBaseUrl().toString())
+                .put("galaxy.location-access-control-url", server.getBaseUrl().toString())
                 .buildOrThrow();
     }
 

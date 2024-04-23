@@ -98,7 +98,7 @@ public class GalaxySnowflakeParallelModule
     @Singleton
     public static TrinoLocationApi createTrinoLocationApi(@ForGalaxySecurity HttpClient httpClient, GalaxySnowflakeConfig config)
     {
-        return new HttpTrinoLocationClient(config.getAccountUri(), httpClient);
+        return new HttpTrinoLocationClient(config.getLocationOverrideUri().orElseGet(config::getAccountUri), httpClient);
     }
 
     @Provides

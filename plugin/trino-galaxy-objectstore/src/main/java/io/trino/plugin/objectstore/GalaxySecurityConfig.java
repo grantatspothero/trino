@@ -15,6 +15,7 @@ package io.trino.plugin.objectstore;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.airlift.configuration.Config;
+import io.airlift.configuration.ConfigDescription;
 import io.airlift.configuration.ConfigHidden;
 import io.starburst.stargate.id.CatalogId;
 import jakarta.validation.constraints.NotNull;
@@ -27,6 +28,7 @@ public class GalaxySecurityConfig
     private boolean enabled = true;
     private URI accountUri;
     private Optional<URI> overrideUri = Optional.empty();
+    private Optional<URI> locationOverrideUri = Optional.empty();
     private CatalogId catalogId;
 
     public boolean isEnabled()
@@ -66,6 +68,23 @@ public class GalaxySecurityConfig
     public GalaxySecurityConfig setAccessControlUri(URI overrideUri)
     {
         this.overrideUri = Optional.ofNullable(overrideUri);
+        return this;
+    }
+
+    @NotNull
+    public Optional<URI> getLocationOverrideUri()
+    {
+        return locationOverrideUri;
+    }
+
+    @Config("galaxy.location-access-control-url")
+    @ConfigDescription("""
+            An optional URL to use for location access control checks.
+            This property may not be present. If not, the galaxy.account-url should be used instead.
+            """)
+    public GalaxySecurityConfig setLocationOverrideUri(URI locationOverrideUri)
+    {
+        this.locationOverrideUri = Optional.ofNullable(locationOverrideUri);
         return this;
     }
 

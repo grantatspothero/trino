@@ -33,6 +33,7 @@ public class TestGalaxySnowflakeConfig
                 .setExternalTableProceduresEnabled(false)
                 .setAccountUri(null)
                 .setAccessControlUri(null)
+                .setLocationOverrideUri(null)
                 .setCatalogId(null));
     }
 
@@ -43,6 +44,7 @@ public class TestGalaxySnowflakeConfig
                 .put("snowflake.external-table-procedures.enabled", "true")
                 .put("galaxy.account-url", "https://whackadoodle.galaxy.com")
                 .put("galaxy.access-control-url", "https://whackadoodle.aws-us-east1.accesscontrol.galaxy.com")
+                .put("galaxy.location-access-control-url", "https://deepspacenine.aws-us-east1.accesscontrol.galaxy.com")
                 .put("snowflake.catalog-id", "c-1234567890")
                 .buildOrThrow();
 
@@ -50,6 +52,7 @@ public class TestGalaxySnowflakeConfig
                 .setExternalTableProceduresEnabled(true)
                 .setAccountUri(URI.create("https://whackadoodle.galaxy.com"))
                 .setAccessControlUri(URI.create("https://whackadoodle.aws-us-east1.accesscontrol.galaxy.com"))
+                .setLocationOverrideUri(URI.create("https://deepspacenine.aws-us-east1.accesscontrol.galaxy.com"))
                 .setCatalogId(new CatalogId("c-1234567890"));
 
         assertFullMapping(properties, expected);

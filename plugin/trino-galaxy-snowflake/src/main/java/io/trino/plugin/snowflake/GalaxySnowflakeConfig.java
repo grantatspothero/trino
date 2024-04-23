@@ -27,6 +27,7 @@ public class GalaxySnowflakeConfig
     private boolean externalTableProceduresEnabled;
     private URI accountUri;
     private Optional<URI> overrideUri = Optional.empty();
+    private Optional<URI> locationOverrideUri = Optional.empty();
     private CatalogId catalogId;
 
     public boolean isExternalTableProceduresEnabled()
@@ -66,6 +67,23 @@ public class GalaxySnowflakeConfig
     public GalaxySnowflakeConfig setAccessControlUri(URI overrideUri)
     {
         this.overrideUri = Optional.ofNullable(overrideUri);
+        return this;
+    }
+
+    @NotNull
+    public Optional<URI> getLocationOverrideUri()
+    {
+        return locationOverrideUri;
+    }
+
+    @Config("galaxy.location-access-control-url")
+    @ConfigDescription("""
+            An optional URL to use for location access control checks.
+            This property may not be present. If not, the galaxy.account-url should be used instead.
+            """)
+    public GalaxySnowflakeConfig setLocationOverrideUri(URI locationOverrideUri)
+    {
+        this.locationOverrideUri = Optional.ofNullable(locationOverrideUri);
         return this;
     }
 

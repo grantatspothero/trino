@@ -83,7 +83,7 @@ public class GalaxyLocationSecurityModule
         @Singleton
         public static TrinoLocationApi createTrinoLocationApi(@ForGalaxyLocationSecurity HttpClient httpClient, GalaxySecurityConfig config)
         {
-            return new HttpTrinoLocationClient(config.getAccountUri(), httpClient);
+            return new HttpTrinoLocationClient(config.getLocationOverrideUri().orElseGet(config::getAccountUri), httpClient);
         }
 
         @Provides
