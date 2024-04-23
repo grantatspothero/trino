@@ -396,24 +396,31 @@ public abstract class BaseObjectStoreConnectorTest
 
     @Test
     public void testDropSchemaCascadeFailure()
-            throws Exception
     {
-        String schemaName = "test_drop_schema_cascade_failure" + randomNameSuffix();
-        assertUpdate("CREATE SCHEMA " + schemaName);
-        assertThat(computeActual("SHOW SCHEMAS").getOnlyColumnAsSet()).contains(schemaName);
+        // Run exclusively as the test creates invalid table object that may affect other tests.
+        executeExclusively(() -> {
+            try {
+                String schemaName = "test_drop_schema_cascade_failure" + randomNameSuffix();
+                assertUpdate("CREATE SCHEMA " + schemaName);
+                assertThat(computeActual("SHOW SCHEMAS").getOnlyColumnAsSet()).contains(schemaName);
 
-        // Create a table with system table name to cause query failure during dropping schema
-        assertUpdate("CREATE TABLE " + schemaName + ".\"test_system_table$partitions\"(a int) WITH (type = 'HIVE')");
-        assertUpdate("CREATE VIEW " + schemaName + ".test_view AS SELECT 1 a");
-        assertUpdate("CREATE MATERIALIZED VIEW " + schemaName + ".test_materialized_view AS SELECT 1 a");
+                // Create a table with system table name to cause query failure during dropping schema
+                assertUpdate("CREATE TABLE " + schemaName + ".\"test_system_table$partitions\"(a int) WITH (type = 'HIVE')");
+                assertUpdate("CREATE VIEW " + schemaName + ".test_view AS SELECT 1 a");
+                assertUpdate("CREATE MATERIALIZED VIEW " + schemaName + ".test_materialized_view AS SELECT 1 a");
 
-        assertQueryFails("DROP SCHEMA " + schemaName + " CASCADE", "Unexpected table present( in Hive metastore)?: %s.test_system_table\\$partitions".formatted(schemaName));
-        assertThat(computeActual("SHOW SCHEMAS").getOnlyColumnAsSet()).contains(schemaName);
-        assertThat(computeActual("SHOW TABLES IN " + schemaName).getOnlyColumnAsSet())
-                .contains("test_system_table$partitions");
+                assertQueryFails("DROP SCHEMA " + schemaName + " CASCADE", "Unexpected table present( in Hive metastore)?: %s.test_system_table\\$partitions".formatted(schemaName));
+                assertThat(computeActual("SHOW SCHEMAS").getOnlyColumnAsSet()).contains(schemaName);
+                assertThat(computeActual("SHOW TABLES IN " + schemaName).getOnlyColumnAsSet())
+                        .contains("test_system_table$partitions");
 
-        metastore.getMetastore().dropTable(schemaName, "test_system_table$partitions");
-        metastore.getMetastore().dropDatabase(schemaName);
+                metastore.getMetastore().dropTable(schemaName, "test_system_table$partitions");
+                metastore.getMetastore().dropDatabase(schemaName);
+            }
+            catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     @Test
