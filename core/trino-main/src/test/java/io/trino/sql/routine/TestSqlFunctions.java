@@ -13,27 +13,36 @@
  */
 package io.trino.sql.routine;
 
+import io.airlift.json.JsonCodec;
+import io.airlift.json.JsonCodecFactory;
+import io.airlift.json.ObjectMapperProvider;
 import io.airlift.slice.Slice;
 import io.trino.Session;
+import io.trino.block.BlockJsonSerde;
 import io.trino.execution.warnings.WarningCollector;
 import io.trino.operator.scalar.SpecializedSqlScalarFunction;
 import io.trino.security.AllowAllAccessControl;
+import io.trino.spi.block.Block;
 import io.trino.spi.function.FunctionId;
 import io.trino.spi.function.FunctionMetadata;
 import io.trino.spi.function.InvocationConvention;
 import io.trino.spi.function.ScalarFunctionImplementation;
 import io.trino.spi.type.Type;
+import io.trino.spi.type.TypeSignature;
 import io.trino.spi.type.VarcharType;
 import io.trino.sql.PlannerContext;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.routine.ir.IrRoutine;
 import io.trino.sql.tree.FunctionSpecification;
 import io.trino.transaction.TransactionManager;
+import io.trino.type.TypeDeserializer;
+import io.trino.type.TypeSignatureKeyDeserializer;
 import org.assertj.core.api.ThrowingConsumer;
 import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.Test;
 
 import java.lang.invoke.MethodHandle;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.google.common.base.Throwables.throwIfUnchecked;
@@ -63,6 +72,19 @@ class TestSqlFunctions
             .withTransactionManager(TRANSACTION_MANAGER)
             .build();
     private static final Session SESSION = testSessionBuilder().build();
+    private static final JsonCodec<IrRoutine> IR_ROUTINE_CODEC;
+
+    static {
+        ObjectMapperProvider provider = new ObjectMapperProvider();
+        provider.setJsonSerializers(Map.of(
+                Block.class, new BlockJsonSerde.Serializer(PLANNER_CONTEXT.getBlockEncodingSerde())));
+        provider.setJsonDeserializers(Map.of(
+                Type.class, new TypeDeserializer(PLANNER_CONTEXT.getTypeManager()),
+                Block.class, new BlockJsonSerde.Deserializer(PLANNER_CONTEXT.getBlockEncodingSerde())));
+        provider.setKeyDeserializers(Map.of(
+                TypeSignature.class, new TypeSignatureKeyDeserializer()));
+        IR_ROUTINE_CODEC = new JsonCodecFactory(provider).jsonCodec(IrRoutine.class);
+    }
 
     @Test
     void testConstantReturn()
@@ -524,7 +546,17 @@ class TestSqlFunctions
         transaction(TRANSACTION_MANAGER, PLANNER_CONTEXT.getMetadata(), new AllowAllAccessControl())
                 .singleStatement()
                 .execute(SESSION, session -> {
-                    ScalarFunctionImplementation implementation = compileFunction(sql, session);
+                    ScalarFunctionImplementation implementation = compileFunction(sql, session, false);
+                    MethodHandle handle = implementation.getMethodHandle()
+                            .bindTo(getInstance(implementation))
+                            .bindTo(session.toConnectorSession());
+                    consumer.accept(handle);
+                });
+
+        transaction(TRANSACTION_MANAGER, PLANNER_CONTEXT.getMetadata(), new AllowAllAccessControl())
+                .singleStatement()
+                .execute(SESSION, session -> {
+                    ScalarFunctionImplementation implementation = compileFunction(sql, session, true);
                     MethodHandle handle = implementation.getMethodHandle()
                             .bindTo(getInstance(implementation))
                             .bindTo(session.toConnectorSession());
@@ -543,7 +575,7 @@ class TestSqlFunctions
         }
     }
 
-    private static ScalarFunctionImplementation compileFunction(@Language("SQL") String sql, Session session)
+    private static ScalarFunctionImplementation compileFunction(@Language("SQL") String sql, Session session, boolean serialize)
     {
         FunctionSpecification function = SQL_PARSER.createFunctionSpecification(sql);
 
@@ -554,6 +586,15 @@ class TestSqlFunctions
 
         SqlRoutinePlanner planner = new SqlRoutinePlanner(PLANNER_CONTEXT);
         IrRoutine routine = planner.planSqlFunction(session, function, analysis);
+
+        if (serialize) {
+            // Simulate worker communication
+            routine = IR_ROUTINE_CODEC.fromJson(IR_ROUTINE_CODEC.toJson(routine));
+        }
+
+        //TODO delayed conflict resolution, put this code here:
+        //// verify routine hash does not fail
+        //SqlRoutineHash.hash(routine, Hashing.sha256().newHasher(), new TestingBlockEncodingSerde());
 
         SqlRoutineCompiler compiler = new SqlRoutineCompiler(createTestingFunctionManager());
         SpecializedSqlScalarFunction sqlScalarFunction = compiler.compile(routine);
