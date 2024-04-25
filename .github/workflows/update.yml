@@ -13,9 +13,9 @@ permissions:
 
 env:
   # credentials for the private repository
-  mavenReleaseUsername: ${{ secrets.CODE_ARTIFACT_USERNAME }}
+  mavenReleaseUsername: ${{ vars.CODE_ARTIFACT_USERNAME }}
   mavenReleasePassword: ${{ secrets.CODE_ARTIFACT_PASSWORD }}
-  mavenSnapshotsUsername: ${{ secrets.CODE_ARTIFACT_USERNAME }}
+  mavenSnapshotsUsername: ${{ vars.CODE_ARTIFACT_USERNAME }}
   mavenSnapshotsPassword: ${{ secrets.CODE_ARTIFACT_PASSWORD }}
   # allow overriding Maven command
   MAVEN: "./mvnw -s .github/settings.xml"
