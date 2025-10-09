@@ -20,11 +20,16 @@ import io.trino.spi.PageBuilder;
 import io.trino.spi.PageSorter;
 import io.trino.spi.block.Block;
 import io.trino.spi.block.BlockBuilder;
+import io.trino.spi.block.DictionaryBlock;
+import io.trino.spi.block.RunLengthEncodedBlock;
+import io.trino.spi.block.ValueBlock;
 import io.trino.spi.connector.SortOrder;
 import io.trino.spi.type.Type;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -99,6 +104,20 @@ public class SortBuffer
         }
     }
 
+    public static void appendPositionsTo(Page page, int[] positions, PageBuilder pageBuilder)
+    {
+        pageBuilder.declarePositions(positions.length);
+        for (int i = 0; i < page.getChannelCount(); i++) {
+            Block block = page.getBlock(i);
+            BlockBuilder blockBuilder = pageBuilder.getBlockBuilder(i);
+            switch (block) {
+                case RunLengthEncodedBlock rleBlock -> blockBuilder.appendRepeated(rleBlock.getValue(), 0, positions.length);
+                case DictionaryBlock dictionaryBlock -> blockBuilder.appendPositions(dictionaryBlock.getDictionary(), dictionaryBlock.getRawIds(), dictionaryBlock.getRawIdsOffset(), positions.length);
+                case ValueBlock valueBlock -> blockBuilder.appendPositions(valueBlock, positions, 0, positions.length);
+            }
+        }
+    }
+
     public void flushTo(Consumer<Page> consumer)
     {
         checkState(!pages.isEmpty(), "page buffer is empty");
@@ -114,10 +133,31 @@ public class SortBuffer
 
         verify(pageBuilder.isEmpty());
 
+        //
+        int lastPageIndex = 0;
+        List<Integer> positionBatch = new ArrayList<>();
         for (int i = 0; i < pageIndex.length; i++) {
-            Page page = pages.get(pageIndex[i]);
-            int position = positionIndex[i];
-            appendPositionTo(page, position, pageBuilder);
+            int pageIdx = pageIndex[i];
+            if (i == 0) {
+                lastPageIndex = pageIdx;
+                positionBatch.add(positionIndex[i]);
+                continue;
+            }
+            if (pageIdx == lastPageIndex) {
+                positionBatch.add(positionIndex[i]);
+                continue;
+            }
+            // flush remaining positions
+            Page page = pages.get(lastPageIndex);
+            if (positionBatch.size() == 1) {
+                appendPositionTo(page, positionBatch.get(0), pageBuilder);
+            }
+            else {
+                appendPositionsTo(page, positionBatch.stream().mapToInt(Integer::intValue).toArray(), pageBuilder);
+            }
+            lastPageIndex = pageIdx;
+            positionBatch.clear();
+            positionBatch.add(positionIndex[i]);
 
             if (pageBuilder.isFull()) {
                 consumer.accept(pageBuilder.build());
@@ -125,6 +165,16 @@ public class SortBuffer
             }
         }
 
+        if (!positionBatch.isEmpty()) {
+            // flush remaining positions
+            Page page = pages.get(lastPageIndex);
+            if (positionBatch.size() == 1) {
+                appendPositionTo(page, positionBatch.get(0), pageBuilder);
+            }
+            else {
+                appendPositionsTo(page, positionBatch.stream().mapToInt(Integer::intValue).toArray(), pageBuilder);
+            }
+        }
         if (!pageBuilder.isEmpty()) {
             consumer.accept(pageBuilder.build());
             pageBuilder.reset();

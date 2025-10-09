@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.iceberg;
 
+import io.airlift.slice.Slice;
 import io.trino.Session;
 import io.trino.filesystem.FileEntry;
 import io.trino.filesystem.FileIterator;
@@ -148,11 +149,11 @@ public final class IcebergTestUtils
                     newSimpleAggregatedMemoryContext(),
                     INITIAL_BATCH_SIZE,
                     RuntimeException::new)) {
-                Comparable<Object> previousMax = null;
+                Slice previousMax = null;
                 for (SourcePage page = recordReader.nextPage(); page != null; page = recordReader.nextPage()) {
                     Block block = page.getBlock(0);
                     for (int position = 0; position < block.getPositionCount(); position++) {
-                        Comparable<Object> current = (Comparable<Object>) readNativeValue(sortColumnType, block, position);
+                        Slice current = (Slice) readNativeValue(sortColumnType, block, position);
                         if (previousMax != null && previousMax.compareTo(current) > 0) {
                             return false;
                         }
