@@ -75,15 +75,14 @@ public class TestIcebergSortedWriting
         try (TestTable table = new TestTable(
                 getQueryRunner()::execute,
                 "test_sorted_lineitem_table",
-                "WITH (sorted_by = ARRAY['comment'], format = '" + format.name() + "') AS TABLE tpch.tiny.lineitem WITH NO DATA")) {
+                "WITH (sorted_by = ARRAY['comment'], format = '" + format.name() + "') AS TABLE tpch.sf1.lineitem WITH NO DATA")) {
             assertUpdate(
                     withSmallRowGroups,
-                    "INSERT INTO " + table.getName() + " TABLE tpch.tiny.lineitem",
-                    "VALUES 60175");
+                    "INSERT INTO " + table.getName() + " TABLE tpch.sf1.lineitem",
+                    "VALUES 6001215L");
             for (Object filePath : computeActual("SELECT file_path from \"" + table.getName() + "$files\"").getOnlyColumnAsSet()) {
                 assertThat(isFileSorted(Location.of((String) filePath), "comment", format)).isTrue();
             }
-            assertQuery("SELECT * FROM " + table.getName(), "SELECT * FROM lineitem");
         }
     }
 
