@@ -27,6 +27,7 @@ import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.SchemaTableName;
 import jakarta.annotation.Nullable;
+import org.apache.iceberg.LazySnapshotTableMetadataReader;
 import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.TableMetadataParser;
 import org.apache.iceberg.exceptions.CommitFailedException;
@@ -35,6 +36,7 @@ import org.apache.iceberg.io.LocationProvider;
 import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.types.Types.NestedField;
 
+import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.util.List;
@@ -51,6 +53,7 @@ import static io.trino.hive.formats.HiveClassNames.FILE_OUTPUT_FORMAT_CLASS;
 import static io.trino.hive.formats.HiveClassNames.LAZY_SIMPLE_SERDE_CLASS;
 import static io.trino.plugin.iceberg.IcebergErrorCode.ICEBERG_INVALID_METADATA;
 import static io.trino.plugin.iceberg.IcebergExceptions.translateMetadataException;
+import static io.trino.plugin.iceberg.IcebergSessionProperties.isLazySnapshotLoadingEnabled;
 import static io.trino.plugin.iceberg.IcebergTableName.isMaterializedViewStorage;
 import static io.trino.plugin.iceberg.IcebergUtil.METADATA_FOLDER_NAME;
 import static io.trino.plugin.iceberg.IcebergUtil.fixBrokenMetadataLocation;
@@ -240,7 +243,17 @@ public abstract class AbstractIcebergTableOperations
     {
         refreshFromMetadataLocation(
                 newLocation,
-                metadataLocation -> TableMetadataParser.read(io().newInputFile(metadataLocation)));
+                metadataLocation -> {
+                    if (isLazySnapshotLoadingEnabled(session)) {
+                        try {
+                            return LazySnapshotTableMetadataReader.readWithLazySnapshots(io(), metadataLocation);
+                        }
+                        catch (IOException e) {
+                            throw new UncheckedIOException(e);
+                        }
+                    }
+                    return TableMetadataParser.read(io().newInputFile(metadataLocation));
+                });
     }
 
     protected void refreshFromMetadataLocation(String newLocation, Function<String, TableMetadata> metadataLoader)

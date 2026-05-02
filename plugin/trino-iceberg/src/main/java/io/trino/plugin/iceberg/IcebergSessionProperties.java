@@ -107,6 +107,7 @@ public final class IcebergSessionProperties
     private static final String INCREMENTAL_REFRESH_ENABLED = "incremental_refresh_enabled";
     public static final String BUCKET_EXECUTION_ENABLED = "bucket_execution_enabled";
     private static final String MAX_PARTITIONS_PER_WRITER = "max_partitions_per_writer";
+    private static final String LAZY_SNAPSHOT_LOADING_ENABLED = "lazy_snapshot_loading_enabled";
 
     private final List<PropertyMetadata<?>> sessionProperties;
 
@@ -396,6 +397,11 @@ public final class IcebergSessionProperties
                             }
                         },
                         false))
+                .add(booleanProperty(
+                        LAZY_SNAPSHOT_LOADING_ENABLED,
+                        "Defer loading of non-current snapshots from metadata files until needed",
+                        icebergConfig.isLazySnapshotLoadingEnabled(),
+                        false))
                 .build();
     }
 
@@ -638,5 +644,10 @@ public final class IcebergSessionProperties
     public static int maxPartitionsPerWriter(ConnectorSession session)
     {
         return session.getProperty(MAX_PARTITIONS_PER_WRITER, Integer.class);
+    }
+
+    public static boolean isLazySnapshotLoadingEnabled(ConnectorSession session)
+    {
+        return session.getProperty(LAZY_SNAPSHOT_LOADING_ENABLED, Boolean.class);
     }
 }

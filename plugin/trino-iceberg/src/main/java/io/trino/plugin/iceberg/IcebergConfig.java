@@ -104,6 +104,7 @@ public class IcebergConfig
     private boolean objectStoreLayoutEnabled;
     private int metadataParallelism = 8;
     private boolean bucketExecutionEnabled = true;
+    private boolean lazySnapshotLoadingEnabled;
 
     public CatalogType getCatalogType()
     {
@@ -680,6 +681,19 @@ public class IcebergConfig
     public IcebergConfig setBucketExecutionEnabled(boolean bucketExecutionEnabled)
     {
         this.bucketExecutionEnabled = bucketExecutionEnabled;
+        return this;
+    }
+
+    public boolean isLazySnapshotLoadingEnabled()
+    {
+        return lazySnapshotLoadingEnabled;
+    }
+
+    @Config("iceberg.lazy-snapshot-loading.enabled")
+    @ConfigDescription("Defer loading of non-current snapshots from metadata files until needed")
+    public IcebergConfig setLazySnapshotLoadingEnabled(boolean lazySnapshotLoadingEnabled)
+    {
+        this.lazySnapshotLoadingEnabled = lazySnapshotLoadingEnabled;
         return this;
     }
 }

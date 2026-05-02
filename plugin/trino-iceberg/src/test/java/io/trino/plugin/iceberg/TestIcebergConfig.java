@@ -86,7 +86,8 @@ public class TestIcebergConfig
                 .setMaterializedViewRefreshSnapshotRetentionPeriod(new Duration(4, HOURS))
                 .setObjectStoreLayoutEnabled(false)
                 .setMetadataParallelism(8)
-                .setBucketExecutionEnabled(true));
+                .setBucketExecutionEnabled(true)
+                .setLazySnapshotLoadingEnabled(false));
     }
 
     @Test
@@ -133,6 +134,7 @@ public class TestIcebergConfig
                 .put("iceberg.object-store-layout.enabled", "true")
                 .put("iceberg.metadata.parallelism", "10")
                 .put("iceberg.bucket-execution", "false")
+                .put("iceberg.lazy-snapshot-loading.enabled", "true")
                 .buildOrThrow();
 
         IcebergConfig expected = new IcebergConfig()
@@ -176,7 +178,8 @@ public class TestIcebergConfig
                 .setMaterializedViewRefreshSnapshotRetentionPeriod(new Duration(1, HOURS))
                 .setObjectStoreLayoutEnabled(true)
                 .setMetadataParallelism(10)
-                .setBucketExecutionEnabled(false);
+                .setBucketExecutionEnabled(false)
+                .setLazySnapshotLoadingEnabled(true);
 
         assertFullMapping(properties, expected);
     }

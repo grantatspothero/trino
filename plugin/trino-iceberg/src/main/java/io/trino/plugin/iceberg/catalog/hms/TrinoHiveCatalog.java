@@ -479,7 +479,7 @@ public class TrinoHiveCatalog
             metadata = uncheckedCacheGet(
                     tableMetadataCache,
                     schemaTableName,
-                    () -> loadIcebergTable(this, tableOperationsProvider, session, schemaTableName).operations().current());
+                    () -> loadTableMetadata(session, schemaTableName));
         }
         catch (UncheckedExecutionException e) {
             throwIfUnchecked(e.getCause());
@@ -487,6 +487,11 @@ public class TrinoHiveCatalog
         }
 
         return getIcebergTableWithMetadata(this, tableOperationsProvider, session, schemaTableName, metadata);
+    }
+
+    private TableMetadata loadTableMetadata(ConnectorSession session, SchemaTableName schemaTableName)
+    {
+        return loadIcebergTable(this, tableOperationsProvider, session, schemaTableName).operations().current();
     }
 
     @Override
