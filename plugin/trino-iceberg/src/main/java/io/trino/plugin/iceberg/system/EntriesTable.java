@@ -15,7 +15,6 @@ package io.trino.plugin.iceberg.system;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import io.trino.plugin.iceberg.IcebergUtil;
 import io.trino.spi.block.ArrayBlockBuilder;
 import io.trino.spi.block.MapBlockBuilder;
 import io.trino.spi.block.RowBlockBuilder;
@@ -32,6 +31,7 @@ import jakarta.annotation.Nullable;
 import org.apache.iceberg.MetadataTableType;
 import org.apache.iceberg.MetricsUtil.ReadableMetricsStruct;
 import org.apache.iceberg.PartitionField;
+import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.transforms.Transforms;
 import org.apache.iceberg.types.Conversions;
@@ -43,6 +43,7 @@ import org.apache.iceberg.util.StructProjection;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -53,6 +54,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.airlift.slice.Slices.wrappedHeapBuffer;
 import static io.trino.plugin.iceberg.IcebergTypes.convertIcebergValueToTrino;
 import static io.trino.plugin.iceberg.IcebergUtil.primitiveFieldTypes;
+import static io.trino.plugin.iceberg.IcebergUtil.primitiveFields;
 import static io.trino.plugin.iceberg.util.SystemTableUtil.getAllPartitionFields;
 import static io.trino.plugin.iceberg.util.SystemTableUtil.getPartitionColumnType;
 import static io.trino.plugin.iceberg.util.SystemTableUtil.partitionTypes;
@@ -90,13 +92,16 @@ public class EntriesTable
                 metadataTableType,
                 executor);
         checkArgument(metadataTableType == ALL_ENTRIES || metadataTableType == ENTRIES, "Unexpected metadata table type: %s", metadataTableType);
+
+        List<Types.NestedField> allPrimitiveFields = getAllPrimitiveFields(icebergTable);
+
         idToTypeMapping = ImmutableMap.<Integer, PrimitiveType>builder()
-                .putAll(primitiveFieldTypes(icebergTable.schema()))
+                .putAll(primitiveFieldTypes(allPrimitiveFields))
                 // Row id and last updated sequence number may be written to v3 file, so we need to have a type mapping for them
                 .put(ROW_ID.fieldId(), (PrimitiveType) ROW_ID.type())
                 .put(LAST_UPDATED_SEQUENCE_NUMBER.fieldId(), (PrimitiveType) LAST_UPDATED_SEQUENCE_NUMBER.type())
                 .buildOrThrow();
-        primitiveFields = IcebergUtil.primitiveFields(icebergTable.schema()).stream()
+        primitiveFields = allPrimitiveFields.stream()
                 .sorted(Comparator.comparing(NestedField::name))
                 .collect(toImmutableList());
         List<PartitionField> partitionFields = getAllPartitionFields(icebergTable);
@@ -351,6 +356,18 @@ public class EntriesTable
             checkArgument(path != null, "delete file path is null");
             VARCHAR.writeString(valueBuilder, Transforms.identity().toHumanString(Types.StringType.get(), Conversions.fromByteBuffer(Types.StringType.get(), path)));
         });
+    }
+
+    private static List<Types.NestedField> getAllPrimitiveFields(Table icebergTable)
+    {
+        Map<Integer, Types.NestedField> allTopLevelFieldsByIdBuilder = new LinkedHashMap<>();
+        icebergTable.schemas()
+                .values()
+                .stream()
+                .sorted(Comparator.comparing(Schema::schemaId))
+                .forEach(schema -> schema.columns().forEach(col -> allTopLevelFieldsByIdBuilder.putIfAbsent(col.fieldId(), col)));
+        List<Types.NestedField> topLevelFields = ImmutableList.copyOf(allTopLevelFieldsByIdBuilder.values());
+        return primitiveFields(topLevelFields);
     }
 
     private enum ContentType

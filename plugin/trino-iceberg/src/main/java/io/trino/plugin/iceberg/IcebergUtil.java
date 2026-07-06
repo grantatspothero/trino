@@ -542,11 +542,16 @@ public final class IcebergUtil
 
     public static List<NestedField> primitiveFields(Schema schema)
     {
-        return primitiveFields(schema.columns())
+        return primitiveFieldsStream(schema.columns())
                 .collect(toImmutableList());
     }
 
-    private static Stream<NestedField> primitiveFields(List<NestedField> nestedFields)
+    public static List<NestedField> primitiveFields(List<NestedField> nestedFields)
+    {
+        return primitiveFieldsStream(nestedFields).collect(toImmutableList());
+    }
+
+    private static Stream<NestedField> primitiveFieldsStream(List<NestedField> nestedFields)
     {
         return nestedFields.stream()
                 .flatMap(IcebergUtil::primitiveFields);
@@ -560,7 +565,7 @@ public final class IcebergUtil
         }
 
         if (type.isNestedType()) {
-            return primitiveFields(type.asNestedType().fields())
+            return primitiveFieldsStream(type.asNestedType().fields())
                     .map(field -> NestedField.from(field).withName(nestedField.name() + "." + field.name()).build());
         }
 
@@ -573,11 +578,16 @@ public final class IcebergUtil
 
     public static Map<Integer, PrimitiveType> primitiveFieldTypes(Schema schema)
     {
-        return primitiveFieldTypes(schema.columns())
+        return primitiveFieldTypesStream(schema.columns())
                 .collect(toImmutableMap(Entry::getKey, Entry::getValue));
     }
 
-    private static Stream<Entry<Integer, PrimitiveType>> primitiveFieldTypes(List<NestedField> nestedFields)
+    public static Map<Integer, PrimitiveType> primitiveFieldTypes(List<NestedField> nestedFields)
+    {
+        return primitiveFieldTypesStream(nestedFields).collect(toImmutableMap(Entry::getKey, Entry::getValue));
+    }
+
+    private static Stream<Entry<Integer, PrimitiveType>> primitiveFieldTypesStream(List<NestedField> nestedFields)
     {
         return nestedFields.stream()
                 .flatMap(IcebergUtil::primitiveFieldTypes);
@@ -591,7 +601,7 @@ public final class IcebergUtil
         }
 
         if (fieldType.isNestedType()) {
-            return primitiveFieldTypes(fieldType.asNestedType().fields());
+            return primitiveFieldTypesStream(fieldType.asNestedType().fields());
         }
 
         if (fieldType.isVariantType()) {

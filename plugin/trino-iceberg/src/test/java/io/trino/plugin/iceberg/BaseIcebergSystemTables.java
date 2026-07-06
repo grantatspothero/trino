@@ -976,6 +976,65 @@ public abstract class BaseIcebergSystemTables
     }
 
     @Test
+    void testEntriesTableAfterDropColumn()
+    {
+        try (TestTable table = newTrinoTable("test_entries_drop_column", "(id INTEGER, name VARCHAR, dt DATE)")) {
+            assertUpdate("INSERT INTO " + table.getName() + " VALUES (1, 'alice', DATE '2024-01-01')", 1);
+            assertUpdate("INSERT INTO " + table.getName() + " VALUES (2, 'bob', DATE '2024-01-02')", 1);
+
+            Table icebergTable = loadTable(table.getName());
+            int idFieldId = icebergTable.schema().findField("id").fieldId();
+            int nameFieldId = icebergTable.schema().findField("name").fieldId();
+            int dtFieldId = icebergTable.schema().findField("dt").fieldId();
+
+            assertUpdate("ALTER TABLE " + table.getName() + " DROP COLUMN name");
+
+            String entriesTable = "\"" + table.getName() + "$entries\"";
+            MaterializedResult result = computeActual(
+                    """
+                    SELECT data_file.lower_bounds, data_file.upper_bounds, readable_metrics
+                    FROM %s
+                    ORDER BY data_file.lower_bounds[%d]
+                    """.formatted(entriesTable, idFieldId));
+            assertThat(result.getRowCount()).isEqualTo(2);
+
+            // first insert: id=1
+            MaterializedRow row1 = result.getMaterializedRows().get(0);
+            assertThat(getBoundsMap(row1, 0))
+                    .containsEntry(idFieldId, "1")
+                    .containsEntry(nameFieldId, "alice")
+                    .containsEntry(dtFieldId, "2024-01-01");
+            assertThat(getBoundsMap(row1, 1))
+                    .containsEntry(idFieldId, "1")
+                    .containsEntry(nameFieldId, "alice")
+                    .containsEntry(dtFieldId, "2024-01-01");
+            // Readable_metrics contain only metrics for the current schema (name is dropped).
+            // Bounds maps contains even dropped fields.
+            assertThat((String) row1.getField(2))
+                    .isEqualTo("{" +
+                            "\"dt\":{\"column_size\":" + value(36, null) + ",\"value_count\":1,\"null_value_count\":0,\"nan_value_count\":null,\"lower_bound\":\"2024-01-01\",\"upper_bound\":\"2024-01-01\"}," +
+                            "\"id\":{\"column_size\":" + value(36, null) + ",\"value_count\":1,\"null_value_count\":0,\"nan_value_count\":null,\"lower_bound\":1,\"upper_bound\":1}" +
+                            "}");
+
+            // second insert: id=2
+            MaterializedRow row2 = result.getMaterializedRows().get(1);
+            assertThat(getBoundsMap(row2, 0))
+                    .containsEntry(idFieldId, "2")
+                    .containsEntry(nameFieldId, "bob")
+                    .containsEntry(dtFieldId, "2024-01-02");
+            assertThat(getBoundsMap(row2, 1))
+                    .containsEntry(idFieldId, "2")
+                    .containsEntry(nameFieldId, "bob")
+                    .containsEntry(dtFieldId, "2024-01-02");
+            assertThat((String) row2.getField(2))
+                    .isEqualTo("{" +
+                            "\"dt\":{\"column_size\":" + value(36, null) + ",\"value_count\":1,\"null_value_count\":0,\"nan_value_count\":null,\"lower_bound\":\"2024-01-02\",\"upper_bound\":\"2024-01-02\"}," +
+                            "\"id\":{\"column_size\":" + value(36, null) + ",\"value_count\":1,\"null_value_count\":0,\"nan_value_count\":null,\"lower_bound\":2,\"upper_bound\":2}" +
+                            "}");
+        }
+    }
+
+    @Test
     void testEntriesPartitionTable()
     {
         try (TestTable table = newTrinoTable(
@@ -1035,6 +1094,12 @@ public abstract class BaseIcebergSystemTables
     private Object value(Object parquet, Object orc)
     {
         return format == PARQUET ? parquet : orc;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<Integer, String> getBoundsMap(MaterializedRow row, int fieldIndex)
+    {
+        return (Map<Integer, String>) row.getField(fieldIndex);
     }
 
     private BaseTable loadTable(String tableName)
